@@ -15,6 +15,14 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['vue'],
+    },
+    
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "tabulator-tables/dist/css/tabulator.min.css"; @import "tabulator-tables/dist/css/tabulator_midnight.css";`
+      }
     }
   }
 })

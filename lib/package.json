@@ -1,0 +1,6 @@
+{
+    "name": "trilogy-studio-core",
+    "main": "./main.ts",
+    "module": "./main.ts",
+    "types": "./index.d.ts"
+  }
