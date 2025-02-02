@@ -41,7 +41,6 @@
 
 
 
-/* This allows draggable gutters */
 .gutter {
   position: relative;
   &.gutter-horizontal,
