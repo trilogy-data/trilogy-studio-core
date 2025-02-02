@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import HelloWorld from './components/HelloWorld.vue'
-import { Test, DataTable, Editor, EditorModel } from 'trilogy-studio-core';
-import  "tabulator-tables/dist/css/tabulator.min.css";
+import { Test, DataTable, Editor, EditorModel, StudioLayout } from 'trilogy-studio-core';
+import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
 
@@ -9,8 +9,8 @@ var loading = false;
 
 
 const editor = new EditorModel(
-  {name: "Test Editor", type: "text", connection:"test-connection"},
-  
+  { name: "Test Editor", type: "text", connection: "test-connection" },
+
 )
 
 const headers = new Map([
@@ -33,12 +33,12 @@ var tabledata = reactive([
 
 function addData() {
   let id = tabledata.length + 1
-  tabledata.push({ id: id, name: "Data", progress : 24, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 })
+  tabledata.push({ id: id, name: "Data", progress: 24, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 })
   console.log(tabledata)
 }
 function submitQuery() {
   console.log("submitting query")
-  loading=true;
+  loading = true;
   setTimeout(() => {
     loading = false;
     addData()
@@ -56,19 +56,29 @@ function submitQuery() {
     <a href="https://vuejs.org/" target="_blank">
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
-  </div >
-<div  class="table"> 
-  editor here
-  <Editor :editorData="editor" :submitCallback="submitQuery"></Editor>
-</div>
+  </div>
+  <div class="table">
+    <StudioLayout>
+      <template #sidebar>
+        <div>
+          <button @click="addData">Add Data</button>
+        </div>
+        </template>
+      <Editor :editorData="editor" :submitCallback="submitQuery"></Editor>
+    </StudioLayout>
+    editor here
 
- 
- <div> <DataTable :headers="headers" :results="tabledata"  /></div>
-  
+  </div>
+
+
+  <div>
+    <DataTable :headers="headers" :results="tabledata" />
+  </div>
+
   <div>
     <Test msg="TEST MESSAGE PLEASE IGNORE" />
     {{ tabledata }}
-</div>
+  </div>
   <HelloWorld msg="Vite + Vue" />
 </template>
 
@@ -89,7 +99,7 @@ function submitQuery() {
 }
 
 .table {
-  width : 500px;
-  height : 500px;
+  width: 500px;
+  height: 500px;
 }
 </style>
