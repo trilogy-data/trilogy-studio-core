@@ -14,7 +14,7 @@ const connection = MDConnection.create({
   mdToken: token
 });
 
-var content = ref("SELECT 1;")
+var content = "SELECT 1;"
 
 
 const editor = new EditorModel(

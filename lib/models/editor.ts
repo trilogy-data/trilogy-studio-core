@@ -44,7 +44,7 @@ export default class Editor implements EditorInterface {
   visible: boolean;
   // monaco: editor.IStandaloneCodeEditor | null;
 
-  constructor(name: string, type: string, connection: string, contents:string | null = null) {
+  constructor({ name, type, connection, contents = null }: { name: string; type: string; connection: string; contents?: string | null }) {
     this.name = name;
     this.type = type;
     this.syntax = "preql";
