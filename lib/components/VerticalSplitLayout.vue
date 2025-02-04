@@ -83,7 +83,7 @@ export default defineComponent({
             //     "flasis": `calc(${size}%)`,
             // }),
             direction: 'vertical',
-            sizes: [50, 50],
+            sizes: [60, 40],
             minSize: 200,
             expandToMin: true,
             gutterSize: 0

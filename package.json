@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@motherduck/wasm-client": "^0.6.6",
+    "@tailwindcss/vite": "^4.0.3",
     "@types/node": "^22.12.0",
     "@types/tabulator-tables": "^6.2.3",
     "@vitejs/plugin-vue": "^5.2.1",
@@ -30,6 +31,7 @@
     "monaco-languageclient": "^9.2.1",
     "split.js": "^1.6.5",
     "tabulator-tables": "^6.3.1",
+    "tailwindcss": "^4.0.3",
     "trilogy-studio-core": "file:lib",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",

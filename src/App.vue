@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import { Test, DataTable, Editor, EditorModel, SidebarLayout, VerticalSplitLayout } from 'trilogy-studio-core';
+import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout } from 'trilogy-studio-core';
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
@@ -8,13 +7,13 @@ import { ref, reactive } from "vue";
 import { MDConnection } from '@motherduck/wasm-client';
 import token from './.token.ts'
 import axios from 'axios';
-var loading = false;
+
 
 const connection = MDConnection.create({
   mdToken: token
 });
 
-var content = "SELECT 1;"
+var content = "SELECT 1 as test;"
 
 
 const editor = new EditorModel(
@@ -23,16 +22,15 @@ const editor = new EditorModel(
 )
 
 var headers = reactive(new Map([
-  ["id", { name: "id", datatype: "string", purpose: "key" }],
-  ["name", { name: "name", datatype: "string", purpose: "key" }],
-  ["progress", { name: "progress", datatype: "number", purpose: "data" }],
-  ["gender", { name: "gender", datatype: "string", purpose: "key" }]
-
-
 ]));
 
+var editors = [
+  { id: 1, name: "index.js" },
+  { id: 2, name: "App.vue" },
+  { id: 3, name: "styles.css" },
+]
 
-var tabledata:ArrayLike<any> = ref([
+var tabledata: ArrayLike<any> = ref([
 ]);
 
 // function addData() {
@@ -63,25 +61,16 @@ async function submitQuery() {
 
 
 }
-
+function handleEditorSelected(editor) {
+  console.log("Selected editor:", editor);
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <div class="table">
-
+  <div class="main">
     <SidebarLayout>
       <template #sidebar>
-        <div>
-          <button @click="addData">Add Data</button>
-        </div>
+        <EditorList :editors="editors" @editor-selected="handleEditorSelected" />
       </template>
       <VerticalSplitLayout>
         <template v-slot:editor="{ x, y }">
@@ -92,14 +81,7 @@ async function submitQuery() {
         </template>
       </VerticalSplitLayout>
     </SidebarLayout>
-
   </div>
-
-  <div>
-    <Test msg="TEST MESSAGE PLEASE IGNORE" />
-    {{ tabledata }}
-  </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
 <style scoped>
@@ -118,9 +100,9 @@ async function submitQuery() {
   filter: drop-shadow(0 0 2em #42b883aa);
 }
 
-.table {
-  width: 1000px;
-  height: 1000px;
+.main {
+  width: 100vw;
+  height: 100vh;
 
 }
 </style>
