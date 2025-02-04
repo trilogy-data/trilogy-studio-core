@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+secrets.env
+
+.token.ts
+
+#python
+__pycache__

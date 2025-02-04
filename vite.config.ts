@@ -5,8 +5,19 @@ import dts from 'vite-plugin-dts'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(),
-    dts({ include: ['lib'] })
+    dts({ include: ['lib'] }),
+    {
+      name: "configure-response-headers",
+      configureServer: (server) => {
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+          res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+          next();
+        });
+      },
+    },
   ],
+  
   build: {
     copyPublicDir: false,
     lib: {

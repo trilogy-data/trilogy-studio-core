@@ -1,48 +1,66 @@
 <script setup lang="ts">
 import HelloWorld from './components/HelloWorld.vue'
-import { Test, DataTable, Editor, EditorModel, StudioLayout } from 'trilogy-studio-core';
+import { Test, DataTable, Editor, EditorModel, SidebarLayout, VerticalSplitLayout } from 'trilogy-studio-core';
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
 
+import { MDConnection } from '@motherduck/wasm-client';
+import token from './.token.ts'
+import axios from 'axios';
 var loading = false;
+
+const connection = MDConnection.create({
+  mdToken: token
+});
+
+var content = ref("SELECT 1;")
 
 
 const editor = new EditorModel(
-  { name: "Test Editor", type: "text", connection: "test-connection" },
+  { name: "Test Editor", type: "text", connection: "test-connection", contents: content },
 
 )
 
-const headers = new Map([
+var headers = reactive(new Map([
   ["id", { name: "id", datatype: "string", purpose: "key" }],
   ["name", { name: "name", datatype: "string", purpose: "key" }],
   ["progress", { name: "progress", datatype: "number", purpose: "data" }],
   ["gender", { name: "gender", datatype: "string", purpose: "key" }]
 
 
+]));
+
+
+var tabledata:ArrayLike<any> = ref([
 ]);
 
-var tabledata = reactive([
-  { id: 1, name: "Oli Bob", progress: 12, gender: "male", rating: 1, col: "red", dob: "19/02/1984", car: 1 },
-  { id: 2, name: "Mary May", progress: 1, gender: "female", rating: 2, col: "blue", dob: "14/05/1982", car: true },
-  { id: 3, name: "Christine Lobowski", progress: 42, gender: "female", rating: 0, col: "green", dob: "22/05/1982", car: "true" },
-  { id: 4, name: "Brendon Philips", progress: 100, gender: "male", rating: 1, col: "orange", dob: "01/08/1980" },
-  { id: 5, name: "Margret Marmajuke", progress: 16, gender: "female", rating: 5, col: "yellow", dob: "31/01/1999" },
-  { id: 6, name: "Frank Harbours", progress: 38, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 },
-]);
-
-function addData() {
-  let id = tabledata.length + 1
-  tabledata.push({ id: id, name: "Data", progress: 24, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 })
-  console.log(tabledata)
-}
-function submitQuery() {
+// function addData() {
+//   let id = tabledata.length + 1
+//   tabledata.push({ id: id, name: "Data", progress: 24, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 })
+//   console.log(tabledata)
+// }
+async function submitQuery() {
   console.log("submitting query")
+  console.log(editor.contents)
   loading = true;
-  setTimeout(() => {
-    loading = false;
-    addData()
-  }, 2000);
+
+  let parsed = await axios.post('http://127.0.0.1:5678/generate_query', {
+    query: editor.contents,
+    dialect: 'duckdb'
+  })
+  console.log(parsed.data)
+  try {
+    const result = await connection.evaluateQuery(parsed.data.generated_sql);
+    headers = new Map(result.data.columnNames().map((header) => [header, { name: header, datatype: "string", purpose: "key" }],));
+    console.log(result.data.toRows())
+    tabledata.value = result.data.toRows();
+    console.log('query result', result);
+    console.log(tabledata)
+  } catch (err) {
+    console.log('query failed', err);
+  }
+
 
 }
 
@@ -58,21 +76,23 @@ function submitQuery() {
     </a>
   </div>
   <div class="table">
-    <StudioLayout>
+
+    <SidebarLayout>
       <template #sidebar>
         <div>
           <button @click="addData">Add Data</button>
         </div>
+      </template>
+      <VerticalSplitLayout>
+        <template v-slot:editor="{ x, y }">
+          <Editor :editorData="editor" :submitCallback="submitQuery" :x="x" :y="y" />
         </template>
-      <Editor :editorData="editor" :submitCallback="submitQuery"></Editor>
-    </StudioLayout>
-    editor here
+        <template #results>
+          <DataTable :headers="headers" :results="tabledata" />
+        </template>
+      </VerticalSplitLayout>
+    </SidebarLayout>
 
-  </div>
-
-
-  <div>
-    <DataTable :headers="headers" :results="tabledata" />
   </div>
 
   <div>
@@ -99,7 +119,8 @@ function submitQuery() {
 }
 
 .table {
-  width: 500px;
-  height: 500px;
+  width: 1000px;
+  height: 1000px;
+
 }
 </style>

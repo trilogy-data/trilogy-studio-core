@@ -44,13 +44,13 @@ export default class Editor implements EditorInterface {
   visible: boolean;
   // monaco: editor.IStandaloneCodeEditor | null;
 
-  constructor(name: string, type: string, connection: string) {
+  constructor(name: string, type: string, connection: string, contents:string | null = null) {
     this.name = name;
     this.type = type;
     this.syntax = "preql";
     this.connection = connection;
     this.results = new Results([], new Map());
-    this.contents = "SELECT 1 -> echo;";
+    this.contents = contents ? contents : "SELECT 1 -> echo;";
     this.loading = false;
     this.error = null;
     this.executed = false;

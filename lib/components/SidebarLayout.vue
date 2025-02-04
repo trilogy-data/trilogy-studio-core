@@ -1,6 +1,6 @@
 <template>
-    <div id="interface" class="interface-2">
-        <div class="interface-wrap row">
+    <div id="interface" class="interface">
+        <div class="interface-wrap">
             <div ref="sidebar" class="sidebar">
                 <slot name="sidebar"></slot>
             </div>
@@ -11,12 +11,19 @@
     </div>
 </template>
 <style>
-.interface-2 {
+.interface {
     position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
+}
+
+.interface-wrap {
+    display: flex;
+    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    max-height: 100%;
 }
 
 .sidebar {
@@ -38,8 +45,6 @@
     z-index: 1;
     overflow: hidden;
 }
-
-
 
 .gutter {
   position: relative;
@@ -78,12 +83,7 @@
 
 
 
-.interface-wrap {
-    display: flex;
-    flex-wrap: nowrap;
-    flex: 1 1 auto;
-    max-height: 100%;
-}
+
 </style>
 <script lang="ts">
 import Split from 'split.js';
@@ -119,18 +119,17 @@ export default {
                 this.split.destroy();
             }
         },
-        mounted() {
-            this.split = Split(this.splitElements, {
-                elementStyle: (_dimension, size) => ({
-                    "flex-basis": `calc(${size}%)`,
-                }),
-                sizes: [25, 75],
-                minSize: 300,
-                expandToMin: true,
-                gutterSize: 0,
-            });
-            console.log('split')
-        }
+    },
+    mounted() {
+        this.split = Split(this.splitElements, {
+            elementStyle: (_dimension, size) => ({
+                "flex-basis": `calc(${size}%)`,
+            }),
+            sizes: [25, 75],
+            minSize: 300,
+            expandToMin: true,
+            gutterSize: 0,
+        });
     }
 };
 </script>

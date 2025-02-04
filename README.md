@@ -9,6 +9,7 @@ Requires following imports:
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css";
 import '@mdi/font/css/materialdesignicons.css';
+import 'splitpanes/dist/splitpanes.css'
 ```
 
 ## Testing

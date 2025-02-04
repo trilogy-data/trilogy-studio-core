@@ -1,0 +1,4 @@
+pytrilogy
+fastapi
+click-default-group
+uvicorn

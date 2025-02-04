@@ -1,16 +1,18 @@
 <template>
     <div :key="editorData.name" ref="editor" id="editor" class="editor-fix-styles">
-        <!-- <div id="editor" > </div> -->
-    </div>
+</div>
 </template>
 <style scoped>
 .editor-fix-styles {
     text-align: left;
     border: none;
+    height:100%;
 }
+
+
 </style>
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, nextTick } from 'vue';
 import Editor from '../models/editor'
 import * as monaco from 'monaco-editor';
 
@@ -40,7 +42,16 @@ export default defineComponent({
         saveCallback: {
             type: Function,
             default: null
+        },
+        y: {
+            type: Number,
+            default: 400
+        },
+        x: {
+            type: Number,
+            default: 400
         }
+
 
     },
     data() {
@@ -51,8 +62,8 @@ export default defineComponent({
             generatingPrompt: false,
             info: 'Query processing...',
             editor: null as monaco.IEditor | null,
-            editorX: 400,
-            editorY: 400,
+            // editorX: 400,
+            // editorY: 400,
 
         }
     },
@@ -60,6 +71,9 @@ export default defineComponent({
     },
     mounted() {
         this.createEditor()
+        console.log(this.x)
+        console.log(this.y)
+        console.log(this.editorData)
     },
     computed: {
         error() {
@@ -79,9 +93,40 @@ export default defineComponent({
         }
 
     },
+    watch: {
+        editorData: {
+            handler() {
+                if (this.editor) {
+                    this.editor.setValue(this.editorData.contents)
+                }
+            },
+            deep: true
+        },
+        x(newVal, oldVal) {
+            console.log(`x changed: ${oldVal} → ${newVal}`);
+            // if (this.editor) {
+            //     nextTick(() => {
+            //         this.editor.layout({ height: this.y, width: this.x });
+            //     });
+            // }
+        },
+        y(newVal, oldVal) {
+            console.log(`y changed: ${oldVal} → ${newVal}`);
+            
+                // if (this.editor) {
+                //     nextTick(() => {
+                //         this.editor.layout({height:this.y});
+                //     });
+
+                // }
+            
+        }
+    },
     methods: {
+        getEditor() {
+            return this.editor;
+        },
         createEditor() {
-            console.log(this.submitCallback)
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
                 return
@@ -90,10 +135,12 @@ export default defineComponent({
                 value: this.editorData.contents,
                 language: 'sql',
                 automaticLayout: true,
+                height: '100%'
             })
             this.editor = editor;
+            editor.layout();
             // this.addMonacoEditor({ editor: editor, name: this.editorData.name })
-            editor.layout({ height: 400, width:400 });
+            // editor.layout({ height: this.y, width: this.x });
             monaco.editor.defineTheme('trilogyStudio', {
                 base: 'vs-dark', // can also be vs-dark or hc-black
                 inherit: true, // can also be false to completely replace the builtin rules
@@ -114,6 +161,7 @@ export default defineComponent({
             });
             monaco.editor.setTheme('trilogyStudio');
             editor.onDidChangeModelContent(() => {
+                console.log('editor contents changed')
                 this.editorData.contents = editor.getValue();
             });
 
@@ -137,7 +185,7 @@ export default defineComponent({
                     label: 'Format Trilogy',
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI],
                     run: function () {
-                        this.formatText(editor.getValue()).then((response) => {
+                        this.formatTextCallback(editor.getValue()).then((response) => {
                             editor.setValue(response)
                         })
                     }
@@ -158,6 +206,7 @@ export default defineComponent({
 
 
         }
+
     }
 })
 </script>
