@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout } from 'trilogy-studio-core';
+import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout, IDE, Manager } from 'trilogy-studio-core';
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
@@ -8,6 +8,7 @@ import { MDConnection } from '@motherduck/wasm-client';
 import token from './.token.ts'
 import axios from 'axios';
 
+var loading = false;
 
 const connection = MDConnection.create({
   mdToken: token
@@ -16,19 +17,10 @@ const connection = MDConnection.create({
 var content = "SELECT 1 as test;"
 
 
-const editor = new EditorModel(
-  { name: "Test Editor", type: "text", connection: "test-connection", contents: content },
-
-)
-
 var headers = reactive(new Map([
 ]));
 
-var editors = [
-  { id: 1, name: "index.js" },
-  { id: 2, name: "App.vue" },
-  { id: 3, name: "styles.css" },
-]
+
 
 var tabledata: ArrayLike<any> = ref([
 ]);
@@ -39,11 +31,8 @@ var tabledata: ArrayLike<any> = ref([
 //   console.log(tabledata)
 // }
 async function submitQuery() {
-  console.log("submitting query")
-  console.log(editor.contents)
   loading = true;
-
-  let parsed = await axios.post('http://127.0.0.1:5678/generate_query', {
+  let parsed = await axios.post('https://trilogy-service.fly.dev/generate_query', {
     query: editor.contents,
     dialect: 'duckdb'
   })
@@ -55,33 +44,21 @@ async function submitQuery() {
     tabledata.value = result.data.toRows();
     console.log('query result', result);
     console.log(tabledata)
+    loading = false;
   } catch (err) {
     console.log('query failed', err);
+    loading = false;
   }
 
 
 }
-function handleEditorSelected(editor) {
-  console.log("Selected editor:", editor);
-}
+
 </script>
 
 <template>
-  <div class="main">
-    <SidebarLayout>
-      <template #sidebar>
-        <EditorList :editors="editors" @editor-selected="handleEditorSelected" />
-      </template>
-      <VerticalSplitLayout>
-        <template v-slot:editor="{ x, y }">
-          <Editor :editorData="editor" :submitCallback="submitQuery" :x="x" :y="y" />
-        </template>
-        <template #results>
-          <DataTable :headers="headers" :results="tabledata" />
-        </template>
-      </VerticalSplitLayout>
-    </SidebarLayout>
-  </div>
+<div class="main">
+  <Manager></Manager>
+</div>
 </template>
 
 <style scoped>

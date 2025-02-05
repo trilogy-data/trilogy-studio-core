@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-current_directory = Path(__file__).parent.parent
+current_directory = Path(__file__).parent
 
 sys.path.append(str(current_directory))
 

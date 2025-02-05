@@ -1,4 +1,6 @@
-pytrilogy
+pytrilogy>=0.0.3.11
 fastapi
 click-default-group
 uvicorn
+httpx
+pytest
