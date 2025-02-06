@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout, IDE, Manager } from 'trilogy-studio-core';
+import { MotherDuckConnection } from 'trilogy-studio-core/connections';
+import { useEditorStore, useConnectionStore } from 'trilogy-studio-core/data';
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
-
-import { MDConnection } from '@motherduck/wasm-client';
 import token from './.token.ts'
 import axios from 'axios';
 
 var loading = false;
-
-const connection = MDConnection.create({
-  mdToken: token
-});
-
-var content = "SELECT 1 as test;"
 
 
 var headers = reactive(new Map([
@@ -52,13 +46,43 @@ async function submitQuery() {
 
 
 }
+let connection = new MotherDuckConnection(
+  'test-connection',
+  token
 
+);
+
+
+
+
+const editor1 = new EditorModel(
+  { name: "Test Editor", type: "text", connection: "test-connection", contents: ref('select 1 as fun;') },
+
+)
+
+const editor2 = new EditorModel(
+  { name: "Test Editor 2", type: "text", connection: "test-connection", contents: ref('select 1') },
+
+)
+
+let store = useEditorStore();
+console.log('store')
+console.log(store)
+console.log(store.editors); // Should print an empty object `{}` initially
+store.addEditor(editor1)
+store.addEditor(editor2)
+
+let connections = useConnectionStore();
+
+connections.addConnection(connection);
+
+let editors = ref([editor1, editor2])
 </script>
 
 <template>
-<div class="main">
-  <Manager></Manager>
-</div>
+  <div class="main">
+    <Manager :connectionStore="connections" :editorStore="store"></Manager>
+  </div>
 </template>
 
 <style scoped>

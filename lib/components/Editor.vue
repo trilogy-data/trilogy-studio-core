@@ -1,26 +1,26 @@
 <template>
-    <div :key="editorData.name" ref="editor" id="editor" class="editor-fix-styles">
-</div>
+    <div :key="editorName" ref="editor" id="editor" class="editor-fix-styles">
+    </div>
 </template>
 <style scoped>
 .editor-fix-styles {
     text-align: left;
     border: none;
-    height:100%;
+    height: 100%;
 }
-
-
 </style>
 <script lang="ts">
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, inject } from 'vue';
 import Editor from '../models/editor'
 import * as monaco from 'monaco-editor';
-
+import EditorStore from '../data/editors';
+import ConnectionStore from '../data/connections';
+import axios from 'axios';
 export default defineComponent({
     name: 'Editor',
     props: {
-        editorData: {
-            type: Editor,
+        editorName: {
+            type: String,
             required: true
         },
         connection: {
@@ -61,7 +61,7 @@ export default defineComponent({
             prompt: '',
             generatingPrompt: false,
             info: 'Query processing...',
-            editor: null as monaco.IEditor | null,
+            editor: null as monaco.editor.IStandaloneCodeEditor | null,
             // editorX: 400,
             // editorY: 400,
 
@@ -69,13 +69,25 @@ export default defineComponent({
     },
     components: {
     },
+    setup() {
+        type EditorStoreType = ReturnType<typeof EditorStore>;
+        type ConnectionStoreType = ReturnType<typeof ConnectionStore>;
+        const connectionStore = inject<ConnectionStoreType>('connectionStore');
+        const editorStore = inject<EditorStoreType>('editorStore');
+        if (!editorStore || !connectionStore) {
+            throw new Error('Editor store and connection store are not provided!');
+        }
+
+        return { connectionStore, editorStore };
+    },
     mounted() {
+
         this.createEditor()
-        console.log(this.x)
-        console.log(this.y)
-        console.log(this.editorData)
     },
     computed: {
+        editorData() {
+            return this.editorStore.editors[this.editorName]
+        },
         error() {
             return this.editorData.error
         },
@@ -90,18 +102,19 @@ export default defineComponent({
         },
         generateOverlayVisible() {
             return this.prompt.length > 1 || this.generatingPrompt
-        }
+        },
+
 
     },
     watch: {
-        editorData: {
-            handler() {
-                if (this.editor) {
-                    this.editor.setValue(this.editorData.contents)
-                }
-            },
-            deep: true
-        },
+        // editorData: {
+        //     handler() {
+        //         if (this.editor) {
+        //             this.editor.setValue(this.editorData.contents)
+        //         }
+        //     },
+        //     deep: true
+        // },
         x(newVal, oldVal) {
             console.log(`x changed: ${oldVal} → ${newVal}`);
             // if (this.editor) {
@@ -112,21 +125,23 @@ export default defineComponent({
         },
         y(newVal, oldVal) {
             console.log(`y changed: ${oldVal} → ${newVal}`);
-            
-                // if (this.editor) {
-                //     nextTick(() => {
-                //         this.editor.layout({height:this.y});
-                //     });
 
-                // }
-            
+            // if (this.editor) {
+            //     nextTick(() => {
+            //         this.editor.layout({height:this.y});
+            //     });
+
+            // }
+
         }
     },
+
     methods: {
         getEditor() {
             return this.editor;
         },
         createEditor() {
+            // let editorData = this.editorStore.editors[this.editorName]
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
                 return
@@ -161,17 +176,36 @@ export default defineComponent({
             });
             monaco.editor.setTheme('trilogyStudio');
             editor.onDidChangeModelContent(() => {
-                console.log('editor contents changed')
-                this.editorData.contents = editor.getValue();
+                this.editorStore.setEditorContents(this.editorName, editor.getValue())
+                // this.$emit('update:contents', editor.getValue());
+                // this.editorData.contents = editor.getValue();
             });
 
-            if (this.submitCallback) {
-                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-                    if (!this.loading) {
-                        this.submitCallback(editor.getValue());
-                    }
-                });
-            }
+
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+                if (!this.loading) {
+                    console.log('submitting query')
+                    axios.post('https://trilogy-service.fly.dev/generate_query', {
+                        query: editor.getValue(),
+                        dialect: 'duckdb'
+                    }).then((response) => {
+                        this.connectionStore.connections[this.editorData.connection].query(response.data.generated_sql).then((sql_response) => {
+                            // console.log(response)
+                            this.editorStore.setEditorResults(this.editorName, sql_response)
+                            // this.editorData.error = null;
+                            console.log(this.editorData.results)
+                        }).catch((error) => {
+                            console.error(error)
+                            this.editorData.error = error;
+                            // this.editorData.results = null;
+                        });
+                    }).catch((error) => {
+                        console.error(error)
+                        this.editorData.error = error;
+                        // this.editorData.results = null;
+                    });
+                }
+            });
             if (this.genAICallback) {
                 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
                     if (!this.loading) {

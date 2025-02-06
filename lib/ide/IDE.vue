@@ -5,11 +5,11 @@
         <EditorList :editors="editors" @editor-selected="setActiveEditor" />
       </template>
       <VerticalSplitLayout>
-        <template v-slot:editor="{ x, y }">
-          <Editor :editorData="activeEditorData" :submitCallback="submitQuery" :x="x" :y="y" />
+        <template v-slot:editor="{ x, y }" v-if="activeEditorData">
+          <Editor :editorName="activeEditor" :x="x" :y="y" />
         </template>
         <template #results>
-          <DataTable :headers="headers" :results="tabledata" />
+          <DataTable :headers="activeEditorData.results.headers" :results="activeEditorData.results.data" />
         </template>
       </VerticalSplitLayout>
     </SidebarLayout>
@@ -68,8 +68,8 @@ export default {
   computed: {
     // The currently active editor
     activeEditorData() {
-      let r = this.editors.find((editor) => editor.name === this.activeEditor);
-      console.log(r)
+      let r = this.editors[this.activeEditor];
+      console.log(r.results)
       return r
     },
   },
