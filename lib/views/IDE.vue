@@ -2,15 +2,15 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar :editors="editorList" @editor-selected="setActiveEditor" @save-editors="saveEditors" />
+        <sidebar @editor-selected="setActiveEditor" @save-editors="saveEditors" />
       </template>
       <vertical-split-layout>
         <template #editor v-if="activeEditorData">
           <editor :key="activeEditor" :editorName="activeEditor" />
         </template>
         <template #results v-if="activeEditorData">
-          <error-message :message="activeEditorData.error" v-if="activeEditorData.error"></error-message>
-          <data-table v-else :headers="activeEditorData.results.headers" :results="activeEditorData.results.data" />
+          <error-message :message="activeEditorData.error" v-if="activeEditorData.error && activeEditorData.error.value"></error-message>
+          <data-table v-else :key="activeEditor" :headers="activeEditorData.results.headers" :results="activeEditorData.results.data" />
         </template>
       </vertical-split-layout>
     </sidebar-layout>
@@ -84,6 +84,7 @@ export default {
     setActiveEditor(editor: string) {
       this.activeEditor = editor
     }
+
   },
   computed: {
     // The currently active editor data

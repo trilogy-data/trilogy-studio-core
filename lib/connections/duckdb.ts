@@ -4,8 +4,8 @@ import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?ur
 import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
 import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 import BaseConnection from "./base";
-import {Results, ColumnType} from '../models/results'
-import type {ResultColumn} from '../models/results'
+import { Results, ColumnType } from '../models/results'
+import type { ResultColumn } from '../models/results'
 
 const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
     mvp: {
@@ -35,15 +35,18 @@ export default class DuckDBConnection extends BaseConnection {
     // private mdToken: string;
     private connection: duckdb.AsyncDuckDBConnection;
 
+    connect() {
+        return createDuckDB().then((conn) => {
+            this.connection = conn
+            this.connected = true
+        });
+    }
+    
     constructor(name: string,) {
         super(name, 'duckdb');
         // Select a bundle based on browser checks
         // this.mdToken = mdToken;
-        createDuckDB().then((conn) => {
-            this.connection = conn
-            this.connected = true
 
-        });
 
     }
 
@@ -60,9 +63,9 @@ export default class DuckDBConnection extends BaseConnection {
 
         schema.forEach((field: any) => {
             headers.set(field.name, {
-            name: field.name,
-            type: this.mapDuckDBTypeToColumnType(field.type),
-            description: "", // Add a description if necessary
+                name: field.name,
+                type: this.mapDuckDBTypeToColumnType(field.type),
+                description: "", // Add a description if necessary
             });
         });
 
@@ -70,24 +73,25 @@ export default class DuckDBConnection extends BaseConnection {
         // console.log(result.batches)
         const data = result.toArray().map((row) => row.toJSON());
         // Return the SqlResult
+
         return new Results(headers, data);
     }
-    
+
     // Helper to map DuckDB column types to your ColumnType enum
     private mapDuckDBTypeToColumnType(duckDBType: string): ColumnType {
         switch (duckDBType) {
-        case "VARCHAR":
-            return ColumnType.STRING;
-        case "INT32":
-        case "INT64":
-            return ColumnType.INTEGER;
-        case "FLOAT":
-        case "DOUBLE":
-            return ColumnType.FLOAT;
-        case "BOOLEAN":
-            return ColumnType.BOOLEAN;
-        default:
-            return ColumnType.UNKNOWN; // Use a fallback if necessary
+            case "VARCHAR":
+                return ColumnType.STRING;
+            case "INT32":
+            case "INT64":
+                return ColumnType.INTEGER;
+            case "FLOAT":
+            case "DOUBLE":
+                return ColumnType.FLOAT;
+            case "BOOLEAN":
+                return ColumnType.BOOLEAN;
+            default:
+                return ColumnType.UNKNOWN; // Use a fallback if necessary
         }
     }
 }

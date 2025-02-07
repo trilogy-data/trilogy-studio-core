@@ -1,7 +1,7 @@
-import type  {ConnectionInterface } from "./connection";
+
 import { Results } from "./results";
-import type {ResultsInterface} from "./results";
-import {ref} from 'vue';
+import type { ResultsInterface } from "./results";
+
 export interface EditorInterface {
   name: string;
   type: string;
@@ -10,12 +10,13 @@ export interface EditorInterface {
   results: ResultsInterface;
   contents: string;
   loading: boolean;
-  error: ref<string | null>;
+  error: string | null;
   status_code: number;
   executed: boolean;
   duration: number | null;
   generated_sql: string | null;
   visible: boolean;
+  storage: string;
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -27,33 +28,45 @@ export default class Editor implements EditorInterface {
   results: Results;
   contents: string;
   loading: boolean;
-  error: ref<string | null>;
+  error: string | null;
   status_code: number;
   executed: boolean;
   duration: number | null;
   generated_sql: string | null;
   visible: boolean;
+  storage: string;
   // monaco: editor.IStandaloneCodeEditor | null;
 
-  constructor({ name, type, connection, contents = null }: { name: string; type: string; connection: string; contents?: string | null }) {
+  defaultContents(type: string) {
+    switch (type) {
+      case "sql":
+        return `SELECT 1;`;
+      case "preql":
+        return `SELECT 1 -> echo;`;
+      default:
+        return `SELECT 1;`;
+    }
+  }
+  constructor({ name, type, connection, storage, contents = null }: { name: string; type: string; connection: string; storage: string, contents?: string | null }) {
     this.name = name;
     this.type = type;
     this.syntax = "preql";
     this.connection = connection;
     this.results = new Results([], new Map());
-    this.contents = contents ? contents : "SELECT 1 -> echo;";
+    this.contents = contents ? contents : this.defaultContents(type);
     this.loading = false;
-    this.error = ref(null);
+    this.error = null;
     this.executed = false;
     this.duration = null;
     // this.monaco = null;
     this.status_code = 200;
     this.generated_sql = null;
     this.visible = true;
+    this.storage = storage;
   }
 
-  setError(error: string| null) {
-    this.error.value = error;
+  setError(error: string | null) {
+    this.error = error;
   }
 
 
@@ -65,6 +78,7 @@ export default class Editor implements EditorInterface {
       name: parsed.name || "",
       type: parsed.type || "unknown",
       connection: parsed.connection || "",
+      storage: parsed.storage || "local",
       contents: parsed.contents || null,
     });
 
@@ -72,7 +86,7 @@ export default class Editor implements EditorInterface {
     editor.syntax = parsed.syntax || "preql";
     editor.results = parsed.results ? Results.fromJSON(parsed.results) : new Results(new Map(), []);
     editor.loading = parsed.loading || false;
-    editor.error.value = parsed.error || null;
+    editor.error = parsed.error || null;
     editor.status_code = parsed.status_code || 200;
     editor.executed = parsed.executed || false;
     editor.duration = parsed.duration || null;

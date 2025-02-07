@@ -1,16 +1,23 @@
 // BaseConnection.ts
 
-import {Results} from '../models/results'
+import { Results } from '../models/results'
 export default abstract class BaseConnection {
     name: string;
     type: string;
     connected: boolean;
 
-    constructor(name: string, type:string) {
+    constructor(name: string, type: string) {
         this.name = name;
         this.type = type;
         this.connected = false; // Default to disconnected
+        this.connect()
     }
 
     abstract query(sql: string): Promise<Results>;
+
+    abstract connect(): Promise<void>;
+
+    async reset() {
+        await this.connect()
+    }
 }

@@ -4,7 +4,7 @@
       <ul class="space-y-1">
         <li v-for="connection in connections" :key="connection.name" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded">
           <div class="editor-content">
-            <span>[{{ connection.type }}] {{ connection.name }}</span>
+            <span>[{{ connection.type }}] {{ connection.name }} {{ connection.connected }} <loading-button :action="()=>resetConnection(connection)">reset</loading-button></span>
           </div>
         </li>
       </ul>
@@ -44,6 +44,8 @@
   import { inject } from 'vue';
   import type { ConnectionStoreType } from '../stores/connectionStore';
   import ConnectionCreator from './ConnectionCreator.vue'
+  import Connection from '../connections/base';
+  import LoadingButton from './LoadingButton.vue'
   export default {
     name: "ConnectionList",
     props: {
@@ -62,9 +64,14 @@
       }
     },
     components: {
-      ConnectionCreator
+      ConnectionCreator,
+      LoadingButton
     },
     methods: {
+      resetConnection(connection:Connection) {
+        console.log('restting connection')
+        return this.connectionStore.resetConnection(connection.name)
+      } 
     },
   };
   </script>

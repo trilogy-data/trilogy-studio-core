@@ -10,8 +10,8 @@ const useEditorStore = defineStore('editors', {
     editorList: (state) => Object.keys(state.editors).map(key => state.editors[key])
   },
   actions: {
-    newEditor(name: string, type:string, connection:string) {
-      let editor = new Editor({name, type, connection, contents:''});
+    newEditor(name: string, type: string, connection: string) {
+      let editor = new Editor({ name, type, connection, storage: 'local', contents: '' });
       if (name in this.editors) {
         throw Error(`Editor with ${name} already exists.`);
       }
@@ -20,6 +20,13 @@ const useEditorStore = defineStore('editors', {
     },
     addEditor(editor: Editor) {
       this.editors[editor.name] = editor; // Add editor using object notation
+    },
+    removeEditor(name: string) {
+      if (this.editors[name]) {
+        delete this.editors[name];
+      } else {
+        throw new Error(`Editor with name "${name}" not found.`);
+      }
     },
     setEditorContents(name: string, contents: string) {
       if (this.editors[name]) {
@@ -41,6 +48,6 @@ const useEditorStore = defineStore('editors', {
   },
 });
 
-export type EditorStoreType =  ReturnType<typeof useEditorStore>;
+export type EditorStoreType = ReturnType<typeof useEditorStore>;
 
 export default useEditorStore;

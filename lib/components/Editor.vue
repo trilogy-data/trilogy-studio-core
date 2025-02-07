@@ -14,8 +14,8 @@ import { defineComponent, inject } from 'vue';
 
 import * as monaco from 'monaco-editor';
 
-import type {ConnectionStoreType} from '../stores/connectionStore.ts';
-import type {EditorStoreType} from '../stores/editorStore.ts';
+import type { ConnectionStoreType } from '../stores/connectionStore.ts';
+import type { EditorStoreType } from '../stores/editorStore.ts';
 import AxiosResolver from '../stores/resolver.ts'
 
 export default defineComponent({
@@ -171,13 +171,11 @@ export default defineComponent({
                         conn.query(response.data.generated_sql).then((sql_response) => {
                             // console.log(response)
                             this.editorStore.setEditorResults(this.editorName, sql_response)
-                            console.log(this.editorData.results)
                         }).catch((error) => {
-                            console.error(error)
                             this.editorData.setError(error.message);
                             // this.editorData.results = null;
                         });
-                    }).catch((error:Error) => {
+                    }).catch((error: Error) => {
                         console.error(error)
                         this.editorData.setError(error.message);
                         // this.editorData.results = null;
@@ -203,18 +201,17 @@ export default defineComponent({
                     }
                 });
             }
-
-            if (this.saveCallback) {
-                editor.addAction({
-                    id: 'save-preql',
-                    label: 'Save Trilogy',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-                    run: function () {
-                        this.saveCallback(editor.getValue())
-                    }
-                });
-            }
-
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                this.$emit("save-editors");
+            });
+            // editor.addAction({
+            //     id: 'save-preql',
+            //     label: 'Save Trilogy',
+            //     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+            //     run: function () {
+            //         this.$emit("save-editors");
+            //     }
+            // });
 
 
         }

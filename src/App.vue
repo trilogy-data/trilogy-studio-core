@@ -30,12 +30,12 @@ let local = localEditors.loadEditors()
 
 if (Object.keys(local).length == 0) {
   const editor1 = new EditorModel(
-    { name: "Test Editor", type: "text", connection: "test-connection", contents: ref('select 1 as fun;') },
+    { name: "Test Editor", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1 as fun;') },
 
   )
 
   const editor2 = new EditorModel(
-    { name: "Test Editor 2", type: "text", connection: "test-connection", contents: ref('select 1') },
+    { name: "Test Editor 2", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1') },
 
   )
   localEditors.saveEditors([editor1, editor2])

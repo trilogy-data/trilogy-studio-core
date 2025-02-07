@@ -11,7 +11,8 @@
 
     <!-- Placeholder for selected content -->
     <div class="sidebar-content">
-      <component :is="selectedItem.component" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <EditorList v-if="selectedIndex === 0" />
+      <ConnectionList v-if="selectedIndex === 1" @editor-selected="editorSelected" @save-editors="saveEditors" />
     </div>
   </div>
 </template>
@@ -29,12 +30,10 @@ export default defineComponent({
         {
           name: "Editors",
           iconClass: "fas fa-folder",
-          component: EditorList
         },
         {
           name: "Connections",
           iconClass: "fas fa-search",
-          component: ConnectionList, // Replace with your actual component
         },
         //   {
         //     name: "Extensions",
@@ -61,6 +60,7 @@ export default defineComponent({
       this.$emit("editor-selected", editor);
     },
     saveEditors() {
+      console.log('saving editors')
       this.$emit("save-editors");
     }
   },

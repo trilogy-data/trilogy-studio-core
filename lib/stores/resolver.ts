@@ -21,7 +21,7 @@ export default class AxiosResolver {
     }
     
     async resolve_query(query:string, dialect:string, type:string) {
-        if (type == 'sql') {
+        if (type === 'sql') {
             // return it as is
             return {'data':{'resolved_sql':query}}
         }

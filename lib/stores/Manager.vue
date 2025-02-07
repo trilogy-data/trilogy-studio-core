@@ -47,6 +47,7 @@ export default {
             }
         }
         const saveEditors = () => {
+            console.log('saving editors')
             for (let source of props.editorSources) {
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
             }

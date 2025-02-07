@@ -29,6 +29,7 @@
         </div>
 
         <button type="submit">Submit</button>
+        <button type="button" @click="visible = !visible">Cancel</button>
       </form>
     </div>
 

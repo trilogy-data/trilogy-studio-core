@@ -1,15 +1,21 @@
 <template>
   <div class="editor-list">
     <h2 class="text-lg font-bold mb-2">Editors</h2>
-    <button @click="saveEditors">Save</button>
+    <button @click="saveEditors()">Save</button>
     <ul class="space-y-1">
-      <li v-for="editor in editors" :key="editor.name" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded"
-        @click="onEditorClick(editor)">
-        <div class="editor-content">
-          <span>[{{ editor.type }}] {{ editor.name }}</span>
-          <span class="editor-connection">{{ editor.connection }}</span>
-        </div>
-      </li>
+      <div v-for="(editors, key) in editorsByStorage" :key="key" class="storage-group mb-4">
+        <h3 class="text-sm font-bold mb-2">{{ key }}</h3>
+        <ul>
+          <li v-for="editor in editors" :key="editor.name"
+            class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded" >
+            <div class="editor-content" @click="onEditorClick(editor)">
+              <span>[{{ editor.type }}] {{ editor.name }}</span>
+              <span class="editor-connection">{{ editor.connection }}</span>
+              <button @click="deleteEditor(editor)">x</button>
+            </div>
+          </li>
+        </ul>
+      </div>
     </ul>
     <editor-creator />
   </div>
@@ -47,6 +53,7 @@
 import { inject } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import EditorCreator from './EditorCreator.vue'
+import EditorModel from '../models/editor';
 export default {
   name: "EditorList",
   props: {
@@ -60,8 +67,17 @@ export default {
 
   },
   computed: {
-    editors() {
-      return Object.keys(this.editorStore.editors).map((editor) => this.editorStore.editors[editor]);
+    editorsByStorage() {
+      const editorsByStorage: Record<string, Array<EditorModel>> = {};
+
+      Object.values(this.editorStore.editors).forEach((editor) => {
+        if (!editorsByStorage[editor.storage]) {
+          editorsByStorage[editor.storage] = [];
+        }
+        editorsByStorage[editor.storage].push(editor);
+      });
+
+      return editorsByStorage;
     }
   },
   components: {
@@ -69,10 +85,14 @@ export default {
   },
   methods: {
     // Emit an event when an editor is clicked
-    onEditorClick(editor: string) {
+    onEditorClick(editor: EditorModel) {
       this.$emit("editor-selected", editor.name);
     },
+    deleteEditor(editor: EditorModel) {
+      this.editorStore.removeEditor(editor.name);
+    },
     saveEditors() {
+      console.log('saving editors 1')
       this.$emit("save-editors");
     }
   },

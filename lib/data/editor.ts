@@ -1,4 +1,5 @@
 import EditorInterface from "../models/editor";
+import {reactive} from "vue";
 
 export default class EditorLocalStorage {
     private storageKey: string;
@@ -32,18 +33,9 @@ export default class EditorLocalStorage {
         let raw = storedData ? JSON.parse(storedData) : [];
         console.log('loaded data')
         console.log(raw)
-        return raw.map((editor: EditorInterface) => EditorInterface.fromJSON(editor));
+        return raw.map((editor: EditorInterface) => reactive(EditorInterface.fromJSON(editor)));
     }
 
-    /**
-     * Load a specific editor by its name
-     * @param name The name of the editor to load
-     * @returns The editor object or null if it doesn't exist
-     */
-    loadEditor(name: string): EditorInterface | null {
-        const editors = this.loadEditors();
-        return editors[name] || null;
-    }
 
     /**
      * Delete a specific editor by its name

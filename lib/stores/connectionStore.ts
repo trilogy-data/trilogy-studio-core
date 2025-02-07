@@ -10,6 +10,13 @@ const useConnectionStore = defineStore('connections', {
         addConnection(connection: Connection) {
           this.connections[connection.name] = connection; // Add editor using object notation
         },
+        resetConnection(name: string) {
+          if (this.connections[name]) {
+            return this.connections[name].reset();
+          } else {
+            throw new Error(`Connection with name "${name}" not found.`);
+          }
+        }
       },
     });
 
