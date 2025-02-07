@@ -35,11 +35,11 @@
             iconClass: "fas fa-folder",
             component: EditorList
           },
-        //   {
-        //     name: "Search",
-        //     iconClass: "fas fa-search",
-        //     component: "Search", // Replace with your actual component
-        //   },
+          {
+            name: "Search",
+            iconClass: "fas fa-search",
+            component: "Search", // Replace with your actual component
+          },
         //   {
         //     name: "Extensions",
         //     iconClass: "fas fa-puzzle-piece",

@@ -47,9 +47,9 @@ import SidebarLayout from "../components/SidebarLayout.vue";
 import VerticalSplitLayout from "../components/VerticalSplitLayout.vue";
 import ErrorMessage from "../components/ErrorMessage.vue"
 import { inject } from 'vue';
-import EditorStore from '../data/editors';
+import type {EditorStoreType} from '../data/editors';
+import type { ConnectionStoreType} from '../data/connections';
 import AxiosResolver from '../data/resolver.ts'
-import ConnectionStore from '../data/connections';
 export default {
   name: "IDEComponent",
   data() {
@@ -66,8 +66,6 @@ export default {
     ErrorMessage,
   },
   setup() {
-    type EditorStoreType = ReturnType<typeof EditorStore>;
-    type ConnectionStoreType = ReturnType<typeof ConnectionStore>;
     type ResolverType = typeof AxiosResolver;
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const editorStore = inject<EditorStoreType>('editorStore');

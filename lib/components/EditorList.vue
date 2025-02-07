@@ -5,12 +5,12 @@
       <li v-for="editor in editors" :key="editor.id" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded"
         @click="onEditorClick(editor)">
         <div class="editor-content">
-          <span>[{{editor.type}}] {{ editor.name }}</span>
+          <span>[{{ editor.type }}] {{ editor.name }}</span>
           <span class="editor-connection">{{ editor.connection }}</span>
         </div>
       </li>
     </ul>
-    <editor-creator/>
+    <editor-creator />
   </div>
 </template>
 
@@ -38,24 +38,30 @@
 
 .editor-connection {
   text-align: right;
-  flex-grow: 1; /* Makes the connection name take up remaining space */
+  flex-grow: 1;
+  /* Makes the connection name take up remaining space */
 }
 </style>
 <script lang="ts">
-import type { PropType } from 'vue'
-import EditorModel from "../models/editor.ts";
+import { inject } from 'vue';
+import type { EditorStoreType } from '../data/editors';
 import EditorCreator from './EditorCreator.vue'
 export default {
   name: "EditorList",
   props: {
-    // // List of editors passed as a prop
-    // editors: {
-    //   type: Array as PropType<Array<EditorModel>>,
-    //   required: true,
-    // },
   },
   setup() {
+    const editorStore = inject<EditorStoreType>('editorStore');
+    if (!editorStore) {
+      throw new Error('Editor store is not provided!');
+    }
+    return { editorStore }
 
+  },
+  computed: {
+    editors() {
+      return Object.keys(this.editorStore.editors).map((editor) => this.editorStore.editors[editor]);
+    }
   },
   components: {
     EditorCreator
@@ -68,4 +74,3 @@ export default {
   },
 };
 </script>
-
