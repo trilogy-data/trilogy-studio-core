@@ -1,7 +1,7 @@
 import type  {ConnectionInterface } from "./connection";
 import { Results } from "./results";
 import type {ResultsInterface} from "./results";
-
+import {ref} from 'vue';
 export interface EditorInterface {
   name: string;
   type: string;
@@ -10,21 +10,12 @@ export interface EditorInterface {
   results: ResultsInterface;
   contents: string;
   loading: boolean;
-  error: string | null;
+  error: ref<string | null>;
   status_code: number;
   executed: boolean;
-  // monaco: editor.IStandaloneCodeEditor | null;
-}
-
-export interface EditorEnrichedInterface {
-  name: string;
-  type: string;
-  connection: ConnectionInterface;
-  results: ResultsInterface;
-  contents: string;
-  loading: boolean;
-  error: string | null;
-  executed: boolean;
+  duration: number | null;
+  generated_sql: string | null;
+  visible: boolean;
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -36,7 +27,7 @@ export default class Editor implements EditorInterface {
   results: Results;
   contents: string;
   loading: boolean;
-  error: string | null;
+  error: ref<string | null>;
   status_code: number;
   executed: boolean;
   duration: number | null;
@@ -52,7 +43,7 @@ export default class Editor implements EditorInterface {
     this.results = new Results([], new Map());
     this.contents = contents ? contents : "SELECT 1 -> echo;";
     this.loading = false;
-    this.error = null;
+    this.error = ref(null);
     this.executed = false;
     this.duration = null;
     // this.monaco = null;
@@ -61,5 +52,33 @@ export default class Editor implements EditorInterface {
     this.visible = true;
   }
 
+  setError(error: string| null) {
+    this.error.value = error;
+  }
 
+
+  static fromJSON(json: string | Partial<Editor>): Editor {
+    const parsed: Partial<Editor> = typeof json === "string" ? JSON.parse(json) : json;
+
+    // Initialize a new Editor instance
+    const editor = new Editor({
+      name: parsed.name || "",
+      type: parsed.type || "unknown",
+      connection: parsed.connection || "",
+      contents: parsed.contents || null,
+    });
+
+    // Hydrate additional properties
+    editor.syntax = parsed.syntax || "preql";
+    editor.results = parsed.results ? Results.fromJSON(parsed.results) : new Results(new Map(), []);
+    editor.loading = parsed.loading || false;
+    editor.error.value = parsed.error || null;
+    editor.status_code = parsed.status_code || 200;
+    editor.executed = parsed.executed || false;
+    editor.duration = parsed.duration || null;
+    editor.generated_sql = parsed.generated_sql || null;
+    editor.visible = parsed.visible !== undefined ? parsed.visible : true;
+
+    return editor
+  }
 }

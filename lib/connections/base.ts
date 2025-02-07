@@ -1,5 +1,6 @@
 // BaseConnection.ts
-import { SqlResult, ColumnType } from "./result";
+
+import {Results} from '../models/results'
 export default abstract class BaseConnection {
     name: string;
     type: string;
@@ -11,5 +12,5 @@ export default abstract class BaseConnection {
         this.connected = false; // Default to disconnected
     }
 
-    abstract query(sql: string): Promise<SqlResult>;
+    abstract query(sql: string): Promise<Results>;
 }

@@ -2,7 +2,7 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar :editors="editorList" @editor-selected="setActiveEditor" />
+        <sidebar :editors="editorList" @editor-selected="setActiveEditor" @save-editors="saveEditors" />
       </template>
       <vertical-split-layout>
         <template #editor v-if="activeEditorData">
@@ -47,9 +47,9 @@ import SidebarLayout from "../components/SidebarLayout.vue";
 import VerticalSplitLayout from "../components/VerticalSplitLayout.vue";
 import ErrorMessage from "../components/ErrorMessage.vue"
 import { inject } from 'vue';
-import type {EditorStoreType} from '../data/editors';
-import type { ConnectionStoreType} from '../data/connections';
-import AxiosResolver from '../data/resolver.ts'
+import type { EditorStoreType } from '../stores/editorStore.ts';
+import type { ConnectionStoreType } from '../stores/connectionStore.ts';
+import AxiosResolver from '../stores/resolver.ts'
 export default {
   name: "IDEComponent",
   data() {
@@ -70,17 +70,20 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const editorStore = inject<EditorStoreType>('editorStore');
     const trilogyResolver = inject<ResolverType>('trilogyResolver');
+    let saveEditors = inject<Function>('saveEditors');
     if (!editorStore || !connectionStore || !trilogyResolver) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!');
     }
-
-    return { connectionStore, editorStore, trilogyResolver };
+    if (!saveEditors) {
+      saveEditors = () => { };
+    }
+    return { connectionStore, editorStore, trilogyResolver, saveEditors };
   },
   methods: {
     // Sets the currently active editor
     setActiveEditor(editor: string) {
       this.activeEditor = editor
-    },
+    }
   },
   computed: {
     // The currently active editor data

@@ -28,6 +28,7 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/tsconfig": "^0.7.0",
     "axios": "^1.7.9",
+    "font-awesome": "^4.7.0",
     "monaco-editor": "^0.52.2",
     "monaco-languageclient": "^9.2.1",
     "pinia": "^2.3.1",

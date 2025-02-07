@@ -11,13 +11,12 @@
 </style>
 <script lang="ts">
 import { defineComponent, inject } from 'vue';
-import Editor from '../models/editor'
+
 import * as monaco from 'monaco-editor';
-import EditorStore from '../data/editors';
-import type {ConnectionStoreType} from '../data/connections';
-import type {EditorStoreType} from '../data/editors';
-import AxiosResolver from '../data/resolver.ts'
-import ConnectionStore from '../data/connections';
+
+import type {ConnectionStoreType} from '../stores/connectionStore.ts';
+import type {EditorStoreType} from '../stores/editorStore.ts';
+import AxiosResolver from '../stores/resolver.ts'
 
 export default defineComponent({
     name: 'Editor',
@@ -172,16 +171,15 @@ export default defineComponent({
                         conn.query(response.data.generated_sql).then((sql_response) => {
                             // console.log(response)
                             this.editorStore.setEditorResults(this.editorName, sql_response)
-                            // this.editorData.error = null;
                             console.log(this.editorData.results)
                         }).catch((error) => {
                             console.error(error)
-                            this.editorData.error = error;
+                            this.editorData.setError(error.message);
                             // this.editorData.results = null;
                         });
-                    }).catch((error) => {
+                    }).catch((error:Error) => {
                         console.error(error)
-                        this.editorData.error = error;
+                        this.editorData.setError(error.message);
                         // this.editorData.results = null;
                     });
                 }

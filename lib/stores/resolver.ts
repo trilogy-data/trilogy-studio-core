@@ -22,7 +22,8 @@ export default class AxiosResolver {
     
     async resolve_query(query:string, dialect:string, type:string) {
         if (type == 'sql') {
-            return query
+            // return it as is
+            return {'data':{'resolved_sql':query}}
         }
         return axios.post(`${this.address}/generate_query`, {
             query: query,

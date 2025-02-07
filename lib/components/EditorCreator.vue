@@ -4,7 +4,6 @@
     <button @click="createEditor">Create Editor</button>
 
     <!-- Form for editor details if editor is being created -->
-    {{ visible }}
     <div v-if="visible">
       <form @submit.prevent="submitEditorCreation">
         <div>
@@ -45,8 +44,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, inject } from 'vue';
-import type { EditorStoreType } from '../data/editors';
-import type { ConnectionStoreType } from '../data/connections';
+import type { EditorStoreType } from '../stores/editorStore';
+import type { ConnectionStoreType } from '../stores/connectionStore';
 export default defineComponent({
   name: 'EditorCreator',
   setup() {

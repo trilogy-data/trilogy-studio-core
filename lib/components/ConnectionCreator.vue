@@ -36,7 +36,7 @@
   
   <script lang="ts">
   import { defineComponent, ref, inject } from 'vue';;
-import type {ConnectionStoreType} from '../data/connections';
+import type {ConnectionStoreType} from '../stores/connectionStore';
   export default defineComponent({
     name: 'ConnectionCreator',
     setup() {

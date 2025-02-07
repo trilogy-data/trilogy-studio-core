@@ -1,16 +1,14 @@
 <template>
     <div class="editor-list">
-      <h2 class="text-lg font-bold mb-2">Editors</h2>
+      <h2 class="text-lg font-bold mb-2">Connections</h2>
       <ul class="space-y-1">
-        <li v-for="editor in editors" :key="editor.id" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded"
-          @click="onEditorClick(editor)">
+        <li v-for="connection in connections" :key="connection.name" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded">
           <div class="editor-content">
-            <span>[{{ editor.type }}] {{ editor.name }}</span>
-            <span class="editor-connection">{{ editor.connection }}</span>
+            <span>[{{ connection.type }}] {{ connection.name }}</span>
           </div>
         </li>
       </ul>
-      <editor-creator />
+      <connection-creator />
     </div>
   </template>
   
@@ -44,33 +42,29 @@
   </style>
   <script lang="ts">
   import { inject } from 'vue';
-  import type { EditorStoreType } from '../data/editors';
-  import EditorCreator from './EditorCreator.vue'
+  import type { ConnectionStoreType } from '../stores/connectionStore';
+  import ConnectionCreator from './ConnectionCreator.vue'
   export default {
-    name: "EditorList",
+    name: "ConnectionList",
     props: {
     },
     setup() {
-      const editorStore = inject<EditorStoreType>('editorStore');
-      if (!editorStore) {
-        throw new Error('Editor store is not provided!');
+      const connectionStore = inject<ConnectionStoreType>('connectionStore');
+      if (!connectionStore) {
+        throw new Error('Connection store is not provided!');
       }
-      return { editorStore }
+      return { connectionStore }
   
     },
     computed: {
-      editors() {
-        return Object.keys(this.editorStore.editors).map((editor) => this.editorStore.editors[editor]);
+      connections() {
+        return Object.keys(this.connectionStore.connections).map((name) => this.connectionStore.connections[name]);
       }
     },
     components: {
-      EditorCreator
+      ConnectionCreator
     },
     methods: {
-      // Emit an event when an editor is clicked
-      onEditorClick(editor: string) {
-        this.$emit("editor-selected", editor.name);
-      },
     },
   };
   </script>

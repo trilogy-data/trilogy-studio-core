@@ -30,7 +30,10 @@ const useEditorStore = defineStore('editors', {
     },
     setEditorResults(name: string, results: Results) {
       if (this.editors[name]) {
-        this.editors[name].results = results;
+        let editor = this.editors[name]
+        editor.results = results;
+        // clean error state
+        editor.setError(null);
       } else {
         throw new Error(`Editor with name "${name}" not found.`);
       }

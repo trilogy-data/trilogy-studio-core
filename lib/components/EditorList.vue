@@ -1,8 +1,9 @@
 <template>
   <div class="editor-list">
     <h2 class="text-lg font-bold mb-2">Editors</h2>
+    <button @click="saveEditors">Save</button>
     <ul class="space-y-1">
-      <li v-for="editor in editors" :key="editor.id" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded"
+      <li v-for="editor in editors" :key="editor.name" class="editor-item p-2 cursor-pointer hover:bg-gray-200 rounded"
         @click="onEditorClick(editor)">
         <div class="editor-content">
           <span>[{{ editor.type }}] {{ editor.name }}</span>
@@ -44,7 +45,7 @@
 </style>
 <script lang="ts">
 import { inject } from 'vue';
-import type { EditorStoreType } from '../data/editors';
+import type { EditorStoreType } from '../stores/editorStore';
 import EditorCreator from './EditorCreator.vue'
 export default {
   name: "EditorList",
@@ -71,6 +72,9 @@ export default {
     onEditorClick(editor: string) {
       this.$emit("editor-selected", editor.name);
     },
+    saveEditors() {
+      this.$emit("save-editors");
+    }
   },
 };
 </script>
