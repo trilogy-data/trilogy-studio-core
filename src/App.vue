@@ -1,59 +1,25 @@
 <script setup lang="ts">
 import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout, IDE, Manager } from 'trilogy-studio-core';
 import { MotherDuckConnection } from 'trilogy-studio-core/connections';
-import { useEditorStore, useConnectionStore } from 'trilogy-studio-core/data';
+
+import {DuckDBConnection} from 'trilogy-studio-core/connections';
+import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/data';
 import "tabulator-tables/dist/css/tabulator.min.css";
 import "tabulator-tables/dist/css/tabulator_midnight.css"
 import { ref, reactive } from "vue";
 import token from './.token.ts'
 import axios from 'axios';
 
-var loading = false;
+// let connection = new MotherDuckConnection(
+//   'test-connection',
+//   token
 
-
-var headers = reactive(new Map([
-]));
-
-
-
-var tabledata: ArrayLike<any> = ref([
-]);
-
-// function addData() {
-//   let id = tabledata.length + 1
-//   tabledata.push({ id: id, name: "Data", progress: 24, gender: "male", rating: 4, col: "red", dob: "12/05/1966", car: 1 })
-//   console.log(tabledata)
-// }
-async function submitQuery() {
-  loading = true;
-  let parsed = await axios.post('https://trilogy-service.fly.dev/generate_query', {
-    query: editor.contents,
-    dialect: 'duckdb'
-  })
-  console.log(parsed.data)
-  try {
-    const result = await connection.evaluateQuery(parsed.data.generated_sql);
-    headers = new Map(result.data.columnNames().map((header) => [header, { name: header, datatype: "string", purpose: "key" }],));
-    console.log(result.data.toRows())
-    tabledata.value = result.data.toRows();
-    console.log('query result', result);
-    console.log(tabledata)
-    loading = false;
-  } catch (err) {
-    console.log('query failed', err);
-    loading = false;
-  }
-
-
-}
-let connection = new MotherDuckConnection(
+// );
+let connection = new DuckDBConnection(
   'test-connection',
-  token
-
 );
 
-
-
+let resolver = new AxiosTrilogyResolver('http://127.0.0.1:5678')
 
 const editor1 = new EditorModel(
   { name: "Test Editor", type: "text", connection: "test-connection", contents: ref('select 1 as fun;') },
@@ -81,7 +47,9 @@ let editors = ref([editor1, editor2])
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store"></Manager>
+    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver">
+      <IDE/>
+    </Manager>
   </div>
 </template>
 

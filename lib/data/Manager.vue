@@ -1,59 +1,44 @@
 <template>
-    <IDE :editors="editors" :activeEditor="activeEditor"></IDE>
+    <slot></slot>
 </template>
 
-<script>
-import IDE from "../ide/IDE.vue";
-import EditorModel from "../models/editor.ts";
-import MotherDuckConnection from "../connections/motherduck.ts";
-import { provide, defineProps, ref } from 'vue';
-import { editor } from "monaco-editor";
+<script lang="ts">
+import IDE from "../views/IDE.vue";
+import EditorStore from "./editors";
+import ConnectionStore from './connections';
+import QueryResolver from './resolver';
+import { provide, PropType  } from 'vue';
 export default {
-    name: "IDEContextManager",
+    name: "ContextManager",
     components: {
         IDE,
     },
     props: {
         connectionStore: {
-            type: Array,
-            default: () => [],
+            type: Object as PropType<ReturnType<typeof ConnectionStore>>,
+            required: true
         },
         editorStore: {
-            type: Array,
-            default: () => [],
+            type: Object as PropType<ReturnType<typeof EditorStore>>,
+            required: true
         },
+        trilogyResolver: {
+            type: QueryResolver,
+            required: true
+
+        }
     },
     setup(props) {
         // provide('connections', props.connections);
         provide('editorStore', props.editorStore);
         provide('connectionStore', props.connectionStore);
+        provide('trilogyResolver', props.trilogyResolver)
     },
     computed: {
-        editors() {
-            return this.editorStore.editors;
-        }
     },
     data() {
+        return {}
 
-        // connection = MotherDuckConnection(
-        //     'test-connection',
-
-        // );
-
-        return {
-                // editors: [
-                //     editor1,
-                //     editor2
-                // ],
-            activeEditor: "Test Editor", // Currently active editor
-
-        };
-    },
-    methods: {
-        // Sets the currently active editor
-        setActiveEditor(editor) {
-            this.activeEditor = editor;
-        },
     }
 };
 </script>

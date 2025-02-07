@@ -3,7 +3,11 @@ export enum ColumnType {
     STRING = "string",
     NUMBER = "number",
     BOOLEAN = "boolean",
+    INTEGER = "integer",
     DATE = "date",
+    FLOAT = "float",
+    UNKNOWN = "unknown",
+
   }
   
 export type ColumnDescription = {
@@ -35,4 +39,6 @@ export type ColumnDescription = {
       });
     }
   }
+  
+
   

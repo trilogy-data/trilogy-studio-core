@@ -12,6 +12,8 @@ const useConnectionStore = defineStore('connections', {
         },
       },
     });
+
+  export type ConnectionStoreType = ReturnType<typeof useConnectionStore>;
   
   
   export default useConnectionStore;

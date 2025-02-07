@@ -14,8 +14,11 @@ import { defineComponent, inject } from 'vue';
 import Editor from '../models/editor'
 import * as monaco from 'monaco-editor';
 import EditorStore from '../data/editors';
+import type {ConnectionStoreType} from '../data/connections';
+import type {EditorStoreType} from '../data/editors';
+import AxiosResolver from '../data/resolver.ts'
 import ConnectionStore from '../data/connections';
-import axios from 'axios';
+
 export default defineComponent({
     name: 'Editor',
     props: {
@@ -70,19 +73,22 @@ export default defineComponent({
     components: {
     },
     setup() {
-        type EditorStoreType = ReturnType<typeof EditorStore>;
-        type ConnectionStoreType = ReturnType<typeof ConnectionStore>;
+        type ResolverType = typeof AxiosResolver;
         const connectionStore = inject<ConnectionStoreType>('connectionStore');
         const editorStore = inject<EditorStoreType>('editorStore');
-        if (!editorStore || !connectionStore) {
-            throw new Error('Editor store and connection store are not provided!');
+        const trilogyResolver = inject<ResolverType>('trilogyResolver');
+        if (!editorStore || !connectionStore || !trilogyResolver) {
+            throw new Error('Editor store and connection store and trilogy resolver are not provided!');
         }
 
-        return { connectionStore, editorStore };
+        return { connectionStore, editorStore, trilogyResolver };
     },
     mounted() {
-
+        console.log('editor mounted')
         this.createEditor()
+    },
+    unmounted() {
+        console.log('editor unmounted')
     },
     computed: {
         editorData() {
@@ -107,33 +113,6 @@ export default defineComponent({
 
     },
     watch: {
-        // editorData: {
-        //     handler() {
-        //         if (this.editor) {
-        //             this.editor.setValue(this.editorData.contents)
-        //         }
-        //     },
-        //     deep: true
-        // },
-        x(newVal, oldVal) {
-            console.log(`x changed: ${oldVal} → ${newVal}`);
-            // if (this.editor) {
-            //     nextTick(() => {
-            //         this.editor.layout({ height: this.y, width: this.x });
-            //     });
-            // }
-        },
-        y(newVal, oldVal) {
-            console.log(`y changed: ${oldVal} → ${newVal}`);
-
-            // if (this.editor) {
-            //     nextTick(() => {
-            //         this.editor.layout({height:this.y});
-            //     });
-
-            // }
-
-        }
     },
 
     methods: {
@@ -144,6 +123,10 @@ export default defineComponent({
             // let editorData = this.editorStore.editors[this.editorName]
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
+                return
+            }
+            // if we've already set up the editor
+            if (this.editor) {
                 return
             }
             const editor = monaco.editor.create(editorElement, {
@@ -184,12 +167,9 @@ export default defineComponent({
 
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
                 if (!this.loading) {
-                    console.log('submitting query')
-                    axios.post('https://trilogy-service.fly.dev/generate_query', {
-                        query: editor.getValue(),
-                        dialect: 'duckdb'
-                    }).then((response) => {
-                        this.connectionStore.connections[this.editorData.connection].query(response.data.generated_sql).then((sql_response) => {
+                    let conn = this.connectionStore.connections[this.editorData.connection];
+                    this.trilogyResolver.resolve_query(editor.getValue(), conn.type, this.editorData.type).then((response) => {
+                        conn.query(response.data.generated_sql).then((sql_response) => {
                             // console.log(response)
                             this.editorStore.setEditorResults(this.editorName, sql_response)
                             // this.editorData.error = null;

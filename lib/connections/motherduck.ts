@@ -9,13 +9,12 @@ export default class MotherDuckConnection extends BaseConnection {
     private connection: MDConnection;
 
     constructor(name: string, mdToken: string) {
-        super(name);
+        super(name, 'motherduck')
         // this.mdToken = mdToken;
         this.connection = MDConnection.create({
             mdToken: mdToken
         });
         this.connected = true;
-
     }
 
     // Example of a custom method for MotherDuck
