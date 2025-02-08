@@ -16,6 +16,13 @@ const useConnectionStore = defineStore('connections', {
           } else {
             throw new Error(`Connection with name "${name}" not found.`);
           }
+        },
+        // @ts-ignore
+        newConnection(name: string, type: string) {
+          if (this.connections[name]) {
+            throw new Error(`Connection with name "${name}" already exists.`);
+          }
+          // this.connections[name] = new Connection(name, type);
         }
       },
     });

@@ -5,7 +5,7 @@ import { Results, ColumnType } from "../models/results";
 
 
 export default class MotherDuckConnection extends BaseConnection {
-    // private mdToken: string;
+    // @ts-ignore
     private connection: MDConnection;
     private mdToken: string;
 

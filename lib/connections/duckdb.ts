@@ -18,9 +18,6 @@ const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
     },
 };
 
-
-
-
 async function createDuckDB() {
     const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
     // Instantiate the asynchronus version of DuckDB-wasm
@@ -32,7 +29,7 @@ async function createDuckDB() {
 }
 
 export default class DuckDBConnection extends BaseConnection {
-    // private mdToken: string;
+    // @ts-ignore
     private connection: duckdb.AsyncDuckDBConnection;
 
     connect() {
@@ -44,10 +41,6 @@ export default class DuckDBConnection extends BaseConnection {
     
     constructor(name: string,) {
         super(name, 'duckdb');
-        // Select a bundle based on browser checks
-        // this.mdToken = mdToken;
-
-
     }
 
     // Example of a custom method for MotherDuck
@@ -71,7 +64,6 @@ export default class DuckDBConnection extends BaseConnection {
         });
 
         // Map data rows
-        // console.log(result.batches)
         const data = result.toArray().map((row) => row.toJSON());
         // Return the SqlResult
         console.log(headers)

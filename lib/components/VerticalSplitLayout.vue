@@ -43,7 +43,7 @@
 </style>
 <script lang="ts">
 import Split from 'split.js';
-import { defineComponent, ref, onMounted, nextTick, getCurrentInstance } from 'vue';
+import { defineComponent, ref } from 'vue';
 
 
 
@@ -62,14 +62,6 @@ export default defineComponent({
         const results = ref(null);
 
         return {
-            // editors,
-            // openEditors,
-            // setActiveEditor,
-            // closeEditor,
-            // localEditor,
-            // activeEditor,
-            // // functions
-            // // refs
             editor,
             results
         }
@@ -78,10 +70,8 @@ export default defineComponent({
     mounted() {
         console.log('mounted')
         console.log(this.$refs)
+        // @ts-ignore
         this.split = Split([this.$refs.editor, this.$refs.results], {
-            // elementStyle: (_dimension, size) => ({
-            //     "flasis": `calc(${size}%)`,
-            // }),
             direction: 'vertical',
             sizes: [60, 40],
             minSize: 200,
@@ -91,20 +81,15 @@ export default defineComponent({
         console.log('SPLIT VERTICAL')
     },
     methods: {
-        resize(type, pane) {
+        // @ts-ignore
+        resize(type, pane) { // @ts-ignore
             let editorPane = pane[0];
             console.log(editorPane)
+            // @ts-ignore
             var clientHeight = document.getElementById('editorPane').clientHeight;
             this.editorY = editorPane.size / 100.0 * clientHeight;
-            // this.editorX = editorPane.clientHeight;
+        },
 
-            console.log(this.editorY);
-            console.log(this.editorX);
-        },
-        startEditor(y, x) {
-            console.log('loaded')
-            this.loaded = true;
-        },
     }
 });
 </script>

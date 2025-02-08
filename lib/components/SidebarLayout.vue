@@ -121,7 +121,9 @@ export default {
         },
     },
     mounted() {
+        // @ts-ignore
         this.split = Split(this.splitElements, {
+            // @ts-ignore
             elementStyle: (_dimension, size) => ({
                 "flex-basis": `calc(${size}%)`,
             }),

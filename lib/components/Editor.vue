@@ -165,16 +165,12 @@ export default defineComponent({
                     let conn = this.connectionStore.connections[this.editorData.connection];
                     this.trilogyResolver.resolve_query(editor.getValue(), conn.type, this.editorData.type).then((response) => {
                         conn.query(response.data.generated_sql).then((sql_response) => {
-                            // console.log(response)
                             this.editorStore.setEditorResults(this.editorName, sql_response)
                         }).catch((error) => {
                             this.editorData.setError(error.message);
-                            // this.editorData.results = null;
                         });
                     }).catch((error: Error) => {
-                        console.error(error)
                         this.editorData.setError(error.message);
-                        // this.editorData.results = null;
                     });
                 }
             });
@@ -185,29 +181,22 @@ export default defineComponent({
                     }
                 });
             }
-            if (this.formatTextCallback) {
-                editor.addAction({
-                    id: 'format-preql',
-                    label: 'Format Trilogy',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI],
-                    run: function () {
-                        this.formatTextCallback(editor.getValue()).then((response) => {
-                            editor.setValue(response)
-                        })
-                    }
-                });
-            }
+            // if (this.formatTextCallback) {
+            //     editor.addAction({
+            //         id: 'format-preql',
+            //         label: 'Format Trilogy',
+            //         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI],
+            //         run: function () {
+
+            //             this.formatTextCallback(editor.getValue()).then((response) => {
+            //                 editor.setValue(response)
+            //             })
+            //         }
+            //     });
+            // }
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
                 this.$emit("save-editors");
             });
-            // editor.addAction({
-            //     id: 'save-preql',
-            //     label: 'Save Trilogy',
-            //     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-            //     run: function () {
-            //         this.$emit("save-editors");
-            //     }
-            // });
 
 
         }

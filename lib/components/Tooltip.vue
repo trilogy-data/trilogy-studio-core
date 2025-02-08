@@ -7,7 +7,7 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
 export default {
     props: {
         content: {
@@ -22,7 +22,7 @@ export default {
     data() {
         return {
             visible: false,
-            hoverTimeout: null,
+            hoverTimeout:  null as ReturnType<typeof setTimeout> | null,
         };
     },
     computed: {
@@ -38,7 +38,9 @@ export default {
 
         },
         hideTooltip() {
-            clearTimeout(this.hoverTimeout);
+            if (this.hoverTimeout) {
+                clearTimeout(this.hoverTimeout);
+            }
             this.visible = false;
         },
     },

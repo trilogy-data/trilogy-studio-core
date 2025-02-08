@@ -57,6 +57,7 @@
 import { Tabulator } from 'tabulator-tables'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../models/results';
+import type { PropType } from 'vue';
 
 export default {
     data() {
@@ -71,7 +72,7 @@ export default {
             required: true,
         },
         'results': {
-            type: Array<Row>,
+            type:  Array as PropType<readonly Row[]>, 
             required: true,
         },
     },
@@ -123,6 +124,7 @@ export default {
     },
     methods: {
         create() {
+            // @ts-ignore
             this.tabulator = new Tabulator(this.$refs.tabulator, {
                 // data: this.tableData, //link data to table  
                 pagination: true, //enable pagination

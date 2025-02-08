@@ -41,6 +41,7 @@ export default {
         provide('trilogyResolver', props.trilogyResolver)
         provide('editorSources', props.editorSources)
         for (let source of props.editorSources) {
+            // @ts-ignore
             let editors = source.loadEditors();
             for (let editor of editors) {
                 props.editorStore.addEditor(editor)
@@ -49,6 +50,7 @@ export default {
         const saveEditors = () => {
             console.log('saving editors')
             for (let source of props.editorSources) {
+                // @ts-ignore
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
             }
         }

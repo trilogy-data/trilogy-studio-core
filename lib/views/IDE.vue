@@ -1,3 +1,4 @@
+
 <template>
   <div class="main">
     <sidebar-layout>
@@ -11,6 +12,7 @@
         <template #results v-if="activeEditorData">
           <error-message v-if="activeEditorData.error" :message="activeEditorData.error"></error-message>
           <data-table v-else-if="activeEditorData.results" 
+          
             :headers="activeEditorData.results.headers" :results="activeEditorData.results.data" />
         </template>
       </vertical-split-layout>

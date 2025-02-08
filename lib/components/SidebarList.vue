@@ -23,7 +23,6 @@
 }
 </style>
 <script lang="ts">
-import { title } from 'process';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
