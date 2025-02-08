@@ -1,39 +1,42 @@
 <template>
   <div class="sidebar-container">
     <!-- Vertical icon strip -->
+
     <div class="sidebar-icons">
+      <img class="trilogy-icon" :src="trilogyIcon" />
       <div v-for="(item, index) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(index)"
         :class="{ active: selectedIndex === index }">
-        <i :class="item.iconClass"></i>
-        <span>{{ item.name }}</span>
+        <i :class="item.icon"></i>
       </div>
     </div>
 
     <!-- Placeholder for selected content -->
     <div class="sidebar-content">
-      <EditorList v-if="selectedIndex === 0" />
-      <ConnectionList v-if="selectedIndex === 1" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <EditorList v-if="selectedIndex === 0" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <ConnectionList v-else-if="selectedIndex === 1" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent } from "vue";
 import EditorList from "./EditorList.vue";
 import ConnectionList from "./ConnectionList.vue";
+import trilogyIcon from "../static/trilogy.png";
 export default defineComponent({
   name: "Sidebar",
   data() {
     return {
       selectedIndex: 0, // Index of the currently selected sidebar item
+      trilogyIcon: trilogyIcon,
       sidebarItems: [
         {
-          name: "Editors",
-          iconClass: "fas fa-folder",
+          name: "edit",
+          icon: "mdi mdi-file-document-edit",
         },
         {
-          name: "Connections",
-          iconClass: "fas fa-search",
+          name: "database",
+          icon: "mdi mdi-database",
         },
         //   {
         //     name: "Extensions",
@@ -45,7 +48,8 @@ export default defineComponent({
   },
   components: {
     EditorList,
-    ConnectionList
+    ConnectionList,
+
   },
   computed: {
     selectedItem() {
@@ -68,25 +72,33 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.trilogy-icon {
+  width: 30px;
+  height: 30px;
+}
+
 .sidebar-container {
   display: flex;
   height: 100vh;
-  /* background-color: #f4f4f5; */
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-font);
 }
 
 .sidebar-icons {
-  background-color: #2c2f3e;
-  color: white;
-  padding-top: 20px;
-  width: 60px;
+  background-color: var(--sidebar-selector-bg);
+  color: var(--sidebar-selector-font);
+  padding-top: 10px;
+  width: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+  font-weight: 200;
 }
 
 .sidebar-icon {
-  margin: 20px 0;
+  margin: 10px 0;
+  width: 100%;
   cursor: pointer;
   text-align: center;
 }
@@ -101,14 +113,14 @@ export default defineComponent({
 }
 
 .sidebar-icon.active {
-  background-color: #3e4c59;
-  border-radius: 50%;
+  background-color: var(--sidebar-selector-selected-bg);
+  /* border-radius: 50%; */
 }
 
 .sidebar-content {
   flex-grow: 1;
   /* background-color: white; */
-  padding: 20px;
+  padding: 5px;
   overflow-y: auto;
 }
 </style>

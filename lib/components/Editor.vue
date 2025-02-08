@@ -72,24 +72,24 @@ export default defineComponent({
     components: {
     },
     setup() {
-        type ResolverType = typeof AxiosResolver;
+
         const connectionStore = inject<ConnectionStoreType>('connectionStore');
         const editorStore = inject<EditorStoreType>('editorStore');
-        const trilogyResolver = inject<ResolverType>('trilogyResolver');
+        const trilogyResolver = inject<AxiosResolver>('trilogyResolver');
         if (!editorStore || !connectionStore || !trilogyResolver) {
             throw new Error('Editor store and connection store and trilogy resolver are not provided!');
         }
-
-        return { connectionStore, editorStore, trilogyResolver };
+        return { connectionStore, editorStore, trilogyResolver};
     },
     mounted() {
-        console.log('editor mounted')
         this.createEditor()
     },
     unmounted() {
-        console.log('editor unmounted')
     },
     computed: {
+        prefersLight() {
+            return window.matchMedia('(prefers-color-scheme: light)').matches;
+        },
         editorData() {
             return this.editorStore.editors[this.editorName]
         },
@@ -119,7 +119,6 @@ export default defineComponent({
             return this.editor;
         },
         createEditor() {
-            // let editorData = this.editorStore.editors[this.editorName]
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
                 return
@@ -132,14 +131,11 @@ export default defineComponent({
                 value: this.editorData.contents,
                 language: 'sql',
                 automaticLayout: true,
-                height: '100%'
             })
             this.editor = editor;
             editor.layout();
-            // this.addMonacoEditor({ editor: editor, name: this.editorData.name })
-            // editor.layout({ height: this.y, width: this.x });
             monaco.editor.defineTheme('trilogyStudio', {
-                base: 'vs-dark', // can also be vs-dark or hc-black
+                base: this.prefersLight? 'vs': 'vs-dark', // can also be vs-dark or hc-black
                 inherit: true, // can also be false to completely replace the builtin rules
                 rules: [
                     { token: 'comment', foreground: 'ffa500', fontStyle: 'italic underline' },

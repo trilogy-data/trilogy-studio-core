@@ -27,7 +27,7 @@
 }
 
 .sidebar {
-    background-color: var(--main-bg-color);
+    background-color: var(--sidebar-bg);
     display: flex;
     flex-direction: column;
     flex-grow: 0;
@@ -125,8 +125,8 @@ export default {
             elementStyle: (_dimension, size) => ({
                 "flex-basis": `calc(${size}%)`,
             }),
-            sizes: [25, 75],
-            minSize: 300,
+            sizes: [15, 85],
+            minSize: 200,
             expandToMin: true,
             gutterSize: 0,
         });

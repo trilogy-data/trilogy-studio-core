@@ -56,6 +56,7 @@ export default class DuckDBConnection extends BaseConnection {
             console.error(`Cannot execute query. ${this.name} is not connected.`);
             throw new Error("Connection not established.");
         }
+        if (!sql) { throw new Error("Query is empty."); }
         const result = await this.connection.query(sql);
         // Map headers (columns) from the result schema
         const schema = result.schema.fields; // Assuming `fields` is the column metadata
@@ -73,7 +74,8 @@ export default class DuckDBConnection extends BaseConnection {
         // console.log(result.batches)
         const data = result.toArray().map((row) => row.toJSON());
         // Return the SqlResult
-
+        console.log(headers)
+        console.log(data)
         return new Results(headers, data);
     }
 

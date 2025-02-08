@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@duckdb/duckdb-wasm": "^1.29.0",
+    "@mdi/font": "^7.4.47",
     "@motherduck/wasm-client": "^0.6.6",
     "@tailwindcss/vite": "^4.0.3",
     "@types/node": "^22.12.0",

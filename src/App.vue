@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout, IDE, Manager } from 'trilogy-studio-core';
-import { MotherDuckConnection } from 'trilogy-studio-core/connections';
-import 'font-awesome/css/font-awesome.css';
 import { DuckDBConnection } from 'trilogy-studio-core/connections';
 import { EditorLocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
-import "tabulator-tables/dist/css/tabulator.min.css";
-import "tabulator-tables/dist/css/tabulator_midnight.css"
+
 import { ref, reactive } from "vue";
 import token from './.token.ts'
-import axios from 'axios';
+
 
 // let connection = new MotherDuckConnection(
 //   'test-connection',

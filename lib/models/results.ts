@@ -26,7 +26,7 @@ export enum ColumnType {
 
   }
 
-type Row = Readonly<Record<string, any>>; // Represents a row, with column names as keys
+export type Row = Readonly<Record<string, any>>; // Represents a row, with column names as keys
   
 export interface ResultColumn {
     name: string
@@ -51,25 +51,37 @@ export class Results implements ResultsInterface {
         this.data = data
         this.headers = headers
     }
-
+    toJSON(): object {
+      return {
+        data: this.data,
+        headers: Object.fromEntries(this.headers), // Convert Map to a plain object
+      };
+    }
     static fromJSON(json: string | Partial<ResultsInterface>): Results {
         const parsed: Partial<ResultsInterface> = typeof json === "string" ? JSON.parse(json) : json;
     
         // Parse headers
+        
         const headers = new Map<string, ResultColumn>(
           Object.entries(parsed.headers || {}).map(([key, value]) => [
             key,
             {
               name: value.name || key,
-              type: value.type || "unknown",
+              type: value.type || ColumnType.UNKNOWN,
               description: value.description || "",
             },
           ])
         );
     
         // Parse data
-        const data = parsed.data || [];
+        if (Array.isArray(parsed.data)){
+            const data = parsed.data || [];
+            return new Results(headers, data);
+        }
+        else{
+          return new Results(headers, []);
+        }
     
-        return new Results(headers, data);
+        
       }
 }

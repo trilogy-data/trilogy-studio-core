@@ -14,7 +14,8 @@
     flex: 1 1 100%;
     flex-wrap: nowrap;
     width: 100%;
-
+    height: 100%;
+    background-color: var(--result-window-bg);
 }
 
 .tabulator .tabulator-tableholder .tabulator-table {
@@ -54,12 +55,13 @@
 
 <script lang="ts">
 import { Tabulator } from 'tabulator-tables'
-import type { ResultColumn } from '../models/results';
+import type { ColumnDefinition } from 'tabulator-tables'
+import type { ResultColumn, Row } from '../models/results';
+
 export default {
     data() {
         return {
             tabulator: null as Tabulator | null,
-            actualTableHeight: '100%',
             selectedCell: null
         }
     },
@@ -69,48 +71,28 @@ export default {
             required: true,
         },
         'results': {
-            type: Array,
+            type: Array<Row>,
             required: true,
         },
     },
     watch: {
-        // active() {
-        //     if (!this.tabulator) return;
-        //     if (this.active) {
-        //         this.tabulator.restoreRedraw()
-        //         this.$nextTick(() => {
-        //             this.tabulator.redraw()
-        //         })
-        //     } else {
-        //         this.tabulator.blockRedraw()
-        //     }
-        // },
         results: {
             handler() {
                 this.updateTable()
             },
-            deep: true 
+            deep: true
         },
-        tableColumns: {
-            handler() {
-                if (!this.tabulator) return;
-                this.tabulator.setColumns(this.tableColumns)
-            }
-        },
-        tableHeight() {
-            if (!this.tabulator) return;
-            this.tabulator.setHeight(this.actualTableHeight)
-        }
     },
     computed: {
         tableData() {
             return this.results
         },
-
-
-        tableColumns() {
+        prefersLight() {
+            return window.matchMedia('(prefers-color-scheme: light)');
+        },
+        tableColumns(): ColumnDefinition[] {
             // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
-            const calculated: Array<Object> = []
+            const calculated: ColumnDefinition[] = []
             this.headers.forEach((details, _) => {
                 const result = {
                     title: details.name,
@@ -129,47 +111,48 @@ export default {
         }
     },
     unmounted() {
-        console.log('unmount event')
         if (this.tabulator) {
-            console.log('destroy tabulator')
             this.tabulator.destroy()
             this.tabulator = null;
-            console.log('tabulator is null')
         }
     },
-    async mounted() {
-        if (!this.tabulator ) {
-            this.tabulator = new Tabulator(this.$refs.tabulator, {
-            // data: this.tableData, //link data to table  
-            pagination:true, //enable pagination
-            paginationMode:"remote", //enable remote pagination
-            reactiveData: true,
-            renderHorizontal: 'virtual',
-            // columns: this.tableColumns, //define table columns
-            maxHeight: "100%",
-            minHeight: "100%",
-            data: this.tableData, //assign data to table
-            columns: this.tableColumns,
-            // height: this.actualTableHeight,
-            nestedFieldSeparator: false,
-            clipboard: true,
-            keybindings: {
-                copyToClipboard: false
-            },
-            downloadConfig: {
-                columnHeaders: true
-            },
-            resizableColumns: true
-        });
-    }
+    mounted() {
+        if (!this.tabulator) {
+            this.create()
+        }
     },
     methods: {
+        create() {
+            this.tabulator = new Tabulator(this.$refs.tabulator, {
+                // data: this.tableData, //link data to table  
+                pagination: true, //enable pagination
+                paginationMode: "remote", //enable remote pagination
+                // reactiveData: true,
+                renderHorizontal: 'virtual',
+                // columns: this.tableColumns, //define table columns
+                maxHeight: "100%",
+                minHeight: "100%",
+                data: this.tableData, //assign data to table
+                columns: this.tableColumns,
+                // height: this.actualTableHeight,
+                nestedFieldSeparator: false,
+                clipboard: true,
+                keybindings: {
+                    copyToClipboard: false
+                },
+                downloadConfig: {
+                    columnHeaders: true
+                },
+                resizableColumns: true
+            });
+        },
         updateTable() {
-        if (!this.tabulator) return;
-        this.tabulator.setColumns(this.tableColumns);
-        this.tabulator.setData(this.results);
-        this.tabulator.redraw();
-    }
+            if (this.tabulator) {
+                this.tabulator.destroy()
+                this.tabulator = null;
+            }
+            this.create()
+        }
     }
 }
 </script>

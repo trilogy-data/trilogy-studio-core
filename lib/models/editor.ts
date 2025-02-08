@@ -52,7 +52,7 @@ export default class Editor implements EditorInterface {
     this.type = type;
     this.syntax = "preql";
     this.connection = connection;
-    this.results = new Results([], new Map());
+    this.results = new Results(new Map(), []);
     this.contents = contents ? contents : this.defaultContents(type);
     this.loading = false;
     this.error = null;
@@ -69,6 +69,24 @@ export default class Editor implements EditorInterface {
     this.error = error;
   }
 
+  toJSON(): string {
+    return JSON.stringify({
+      name: this.name,
+      type: this.type,
+      syntax: this.syntax,
+      connection: this.connection,
+      results: this.results.toJSON(), // Serialize the Results instance
+      contents: this.contents,
+      loading: this.loading,
+      error: this.error,
+      status_code: this.status_code,
+      executed: this.executed,
+      duration: this.duration,
+      generated_sql: this.generated_sql,
+      visible: this.visible,
+      storage: this.storage,
+    });
+  }
 
   static fromJSON(json: string | Partial<Editor>): Editor {
     const parsed: Partial<Editor> = typeof json === "string" ? JSON.parse(json) : json;

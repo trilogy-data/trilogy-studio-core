@@ -19,7 +19,6 @@ export default class EditorLocalStorage {
     }
 
     saveEditors(editorsList: EditorInterface[]): void {
-        console.log('savinge ditors')
         localStorage.setItem(this.storageKey, JSON.stringify(editorsList));
     }
 
@@ -31,8 +30,6 @@ export default class EditorLocalStorage {
     loadEditors(): Record<string, EditorInterface> {
         const storedData = localStorage.getItem(this.storageKey);
         let raw = storedData ? JSON.parse(storedData) : [];
-        console.log('loaded data')
-        console.log(raw)
         return raw.map((editor: EditorInterface) => reactive(EditorInterface.fromJSON(editor)));
     }
 
