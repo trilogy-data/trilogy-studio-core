@@ -29,3 +29,5 @@ secrets.env
 
 #python
 __pycache__
+
+config_backup

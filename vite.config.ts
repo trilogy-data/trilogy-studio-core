@@ -1,36 +1,45 @@
 import { defineConfig } from 'vite'
-import { resolve } from 'path'
+// import { resolve } from 'path'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import tailwindcss from '@tailwindcss/vite'
-
+import {
+  resolve
+} from 'node:path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(),
-    dts({ include: ['lib'] }),
-    tailwindcss(),
-    {
-      name: "configure-response-headers",
-      configureServer: (server) => {
-        server.middlewares.use((_req, res, next) => {
-          res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-          res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-          next();
-        });
-      },
+  dts({ include: ['lib'] }),
+  tailwindcss(),
+  {
+    name: "configure-response-headers",
+    configureServer: (server) => {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        next();
+      });
     },
+  },
   ],
-  
+
   build: {
     copyPublicDir: false,
-    lib: {
-      entry: resolve(__dirname, 'lib/main.ts'),
-      formats: ['es']
-    },
+
+    // if we ever want a build
+    // lib: {
+    //   entry: resolve(__dirname, 'lib/main.ts'),
+    //   formats: ['es']
+    // },
+    // for when we turn this into a module
     rollupOptions: {
-      external: ['vue'],
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
+      // external: ['vue'],
     },
-    
+
+
   },
   css: {
     preprocessorOptions: {

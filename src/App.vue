@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { DataTable, Editor, EditorList, EditorModel, SidebarLayout, VerticalSplitLayout, IDE, Manager } from 'trilogy-studio-core';
+// @ts-ignore
+import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
 import { DuckDBConnection } from 'trilogy-studio-core/connections';
 import { EditorLocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
 
-import { ref, reactive } from "vue";
-import token from './.token.ts'
+import { ref } from "vue";
 
-
-// let connection = new MotherDuckConnection(
-//   'test-connection',
-//   token
-
-// );
 let connection = new DuckDBConnection(
   'test-connection',
 );
@@ -38,14 +32,7 @@ if (Object.keys(local).length == 0) {
   localEditors.saveEditors([editor1, editor2])
 }
 
-
-
 let store = useEditorStore();
-console.log('store')
-console.log(store)
-console.log(store.editors); // Should print an empty object `{}` initially
-// store.addEditor(editor1)
-// store.addEditor(editor2)
 
 let connections = useConnectionStore();
 
