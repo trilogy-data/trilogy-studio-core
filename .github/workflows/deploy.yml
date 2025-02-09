@@ -26,6 +26,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,6 +40,8 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+        env:
+            PUBLIC_URL: https://trilogy-data.github.io/trilogy-studio-core/
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact

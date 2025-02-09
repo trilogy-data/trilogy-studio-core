@@ -41,6 +41,7 @@ export default defineConfig({
 
 
   },
+  base: '/trilogy-studio-core/',
   css: {
     preprocessorOptions: {
       scss: {
