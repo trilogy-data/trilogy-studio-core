@@ -24,7 +24,7 @@ export default defineConfig({
   ],
 
   build: {
-    copyPublicDir: false,
+    copyPublicDir: true,
 
     // if we ever want a build
     // lib: {

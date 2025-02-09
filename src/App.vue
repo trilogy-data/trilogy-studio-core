@@ -10,8 +10,9 @@ import { ref } from "vue";
 let connection = new DuckDBConnection(
   'test-connection',
 );
+const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
-let resolver = new AxiosTrilogyResolver('http://127.0.0.1:5678')
+let resolver = new AxiosTrilogyResolver(apiUrl);
 
 let localEditors = new EditorLocalStorage('test-connection')
 
