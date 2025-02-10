@@ -61,7 +61,7 @@ allowed_origins += [
     "http://localhost:8081",
     "http://localhost:8090",
 ]
-allow_origin_regex = "(app://.)|(http://localhost:[0-9]+)"
+allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)"
 
 
 app.add_middleware(

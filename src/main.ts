@@ -16,5 +16,6 @@ const Pinia = createPinia()
 
 const app = createApp(App)
 app.use(Pinia)
+
 app.mount('#app')
 

@@ -3,12 +3,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import tailwindcss from '@tailwindcss/vite'
+// import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
 import {
   resolve
 } from 'node:path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(),
+    // nodePolyfills({ include: ['events'] }),
   dts({ include: ['lib'] }),
   tailwindcss(),
   {
@@ -16,7 +19,7 @@ export default defineConfig({
     configureServer: (server) => {
       server.middlewares.use((_req, res, next) => {
         res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
         next();
       });
     },

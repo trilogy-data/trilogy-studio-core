@@ -32,10 +32,9 @@ export default class DuckDBConnection extends BaseConnection {
     // @ts-ignore
     private connection: duckdb.AsyncDuckDBConnection;
 
-    connect() {
+    async connect() {
         return createDuckDB().then((conn) => {
             this.connection = conn
-            this.connected = true
         });
     }
     
@@ -66,8 +65,6 @@ export default class DuckDBConnection extends BaseConnection {
         // Map data rows
         const data = result.toArray().map((row) => row.toJSON());
         // Return the SqlResult
-        console.log(headers)
-        console.log(data)
         return new Results(headers, data);
     }
 

@@ -1,14 +1,19 @@
 <script setup lang="ts">
 // @ts-ignore
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
-import { DuckDBConnection } from 'trilogy-studio-core/connections';
+import { DuckDBConnection, BigQueryOauthConnection } from 'trilogy-studio-core/connections';
 import { EditorLocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
 
 import { ref } from "vue";
 
+
 let connection = new DuckDBConnection(
   'test-connection',
+);
+let connection2 = new BigQueryOauthConnection(
+  'test-connection2',
+  'preqldata'
 );
 const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
@@ -38,6 +43,7 @@ let store = useEditorStore();
 let connections = useConnectionStore();
 
 connections.addConnection(connection);
+connections.addConnection(connection2);
 
 
 </script>

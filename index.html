@@ -4,10 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png+xml" href="/trilogy.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: https://www.gstatic.com https://accounts.google.com https://apis.google.com;
+    frame-src 'self' https://accounts.google.com;
+    style-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:;
+    font-src 'self' https://fonts.gstatic.com;
+    connect-src 'self' https://www.googleapis.com https://accounts.google.com https://www.gstatic.com https://bigquery.googleapis.com;
+    img-src 'self' data: https://www.gstatic.com https://accounts.google.com;
+  ">
+  <!-- <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://apis.google.com https://www.gstatic.com;
+  style-src 'self' 'unsafe-inline';
+  connect-src 'self' https://www.googleapis.com https://accounts.google.com;
+  frame-src 'self' https://accounts.google.com;
+  img-src 'self' data: https://www.gstatic.com https://accounts.google.com;
+  font-src 'self' https://fonts.gstatic.com;
+"> -->
     <title>Trilogy Studio</title>
   </head>
   <body>
     <div id="app"></div>
+    <script src="https://apis.google.com/js/api.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

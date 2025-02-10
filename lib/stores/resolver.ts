@@ -2,6 +2,12 @@
 
 import axios from 'axios';
 
+interface QueryResponse {
+    data: {
+        generated_sql: string
+    }
+}
+
 
 export default class AxiosResolver {
     address: string
@@ -9,7 +15,7 @@ export default class AxiosResolver {
     constructor(address: string) {
         this.address = address
     }
-    getErrorMessage(error: Error):string {
+    getErrorMessage(error: Error): string {
         let base = 'An error occured.'
         if (axios.isAxiosError(error)) {
             base = error.message;
@@ -19,19 +25,16 @@ export default class AxiosResolver {
         }
         return base;
     }
-    
-    async resolve_query(query:string, dialect:string, type:string) {
-        console.log('resolving query')
-        console.log(type)
-        console.log(query)
+
+    async resolve_query(query: string, dialect: string, type: string): Promise<QueryResponse> {
         if (type === 'sql') {
             // return it as is
-            return {'data':{'generated_sql':query}}
+            return { 'data': { 'generated_sql': query } }
         }
         return axios.post(`${this.address}/generate_query`, {
             query: query,
             dialect: dialect
-        }).catch((error:Error)=> {
+        }).catch((error: Error) => {
             throw Error(this.getErrorMessage(error))
         })
     }

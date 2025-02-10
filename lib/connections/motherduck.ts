@@ -19,7 +19,6 @@ export default class MotherDuckConnection extends BaseConnection {
         this.connection = MDConnection.create({
             mdToken: this.mdToken
         });
-        this.connected = true;
     }
 
     // Example of a custom method for MotherDuck
@@ -30,6 +29,7 @@ export default class MotherDuckConnection extends BaseConnection {
         }
         const result = await this.connection.evaluateQuery(sql);
         let headers = new Map(result.data.columnNames().map((header) => [header, { name: header, type: ColumnType.STRING, description: "" }],));
+        //rows are simple arrays of json objects
         return new Results(headers, result.data.toRows());
     }
 }

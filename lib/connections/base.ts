@@ -5,12 +5,22 @@ export default abstract class BaseConnection {
     name: string;
     type: string;
     connected: boolean;
+    error: string | null = null;
 
-    constructor(name: string, type: string) {
+    constructor(name: string, type: string, autoConnect: boolean = true) {
         this.name = name;
         this.type = type;
         this.connected = false; // Default to disconnected
-        this.connect()
+        if (autoConnect) {
+            this.connect().then(() => {
+                this.connected = true;
+            }).catch((error) => {
+                if (error instanceof Error) {
+                    this.error = error.message;
+                }
+                this.connected = false;
+            });
+        }
     }
 
     abstract query(sql: string): Promise<Results>;
@@ -18,6 +28,16 @@ export default abstract class BaseConnection {
     abstract connect(): Promise<void>;
 
     async reset() {
-        await this.connect()
+        try {
+            this.connected = false;
+            this.error = null;
+            await this.connect()
+            this.connected = true;
+        } catch (error) {
+            if (error instanceof Error) {
+                this.error = error.message;
+            }
+        }
+
     }
 }

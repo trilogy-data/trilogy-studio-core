@@ -68,8 +68,6 @@ export default defineComponent({
 
     },
     mounted() {
-        console.log('mounted')
-        console.log(this.$refs)
         // @ts-ignore
         this.split = Split([this.$refs.editor, this.$refs.results], {
             direction: 'vertical',
@@ -78,13 +76,12 @@ export default defineComponent({
             expandToMin: true,
             gutterSize: 0
         });
-        console.log('SPLIT VERTICAL')
     },
     methods: {
         // @ts-ignore
         resize(type, pane) { // @ts-ignore
             let editorPane = pane[0];
-            console.log(editorPane)
+
             // @ts-ignore
             var clientHeight = document.getElementById('editorPane').clientHeight;
             this.editorY = editorPane.size / 100.0 * clientHeight;

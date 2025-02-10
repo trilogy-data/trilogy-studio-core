@@ -64,7 +64,7 @@ export default defineComponent({
       this.$emit("editor-selected", editor);
     },
     saveEditors() {
-      console.log('saving editors')
+
       this.$emit("save-editors");
     }
   },

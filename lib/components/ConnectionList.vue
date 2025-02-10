@@ -3,20 +3,26 @@
     <template #actions>
       <connection-creator />
     </template>
+    <!-- <button @click="login">Login Using Google</button> -->
+    <li v-for="connection in connections" :key="connection.name"
+      class="connection-item p-2 cursor-pointer hover:bg-gray-200 rounded">
+      <div class="connection-content">
+        <tooltip content="DuckDB" v-if="connection.type == 'duckdb'"><i class="mdi mdi-duck"></i>
+        </tooltip>
+        <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
+        </tooltip>
+        <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
+        <span class="padding-left">{{ connection.name }}
 
-      <li v-for="connection in connections" :key="connection.name"
-        class="connection-item p-2 cursor-pointer hover:bg-gray-200 rounded">
-        <div class="connection-content">
-          <tooltip content="DuckDB" v-if="connection.type == 'duckdb'"><i class="mdi mdi-duck"></i>
+          <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
           </tooltip>
-          <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
-          </tooltip>
-          <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
-          <span class="padding-left">{{ connection.name }} <tooltip  v-if="connection.connected" content="Connected"><i class="mdi mdi-check green"></i></tooltip> <loading-button
-              :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button></span>
-              
-        </div>
-      </li>
+          <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
+              class="mdi mdi-alert-circle-outline red"></i></tooltip>
+          <loading-button :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button>
+        </span>
+
+      </div>
+    </li>
 
   </sidebar-list>
 </template>
@@ -25,6 +31,11 @@
 .green {
   color: green;
 }
+
+.red {
+  color: red;
+}
+
 .padding-left {
   padding-left: 5px;
 }
@@ -51,6 +62,11 @@
   /* Makes the connection name take up remaining space */
 }
 </style>
+
+
+
+
+
 <script lang="ts">
 import { inject } from 'vue';
 import type { ConnectionStoreType } from '../stores/connectionStore';
@@ -84,9 +100,21 @@ export default {
   },
   methods: {
     resetConnection(connection: Connection) {
-      console.log('restting connection')
       return this.connectionStore.resetConnection(connection.name)
-    }
+    },
+    // login() {
+    //   const client = google.accounts.oauth2.initTokenClient({
+    //     client_id: '734709568634-3u732kjmtp8e4bi6te0g7uo9278k104i.apps.googleusercontent.com',
+    //     scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    //     callback: (response) => {
+    //       console.log(response)
+    //     },
+    //     error_callback: (error) => {
+    //       console.log("Handle the error", error)
+    //     },
+    //   });
+    //   client.requestAccessToken()
+    // }
   },
 };
 </script>
