@@ -65,8 +65,6 @@
 
 
 
-
-
 <script lang="ts">
 import { inject } from 'vue';
 import type { ConnectionStoreType } from '../stores/connectionStore';

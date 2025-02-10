@@ -25,4 +25,14 @@ export class Connection implements ConnectionInterface {
     public static fromJSON({ name, type, active, model, extra }: { name: string; type: string; active: boolean; model: string | null; extra: object | null }) {
         return new Connection(name, type, active, model, extra)
     }
+
+    public toJSON() {
+        return {
+            name: this.name,
+            type: this.type,
+            active: this.active,
+            model: this.model,
+            extra: this.extra
+        }
+    }
 }

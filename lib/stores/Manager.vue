@@ -48,13 +48,18 @@ export default {
             }
         }
         const saveEditors = () => {
-            console.log('saving editors')
             for (let source of props.editorSources) {
                 // @ts-ignore
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
             }
         }
-        provide('saveEditors', saveEditors)
+        const saveConnections= () => {
+            for (let source of props.connectionSources) {
+                // @ts-ignore
+                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
+            }
+        }
+        provide('saveEditors', saveEditors, saveConnectionsc)
     },
     computed: {
     },
