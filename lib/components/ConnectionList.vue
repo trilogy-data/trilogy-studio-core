@@ -11,7 +11,7 @@
         </tooltip>
         <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
         </tooltip>
-        <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
+        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i></tooltip>
         <span class="padding-left">{{ connection.name }}
 
           <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>

@@ -1,8 +1,10 @@
 <template>
   <sidebar-list title="Editors">
     <template #actions>
-      <div class="action-container"><button @click="saveEditors()">Save</button>
+      <div class="action-container">
+        <button @click="saveEditors()">Save</button>
         <editor-creator />
+        <button @click="addDemoEditors()">Demo</button>
       </div>
     </template>
     <div v-for="(editors, key) in editorsByStorage" :key="key" class="storage-group">
@@ -148,6 +150,12 @@ export default {
     },
     displayKey(key: string) {
       return key === 'local' ? 'Local Storage' : key;
+    },
+    addDemoEditors() {
+      const editor1 = new EditorModel(
+        { name: "Duckdb", type: "text", connection: "test-connection", storage: "local", contents: 'select 1 as fun;' },
+      )
+      this.editorStore.addEditor(editor1);
     }
   },
 };

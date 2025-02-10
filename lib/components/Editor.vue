@@ -163,7 +163,16 @@ export default defineComponent({
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
                 if (!this.loading) {
                     let conn = this.connectionStore.connections[this.editorData.connection];
-                    this.trilogyResolver.resolve_query(editor.getValue(), conn.type, this.editorData.type).then((response) => {
+                    var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
+                    var text: string;
+                    if (selected) {
+                        text = editor.getModel()?.getValueInRange(selected) as string;
+                        
+                    }
+                    else {
+                        text = editor.getValue();
+                    }
+                    this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type).then((response) => {
                         conn.query(response.data.generated_sql).then((sql_response) => {
                             this.editorStore.setEditorResults(this.editorName, sql_response)
                         }).catch((error) => {

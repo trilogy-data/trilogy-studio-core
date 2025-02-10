@@ -40,7 +40,38 @@ export interface ResultsInterface {
     data:  readonly Row[];
 }
 
+type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
 
+function makeValuesJsonSerializable(objects: Record<string, any>[]): Record<string, SerializableValue>[] {
+  return objects.map((obj) => {
+    const serializedObj: Record<string, SerializableValue> = {};
+    for (const key in obj) {
+      const value = obj[key];
+
+      // Handle BigInt specifically
+      if (typeof value === "bigint") {
+        serializedObj[key] = value.toString();
+      }
+      // Handle Dates
+      else if (value instanceof Date) {
+        serializedObj[key] = value.toISOString();
+      }
+      // Recursively handle nested objects or arrays
+      else if (Array.isArray(value)) {
+        serializedObj[key] = value.map((item) =>
+          typeof item === "object" && item !== null ? makeValuesJsonSerializable([item])[0] : item
+        );
+      } else if (typeof value === "object" && value !== null) {
+        serializedObj[key] = makeValuesJsonSerializable([value])[0];
+      }
+      // All other values are JSON serializable as-is
+      else {
+        serializedObj[key] = value;
+      }
+    }
+    return serializedObj;
+  });
+}
 
 export class Results implements ResultsInterface {
 
@@ -53,7 +84,7 @@ export class Results implements ResultsInterface {
     }
     toJSON(): object {
       return {
-        data: this.data,
+        data: makeValuesJsonSerializable(this.data),
         headers: Object.fromEntries(this.headers), // Convert Map to a plain object
       };
     }

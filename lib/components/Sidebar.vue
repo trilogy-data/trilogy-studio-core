@@ -3,10 +3,10 @@
     <!-- Vertical icon strip -->
 
     <div class="sidebar-icons">
-      <img class="trilogy-icon" :src="trilogyIcon" />
+      <tooltip content="Trilogy Studio (Alpha)"><img class="trilogy-icon" :src="trilogyIcon" /></tooltip>
       <div v-for="(item, index) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(index)"
         :class="{ active: selectedIndex === index }">
-        <i :class="item.icon"></i>
+        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
     </div>
 
@@ -23,6 +23,7 @@ import { defineComponent } from "vue";
 import EditorList from "./EditorList.vue";
 import ConnectionList from "./ConnectionList.vue";
 import trilogyIcon from "../static/trilogy.png";
+import Tooltip from "./Tooltip.vue";
 export default defineComponent({
   name: "Sidebar",
   data() {
@@ -32,10 +33,12 @@ export default defineComponent({
       sidebarItems: [
         {
           name: "edit",
+          tooltip: 'Code Editors',
           icon: "mdi mdi-file-document-edit",
         },
         {
           name: "database",
+          tooltip: 'Connections',
           icon: "mdi mdi-database",
         },
         //   {
@@ -49,6 +52,7 @@ export default defineComponent({
   components: {
     EditorList,
     ConnectionList,
+    Tooltip
 
   },
   computed: {
