@@ -16,6 +16,8 @@
 
 /* Dark Mode Colors */
 :root {
+  --text-color: #FFFFFF;
+
   --sidebar-selector-bg: #3C3C3C;
   --sidebar-selector-font: #FFFFFF;
   --sidebar-selector-selected-bg: #4D4D4D;
@@ -39,6 +41,7 @@
 
 @media (prefers-color-scheme: light) {
   :root {
+    --text-color: #333333;
     --sidebar-selector-bg: #E8E8E8;
     --sidebar-selector-font: #333333;
     --sidebar-selector-selected-bg: #FFFFFF;

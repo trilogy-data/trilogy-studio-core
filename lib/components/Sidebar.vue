@@ -14,6 +14,7 @@
     <div class="sidebar-content">
       <EditorList v-if="selectedIndex === 0" @editor-selected="editorSelected" @save-editors="saveEditors" />
       <ConnectionList v-else-if="selectedIndex === 1" />
+      <TutorialSidebar v-else-if="selectedIndex === 2" />
     </div>
   </div>
 </template>
@@ -22,6 +23,7 @@
 import { defineComponent } from "vue";
 import EditorList from "./EditorList.vue";
 import ConnectionList from "./ConnectionList.vue";
+import TutorialSidebar from "./TutorialSidebar.vue";
 import trilogyIcon from "../static/trilogy.png";
 import Tooltip from "./Tooltip.vue";
 export default defineComponent({
@@ -35,11 +37,19 @@ export default defineComponent({
           name: "edit",
           tooltip: 'Code Editors',
           icon: "mdi mdi-file-document-edit",
+          screen: 'editors',
         },
         {
           name: "database",
           tooltip: 'Connections',
           icon: "mdi mdi-database",
+          screen: 'editors',
+        },
+        {
+          name: "help",
+          tooltip: 'Tutorial',
+          icon: "mdi mdi-help",
+          screen: 'tutorial',
         },
         //   {
         //     name: "Extensions",
@@ -52,7 +62,8 @@ export default defineComponent({
   components: {
     EditorList,
     ConnectionList,
-    Tooltip
+    Tooltip,
+    TutorialSidebar,
 
   },
   computed: {
@@ -63,12 +74,12 @@ export default defineComponent({
   methods: {
     selectItem(index: number) {
       this.selectedIndex = index;
+      this.$emit("screen-selected", this.sidebarItems[index].screen);
     },
     editorSelected(editor: string) {
       this.$emit("editor-selected", editor);
     },
     saveEditors() {
-
       this.$emit("save-editors");
     }
   },

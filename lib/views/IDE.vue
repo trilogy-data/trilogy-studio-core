@@ -1,21 +1,32 @@
-
 <template>
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar @editor-selected="setActiveEditor" @save-editors="saveEditorsCall" />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen"
+          @save-editors="saveEditorsCall" />
       </template>
-      <vertical-split-layout>
-        <template #editor v-if="activeEditorData">
-          <editor :key="activeEditor" :editorName="activeEditor" @save-editors="saveEditorsCall" />
-        </template>
-        <template #results v-if="activeEditorData">
-          <error-message v-if="activeEditorData.error" :message="activeEditorData.error"></error-message>
-          <data-table v-else-if="activeEditorData.results" 
-          
-            :headers="activeEditorData.results.headers" :results="activeEditorData.results.data" />
-        </template>
-      </vertical-split-layout>
+
+      <template v-if="activeScreen === 'editors'">
+        <vertical-split-layout>
+          <template #editor v-if="activeEditorData">
+            <editor :key="activeEditor" :editorName="activeEditor" @save-editors="saveEditorsCall" />
+          </template>
+          <template #results v-if="activeEditorData">
+            <error-message v-if="activeEditorData.error" :message="activeEditorData.error"></error-message>
+            <data-table v-else-if="activeEditorData.results" :headers="activeEditorData.results.headers"
+              :results="activeEditorData.results.data" />
+          </template>
+        </vertical-split-layout>
+      </template>
+
+      <template v-else-if="activeScreen === 'tutorial'">
+        <Tutorial/>
+      </template>
+
+      <template v-else>
+        <div>Help</div>
+      </template>
+
     </sidebar-layout>
   </div>
 </template>
@@ -47,6 +58,7 @@ import Sidebar from '../components/Sidebar.vue';
 import Editor from "../components/Editor.vue";
 import DataTable from "../components/DataTable.vue";
 import SidebarLayout from "../components/SidebarLayout.vue";
+import Tutorial from "../components/Tutorial.vue";
 import VerticalSplitLayout from "../components/VerticalSplitLayout.vue";
 import ErrorMessage from "../components/ErrorMessage.vue"
 import { inject } from 'vue';
@@ -57,7 +69,8 @@ export default {
   name: "IDEComponent",
   data() {
     return {
-      activeEditor: 'Test Editor'
+      activeEditor: 'Test Editor',
+      activeScreen: 'editors',
     };
   },
   components: {
@@ -67,6 +80,7 @@ export default {
     SidebarLayout,
     VerticalSplitLayout,
     ErrorMessage,
+    Tutorial,
   },
   setup() {
     type ResolverType = typeof AxiosResolver;
@@ -86,6 +100,9 @@ export default {
     // Sets the currently active editor
     setActiveEditor(editor: string) {
       this.activeEditor = editor
+    },
+    setActiveScreen(screen: string) {
+      this.activeScreen = screen
     },
     saveEditorsCall() {
       this.saveEditors()
