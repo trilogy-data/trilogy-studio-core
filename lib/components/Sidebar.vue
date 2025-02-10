@@ -15,6 +15,7 @@
       <EditorList v-if="selectedIndex === 0" @editor-selected="editorSelected" @save-editors="saveEditors" />
       <ConnectionList v-else-if="selectedIndex === 1" />
       <TutorialSidebar v-else-if="selectedIndex === 2" />
+      <TutorialSidebar v-else-if="selectedIndex === 3" />
     </div>
   </div>
 </template>
@@ -46,11 +47,18 @@ export default defineComponent({
           screen: 'editors',
         },
         {
+          name: "models",
+          tooltip: 'Models',
+          icon: "mdi mdi-set-center",
+          screen: 'models',
+        },
+        {
           name: "help",
           tooltip: 'Tutorial',
           icon: "mdi mdi-help",
           screen: 'tutorial',
         },
+
         //   {
         //     name: "Extensions",
         //     iconClass: "fas fa-puzzle-piece",

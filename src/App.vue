@@ -2,7 +2,7 @@
 // @ts-ignore
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
 import { DuckDBConnection, BigQueryOauthConnection } from 'trilogy-studio-core/connections';
-import { EditorLocalStorage } from 'trilogy-studio-core/data';
+import { LocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
 
 import { ref } from "vue";
@@ -19,7 +19,7 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER
 
 let resolver = new AxiosTrilogyResolver(apiUrl);
 
-let localEditors = new EditorLocalStorage('test-connection')
+let localEditors = new LocalStorage()
 
 let editorSources = [localEditors]
 

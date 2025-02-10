@@ -103,7 +103,7 @@
 import { inject } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import EditorCreator from './EditorCreator.vue'
-import EditorModel from '../models/editor';
+import EditorModel from '../editors/editor';
 import SidebarList from './SidebarList.vue';
 import Tooltip from './Tooltip.vue';
 export default {

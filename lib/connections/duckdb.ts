@@ -4,8 +4,8 @@ import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?ur
 import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
 import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 import BaseConnection from "./base";
-import { Results, ColumnType } from '../models/results'
-import type { ResultColumn } from '../models/results'
+import { Results, ColumnType } from '../editors/results'
+import type { ResultColumn } from '../editors/results'
 
 const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
     mvp: {

@@ -1,7 +1,7 @@
 // MotherDuckConnection.ts
 import BaseConnection from "./base";
 import { MDConnection } from '@motherduck/wasm-client';
-import { Results, ColumnType } from "../models/results";
+import { Results, ColumnType } from "../editors/results";
 
 
 export default class MotherDuckConnection extends BaseConnection {

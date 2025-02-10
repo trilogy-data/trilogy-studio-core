@@ -22,9 +22,11 @@
       <template v-else-if="activeScreen === 'tutorial'">
         <Tutorial/>
       </template>
-
+      <template v-else-if="activeScreen === 'models'">
+        <ModelView/>
+      </template>
       <template v-else>
-        <div>Help</div>
+        <div>How'd you get here?</div>
       </template>
 
     </sidebar-layout>
@@ -53,18 +55,25 @@ aside {
 }
 </style>
 <script lang="ts">
-
+import SidebarLayout from "../components/SidebarLayout.vue";
 import Sidebar from '../components/Sidebar.vue';
+// editor imports
 import Editor from "../components/Editor.vue";
 import DataTable from "../components/DataTable.vue";
-import SidebarLayout from "../components/SidebarLayout.vue";
-import Tutorial from "../components/Tutorial.vue";
 import VerticalSplitLayout from "../components/VerticalSplitLayout.vue";
 import ErrorMessage from "../components/ErrorMessage.vue"
-import { inject } from 'vue';
+
+// tutorial imports
+import Tutorial from "../components/Tutorial.vue";
+
+//model imports
+import ModelView from '../components/Models.vue';
+
 import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import AxiosResolver from '../stores/resolver.ts'
+
+import { inject } from 'vue';
 export default {
   name: "IDEComponent",
   data() {
@@ -81,6 +90,7 @@ export default {
     VerticalSplitLayout,
     ErrorMessage,
     Tutorial,
+    ModelView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver;

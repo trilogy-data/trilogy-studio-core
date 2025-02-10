@@ -1,6 +1,6 @@
 import BaseConnection from "./base";
-import { Results, ColumnType } from "../models/results";
-import type { ResultColumn } from "../models/results";
+import { Results, ColumnType } from "../editors/results";
+import type { ResultColumn } from "../editors/results";
 
 
 declare var google: any;

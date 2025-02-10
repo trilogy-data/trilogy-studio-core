@@ -28,41 +28,42 @@ export default {
             required: true
 
         },
-        editorSources: {
+        storageSources: {
             type: Array,
             required: false,
             default: () => []
         },
-        connectionSources: {
-            type: Array,
-            required: false,
-            default: () => []
-        }
     },
     setup(props) {
         // provide('connections', props.connections);
         provide('editorStore', props.editorStore);
         provide('connectionStore', props.connectionStore);
         provide('trilogyResolver', props.trilogyResolver)
-        provide('editorSources', props.editorSources)
-        provide('connectionSources', props.connectionSources)
-        for (let source of props.editorSources) {
+        provide('storageSources', props.storageSources)
+        for (let source of props.storageSources) {
             // @ts-ignore
             let editors = source.loadEditors();
             for (let editor of editors) {
                 props.editorStore.addEditor(editor)
             }
         }
+        for (let source of props.storageSources) {
+            // @ts-ignore
+            let connections = source.loadConnections();
+            for (let connection of connections) {
+                props.connectionStore.addConnection(connection)
+            }
+        }
         const saveEditors = () => {
-            for (let source of props.editorSources) {
+            for (let source of props.storageSources) {
                 // @ts-ignore
-                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
+                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.storage == source.type))
             }
         }
         const saveConnections= () => {
-            for (let source of props.connectionSources) {
+            for (let source of props.storageSources) {
                 // @ts-ignore
-                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
+                source.saveConnections(Object.values(props.connectionStore.connections).filter((connection) => connection.storage = source.type))
             }
         }
         provide('saveEditors', saveEditors,)

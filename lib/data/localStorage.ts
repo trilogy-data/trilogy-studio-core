@@ -1,4 +1,4 @@
-import EditorInterface from "../models/editor";
+import EditorInterface from "../editors/editor";
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from "../connections";
 import { reactive } from "vue";
 
