@@ -32,6 +32,11 @@ export default {
             type: Array,
             required: false,
             default: () => []
+        },
+        connectionSources: {
+            type: Array,
+            required: false,
+            default: () => []
         }
     },
     setup(props) {
@@ -40,6 +45,7 @@ export default {
         provide('connectionStore', props.connectionStore);
         provide('trilogyResolver', props.trilogyResolver)
         provide('editorSources', props.editorSources)
+        provide('connectionSources', props.connectionSources)
         for (let source of props.editorSources) {
             // @ts-ignore
             let editors = source.loadEditors();
@@ -59,7 +65,8 @@ export default {
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
             }
         }
-        provide('saveEditors', saveEditors, saveConnectionsc)
+        provide('saveEditors', saveEditors,)
+        provide('saveConnections', saveConnections,)
     },
     computed: {
     },

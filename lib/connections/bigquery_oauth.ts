@@ -16,6 +16,17 @@ export default class BigQueryOauthConnection extends BaseConnection {
         this.projectId = projectId;
     }
 
+    toJSON(): object {
+        return {
+            name: this.name,
+            type: this.type,
+            projectId: this.projectId,
+        };
+    }
+
+    static fromJSON(fields: { name: string; projectId: string }): BigQueryOauthConnection {
+        return new BigQueryOauthConnection(fields.name, fields.projectId);
+    }
     async connect(): Promise<void> {
         let fun = this;
         try {

@@ -15,6 +15,18 @@ export default class MotherDuckConnection extends BaseConnection {
 
     }
 
+    toJSON(): object {
+        return {
+            name: this.name,
+            type: this.type,
+            mdToken: this.mdToken,
+        };
+    }
+
+    static fromJSON(fields: { name: string; mdToken: string }): MotherDuckConnection {
+        return new MotherDuckConnection(fields.name, fields.mdToken);
+    }
+
     async connect() {
         this.connection = MDConnection.create({
             mdToken: this.mdToken

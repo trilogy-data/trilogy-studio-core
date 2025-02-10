@@ -31,13 +31,23 @@ async function createDuckDB() {
 export default class DuckDBConnection extends BaseConnection {
     // @ts-ignore
     private connection: duckdb.AsyncDuckDBConnection;
+    static fromJSON(fields: { name: string; }): DuckDBConnection {
+        return new DuckDBConnection(fields.name);
+    }
+
+    toJSON(): object {
+        return {
+            name: this.name,
+            type: this.type,
+        };
+    }
 
     async connect() {
         return createDuckDB().then((conn) => {
             this.connection = conn
         });
     }
-    
+
     constructor(name: string,) {
         super(name, 'duckdb');
     }

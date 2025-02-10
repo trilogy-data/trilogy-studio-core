@@ -1,1 +1,1 @@
-export { default as EditorLocalStorage } from './editor';
+export { default as LocalStorage } from './localStorage';

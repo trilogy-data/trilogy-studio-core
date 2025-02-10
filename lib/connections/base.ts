@@ -40,4 +40,10 @@ export default abstract class BaseConnection {
         }
 
     }
+
+    abstract toJSON(): object;
+
+    static fromJSON(fields:object) {
+        throw new Error("Method not implemented.");
+    }
 }
