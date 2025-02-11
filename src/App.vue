@@ -78,12 +78,11 @@ modelConfigs.forEach((config) => {
 
 
 
-
 </script>
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="modelConfigs"
+    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
       :storageSources="contentSources">
       <IDE />
     </Manager>

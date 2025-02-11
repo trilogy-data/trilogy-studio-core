@@ -58,7 +58,7 @@ export default defineComponent({
   setup() {
     const modelStore = inject<ModelConfigStoreType>('modelStore');
     if (!modelStore) {
-      throw new Error('Connection store is not provided!');
+      throw new Error('Model store is not provided!');
     }
     return { modelStore }
   },
@@ -68,6 +68,7 @@ export default defineComponent({
   },
   computed: {
     modelConfigs(): Record<string, ModelConfig> {
+      console.log(this.modelStore.models);
       return this.modelStore.models;
     },
   },
