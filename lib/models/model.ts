@@ -169,20 +169,45 @@ export class ModelParseResults {
         this.concepts = concepts
         this.datasources = datasources
     }
+
+    static fromJSON(data: any): ModelParseResults {
+        return new ModelParseResults(
+            data.concepts.map((concept: any) => new Concept(
+                concept.key,
+                concept.name,
+                concept.namespace,
+                concept.datatype,
+                concept.purpose,
+                concept.description,
+                concept.lineage
+            )),
+            data.datasources.map((datasource: any) => new Datasource(
+                datasource.name,
+                datasource.address,
+                datasource.fields,
+                datasource.grain
+            ))
+        );
+    }
 }
 
 
 
 export class ModelConfig {
     name: string;
+    storage: string;
     sources: string[];
     parseResults: ModelParseResults | null = null;
 
-    constructor(name: string, sources: string[], parseResults: ModelParseResults | null = null) {
+    constructor({ name, sources, storage, parseResults = null }: { name: string, sources: string[], storage: string, parseResults: ModelParseResults | null }) {
         this.name = name;
         this.sources = sources;
+        this.storage = storage;
         this.parseResults = parseResults;
     }
 
+    static fromJSON(data: any): ModelConfig {
+        return new ModelConfig({ name: data.name, storage: data.storage, sources: data.sources, parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null });
+    }
 
 }

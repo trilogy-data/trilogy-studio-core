@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "npm install ./lib -D && vite",
     "build": "vue-tsc -b  && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "peerDependencies": {
     "monaco-editor": "^0.52.2",
@@ -43,6 +44,7 @@
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.5.0",
     "vite-plugin-node-polyfills": "^0.23.0",
+    "vitest": "^3.0.5",
     "vue": "^3.5.13",
     "vue-tsc": "^2.2.0"
   }

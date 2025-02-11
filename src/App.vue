@@ -2,8 +2,9 @@
 // @ts-ignore
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
 import { DuckDBConnection, BigQueryOauthConnection } from 'trilogy-studio-core/connections';
+import { ModelConfig, ModelParseResults, Concept, Datasource, DataType, Purpose } from 'trilogy-studio-core/models';
 import { LocalStorage } from 'trilogy-studio-core/data';
-import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
+import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
 
 import { ref } from "vue";
 
@@ -19,11 +20,11 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER
 
 let resolver = new AxiosTrilogyResolver(apiUrl);
 
-let localEditors = new LocalStorage()
+let localStorage = new LocalStorage()
 
-let editorSources = [localEditors]
+let contentSources = [localStorage]
 
-let local = localEditors.loadEditors()
+let local = localStorage.loadEditors()
 
 if (Object.keys(local).length == 0) {
   const editor1 = new EditorModel(
@@ -35,23 +36,55 @@ if (Object.keys(local).length == 0) {
     { name: "Test Editor 2", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1') },
 
   )
-  localEditors.saveEditors([editor1, editor2])
+  localStorage.saveEditors([editor1, editor2])
 }
 
 let store = useEditorStore();
 
 let connections = useConnectionStore();
-
 connections.addConnection(connection);
 connections.addConnection(connection2);
+
+let models = useModelConfigStore();
+let modelConfigs = [
+  new ModelConfig(
+    {
+      name: "Config A",
+      storage: 'local',
+      sources: ["source1.sql", "source2.sql"],
+      parseResults: new ModelParseResults(
+        [
+          new Concept("concept1", "Concept 1", "namespace1", DataType.STRING, Purpose.KEY),
+          new Concept("concept2", "Concept 2", "namespace2", DataType.NUMBER, Purpose.METRIC),
+        ],
+        [
+          new Datasource("Datasource A", "address-a", [], []),
+          new Datasource("Datasource B", "address-b", [], []),
+        ]
+      )
+    }
+  ),
+  new ModelConfig({
+    name: "Config B",
+    storage: 'local',
+    sources: ["source3.sql"],
+    parseResults: null // No parse results for this example
+  }
+  ),
+] as ModelConfig[]
+modelConfigs.forEach((config) => {
+  models.addModelConfig(config)
+})
+
+
 
 
 </script>
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" ,
-      :editorSources="editorSources">
+    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="modelConfigs"
+      :storageSources="contentSources">
       <IDE />
     </Manager>
   </div>

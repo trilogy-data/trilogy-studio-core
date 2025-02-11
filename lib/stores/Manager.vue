@@ -6,9 +6,11 @@
 import IDE from "../views/IDE.vue";
 import type {EditorStoreType} from './editorStore';
 import type {ConnectionStoreType} from './connectionStore';
+import type {ModelConfigStoreType} from './modelStore';
 import QueryResolver from './resolver';
 import { provide } from 'vue';
 import type { PropType} from 'vue'
+import {Storage} from '../data'
 export default {
     name: "ContextManager",
     components: {
@@ -23,13 +25,17 @@ export default {
             type: Object as PropType<EditorStoreType>,
             required: true
         },
+        modelStore: {
+            type: Object as PropType<ModelConfigStoreType>,
+            required: true
+        },
         trilogyResolver: {
             type: QueryResolver,
             required: true
 
         },
         storageSources: {
-            type: Array,
+            type: Array<Storage>,
             required: false,
             default: () => []
         },
@@ -38,19 +44,20 @@ export default {
         // provide('connections', props.connections);
         provide('editorStore', props.editorStore);
         provide('connectionStore', props.connectionStore);
+        provide('modelStore', props.modelStore);
         provide('trilogyResolver', props.trilogyResolver)
         provide('storageSources', props.storageSources)
         for (let source of props.storageSources) {
             // @ts-ignore
             let editors = source.loadEditors();
-            for (let editor of editors) {
+            for (let editor of Object.values(editors)) {
                 props.editorStore.addEditor(editor)
             }
         }
         for (let source of props.storageSources) {
             // @ts-ignore
             let connections = source.loadConnections();
-            for (let connection of connections) {
+            for (let connection of Object.values(connections)) {
                 props.connectionStore.addConnection(connection)
             }
         }
@@ -66,8 +73,14 @@ export default {
                 source.saveConnections(Object.values(props.connectionStore.connections).filter((connection) => connection.storage = source.type))
             }
         }
+        const saveModels = () => {
+            for (let source of props.storageSources) {
+                source.saveModelConfig(Object.values(props.modelStore.models).filter((model) => model.storage == source.type))
+            }
+        }
         provide('saveEditors', saveEditors,)
         provide('saveConnections', saveConnections,)
+        provide('saveModels', saveModels,)
     },
     computed: {
     },

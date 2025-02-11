@@ -1,53 +1,58 @@
 import { defineStore } from 'pinia'
-import Model from '../models'
-import { Results } from "../editors/results";
+import { ModelConfig, ModelParseResults } from '../models'
 
-const useEditorStore = defineStore('editors', {
+const useModelConfigStore = defineStore('models', {
   state: () => ({
-    editors: {} as Record<string, Editor>, // Use an object instead of Map
+    models: {} as Record<string, ModelConfig>, // Use an object instead of Map
   }),
   getters: {
-    editorList: (state) => Object.keys(state.editors).map(key => state.editors[key])
+    modelList: (state) => Object.keys(state.models).map(key => state.models[key])
   },
   actions: {
-    newEditor(name: string, type: string, connection: string) {
-      let editor = new Editor({ name, type, connection, storage: 'local', contents: '' });
-      if (name in this.editors) {
-        throw Error(`Editor with ${name} already exists.`);
+    newModelConfig(name: string) {
+      let model = new ModelConfig({ name: name, storage: 'local', sources: ['abc'], parseResults: null });
+      if (name in this.models) {
+        throw Error(`ModelConfig with ${name} already exists.`);
       }
-      this.editors[editor.name] = editor; // Add editor using object notation
+      this.models[model.name] = model; // Add model using object notation
 
     },
-    addEditor(editor: Editor) {
-      this.editors[editor.name] = editor; // Add editor using object notation
+    addModelConfig(model: ModelConfig) {
+      this.models[model.name] = model; // Add model using object notation
     },
-    removeEditor(name: string) {
-      if (this.editors[name]) {
-        delete this.editors[name];
+    removeModelConfig(name: string) {
+      if (this.models[name]) {
+        delete this.models[name];
       } else {
-        throw new Error(`Editor with name "${name}" not found.`);
+        throw new Error(`ModelConfig with name "${name}" not found.`);
       }
     },
-    setEditorContents(name: string, contents: string) {
-      if (this.editors[name]) {
-        this.editors[name].contents = contents;
+    addModelConfigSource(name: string, contents: string) {
+      if (this.models[name]) {
+        this.models[name].sources.push(contents);
       } else {
-        throw new Error(`Editor with name "${name}" not found.`);
+        throw new Error(`ModelConfig with name "${name}" not found.`);
       }
     },
-    setEditorResults(name: string, results: Results) {
-      if (this.editors[name]) {
-        let editor = this.editors[name]
-        editor.results = results;
-        // clean error state
-        editor.setError(null);
+    removeModelConfigSource(name: string, contents: string) {
+      if (this.models[name]) {
+        let model = this.models[name]
+        model.sources = model.sources.filter(source => source !== contents);
       } else {
-        throw new Error(`Editor with name "${name}" not found.`);
+        throw new Error(`ModelConfig with name "${name}" not found.`);
+      }
+    },
+    setModelConfigParseResults(name: string, results: ModelParseResults) {
+      if (this.models[name]) {
+        let model = this.models[name]
+        model.parseResults = results;
+      } else {
+        throw new Error(`ModelConfig with name "${name}" not found.`);
       }
     }
   },
 });
 
-export type EditorStoreType = ReturnType<typeof useEditorStore>;
+export type ModelConfigStoreType = ReturnType<typeof useModelConfigStore>;
 
-export default useEditorStore;
+export default useModelConfigStore;

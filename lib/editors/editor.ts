@@ -69,8 +69,8 @@ export default class Editor implements EditorInterface {
     this.error = error;
   }
 
-  toJSON(): string {
-    return JSON.stringify({
+  toJSON(): object {
+    return {
       name: this.name,
       type: this.type,
       syntax: this.syntax,
@@ -85,7 +85,7 @@ export default class Editor implements EditorInterface {
       generated_sql: this.generated_sql,
       visible: this.visible,
       storage: this.storage,
-    });
+    };
   }
 
   static fromJSON(json: string | Partial<Editor>): Editor {

@@ -1,99 +1,112 @@
 import EditorInterface from "../editors/editor";
+import { ModelConfig } from "../models";
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from "../connections";
 import { reactive } from "vue";
+import AbstractStorage from './storage'
 
-export default class EditorLocalStorage {
+export default class LocalStorage extends AbstractStorage {
     private editorStorageKey: string;
     private connectionStorageKey: string;
+    private modelStorageKey: string
 
     constructor() {
+        super()
         this.editorStorageKey = "editors";
         this.connectionStorageKey = "connections";
+        this.modelStorageKey = "modelConfig";
     }
 
-    /**
-     * Save a single editor object to localStorage
-     * @param editor The editor object to save
-     */
     saveEditor(editor: EditorInterface): void {
         const editors = this.loadEditors();
         editors[editor.name] = editor;
-        localStorage.setItem(this.editorStorageKey, JSON.stringify(editors));
+        this.saveEditors(Object.values(editors));
     }
 
     saveEditors(editorsList: EditorInterface[]): void {
-        localStorage.setItem(this.editorStorageKey, JSON.stringify(editorsList));
+        localStorage.setItem(this.editorStorageKey, JSON.stringify(Object.values(editorsList).map((editor) => editor.toJSON())));
     }
 
-
-    /**
-     * Load all editors from localStorage
-     * @returns A record of all editor objects
-     */
     loadEditors(): Record<string, EditorInterface> {
         const storedData = localStorage.getItem(this.editorStorageKey);
         let raw = storedData ? JSON.parse(storedData) : [];
-        return raw.map((editor: EditorInterface) => reactive(EditorInterface.fromJSON(editor)));
+        // map the raw array to a Record<string, EditorInterface> with the editorInterface wrapped in reactive
+        return raw.reduce((acc: Record<string, EditorInterface>, editor: EditorInterface) => {
+            acc[editor.name] = reactive(EditorInterface.fromJSON(editor));
+            acc[editor.name].storage = 'local';
+            return acc;
+        }, {});
+
+    }
+    deleteEditor(name: string): void {
+        const editors = this.loadEditors();
+        if (editors[name]) {
+            delete editors[name];
+            this.saveEditors(Object.values(editors));
+        }
     }
 
-    saveConnections(connections: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>): void {
-        localStorage.setItem(this.connectionStorageKey, JSON.stringify(Object.values(connections)));
+    clearEditors(): void {
+        localStorage.removeItem(this.editorStorageKey);
+    }
+
+    hasEditor(name: string): boolean {
+        const editors = this.loadEditors();
+        // any editor has the property name == name
+        return Object.values(editors).some((editor) => editor.name === name);
+
+    }
+
+    saveConnections(connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>): void {
+        localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections));
     }
 
     loadConnections(): Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection> {
         const storedData = localStorage.getItem(this.connectionStorageKey);
         let raw = storedData ? JSON.parse(storedData) : [];
         // map raw into appropriate connection form using the connection.type field on the connection object
-
-        return raw.map((connection) => {
+        return raw.reduce((acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>, connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection) => {
             switch (connection.type) {
                 case "bigquery":
-                    return reactive(BigQueryOauthConnection.fromJSON(connection));
+                    acc[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection));
+                    break;
                 case "duckdb":
-                    return reactive(DuckDBConnection.fromJSON(connection));
+                    acc[connection.name] = reactive(DuckDBConnection.fromJSON(connection));
+                    break;
                 case "motherduck":
-                    return reactive(MotherDuckConnection.fromJSON(connection));
+                    acc[connection.name] = reactive(MotherDuckConnection.fromJSON(connection));
+                    break;
                 default:
                     throw new Error(`Unknown connection type: ${connection.type}`);
             }
-        });
+            return acc;
+        }, {});
     }
 
     deleteConnection(name: string): void {
         const connections = this.loadConnections();
         if (connections[name]) {
             delete connections[name];
-            localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections));
+            this.saveConnections(Object.values(connections));
         }
     }
 
+    // model config storage
 
-    /**
-     * Delete a specific editor by its name
-     * @param name The name of the editor to delete
-     */
-    deleteEditor(name: string): void {
-        const editors = this.loadEditors();
-        if (editors[name]) {
-            delete editors[name];
-            localStorage.setItem(this.editorStorageKey, JSON.stringify(editors));
-        }
+    loadModelConfig(): Record<string, ModelConfig> {
+        const storedData = localStorage.getItem(this.modelStorageKey);
+        let raw = storedData ? JSON.parse(storedData) : [];
+        return raw.map((modelConfig: ModelConfig) => reactive(ModelConfig.fromJSON(modelConfig)));
     }
 
-    /**
-     * Clear all editors from localStorage
-     */
-    clearEditors(): void {
-        localStorage.removeItem(this.editorStorageKey);
+    saveModelConfig(modelConfig: ModelConfig[]): void {
+        localStorage.setItem(this.modelStorageKey, JSON.stringify(modelConfig));
     }
 
-    /**
-     * Check if an editor exists in localStorage
-     * @param name The name of the editor
-     * @returns True if the editor exists, false otherwise
-     */
-    hasEditor(name: string): boolean {
-        const editors = this.loadEditors();
-        return name in editors;
+    clearModelConfig(): void {
+        localStorage.removeItem(this.modelStorageKey);
     }
+
+
+
+
 }
