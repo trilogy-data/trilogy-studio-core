@@ -46,6 +46,15 @@ const useModelConfigStore = defineStore('models', {
       if (this.models[name]) {
         let model = this.models[name]
         model.parseResults = results;
+        model.parseError = null;
+      } else {
+        throw new Error(`ModelConfig with name "${name}" not found.`);
+      }
+    },
+    setModelParseError(name: string, error: string) {
+      if (this.models[name]) {
+        let model = this.models[name]
+        model.parseError = error
       } else {
         throw new Error(`ModelConfig with name "${name}" not found.`);
       }

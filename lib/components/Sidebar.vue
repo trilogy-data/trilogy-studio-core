@@ -14,7 +14,7 @@
     <div class="sidebar-content">
       <EditorList v-if="selectedIndex === 0" @editor-selected="editorSelected" @save-editors="saveEditors" />
       <ConnectionList v-else-if="selectedIndex === 1" />
-      <TutorialSidebar v-else-if="selectedIndex === 2" />
+      <ModelSidebar v-else-if="selectedIndex === 2" />
       <TutorialSidebar v-else-if="selectedIndex === 3" />
     </div>
   </div>
@@ -25,15 +25,15 @@ import { defineComponent } from "vue";
 import EditorList from "./EditorList.vue";
 import ConnectionList from "./ConnectionList.vue";
 import TutorialSidebar from "./TutorialSidebar.vue";
+import ModelSidebar from "./ModelSidebar.vue";
 import trilogyIcon from "../static/trilogy.png";
 import Tooltip from "./Tooltip.vue";
+import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
 export default defineComponent({
   name: "Sidebar",
   data() {
-    return {
-      selectedIndex: 0, // Index of the currently selected sidebar item
-      trilogyIcon: trilogyIcon,
-      sidebarItems: [
+    let active = getDefaultValueFromHash('screen');
+    let sideBarItems = [
         {
           name: "edit",
           tooltip: 'Code Editors',
@@ -54,7 +54,7 @@ export default defineComponent({
         },
         {
           name: "help",
-          tooltip: 'Tutorial',
+          tooltip: 'Help/Guide',
           icon: "mdi mdi-help",
           screen: 'tutorial',
         },
@@ -64,7 +64,12 @@ export default defineComponent({
         //     iconClass: "fas fa-puzzle-piece",
         //     component: "Extensions", // Replace with your actual component
         //   },
-      ],
+      ]
+    return {
+      // index of the sidebarItem where the screen == active
+      selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
+      trilogyIcon: trilogyIcon,
+      sidebarItems: sideBarItems,
     };
   },
   components: {
@@ -72,6 +77,7 @@ export default defineComponent({
     ConnectionList,
     Tooltip,
     TutorialSidebar,
+    ModelSidebar,
 
   },
   computed: {

@@ -19,13 +19,13 @@
   
       <section id="models" class="tutorial-section">
         <h2>Models</h2>
-        <p>Models are the trilogy semantic model. When you run a trilogy command against a model, it will be able to import all included files and reference them.</p>
+        <p>Models are the Trilogy semantic layer. When you run a Trilogy command in an editor associated with a model, it will be able to import all included files and reference them.</p>
       </section>
   
       <section id="data-and-privacy" class="tutorial-section">
         <h2>Data and Privacy</h2>
-        <p>The content of a Trilogy IDE (or selected subset) + defined model source files will be sent to a remote server to generate SQL. This contains no other identifying information beyond the editor text.</p>
-        <p>All other operations will happen local to your machine.</p>
+        <p>The content of a Trilogy IDE (or selected subset) + defined model source files will be sent to a remote server to generate SQL. This contains no other identifying information beyond the editor text and associated model editor texts sent.</p>
+        <p>All other operations will be between your local machine and services you control, such as querying any database you configured.</p>
   
         <h3>Product Specific</h3>
         <h4>Google</h4>
@@ -37,7 +37,7 @@
   
       <section id="telemetry" class="tutorial-section">
         <h2>Telemetry</h2>
-        <p>We use goattrack to connect anonymized statistics about usage.</p>
+        <p>We use <a href="https://www.goatcounter.com/">GoatCounter</a> to connect anonymized statistics about usage.</p>
       </section>
     </div>
   </template>
@@ -52,6 +52,7 @@
   .tutorial-container {
     padding: 1rem;
     color: var(--text-color);
+    overflow-y:scroll;
   }
   
   .tutorial-section {

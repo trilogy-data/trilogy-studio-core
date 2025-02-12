@@ -127,12 +127,7 @@ export default defineComponent({
     //visible
     let visible = ref(false);
 
-    // Ref to store the submitted editor's details
-    const submittedEditor = ref<{
-      name: string;
-      type: string;
-      connection: string;
-    } | null>(null);
+
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
@@ -145,7 +140,6 @@ export default defineComponent({
     // Function to submit the editor details
     const submitEditorCreation = () => {
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
-        submittedEditor.value = { ...editorDetails.value }; // Save the submitted editor
         visible.value = false;
         editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection);
       }
@@ -157,7 +151,6 @@ export default defineComponent({
       connections,
       createEditor,
       submitEditorCreation,
-      submittedEditor
     };
   }
 });

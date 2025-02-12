@@ -19,7 +19,7 @@ from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
-from io_models import QueryInSchema, FormatQueryOutSchema, QueryOut, QueryOutColumn
+from io_models import QueryInSchema, FormatQueryOutSchema, QueryOut, QueryOutColumn, ModelInSchema, Model
 
 from logging import getLogger
 import click
@@ -29,7 +29,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
-from env_helpers import parse_env_from_full_model
+from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 
@@ -61,7 +61,7 @@ allowed_origins += [
     "http://localhost:8081",
     "http://localhost:8090",
 ]
-allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)"
+allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 
 
 app.add_middleware(
@@ -124,6 +124,11 @@ def generate_query(query: QueryInSchema):
         generated_sql=dialect.compile_statement(generated[-1]), columns=columns
     )
     return output
+
+@router.post("/parse_model")
+def parse_model(model: ModelInSchema)->Model:
+    env = parse_env_from_full_model(model)
+    return model_to_response(model.name, env)
 
 
 ## Core

@@ -1,11 +1,25 @@
 
 
 import axios from 'axios';
+import {Concept, Datasource} from '../models';
 
 interface QueryResponse {
     data: {
         generated_sql: string
     }
+}
+
+
+
+interface ModelResponse {
+    name: string,
+    concepts: Concept[]
+    datasources: Datasource[]
+}
+
+interface ContentInput{
+    alias:string,
+    contents:string
 }
 
 
@@ -35,6 +49,15 @@ export default class AxiosResolver {
             query: query,
             dialect: dialect
         }).catch((error: Error) => {
+            throw Error(this.getErrorMessage(error))
+        })
+    }
+
+    async resolveModel(name: string, sources: ContentInput[]): Promise<ModelResponse> {
+        return axios.post(`${this.address}/parse_model`, {
+            name: name,
+            sources: sources
+        }).then((response) => { return response.data }).catch((error: Error) => {
             throw Error(this.getErrorMessage(error))
         })
     }

@@ -8,12 +8,14 @@ export default class LocalStorage extends AbstractStorage {
     private editorStorageKey: string;
     private connectionStorageKey: string;
     private modelStorageKey: string
+    public type: string;
 
     constructor() {
         super()
         this.editorStorageKey = "editors";
         this.connectionStorageKey = "connections";
         this.modelStorageKey = "modelConfig";
+        this.type = 'local';
     }
 
     saveEditor(editor: EditorInterface): void {
@@ -23,6 +25,8 @@ export default class LocalStorage extends AbstractStorage {
     }
 
     saveEditors(editorsList: EditorInterface[]): void {
+
+        console.log(editorsList);
         localStorage.setItem(this.editorStorageKey, JSON.stringify(Object.values(editorsList).map((editor) => editor.toJSON())));
     }
 

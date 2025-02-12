@@ -165,7 +165,7 @@ export default defineComponent({
                     let conn = this.connectionStore.connections[this.editorData.connection];
                     var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
                     var text: string;
-                    if (selected) {
+                    if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {
                         text = editor.getModel()?.getValueInRange(selected) as string;
                         
                     }

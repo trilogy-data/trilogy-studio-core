@@ -14,8 +14,8 @@ class LineageItem(BaseModel):
 
 
 class UIConcept(BaseModel):
-    key: str
-    name: str
+    address: str
+    name:str
     namespace: str
     datatype: DataType | ListType | MapType | StructType
     purpose: Purpose

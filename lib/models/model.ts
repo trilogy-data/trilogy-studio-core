@@ -198,6 +198,7 @@ export class ModelConfig {
     storage: string;
     sources: string[];
     parseResults: ModelParseResults | null = null;
+    parseError: string | null = null;
 
     constructor({ name, sources, storage, parseResults = null }: { name: string, sources: string[], storage: string, parseResults: ModelParseResults | null }) {
         this.name = name;
