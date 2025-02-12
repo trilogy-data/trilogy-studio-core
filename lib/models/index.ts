@@ -4,5 +4,6 @@ export {
     Datasource,
     Concept,
     DataType,
+    ModelSource,
     Purpose,
 } from './model'

@@ -46,54 +46,6 @@ connections.addConnection(connection);
 connections.addConnection(connection2);
 
 let models = useModelConfigStore();
-let modelConfigs = [
-  new ModelConfig(
-    {
-      name: "Config A",
-      storage: 'local',
-      sources: ["source1.sql", "source2.sql"],
-      parseResults: new ModelParseResults(
-        [
-          new Concept("concept1", "Concept 1", "namespace1", DataType.STRING, Purpose.KEY),
-          new Concept("concept2", "Concept 2", "namespace2", DataType.NUMBER, Purpose.METRIC),
-        ],
-        [
-          new Datasource("Datasource A", "address-a", [], []),
-          new Datasource("Datasource B", "address-b", [], []),
-        ]
-      )
-    }
-  ),
-  new ModelConfig(
-    {
-      name: "Config C",
-      storage: 'local',
-      sources: ["source1.sql", "source2.sql"],
-      parseResults: new ModelParseResults(
-        [
-          new Concept("concept1", "Concept 1", "namespace1", DataType.STRING, Purpose.KEY),
-          new Concept("concept2", "Concept 2", "namespace2", DataType.NUMBER, Purpose.METRIC),
-        ],
-        [
-          new Datasource("Datasource A", "address-a", [], []),
-          new Datasource("Datasource B", "address-b", [], []),
-        ]
-      )
-    }
-  ),
-  new ModelConfig({
-    name: "Config B",
-    storage: 'local',
-    sources: ["source3.sql"],
-    parseResults: null // No parse results for this example
-  }
-  ),
-] as ModelConfig[]
-modelConfigs.forEach((config) => {
-  models.addModelConfig(config)
-})
-
-
 
 </script>
 

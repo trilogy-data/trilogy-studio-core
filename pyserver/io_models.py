@@ -77,5 +77,5 @@ class QueryOutColumn(BaseModel):
 
 
 class QueryOut(BaseModel):
-    generated_sql: str
+    generated_sql: str | None
     columns: List[QueryOutColumn] | None

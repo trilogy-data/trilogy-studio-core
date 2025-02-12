@@ -120,7 +120,7 @@ export enum Purpose {
 
 
 export class Concept {
-    key: string;
+    address: string;
     name: string;
     namespace: string;
     datatype: DataType | ListType | MapType | StructType;
@@ -129,7 +129,7 @@ export class Concept {
     lineage: LineageItem[];
 
     constructor(
-        key: string,
+        address:string,
         name: string,
         namespace: string,
         datatype: DataType | ListType | MapType | StructType,
@@ -137,7 +137,7 @@ export class Concept {
         description?: string,
         lineage: LineageItem[] = []
     ) {
-        this.key = key;
+        this.address = address;
         this.name = name;
         this.namespace = namespace;
         this.datatype = datatype;
@@ -192,15 +192,24 @@ export class ModelParseResults {
 }
 
 
+export class ModelSource {
+    editor:string;
+    alias:string;
+
+    constructor(editor:string, alias:string) {
+        this.editor = editor;
+        this.alias = alias;
+    }
+}
 
 export class ModelConfig {
     name: string;
     storage: string;
-    sources: string[];
+    sources: ModelSource[];
     parseResults: ModelParseResults | null = null;
     parseError: string | null = null;
 
-    constructor({ name, sources, storage, parseResults = null }: { name: string, sources: string[], storage: string, parseResults: ModelParseResults | null }) {
+    constructor({ name, sources, storage, parseResults = null }: { name: string, sources: ModelSource[], storage: string, parseResults: ModelParseResults | null }) {
         this.name = name;
         this.sources = sources;
         this.storage = storage;

@@ -19,6 +19,7 @@ from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
+from trilogy.authoring import SelectStatement, MultiSelectStatement
 from io_models import QueryInSchema, FormatQueryOutSchema, QueryOut, QueryOutColumn, ModelInSchema, Model
 
 from logging import getLogger
@@ -108,18 +109,23 @@ def generate_query(query: QueryInSchema):
     try:
         _, parsed = parse_text(safe_format_query(query.query), env)
         final = parsed[-1]
-        columns = [
-            QueryOutColumn(
-                name=x.address,
-                datatype=env.concepts[x.address].datatype,
-                purpose=env.concepts[x.address].purpose,
-            )
-            for x in final.output_components
-        ]
-        generated = dialect.generate_queries(environment=env, statements=[final])
+        if not isinstance(final, (SelectStatement, MultiSelectStatement)):
+            columns = []
+            generated = None
+        else:
+            columns = [
+                QueryOutColumn(
+                    name=x.address,
+                    datatype=env.concepts[x.address].datatype,
+                    purpose=env.concepts[x.address].purpose,
+                )
+                for x in final.output_components
+            ]
+            generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
-
+    if not generated:
+        return QueryOut(generated_sql=None, columns=columns)
     output = QueryOut(
         generated_sql=dialect.compile_statement(generated[-1]), columns=columns
     )
@@ -128,6 +134,12 @@ def generate_query(query: QueryInSchema):
 @router.post("/parse_model")
 def parse_model(model: ModelInSchema)->Model:
     env = parse_env_from_full_model(model)
+    # add all imports by default
+    for idx, source in enumerate(model.sources):
+        if source.alias:
+            env.parse(f'import import_{idx} as {source.alias};')
+        else:
+            env.parse(f'import import_{idx};')
     return model_to_response(model.name, env)
 
 

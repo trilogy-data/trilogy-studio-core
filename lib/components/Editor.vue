@@ -16,6 +16,7 @@ import * as monaco from 'monaco-editor';
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import type { EditorStoreType } from '../stores/editorStore.ts';
+import {Results} from '../editors/results'
 import AxiosResolver from '../stores/resolver.ts'
 
 export default defineComponent({
@@ -173,6 +174,10 @@ export default defineComponent({
                         text = editor.getValue();
                     }
                     this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type).then((response) => {
+                        if (!response.data.generated_sql){
+                            this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
+                            return
+                        }
                         conn.query(response.data.generated_sql).then((sql_response) => {
                             this.editorStore.setEditorResults(this.editorName, sql_response)
                         }).catch((error) => {

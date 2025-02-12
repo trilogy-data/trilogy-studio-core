@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ModelConfig, ModelParseResults } from '../models'
+import { ModelConfig, ModelParseResults, ModelSource } from '../models'
 
 const useModelConfigStore = defineStore('models', {
   state: () => ({
@@ -27,7 +27,7 @@ const useModelConfigStore = defineStore('models', {
         throw new Error(`ModelConfig with name "${name}" not found.`);
       }
     },
-    addModelConfigSource(name: string, contents: string) {
+    addModelConfigSource(name: string, contents:ModelSource) {
       if (this.models[name]) {
         this.models[name].sources.push(contents);
       } else {
@@ -37,7 +37,7 @@ const useModelConfigStore = defineStore('models', {
     removeModelConfigSource(name: string, contents: string) {
       if (this.models[name]) {
         let model = this.models[name]
-        model.sources = model.sources.filter(source => source !== contents);
+        model.sources = model.sources.filter(source => source.alias !== contents);
       } else {
         throw new Error(`ModelConfig with name "${name}" not found.`);
       }
@@ -55,6 +55,7 @@ const useModelConfigStore = defineStore('models', {
       if (this.models[name]) {
         let model = this.models[name]
         model.parseError = error
+        model.parseResults = null
       } else {
         throw new Error(`ModelConfig with name "${name}" not found.`);
       }

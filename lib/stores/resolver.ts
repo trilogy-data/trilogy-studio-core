@@ -40,14 +40,15 @@ export default class AxiosResolver {
         return base;
     }
 
-    async resolve_query(query: string, dialect: string, type: string): Promise<QueryResponse> {
+    async resolve_query(query: string, dialect: string, type: string, sources: ContentInput[] | null = null): Promise<QueryResponse> {
         if (type === 'sql') {
             // return it as is
             return { 'data': { 'generated_sql': query } }
         }
         return axios.post(`${this.address}/generate_query`, {
             query: query,
-            dialect: dialect
+            dialect: dialect,
+            sources: sources || []
         }).catch((error: Error) => {
             throw Error(this.getErrorMessage(error))
         })

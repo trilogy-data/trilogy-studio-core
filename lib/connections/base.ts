@@ -4,7 +4,8 @@ import { Results } from '../editors/results'
 export default abstract class BaseConnection {
     name: string;
     type: string;
-    storage: String;
+    storage: string;
+    model: string| null =  null;
     connected: boolean;
     error: string | null = null;
 
@@ -29,6 +30,10 @@ export default abstract class BaseConnection {
     abstract query(sql: string): Promise<Results>;
 
     abstract connect(): Promise<void>;
+
+    setModel(model: string) {
+        this.model = model;
+    }
 
     async reset() {
         try {

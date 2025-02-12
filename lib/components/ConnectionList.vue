@@ -14,6 +14,28 @@
         <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i></tooltip>
         <span class="padding-left">{{ connection.name }}
 
+          <div class="flex relative-container">
+            <button class="button" @click="connectionModelVisible[connection.name] = true">
+              {{connection.model || 'Set Model'}}
+            </button>
+
+            <div v-if="connectionModelVisible[connection.name]" class="absolute-form">
+              <form @submit.prevent="submitConnectionModel(connection.name)">
+                <div>
+                  <label for="connection-model">Model</label>
+                  <select v-model="connectionDetails.model" id="connection-model" required>
+                    <option v-for="model in modelList" :key="model" :value="model">
+                      {{ model }}
+                    </option>
+                  </select>
+                </div>
+
+                <button type="submit">Submit</button>
+                <button type="button" @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Cancel</button>
+              </form>
+            </div>
+          </div>
+
           <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
           </tooltip>
           <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
@@ -66,8 +88,9 @@
 
 
 <script lang="ts">
-import { inject } from 'vue';
+import { inject, ref } from 'vue';
 import type { ConnectionStoreType } from '../stores/connectionStore';
+import type { ModelConfigStoreType } from '../stores/modelStore';
 import ConnectionCreator from './ConnectionCreator.vue'
 import Connection from '../connections/base';
 import SidebarList from './SidebarList.vue';
@@ -79,16 +102,31 @@ export default {
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
-    if (!connectionStore) {
+    const modelStore = inject<ModelConfigStoreType>('modelStore');
+    if (!connectionStore || !modelStore) {
       throw new Error('Connection store is not provided!');
     }
-    return { connectionStore }
+    const connectionModelVisible = ref<Record<string, boolean>>({});
+    const connectionDetails = ref({
+      model: '',
+    });
+
+    const submitConnectionModel = (connection: string) => {
+      if (connectionDetails.value.model) {
+        connectionStore.connections[connection].model = connectionDetails.value.model;
+      }
+    };
+
+    return { connectionStore, connectionModelVisible, connectionDetails, submitConnectionModel, modelStore };
 
   },
   computed: {
     connections() {
-      return Object.keys(this.connectionStore.connections).map((name) => this.connectionStore.connections[name]);
-    }
+      return Object.values(this.connectionStore.connections);
+    },
+    modelList() {
+      return Object.keys(this.modelStore.models);
+    } 
   },
   components: {
     ConnectionCreator,

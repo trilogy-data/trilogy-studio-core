@@ -15,7 +15,10 @@
             <div v-if="newSourceVisible[index]" class="absolute-form">
               <form @submit.prevent="submitSourceAddition(index)">
                 <div>
-                  <label for="connection-name">Editors</label>
+                  <label for="connection-name">Alias</label>
+                  <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
+                  <label for="connection-name">Editor</label>
+
                   <select v-model="sourceDetails.name" id="editor-name" required>
                     <option v-for="editor in editorList" :key="editor" :value="editor">
                       {{ editor }}
@@ -31,13 +34,18 @@
           <button class="button" @click="clearSources(index)">
             Clear Sources
           </button>
+          <button class="button" @click="remove(index)">
+            Delete
+          </button>
         </div>
         <ul class="source-list">
           <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-            {{ source }}
+            {{ source.alias }} ({{ source.editor }})
           </li>
         </ul>
-
+        <div v-if="config.parseError" class="parse-error">
+          <em>Error fetching parse results: {{ config.parseError }}</em>
+        </div>
         <div v-if="config.parseResults" class="parse-results">
           <div>
             <div class="toggle-concepts" @click="toggleConcepts(index)">
@@ -45,11 +53,7 @@
             </div>
           </div>
           <div v-show="isExpanded[index]" class="concepts-list">
-            <ul>
-              <li v-for="(concept, conceptIndex) in config.parseResults.concepts" :key="conceptIndex">
-                {{ concept.name }} ({{ concept.datatype }})
-              </li>
-            </ul>
+            <ModelConcept :config = "config.parseResults"/>
           </div>
           <div class="datasources">
             <strong>Datasources:</strong>
@@ -159,6 +163,25 @@
   margin-top: 16px;
   color: #999;
 }
+
+input,
+select {
+  font-size: 12px;
+  border: 1px solid #ccc;
+  /* Light gray border for inputs */
+  border-radius: 0;
+  /* Sharp corners */
+  width: 95%;
+  /* Full width of the container */
+}
+
+input:focus,
+select:focus {
+  border-color: #4b4b4b;
+  /* Dark gray border on focus */
+  outline: none;
+}
+
 </style>
 
 <script lang="ts">
@@ -170,15 +193,18 @@ import {
   Concept,
   DataType,
   Purpose,
+  ModelSource
 } from "../models"; // Adjust the import path
 import type { ModelConfigStoreType } from "../stores/modelStore";
 import type { EditorStoreType } from "../stores/editorStore";
+import ModelConcept from "./ModelConcept.vue";
 import AxiosResolver from "../stores/resolver";
 export default defineComponent({
   name: "ModelConfigViewer",
   setup() {
     const sourceDetails = ref({
       name: '',
+      alias: '',
     });
 
     const modelStore = inject<ModelConfigStoreType>("modelStore");
@@ -195,16 +221,37 @@ export default defineComponent({
 
     const newSourceVisible = ref<Record<string, boolean>>({});
 
+    const fetchParseResults = (model: string) => {
+      trilogyResolver
+        .resolveModel(model, modelStore.models[model].sources.map((source) => ({ alias: source.alias, contents: (editorStore.editors[source.editor] || { contents: "" }).contents })))
+        .then((parseResults) => {
+          modelStore.setModelConfigParseResults(model, parseResults);
+        })
+        .catch((error) => {
+          console.log(error)
+          modelStore.setModelParseError(model, error.message);
+          console.error("Failed to fetch parse results:", error);
+        });
+    }
 
     // Function to submit the editor details
     const submitSourceAddition = (model: string) => {
       if (sourceDetails.value.name) {
         let target = modelStore.models[model];
-        target.sources.push(sourceDetails.value.name);
+        // check if it's already in the sources (sources are {name: string, alias: string}[])
+        if (target.sources.some((source) => source.editor === sourceDetails.value.name)) {
+          console.error('Source already exists in model');
+        } else {
+          target.sources.push({ alias: sourceDetails.value.alias, editor: sourceDetails.value.name });
+          fetchParseResults(model);
+        }
       }
     };
 
-    return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver };
+    return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver, fetchParseResults };
+  },
+  components: {
+    ModelConcept,
   },
   computed: {
     modelConfigs(): Record<string, ModelConfig> {
@@ -215,36 +262,12 @@ export default defineComponent({
     },
   },
   methods: {
-    fetchParseResults(model: string) {
-      this.trilogyResolver
-        .resolveModel(model, this.modelConfigs[model].sources.map((source) => ({ alias: source, contents: (this.editorStore.editors[source] || { contents: "" }).contents })))
-        .then((parseResults) => {
-          this.modelStore.setModelConfigParseResults(model, parseResults);
-        })
-        .catch((error) => {
-          this.modelStore.setModelParseError(model, error.message);
-          console.error("Failed to fetch parse results:", error);
-        });
-      const mockParseResults = new ModelParseResults(
-        [
-          new Concept(
-            "concept3",
-            "Concept 3",
-            "namespace3",
-            DataType.BOOL,
-            Purpose.PROPERTY
-          ),
-        ],
-        [new Datasource("Datasource C", "address-c", [], [])]
-      );
-      this.modelStore.setModelConfigParseResults(model, mockParseResults);
-    },
-    addNewSource(model: string) {
-      const newSource = `source${Math.random().toFixed(3).slice(2)}.sql`;
-      this.modelConfigs[model].sources.push(newSource);
-    },
     clearSources(model: string) {
       this.modelConfigs[model].sources = [];
+      this.fetchParseResults(model);
+    },
+    remove(model: string) {
+      this.modelStore.removeModelConfig(model);
     },
   },
 });

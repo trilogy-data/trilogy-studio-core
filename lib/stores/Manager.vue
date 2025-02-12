@@ -48,14 +48,12 @@ export default {
         provide('trilogyResolver', props.trilogyResolver)
         provide('storageSources', props.storageSources)
         for (let source of props.storageSources) {
-            // @ts-ignore
             let editors = source.loadEditors();
             for (let editor of Object.values(editors)) {
                 props.editorStore.addEditor(editor)
             }
         }
         for (let source of props.storageSources) {
-            // @ts-ignore
             let connections = source.loadConnections();
             for (let connection of Object.values(connections)) {
                 props.connectionStore.addConnection(connection)
@@ -63,20 +61,22 @@ export default {
         }
         const saveEditors = () => {
             for (let source of props.storageSources) {
-                // @ts-ignore
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.storage == source.type))
             }
+            console.log('Editors saved')
         }
         const saveConnections= () => {
             for (let source of props.storageSources) {
                 // @ts-ignore
                 source.saveConnections(Object.values(props.connectionStore.connections).filter((connection) => connection.storage = source.type))
             }
+            console.log('Connections saved')
         }
         const saveModels = () => {
             for (let source of props.storageSources) {
                 source.saveModelConfig(Object.values(props.modelStore.models).filter((model) => model.storage == source.type))
             }
+            console.log('Models saved')
         }
         provide('saveEditors', saveEditors,)
         provide('saveConnections', saveConnections,)

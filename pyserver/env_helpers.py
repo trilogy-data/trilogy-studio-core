@@ -125,11 +125,7 @@ def parse_env_from_full_model(input: ModelInSchema | None) -> Environment:
         content={f'import_{idx}': source.contents for idx,  source in enumerate(input.sources)}
     )
     env = Environment(config=EnvironmentOptions(import_resolver=resolver))
-    for idx, source in enumerate(input.sources):
-        if source.alias:
-            env.parse(f'import import_{idx} as {source.alias};')
-        else:
-            env.parse(f'import import_{idx};')
+
     return env
 
 

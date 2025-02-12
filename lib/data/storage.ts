@@ -3,6 +3,11 @@ import { ModelConfig } from "../models";
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from "../connections";
 
 export default abstract class AbstractStorage {
+    public type: string;
+
+    constructor() {
+        this.type = 'abstract';
+    }
 
     abstract saveEditor(editor: EditorInterface): void;
     abstract saveEditors(editorsList: EditorInterface[]): void;
