@@ -1,8 +1,10 @@
 <template>
   <sidebar-list title="Connections">
     <template #actions>
-      <connection-creator />
-      <button @click="saveConnections()">Save</button>
+      <div class="button-container">
+        <connection-creator />
+        <loading-button :action="saveConnections">Save</loading-button>
+      </div>
     </template>
     <!-- <button @click="login">Login Using Google</button> -->
     <li v-for="connection in connections" :key="connection.name"
@@ -12,12 +14,15 @@
         </tooltip>
         <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
         </tooltip>
-        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i></tooltip>
-        <span class="padding-left">{{ connection.name }}
 
+        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i>
+        </tooltip>
+
+        <div class="button-container">
+          <span class="padding-left">{{ connection.name }}</span>
           <div class="flex relative-container">
             <button class="button" @click="connectionModelVisible[connection.name] = true">
-              {{connection.model || 'Set Model'}}
+              {{ connection.model || 'Set Model' }}
             </button>
 
             <div v-if="connectionModelVisible[connection.name]" class="absolute-form">
@@ -32,7 +37,8 @@
                 </div>
 
                 <button type="submit">Submit</button>
-                <button type="button" @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Cancel</button>
+                <button type="button"
+                  @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Cancel</button>
               </form>
             </div>
           </div>
@@ -42,7 +48,8 @@
           <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
               class="mdi mdi-alert-circle-outline red"></i></tooltip>
           <loading-button :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button>
-        </span>
+        </div>
+
 
       </div>
     </li>
@@ -115,6 +122,7 @@ import Connection from '../connections/base';
 import SidebarList from './SidebarList.vue';
 import LoadingButton from './LoadingButton.vue';
 import Tooltip from './Tooltip.vue';
+
 export default {
   name: "ConnectionList",
   props: {
@@ -122,7 +130,7 @@ export default {
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const modelStore = inject<ModelConfigStoreType>('modelStore');
-    const saveConnections = inject('saveConnections');
+    const saveConnections = inject<Function>('saveConnections');
     if (!connectionStore || !modelStore) {
       throw new Error('Connection store is not provided!');
     }
@@ -135,6 +143,7 @@ export default {
       if (connectionDetails.value.model) {
         connectionStore.connections[connection].model = connectionDetails.value.model;
       }
+      connectionModelVisible.value[connection] = false;
     };
 
     return { connectionStore, connectionModelVisible, connectionDetails, submitConnectionModel, saveConnections, modelStore };
@@ -146,7 +155,7 @@ export default {
     },
     modelList() {
       return Object.keys(this.modelStore.models);
-    } 
+    }
   },
   components: {
     ConnectionCreator,

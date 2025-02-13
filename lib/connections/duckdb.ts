@@ -43,6 +43,7 @@ export default class DuckDBConnection extends BaseConnection {
         return {
             name: this.name,
             type: this.type,
+            model: this.model,
         };
     }
 

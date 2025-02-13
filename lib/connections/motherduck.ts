@@ -19,6 +19,7 @@ export default class MotherDuckConnection extends BaseConnection {
         return {
             name: this.name,
             type: this.type,
+            model: this.model,
             mdToken: this.mdToken,
         };
     }

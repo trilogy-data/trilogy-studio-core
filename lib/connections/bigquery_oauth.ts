@@ -20,6 +20,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
         return {
             name: this.name,
             type: this.type,
+            model: this.model,
             projectId: this.projectId,
         };
     }

@@ -61,6 +61,7 @@ export default class LocalStorage extends AbstractStorage {
     }
 
     saveConnections(connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>): void {
+        console.log(JSON.stringify(connections))
         localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections));
     }
 
@@ -99,10 +100,13 @@ export default class LocalStorage extends AbstractStorage {
     loadModelConfig(): Record<string, ModelConfig> {
         const storedData = localStorage.getItem(this.modelStorageKey);
         let raw = storedData ? JSON.parse(storedData) : [];
+        console.log(storedData)
         return raw.map((modelConfig: ModelConfig) => reactive(ModelConfig.fromJSON(modelConfig)));
     }
 
     saveModelConfig(modelConfig: ModelConfig[]): void {
+        console.log('saving models')
+        console.log(JSON.stringify(modelConfig))
         localStorage.setItem(this.modelStorageKey, JSON.stringify(modelConfig));
     }
 

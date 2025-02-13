@@ -183,17 +183,12 @@ select:focus {
 import { defineComponent, inject, ref } from "vue";
 import {
   ModelConfig,
-  ModelParseResults,
-  Datasource,
-  Concept,
-  DataType,
-  Purpose,
-  ModelSource
 } from "../models"; // Adjust the import path
 import type { ModelConfigStoreType } from "../stores/modelStore";
 import type { EditorStoreType } from "../stores/editorStore";
 import ModelConcept from "./ModelConcept.vue";
 import AxiosResolver from "../stores/resolver";
+import LoadingButton  from "./LoadingButton.vue";
 export default defineComponent({
   name: "ModelConfigViewer",
   setup() {
@@ -247,6 +242,7 @@ export default defineComponent({
   },
   components: {
     ModelConcept,
+    LoadingButton,
   },
   computed: {
     modelConfigs(): Record<string, ModelConfig> {

@@ -3,7 +3,7 @@
         <h2 class="">Models</h2>
         <div class="button-container">
             <model-create />
-            <button @click="saveModels()">Save</button>
+            <loading-button :action="saveModels">Save</loading-button>
         </div>
         <ul>
             <li v-for="(config, index) in modelConfigs" :key="index" class="mb-6 border rounded-lg p-4">
@@ -20,11 +20,12 @@ import {
 } from "../models"; // Adjust the import path
 import type { ModelConfigStoreType } from "../stores/modelStore";
 import ModelCreate from "./ModelCreate.vue";
+import LoadingButton  from "./LoadingButton.vue";
 export default defineComponent({
     name: "ModelConfigViewer",
     setup() {
         const modelStore = inject<ModelConfigStoreType>('modelStore');
-        const saveModels = inject('saveModels');
+        const saveModels = inject<Function>('saveModels');
         if (!modelStore || !saveModels) {
             throw new Error('Model store is not provided!');
         }
@@ -32,6 +33,7 @@ export default defineComponent({
     },
     components: {
         ModelCreate,
+        LoadingButton,
     },
     data() {
         return {

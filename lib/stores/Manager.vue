@@ -4,13 +4,13 @@
 
 <script lang="ts">
 import IDE from "../views/IDE.vue";
-import type {EditorStoreType} from './editorStore';
-import type {ConnectionStoreType} from './connectionStore';
-import type {ModelConfigStoreType} from './modelStore';
+import type { EditorStoreType } from './editorStore';
+import type { ConnectionStoreType } from './connectionStore';
+import type { ModelConfigStoreType } from './modelStore';
 import QueryResolver from './resolver';
 import { provide } from 'vue';
-import type { PropType} from 'vue'
-import {Storage} from '../data'
+import type { PropType } from 'vue'
+import { Storage } from '../data'
 export default {
     name: "ContextManager",
     components: {
@@ -59,13 +59,19 @@ export default {
                 props.connectionStore.addConnection(connection)
             }
         }
+        for (let source of props.storageSources) {
+            let connections = source.loadModelConfig();
+            for (let modelConfig of Object.values(connections)) {
+                props.modelStore.addModelConfig(modelConfig)
+            }
+        }
         const saveEditors = () => {
             for (let source of props.storageSources) {
                 source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.storage == source.type))
             }
             console.log('Editors saved')
         }
-        const saveConnections= () => {
+        const saveConnections = () => {
             for (let source of props.storageSources) {
                 // @ts-ignore
                 source.saveConnections(Object.values(props.connectionStore.connections).filter((connection) => connection.storage = source.type))
