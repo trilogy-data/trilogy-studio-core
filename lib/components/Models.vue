@@ -5,7 +5,7 @@
         <h3 class="card-title">{{ config.name }}</h3>
         <div class="button-container">
           <button class="button" @click="fetchParseResults(index)">
-            Fetch Parse Results
+            Parse
           </button>
           <div class="flex relative-container">
             <button class="button" @click="newSourceVisible[index] = true">
@@ -82,8 +82,7 @@
 }
 
 .card {
-  background-color: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -107,11 +106,7 @@
   color: #666;
 }
 
-.button-container {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
+
 
 .button {
   border: none;
@@ -156,12 +151,12 @@
 .datasources ul {
   list-style: disc;
   padding-left: 20px;
-  color: #666;
+  color: var(--text-faint);
 }
 
 .no-results {
   margin-top: 16px;
-  color: #999;
+  color: var(--text-faint);
 }
 
 input,

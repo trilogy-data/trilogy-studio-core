@@ -17,7 +17,7 @@ interface ModelResponse {
     datasources: Datasource[]
 }
 
-interface ContentInput{
+export interface ContentInput{
     alias:string,
     contents:string
 }
@@ -48,7 +48,7 @@ export default class AxiosResolver {
         return axios.post(`${this.address}/generate_query`, {
             query: query,
             dialect: dialect,
-            sources: sources || []
+            full_model: {name:'', sources: sources || []}
         }).catch((error: Error) => {
             throw Error(this.getErrorMessage(error))
         })

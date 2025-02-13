@@ -16,6 +16,7 @@
 :root {
 
   --text-color: #FFFFFF;
+  --special-text: #cc6900;
   color: var(--text-color);
 
   --sidebar-selector-bg: #3C3C3C;
@@ -35,6 +36,8 @@
   --border-light: #4b4b4b;
   --button-bg: #4D4D4D;
   --button-mouseover: #3C3C3C;
+
+
   a:hover {
     color: #535bf2;
   }
@@ -45,6 +48,7 @@
 @media (prefers-color-scheme: light) {
   :root {
     --text-color: #333333;
+    --special-text: #0066cc;
     color: var(--text-color);
 
     --sidebar-selector-bg: #E8E8E8;
@@ -97,6 +101,12 @@ button:hover {
     /* Lighter gray when hovered */
 }
 
+.button-container {
+  display: flex;
+  gap: 8px;
+  /* margin-bottom: 8px; */
+}
+
 button {
   height: 24px;
   border-radius: 2px;
@@ -122,17 +132,19 @@ button:focus-visible {
 
 .relative-container {
   position: relative; /* Ensures the absolute positioning is relative to this container */
+  padding: 0px;
 }
 
 .absolute-form {
   position: absolute;
   top: 100%; /* Position below the button */
-  left: 0; /* Align with the button horizontally */
-  background-color: white; /* For contrast and visibility */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-  border: 1px solid #ccc; /* Optional: Border for better separation */
-  z-index: 1000; /* Ensure it appears in front of other content */
+  left: 0px; 
+  background-color: var(--button-bg);
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); 
+  border: 1px solid var(--border); 
+  z-index: 1000; 
   width: 250px;
   font-size: 15px;
   text-align: center;
 }
+

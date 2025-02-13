@@ -34,37 +34,9 @@
 
 <style scoped>
 
-.relative-container {
-  position: relative; /* Ensures the absolute positioning is relative to this container */
-}
-
-.absolute-form {
-  position: absolute;
-  top: 100%; /* Position below the button */
-  left: 0; /* Align with the button horizontally */
-  background-color: white; /* For contrast and visibility */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-  border: 1px solid #ccc; /* Optional: Border for better separation */
-  z-index: 1000; /* Ensure it appears in front of other content */
-  width: 250px;
-  font-size: 15px;
-  text-align: center;
-}
-
 
 .button {
   flex: 1;
-}
-
-form {
-  /* margin-top: 20px; */
-  /* padding: 20px; */
-  background-color: #e0e0e0;
-  /* Gray background for form */
-  border: 1px solid #ddd;
-  /* Light gray border */
-  border-radius: 0;
-  /* Sharp corners */
 }
 
 

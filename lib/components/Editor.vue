@@ -16,8 +16,10 @@ import * as monaco from 'monaco-editor';
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import type { EditorStoreType } from '../stores/editorStore.ts';
+import type { ModelConfigStoreType } from '../stores/modelStore.ts';
 import {Results} from '../editors/results'
-import AxiosResolver from '../stores/resolver.ts'
+import AxiosResolver from '../stores/resolver'
+import type {ContentInput} from '../stores/resolver'
 
 export default defineComponent({
     name: 'Editor',
@@ -76,11 +78,12 @@ export default defineComponent({
 
         const connectionStore = inject<ConnectionStoreType>('connectionStore');
         const editorStore = inject<EditorStoreType>('editorStore');
+        const modelStore = inject<ModelConfigStoreType>('modelStore');
         const trilogyResolver = inject<AxiosResolver>('trilogyResolver');
-        if (!editorStore || !connectionStore || !trilogyResolver) {
+        if (!editorStore || !connectionStore || !trilogyResolver || !modelStore) {
             throw new Error('Editor store and connection store and trilogy resolver are not provided!');
         }
-        return { connectionStore, editorStore, trilogyResolver};
+        return { connectionStore, modelStore, editorStore, trilogyResolver};
     },
     mounted() {
         this.createEditor()
@@ -164,6 +167,16 @@ export default defineComponent({
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
                 if (!this.loading) {
                     let conn = this.connectionStore.connections[this.editorData.connection];
+                    var sources:ContentInput[] = [];
+                    if (conn.model) {
+                        sources = this.modelStore.models[conn.model].sources.map((source) => {
+                            return {
+                                alias: source.alias,
+                                contents: this.editorStore.editors[source.editor].contents
+                            }
+                        });
+                    }
+                    console.log(sources)
                     var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
                     var text: string;
                     if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {
@@ -173,7 +186,7 @@ export default defineComponent({
                     else {
                         text = editor.getValue();
                     }
-                    this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type).then((response) => {
+                    this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type, sources).then((response) => {
                         if (!response.data.generated_sql){
                             this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
                             return

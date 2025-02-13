@@ -122,7 +122,7 @@ def parse_env_from_full_model(input: ModelInSchema | None) -> Environment:
         return Environment()
     
     resolver = DictImportResolver(
-        content={f'import_{idx}': source.contents for idx,  source in enumerate(input.sources)}
+        content={source.alias: source.contents for idx,  source in enumerate(input.sources)}
     )
     env = Environment(config=EnvironmentOptions(import_resolver=resolver))
 

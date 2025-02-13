@@ -2,6 +2,7 @@
   <sidebar-list title="Connections">
     <template #actions>
       <connection-creator />
+      <button @click="saveConnections()">Save</button>
     </template>
     <!-- <button @click="login">Login Using Google</button> -->
     <li v-for="connection in connections" :key="connection.name"
@@ -62,6 +63,24 @@
   padding-left: 5px;
 }
 
+input,
+select {
+  font-size: 12px;
+  border: 1px solid #ccc;
+  /* Light gray border for inputs */
+  border-radius: 0;
+  /* Sharp corners */
+  width: 95%;
+  /* Full width of the container */
+}
+
+input:focus,
+select:focus {
+  border-color: #4b4b4b;
+  /* Dark gray border on focus */
+  outline: none;
+}
+
 .connection-item {
   display: flex;
   justify-content: flex-start;
@@ -103,6 +122,7 @@ export default {
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const modelStore = inject<ModelConfigStoreType>('modelStore');
+    const saveConnections = inject('saveConnections');
     if (!connectionStore || !modelStore) {
       throw new Error('Connection store is not provided!');
     }
@@ -117,7 +137,7 @@ export default {
       }
     };
 
-    return { connectionStore, connectionModelVisible, connectionDetails, submitConnectionModel, modelStore };
+    return { connectionStore, connectionModelVisible, connectionDetails, submitConnectionModel, saveConnections, modelStore };
 
   },
   computed: {

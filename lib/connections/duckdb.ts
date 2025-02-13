@@ -31,8 +31,12 @@ async function createDuckDB() {
 export default class DuckDBConnection extends BaseConnection {
     // @ts-ignore
     private connection: duckdb.AsyncDuckDBConnection;
-    static fromJSON(fields: { name: string; }): DuckDBConnection {
-        return new DuckDBConnection(fields.name);
+    static fromJSON(fields: { name: string; model:string| null }): DuckDBConnection {
+        let base = new DuckDBConnection(fields.name);
+        if (fields.model) {
+            base.model = fields.model;
+        }
+        return base;
     }
 
     toJSON(): object {

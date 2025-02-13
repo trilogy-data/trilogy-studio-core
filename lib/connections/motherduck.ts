@@ -23,8 +23,12 @@ export default class MotherDuckConnection extends BaseConnection {
         };
     }
 
-    static fromJSON(fields: { name: string; mdToken: string }): MotherDuckConnection {
-        return new MotherDuckConnection(fields.name, fields.mdToken);
+    static fromJSON(fields: { name: string; mdToken: string, model:string | null }): MotherDuckConnection {
+        let base = new MotherDuckConnection(fields.name, fields.mdToken);
+        if (fields.model) {
+            base.model = fields.model;
+        }
+        return base;
     }
 
     async connect() {

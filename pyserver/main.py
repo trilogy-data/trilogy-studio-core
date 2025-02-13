@@ -136,10 +136,7 @@ def parse_model(model: ModelInSchema)->Model:
     env = parse_env_from_full_model(model)
     # add all imports by default
     for idx, source in enumerate(model.sources):
-        if source.alias:
-            env.parse(f'import import_{idx} as {source.alias};')
-        else:
-            env.parse(f'import import_{idx};')
+        env.parse(f'import {source.alias};')
     return model_to_response(model.name, env)
 
 

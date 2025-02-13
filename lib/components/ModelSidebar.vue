@@ -1,7 +1,10 @@
 <template>
     <div class="model-display">
         <h2 class="">Models</h2>
-        <button @click="saveModels()">Save</button>
+        <div class="button-container">
+            <model-create />
+            <button @click="saveModels()">Save</button>
+        </div>
         <ul>
             <li v-for="(config, index) in modelConfigs" :key="index" class="mb-6 border rounded-lg p-4">
                 <a class="header" :href="`#${config.name}`">{{ config.name }}</a>
@@ -16,6 +19,7 @@ import {
     ModelConfig,
 } from "../models"; // Adjust the import path
 import type { ModelConfigStoreType } from "../stores/modelStore";
+import ModelCreate from "./ModelCreate.vue";
 export default defineComponent({
     name: "ModelConfigViewer",
     setup() {
@@ -25,6 +29,9 @@ export default defineComponent({
             throw new Error('Model store is not provided!');
         }
         return { modelStore, saveModels }
+    },
+    components: {
+        ModelCreate,
     },
     data() {
         return {

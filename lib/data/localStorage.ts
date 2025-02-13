@@ -70,7 +70,7 @@ export default class LocalStorage extends AbstractStorage {
         // map raw into appropriate connection form using the connection.type field on the connection object
         return raw.reduce((acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>, connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection) => {
             switch (connection.type) {
-                case "bigquery":
+                case "bigquery-ouath":
                     acc[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection));
                     break;
                 case "duckdb":

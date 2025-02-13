@@ -68,15 +68,14 @@ export default defineComponent({
     text-align: center;
     font-size: 1.5rem;
     margin-bottom: 20px;
-    color: #333;
 }
 
 .concept-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
-    background-color: #f9f9f9;
+    background-color: var(--sidebar-bg);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -88,12 +87,10 @@ export default defineComponent({
     font-size: 1.2rem;
     font-weight: bold;
     margin: 5px;
-    color: #333;
 }
 
 .concept-info {
     font-size: 0.9rem;
-    color: #555;
 }
 
 .concept-description {
@@ -113,6 +110,7 @@ export default defineComponent({
 .lineage-path {
     display: flex;
     flex-direction: row;
+    flex-wrap:wrap;
 }
 
 .lineage-step {
@@ -123,8 +121,8 @@ export default defineComponent({
 }
 
 .lineage-token {
-    background: #eaf4fc;
-    color: #0066cc;
+    background: var(--border-light);
+    color: var(--special-text);
     padding: 2px 4px;
     border-radius: 4px;
 

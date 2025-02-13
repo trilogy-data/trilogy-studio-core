@@ -43,7 +43,7 @@
     max-height: 100%;
     min-width: 350px;
     z-index: 1;
-    overflow: hidden;
+    overflow: scroll;
 }
 
 .gutter {
