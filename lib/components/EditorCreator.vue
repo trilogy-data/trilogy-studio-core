@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative-container">
     <button @click="createEditor">Add</button>
-    <div v-if="visible" class="absolute-form">
+    <div v-if="visible" class="absolute-form"  popover="true">
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>

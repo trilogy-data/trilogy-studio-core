@@ -1,10 +1,10 @@
 <template>
   <sidebar-list title="Editors">
     <template #actions>
-      <div class="action-container">
-        <button @click="saveEditors()">Save</button>
+      <div class="button-container">
         <editor-creator />
-        <button @click="addDemoEditors()">Demo</button>
+        <loading-button ref="loadingBbutton" :action="saveEditors" :keyCombination="['control', 's']">Save</loading-button>
+
       </div>
     </template>
     <div v-for="(editors, key) in editorsByStorage" :key="key" class="storage-group">
@@ -61,14 +61,6 @@
 }
 
 
-.action-container {
-  display: flex;
-  align-items: center;
-  /* Aligns items vertically */
-  gap: 0.5rem;
-  /* Adds space between the button and editor-creator */
-  max-width: 20%;
-}
 
 .editor-item {
   display: flex;
@@ -106,6 +98,7 @@ import EditorCreator from './EditorCreator.vue'
 import EditorModel from '../editors/editor';
 import SidebarList from './SidebarList.vue';
 import Tooltip from './Tooltip.vue';
+import LoadingButton from './LoadingButton.vue';
 export default {
   name: "EditorList",
   props: {
@@ -136,6 +129,7 @@ export default {
     EditorCreator,
     SidebarList,
     Tooltip,
+    LoadingButton,
   },
   methods: {
     // Emit an event when an editor is clicked

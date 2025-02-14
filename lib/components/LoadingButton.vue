@@ -1,5 +1,5 @@
 <template>
-    <div class="relative inline-block">
+    <div class="relative inline-block button-wrapper">
         <button class="btn flex" :disabled="isLoading" @click="handleClick">
             <transition name="fade" mode="out-in">
 
@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 export default {
     props: {
@@ -25,11 +25,35 @@ export default {
             type: Function,
             required: true,
         },
+        keyCombination: {
+            type: Array<string>,
+            default: null, // Optional property
+        },
     },
+
     setup(props) {
         const isLoading = ref(false);
         const status = ref<'success' | 'error' | null>(null);
+        const keysPressed = new Set<string>();
 
+        const handleKeydown = (event: KeyboardEvent) => {
+            if (!props.keyCombination) return;
+            keysPressed.add(event.key.toLowerCase());
+            console.log('debug')
+            console.log(keysPressed)
+
+            const requiredKeys = new Set(props.keyCombination.map((key) => key.toLowerCase()));
+            console.log(requiredKeys)
+            console.log(Array.from(requiredKeys).every((key) => keysPressed.has(key)))
+            if (Array.from(requiredKeys).every((key) => keysPressed.has(key))) {
+                event.preventDefault(); // Prevent default browser action
+                handleClick(); // Call the action
+            }
+        };
+        const handleKeyup = (event: KeyboardEvent) => {
+            // Remove the key from the set
+            keysPressed.delete(event.key.toLowerCase());
+        };
         const handleClick = async () => {
             isLoading.value = true;
             status.value = null; // Reset status before running action
@@ -53,17 +77,33 @@ export default {
                 }, 1500);
             }
         };
+        onMounted(() => {
+            window.addEventListener('keydown', handleKeydown);
+            window.addEventListener('keyup', handleKeyup);
+        });
+
+        onUnmounted(() => {
+            window.removeEventListener('keydown', handleKeydown);
+            window.removeEventListener('keyup', handleKeyup);
+        });
+
 
         return {
             isLoading,
             status,
             handleClick,
+            handleKeydown,
         };
     },
+
 };
 </script>
 
 <style>
+.button-wrapper {
+    flex: 1;
+}
+
 .red {
     color: red;
 }
@@ -73,13 +113,14 @@ export default {
 }
 
 .btn {
-    min-width: 35px;
+    min-height: 24px;
     border: 2px solid transparent;
+    width: 100%;
 }
 
 .spinner {
     display: inline-block;
-    width: 35%;
+    height: 45%;
     aspect-ratio: 1 / 1;
     border: 2px solid transparent;
     border-top-color: var(--color);
@@ -104,6 +145,6 @@ export default {
 
 .fade-enter-from,
 .fade-leave-to {
-    opacity: 0;
+    opacity: 0 0.05s ease;
 }
 </style>

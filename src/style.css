@@ -133,18 +133,24 @@ button:focus-visible {
 .relative-container {
   position: relative; /* Ensures the absolute positioning is relative to this container */
   padding: 0px;
+  flex: 1;
+}
+
+.relative-container button{
+  width:100%;
+
 }
 
 .absolute-form {
   position: absolute;
   top: 100%; /* Position below the button */
-  left: 0px; 
+  left: -25%; 
   background-color: var(--button-bg);
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); 
   border: 1px solid var(--border); 
-  z-index: 1000; 
+  z-index: 1001; 
   width: 250px;
   font-size: 15px;
   text-align: center;
-}
 
+}

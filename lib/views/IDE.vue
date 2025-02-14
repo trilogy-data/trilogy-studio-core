@@ -12,7 +12,7 @@
             <editor :key="activeEditor" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
-            <error-message v-if="activeEditorData.error" :message="activeEditorData.error"></error-message>
+            <error-message v-if="activeEditorData.error">{{ activeEditorData.error }}</error-message>
             <data-table v-else-if="activeEditorData.results" :headers="activeEditorData.results.headers"
               :results="activeEditorData.results.data" />
           </template>

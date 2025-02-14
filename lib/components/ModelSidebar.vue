@@ -1,16 +1,25 @@
 <template>
-    <div class="model-display">
-        <h2 class="">Models</h2>
-        <div class="button-container">
-            <model-create />
-            <loading-button :action="saveModels">Save</loading-button>
+    <sidebar-list title="Models">
+        <template #actions>
+            <div class="button-container">
+                <model-create />
+                <loading-button :action="saveModels" :key-combination="['control', 's']">Save</loading-button>
+            </div>
+        </template>
+        <div v-for="(config, index) in modelConfigs" :key="index" class="storage-group">
+            <h4 class="text-sm">{{ index }}</h4>
+            <!-- <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
+        <div class="editor-content">
+          <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'"><i class="mdi mdi-alpha-s-box-outline"></i>
+          </tooltip>
+          <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
+          <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{ editor.name }}</span>
+          <span class="editor-connection"> ({{ editor.connection }})</span>
+          <span class="remove-btn"><i class="mdi mdi-close" @click="deleteEditor(editor)"></i></span>
         </div>
-        <ul>
-            <li v-for="(config, index) in modelConfigs" :key="index" class="mb-6 border rounded-lg p-4">
-                <a class="header" :href="`#${config.name}`">{{ config.name }}</a>
-            </li>
-        </ul>
-    </div>
+      </li> -->
+        </div>
+    </sidebar-list>
 </template>
 
 <script lang="ts">
@@ -20,7 +29,8 @@ import {
 } from "../models"; // Adjust the import path
 import type { ModelConfigStoreType } from "../stores/modelStore";
 import ModelCreate from "./ModelCreate.vue";
-import LoadingButton  from "./LoadingButton.vue";
+import LoadingButton from "./LoadingButton.vue";
+import SidebarList from './SidebarList.vue';
 export default defineComponent({
     name: "ModelConfigViewer",
     setup() {
@@ -34,6 +44,7 @@ export default defineComponent({
     components: {
         ModelCreate,
         LoadingButton,
+        SidebarList,
     },
     data() {
         return {

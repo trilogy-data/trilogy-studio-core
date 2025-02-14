@@ -1,7 +1,7 @@
 <template>
-    <div v-if="message" class="error-message">
+    <div class="error-message">
       <span class="error-icon">⚠️</span>
-      <span class="error-text">{{ message }}</span>
+      <span class="error-text"><slot></slot></span>
     </div>
   </template>
   
@@ -9,10 +9,10 @@
   export default {
     name: "ErrorMessage",
     props: {
-      message: {
-        type: String,
-        required: true,
-      },
+      // message: {
+      //   type: String,
+      //   required: true,
+      // },
     },
   };
   </script>

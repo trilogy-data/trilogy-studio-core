@@ -159,6 +159,8 @@ export default defineComponent({
             monaco.editor.setTheme('trilogyStudio');
             editor.onDidChangeModelContent(() => {
                 this.editorStore.setEditorContents(this.editorName, editor.getValue())
+                console.log('changed')
+
                 // this.$emit('update:contents', editor.getValue());
                 // this.editorData.contents = editor.getValue();
             });
@@ -176,7 +178,6 @@ export default defineComponent({
                             }
                         });
                     }
-                    console.log(sources)
                     var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
                     var text: string;
                     if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {

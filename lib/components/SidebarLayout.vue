@@ -24,6 +24,7 @@
     flex-wrap: nowrap;
     flex: 1 1 auto;
     max-height: 100%;
+    isolation: isolate;
 }
 
 .sidebar {
@@ -35,7 +36,8 @@
     /* flex-wrap: wrap; */
     height: 100%;
     width: 100%;
-    z-index: 2;
+    z-index: 51;
+    overflow-y:visible;
 }
 
 .nested-page-content {
@@ -52,7 +54,7 @@
   &.gutter-vertical {
     display: flex;
     background-color: transparent;
-    z-index: 10;
+    z-index: 60;
   }
   &.gutter-horizontal {
     width: 0!important;
@@ -77,7 +79,7 @@
     content: "";
     display: block;
     position: absolute;
-    z-index: 10;
+    z-index: 60;
   }
 }
 

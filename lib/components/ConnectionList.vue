@@ -3,7 +3,8 @@
     <template #actions>
       <div class="button-container">
         <connection-creator />
-        <loading-button :action="saveConnections">Save</loading-button>
+        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+
       </div>
     </template>
     <!-- <button @click="login">Login Using Google</button> -->
@@ -20,7 +21,7 @@
 
         <div class="button-container">
           <span class="padding-left">{{ connection.name }}</span>
-          <div class="flex relative-container">
+          <div class="flex relative-container button-container">
             <button class="button" @click="connectionModelVisible[connection.name] = true">
               {{ connection.model || 'Set Model' }}
             </button>
@@ -131,7 +132,7 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const modelStore = inject<ModelConfigStoreType>('modelStore');
     const saveConnections = inject<Function>('saveConnections');
-    if (!connectionStore || !modelStore) {
+    if (!connectionStore || !modelStore || !saveConnections) {
       throw new Error('Connection store is not provided!');
     }
     const connectionModelVisible = ref<Record<string, boolean>>({});

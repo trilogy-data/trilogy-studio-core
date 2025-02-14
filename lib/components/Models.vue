@@ -40,20 +40,22 @@
         </div>
         <ul class="source-list">
           <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-            {{ source.alias }} ({{ source.editor }})
+            <div @click="onEditorClick(source)">{{ source.alias }} ({{ source.editor }})</div>
+            <Editor class="editor-inline" v-if="isEditorExpanded[source.editor]" :editorName="source.editor" />
           </li>
+
         </ul>
         <div v-if="config.parseError" class="parse-error">
-          <em>Error fetching parse results: {{ config.parseError }}</em>
+          <error-message><span>Error fetching parse results: {{ config.parseError }}</span></error-message>
         </div>
-        <div v-if="config.parseResults" class="parse-results">
+        <div v-else-if="config.parseResults" class="parse-results">
           <div>
             <div class="toggle-concepts" @click="toggleConcepts(index)">
               Concepts ({{ config.parseResults.concepts.length }}) {{ isExpanded[index] ? '' : '>' }}
             </div>
           </div>
           <div v-show="isExpanded[index]" class="concepts-list">
-            <ModelConcept :config = "config.parseResults"/>
+            <ModelConcept :config="config.parseResults" />
           </div>
           <div class="datasources">
             <strong>Datasources:</strong>
@@ -73,6 +75,9 @@
 </template>
 
 <style scoped>
+.editor-inline {
+  height:400px;
+}
 .model-display {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -176,7 +181,6 @@ select:focus {
   /* Dark gray border on focus */
   outline: none;
 }
-
 </style>
 
 <script lang="ts">
@@ -188,7 +192,9 @@ import type { ModelConfigStoreType } from "../stores/modelStore";
 import type { EditorStoreType } from "../stores/editorStore";
 import ModelConcept from "./ModelConcept.vue";
 import AxiosResolver from "../stores/resolver";
-import LoadingButton  from "./LoadingButton.vue";
+import LoadingButton from "./LoadingButton.vue";
+import ErrorMessage from "./ErrorMessage.vue";
+import Editor from "./Editor.vue";
 export default defineComponent({
   name: "ModelConfigViewer",
   setup() {
@@ -204,6 +210,8 @@ export default defineComponent({
       throw new Error("Missing model store or editor store!");
     }
     const isExpanded = ref<Record<string, boolean>>({});
+
+    const isEditorExpanded = ref<Record<string, boolean>>({});
 
     const toggleConcepts = (index: string) => {
       isExpanded.value[index] = !isExpanded.value[index];
@@ -238,11 +246,13 @@ export default defineComponent({
       }
     };
 
-    return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver, fetchParseResults };
+    return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver, fetchParseResults, isEditorExpanded };
   },
   components: {
     ModelConcept,
     LoadingButton,
+    ErrorMessage,
+    Editor,
   },
   computed: {
     modelConfigs(): Record<string, ModelConfig> {
@@ -259,6 +269,9 @@ export default defineComponent({
     },
     remove(model: string) {
       this.modelStore.removeModelConfig(model);
+    },
+    onEditorClick(source: { alias: string; editor: string }) {
+      this.isEditorExpanded[source.editor] = !this.isEditorExpanded[source.editor];
     },
   },
 });

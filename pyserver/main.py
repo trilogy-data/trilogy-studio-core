@@ -133,12 +133,14 @@ def generate_query(query: QueryInSchema):
 
 @router.post("/parse_model")
 def parse_model(model: ModelInSchema)->Model:
-    env = parse_env_from_full_model(model)
-    # add all imports by default
-    for idx, source in enumerate(model.sources):
-        env.parse(f'import {source.alias};')
-    return model_to_response(model.name, env)
-
+    try:
+        env = parse_env_from_full_model(model)
+        # add all imports by default
+        for idx, source in enumerate(model.sources):
+            env.parse(f'import {source.alias};')
+        return model_to_response(model.name, env)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 ## Core
 @router.get("/")
