@@ -17,6 +17,19 @@
             <option value="bigquery">Bigquery Oauth</option>
           </select>
         </div>
+        <!-- Dynamic Fields Based on Type -->
+        <div v-if="connectionDetails.type === 'motherduck'">
+          <label for="md-token">MotherDuck Token</label>
+          <input type="text" v-model="connectionDetails.options.mdToken" id="md-token"
+            placeholder="MotherDuck Token" required />
+        </div>
+
+        <div v-if="connectionDetails.type === 'bigquery'">
+          <label for="project-id">BigQuery Project ID</label>
+          <input type="text" v-model="connectionDetails.options.projectId" id="project-id"
+            placeholder="Billing Project ID" required />
+        </div>
+
         <button type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
       </form>
@@ -26,38 +39,10 @@
 
 <style scoped>
 
-.relative-container {
-  position: relative; /* Ensures the absolute positioning is relative to this container */
-}
-
-.absolute-form {
-  position: absolute;
-  top: 100%; /* Position below the button */
-  left: 0; /* Align with the button horizontally */
-  background-color: white; /* For contrast and visibility */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-  border: 1px solid #ccc; /* Optional: Border for better separation */
-  z-index: 1000; /* Ensure it appears in front of other content */
-  width: 250px;
-  font-size: 15px;
-  text-align: center;
-}
-
-
 .button {
   flex: 1;
 }
 
-form {
-  /* margin-top: 20px; */
-  /* padding: 20px; */
-  background-color: #e0e0e0;
-  /* Gray background for form */
-  border: 1px solid #ddd;
-  /* Light gray border */
-  border-radius: 0;
-  /* Sharp corners */
-}
 
 
 input,
@@ -85,52 +70,47 @@ option {
 
 label {
   font-weight: 300
-  /* Dark gray text */
+    /* Dark gray text */
 }
 </style>
+
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue';;
+import { defineComponent, ref, inject } from 'vue';
 import type { ConnectionStoreType } from '../stores/connectionStore';
+
 export default defineComponent({
   name: 'ConnectionCreator',
   setup() {
-    // Placeholder for editor details
     const connectionDetails = ref({
       name: '',
-      type: 'duckdb', // Default value
+      type: 'duckdb',
+      options: { mdToken: '', projectId: '' }
     });
 
-    // Array of available connection names
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     if (!connectionStore) {
-      throw ("must inject connectionStore to ConnectionCreator")
+      throw new Error('must inject connectionStore to ConnectionCreator');
     }
 
+    const connections = connectionStore.connections;
+    const visible = ref(false);
 
-
-    let connections = connectionStore.connections;
-    //visible
-    let visible = ref(false);
-
-    // Ref to store the submitted editor's details
-    const submittedConnection = ref<{
-      name: string;
-      type: string;
-    } | null>(null);
-
-    // Function to create the editor by collecting details from the form
     const createConnection = () => {
       visible.value = !visible.value;
-      connectionDetails.value.name = ''; // Reset name field
-      connectionDetails.value.type = 'duckdb'; // Reset type dropdown
+      connectionDetails.value.name = '';
+      connectionDetails.value.type = 'duckdb';
+      connectionDetails.value.options = { mdToken: '', projectId: '' }; // Reset options
     };
 
-    // Function to submit the editor details
     const submitConnectionCreation = () => {
       if (connectionDetails.value.name && connectionDetails.value.type) {
-        submittedConnection.value = { ...connectionDetails.value }; // Save the submitted editor
         visible.value = false;
-        connectionStore.newConnection(connectionDetails.value.name, connectionDetails.value.type,);
+        console.log('Added connection', connectionDetails.value);
+        connectionStore.newConnection(
+          connectionDetails.value.name,
+          connectionDetails.value.type,
+          connectionDetails.value.options
+        );
       }
     };
 
@@ -139,8 +119,7 @@ export default defineComponent({
       connectionDetails,
       connections,
       createConnection,
-      submitConnectionCreation,
-      submittedConnection
+      submitConnectionCreation
     };
   }
 });

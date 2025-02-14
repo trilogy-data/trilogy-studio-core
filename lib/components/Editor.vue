@@ -169,6 +169,7 @@ export default defineComponent({
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
                 if (!this.loading) {
                     let conn = this.connectionStore.connections[this.editorData.connection];
+                    
                     var sources:ContentInput[] = [];
                     if (conn.model) {
                         sources = this.modelStore.models[conn.model].sources.map((source) => {

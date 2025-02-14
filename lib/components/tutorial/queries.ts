@@ -145,3 +145,45 @@ datasource supplier (
 grain (id)
 address \`https://shell.duckdb.org/data/tpch/0_01/parquet/supplier.parquet\`;
 `
+
+export const LINE_ITEM_CONTENT = `
+import order as order;
+import supplier as supplier;
+import part as part;
+
+key id int;
+property id.quantity float;
+property id.extended_price float;
+property id.discount float;
+property id.tax float;
+property id.return_flag string;
+property id.line_status string;
+property id.ship_date date;
+property id.commit_date date;
+property id.reciept_date date;
+property id.ship_instruct string;
+property id.ship_mode string;
+property id.comment string;
+
+
+datasource lineitem(
+    l_orderkey: order.id,
+    l_partkey: part.id,
+    l_suppkey: supplier.id,
+    l_linenumber:id,
+    l_quantity:quantity,
+    l_extendedprice: extended_price,
+    l_discount:discount,
+    l_tax:Tax,
+    l_returnflag:return_flag,
+    l_linestatus: line_status,
+    l_shipdate: ship_date,
+    l_commitdate: commit_date,
+    l_receiptdate:receipt_date,
+    l_shipinstruct:ship_instruct,
+    l_shipmode: ship_mode,
+    l_comment:comment
+)
+grain(id)
+address \`https://shell.duckdb.org/data/tpch/0_01/parquet/lineitem.parquet\`;
+`

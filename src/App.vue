@@ -9,13 +9,7 @@ import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyRe
 import { ref } from "vue";
 
 
-let connection = new DuckDBConnection(
-  'test-connection',
-);
-let connection2 = new BigQueryOauthConnection(
-  'test-connection2',
-  'preqldata'
-);
+
 const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
 let resolver = new AxiosTrilogyResolver(apiUrl);
@@ -42,8 +36,7 @@ if (Object.keys(local).length == 0) {
 let store = useEditorStore();
 
 let connections = useConnectionStore();
-connections.addConnection(connection);
-connections.addConnection(connection2);
+
 
 let models = useModelConfigStore();
 
