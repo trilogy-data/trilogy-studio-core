@@ -21,7 +21,12 @@
 
         <div class="button-container">
           <span class="padding-left">{{ connection.name }}</span>
+          <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
+          </tooltip>
+          <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
+              class="mdi mdi-alert-circle-outline red"></i></tooltip>
           <div class="flex relative-container button-container">
+
             <button class="button" @click="connectionModelVisible[connection.name] = true">
               {{ connection.model || 'Set Model' }}
             </button>
@@ -44,10 +49,7 @@
             </div>
           </div>
 
-          <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
-          </tooltip>
-          <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
-              class="mdi mdi-alert-circle-outline red"></i></tooltip>
+
           <loading-button :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button>
         </div>
 
@@ -109,6 +111,9 @@ select:focus {
   text-align: right;
   flex-grow: 1;
   /* Makes the connection name take up remaining space */
+}
+.button {
+  min-width:60px;
 }
 </style>
 
