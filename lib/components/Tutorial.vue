@@ -3,6 +3,7 @@
         <section id="demo" class="tutorial-section">
         <h2>Demo</h2>
         <p>The demo experience will take you on a tour of capabilities. </p>
+        <button @click="setupDemo">Setup Demo</button>
       </section>
   
       <section id="querying" class="tutorial-section">
@@ -43,8 +44,31 @@
   </template>
   
   <script lang="ts">
+  import { inject } from 'vue';
+  import type{ EditorStoreType } from '../stores/editorStore';
+  import type { ConnectionStoreType } from '../stores/connectionStore';
+  import { DuckDBConnection } from '../connections';
+  import Editor from '../editors/editor'
   export default {
-    name: 'TutorialComponent'
+    name: 'TutorialComponent',
+    setup() {
+    const editorStore = inject<EditorStoreType>('editorStore');
+    const connectionStore = inject<ConnectionStoreType>('connectionStore');
+    if (!editorStore || !connectionStore) {
+      throw new Error('Editor store is not provided!');
+    }
+    return { editorStore, connectionStore }
+  },
+    methods: {
+      setupDemo() {
+        let connName = 'demo-connection';
+        let connection = new DuckDBConnection(connName);
+        this.connectionStore.addConnection(connection);
+        let customer = new Editor({ name: 'customer', type: 'trilogy', connection: connName, storage: 'local', contents:'' });
+
+
+      }
+    }
   };
   </script>
   

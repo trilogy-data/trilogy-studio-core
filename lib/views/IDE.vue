@@ -76,14 +76,13 @@ import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
 import { inject } from 'vue';
 
 
-
-
 export default {
   name: "IDEComponent",
   data() {
     let screen = getDefaultValueFromHash('screen');
+    let activeEditor = getDefaultValueFromHash('editor');
     return {
-      activeEditor: 'Test Editor',
+      activeEditor: activeEditor,
       activeScreen: screen ? screen : 'editors',
     };
   },
@@ -115,6 +114,7 @@ export default {
     // Sets the currently active editor
     setActiveEditor(editor: string) {
       this.activeEditor = editor
+      pushHashToUrl('editor', editor)
     },
     setActiveScreen(screen: string) {
       this.activeScreen = screen

@@ -39,13 +39,9 @@ export default {
         const handleKeydown = (event: KeyboardEvent) => {
             if (!props.keyCombination) return;
             keysPressed.add(event.key.toLowerCase());
-            console.log('debug')
-            console.log(keysPressed)
-
             const requiredKeys = new Set(props.keyCombination.map((key) => key.toLowerCase()));
-            console.log(requiredKeys)
-            console.log(Array.from(requiredKeys).every((key) => keysPressed.has(key)))
             if (Array.from(requiredKeys).every((key) => keysPressed.has(key))) {
+                keysPressed.clear(); // Clear the keys after the combination is detected
                 event.preventDefault(); // Prevent default browser action
                 handleClick(); // Call the action
             }
@@ -63,7 +59,6 @@ export default {
                 await props.action();
                 localStatus = 'success';
             } catch (error) {
-                console.error(error);
                 localStatus = 'error';
             } finally {
                 const elapsedTime = Date.now() - startTime;
