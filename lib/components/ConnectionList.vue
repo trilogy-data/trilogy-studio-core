@@ -19,19 +19,21 @@
         <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i>
         </tooltip>
 
-        <div class="button-container">
-          <span class="padding-left">{{ connection.name }}</span>
+        <div class="button-container connection-parts">
+          <div class="padding-left" >
+          <span >{{ connection.name }}</span>
           <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
           </tooltip>
           <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
               class="mdi mdi-alert-circle-outline red"></i></tooltip>
-          <div class="flex relative-container button-container">
+            </div>
+          <div class="flex relative-container button-container float-right">
 
             <button class="button" @click="connectionModelVisible[connection.name] = true">
               {{ connection.model || 'Set Model' }}
             </button>
 
-            <div v-if="connectionModelVisible[connection.name]" class="absolute-form">
+            <div v-if="connectionModelVisible[connection.name]" class="absolute-form override-left">
               <form @submit.prevent="submitConnectionModel(connection.name)">
                 <div>
                   <label for="connection-model">Model</label>
@@ -44,7 +46,7 @@
 
                 <button type="submit">Submit</button>
                 <button type="button"
-                  @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Cancel</button>
+                  @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Close</button>
               </form>
             </div>
           </div>
@@ -61,6 +63,23 @@
 </template>
 
 <style scoped>
+.override-left {
+  left: -150px;
+}
+.connection-parts {
+  width:100%;
+}
+
+.padding-left {
+  padding-left: 5px;
+  flex: 3;
+}
+
+
+.float-right {
+  flex:1;
+}
+
 .green {
   color: green;
 }
@@ -69,9 +88,6 @@
   color: red;
 }
 
-.padding-left {
-  padding-left: 5px;
-}
 
 input,
 select {
@@ -114,6 +130,7 @@ select:focus {
 }
 .button {
   min-width:60px;
+  white-space: nowrap;
 }
 </style>
 

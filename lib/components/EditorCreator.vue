@@ -69,7 +69,7 @@ label {
 }
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue';
+import { defineComponent, ref, inject, } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import type { ConnectionStoreType } from '../stores/connectionStore';
 import Tooltip from './Tooltip.vue';
@@ -78,7 +78,7 @@ export default defineComponent({
   components: {
     Tooltip
   },
-  setup() {
+  setup(props, {emit}) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',
@@ -114,6 +114,7 @@ export default defineComponent({
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
         visible.value = false;
         editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection);
+        emit("editor-selected", (editorDetails.value.name));
       }
     };
 

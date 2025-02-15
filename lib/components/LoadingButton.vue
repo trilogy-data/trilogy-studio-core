@@ -4,7 +4,7 @@
             <transition name="fade" mode="out-in">
 
                 <span v-if="status === 'success'" class="green">✔</span>
-                <span v-else-if="status === 'error'" class="red">✖</span>
+                <span v-else-if="status === 'error'" class="red">✖ ({{ errorMessage }})</span>
                 <span v-else-if="isLoading" class="spinner"></span>
                 <span v-else>
                     <slot></slot>
@@ -33,6 +33,7 @@ export default {
 
     setup(props) {
         const isLoading = ref(false);
+        const errorMessage = ref<string | null>(null);
         const status = ref<'success' | 'error' | null>(null);
         const keysPressed = new Set<string>();
 
@@ -60,6 +61,9 @@ export default {
                 localStatus = 'success';
             } catch (error) {
                 localStatus = 'error';
+                if (error instanceof Error) {
+                    errorMessage.value = error.message;
+                }
             } finally {
                 const elapsedTime = Date.now() - startTime;
                 const remainingTime = Math.max(500 - elapsedTime, 0);
@@ -69,6 +73,7 @@ export default {
                 // Clear status after a brief delay
                 setTimeout(() => {
                     status.value = null;
+                    errorMessage.value = null;
                 }, 1500);
             }
         };
@@ -84,6 +89,7 @@ export default {
 
 
         return {
+            errorMessage,
             isLoading,
             status,
             handleClick,

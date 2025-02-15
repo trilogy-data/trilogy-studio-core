@@ -9,9 +9,10 @@ export default abstract class BaseConnection {
     connected: boolean;
     error: string | null = null;
 
-    constructor(name: string, type: string,  autoConnect: boolean = true) {
+    constructor(name: string, type: string,  autoConnect: boolean = true, model?: string) {
         this.name = name;
         this.type = type;
+        this.model = model || null;
         // hardcoded for dev
         this.storage = 'local';
         this.connected = false; // Default to disconnected

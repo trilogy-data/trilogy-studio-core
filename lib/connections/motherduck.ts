@@ -9,8 +9,8 @@ export default class MotherDuckConnection extends BaseConnection {
     private connection: MDConnection;
     private mdToken: string;
 
-    constructor(name: string, mdToken: string) {
-        super(name, 'motherduck')
+    constructor(name: string, mdToken: string, model?: string) {
+        super(name, 'motherduck', true, model)
         this.mdToken = mdToken;
 
     }

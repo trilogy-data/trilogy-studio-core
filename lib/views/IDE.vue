@@ -128,6 +128,7 @@ export default {
   computed: {
     // The currently active editor data
     activeEditorData() {
+      if (!this.activeEditor) return null;
       let r = this.editorStore.editors[this.activeEditor];
       return r
     },

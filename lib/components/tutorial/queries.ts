@@ -109,19 +109,19 @@ datasource part (
 grain(id)
 address \`https://shell.duckdb.org/data/tpch/0_01/parquet/part.parquet\`;
 
-property <part.id,supplier.id>.available_quantity;
-property <part.id,supplier.id>.supply_cost;
-property <part.id,supplier.id>.supplier_comment;
+property <id,supplier.id>.available_quantity float;
+property <id,supplier.id>.supply_cost float; 
+property <id,supplier.id>.supplier_comment string;
 
 datasource partsupp (
-    ps_partkey:part.id,
+    ps_partkey:id,
     ps_suppkey:supplier.id,
     ps_availqty: available_quantity,
     ps_supplycost:supply_cost,
     ps_comment:supplier_comment
 )
-grain (part.id, supplier.d)
-address \`https://shell.duckdb.org/data/tpch/0_01/parquet/partsupp.parquet\`
+grain (id, supplier.id)
+address \`https://shell.duckdb.org/data/tpch/0_01/parquet/partsupp.parquet\`;
 `;
 
 export const SUPPLIER_CONTENT = `
@@ -160,7 +160,7 @@ property id.return_flag string;
 property id.line_status string;
 property id.ship_date date;
 property id.commit_date date;
-property id.reciept_date date;
+property id.receipt_date date;
 property id.ship_instruct string;
 property id.ship_mode string;
 property id.comment string;
@@ -174,7 +174,7 @@ datasource lineitem(
     l_quantity:quantity,
     l_extendedprice: extended_price,
     l_discount:discount,
-    l_tax:Tax,
+    l_tax:tax,
     l_returnflag:return_flag,
     l_linestatus: line_status,
     l_shipdate: ship_date,

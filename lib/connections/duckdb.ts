@@ -53,8 +53,9 @@ export default class DuckDBConnection extends BaseConnection {
         });
     }
 
-    constructor(name: string,) {
-        super(name, 'duckdb');
+    constructor(name: string, model?: string) {
+        super(name, 'duckdb', false, model);
+
     }
 
     // Example of a custom method for MotherDuck

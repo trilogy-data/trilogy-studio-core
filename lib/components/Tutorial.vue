@@ -3,7 +3,7 @@
     <section id="demo" class="tutorial-section">
       <h2>Demo</h2>
       <p>The demo experience will take you on a tour of capabilities. </p>
-      <button @click="setupDemo">Setup Demo</button>
+      <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
 
     <section id="querying" class="tutorial-section">
@@ -61,24 +61,34 @@ import type { ConnectionStoreType } from '../stores/connectionStore';
 import type { ModelConfigStoreType } from '../stores/modelStore';
 import { DuckDBConnection } from '../connections';
 import Editor from '../editors/editor'
+import LoadingButton from './LoadingButton.vue';
 import { ModelConfig } from '../models/model';
 import { CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT, LINE_ITEM_CONTENT } from './tutorial/queries'
+import { QUERY_LINE_ITEM } from './tutorial/example_queries';
 export default {
   name: 'TutorialComponent',
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore');
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const modelStore = inject<ModelConfigStoreType>('modelStore');
-    if (!editorStore || !connectionStore || !modelStore) {
+    const saveEditors = inject<Function>('saveEditors');
+    const saveConnections = inject<Function>('saveConnections');
+    const saveModels = inject<Function>('saveModels');
+    if (!editorStore || !connectionStore || !modelStore || !saveEditors || !saveConnections || !saveModels) {
       throw new Error('Editor store is not provided!');
     }
-    return { editorStore, connectionStore, modelStore }
+    return { editorStore, connectionStore, modelStore, saveEditors, saveConnections, saveModels };
+  },
+  components: {
+    LoadingButton
   },
   methods: {
     setupDemo() {
       let connName = 'demo-connection';
-      let connection = new DuckDBConnection(connName);
-      this.connectionStore.addConnection(connection);
+      let modelName = 'demo-model';
+      let connection = new DuckDBConnection(connName, modelName);
+      let x = this.connectionStore.addConnection(connection);
+      console.log(x)
       //CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT
       let customer = new Editor({ name: 'customer', type: 'trilogy', connection: connName, storage: 'local', contents: CUSTOMER_CONTENT });
       this.editorStore.addEditor(customer);
@@ -95,18 +105,23 @@ export default {
       let lineItem = new Editor({ name: 'lineitem', type: 'trilogy', connection: connName, storage: 'local', contents: LINE_ITEM_CONTENT });
       this.editorStore.addEditor(lineItem);
 
+      // add example queries
+      let query = new Editor({ name: 'query_1', type: 'trilogy', connection: connName, storage: 'local', contents: QUERY_LINE_ITEM });
+      this.editorStore.addEditor(query);
+
       let mc = new ModelConfig({
-        name: 'demo-model',
+        name: modelName,
         sources: [{ alias: 'customer', editor: 'customer' }, { alias: 'order', editor: 'order' },
         { alias: 'part', editor: 'part' }, { alias: 'nation', editor: 'nation' }, { alias: 'supplier', editor: 'supplier' },
-         { alias: 'region', editor: 'region' }, { alias: 'lineitem', editor: 'lineitem' }
+        { alias: 'region', editor: 'region' }, { alias: 'lineitem', editor: 'lineitem' }
         ],
         storage: 'local', parseResults: null
       });
       this.modelStore.addModelConfig(mc)
-      // this.modelStore.parseConfig(mc.name)
-
-
+      
+      this.saveEditors(Object.values(this.editorStore.editors));
+      this.saveConnections(Object.values(this.connectionStore.connections));
+      this.saveModels(Object.values(this.modelStore.models));
     }
   }
 };

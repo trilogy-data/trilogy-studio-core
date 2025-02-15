@@ -1,12 +1,45 @@
 <template>
     <div :key="editorName" ref="editor" id="editor" class="editor-fix-styles">
+        <!-- <button class="absolute-button bottom-run" @onClick=runQuery>Run</button>
+        <button class="absolute-button bottom-reset" >Reset Editor</button> -->
     </div>
+
 </template>
 <style scoped>
 .editor-fix-styles {
     text-align: left;
     border: none;
     height: 100%;
+    /* position: relative; */
+}
+
+.absolute-button {
+    position: absolute;
+    bottom: 16px;
+    /* Distance from the bottom of the container */
+    right: 16px;
+    /* Distance from the right of the container */
+    margin-top: 8px;
+    /* Add space between the buttons */
+    padding: 8px 16px;
+    background-color: transparent;
+    /* Transparent background */
+    color: #007bff;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    z-index: 99;
+}
+
+.bottom-run {
+    bottom: 16px;
+    right: 16px;
+}
+
+.bottom-reset {
+    bottom: 16px;
+    right: 100px;
 }
 </style>
 <script lang="ts">
@@ -17,9 +50,12 @@ import * as monaco from 'monaco-editor';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ModelConfigStoreType } from '../stores/modelStore.ts';
-import {Results} from '../editors/results'
+import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
-import type {ContentInput} from '../stores/resolver'
+import type { ContentInput } from '../stores/resolver'
+
+let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
+let editorMap: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map();
 
 export default defineComponent({
     name: 'Editor',
@@ -66,7 +102,7 @@ export default defineComponent({
             prompt: '',
             generatingPrompt: false,
             info: 'Query processing...',
-            editor: null as monaco.editor.IStandaloneCodeEditor | null,
+            // editor: null as monaco.editor.IStandaloneCodeEditor | null,
             // editorX: 400,
             // editorY: 400,
 
@@ -83,7 +119,8 @@ export default defineComponent({
         if (!editorStore || !connectionStore || !trilogyResolver || !modelStore) {
             throw new Error('Editor store and connection store and trilogy resolver are not provided!');
         }
-        return { connectionStore, modelStore, editorStore, trilogyResolver};
+        
+        return { connectionStore, modelStore, editorStore, trilogyResolver };
     },
     mounted() {
         this.createEditor()
@@ -119,8 +156,56 @@ export default defineComponent({
     },
 
     methods: {
+        runQuery() {
+            const editor = editorInstance;
+            console.log('running')
+            if (this.loading) {
+                return;
+            }
+            if (!editor) {
+                return;
+            }
+            let conn = this.connectionStore.connections[this.editorData.connection];
+            if (!conn) {
+                this.editorData.setError(`Connection ${this.editorData.connection} not found.`);
+                return;
+            }
+
+            var sources: ContentInput[] = [];
+            if (conn.model) {
+                sources = this.modelStore.models[conn.model].sources.map((source) => {
+                    return {
+                        alias: source.alias,
+                        contents: this.editorStore.editors[source.editor].contents
+                    }
+                });
+            }
+            var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
+            var text: string;
+            if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {
+                text = editor.getModel()?.getValueInRange(selected) as string;
+
+            }
+            else {
+                text = editor.getValue();
+            }
+            this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type, sources).then((response) => {
+                if (!response.data.generated_sql) {
+                    this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
+                    return
+                }
+                conn.query(response.data.generated_sql).then((sql_response) => {
+                    this.editorStore.setEditorResults(this.editorName, sql_response)
+                }).catch((error) => {
+                    this.editorData.setError(error.message);
+                });
+            }).catch((error: Error) => {
+                this.editorData.setError(error.message);
+            });
+        },
         getEditor() {
-            return this.editor;
+
+            editorMap.get(this.editorName);
         },
         createEditor() {
             let editorElement = document.getElementById('editor')
@@ -128,7 +213,7 @@ export default defineComponent({
                 return
             }
             // if we've already set up the editor
-            if (this.editor) {
+            if (editorInstance) {
                 return
             }
             const editor = monaco.editor.create(editorElement, {
@@ -136,10 +221,10 @@ export default defineComponent({
                 language: 'sql',
                 automaticLayout: true,
             })
-            this.editor = editor;
+            editorInstance = editor;
             editor.layout();
             monaco.editor.defineTheme('trilogyStudio', {
-                base: this.prefersLight? 'vs': 'vs-dark', // can also be vs-dark or hc-black
+                base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
                 inherit: true, // can also be false to completely replace the builtin rules
                 rules: [
                     { token: 'comment', foreground: 'ffa500', fontStyle: 'italic underline' },
@@ -167,41 +252,7 @@ export default defineComponent({
 
 
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-                if (!this.loading) {
-                    let conn = this.connectionStore.connections[this.editorData.connection];
-                    
-                    var sources:ContentInput[] = [];
-                    if (conn.model) {
-                        sources = this.modelStore.models[conn.model].sources.map((source) => {
-                            return {
-                                alias: source.alias,
-                                contents: this.editorStore.editors[source.editor].contents
-                            }
-                        });
-                    }
-                    var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
-                    var text: string;
-                    if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {
-                        text = editor.getModel()?.getValueInRange(selected) as string;
-                        
-                    }
-                    else {
-                        text = editor.getValue();
-                    }
-                    this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type, sources).then((response) => {
-                        if (!response.data.generated_sql){
-                            this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
-                            return
-                        }
-                        conn.query(response.data.generated_sql).then((sql_response) => {
-                            this.editorStore.setEditorResults(this.editorName, sql_response)
-                        }).catch((error) => {
-                            this.editorData.setError(error.message);
-                        });
-                    }).catch((error: Error) => {
-                        this.editorData.setError(error.message);
-                    });
-                }
+                this.runQuery();
             });
             if (this.genAICallback) {
                 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
