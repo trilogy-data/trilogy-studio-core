@@ -2,6 +2,11 @@
 import { Results } from "./results";
 import type { ResultsInterface } from "./results";
 
+// enum of tags
+export enum EditorTag {
+  SOURCE = "source",
+}
+
 export interface EditorInterface {
   name: string;
   type: string;
@@ -17,6 +22,8 @@ export interface EditorInterface {
   generated_sql: string | null;
   visible: boolean;
   storage: string;
+  tags: EditorTag[];
+  cancelCallback:  (() => void) | null;
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -35,6 +42,8 @@ export default class Editor implements EditorInterface {
   generated_sql: string | null;
   visible: boolean;
   storage: string;
+  tags: EditorTag[];
+  cancelCallback:  (() => void) | null;
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -47,7 +56,7 @@ export default class Editor implements EditorInterface {
         return `SELECT 1;`;
     }
   }
-  constructor({ name, type, connection, storage, contents = null }: { name: string; type: string; connection: string; storage: string, contents?: string | null }) {
+  constructor({ name, type, connection, storage, contents = null, tags = null }: { name: string; type: string; connection: string; storage: string, contents?: string | null, tags?: EditorTag[] | null }) {
     this.name = name;
     this.type = type;
     this.syntax = "preql";
@@ -63,6 +72,8 @@ export default class Editor implements EditorInterface {
     this.generated_sql = null;
     this.visible = true;
     this.storage = storage;
+    this.tags = tags ? tags : [];
+    this.cancelCallback = null;
   }
 
   setError(error: string | null) {
@@ -85,6 +96,7 @@ export default class Editor implements EditorInterface {
       generated_sql: this.generated_sql,
       visible: this.visible,
       storage: this.storage,
+      tags: this.tags
     };
   }
 
@@ -110,6 +122,12 @@ export default class Editor implements EditorInterface {
     editor.duration = parsed.duration || null;
     editor.generated_sql = parsed.generated_sql || null;
     editor.visible = parsed.visible !== undefined ? parsed.visible : true;
+    // rehydrate tags to EditorTag
+    console.log(parsed.tags)
+    editor.tags = parsed.tags ? parsed.tags.map((tag: string) => {
+      return Object.values(EditorTag).includes(tag as EditorTag) ? tag as EditorTag : null;
+    }).filter((tag): tag is EditorTag => tag !== null) : [];
+    
 
     return editor
   }

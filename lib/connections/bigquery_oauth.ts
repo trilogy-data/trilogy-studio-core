@@ -14,6 +14,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
     constructor(name: string, projectId: string , model?: string) {
         super(name, "bigquery-ouath", false), model;
         this.projectId = projectId;
+        this.query_type = 'bigquery';
     }
 
     toJSON(): object {

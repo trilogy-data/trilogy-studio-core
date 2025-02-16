@@ -6,24 +6,57 @@
           @save-editors="saveEditorsCall" />
       </template>
 
-      <template v-if="activeScreen === 'editors'">
+      <template v-if="['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor">
             <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
-            <error-message v-if="activeEditorData.error">{{ activeEditorData.error }}</error-message>
-            <data-table v-else-if="activeEditorData.results" :headers="activeEditorData.results.headers"
-              :results="activeEditorData.results.data" />
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback"/>
+            <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}</error-message>
+            <div v-else-if="activeEditorData.results" class="results-container">
+              <div class="tabs">
+                <button 
+                  class="tab-button" 
+                  :class="{ active: activeTab === 'results' }"
+                  @click="activeTab = 'results'"
+                >
+                  Results
+                </button>
+                <button 
+                  class="tab-button" 
+                  :class="{ active: activeTab === 'sql' }"
+                  @click="activeTab = 'sql'"
+                >
+                  Generated SQL
+                </button>
+              </div>
+              <div class="tab-content">
+                <data-table 
+                  v-if="activeTab === 'results'"
+                  :headers="activeEditorData.results.headers"
+                  :results="activeEditorData.results.data" 
+                />
+                <div v-else class="sql-view">
+                  <pre>{{ activeEditorData.generated_sql }}</pre>
+                </div>
+              </div>
+            </div>
           </template>
         </vertical-split-layout>
       </template>
 
       <template v-else-if="activeScreen === 'tutorial'">
-        <Tutorial/>
+        <tutorial/>
       </template>
       <template v-else-if="activeScreen === 'models'">
-        <ModelView/>
+        <model-view/>
+      </template>
+      <template v-else-if="activeScreen === 'profile'">
+        <user-profile/>
+      </template>
+      <template v-else-if="activeScreen === 'settings'">
+       <user-settings/>
       </template>
       <template v-else>
         <div>How'd you get here?</div>
@@ -47,34 +80,83 @@ header {
 .main {
   width: 100vw;
   height: 100vh;
-
 }
 
 aside {
   flex-shrink: 0;
 }
+
+.results-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tab-button {
+  /* padding: 0.5rem 1rem; */
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: #334155;
+}
+
+.tab-button.active {
+  color: #0ea5e9;
+  border-bottom: 2px solid #0ea5e9;
+}
+
+.tab-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.sql-view {
+  padding: 1rem;
+  background: #f8fafc;
+  height: 100%;
+}
+
+.sql-view pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #334155;
+}
 </style>
+
 <script lang="ts">
 import SidebarLayout from "../components/SidebarLayout.vue";
 import Sidebar from '../components/Sidebar.vue';
-// editor imports
 import Editor from "../components/Editor.vue";
 import DataTable from "../components/DataTable.vue";
 import VerticalSplitLayout from "../components/VerticalSplitLayout.vue";
 import ErrorMessage from "../components/ErrorMessage.vue"
-
-// tutorial imports
+import LoadingView from "../components/LoadingView.vue";
 import Tutorial from "../components/Tutorial.vue";
-
-//model imports
 import ModelView from '../components/Models.vue';
+import UserSettings from '../components/UserSettings.vue';
+import UserProfile from "../components/UserProfile.vue";
 
 import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
-import { inject } from 'vue';
-
+import { inject, ref } from 'vue';
 
 export default {
   name: "IDEComponent",
@@ -84,6 +166,7 @@ export default {
     return {
       activeEditor: activeEditor,
       activeScreen: screen ? screen : 'editors',
+      activeTab: 'results',
     };
   },
   components: {
@@ -95,6 +178,9 @@ export default {
     ErrorMessage,
     Tutorial,
     ModelView,
+    UserSettings,
+    UserProfile,
+    LoadingView
   },
   setup() {
     type ResolverType = typeof AxiosResolver;
@@ -111,7 +197,6 @@ export default {
     return { connectionStore, editorStore, trilogyResolver, saveEditors };
   },
   methods: {
-    // Sets the currently active editor
     setActiveEditor(editor: string) {
       this.activeEditor = editor
       pushHashToUrl('editor', editor)
@@ -123,10 +208,8 @@ export default {
     saveEditorsCall() {
       this.saveEditors()
     }
-
   },
   computed: {
-    // The currently active editor data
     activeEditorData() {
       if (!this.activeEditor) return null;
       let r = this.editorStore.editors[this.activeEditor];
@@ -138,8 +221,6 @@ export default {
     editors() {
       return this.editorStore.editors
     }
-  },
-  props: {
   },
 };
 </script>

@@ -19,3 +19,25 @@ order BY
     line_item.return_flag desc,
     line_item.line_status desc
 ;`
+
+export const QUERY_JOIN = `
+import part as part;
+
+where  part.supplier.nation.region.name = 'EUROPE'
+select 
+	part.supplier.account_balance,
+	part.supplier.name,
+	part.supplier.nation.name,
+	part.id,
+	part.manufacturer,
+	part.supplier.address,
+	part.supplier.phone,
+	part.supplier.comment,
+	--part.supply_cost,
+	min(part.supply_cost) by part.id as min_part_cost,
+HAVING
+	part.supply_cost = min_part_cost
+
+order by
+	part.id asc;
+`

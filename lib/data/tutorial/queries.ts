@@ -1,10 +1,11 @@
 
 
 export const CUSTOMER_CONTENT = `
+import nation as nation;
+
 key id int;
 property id.name string;
 property id.address string;
-# c_nationkey fk
 property id.phone string;
 property id.account_balance float;
 property id.market_segment string;
@@ -14,7 +15,7 @@ datasource customers (
     c_custkey:id,
     c_name:name,
     c_address:address,
-#  c_nationkey   INTEGER not null,
+    c_nationkey:nation.id,
     c_phone:phone,
     c_acctbal:account_balance,
     c_mktsegment:market_segment,
@@ -137,7 +138,7 @@ datasource supplier (
     s_suppkey:id,
     s_name:name,
     s_address:address,
-    s_nation_key:nation.id,
+    s_nationkey:nation.id,
     s_phone:phone,
     s_acctbal:account_balance,
     s_comment:comment

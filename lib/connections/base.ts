@@ -8,6 +8,7 @@ export default abstract class BaseConnection {
     model: string| null =  null;
     connected: boolean;
     error: string | null = null;
+    query_type: string = null;
 
     constructor(name: string, type: string,  autoConnect: boolean = true, model?: string) {
         this.name = name;
@@ -15,6 +16,7 @@ export default abstract class BaseConnection {
         this.model = model || null;
         // hardcoded for dev
         this.storage = 'local';
+        this.query_type = 'duckdb';
         this.connected = false; // Default to disconnected
         if (autoConnect) {
             this.connect().then(() => {

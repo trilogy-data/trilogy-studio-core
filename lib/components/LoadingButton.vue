@@ -1,8 +1,15 @@
 <template>
     <div class="relative inline-block button-wrapper">
-        <button class="btn flex" :disabled="isLoading" @click="handleClick">
+        <button 
+            :class="[
+                {'btn flex': useDefaultStyle}, 
+                $attrs.class
+            ]" 
+            v-bind="$attrs" 
+            :disabled="isLoading" 
+            @click="handleClick"
+        >
             <transition name="fade" mode="out-in">
-
                 <span v-if="status === 'success'" class="green">✔</span>
                 <span v-else-if="status === 'error'" class="red">✖ ({{ errorMessage }})</span>
                 <span v-else-if="isLoading" class="spinner"></span>
@@ -10,9 +17,7 @@
                     <slot></slot>
                 </span>
             </transition>
-
         </button>
-
     </div>
 </template>
 
@@ -24,6 +29,10 @@ export default {
         action: {
             type: Function,
             required: true,
+        },
+        useDefaultStyle: {
+            type: Boolean,
+            default: true,
         },
         keyCombination: {
             type: Array<string>,

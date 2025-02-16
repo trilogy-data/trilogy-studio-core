@@ -1,28 +1,25 @@
 <template>
     <div ref="editor" id="editor" class="editor-fix-styles">
-        <!-- <button class="absolute-button bottom-run" @onClick=runQuery>Run</button>
-        <button class="absolute-button bottom-reset" >Reset Editor</button> -->
+        <div class = "absolute-button bottom-run"><loading-button  class="button-transparent" :action="runQuery">Run (ctrl-enter)</loading-button></div>
     </div>
 
 </template>
-<style scoped>
+<style>
 .editor-fix-styles {
     text-align: left;
     border: none;
     height: 100%;
-    /* position: relative; */
+    position: relative;
 }
 
 .absolute-button {
     position: absolute;
     bottom: 16px;
-    /* Distance from the bottom of the container */
     right: 16px;
-    /* Distance from the right of the container */
-    margin-top: 8px;
-    /* Add space between the buttons */
-    padding: 8px 16px;
-    background-color: transparent;
+}
+
+.button-transparent {
+    background-color: transparent !important;
     /* Transparent background */
     color: #007bff;
     border: 1px solid #007bff;
@@ -30,6 +27,8 @@
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease;
     z-index: 99;
+    /* height: 24px; */
+    /* min-width: 60px; */
 }
 
 .bottom-run {
@@ -52,6 +51,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ModelConfigStoreType } from '../stores/modelStore.ts';
 import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
+import LoadingButton from './LoadingButton.vue';
 import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map();
@@ -113,6 +113,7 @@ export default defineComponent({
         }
     },
     components: {
+        LoadingButton
     },
     setup() {
 
@@ -123,7 +124,7 @@ export default defineComponent({
         if (!editorStore || !connectionStore || !trilogyResolver || !modelStore) {
             throw new Error('Editor store and connection store and trilogy resolver are not provided!');
         }
-        
+
         return { connectionStore, modelStore, editorStore, trilogyResolver };
     },
     mounted() {
@@ -169,57 +170,92 @@ export default defineComponent({
     },
 
     methods: {
-        runQuery() {
+        async runQuery() {
             const editor = editorMap.get(this.context);
-            if (this.loading) {
+            if (this.loading || !editor) {
                 return;
             }
-            if (!editor) {
-                return;
-            }
-            let conn = this.connectionStore.connections[this.editorData.connection];
+
+            const conn = this.connectionStore.connections[this.editorData.connection];
             if (!conn) {
+                console.log('connection not found')
                 this.editorData.setError(`Connection ${this.editorData.connection} not found.`);
                 return;
             }
 
-            var sources: ContentInput[] = [];
-            if (conn.model) {
-                sources = this.modelStore.models[conn.model].sources.map((source) => {
-                    return {
+            // Create an AbortController for cancellation
+            const controller = new AbortController();
+            this.editorData.cancelCallback = () => {
+                controller.abort();
+                this.editorData.loading = false;
+                this.editorData.cancelCallback = null;
+            };
+
+            try {
+                this.editorData.loading = true;
+
+                // Prepare sources if model exists
+                const sources: ContentInput[] = conn.model
+                    ? this.modelStore.models[conn.model].sources.map((source) => ({
                         alias: source.alias,
                         contents: this.editorStore.editors[source.editor].contents
-                    }
-                });
-            }
-            var selected: monaco.Selection | monaco.Range | null = editor.getSelection();
-            var text: string;
-            if (selected && !(selected.startColumn === selected.endColumn && selected.startLineNumber === selected.endLineNumber)) {
-                text = editor.getModel()?.getValueInRange(selected) as string;
+                    }))
+                    : [];
 
-            }
-            else {
-                text = editor.getValue();
-            }
-            this.trilogyResolver.resolve_query(text, conn.type, this.editorData.type, sources).then((response) => {
-                if (!response.data.generated_sql) {
-                    this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
-                    return
+                // Get selected text or full content
+                const selected = editor.getSelection();
+                const text = selected && !(
+                    selected.startColumn === selected.endColumn &&
+                    selected.startLineNumber === selected.endLineNumber
+                )
+                    ? editor.getModel()?.getValueInRange(selected) as string
+                    : editor.getValue();
+
+                // First promise: Resolve query
+                const resolveResponse = await Promise.race([
+                    this.trilogyResolver.resolve_query(text, conn.query_type, this.editorData.type, sources),
+                    new Promise((_, reject) => {
+                        controller.signal.addEventListener('abort', () =>
+                            reject(new Error('Query cancelled by user'))
+                        );
+                    })
+                ]);
+
+                if (!resolveResponse.data.generated_sql) {
+                    this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []));
+                    return;
                 }
-                conn.query(response.data.generated_sql).then((sql_response) => {
-                    this.editorStore.setEditorResults(this.editorName, sql_response)
-                }).catch((error) => {
-                    this.editorData.setError(error.message);
-                });
-            }).catch((error: Error) => {
-                this.editorData.setError(error.message);
-            });
+                this.editorData.generated_sql = resolveResponse.data.generated_sql;
+
+                // Second promise: Execute query
+                const sqlResponse = await Promise.race([
+                    conn.query(resolveResponse.data.generated_sql),
+                    new Promise((_, reject) => {
+                        controller.signal.addEventListener('abort', () =>
+                            reject(new Error('Query cancelled by user'))
+                        );
+                    })
+                ]);
+
+                this.editorStore.setEditorResults(this.editorName, sqlResponse);
+
+            } catch (error) {
+                if (error instanceof Error) {
+                    // Handle abortion vs other errors differently
+                    const errorMessage = controller.signal.aborted
+                        ? 'Query cancelled by user'
+                        : error.message;
+                    this.editorData.setError(errorMessage);
+                }
+            } finally {
+                this.editorData.loading = false;
+                this.editorData.cancelCallback = null;
+            }
         },
         getEditor() {
             editorMap.get(this.editorName);
         },
         createEditor() {
-            console.log('creating editor')
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
                 return
