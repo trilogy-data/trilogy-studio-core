@@ -8,8 +8,8 @@
 
       <template v-if="activeScreen === 'editors'">
         <vertical-split-layout>
-          <template #editor v-if="activeEditorData">
-            <editor :key="activeEditor" :editorName="activeEditor" @save-editors="saveEditorsCall" />
+          <template #editor v-if="activeEditor">
+            <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
             <error-message v-if="activeEditorData.error">{{ activeEditorData.error }}</error-message>

@@ -41,7 +41,8 @@
         <ul class="source-list">
           <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
             <div @click="onEditorClick(source)">{{ source.alias }} ({{ source.editor }})</div>
-            <Editor class="editor-inline" v-if="isEditorExpanded[source.editor]" :editorName="source.editor" />
+            <Editor :context="source.editor" class="editor-inline" v-if="isEditorExpanded[source.editor]"
+              :editorName="source.editor" />
           </li>
 
         </ul>
@@ -76,8 +77,9 @@
 
 <style scoped>
 .editor-inline {
-  height:400px;
+  height: 400px;
 }
+
 .model-display {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

@@ -1,5 +1,5 @@
 <template>
-    <div :key="editorName" ref="editor" id="editor" class="editor-fix-styles">
+    <div ref="editor" id="editor" class="editor-fix-styles">
         <!-- <button class="absolute-button bottom-run" @onClick=runQuery>Run</button>
         <button class="absolute-button bottom-reset" >Reset Editor</button> -->
     </div>
@@ -54,12 +54,16 @@ import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
 import type { ContentInput } from '../stores/resolver'
 
-let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let editorMap: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map();
+let mountedMap: Map<string, boolean> = new Map();
 
 export default defineComponent({
     name: 'Editor',
     props: {
+        context: {
+            type: String,
+            required: true
+        },
         editorName: {
             type: String,
             required: true
@@ -124,8 +128,11 @@ export default defineComponent({
     },
     mounted() {
         this.createEditor()
+        mountedMap.set(this.context, true);
     },
     unmounted() {
+        editorMap.get(this.context)?.dispose();
+        mountedMap.delete(this.context);
     },
     computed: {
         prefersLight() {
@@ -153,12 +160,17 @@ export default defineComponent({
 
     },
     watch: {
+        editorName: {
+            handler() {
+                console.log('editorName changed')
+                this.createEditor()
+            },
+        }
     },
 
     methods: {
         runQuery() {
-            const editor = editorInstance;
-            console.log('running')
+            const editor = editorMap.get(this.context);
             if (this.loading) {
                 return;
             }
@@ -204,16 +216,18 @@ export default defineComponent({
             });
         },
         getEditor() {
-
             editorMap.get(this.editorName);
         },
         createEditor() {
+            console.log('creating editor')
             let editorElement = document.getElementById('editor')
             if (!editorElement) {
                 return
             }
             // if we've already set up the editor
-            if (editorInstance) {
+            if (editorMap.has(this.context) && mountedMap.get(this.context)) {
+                console.log('editor already exists')
+                editorMap.get(this.context)?.setValue(this.editorData.contents)
                 return
             }
             const editor = monaco.editor.create(editorElement, {
@@ -221,7 +235,7 @@ export default defineComponent({
                 language: 'sql',
                 automaticLayout: true,
             })
-            editorInstance = editor;
+            editorMap.set(this.context, editor);
             editor.layout();
             monaco.editor.defineTheme('trilogyStudio', {
                 base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
