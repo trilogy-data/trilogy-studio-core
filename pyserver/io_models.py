@@ -1,6 +1,12 @@
 from typing import List, Optional, Tuple
 
-from trilogy.authoring import DataType, Purpose, ListType, StructType
+from trilogy.authoring import (
+    DataType,
+    Purpose,
+    ListType,
+    StructType,
+)  # , NumericType, TraitDataType
+from trilogy.core.models.core import NumericType, TraitDataType
 from trilogy.core.models.core import MapType
 from pydantic import BaseModel, Field
 
@@ -15,9 +21,9 @@ class LineageItem(BaseModel):
 
 class UIConcept(BaseModel):
     address: str
-    name:str
+    name: str
     namespace: str
-    datatype: DataType | ListType | MapType | StructType
+    datatype: DataType | ListType | MapType | StructType | NumericType | TraitDataType
     purpose: Purpose
     description: Optional[str] = None
     lineage: List[LineageItem] = Field(default_factory=list)
@@ -72,7 +78,7 @@ class QueryInSchema(BaseModel):
 
 class QueryOutColumn(BaseModel):
     name: str
-    datatype: DataType
+    datatype: DataType | TraitDataType | ListType | StructType | MapType | NumericType
     purpose: Purpose
 
 

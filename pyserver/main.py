@@ -20,7 +20,14 @@ from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
 from trilogy.authoring import SelectStatement, MultiSelectStatement
-from io_models import QueryInSchema, FormatQueryOutSchema, QueryOut, QueryOutColumn, ModelInSchema, Model
+from .io_models import (
+    QueryInSchema,
+    FormatQueryOutSchema,
+    QueryOut,
+    QueryOutColumn,
+    ModelInSchema,
+    Model,
+)
 
 from logging import getLogger
 import click
@@ -30,7 +37,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
-from env_helpers import parse_env_from_full_model, model_to_response
+from .env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 
@@ -131,16 +138,18 @@ def generate_query(query: QueryInSchema):
     )
     return output
 
+
 @router.post("/parse_model")
-def parse_model(model: ModelInSchema)->Model:
+def parse_model(model: ModelInSchema) -> Model:
     try:
         env = parse_env_from_full_model(model)
         # add all imports by default
         for idx, source in enumerate(model.sources):
-            env.parse(f'import {source.alias};')
+            env.parse(f"import {source.alias};")
         return model_to_response(model.name, env)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
+
 
 ## Core
 @router.get("/")

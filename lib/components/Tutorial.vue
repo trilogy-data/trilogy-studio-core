@@ -16,11 +16,12 @@
 
         If this is your first visit, then the demo will be set up automatically.
 
-        Try the demo_1 and demo_2 queries to see how the model can be used to generate SQL, and then look at the source
+        Try the example_query_1 and example_query_2 queries to see how the model can be used to generate SQL, and then
+        look at the source
         model files to see inputs.
 
         Clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state.
-        Take care as it will revert any changes you have made. </p>
+        Take care with this, as it will revert any changes you have made. </p>
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
 
@@ -56,6 +57,10 @@
       <p>Models are the Trilogy semantic layer. When you run a Trilogy command in a connection with a model associated,
         it
         will be able to import all included files and reference them.</p>
+
+      <p>Any editor can be turned into a model source. By default, model sources are hidden in browsing, but this can be
+        toggled
+        in the editor view.</p>
     </section>
 
     <section id="data-and-privacy" class="tutorial-section">
@@ -63,8 +68,10 @@
       <p>The content of a Trilogy IDE (or selected subset) + defined model source files will be sent to a remote server
         to generate SQL. This contains no other identifying information beyond the editor text and associated model
         editor texts sent.</p>
-      <p>All other operations will be between your local machine and services you control. For example, when querying any database
-        you have configured, the javascript backend will communicate directly with the database without any intermediate 3rd party servers.</p>
+      <p>All other operations will be between your local machine and services you control. For example, when querying
+        any database
+        you have configured, the javascript backend will communicate directly with the database without any intermediate
+        3rd party servers.</p>
 
       <h3>Product Specific</h3>
       <h4>Google</h4>
@@ -73,7 +80,8 @@
 
       <h4>Other</h4>
       <p>For other databases that require secrets, we will use the browser credential API to store your credentials
-        locally and prompt you before accessing them. These credentials are only sent to the relevant database as part of connecting.</p>
+        locally and prompt you before accessing them. These credentials are only sent to the relevant database as part
+        of connecting.</p>
 
     </section>
 
@@ -91,7 +99,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore';
 import type { ModelConfigStoreType } from '../stores/modelStore';
 import { DuckDBConnection } from '../connections';
 import Editor from '../editors/editor'
-import {EditorTag} from '../editors/editor'
+import { EditorTag } from '../editors/editor'
 import LoadingButton from './LoadingButton.vue';
 import { ModelConfig } from '../models/model';
 import ConnectionList from './ConnectionList.vue';

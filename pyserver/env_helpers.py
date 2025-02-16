@@ -1,5 +1,5 @@
 from trilogy import Environment
-from io_models import ModelInSchema, Model, LineageItem, UIConcept
+from .io_models import ModelInSchema, Model, LineageItem, UIConcept
 
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.parsing.render import Renderer
@@ -13,8 +13,11 @@ from trilogy.authoring import (
     Comparison,
     AggregateWrapper,
     MultiSelectStatement,
+    SelectStatement,
+    ConceptRef,
     DEFAULT_NAMESPACE,
 )
+from trilogy.core.models.author import MultiSelectLineage, RowsetItem
 from typing import Any, List, Union
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
@@ -32,6 +35,7 @@ def flatten_array(input: Any, depth: int = 0) -> List[LineageItem]:
 
 def flatten_lineage(
     input: Union[
+        ConceptRef,
         Concept,
         int,
         float,
@@ -43,6 +47,9 @@ def flatten_lineage(
         Conditional,
         Comparison,
         AggregateWrapper,
+        SelectStatement,
+        MultiSelectLineage,
+        RowsetItem,
         # RowsetItem,
         MultiSelectStatement,
     ],
@@ -75,7 +82,7 @@ def flatten_lineage(
         ]  # ], ')']
         chain += flatten_lineage(input.content, depth + 1)
         chain += [LineageItem(token="by", depth=depth)]
-        chain += flatten_array(input.where.input, depth + 1)
+        chain += flatten_array(input.where.concept_arguments, depth + 1)
         chain += [LineageItem(token=")", depth=depth)]
     elif isinstance(input, AggregateWrapper):
         return flatten_lineage(input.function, depth)
@@ -120,9 +127,11 @@ def flatten_lineage(
 def parse_env_from_full_model(input: ModelInSchema | None) -> Environment:
     if not input:
         return Environment()
-    
+
     resolver = DictImportResolver(
-        content={source.alias: source.contents for idx,  source in enumerate(input.sources)}
+        content={
+            source.alias: source.contents for idx, source in enumerate(input.sources)
+        }
     )
     env = Environment(config=EnvironmentOptions(import_resolver=resolver))
 
@@ -138,7 +147,7 @@ def model_to_response(
         # don't show private concepts
         if sconcept.name.startswith("_"):
             continue
-        if '__preql_internal' in sconcept.address:
+        if "__preql_internal" in sconcept.address:
             continue
         final_concepts.append(
             UIConcept(
