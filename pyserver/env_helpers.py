@@ -1,5 +1,5 @@
 from trilogy import Environment
-from .io_models import ModelInSchema, Model, LineageItem, UIConcept
+from io_models import ModelInSchema, Model, LineageItem, UIConcept
 
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.parsing.render import Renderer
@@ -15,7 +15,6 @@ from trilogy.authoring import (
     MultiSelectStatement,
     SelectStatement,
     ConceptRef,
-    DEFAULT_NAMESPACE,
 )
 from trilogy.core.models.author import MultiSelectLineage, RowsetItem
 from typing import Any, List, Union

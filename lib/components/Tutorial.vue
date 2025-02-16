@@ -8,6 +8,10 @@
         next section configures
         entirely new main screen experiences. Configuration/profile are accessible at the bottom.</p>
 
+      By default, Trilogy Studio stores your editors, connections, and models in local storage. Use the
+      save buttons to record changes. You can also use the keyboard shortcuts <kbd>Ctrl</kbd> + <kbd>S</kbd> to save
+      your work.
+
     </section>
     <section id="demo" class="tutorial-section">
       <h2>Demo</h2>
@@ -17,8 +21,7 @@
         If this is your first visit, then the demo will be set up automatically.
 
         Try the example_query_1 and example_query_2 queries to see how the model can be used to generate SQL, and then
-        look at the source
-        model files to see inputs.
+        look at the source model files to see inputs. (you may have to uhide them.)
 
         Clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state.
         Take care with this, as it will revert any changes you have made. </p>
@@ -43,10 +46,10 @@
         editors
         as semantic sources.
       </p>
-      You can view current connections below. Edit the model associated with a connection by clicking the button next to
-      it.
+      You can view current connections below. Edit the model associated with a connection by clicking the model name next to (or set model if not set).
+      Connections will not automatically connect on startup by default; click the <i class="mdi mdi-connection"></i> button to connect.
 
-      This connection view is accessible. through the connections page on the left side.
+      This connection view is always accessible through the connections page on the left side.
       <div class='sidebar-tutorial-container'>
         <connection-list />
       </div>
@@ -61,6 +64,17 @@
       <p>Any editor can be turned into a model source. By default, model sources are hidden in browsing, but this can be
         toggled
         in the editor view.</p>
+
+      <p>A model contains all metadata parseable from your source files. If you haven't deleted the demo model, it will be visible below. (You can reset the demo to restore it).
+
+      Models are automatically parsed on query submission, but can be validated. Click the 'parse' button to parse the model. This will send the model to a backend server to be parsed and typechecked
+      and generate metadata for visibility.
+
+      You can click on an editor name to view and edit it. This can be useful to fix parse errors easily. 
+
+      </p>
+
+      <model-card :config="demoConfig" />
     </section>
 
     <section id="data-and-privacy" class="tutorial-section">
@@ -102,6 +116,7 @@ import Editor from '../editors/editor'
 import { EditorTag } from '../editors/editor'
 import LoadingButton from './LoadingButton.vue';
 import { ModelConfig } from '../models/model';
+import ModelCard from './ModelCard.vue';
 import ConnectionList from './ConnectionList.vue';
 import { CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT, LINE_ITEM_CONTENT } from '../data/tutorial/queries'
 import { QUERY_LINE_ITEM, QUERY_JOIN } from '../data/tutorial/example_queries';
@@ -121,7 +136,13 @@ export default {
   },
   components: {
     LoadingButton,
-    ConnectionList
+    ConnectionList,
+    ModelCard,
+  },
+  computed: {
+    demoConfig() {
+      return this.modelStore.models['demo-model'];
+    }
   },
   methods: {
     setupDemo() {
@@ -129,7 +150,6 @@ export default {
       let modelName = 'demo-model';
       let connection = new DuckDBConnection(connName, modelName);
       let x = this.connectionStore.addConnection(connection);
-      console.log(x)
       //CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT
       let customer = new Editor({ name: 'customer', type: 'trilogy', connection: connName, storage: 'local', contents: CUSTOMER_CONTENT, tags: [EditorTag.SOURCE] });
       this.editorStore.addEditor(customer);

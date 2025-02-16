@@ -84,7 +84,7 @@ export default class LocalStorage extends AbstractStorage {
                     acc[connection.name] = reactive(MotherDuckConnection.fromJSON(connection));
                     break;
                 default:
-                    throw new Error(`Unknown connection type: ${connection.type}`);
+                    break;
             }
             return acc;
         }, {});

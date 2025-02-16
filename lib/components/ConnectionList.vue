@@ -16,7 +16,7 @@
         <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
         </tooltip>
 
-        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i>
+        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-oauth'"> <i class="mdi mdi-google"></i>
         </tooltip>
 
         <div class="button-container connection-parts">
@@ -52,7 +52,7 @@
           </div>
 
 
-          <loading-button :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button>
+          <loading-button :action="() => resetConnection(connection)"><i :class="connection.connected? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i></loading-button>
         </div>
 
 

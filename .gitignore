@@ -30,4 +30,5 @@ secrets.env
 #python
 __pycache__
 
+.mypy_cache
 config_backup

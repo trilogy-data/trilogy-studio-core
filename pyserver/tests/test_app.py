@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from ..io_models import ModelInSchema, ModelSourceInSchema
+from io_models import ModelInSchema, ModelSourceInSchema
 
 
 def test_read_main(test_client: TestClient):

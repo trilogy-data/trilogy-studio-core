@@ -1,76 +1,7 @@
 <template>
   <div class="model-display">
     <div v-for="(config, index) in modelConfigs" :key="index" class="card">
-      <section :id="config.name" class="model-section">
-        <h3 class="card-title">{{ config.name }}</h3>
-        <div class="button-container">
-          <button class="button" @click="fetchParseResults(index)">
-            Parse
-          </button>
-          <div class="flex relative-container">
-            <button class="button" @click="newSourceVisible[index] = true">
-              Add New Source
-            </button>
-
-            <div v-if="newSourceVisible[index]" class="absolute-form">
-              <form @submit.prevent="submitSourceAddition(index)">
-                <div>
-                  <label for="connection-name">Alias</label>
-                  <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
-                  <label for="connection-name">Editor</label>
-
-                  <select v-model="sourceDetails.name" id="editor-name" required>
-                    <option v-for="editor in editorList" :key="editor" :value="editor">
-                      {{ editor }}
-                    </option>
-                  </select>
-                </div>
-
-                <button type="submit">Submit</button>
-                <button type="button" @click="newSourceVisible[index] = !newSourceVisible[index]">Cancel</button>
-              </form>
-            </div>
-          </div>
-          <button class="button" @click="clearSources(index)">
-            Clear Sources
-          </button>
-          <button class="button" @click="remove(index)">
-            Delete
-          </button>
-        </div>
-        <ul class="source-list">
-          <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-            <div @click="onEditorClick(source)">{{ source.alias }} ({{ source.editor }})</div>
-            <Editor :context="source.editor" class="editor-inline" v-if="isEditorExpanded[source.editor]"
-              :editorName="source.editor" />
-          </li>
-
-        </ul>
-        <div v-if="config.parseError" class="parse-error">
-          <error-message><span>Error fetching parse results: {{ config.parseError }}</span></error-message>
-        </div>
-        <div v-else-if="config.parseResults" class="parse-results">
-          <div>
-            <div class="toggle-concepts" @click="toggleConcepts(index)">
-              Concepts ({{ config.parseResults.concepts.length }}) {{ isExpanded[index] ? '' : '>' }}
-            </div>
-          </div>
-          <div v-show="isExpanded[index]" class="concepts-list">
-            <ModelConcept :config="config.parseResults" />
-          </div>
-          <div class="datasources">
-            <strong>Datasources:</strong>
-            <ul>
-              <li v-for="(datasource, datasourceIndex) in config.parseResults.datasources" :key="datasourceIndex">
-                {{ datasource.name }} ({{ datasource.address }})
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div v-else class="no-results">
-          <em>No parse results available.</em>
-        </div>
-      </section>
+      <ModelCard :config="config" :index="index" />
     </div>
   </div>
 </template>
@@ -196,6 +127,7 @@ import ModelConcept from "./ModelConcept.vue";
 import AxiosResolver from "../stores/resolver";
 import LoadingButton from "./LoadingButton.vue";
 import ErrorMessage from "./ErrorMessage.vue";
+import ModelCard from "./ModelCard.vue";
 import Editor from "./Editor.vue";
 export default defineComponent({
   name: "ModelConfigViewer",
@@ -255,6 +187,7 @@ export default defineComponent({
     LoadingButton,
     ErrorMessage,
     Editor,
+    ModelCard,
   },
   computed: {
     modelConfigs(): Record<string, ModelConfig> {

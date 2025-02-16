@@ -20,7 +20,7 @@ from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
 from trilogy.authoring import SelectStatement, MultiSelectStatement
-from .io_models import (
+from io_models import (
     QueryInSchema,
     FormatQueryOutSchema,
     QueryOut,
@@ -37,7 +37,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
-from .env_helpers import parse_env_from_full_model, model_to_response
+from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 
