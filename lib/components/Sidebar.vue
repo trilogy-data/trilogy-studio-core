@@ -3,12 +3,12 @@
     <div class="sidebar-icons">
       <tooltip content="Trilogy Studio (Alpha)"><img class="trilogy-icon" :src="trilogyIcon" /></tooltip>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, index) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, index) in sidebarFeatureItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
@@ -39,7 +39,7 @@ import TutorialSidebar from "./TutorialSidebar.vue";
 import ModelSidebar from "./ModelSidebar.vue";
 import trilogyIcon from "../static/trilogy.png";
 import Tooltip from "./Tooltip.vue";
-import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
+import { getDefaultValueFromHash } from '../stores/urlStore';
 export default defineComponent({
   name: "Sidebar",
   data() {

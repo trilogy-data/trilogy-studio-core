@@ -1,6 +1,7 @@
 <template>
     <div ref="editor" id="editor" class="editor-fix-styles">
-        <div class = "absolute-button bottom-run"><loading-button  class="button-transparent" :action="runQuery">Run (ctrl-enter)</loading-button></div>
+        <div class="absolute-button bottom-run"><loading-button class="button-transparent" :action="runQuery">Run
+                (ctrl-enter)</loading-button></div>
     </div>
 
 </template>
@@ -220,15 +221,17 @@ export default defineComponent({
                         );
                     })
                 ]);
-
+                // @ts-ignore
                 if (!resolveResponse.data.generated_sql) {
                     this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []));
                     return;
                 }
+                // @ts-ignore
                 this.editorData.generated_sql = resolveResponse.data.generated_sql;
 
                 // Second promise: Execute query
                 const sqlResponse = await Promise.race([
+                    // @ts-ignore
                     conn.query(resolveResponse.data.generated_sql),
                     new Promise((_, reject) => {
                         controller.signal.addEventListener('abort', () =>
@@ -236,7 +239,7 @@ export default defineComponent({
                         );
                     })
                 ]);
-
+                // @ts-ignore
                 this.editorStore.setEditorResults(this.editorName, sqlResponse);
 
             } catch (error) {

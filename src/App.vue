@@ -1,8 +1,6 @@
 <script setup lang="ts">
 // @ts-ignore
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
-import { DuckDBConnection, BigQueryOauthConnection } from 'trilogy-studio-core/connections';
-import { ModelConfig, ModelParseResults, Concept, Datasource, DataType, Purpose } from 'trilogy-studio-core/models';
 import { LocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
 

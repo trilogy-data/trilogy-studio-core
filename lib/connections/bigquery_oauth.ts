@@ -12,7 +12,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
     private projectId: string;
 
     constructor(name: string, projectId: string , model?: string) {
-        super(name, "bigquery-ouath", false), model;
+        super(name, "bigquery-oauth", false), model;
         this.projectId = projectId;
         this.query_type = 'bigquery';
     }

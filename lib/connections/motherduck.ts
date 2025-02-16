@@ -12,6 +12,7 @@ export default class MotherDuckConnection extends BaseConnection {
     constructor(name: string, mdToken: string, model?: string) {
         super(name, 'motherduck', true, model)
         this.mdToken = mdToken;
+        this.query_type = 'duckdb';
 
     }
 

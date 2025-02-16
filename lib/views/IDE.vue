@@ -156,7 +156,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
-import { inject, ref } from 'vue';
+import { inject } from 'vue';
 
 export default {
   name: "IDEComponent",

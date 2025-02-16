@@ -10,11 +10,11 @@ export default class LocalStorage extends AbstractStorage {
     private modelStorageKey: string
     public type: string;
 
-    constructor() {
+    constructor(prefix: string = "") {
         super()
-        this.editorStorageKey = "editors";
-        this.connectionStorageKey = "connections";
-        this.modelStorageKey = "modelConfig";
+        this.editorStorageKey = prefix + "editors";
+        this.connectionStorageKey = prefix + "connections";
+        this.modelStorageKey = prefix + "modelConfig";
         this.type = 'local';
     }
 
@@ -71,13 +71,16 @@ export default class LocalStorage extends AbstractStorage {
         // map raw into appropriate connection form using the connection.type field on the connection object
         return raw.reduce((acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>, connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection) => {
             switch (connection.type) {
-                case "bigquery-ouath":
+                case "bigquery-oauth":
+                    // @ts-ignore
                     acc[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection));
                     break;
                 case "duckdb":
+                    // @ts-ignore
                     acc[connection.name] = reactive(DuckDBConnection.fromJSON(connection));
                     break;
                 case "motherduck":
+                    // @ts-ignore
                     acc[connection.name] = reactive(MotherDuckConnection.fromJSON(connection));
                     break;
                 default:

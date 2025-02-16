@@ -125,7 +125,7 @@ export class Concept {
     namespace: string;
     datatype: DataType | ListType | MapType | StructType;
     purpose: Purpose;
-    description?: string;
+    description: string | null;
     lineage: LineageItem[];
 
     constructor(
@@ -142,7 +142,7 @@ export class Concept {
         this.namespace = namespace;
         this.datatype = datatype;
         this.purpose = purpose;
-        this.description = description;
+        this.description = description || null;
         this.lineage = lineage;
     }
 }

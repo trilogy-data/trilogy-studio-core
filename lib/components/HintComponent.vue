@@ -116,14 +116,14 @@ export default {
     computed: {
 
         shortcuts():Array<any> {
-            if (this.$store.getters.genAIConnections.length > 0) {
-                return this.staticShortcuts.concat([
-                    {
-                        name: 'Generate Trilogy From Selected Text',
-                        keys: ['G']
-                    }
-                ])
-            }
+            // if (this.$store.getters.genAIConnections.length > 0) {
+            //     return this.staticShortcuts.concat([
+            //         {
+            //             name: 'Generate Trilogy From Selected Text',
+            //             keys: ['G']
+            //         }
+            //     ])
+            // }
             return this.staticShortcuts
         },
 

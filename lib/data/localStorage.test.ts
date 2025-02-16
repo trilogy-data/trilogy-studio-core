@@ -44,12 +44,12 @@ describe("EditorLocalStorage", () => {
     let localStorage: LocalStorage;
 
     beforeEach(() => {
-        localStorage = new LocalStorage();
+        localStorage = new LocalStorage("test");
         // localStorage.clear();
     });
 
     it("should save and load an editor", () => {
-        const editor: Editor = new Editor( {name: "editor1", type:'preql', connection:'test-connection', storage:'abc', contents: "test content" });
+        const editor: Editor = new Editor({ name: "editor1", type: 'preql', connection: 'test-connection', storage: 'abc', contents: "test content" });
         expect(editor.name).toBe("editor1");
         localStorage.saveEditor(editor);
         const loadedEditors = localStorage.loadEditors();
@@ -60,8 +60,8 @@ describe("EditorLocalStorage", () => {
 
     it("should save and clear editors", () => {
         const editors: Editor[] = [
-            new Editor({ name: "editor1", type:'preql', connection:'test-connection', storage:'abc', contents: "content1" }),
-            new Editor({ name: "editor2", type:'preql', connection:'test-connection', storage:'abc', contents: "content2" }),
+            new Editor({ name: "editor1", type: 'preql', connection: 'test-connection', storage: 'abc', contents: "content1" }),
+            new Editor({ name: "editor2", type: 'preql', connection: 'test-connection', storage: 'abc', contents: "content2" }),
         ];
 
         localStorage.saveEditors(editors);
@@ -76,7 +76,7 @@ describe("EditorLocalStorage", () => {
     });
 
     it("should delete an editor by name", () => {
-        const editor: EditorInterface = new Editor({ name: "editor1", type:'preql', connection:'test-connection', storage:'abc', contents: "test content" });
+        const editor: Editor = new Editor({ name: "editor1", type: 'preql', connection: 'test-connection', storage: 'local', contents: "test content" });
 
         localStorage.saveEditor(editor);
         localStorage.deleteEditor("editor1");
@@ -86,7 +86,8 @@ describe("EditorLocalStorage", () => {
     });
 
     it("should check if an editor exists", () => {
-        const editor: EditorInterface = new Editor({ name: "editor1", type:'preql', connection:'test-connection', storage:'abc', contents: "test content" });
+
+        const editor: Editor = new Editor({ name: "editor1", type: 'preql', connection: 'test-connection', storage: 'local', contents: "test content" });
 
         localStorage.saveEditor(editor);
 
@@ -96,10 +97,11 @@ describe("EditorLocalStorage", () => {
 
     it("should save and load connections", () => {
         const connections = {
-            conn1: { type: "bigquery", name: "conn1" },
-            conn2: { type: "duckdb", name: "conn2" },
+            conn1: { type: "bigquery-oauth", name: "conn1", storage: 'local' },
+            conn2: { type: "duckdb", name: "conn2", storage: 'local' },
         };
 
+        // @ts-ignore
         localStorage.saveConnections(Object.values(connections));
         const loadedConnections = localStorage.loadConnections();
 
@@ -110,10 +112,10 @@ describe("EditorLocalStorage", () => {
 
     it("should delete a connection by name", () => {
         const connections = {
-            conn1: { type: "bigquery", name: "conn1" },
+            conn1: { type: "bigquery-oauth", name: "conn1" },
             conn2: { type: "duckdb", name: "conn2" },
         };
-
+        // @ts-ignore
         localStorage.saveConnections(Object.values(connections));
         localStorage.deleteConnection("conn1");
 
@@ -123,8 +125,8 @@ describe("EditorLocalStorage", () => {
     });
 
     it("should save and load model configs", () => {
-        let c1 = new ModelConfig({name:"config1", storage:'local', sources:["source1"]})
-        let c2 = new ModelConfig({name:"config2", storage:'local',  sources:["source2"]})
+        let c1 = new ModelConfig({ name: "config1", storage: 'local', sources: [{ editor: "source1", alias: "alias1" }], parseResults: null })
+        let c2 = new ModelConfig({ name: "config2", storage: 'local', sources: [{ editor: "source2", alias: "alias2" }], parseResults: null })
         const modelConfigList = {
             config1: c1,
             config2: c2,
@@ -142,7 +144,7 @@ describe("EditorLocalStorage", () => {
         const modelConfig = {
             config1: { id: "config1", settings: "settings1" },
         };
-
+        // @ts-ignore
         localStorage.saveModelConfig(modelConfig);
         localStorage.clearModelConfig();
 

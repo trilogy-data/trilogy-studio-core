@@ -55,6 +55,7 @@ export default class DuckDBConnection extends BaseConnection {
 
     constructor(name: string, model?: string) {
         super(name, 'duckdb', false, model);
+        this.query_type = 'duckdb';
 
     }
 

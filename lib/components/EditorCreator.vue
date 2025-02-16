@@ -78,7 +78,7 @@ export default defineComponent({
   components: {
     Tooltip
   },
-  setup(props, {emit}) {
+  setup(_, {emit}) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',

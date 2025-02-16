@@ -18,7 +18,7 @@
 import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue';
 
 interface Props {
-  cancel?: () => void;
+  cancel?: (() => void) | null
 }
 
 export default defineComponent({

@@ -6,7 +6,7 @@
                 <loading-button :action="saveModels" :key-combination="['control', 's']">Save</loading-button>
             </div>
         </template>
-        <div v-for="(config, index) in modelConfigs" :key="index" class="storage-group">
+        <div v-for="(_, index) in modelConfigs" :key="index" class="storage-group">
             <h4 class="text-sm">{{ index }}</h4>
             <!-- <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
         <div class="editor-content">

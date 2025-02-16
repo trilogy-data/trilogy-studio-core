@@ -23,20 +23,17 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import type { PropType } from 'vue';
-interface LineageStep {
-    token: string;
-    depth: number;
-    link: string | null;
-}
+import type {DataType, ListType, StructType, MapType, LineageItem} from "../models";
+
 
 interface Concept {
     address: string;
     name: string;
     namespace: string;
-    datatype: string;
+    datatype: DataType | ListType | StructType | MapType;
     purpose: string;
     description: string | null;
-    lineage: LineageStep[];
+    lineage: LineageItem[];
 }
 
 interface Config {

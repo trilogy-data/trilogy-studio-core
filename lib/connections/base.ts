@@ -8,7 +8,7 @@ export default abstract class BaseConnection {
     model: string| null =  null;
     connected: boolean;
     error: string | null = null;
-    query_type: string = null;
+    query_type: string = "abstract";
 
     constructor(name: string, type: string,  autoConnect: boolean = true, model?: string) {
         this.name = name;
@@ -16,7 +16,7 @@ export default abstract class BaseConnection {
         this.model = model || null;
         // hardcoded for dev
         this.storage = 'local';
-        this.query_type = 'duckdb';
+        this.query_type = 'abstract';
         this.connected = false; // Default to disconnected
         if (autoConnect) {
             this.connect().then(() => {
@@ -54,6 +54,7 @@ export default abstract class BaseConnection {
 
     abstract toJSON(): object;
 
+    // @ts-ignore
     static fromJSON(fields:object) {
         throw new Error("Method not implemented.");
     }
