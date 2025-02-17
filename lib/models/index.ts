@@ -11,3 +11,8 @@ export {
     Purpose,
     LineageItem,
 } from './model'
+
+export {
+    ModelImport,
+    ImportFile
+} from './import'

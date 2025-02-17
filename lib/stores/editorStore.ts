@@ -10,8 +10,8 @@ const useEditorStore = defineStore('editors', {
     editorList: (state) => Object.keys(state.editors).map(key => state.editors[key])
   },
   actions: {
-    newEditor(name: string, type: string, connection: string) {
-      let editor = new Editor({ name, type, connection, storage: 'local', contents: '' });
+    newEditor(name: string, type: string, connection: string, contents: string | undefined) {
+      let editor = new Editor({ name, type, connection, storage: 'local', contents: contents || '' });
       if (name in this.editors) {
         throw Error(`Editor with ${name} already exists.`);
       }

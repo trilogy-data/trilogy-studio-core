@@ -45,13 +45,17 @@ monaco.languages.setLanguageConfiguration('trilogy', {
 });
 
 monaco.languages.setMonarchTokensProvider("trilogy", {
+    ignoreCase:true,
 	tokenizer: {
 		root: [
             // Match comments (lines starting with #)
             [/#.*/, "comment"],
-        
+            
+            // Match hidden
+            [/\-\-.*/, "hidden"],
+
             // Match SQL keywords (SELECT, WHERE, ORDER, BY)
-            [/SELECT|WHERE|ORDER|BY/, "keyword"],
+            [/(^|\s)(SELECT|WHERE|ORDER|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, "keyword"],
         
             // Match definitions (auto, property, metric)
             [/auto|property|metric|import/, "definition"],

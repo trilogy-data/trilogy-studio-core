@@ -1,7 +1,7 @@
 <template>
     <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
     <div v-else ref="editor" id="editor" class="editor-fix-styles">
-        <div class="absolute-button bottom-run"><loading-button class="button-transparent" :action="runQuery">Run
+        <div class="absolute-button bottom-run">ABC <loading-button class="button-transparent" :action="runQuery">Run
                 (ctrl-enter)</loading-button></div>
     </div>
 
@@ -185,6 +185,7 @@ export default defineComponent({
             }
 
             try {
+                // @ts-ignore
                 window.goatcounter.count({
                     path: 'studio-query-execution',
                     title: this.editorData.type,
@@ -307,6 +308,7 @@ export default defineComponent({
                     { token: 'operator', foreground: '#D4D4D4' }, // Light gray for operators
                     { token: 'delimiter', foreground: '#D4D4D4' }, // Light gray for delimiters (like commas, colons)
                     { token: 'function', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
+                    { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic'} // hidden should be whitish
                 ],
                 colors: {
                     // 'editor.foreground': '#F8F8F8',
