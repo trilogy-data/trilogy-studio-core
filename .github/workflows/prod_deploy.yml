@@ -1,0 +1,48 @@
+
+
+name: Build and Deploy Docs
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'static-deploy'
+
+env:
+  SERVICE_NAME: trilogy-docs-demo
+jobs:
+  setup-build-deploy:
+    name: Deploy Blog
+    runs-on: ubuntu-latest
+
+    # Add "id-token" with the intended permissions.
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+        # Setup gcloud CLI
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Set up Node
+          uses: actions/setup-node@v4
+          with:
+            node-version: 20
+            cache: 'npm'
+        - name: Install dependencies
+          run: npm ci
+        - name: Run Tests
+          run: npm run test
+        - name: Build
+          run: npm run build
+          env:
+            PUBLIC_URL: https://trilogydata.dev/studio-core/
+        - name: Upload
+          uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          with:
+              server: ${{ secrets.FTP_SERVER }}
+              username: ${{ secrets.FTP_USER }}
+              password: ${{ secrets.FTP_SECRET }}
+              local-dir: ./dist/
+              server-dir: /studio-core/
+              protocol: 'ftps'

@@ -7,12 +7,6 @@ import { Tabulator, ResizeColumnsModule, DownloadModule, FormatModule, FilterMod
 
 Tabulator.registerModule([ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule]);
 
-
-
-import { ref } from "vue";
-
-
-
 const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
 let resolver = new AxiosTrilogyResolver(apiUrl);
@@ -21,25 +15,9 @@ let localStorage = new LocalStorage()
 
 let contentSources = [localStorage]
 
-let local = localStorage.loadEditors()
-
-if (Object.keys(local).length == 0) {
-  const editor1 = new EditorModel(
-    { name: "Test Editor", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1 as fun;') },
-
-  )
-
-  const editor2 = new EditorModel(
-    { name: "Test Editor 2", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1') },
-
-  )
-  localStorage.saveEditors([editor1, editor2])
-}
-
 let store = useEditorStore();
 
 let connections = useConnectionStore();
-
 
 let models = useModelConfigStore();
 
