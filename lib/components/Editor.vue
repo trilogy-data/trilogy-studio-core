@@ -129,7 +129,9 @@ export default defineComponent({
         return { connectionStore, modelStore, editorStore, trilogyResolver };
     },
     mounted() {
-        this.createEditor()
+        this.$nextTick(() => {
+            this.createEditor()
+        })
         mountedMap.set(this.context, true);
     },
     unmounted() {
@@ -164,8 +166,9 @@ export default defineComponent({
     watch: {
         editorName: {
             handler() {
-                console.log('editorName changed')
-                this.createEditor()
+                this.$nextTick(() => {
+                    this.createEditor()
+                })
             },
         }
     },
@@ -179,7 +182,6 @@ export default defineComponent({
 
             const conn = this.connectionStore.connections[this.editorData.connection];
             if (!conn) {
-                console.log('connection not found')
                 this.editorData.setError(`Connection ${this.editorData.connection} not found.`);
                 return;
             }

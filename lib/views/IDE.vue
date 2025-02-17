@@ -8,7 +8,7 @@
 
       <template v-if="['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
-          <template #editor v-if="activeEditor">
+          <template #editor v-if="activeEditor && activeEditorData">
             <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
@@ -42,6 +42,7 @@
                 </div>
               </div>
             </div>
+            <hint-component v-else />
           </template>
         </vertical-split-layout>
       </template>
@@ -151,6 +152,7 @@ import Tutorial from "../components/Tutorial.vue";
 import ModelView from '../components/Models.vue';
 import UserSettings from '../components/UserSettings.vue';
 import UserProfile from "../components/UserProfile.vue";
+import HintComponent from "../components/HintComponent.vue";
 
 import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
@@ -180,7 +182,8 @@ export default {
     ModelView,
     UserSettings,
     UserProfile,
-    LoadingView
+    LoadingView,
+    HintComponent
   },
   setup() {
     type ResolverType = typeof AxiosResolver;

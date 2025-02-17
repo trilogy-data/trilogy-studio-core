@@ -24,7 +24,7 @@
           <span >{{ connection.name }}</span>
           <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
           </tooltip>
-          <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
+          <tooltip v-else-if="connection.error" :content="connection.error" position="right"><i
               class="mdi mdi-alert-circle-outline red"></i></tooltip>
             </div>
           <div class="flex relative-container button-container float-right">

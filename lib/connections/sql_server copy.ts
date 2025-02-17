@@ -1,11 +1,11 @@
 import BaseConnection from "./base";
 import sql from 'mssql';
 import { Results, ColumnType } from "../editors/results";
-import {Connection, Request} from 'tedious'
-import dns from 'dns';
+
+
 export default class SQLServerConnection extends BaseConnection {
 
-    private connection: Connection | null;
+    private connection: sql.ConnectionPool | null;
     private username: string;
     private password: string;
 
@@ -13,7 +13,7 @@ export default class SQLServerConnection extends BaseConnection {
         super(name, 'sqlserver', false, model)
         this.username = username;
         this.password = password;
-        this.query_type = 'sql_server';
+        this.query_type = 'sqlserver';
         this.connection = null;
 
     }
@@ -38,32 +38,13 @@ export default class SQLServerConnection extends BaseConnection {
 
     async connect() {
         const config = {
-            authentication: {
-                type: 'default',
-                options: {
-                    userName: this.username,
-                    password: this.password,
-                }
-            },
-            // database: 'AdventureWorks2019',
+            user: this.username,
+            password: this.password,
+            database: 'AdventureWorks2019',
             server: '127.0.0.1',
-            options: {
-                port: 1433 // Default Port
-              }
         }
-        this.connection = new Connection(config)
-        this.connection.connect(
-            (err) => {
-                if (err) {
-                    console.error(err);
-                    this.connected = false;
-                    this.error = err.message;
-                    throw err;
-
-                } else {
-                    console.log('Connected to SQL Server');
-                }
-            }
+        this.connection = await sql.connect(
+            config
         )
     }
 
@@ -73,14 +54,8 @@ export default class SQLServerConnection extends BaseConnection {
             console.error(`Cannot execute query. ${this.name} is not connected.`);
             throw new Error("Connection not established.");
         }
-        let request = new Request(sql, (err, rowCount, rows) => {
-            if (err) {
-                console.log(err)
-            }
-            return rows
-        });
-        const result = await this.connection.execSql(request);
-        console.log(result)
+        const result = await this.connection.query(sql);
+        console.log(result);
         let headers = new Map(result.data.columnNames().map((header) => [header, { name: header, type: ColumnType.STRING, description: "" }],));
         //rows are simple arrays of json objects
         return new Results(headers, result.data.toRows());

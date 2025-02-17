@@ -25,7 +25,7 @@ export default abstract class BaseConnection {
                 if (error instanceof Error) {
                     this.error = error.message;
                 }
-                this.connected = false;
+                throw error;
             });
         }
     }
@@ -47,7 +47,9 @@ export default abstract class BaseConnection {
         } catch (error) {
             if (error instanceof Error) {
                 this.error = error.message;
+
             }
+            throw error;
         }
 
     }

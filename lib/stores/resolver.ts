@@ -32,12 +32,14 @@ export default class AxiosResolver {
     getErrorMessage(error: Error): string {
         let base = 'An error occured.'
         if (axios.isAxiosError(error)) {
+            console.log('is axios')
             base = error.message;
             if (error.response && error.response.data) {
+                console.log('got detail')
                 base = error.response.data.detail;
             }
         }
-        return base;
+        return JSON.stringify(base);
     }
 
     async resolve_query(query: string, dialect: string, type: string, sources: ContentInput[] | null = null): Promise<QueryResponse> {
@@ -50,6 +52,7 @@ export default class AxiosResolver {
             dialect: dialect,
             full_model: {name:'', sources: sources || []}
         }).catch((error: Error) => {
+            console.log(error)
             throw Error(this.getErrorMessage(error))
         })
     }
