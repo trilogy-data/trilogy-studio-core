@@ -35,7 +35,7 @@ jobs:
         - name: Build
           run: npm run build
           env:
-            PUBLIC_URL: https://trilogydata.dev/studio-core/
+            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/
         - name: Upload
           uses: SamKirkland/FTP-Deploy-Action@v4.3.5
           with:
@@ -43,5 +43,5 @@ jobs:
               username: ${{ secrets.FTP_USER }}
               password: ${{ secrets.FTP_SECRET }}
               local-dir: ./dist/
-              server-dir: /studio-core/
+              server-dir: /trilogy-studio-core/
               protocol: 'ftps'
