@@ -276,7 +276,7 @@ export default defineComponent({
             }
             const editor = monaco.editor.create(editorElement, {
                 value: this.editorData.contents,
-                language: 'trilogy',
+                language: this.editorData.type === 'trilogy' ? 'trilogy' : 'sql',
                 automaticLayout: true,
 
             })
