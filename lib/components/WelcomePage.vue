@@ -6,7 +6,7 @@
             <img :src="trilogyIcon" alt="Logo" class="logo-image" />
         </div>
 
-        <p>Get started with a new editor, a demo model, or reviewing the help page.</p>
+        <p>Dive into a new editor, try the demo model, or review the help page to get started.</p>
         <div class="buttons">
             <editor-creator >
                 <template v-slot="{ onClick }">

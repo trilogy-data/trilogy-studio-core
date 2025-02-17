@@ -276,18 +276,27 @@ export default defineComponent({
             }
             const editor = monaco.editor.create(editorElement, {
                 value: this.editorData.contents,
-                language: 'sql',
+                language: 'trilogy',
                 automaticLayout: true,
+
             })
             editorMap.set(this.context, editor);
+
             editor.layout();
             monaco.editor.defineTheme('trilogyStudio', {
                 base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
                 inherit: true, // can also be false to completely replace the builtin rules
+                // language: 'sql',
                 rules: [
-                    { token: 'comment', foreground: 'ffa500', fontStyle: 'italic underline' },
-                    { token: 'comment.js', foreground: '008800', fontStyle: 'bold' },
-                    { token: 'comment.css', foreground: '0000ff' } // will inherit fontStyle from `comment` above
+                    { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' }, // Green for comments
+                    { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' }, // Blue for keywords
+                    { token: 'definition', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light yellow for function definitions
+                    { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' }, // Teal for types (like int, string, etc.)
+                    { token: 'string', foreground: '#CE9178' }, // Light orange for strings
+                    { token: 'number', foreground: '#B5CEA8' }, // Light green for numbers
+                    { token: 'operator', foreground: '#D4D4D4' }, // Light gray for operators
+                    { token: 'delimiter', foreground: '#D4D4D4' }, // Light gray for delimiters (like commas, colons)
+                    { token: 'function', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
                 ],
                 colors: {
                     // 'editor.foreground': '#F8F8F8',
@@ -297,7 +306,8 @@ export default defineComponent({
                     // 'editorLineNumber.foreground': '#008800',
                     // 'editor.selectionBackground': '#88000030',
                     // 'editor.inactiveSelectionBackground': '#88000015'
-                }
+                },
+
             });
             monaco.editor.setTheme('trilogyStudio');
             editor.onDidChangeModelContent(() => {

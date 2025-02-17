@@ -1,7 +1,7 @@
 import type { EditorStoreType } from '../../stores/editorStore';
 import type { ConnectionStoreType } from '../../stores/connectionStore';
 import type { ModelConfigStoreType } from '../../stores/modelStore';
-import { DuckDBConnection, Connection } from '../../connections';
+import { DuckDBConnection} from '../../connections';
 import { Editor, EditorTag } from '../../editors';
 import { ModelConfig } from '../../models';
 import { CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT, LINE_ITEM_CONTENT } from './queries'
@@ -11,9 +11,9 @@ export default async function setupDemo(
     editorStore: EditorStoreType,
     connectionStore: ConnectionStoreType,
     modelStore: ModelConfigStoreType,
-    saveEditors: (editors: Editor[]) => void,
-    saveConnections: (connections: Connection[]) => void,
-    saveModels: (models: ModelConfig[]) => void 
+    saveEditors: Function,
+    saveConnections: Function,
+    saveModels: Function,
 ) {
     let connName = 'demo-connection';
     let modelName = 'demo-model';

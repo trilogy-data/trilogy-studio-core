@@ -157,7 +157,7 @@ export default {
     let screen = getDefaultValueFromHash('screen');
     let activeEditor = getDefaultValueFromHash('editor');
     return {
-      activeEditor: activeEditor,
+      activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
       activeTab: 'results',
     };
@@ -186,8 +186,8 @@ export default {
     let saveEditors = inject<Function>('saveEditors');
     let saveConnections = inject<Function>('saveConnections');
     let saveModels = inject<Function>('saveModels');
-    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore) {
-      throw new Error('Editor store and connection store and trilogy resolver are not provided!');
+    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !saveConnections || !saveModels) {
+      throw new Error('Requires injection of connection store, editor store, model store, editors, connections, and models saving.');
     }
     if (!saveEditors) {
       saveEditors = () => { };
