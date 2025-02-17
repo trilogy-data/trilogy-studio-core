@@ -15,7 +15,6 @@
             <option value="duckdb">DuckDB</option>
             <option value="motherduck">MotherDuck</option>
             <option value="bigquery">Bigquery Oauth</option>
-            <option value="sqlserver">SQL Server</option>
           </select>
         </div>
         <!-- Dynamic Fields Based on Type -->

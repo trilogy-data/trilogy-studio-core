@@ -30,11 +30,8 @@ export default defineComponent({
             }
         });
         onMounted(() => {
-            console.log('mounting')
-            console.log(tableRef.value)
             nextTick(() => {
                 if (tableRef.value) {
-                    console.log('creating tabulator')
                     tabulator = new Tabulator(tableRef.value, {
                         layout: 'fitColumns',
                         // height:300,
@@ -62,6 +59,7 @@ export default defineComponent({
                             },
 
                             {
+                                // @ts-ignore
                                 title: 'Keys', field: 'keys', formatter: "array", formatterParams: {
                                     delimiter: ", ", //join values using the "|" delimiter
                                 }

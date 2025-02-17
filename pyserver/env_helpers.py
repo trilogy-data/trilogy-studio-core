@@ -1,5 +1,5 @@
 from trilogy import Environment
-from io_models import ModelInSchema, Model, LineageItem, UIConcept
+from io_models import ModelInSchema, Model, LineageItem, UIConcept, UIDatasource
 
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.parsing.render import Renderer
@@ -16,6 +16,7 @@ from trilogy.authoring import (
     SelectStatement,
     ConceptRef,
 )
+from trilogy.core.models.datasource import Address
 from trilogy.core.models.author import MultiSelectLineage, RowsetItem
 from typing import Any, List, Union
 
@@ -163,4 +164,41 @@ def model_to_response(
             )
         )
     final_concepts.sort(key=lambda x: x.address)
-    return Model(name=name, concepts=final_concepts, rendered=rendered)
+
+    final_datasources: list[UIDatasource] = []
+    for dkey, datasource in env.datasources.items():
+        dconcepts:list[UIConcept] = []
+        for sconcept in datasource.concepts:
+            # don't show private concepts
+            if sconcept.name.startswith("_"):
+                continue
+            sconcept = env.concepts[sconcept]
+            dconcepts.append(
+                UIConcept(
+                    name=sconcept.name,
+                    datatype=sconcept.datatype,
+                    purpose=sconcept.purpose,
+                    description=(
+                        sconcept.metadata.description if sconcept.metadata else None
+                    ),
+                    namespace=sconcept.namespace or "",
+                    address=sconcept.address,
+                    lineage=flatten_lineage(sconcept, depth=0),
+                    keys=sconcept.keys or [],
+                )
+            )
+        dconcepts.sort(key=lambda x: x.address)
+        if isinstance(datasource.address, Address):
+            final_address = datasource.address.location
+        else:
+            final_address = datasource.address
+
+        final_datasources.append(
+            UIDatasource(name=dkey, location=final_address, concepts=dconcepts)
+        )
+    return Model(
+        name=name,
+        concepts=final_concepts,
+        rendered=rendered,
+        datasources=final_datasources,
+    )

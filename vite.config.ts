@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [vue(),
   // nodePolyfills({ include: ['events'] }),
   dts({ include: ['lib'] }),
-  nodePolyfills(),
+  nodePolyfills({ include: ['events', 'dns', 'stream', ] }),
   {
     name: "configure-response-headers",
     configureServer: (server) => {

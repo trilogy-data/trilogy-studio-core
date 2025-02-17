@@ -39,10 +39,21 @@
         </div>
         <ul class="source-list">
             <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-                <div @click="onEditorClick(source)">Editor: {{ source.editor }} (import alias: {{ source.alias }})
+
+                <div class="editor-source" @click="onEditorClick(source)">
+                    <div class="flex relative-container">{{ source.editor }} <span class="editor-source-alias">
+                            (imported as {{
+                                source.alias }})</span>
+                        <button class="button delete-button" @click="removeSource(index, sourceIndex)">
+                            Remove
+                        </button>
+                    </div>
+                    <Editor :context="source.editor" class="editor-inline" v-if="isEditorExpanded[source.editor]"
+                        :editorName="source.editor" />
                 </div>
-                <Editor :context="source.editor" class="editor-inline" v-if="isEditorExpanded[source.editor]"
-                    :editorName="source.editor" />
+
+
+
             </li>
 
         </ul>
@@ -52,7 +63,7 @@
         <div v-else-if="config.parseResults" class="parse-results">
             <div>
                 <div class="toggle-concepts" @click="toggleConcepts(index)">
-                    Concepts ({{ config.parseResults.concepts.length }}) {{ isExpanded[index] ? '' : '>' }}
+                    {{ isExpanded[index] ? 'Hide' : 'Show' }} Concepts ({{ config.parseResults.concepts.length }})
                 </div>
             </div>
             <div v-if="isExpanded[index]">
@@ -60,12 +71,13 @@
                 <ConceptTable :concepts="config.parseResults.concepts" />
             </div>
             <div class="datasources">
-                <strong>Datasources:</strong>
-                <ul>
-                    <li v-for="(datasource, datasourceIndex) in config.parseResults.datasources" :key="datasourceIndex">
-                        {{ datasource.name }} ({{ datasource.address }})
-                    </li>
-                </ul>
+                <div class="toggle-concepts" @click="toggleDatasources(index)">
+                    {{ isDatasourceExpanded[index] ? 'Hide' : 'Show' }} Datasources ({{
+                        config.parseResults.datasources.length }})
+                </div>
+                <div v-if="isDatasourceExpanded[index]">
+                    <DatasourceTable :datasources="config.parseResults.datasources" />
+                </div>
             </div>
         </div>
         <div v-else class="no-results">
@@ -76,6 +88,34 @@
 </template>
 
 <style scoped>
+.button {
+    flex: .25
+}
+
+.delete-button {
+    width: 100px;
+    margin-left: 20px;
+    font-size: 10px;
+    height: 20px;
+}
+
+.editor-source {
+    cursor: pointer;
+    border-left: 1px solid var(--border);
+    padding: 4px;
+    margin-bottom: 10px;
+    flex: 1;
+}
+
+.editor-source:hover {
+    background-color: var(--bg-light);
+}
+
+.editor-source-alias {
+    font-size: 0.875rem;
+    color: var(--text-faint);
+}
+
 .editor-inline {
     height: 400px;
 }
@@ -84,14 +124,12 @@
 .card-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #333;
     margin-top: 0px;
 }
 
 .source-list {
     list-style: none;
     margin-bottom: 16px;
-    color: #666;
 }
 
 
@@ -125,10 +163,11 @@
 }
 
 .toggle-concepts {
-    color: #007bff;
     cursor: pointer;
-    text-decoration: underline;
+    /* text-decoration: underline; */
     font-size: 1.1rem;
+    background-color: var(--sidebar-bg);
+    padding: 4px;
 }
 
 .toggle-concepts:hover {
@@ -178,6 +217,7 @@ import AxiosResolver from "../stores/resolver";
 import LoadingButton from "./LoadingButton.vue";
 import ErrorMessage from "./ErrorMessage.vue";
 import ConceptTable from "./ConceptTable.vue";
+import DatasourceTable from "./DatasourceTable.vue";
 import Editor from "./Editor.vue";
 export default defineComponent({
     name: "ModelConfigViewer",
@@ -200,6 +240,7 @@ export default defineComponent({
             throw new Error("Missing model store or editor store!");
         }
         const isExpanded = ref<Record<string, boolean>>({});
+        const isDatasourceExpanded = ref<Record<string, boolean>>({});
 
         const isEditorExpanded = ref<Record<string, boolean>>({});
 
@@ -207,18 +248,20 @@ export default defineComponent({
             isExpanded.value[index] = !isExpanded.value[index];
         };
 
+        const toggleDatasources = (index: string) => {
+            isDatasourceExpanded.value[index] = !isDatasourceExpanded.value[index];
+        };
+
         const newSourceVisible = ref<Record<string, boolean>>({});
 
         const fetchParseResults = (model: string) => {
-            console.log('Fetching parse results for model:', model);
             return trilogyResolver
                 .resolveModel(model, modelStore.models[model].sources.map((source) => ({ alias: source.alias, contents: (editorStore.editors[source.editor] || { contents: "" }).contents })))
                 .then((parseResults) => {
-                    console.log(parseResults)
+
                     modelStore.setModelConfigParseResults(model, parseResults);
                 })
                 .catch((error) => {
-                    console.log(error)
                     modelStore.setModelParseError(model, error.message);
                     console.error("Failed to fetch parse results:", error);
                 });
@@ -238,7 +281,7 @@ export default defineComponent({
             }
         };
         let index = computed(() => props.config.name);
-        return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver, fetchParseResults, isEditorExpanded, index };
+        return { modelStore, editorStore, isExpanded, toggleConcepts, isDatasourceExpanded, newSourceVisible, submitSourceAddition, toggleDatasources, sourceDetails, trilogyResolver, fetchParseResults, isEditorExpanded, index };
     },
     components: {
         ModelConcept,
@@ -246,6 +289,7 @@ export default defineComponent({
         ErrorMessage,
         Editor,
         ConceptTable,
+        DatasourceTable,
     },
     computed: {
         modelConfigs(): Record<string, ModelConfig> {
@@ -258,6 +302,10 @@ export default defineComponent({
     methods: {
         clearSources(model: string) {
             this.modelConfigs[model].sources = [];
+            this.fetchParseResults(model);
+        },
+        removeSource(model: string, sourceIndex: number) {
+            this.modelConfigs[model].sources.splice(sourceIndex, 1);
             this.fetchParseResults(model);
         },
         remove(model: string) {

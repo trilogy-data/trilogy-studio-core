@@ -8,9 +8,11 @@
     <div class="loading-text">
       Running query{{ dots }}
     </div>
+    <div class="cancel-container">
     <button v-if="cancel" @click="handleCancel" class="cancel-button">
       Cancel
     </button>
+  </div>
   </div>
 </template>
 
@@ -68,8 +70,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background: var(--bg-light);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   height:100%;
 }
@@ -110,7 +111,6 @@ export default defineComponent({
 
 .loading-text {
   font-size: 1.1rem;
-  color: #666;
   margin-bottom: 1rem;
   min-width: 120px;
   text-align: center;
@@ -118,18 +118,20 @@ export default defineComponent({
 }
 
 .cancel-button {
-  padding: 0.5rem 1rem;
   background-color: #e74c3c;
   color: white;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
-  height:24px;
+  height:24px !important;
   width: 100px;
 }
 
 .cancel-button:hover {
   background-color: #c0392b;
+}
+
+.cancel-container {
+ height:10px;
 }
 </style>

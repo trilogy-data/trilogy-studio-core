@@ -51,7 +51,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
             }).requestAccessToken();
 
         } catch (error) {
-            console.log("Error connecting to BigQuery with OAuth", error);
+            console.error("Error connecting to BigQuery with OAuth", error);
             throw error;
         }
     }
@@ -118,7 +118,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
                 return rowData;
             });
             // Return results
-            console.log(rows)
             return new Results(headers, rows);
         } catch (error) {
             throw error

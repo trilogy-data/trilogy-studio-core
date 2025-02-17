@@ -95,8 +95,8 @@ aside {
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--sidebar-bg)
 }
 
 .tab-button {
@@ -105,12 +105,11 @@ aside {
   background: none;
   cursor: pointer;
   font-size: 0.875rem;
-  color: #64748b;
   border-bottom: 2px solid transparent;
 }
 
 .tab-button:hover {
-  color: #334155;
+  color: #0ea5e9;
 }
 
 .tab-button.active {
@@ -125,18 +124,17 @@ aside {
 
 .sql-view {
   padding: 1rem;
-  background: #f8fafc;
   height: 100%;
 }
 
 .sql-view pre {
   margin: 0;
+  background: var(--bg-light);
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #334155;
 }
 </style>
 

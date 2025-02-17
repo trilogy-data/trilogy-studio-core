@@ -30,9 +30,16 @@ class UIConcept(BaseModel):
     keys: List[str] = Field(default_factory=list)
 
 
+class UIDatasource(BaseModel):
+    name: str
+    location:str
+    description: Optional[str] = None
+    concepts: List[UIConcept]
+
 class Model(BaseModel):
     name: str
     concepts: List[UIConcept]
+    datasources: List[UIDatasource]
     rendered: str | None = None
 
 

@@ -1,6 +1,6 @@
 import EditorInterface from "../editors/editor";
 import { ModelConfig } from "../models";
-import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection, SQLServerConnection } from "../connections";
+import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from "../connections";
 import { reactive } from "vue";
 import AbstractStorage from './storage'
 
@@ -69,7 +69,7 @@ export default class LocalStorage extends AbstractStorage {
         const storedData = localStorage.getItem(this.connectionStorageKey);
         let raw = storedData ? JSON.parse(storedData) : [];
         // map raw into appropriate connection form using the connection.type field on the connection object
-        return raw.reduce((acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SQLServerConnection>, connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SQLServerConnection) => {
+        return raw.reduce((acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection >, connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection ) => {
             switch (connection.type) {
                 case "bigquery-oauth":
                     // @ts-ignore
@@ -83,10 +83,10 @@ export default class LocalStorage extends AbstractStorage {
                     // @ts-ignore
                     acc[connection.name] = reactive(MotherDuckConnection.fromJSON(connection));
                     break;
-                case "sqlserver":
-                    // @ts-ignore
-                    acc[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
-                    break;
+                // case "sqlserver":
+                //     // @ts-ignore
+                //     acc[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
+                //     break;
                 default:
                     break;
             }

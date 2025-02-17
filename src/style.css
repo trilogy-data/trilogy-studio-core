@@ -16,6 +16,7 @@
 :root {
 
   --text-color: #FFFFFF;
+  --text-faint: #B3B3B3;
   --special-text: #cc6900;
   color: var(--text-color);
 
@@ -48,6 +49,7 @@
 @media (prefers-color-scheme: light) {
   :root {
     --text-color: #333333;
+    --text-faint: #B3B3B3;
     --special-text: #0066cc;
     color: var(--text-color);
 

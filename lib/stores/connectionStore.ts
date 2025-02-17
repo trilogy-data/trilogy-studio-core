@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import Connection from '../connections/base'
-import { SQLServerConnection, DuckDBConnection, BigQueryOauthConnection, MotherDuckConnection } from '../connections';
+import { DuckDBConnection, BigQueryOauthConnection, MotherDuckConnection } from '../connections';
 
 const useConnectionStore = defineStore('connections', {
   state: () => ({
@@ -35,9 +35,9 @@ const useConnectionStore = defineStore('connections', {
       else if (type === 'motherduck') {
         this.connections[name] = new MotherDuckConnection(name, options.mdToken);
       }
-      else if (type === 'sqlserver') {
-        this.connections[name] = new SQLServerConnection(name, options.username, options.password);
-      }
+      // else if (type === 'sqlserver') {
+      //   this.connections[name] = new SQLServerConnection(name, options.username, options.password);
+      // }
       else {
         throw new Error(`Connection type "${type}" not found.`);
       }

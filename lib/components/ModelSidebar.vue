@@ -52,7 +52,7 @@ export default defineComponent({
     },
     computed: {
         modelConfigs(): Record<string, ModelConfig> {
-            console.log(this.modelStore.models);
+
             return this.modelStore.models;
         },
     },

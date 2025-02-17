@@ -1,5 +1,6 @@
 <template>
-    <div ref="editor" id="editor" class="editor-fix-styles">
+    <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
+    <div v-else ref="editor" id="editor" class="editor-fix-styles">
         <div class="absolute-button bottom-run"><loading-button class="button-transparent" :action="runQuery">Run
                 (ctrl-enter)</loading-button></div>
     </div>
@@ -53,6 +54,7 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts';
 import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue';
+import ErrorMessage from './ErrorMessage.vue';
 import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map();
@@ -114,7 +116,8 @@ export default defineComponent({
         }
     },
     components: {
-        LoadingButton
+        LoadingButton,
+        ErrorMessage
     },
     setup() {
 
@@ -136,6 +139,7 @@ export default defineComponent({
     },
     unmounted() {
         editorMap.get(this.context)?.dispose();
+        editorMap.delete(this.context);
         mountedMap.delete(this.context);
     },
     computed: {
@@ -267,7 +271,6 @@ export default defineComponent({
             }
             // if we've already set up the editor
             if (editorMap.has(this.context) && mountedMap.get(this.context)) {
-                console.log('editor already exists')
                 editorMap.get(this.context)?.setValue(this.editorData.contents)
                 return
             }
@@ -299,7 +302,7 @@ export default defineComponent({
             monaco.editor.setTheme('trilogyStudio');
             editor.onDidChangeModelContent(() => {
                 this.editorStore.setEditorContents(this.editorName, editor.getValue())
-                console.log('changed')
+
 
                 // this.$emit('update:contents', editor.getValue());
                 // this.editorData.contents = editor.getValue();

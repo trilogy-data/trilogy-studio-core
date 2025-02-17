@@ -19,7 +19,8 @@
           </h4>
           <div v-if="!collapsed[storage]">
             <div v-for="(editors, connection) in connections" :key="connection" class="connection-group">
-              <div class="text-sm left-pad" @click="toggleCollapse(connection)">{{ connection }} ({{ editors.length }})</div>
+              <div class="text-sm left-pad" @click="toggleCollapse(connection)">{{ connection }} ({{ editors.length }})
+              </div>
               <ul class="list" v-if="!collapsed[connection]">
                 <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
                   <div class="editor-content">
@@ -54,6 +55,7 @@
   margin-top: 0px;
   margin-bottom: 0px;
 }
+
 .padding-left {
   padding-left: 5px;
   text-align: left;
@@ -135,7 +137,7 @@
 
 .tag {
   cursor: pointer;
-  background: var(--tag-bg, lightgray);
+  background: var(--button-bg);
   padding: 2px 5px;
   margin: 2px;
   /* border-radius: 4px; */
@@ -143,7 +145,7 @@
 }
 
 .tag:hover {
-  background: var(--tag-hover-bg, gray);
+  background: var(--button-mouseove);
 }
 
 .tag-excluded {
