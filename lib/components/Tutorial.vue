@@ -46,8 +46,10 @@
         editors
         as semantic sources.
       </p>
-      You can view current connections below. Edit the model associated with a connection by clicking the model name next to (or set model if not set).
-      Connections will not automatically connect on startup by default; click the <i class="mdi mdi-connection"></i> button to connect.
+      You can view current connections below. Edit the model associated with a connection by clicking the model name
+      next to (or set model if not set).
+      Connections will not automatically connect on startup by default; click the <i class="mdi mdi-connection"></i>
+      button to connect.
 
       This connection view is always accessible through the connections page on the left side.
       <div class='sidebar-tutorial-container'>
@@ -65,12 +67,14 @@
         toggled
         in the editor view.</p>
 
-      <p>A model contains all metadata parseable from your source files. If you haven't deleted the demo model, it will be visible below. (You can reset the demo to restore it).
+      <p>A model contains all metadata parseable from your source files. If you haven't deleted the demo model, it will
+        be visible below. (You can reset the demo to restore it).
 
-      Models are automatically parsed on query submission, but can be validated. Click the 'parse' button to parse the model. This will send the model to a backend server to be parsed and typechecked
-      and generate metadata for visibility.
+        Models are automatically parsed on query submission, but also support on-demand validation. Click the 'parse'
+        button to parse the model. This will send the model to a backend server to be parsed and typechecked
+        and generate metadata for visibility.
 
-      You can click on an editor name to view and edit it. This can be useful to fix parse errors easily. 
+        You can click on an editor name to view and edit it. This can be useful to fix parse errors easily.
 
       </p>
 
@@ -89,12 +93,12 @@
 
       <h3>Product Specific</h3>
       <h4>Google</h4>
-      <p>For google products (Bigquery, etc), we will use the google-javascript-api to authenticate as your account on
+      <p>For google products (Bigquery, etc), the google-javascript-api is used to authenticate your account on
         the client side.</p>
 
       <h4>Other</h4>
-      <p>For other databases that require secrets, we will use the browser credential API to store your credentials
-        locally and prompt you before accessing them. These credentials are only sent to the relevant database as part
+      <p>For other databases that require secrets, the browser credential API is used to store credentials
+        locally and prompt before accessing them. These credentials are only sent to the relevant database as part
         of connecting.</p>
 
     </section>

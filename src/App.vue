@@ -3,6 +3,11 @@
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
 import { LocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
+import { Tabulator, ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule } from 'tabulator-tables'
+
+Tabulator.registerModule([ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule]);
+
+
 
 import { ref } from "vue";
 

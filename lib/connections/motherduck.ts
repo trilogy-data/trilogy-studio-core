@@ -1,4 +1,3 @@
-// MotherDuckConnection.ts
 import BaseConnection from "./base";
 import { MDConnection } from '@motherduck/wasm-client';
 import { Results, ColumnType } from "../editors/results";

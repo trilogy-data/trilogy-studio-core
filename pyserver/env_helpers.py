@@ -159,7 +159,8 @@ def model_to_response(
                 namespace=sconcept.namespace or "",
                 address=skey,
                 lineage=flatten_lineage(sconcept, depth=0),
+                keys=sconcept.keys or [],
             )
         )
-    final_concepts.sort(key=lambda x: x.name)
+    final_concepts.sort(key=lambda x: x.address)
     return Model(name=name, concepts=final_concepts, rendered=rendered)

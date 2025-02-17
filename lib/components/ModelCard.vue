@@ -2,7 +2,7 @@
     <section :id="config.name" class="model-section">
         <h3 class="card-title">{{ config.name }}</h3>
         <div class="button-container">
-            <loading-button class="button" :action="()=>fetchParseResults(index)">
+            <loading-button class="button" :action="() => fetchParseResults(index)">
                 Parse
             </loading-button>
             <div class="flex relative-container">
@@ -39,7 +39,8 @@
         </div>
         <ul class="source-list">
             <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-                <div @click="onEditorClick(source)">{{ source.alias }} ({{ source.editor }})</div>
+                <div @click="onEditorClick(source)">Editor: {{ source.editor }} (import alias: {{ source.alias }})
+                </div>
                 <Editor :context="source.editor" class="editor-inline" v-if="isEditorExpanded[source.editor]"
                     :editorName="source.editor" />
             </li>
@@ -54,8 +55,9 @@
                     Concepts ({{ config.parseResults.concepts.length }}) {{ isExpanded[index] ? '' : '>' }}
                 </div>
             </div>
-            <div v-show="isExpanded[index]" class="concepts-list">
-                <ModelConcept :config="config.parseResults" />
+            <div v-if="isExpanded[index]">
+                <!-- <ModelConcept :config="config.parseResults" /> -->
+                <ConceptTable :concepts="config.parseResults.concepts" />
             </div>
             <div class="datasources">
                 <strong>Datasources:</strong>
@@ -78,35 +80,16 @@
     height: 400px;
 }
 
-.model-display {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
-    padding: 20px;
-    margin: 0 auto;
-}
-
-.card {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
 
 .card-title {
     font-size: 1.25rem;
     font-weight: 600;
     color: #333;
-    margin-bottom: 16px;
+    margin-top: 0px;
 }
 
 .source-list {
+    list-style: none;
     margin-bottom: 16px;
     color: #666;
 }
@@ -194,6 +177,7 @@ import ModelConcept from "./ModelConcept.vue";
 import AxiosResolver from "../stores/resolver";
 import LoadingButton from "./LoadingButton.vue";
 import ErrorMessage from "./ErrorMessage.vue";
+import ConceptTable from "./ConceptTable.vue";
 import Editor from "./Editor.vue";
 export default defineComponent({
     name: "ModelConfigViewer",
@@ -253,7 +237,7 @@ export default defineComponent({
                 }
             }
         };
-        let index = computed(() => props.config.name);    
+        let index = computed(() => props.config.name);
         return { modelStore, editorStore, isExpanded, toggleConcepts, newSourceVisible, submitSourceAddition, sourceDetails, trilogyResolver, fetchParseResults, isEditorExpanded, index };
     },
     components: {
@@ -261,6 +245,7 @@ export default defineComponent({
         LoadingButton,
         ErrorMessage,
         Editor,
+        ConceptTable,
     },
     computed: {
         modelConfigs(): Record<string, ModelConfig> {

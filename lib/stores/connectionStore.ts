@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import Connection from '../connections/base'
-import { DuckDBConnection, BigQueryOauthConnection, MotherDuckConnection } from '../connections';
+import { SQLServerConnection, DuckDBConnection, BigQueryOauthConnection, MotherDuckConnection } from '../connections';
 
 const useConnectionStore = defineStore('connections', {
   state: () => ({
@@ -9,9 +9,7 @@ const useConnectionStore = defineStore('connections', {
 
   actions: {
     addConnection(connection: Connection) {
-      console.log(connection)
       this.connections[connection.name] = connection;
-      console.log(connection)
       return connection
     },
 
@@ -28,9 +26,6 @@ const useConnectionStore = defineStore('connections', {
       if (this.connections[name]) {
         throw new Error(`Connection with name "${name}" already exists.`);
       }
-      console.log(type)
-      console.log(name)
-      console.log(options)
       if (type === 'duckdb') {
         this.connections[name] = new DuckDBConnection(name);
       }
@@ -40,10 +35,12 @@ const useConnectionStore = defineStore('connections', {
       else if (type === 'motherduck') {
         this.connections[name] = new MotherDuckConnection(name, options.mdToken);
       }
+      else if (type === 'sqlserver') {
+        this.connections[name] = new SQLServerConnection(name, options.username, options.password);
+      }
       else {
         throw new Error(`Connection type "${type}" not found.`);
       }
-      console.log(this.connections)
     }
   },
 });

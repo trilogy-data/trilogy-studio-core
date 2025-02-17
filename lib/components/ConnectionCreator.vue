@@ -15,19 +15,26 @@
             <option value="duckdb">DuckDB</option>
             <option value="motherduck">MotherDuck</option>
             <option value="bigquery">Bigquery Oauth</option>
+            <option value="sqlserver">SQL Server</option>
           </select>
         </div>
         <!-- Dynamic Fields Based on Type -->
         <div v-if="connectionDetails.type === 'motherduck'">
           <label for="md-token">MotherDuck Token</label>
-          <input type="text" v-model="connectionDetails.options.mdToken" id="md-token"
-            placeholder="MotherDuck Token" required />
+          <input type="text" v-model="connectionDetails.options.mdToken" id="md-token" placeholder="MotherDuck Token"
+            required />
         </div>
 
         <div v-if="connectionDetails.type === 'bigquery'">
           <label for="project-id">BigQuery Project ID</label>
           <input type="text" v-model="connectionDetails.options.projectId" id="project-id"
             placeholder="Billing Project ID" required />
+        </div>
+        <div v-if="connectionDetails.type === 'sqlserver'">
+          <label for="username">Username</label>
+          <input type="text" v-model="connectionDetails.options.username" id="username" required />
+          <label for="password">Password</label>
+          <input type="text" v-model="connectionDetails.options.password" id="username" required />
         </div>
 
         <button type="submit">Submit</button>
@@ -38,7 +45,6 @@
 </template>
 
 <style scoped>
-
 .button {
   flex: 1;
 }
@@ -84,7 +90,7 @@ export default defineComponent({
     const connectionDetails = ref({
       name: '',
       type: 'duckdb',
-      options: { mdToken: '', projectId: '' }
+      options: { mdToken: '', projectId: '', username: '', password: '' }
     });
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
@@ -99,7 +105,7 @@ export default defineComponent({
       visible.value = !visible.value;
       connectionDetails.value.name = '';
       connectionDetails.value.type = 'duckdb';
-      connectionDetails.value.options = { mdToken: '', projectId: '' }; // Reset options
+      connectionDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' }; // Reset options
     };
 
     const submitConnectionCreation = () => {

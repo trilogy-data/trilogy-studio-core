@@ -27,6 +27,7 @@ class UIConcept(BaseModel):
     purpose: Purpose
     description: Optional[str] = None
     lineage: List[LineageItem] = Field(default_factory=list)
+    keys: List[str] = Field(default_factory=list)
 
 
 class Model(BaseModel):
