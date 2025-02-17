@@ -1,6 +1,6 @@
 
 
-name: Build and Deploy Docs
+name: Build and Deploy to TrilogyData
 
 on:
   push:
@@ -8,11 +8,10 @@ on:
       - 'main'
       - 'static-deploy'
 
-env:
-  SERVICE_NAME: trilogy-docs-demo
+
 jobs:
   setup-build-deploy:
-    name: Deploy Blog
+    name: Deploy Production
     runs-on: ubuntu-latest
 
     # Add "id-token" with the intended permissions.
