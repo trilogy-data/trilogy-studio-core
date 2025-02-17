@@ -110,7 +110,6 @@ export default defineComponent({
     const submitConnectionCreation = () => {
       if (connectionDetails.value.name && connectionDetails.value.type) {
         visible.value = false;
-        console.log('Added connection', connectionDetails.value);
         connectionStore.newConnection(
           connectionDetails.value.name,
           connectionDetails.value.type,

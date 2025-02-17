@@ -42,7 +42,7 @@
 
                 <div class="editor-source" @click="onEditorClick(source)">
                     <div class="flex relative-container">{{ source.editor }} <span class="editor-source-alias">
-                            (imported as {{
+                            (importable as {{
                                 source.alias }})</span>
                         <button class="button delete-button" @click="removeSource(index, sourceIndex)">
                             Remove

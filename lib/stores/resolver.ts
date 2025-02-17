@@ -32,10 +32,8 @@ export default class AxiosResolver {
     getErrorMessage(error: Error): string {
         let base = 'An error occured.'
         if (axios.isAxiosError(error)) {
-            console.log('is axios')
             base = error.message;
             if (error.response && error.response.data) {
-                console.log('got detail')
                 base = error.response.data.detail;
             }
         }

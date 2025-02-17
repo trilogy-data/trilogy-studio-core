@@ -20,10 +20,6 @@ export default defineComponent({
         const tableRef = ref<HTMLDivElement | null>(null);
         let tabulator: Tabulator | null = null;
 
-        const getDepthColor = (depth: number): string => {
-            const colors = ['#ff0000', '#ff6600', '#ffcc00', '#33cc33', '#0099ff', '#9933ff', '#6600cc'];
-            return colors[depth % colors.length] || '#000000';
-        };
         onBeforeUnmount(() => {
             if (tabulator) {
                 tabulator.destroy();

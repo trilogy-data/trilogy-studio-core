@@ -3,7 +3,7 @@ export const QUERY_LINE_ITEM = `import lineitem as line_item;
 auto discounted_price <- line_item.extended_price * (1-line_item.discount);
 auto charge_price <- discounted_price * (1+line_item.tax);
 
-where line_item.ship_date <= '1998-12-01'::date 
+WHERE line_item.ship_date <= '1998-12-01'::date 
 SELECT
     line_item.return_flag,
     line_item.line_status,
@@ -15,7 +15,7 @@ SELECT
     avg(line_item.extended_price)-> avg_price,
     avg(line_item.discount)->discount,
     count(line_item.id) as count_order
-order BY    
+ORDER BY   
     line_item.return_flag desc,
     line_item.line_status desc
 ;`
@@ -23,8 +23,8 @@ order BY
 export const QUERY_JOIN = `
 import part as part;
 
-where  part.supplier.nation.region.name = 'EUROPE'
-select 
+WHERE part.supplier.nation.region.name = 'EUROPE'
+SELECT
 	part.supplier.account_balance,
 	part.supplier.name,
 	part.supplier.nation.name,
@@ -37,7 +37,6 @@ select
 	min(part.supply_cost) by part.id as min_part_cost,
 HAVING
 	part.supply_cost = min_part_cost
-
-order by
+ORDER BY
 	part.id asc;
 `

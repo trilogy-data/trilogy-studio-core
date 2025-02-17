@@ -129,7 +129,7 @@ export class Concept {
     lineage: LineageItem[];
 
     constructor(
-        address:string,
+        address: string,
         name: string,
         namespace: string,
         datatype: DataType | ListType | MapType | StructType,
@@ -193,10 +193,10 @@ export class ModelParseResults {
 
 
 export class ModelSource {
-    editor:string;
-    alias:string;
+    editor: string;
+    alias: string;
 
-    constructor(editor:string, alias:string) {
+    constructor(editor: string, alias: string) {
         this.editor = editor;
         this.alias = alias;
     }
@@ -217,6 +217,7 @@ export class ModelConfig {
     }
 
     static fromJSON(data: any): ModelConfig {
+        console.log(data)
         return new ModelConfig({ name: data.name, storage: data.storage, sources: data.sources, parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null });
     }
 

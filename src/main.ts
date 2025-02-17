@@ -2,6 +2,7 @@ import { Buffer } from 'buffer';
 
 window.Buffer = Buffer;
 // polyfill for SQL Server Driver
+// @ts-ignore
 Error.captureStackTrace = (targetObject: object, constructorOpt?: Function) => { };
 import { createApp } from 'vue'
 import './style.css'

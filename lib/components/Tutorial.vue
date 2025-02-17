@@ -35,7 +35,8 @@
       <p>When creating an editor, you will select a type. Trilogy editors run Trilogy code; SQL editors run SQL. An
         editor must be associated with a connection and may be associated with a model.</p>
       <p>When running trilogy queries, your command will first go to a backend server to be parsed/typechecked, then the
-        output SQL will be returned to the editor to execute as a normal SQL query.</p>
+        output SQL will be returned to the editor to be run as a normal SQL query.
+        SQL editors will submit directly to the configured connection without the first parsing pass.</p>
     </section>
 
     <section id="connections" class="tutorial-section">
@@ -61,7 +62,9 @@
       <h2>Models</h2>
       <p>Models are the Trilogy semantic layer. When you run a Trilogy command in a connection with a model associated,
         it
-        will be able to import all included files and reference them.</p>
+        will be able reference that file as an import in any other editor on the connection. An editor is added to a
+        model
+        with an alias, which is how it should be referenced.</p>
 
       <p>Any editor can be turned into a model source. By default, model sources are hidden in browsing, but this can be
         toggled
@@ -83,7 +86,7 @@
 
     <section id="data-and-privacy" class="tutorial-section">
       <h2>Data and Privacy</h2>
-      <p>The content of a Trilogy IDE (or selected subset) + defined model source files will be sent to a remote server
+      <p>The content of a Trilogy IDE (or selected section of code) + defined model source files will be sent to a remote server
         to generate SQL. This contains no other identifying information beyond the editor text and associated model
         editor texts sent.</p>
       <p>All other operations will be between your local machine and services you control. For example, when querying
@@ -93,13 +96,14 @@
 
       <h3>Product Specific</h3>
       <h4>Google</h4>
-      <p>For google products (Bigquery, etc), the google-javascript-api is used to authenticate your account on
-        the client side.</p>
+      <p>For google products (Bigquery, etc), the google-javascript-api is used to authenticate your account directly
+        from the web client.</p>
 
       <h4>Other</h4>
-      <p>For other databases that require secrets, the browser credential API is used to store credentials
+      <p>For other databases that require secrets, the browser credential API (NOT YET IMPLEMENTED) is used to store
+        credentials
         locally and prompt before accessing them. These credentials are only sent to the relevant database as part
-        of connecting.</p>
+        of connecting. </p>
 
     </section>
 
@@ -153,7 +157,7 @@ export default {
       let connName = 'demo-connection';
       let modelName = 'demo-model';
       let connection = new DuckDBConnection(connName, modelName);
-      let x = this.connectionStore.addConnection(connection);
+      this.connectionStore.addConnection(connection);
       //CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT
       let customer = new Editor({ name: 'customer', type: 'trilogy', connection: connName, storage: 'local', contents: CUSTOMER_CONTENT, tags: [EditorTag.SOURCE] });
       this.editorStore.addEditor(customer);
