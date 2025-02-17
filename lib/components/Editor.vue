@@ -184,6 +184,16 @@ export default defineComponent({
                 return;
             }
 
+            try {
+                window.goatcounter.count({
+                    path: 'studio-query-execution',
+                    title: this.editorData.type,
+                    event: true,
+                })
+            } catch (error) {
+                console.log(error)
+            }
+
             const conn = this.connectionStore.connections[this.editorData.connection];
             if (!conn) {
                 this.editorData.setError(`Connection ${this.editorData.connection} not found.`);

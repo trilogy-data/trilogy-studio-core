@@ -27,7 +27,7 @@ export default defineComponent({
   name: 'LoadingPlaceholder',
   props: {
     cancel: {
-      type: Promise,
+      type: Function,
       required: false
     },
   },
