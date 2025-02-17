@@ -1,8 +1,44 @@
 from fastapi.testclient import TestClient
+from io_models import ModelInSchema, ModelSourceInSchema
+
 
 def test_read_main(test_client: TestClient):
     response = test_client.get("/")
     assert response.status_code == 200
+
+
+def test_model_response(test_client: TestClient):
+
+    model = ModelInSchema(
+        name="test_parse",
+        sources=[
+            ModelSourceInSchema(
+                alias="test",
+                contents="""key cuid int; 
+property cuid.name string;
+auto customer_count <- count(cuid);
+
+datasource customers (
+    id: cuid,
+    name: name,
+)
+grain (id,)
+query '''
+select 1 as id, 'bob' as name
+union all
+select 2 as id, 'fred' as name
+union all
+select 3 as id, 'alice' as name
+'''
+;
+""",
+            )
+        ],
+    )
+
+    response = test_client.post("/parse_model", data=model.model_dump_json())  # type: ignore
+    assert response.status_code == 200
+    assert response.json()["concepts"][0]["address"] == "test.cuid"
 
 
 # def test_read_models(test_client: TestClient):
@@ -43,4 +79,3 @@ def test_read_main(test_client: TestClient):
 #         parsed = GenAIConnectionInSchema.model_validate(arg)
 #         response = test_client.post("/gen_ai_connection", data=parsed.model_dump_json(by_alias=True))  # type: ignore # noqa: E501
 #         assert response.status_code == 403
-

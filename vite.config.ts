@@ -2,8 +2,7 @@ import { defineConfig } from 'vite'
 // import { resolve } from 'path'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
-import tailwindcss from '@tailwindcss/vite'
-// import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 import {
   resolve
@@ -11,9 +10,9 @@ import {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(),
-    // nodePolyfills({ include: ['events'] }),
+  // nodePolyfills({ include: ['events'] }),
   dts({ include: ['lib'] }),
-  tailwindcss(),
+  nodePolyfills({ include: ['events', 'dns', 'stream', ] }),
   {
     name: "configure-response-headers",
     configureServer: (server) => {
@@ -25,7 +24,14 @@ export default defineConfig({
     },
   },
   ],
-
+  define: {
+    global: 'window',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer/', // buffer requires / 
+    },
+  },
   build: {
     copyPublicDir: true,
 

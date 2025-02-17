@@ -1,37 +1,75 @@
-<template>
-  <sidebar-list title="Editors">
-    <template #actions>
-      <div class="action-container">
-        <button @click="saveEditors()">Save</button>
-        <editor-creator />
-        <button @click="addDemoEditors()">Demo</button>
-      </div>
-    </template>
-    <div v-for="(editors, key) in editorsByStorage" :key="key" class="storage-group">
-      <h4 class="text-sm">{{ displayKey(key) }} ({{ editors.length }})</h4>
-      <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
-        <div class="editor-content">
-          <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'"><i class="mdi mdi-alpha-s-box-outline"></i>
-          </tooltip>
-          <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
-          <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{ editor.name }}</span>
-          <span class="editor-connection"> ({{ editor.connection }})</span>
-          <span class="remove-btn"><i class="mdi mdi-close" @click="deleteEditor(editor)"></i></span>
+    <template>
+      <sidebar-list title="Editors">
+        <template #actions>
+          <!-- Tags as filters -->
+          <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
+            @click="toggleTagFilter(tag)">
+            {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} editors with {{ tag }} tag
+          </span>
+          <div class="button-container">
+            <editor-creator />
+            <loading-button ref="loadingButton" :action="saveEditors"
+              :keyCombination="['control', 's']">Save</loading-button>
+
+          </div>
+        </template>
+        <div v-for="(connections, storage) in groupedEditors" :key="storage" class="storage-group">
+          <h4 class="text-sm" @click="toggleCollapse(storage)">
+            {{ displayKey(storage) }} ({{ Object.values(connections).flat().length }})
+          </h4>
+          <div v-if="!collapsed[storage]">
+            <div v-for="(editors, connection) in connections" :key="connection" class="connection-group">
+              <div class="text-sm left-pad" @click="toggleCollapse(connection)">{{ connection }} ({{ editors.length }})
+              </div>
+              <ul class="list" v-if="!collapsed[connection]">
+                <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
+                  <div class="editor-content">
+                    <div class="main-content">
+                      <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'">
+                        <i class="mdi mdi-alpha-s-box-outline"></i>
+                      </tooltip>
+                      <tooltip content="Trilogy Editor" v-else>
+                        <i class="mdi mdi-alpha-t-box-outline"></i>
+                      </tooltip>
+                      <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{ editor.name
+                        }}</span>
+                      <span v-for="tag in editor.tags" :key="tag" class="tag">{{ tag }}</span>
+                    </div>
+                    <tooltip content="Delete Editor" position="left">
+                      <span class="remove-btn" @click.stop="deleteEditor(editor)">
+                        <i class="mdi mdi-close"></i>
+                      </span>
+                    </tooltip>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </li>
-    </div>
-  </sidebar-list>
-</template>
+      </sidebar-list>
+    </template>
 
 <style scoped>
+.list {
+  padding-top: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
 .padding-left {
   padding-left: 5px;
+  text-align: left;
+}
+
+.left-pad {
+  margin-left: 5px;
+  text-align: left;
 }
 
 .text-sm {
   font-weight: 400;
   margin-top: 0px;
-  margin-bottom: 5px;
+  /* margin-bottom: 5px; */
   padding-left: 5px;
 }
 
@@ -49,7 +87,7 @@
   padding: 0;
   width: 24px;
   opacity: 0.5;
-  color: red;
+  color: rgb(114, 1, 1);
   text-align: center;
   /* border: 1px solid var(--border-light); */
 }
@@ -61,26 +99,24 @@
 }
 
 
-.action-container {
-  display: flex;
-  align-items: center;
-  /* Aligns items vertically */
-  gap: 0.5rem;
-  /* Adds space between the button and editor-creator */
-  max-width: 20%;
-}
 
 .editor-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  /* justify-content: space-between; */
+  /* align-items: left; */
   /* border: 1px solid var(--border-light); */
   padding: 2px;
+}
+
+.main-content {
+  display: flex;
+  align-items: center;
 }
 
 .editor-content {
   display: flex;
   justify-content: space-between;
+  /* This is the key change */
   padding-left: 5px;
   width: 100%;
   font-size: 15px;
@@ -98,14 +134,33 @@
   padding-left: 4px;
   /* Makes the connection name take up remaining space */
 }
+
+.tag {
+  cursor: pointer;
+  background: var(--button-bg);
+  padding: 2px 5px;
+  margin: 2px;
+  /* border-radius: 4px; */
+  font-size: 8px;
+}
+
+.tag:hover {
+  background: var(--button-mouseove);
+}
+
+.tag-excluded {
+  background: darkgray;
+}
 </style>
 <script lang="ts">
-import { inject } from 'vue';
+import { inject, ref, computed } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import EditorCreator from './EditorCreator.vue'
-import EditorModel from '../models/editor';
+import EditorModel from '../editors/editor';
 import SidebarList from './SidebarList.vue';
 import Tooltip from './Tooltip.vue';
+import LoadingButton from './LoadingButton.vue';
+import { EditorTag } from '../editors';
 export default {
   name: "EditorList",
   props: {
@@ -115,7 +170,47 @@ export default {
     if (!editorStore) {
       throw new Error('Editor store is not provided!');
     }
-    return { editorStore }
+
+    const collapsed = ref<Record<string, boolean>>({});
+    const toggleCollapse = (key: string) => {
+      collapsed.value[key] = !collapsed.value[key];
+    };
+
+    const hiddenTags = ref<Set<string>>(new Set(['source']));
+    const toggleTagFilter = (tag: string) => {
+      if (hiddenTags.value.has(tag)) {
+        hiddenTags.value.delete(tag);
+      } else {
+        hiddenTags.value.add(tag);
+      }
+    };
+
+    const groupedEditors = computed(() => {
+      const result: Record<string, Record<string, EditorModel[]>> = {};
+
+      Object.values(editorStore.editors).forEach((editor) => {
+        if (hiddenTags.value.size > 0 && editor.tags.some(tag => hiddenTags.value.has(tag))) {
+          return;
+        }
+        if (!result[editor.storage]) {
+          result[editor.storage] = {};
+        }
+        if (!result[editor.storage][editor.connection]) {
+          result[editor.storage][editor.connection] = [];
+        }
+        result[editor.storage][editor.connection].push(editor);
+      });
+
+      // Sort the editors alphabetically by name in each group
+      Object.keys(result).forEach(storage => {
+        Object.keys(result[storage]).forEach(connection => {
+          result[storage][connection].sort((a, b) => a.name.localeCompare(b.name));
+        });
+      });
+
+      return result;
+    });
+    return { editorStore, EditorTag, toggleTagFilter, groupedEditors, toggleCollapse, collapsed, hiddenTags };
 
   },
   computed: {
@@ -136,6 +231,7 @@ export default {
     EditorCreator,
     SidebarList,
     Tooltip,
+    LoadingButton,
   },
   methods: {
     // Emit an event when an editor is clicked

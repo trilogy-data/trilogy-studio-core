@@ -1,7 +1,5 @@
-
-
 :root {
-  font-family: ui-sans-serif,system-ui,sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -16,7 +14,11 @@
 
 /* Dark Mode Colors */
 :root {
+
   --text-color: #FFFFFF;
+  --text-faint: #B3B3B3;
+  --special-text: #cc6900;
+  color: var(--text-color);
 
   --sidebar-selector-bg: #3C3C3C;
   --sidebar-selector-font: #FFFFFF;
@@ -31,10 +33,15 @@
   --result-window-bg: #262626;
   --result-window-font: #CCCCCC;
 
-  --border:#898989;
+  --border: #898989;
   --border-light: #4b4b4b;
   --button-bg: #4D4D4D;
   --button-mouseover: #3C3C3C;
+
+
+  a:hover {
+    color: #535bf2;
+  }
 }
 
 
@@ -42,24 +49,29 @@
 @media (prefers-color-scheme: light) {
   :root {
     --text-color: #333333;
+    --text-faint: #B3B3B3;
+    --special-text: #0066cc;
+    color: var(--text-color);
+
     --sidebar-selector-bg: #E8E8E8;
     --sidebar-selector-font: #333333;
     --sidebar-selector-selected-bg: #FFFFFF;
-  
+
     --sidebar-bg: #F2F2F2;
     --sidebar-font: #4D4D4D;
-  
+
     --query-window-bg: #FFFFFF;
     --query-window-font: #2E2E2E;
-  
+
     --result-window-bg: #F9F9F9;
     --result-window-font: #3C3C3C;
-  
+
     --border: #7171715e;
     --border-light: #E5E5E5;
     --button-bg: #dfdfdff0;
     --button-mouseover: #cfcfcf;
   }
+
   a:hover {
     color: #747bff;
   }
@@ -71,9 +83,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
-a:hover {
-  color: #535bf2;
-}
+
 
 body {
   margin: 0;
@@ -90,11 +100,17 @@ h1 {
 
 button:hover {
   background-color: var(--button-mouseover)
-  /* Lighter gray when hovered */
+    /* Lighter gray when hovered */
+}
+
+.button-container {
+  display: flex;
+  gap: 8px;
+  /* margin-bottom: 8px; */
 }
 
 button {
-  height:24px;
+  height: 24px;
   border-radius: 2px;
   border: 1px solid transparent;
   /* padding: 0.6em 1.2em; */
@@ -114,4 +130,28 @@ button:focus-visible {
 
 .card {
   padding: 2em;
+}
+
+.relative-container {
+  position: relative; /* Ensures the absolute positioning is relative to this container */
+  padding: 0px;
+  flex: 1;
+}
+
+.relative-container button{
+  width:100%;
+
+}
+
+.absolute-form {
+  position: absolute;
+  top: 100%; /* Position below the button */
+  background-color: var(--button-bg);
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); 
+  border: 1px solid var(--border); 
+  z-index: 1001; 
+  width: 250px;
+  font-size: 15px;
+  text-align: center;
+
 }

@@ -19,7 +19,15 @@ from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
-from io_models import QueryInSchema, FormatQueryOutSchema, QueryOut, QueryOutColumn
+from trilogy.authoring import SelectStatement, MultiSelectStatement
+from io_models import (
+    QueryInSchema,
+    FormatQueryOutSchema,
+    QueryOut,
+    QueryOutColumn,
+    ModelInSchema,
+    Model,
+)
 
 from logging import getLogger
 import click
@@ -29,7 +37,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
-from env_helpers import parse_env_from_full_model
+from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 
@@ -61,7 +69,7 @@ allowed_origins += [
     "http://localhost:8081",
     "http://localhost:8090",
 ]
-allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)"
+allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 
 
 app.add_middleware(
@@ -108,22 +116,39 @@ def generate_query(query: QueryInSchema):
     try:
         _, parsed = parse_text(safe_format_query(query.query), env)
         final = parsed[-1]
-        columns = [
-            QueryOutColumn(
-                name=x.address,
-                datatype=env.concepts[x.address].datatype,
-                purpose=env.concepts[x.address].purpose,
-            )
-            for x in final.output_components
-        ]
-        generated = dialect.generate_queries(environment=env, statements=[final])
+        if not isinstance(final, (SelectStatement, MultiSelectStatement)):
+            columns = []
+            generated = None
+        else:
+            columns = [
+                QueryOutColumn(
+                    name=x.address,
+                    datatype=env.concepts[x.address].datatype,
+                    purpose=env.concepts[x.address].purpose,
+                )
+                for x in final.output_components
+            ]
+            generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
-
+    if not generated:
+        return QueryOut(generated_sql=None, columns=columns)
     output = QueryOut(
         generated_sql=dialect.compile_statement(generated[-1]), columns=columns
     )
     return output
+
+
+@router.post("/parse_model")
+def parse_model(model: ModelInSchema) -> Model:
+    try:
+        env = parse_env_from_full_model(model)
+        # add all imports by default
+        for idx, source in enumerate(model.sources):
+            env.parse(f"import {source.alias} as {source.alias};")
+        return model_to_response(model.name, env)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
 ## Core

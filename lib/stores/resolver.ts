@@ -1,11 +1,25 @@
 
 
 import axios from 'axios';
+import {Concept, Datasource} from '../models';
 
 interface QueryResponse {
     data: {
         generated_sql: string
     }
+}
+
+
+
+interface ModelResponse {
+    name: string,
+    concepts: Concept[]
+    datasources: Datasource[]
+}
+
+export interface ContentInput{
+    alias:string,
+    contents:string
 }
 
 
@@ -23,18 +37,29 @@ export default class AxiosResolver {
                 base = error.response.data.detail;
             }
         }
-        return base;
+        return JSON.stringify(base);
     }
 
-    async resolve_query(query: string, dialect: string, type: string): Promise<QueryResponse> {
+    async resolve_query(query: string, dialect: string, type: string, sources: ContentInput[] | null = null): Promise<QueryResponse> {
         if (type === 'sql') {
             // return it as is
             return { 'data': { 'generated_sql': query } }
         }
         return axios.post(`${this.address}/generate_query`, {
             query: query,
-            dialect: dialect
+            dialect: dialect,
+            full_model: {name:'', sources: sources || []}
         }).catch((error: Error) => {
+            console.log(error)
+            throw Error(this.getErrorMessage(error))
+        })
+    }
+
+    async resolveModel(name: string, sources: ContentInput[]): Promise<ModelResponse> {
+        return axios.post(`${this.address}/parse_model`, {
+            name: name,
+            sources: sources
+        }).then((response) => { return response.data }).catch((error: Error) => {
             throw Error(this.getErrorMessage(error))
         })
     }

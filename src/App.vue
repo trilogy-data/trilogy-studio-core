@@ -1,29 +1,27 @@
 <script setup lang="ts">
 // @ts-ignore
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
-import { DuckDBConnection, BigQueryOauthConnection } from 'trilogy-studio-core/connections';
-import { EditorLocalStorage } from 'trilogy-studio-core/data';
-import { useEditorStore, useConnectionStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
+import { LocalStorage } from 'trilogy-studio-core/data';
+import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
+import { Tabulator, ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule } from 'tabulator-tables'
+
+Tabulator.registerModule([ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule]);
+
+
 
 import { ref } from "vue";
 
 
-let connection = new DuckDBConnection(
-  'test-connection',
-);
-let connection2 = new BigQueryOauthConnection(
-  'test-connection2',
-  'preqldata'
-);
+
 const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
 let resolver = new AxiosTrilogyResolver(apiUrl);
 
-let localEditors = new EditorLocalStorage('test-connection')
+let localStorage = new LocalStorage()
 
-let editorSources = [localEditors]
+let contentSources = [localStorage]
 
-let local = localEditors.loadEditors()
+let local = localStorage.loadEditors()
 
 if (Object.keys(local).length == 0) {
   const editor1 = new EditorModel(
@@ -35,23 +33,22 @@ if (Object.keys(local).length == 0) {
     { name: "Test Editor 2", type: "text", connection: "test-connection", storage: "local", contents: ref('select 1') },
 
   )
-  localEditors.saveEditors([editor1, editor2])
+  localStorage.saveEditors([editor1, editor2])
 }
 
 let store = useEditorStore();
 
 let connections = useConnectionStore();
 
-connections.addConnection(connection);
-connections.addConnection(connection2);
 
+let models = useModelConfigStore();
 
 </script>
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" ,
-      :editorSources="editorSources">
+    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
+      :storageSources="contentSources">
       <IDE />
     </Manager>
   </div>

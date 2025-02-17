@@ -1,20 +1,32 @@
 <template>
   <div class="sidebar-container">
-    <!-- Vertical icon strip -->
-
     <div class="sidebar-icons">
       <tooltip content="Trilogy Studio (Alpha)"><img class="trilogy-icon" :src="trilogyIcon" /></tooltip>
-      <div v-for="(item, index) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(index)"
-        :class="{ active: selectedIndex === index }">
+      <div class="sidebar-divider"></div>
+      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }">
+        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+      </div>
+      <div class="sidebar-bottom-icons">
+        <div class="sidebar-icon" @click="selectItem('settings')">
+          <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
+        </div>
+        <div class="sidebar-icon" @click="selectItem('profile')">
+          <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
+        </div>
       </div>
     </div>
 
-    <!-- Placeholder for selected content -->
     <div class="sidebar-content">
-      <EditorList v-if="selectedIndex === 0" @editor-selected="editorSelected" @save-editors="saveEditors" />
-      <ConnectionList v-else-if="selectedIndex === 1" />
-      <TutorialSidebar v-else-if="selectedIndex === 2" />
+      <EditorList v-if="active === 'editors'" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <ConnectionList v-else-if="active === 'connections'" />
+      <ModelSidebar v-else-if="active === 'models'" />
+      <TutorialSidebar v-else-if="active === 'tutorial'" />
     </div>
   </div>
 </template>
@@ -24,39 +36,56 @@ import { defineComponent } from "vue";
 import EditorList from "./EditorList.vue";
 import ConnectionList from "./ConnectionList.vue";
 import TutorialSidebar from "./TutorialSidebar.vue";
+import ModelSidebar from "./ModelSidebar.vue";
 import trilogyIcon from "../static/trilogy.png";
 import Tooltip from "./Tooltip.vue";
+import { getDefaultValueFromHash } from '../stores/urlStore';
 export default defineComponent({
   name: "Sidebar",
   data() {
+    let active = getDefaultValueFromHash('screen');
+    let sidebarFeatureItems = [
+      {
+        name: "models",
+        tooltip: 'Models',
+        icon: "mdi mdi-set-center",
+        screen: 'models',
+      },
+      {
+        name: "help",
+        tooltip: 'Help/Guide',
+        icon: "mdi mdi-help",
+        screen: 'tutorial',
+      },
+    ];
+    let sideBarItems = [
+      {
+        name: "edit",
+        tooltip: 'Editors',
+        icon: "mdi mdi-file-document-edit",
+        screen: 'editors',
+      },
+      {
+        name: "database",
+        tooltip: 'Editor Connections',
+        icon: "mdi mdi-database",
+        screen: 'connections',
+      },
+
+
+      //   {
+      //     name: "Extensions",
+      //     iconClass: "fas fa-puzzle-piece",
+      //     component: "Extensions", // Replace with your actual component
+      //   },
+    ]
     return {
-      selectedIndex: 0, // Index of the currently selected sidebar item
+      // index of the sidebarItem where the screen == active
+      // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
+      active:active,
       trilogyIcon: trilogyIcon,
-      sidebarItems: [
-        {
-          name: "edit",
-          tooltip: 'Code Editors',
-          icon: "mdi mdi-file-document-edit",
-          screen: 'editors',
-        },
-        {
-          name: "database",
-          tooltip: 'Connections',
-          icon: "mdi mdi-database",
-          screen: 'editors',
-        },
-        {
-          name: "help",
-          tooltip: 'Tutorial',
-          icon: "mdi mdi-help",
-          screen: 'tutorial',
-        },
-        //   {
-        //     name: "Extensions",
-        //     iconClass: "fas fa-puzzle-piece",
-        //     component: "Extensions", // Replace with your actual component
-        //   },
-      ],
+      sidebarItems: sideBarItems,
+      sidebarFeatureItems: sidebarFeatureItems,
     };
   },
   components: {
@@ -64,23 +93,30 @@ export default defineComponent({
     ConnectionList,
     Tooltip,
     TutorialSidebar,
+    ModelSidebar,
 
   },
   computed: {
-    selectedItem() {
-      return this.sidebarItems[this.selectedIndex];
-    },
   },
   methods: {
-    selectItem(index: number) {
-      this.selectedIndex = index;
-      this.$emit("screen-selected", this.sidebarItems[index].screen);
+    selectItem(index: string) {
+      this.active = index;
+      this.$emit("screen-selected", index);
     },
     editorSelected(editor: string) {
       this.$emit("editor-selected", editor);
     },
     saveEditors() {
       this.$emit("save-editors");
+    },
+    openSettings() {
+      this
+      console.log("Settings clicked");
+      // Implement settings navigation
+    },
+    openProfile() {
+      console.log("Profile clicked");
+      // Implement profile navigation
     }
   },
 });
@@ -127,7 +163,7 @@ export default defineComponent({
   font-size: 20px;
 }
 
-.sidebar-icon.active {
+.sidebar-icon.selected {
   background-color: var(--sidebar-selector-selected-bg);
   /* border-radius: 50%; */
 }
@@ -137,5 +173,20 @@ export default defineComponent({
   /* background-color: white; */
   padding: 5px;
   overflow-y: auto;
+}
+
+.sidebar-divider {
+  width: 60%;
+  height: 1px;
+  background-color: var(--sidebar-selector-selected-bg, #ccc);
+  margin: 10px 0;
+}
+
+/* Bottom icons container */
+.sidebar-bottom-icons {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  margin-top: auto;
 }
 </style>

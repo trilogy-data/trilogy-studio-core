@@ -1,15 +1,22 @@
 // BaseConnection.ts
 
-import { Results } from '../models/results'
+import { Results } from '../editors/results'
 export default abstract class BaseConnection {
     name: string;
     type: string;
+    storage: string;
+    model: string| null =  null;
     connected: boolean;
     error: string | null = null;
+    query_type: string = "abstract";
 
-    constructor(name: string, type: string, autoConnect: boolean = true) {
+    constructor(name: string, type: string,  autoConnect: boolean = true, model?: string) {
         this.name = name;
         this.type = type;
+        this.model = model || null;
+        // hardcoded for dev
+        this.storage = 'local';
+        this.query_type = 'abstract';
         this.connected = false; // Default to disconnected
         if (autoConnect) {
             this.connect().then(() => {
@@ -18,7 +25,7 @@ export default abstract class BaseConnection {
                 if (error instanceof Error) {
                     this.error = error.message;
                 }
-                this.connected = false;
+                throw error;
             });
         }
     }
@@ -26,6 +33,10 @@ export default abstract class BaseConnection {
     abstract query(sql: string): Promise<Results>;
 
     abstract connect(): Promise<void>;
+
+    setModel(model: string) {
+        this.model = model;
+    }
 
     async reset() {
         try {
@@ -36,8 +47,17 @@ export default abstract class BaseConnection {
         } catch (error) {
             if (error instanceof Error) {
                 this.error = error.message;
+
             }
+            throw error;
         }
 
+    }
+
+    abstract toJSON(): object;
+
+    // @ts-ignore
+    static fromJSON(fields:object) {
+        throw new Error("Method not implemented.");
     }
 }

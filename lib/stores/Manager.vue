@@ -4,11 +4,13 @@
 
 <script lang="ts">
 import IDE from "../views/IDE.vue";
-import type {EditorStoreType} from './editorStore';
-import type {ConnectionStoreType} from './connectionStore';
+import type { EditorStoreType } from './editorStore';
+import type { ConnectionStoreType } from './connectionStore';
+import type { ModelConfigStoreType } from './modelStore';
 import QueryResolver from './resolver';
 import { provide } from 'vue';
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
+import { Storage } from '../data'
 export default {
     name: "ContextManager",
     components: {
@@ -23,38 +25,68 @@ export default {
             type: Object as PropType<EditorStoreType>,
             required: true
         },
+        modelStore: {
+            type: Object as PropType<ModelConfigStoreType>,
+            required: true
+        },
         trilogyResolver: {
             type: QueryResolver,
             required: true
 
         },
-        editorSources: {
-            type: Array,
+        storageSources: {
+            type: Array<Storage>,
             required: false,
             default: () => []
-        }
+        },
     },
     setup(props) {
         // provide('connections', props.connections);
         provide('editorStore', props.editorStore);
         provide('connectionStore', props.connectionStore);
+        provide('modelStore', props.modelStore);
         provide('trilogyResolver', props.trilogyResolver)
-        provide('editorSources', props.editorSources)
-        for (let source of props.editorSources) {
-            // @ts-ignore
+        provide('storageSources', props.storageSources)
+        for (let source of props.storageSources) {
             let editors = source.loadEditors();
-            for (let editor of editors) {
+            for (let editor of Object.values(editors)) {
                 props.editorStore.addEditor(editor)
             }
         }
-        const saveEditors = () => {
-            console.log('saving editors')
-            for (let source of props.editorSources) {
-                // @ts-ignore
-                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.type))
+        for (let source of props.storageSources) {
+            let connections = source.loadConnections();
+            for (let connection of Object.values(connections)) {
+                props.connectionStore.addConnection(connection)
             }
         }
-        provide('saveEditors', saveEditors)
+        for (let source of props.storageSources) {
+            let connections = source.loadModelConfig();
+            for (let modelConfig of Object.values(connections)) {
+                props.modelStore.addModelConfig(modelConfig)
+            }
+        }
+        const saveEditors = () => {
+            for (let source of props.storageSources) {
+                source.saveEditors(Object.values(props.editorStore.editors).filter((editor) => editor.storage == source.type))
+            }
+            console.log('Editors saved')
+        }
+        const saveConnections = () => {
+            for (let source of props.storageSources) {
+                // @ts-ignore
+                source.saveConnections(Object.values(props.connectionStore.connections).filter((connection) => connection.storage = source.type))
+            }
+            console.log('Connections saved')
+        }
+        const saveModels = () => {
+            for (let source of props.storageSources) {
+                source.saveModelConfig(Object.values(props.modelStore.models).filter((model) => model.storage == source.type))
+            }
+            console.log('Models saved')
+        }
+        provide('saveEditors', saveEditors,)
+        provide('saveConnections', saveConnections,)
+        provide('saveModels', saveModels,)
     },
     computed: {
     },

@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative-container">
     <button @click="createEditor">Add</button>
-    <div v-if="visible" class="absolute-form">
+    <div v-if="visible" class="absolute-form" >
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>
@@ -34,37 +34,9 @@
 
 <style scoped>
 
-.relative-container {
-  position: relative; /* Ensures the absolute positioning is relative to this container */
-}
-
-.absolute-form {
-  position: absolute;
-  top: 100%; /* Position below the button */
-  left: 0; /* Align with the button horizontally */
-  background-color: white; /* For contrast and visibility */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-  border: 1px solid #ccc; /* Optional: Border for better separation */
-  z-index: 1000; /* Ensure it appears in front of other content */
-  width: 250px;
-  font-size: 15px;
-  text-align: center;
-}
-
 
 .button {
   flex: 1;
-}
-
-form {
-  /* margin-top: 20px; */
-  /* padding: 20px; */
-  background-color: #e0e0e0;
-  /* Gray background for form */
-  border: 1px solid #ddd;
-  /* Light gray border */
-  border-radius: 0;
-  /* Sharp corners */
 }
 
 
@@ -97,7 +69,7 @@ label {
 }
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue';
+import { defineComponent, ref, inject, } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import type { ConnectionStoreType } from '../stores/connectionStore';
 import Tooltip from './Tooltip.vue';
@@ -106,7 +78,7 @@ export default defineComponent({
   components: {
     Tooltip
   },
-  setup() {
+  setup(_, {emit}) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',
@@ -127,12 +99,7 @@ export default defineComponent({
     //visible
     let visible = ref(false);
 
-    // Ref to store the submitted editor's details
-    const submittedEditor = ref<{
-      name: string;
-      type: string;
-      connection: string;
-    } | null>(null);
+
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
@@ -145,9 +112,9 @@ export default defineComponent({
     // Function to submit the editor details
     const submitEditorCreation = () => {
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
-        submittedEditor.value = { ...editorDetails.value }; // Save the submitted editor
         visible.value = false;
         editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection);
+        emit("editor-selected", (editorDetails.value.name));
       }
     };
 
@@ -157,7 +124,6 @@ export default defineComponent({
       connections,
       createEditor,
       submitEditorCreation,
-      submittedEditor
     };
   }
 });

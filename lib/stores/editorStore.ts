@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import Editor from '../models/editor'
-import { Results } from "../models/results";
+import Editor from '../editors/editor'
+import { Results } from "../editors/results";
 
 const useEditorStore = defineStore('editors', {
   state: () => ({

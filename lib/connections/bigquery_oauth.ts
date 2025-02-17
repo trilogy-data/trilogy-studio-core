@@ -1,6 +1,6 @@
 import BaseConnection from "./base";
-import { Results, ColumnType } from "../models/results";
-import type { ResultColumn } from "../models/results";
+import { Results, ColumnType } from "../editors/results";
+import type { ResultColumn } from "../editors/results";
 
 
 declare var google: any;
@@ -11,11 +11,28 @@ export default class BigQueryOauthConnection extends BaseConnection {
     private accessToken: string;
     private projectId: string;
 
-    constructor(name: string, projectId: string) {
-        super(name, "bigquery-ouath", false);
+    constructor(name: string, projectId: string , model?: string) {
+        super(name, "bigquery-oauth", false), model;
         this.projectId = projectId;
+        this.query_type = 'bigquery';
     }
 
+    toJSON(): object {
+        return {
+            name: this.name,
+            type: this.type,
+            model: this.model,
+            projectId: this.projectId,
+        };
+    }
+
+    static fromJSON(fields: { name: string; projectId: string, model:string | null }): BigQueryOauthConnection {
+        let base =  new BigQueryOauthConnection(fields.name, fields.projectId);
+        if (fields.model) {
+            base.model = fields.model;
+        }
+        return base;
+    }
     async connect(): Promise<void> {
         let fun = this;
         try {
@@ -34,7 +51,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
             }).requestAccessToken();
 
         } catch (error) {
-            console.log("Error connecting to BigQuery with OAuth", error);
+            console.error("Error connecting to BigQuery with OAuth", error);
             throw error;
         }
     }
@@ -101,7 +118,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
                 return rowData;
             });
             // Return results
-            console.log(rows)
             return new Results(headers, rows);
         } catch (error) {
             throw error

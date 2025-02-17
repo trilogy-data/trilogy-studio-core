@@ -56,7 +56,7 @@
 <script lang="ts">
 import { Tabulator } from 'tabulator-tables'
 import type { ColumnDefinition } from 'tabulator-tables'
-import type { ResultColumn, Row } from '../models/results';
+import type { ResultColumn, Row } from '../editors/results';
 import type { PropType } from 'vue';
 
 export default {

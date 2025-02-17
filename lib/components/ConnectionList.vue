@@ -1,7 +1,11 @@
 <template>
   <sidebar-list title="Connections">
     <template #actions>
-      <connection-creator />
+      <div class="button-container">
+        <connection-creator />
+        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+
+      </div>
     </template>
     <!-- <button @click="login">Login Using Google</button> -->
     <li v-for="connection in connections" :key="connection.name"
@@ -11,15 +15,46 @@
         </tooltip>
         <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'">M<i class="mdi mdi-duck"></i>
         </tooltip>
-        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-ouath'"> <i class="mdi mdi-google"></i></tooltip>
-        <span class="padding-left">{{ connection.name }}
 
+        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-oauth'"> <i class="mdi mdi-google"></i>
+        </tooltip>
+
+        <div class="button-container connection-parts">
+          <div class="padding-left" >
+          <span >{{ connection.name }}</span>
           <tooltip v-if="connection.connected" content="Connected" position="bottom"><i class="mdi mdi-check green"></i>
           </tooltip>
-          <tooltip v-else-if="connection.error" :content="connection.error" position="bottom"><i
+          <tooltip v-else-if="connection.error" :content="connection.error" position="right"><i
               class="mdi mdi-alert-circle-outline red"></i></tooltip>
-          <loading-button :action="() => resetConnection(connection)"><i class="mdi mdi-refresh"></i></loading-button>
-        </span>
+            </div>
+          <div class="flex relative-container button-container float-right">
+
+            <button class="button" @click="connectionModelVisible[connection.name] = true">
+              {{ connection.model || 'Set Model' }}
+            </button>
+
+            <div v-if="connectionModelVisible[connection.name]" class="absolute-form override-left">
+              <form @submit.prevent="submitConnectionModel(connection.name)">
+                <div>
+                  <label for="connection-model">Model</label>
+                  <select v-model="connectionDetails.model" id="connection-model" required>
+                    <option v-for="model in modelList" :key="model" :value="model">
+                      {{ model }}
+                    </option>
+                  </select>
+                </div>
+
+                <button type="submit">Submit</button>
+                <button type="button"
+                  @click="connectionModelVisible[connection.name] = !connectionModelVisible[connection.name]">Close</button>
+              </form>
+            </div>
+          </div>
+
+
+          <loading-button :action="() => resetConnection(connection)"><i :class="connection.connected? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i></loading-button>
+        </div>
+
 
       </div>
     </li>
@@ -28,6 +63,23 @@
 </template>
 
 <style scoped>
+.override-left {
+  left: -150px;
+}
+.connection-parts {
+  width:100%;
+}
+
+.padding-left {
+  padding-left: 5px;
+  flex: 3;
+}
+
+
+.float-right {
+  flex:1;
+}
+
 .green {
   color: green;
 }
@@ -36,8 +88,23 @@
   color: red;
 }
 
-.padding-left {
-  padding-left: 5px;
+
+input,
+select {
+  font-size: 12px;
+  border: 1px solid #ccc;
+  /* Light gray border for inputs */
+  border-radius: 0;
+  /* Sharp corners */
+  width: 95%;
+  /* Full width of the container */
+}
+
+input:focus,
+select:focus {
+  border-color: #4b4b4b;
+  /* Dark gray border on focus */
+  outline: none;
 }
 
 .connection-item {
@@ -61,35 +128,56 @@
   flex-grow: 1;
   /* Makes the connection name take up remaining space */
 }
+.button {
+  min-width:60px;
+  white-space: nowrap;
+}
 </style>
 
 
 
-
-
 <script lang="ts">
-import { inject } from 'vue';
+import { inject, ref } from 'vue';
 import type { ConnectionStoreType } from '../stores/connectionStore';
+import type { ModelConfigStoreType } from '../stores/modelStore';
 import ConnectionCreator from './ConnectionCreator.vue'
 import Connection from '../connections/base';
 import SidebarList from './SidebarList.vue';
 import LoadingButton from './LoadingButton.vue';
 import Tooltip from './Tooltip.vue';
+
 export default {
   name: "ConnectionList",
   props: {
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
-    if (!connectionStore) {
+    const modelStore = inject<ModelConfigStoreType>('modelStore');
+    const saveConnections = inject<Function>('saveConnections');
+    if (!connectionStore || !modelStore || !saveConnections) {
       throw new Error('Connection store is not provided!');
     }
-    return { connectionStore }
+    const connectionModelVisible = ref<Record<string, boolean>>({});
+    const connectionDetails = ref({
+      model: '',
+    });
+
+    const submitConnectionModel = (connection: string) => {
+      if (connectionDetails.value.model) {
+        connectionStore.connections[connection].model = connectionDetails.value.model;
+      }
+      connectionModelVisible.value[connection] = false;
+    };
+
+    return { connectionStore, connectionModelVisible, connectionDetails, submitConnectionModel, saveConnections, modelStore };
 
   },
   computed: {
     connections() {
-      return Object.keys(this.connectionStore.connections).map((name) => this.connectionStore.connections[name]);
+      return Object.values(this.connectionStore.connections);
+    },
+    modelList() {
+      return Object.keys(this.modelStore.models);
     }
   },
   components: {

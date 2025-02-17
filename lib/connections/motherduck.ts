@@ -1,7 +1,6 @@
-// MotherDuckConnection.ts
 import BaseConnection from "./base";
 import { MDConnection } from '@motherduck/wasm-client';
-import { Results, ColumnType } from "../models/results";
+import { Results, ColumnType } from "../editors/results";
 
 
 export default class MotherDuckConnection extends BaseConnection {
@@ -9,10 +8,28 @@ export default class MotherDuckConnection extends BaseConnection {
     private connection: MDConnection;
     private mdToken: string;
 
-    constructor(name: string, mdToken: string) {
-        super(name, 'motherduck')
+    constructor(name: string, mdToken: string, model?: string) {
+        super(name, 'motherduck', true, model)
         this.mdToken = mdToken;
+        this.query_type = 'duckdb';
 
+    }
+
+    toJSON(): object {
+        return {
+            name: this.name,
+            type: this.type,
+            model: this.model,
+            mdToken: this.mdToken,
+        };
+    }
+
+    static fromJSON(fields: { name: string; mdToken: string, model:string | null }): MotherDuckConnection {
+        let base = new MotherDuckConnection(fields.name, fields.mdToken);
+        if (fields.model) {
+            base.model = fields.model;
+        }
+        return base;
     }
 
     async connect() {

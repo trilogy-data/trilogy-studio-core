@@ -42,7 +42,7 @@ export interface ResultsInterface {
 
 type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
 
-function makeValuesJsonSerializable(objects: Record<string, any>[]): Record<string, SerializableValue>[] {
+function makeValuesJsonSerializable(objects: readonly Readonly<Record<string, any>>[]): Record<string, SerializableValue>[] {
   return objects.map((obj) => {
     const serializedObj: Record<string, SerializableValue> = {};
     for (const key in obj) {
