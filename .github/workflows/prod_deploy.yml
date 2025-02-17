@@ -13,7 +13,7 @@ jobs:
   setup-build-deploy:
     name: Deploy Production
     runs-on: ubuntu-latest
-
+    environment: production
     # Add "id-token" with the intended permissions.
     permissions:
       contents: 'read'
