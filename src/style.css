@@ -18,6 +18,7 @@
   --text-color: #FFFFFF;
   --text-faint: #B3B3B3;
   --special-text: #cc6900;
+  --delete-color: #d74f00;
   color: var(--text-color);
 
   --sidebar-selector-bg: #3C3C3C;
@@ -52,6 +53,7 @@
     --text-faint: #B3B3B3;
     --special-text: #0066cc;
     color: var(--text-color);
+    --delete-color: #ff0000;
 
     --sidebar-selector-bg: #E8E8E8;
     --sidebar-selector-font: #333333;

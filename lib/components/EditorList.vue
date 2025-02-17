@@ -22,8 +22,10 @@
               <div class="text-sm left-pad" @click="toggleCollapse(connection)">{{ connection }} ({{ editors.length }})
               </div>
               <ul class="list" v-if="!collapsed[connection]">
-                <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
-                  <div class="editor-content">
+                <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)"
+               
+                >
+                  <div class="editor-content"  :class="{ 'active-editor': activeEditor === editor.name }" >
                     <div class="main-content">
                       <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'">
                         <i class="mdi mdi-alpha-s-box-outline"></i>
@@ -87,7 +89,7 @@
   padding: 0;
   width: 24px;
   opacity: 0.5;
-  color: rgb(114, 1, 1);
+  color: var(--delete-color);
   text-align: center;
   /* border: 1px solid var(--border-light); */
 }
@@ -112,7 +114,9 @@
   display: flex;
   align-items: center;
 }
-
+.active-editor {
+  background-color: var(--button-bg);
+} 
 .editor-content {
   display: flex;
   justify-content: space-between;
@@ -123,7 +127,7 @@
 }
 
 .editor-content:hover {
-  background-color: var(--bg-light);
+  background-color: var(--button-mouseover);
 }
 
 .editor-connection {
@@ -164,6 +168,7 @@ import { EditorTag } from '../editors';
 export default {
   name: "EditorList",
   props: {
+    activeEditor: String,
   },
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore');

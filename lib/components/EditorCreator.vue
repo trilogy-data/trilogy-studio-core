@@ -1,15 +1,19 @@
 <template>
   <div class="flex relative-container">
-    <button @click="createEditor">Add</button>
-    <div v-if="visible" class="absolute-form" >
+    <slot  :onClick="createEditor">
+      <button @click="createEditor">Add</button>
+    </slot>
+
+    <div v-if="visible" class="absolute-form">
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>
-          <input  type="text" v-model="editorDetails.name" id="editor-name" required />
+          <input type="text" v-model="editorDetails.name" id="editor-name" required />
         </div>
 
         <div>
-          <tooltip position="bottom" content="Use SQL editors to run raw SQL."><label for="editor-type">Type</label></tooltip>
+          <tooltip position="bottom" content="Use SQL editors to run raw SQL."><label for="editor-type">Type</label>
+          </tooltip>
           <select v-model="editorDetails.type" id="editor-type" required>
             <option value="preql">Trilogy</option>
             <option value="sql">SQL</option>
@@ -33,8 +37,6 @@
 </template>
 
 <style scoped>
-
-
 .button {
   flex: 1;
 }
@@ -65,7 +67,7 @@ option {
 
 label {
   font-weight: 300
-  /* Dark gray text */
+    /* Dark gray text */
 }
 </style>
 <script lang="ts">
@@ -78,7 +80,7 @@ export default defineComponent({
   components: {
     Tooltip
   },
-  setup(_, {emit}) {
+  setup(_, { emit }) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',
@@ -103,6 +105,7 @@ export default defineComponent({
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
+      console.log('new editor')
       visible.value = !visible.value;
       editorDetails.value.name = ''; // Reset name field
       editorDetails.value.type = 'preql'; // Reset type dropdown

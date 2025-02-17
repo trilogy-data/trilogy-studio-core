@@ -7,10 +7,13 @@
         The sidebar is further split into sections; the first icons change the sidebar for the query editor, while the
         next section configures
         entirely new main screen experiences. Configuration/profile are accessible at the bottom.</p>
+      <highlight-component type="tip"> By default, Trilogy Studio stores your editors, connections, and models in
+        browser local
+        storage. Use the
+        save buttons on the left hand nav to record changes. You can also use the keyboard shortcuts <kbd>Ctrl</kbd> +
+        <kbd>S</kbd> to save
+        your work.</highlight-component>
 
-      By default, Trilogy Studio stores your editors, connections, and models in local storage. Use the
-      save buttons to record changes. You can also use the keyboard shortcuts <kbd>Ctrl</kbd> + <kbd>S</kbd> to save
-      your work.
 
     </section>
     <section id="demo" class="tutorial-section">
@@ -30,11 +33,11 @@
 
     <section id="querying" class="tutorial-section">
       <h2>Querying</h2>
-      <p>The primary function of trilogy studio is letting you run queries in Trilogy or SQL against connections
+      <p>A core feature of Trilogy Studio is running in Trilogy or SQL against connections
         representing backend databases.</p>
       <p>When creating an editor, you will select a type. Trilogy editors run Trilogy code; SQL editors run SQL. An
         editor must be associated with a connection and may be associated with a model.</p>
-      <p>When running trilogy queries, your command will first go to a backend server to be parsed/typechecked, then the
+      <p>When running Trilogy queries, your command will first go to a backend server to be parsed/typechecked, then the
         output SQL will be returned to the editor to be run as a normal SQL query.
         SQL editors will submit directly to the configured connection without the first parsing pass.</p>
     </section>
@@ -44,8 +47,7 @@
       <p>Editors must be associated with a connection. A connection represents a particular underlying backend database
         resource. Many IDEs can share one connection, but only a single query can be executed on a connection at a
         single point in time. Connections are also associated with model, which enables configuration of additional
-        editors
-        as semantic sources.
+        editors as semantic sources.
       </p>
       You can view current connections below. Edit the model associated with a connection by clicking the model name
       next to (or set model if not set).
@@ -66,10 +68,10 @@
         model
         with an alias, which is how it should be referenced.</p>
 
-      <p>Any editor can be turned into a model source. By default, model sources are hidden in browsing, but this can be
+      <highlight-component type="tip"> Any editor can be turned into a model source. By default, model sources are
+        hidden in browsing, but this can be
         toggled
-        in the editor view.</p>
-
+        in the editor view.</highlight-component>
       <p>A model contains all metadata parseable from your source files. If you haven't deleted the demo model, it will
         be visible below. (You can reset the demo to restore it).
 
@@ -86,7 +88,8 @@
 
     <section id="data-and-privacy" class="tutorial-section">
       <h2>Data and Privacy</h2>
-      <p>The content of a Trilogy IDE (or selected section of code) + defined model source files will be sent to a remote server
+      <p>The content of a Trilogy IDE (or selected section of code) + defined model source files will be sent to a
+        remote server
         to generate SQL. This contains no other identifying information beyond the editor text and associated model
         editor texts sent.</p>
       <p>All other operations will be between your local machine and services you control. For example, when querying
@@ -109,7 +112,8 @@
 
     <section id="telemetry" class="tutorial-section">
       <h2>Telemetry</h2>
-      <p>We use <a href="https://www.goatcounter.com/">GoatCounter</a> to connect anonymized statistics about usage.</p>
+      <p><a href="https://www.goatcounter.com/">GoatCounter</a> is used to collect anonymized statistics about usage.
+      </p>
     </section>
   </div>
 </template>
@@ -119,15 +123,13 @@ import { inject } from 'vue';
 import type { EditorStoreType } from '../stores/editorStore';
 import type { ConnectionStoreType } from '../stores/connectionStore';
 import type { ModelConfigStoreType } from '../stores/modelStore';
-import { DuckDBConnection } from '../connections';
-import Editor from '../editors/editor'
-import { EditorTag } from '../editors/editor'
 import LoadingButton from './LoadingButton.vue';
-import { ModelConfig } from '../models/model';
+
+import HighlightComponent from './HighlightComponent.vue';
 import ModelCard from './ModelCard.vue';
 import ConnectionList from './ConnectionList.vue';
-import { CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT, LINE_ITEM_CONTENT } from '../data/tutorial/queries'
-import { QUERY_LINE_ITEM, QUERY_JOIN } from '../data/tutorial/example_queries';
+import setupDemo from '../data/tutorial/demoSetup';
+
 export default {
   name: 'TutorialComponent',
   setup() {
@@ -146,6 +148,7 @@ export default {
     LoadingButton,
     ConnectionList,
     ModelCard,
+    HighlightComponent,
   },
   computed: {
     demoConfig() {
@@ -154,46 +157,7 @@ export default {
   },
   methods: {
     setupDemo() {
-      let connName = 'demo-connection';
-      let modelName = 'demo-model';
-      let connection = new DuckDBConnection(connName, modelName);
-      this.connectionStore.addConnection(connection);
-      //CUSTOMER_CONTENT, ORDER_CONTENT, PART_CONTENT, NATION_CONTENT, SUPPLIER_CONTENT, REGION_CONTENT
-      let customer = new Editor({ name: 'customer', type: 'trilogy', connection: connName, storage: 'local', contents: CUSTOMER_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(customer);
-      let order = new Editor({ name: 'order', type: 'trilogy', connection: connName, storage: 'local', contents: ORDER_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(order);
-      let part = new Editor({ name: 'part', type: 'trilogy', connection: connName, storage: 'local', contents: PART_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(part);
-      let nation = new Editor({ name: 'nation', type: 'trilogy', connection: connName, storage: 'local', contents: NATION_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(nation);
-      let supplier = new Editor({ name: 'supplier', type: 'trilogy', connection: connName, storage: 'local', contents: SUPPLIER_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(supplier);
-      let region = new Editor({ name: 'region', type: 'trilogy', connection: connName, storage: 'local', contents: REGION_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(region);
-      let lineItem = new Editor({ name: 'lineitem', type: 'trilogy', connection: connName, storage: 'local', contents: LINE_ITEM_CONTENT, tags: [EditorTag.SOURCE] });
-      this.editorStore.addEditor(lineItem);
-
-      // add example queries
-      let query = new Editor({ name: 'example_query_1', type: 'trilogy', connection: connName, storage: 'local', contents: QUERY_LINE_ITEM });
-      this.editorStore.addEditor(query);
-
-      query = new Editor({ name: 'example_query_2', type: 'trilogy', connection: connName, storage: 'local', contents: QUERY_JOIN });
-      this.editorStore.addEditor(query);
-
-      let mc = new ModelConfig({
-        name: modelName,
-        sources: [{ alias: 'customer', editor: 'customer' }, { alias: 'order', editor: 'order' },
-        { alias: 'part', editor: 'part' }, { alias: 'nation', editor: 'nation' }, { alias: 'supplier', editor: 'supplier' },
-        { alias: 'region', editor: 'region' }, { alias: 'lineitem', editor: 'lineitem' }
-        ],
-        storage: 'local', parseResults: null
-      });
-      this.modelStore.addModelConfig(mc)
-
-      this.saveEditors(Object.values(this.editorStore.editors));
-      this.saveConnections(Object.values(this.connectionStore.connections));
-      this.saveModels(Object.values(this.modelStore.models));
+      setupDemo(this.editorStore, this.connectionStore, this.modelStore, this.saveEditors, this.saveConnections, this.saveModels);
     }
   }
 };

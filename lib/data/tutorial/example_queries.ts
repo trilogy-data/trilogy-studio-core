@@ -1,8 +1,13 @@
-export const QUERY_LINE_ITEM = `import lineitem as line_item;
+export const QUERY_LINE_ITEM = `
+# trilogy models run on imports to reuse logic
+import lineitem as line_item;
 
-auto discounted_price <- line_item.extended_price * (1-line_item.discount);
-auto charge_price <- discounted_price * (1+line_item.tax);
+# you can define new concepts in line 
+auto discounted_price <- line_item.extended_price * (1-line_item.discount); #the discounted price is off the extended privce
+auto charge_price <- discounted_price * (1+line_item.tax); #charged price includes taxes
 
+# and then use them in queries
+# use the run button or ctrl-enter to run this
 WHERE line_item.ship_date <= '1998-12-01'::date 
 SELECT
     line_item.return_flag,
@@ -14,11 +19,18 @@ SELECT
     avg(line_item.quantity)-> avg_qty,
     avg(line_item.extended_price)-> avg_price,
     avg(line_item.discount)->discount,
+    # you can reuse a concept immediately in the same query
+    avg_price-discounted_price as avg_disc,
     count(line_item.id) as count_order
 ORDER BY   
     line_item.return_flag desc,
     line_item.line_status desc
-;`
+;
+
+# check out the generated sql
+# the second tutorial editor will have a more complicated joins scheme
+# use the browser on the left to navigate to the other editor under the demo connection
+`
 
 export const QUERY_JOIN = `
 import part as part;

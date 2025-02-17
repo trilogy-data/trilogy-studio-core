@@ -1,15 +1,16 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-icons">
-      <tooltip content="Trilogy Studio (Alpha)"><img class="trilogy-icon" :src="trilogyIcon" /></tooltip>
+      <tooltip content="Trilogy Studio (Alpha)"><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" />
+      </tooltip>
       <div class="sidebar-divider"></div>
       <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }">
+      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
+        @click="selectItem(item.screen)" :class="{ selected: active == item.screen }">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
       <div class="sidebar-bottom-icons">
@@ -23,7 +24,7 @@
     </div>
 
     <div class="sidebar-content">
-      <EditorList v-if="active === 'editors'" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <EditorList :activeEditor="activeEditor" v-if="active === 'editors'" @editor-selected="editorSelected" @save-editors="saveEditors" />
       <ConnectionList v-else-if="active === 'connections'" />
       <ModelSidebar v-else-if="active === 'models'" />
       <TutorialSidebar v-else-if="active === 'tutorial'" />
@@ -42,8 +43,19 @@ import Tooltip from "./Tooltip.vue";
 import { getDefaultValueFromHash } from '../stores/urlStore';
 export default defineComponent({
   name: "Sidebar",
+  props: {
+    active: {
+      type: String,
+      default: getDefaultValueFromHash('screen'),
+      optional: true,
+    },
+    activeEditor: {
+      type: String,
+      default: getDefaultValueFromHash('editor'),
+      optional: true,
+    },
+  },
   data() {
-    let active = getDefaultValueFromHash('screen');
     let sidebarFeatureItems = [
       {
         name: "models",
@@ -82,7 +94,6 @@ export default defineComponent({
     return {
       // index of the sidebarItem where the screen == active
       // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
-      active:active,
       trilogyIcon: trilogyIcon,
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
@@ -96,11 +107,10 @@ export default defineComponent({
     ModelSidebar,
 
   },
-  computed: {
-  },
+
   methods: {
     selectItem(index: string) {
-      this.active = index;
+
       this.$emit("screen-selected", index);
     },
     editorSelected(editor: string) {
@@ -110,7 +120,6 @@ export default defineComponent({
       this.$emit("save-editors");
     },
     openSettings() {
-      this
       console.log("Settings clicked");
       // Implement settings navigation
     },

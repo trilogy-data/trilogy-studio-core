@@ -2,41 +2,30 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall" />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          :active="activeScreen" :activeEditor="activeEditor" />
       </template>
 
-      <template v-if="['editors', 'connections'].includes(activeScreen)">
+      <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
             <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
-            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback"/>
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
             <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}</error-message>
             <div v-else-if="activeEditorData.results" class="results-container">
               <div class="tabs">
-                <button 
-                  class="tab-button" 
-                  :class="{ active: activeTab === 'results' }"
-                  @click="activeTab = 'results'"
-                >
+                <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="activeTab = 'results'">
                   Results
                 </button>
-                <button 
-                  class="tab-button" 
-                  :class="{ active: activeTab === 'sql' }"
-                  @click="activeTab = 'sql'"
-                >
+                <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="activeTab = 'sql'">
                   Generated SQL
                 </button>
               </div>
               <div class="tab-content">
-                <data-table 
-                  v-if="activeTab === 'results'"
-                  :headers="activeEditorData.results.headers"
-                  :results="activeEditorData.results.data" 
-                />
+                <data-table v-if="activeTab === 'results'" :headers="activeEditorData.results.headers"
+                  :results="activeEditorData.results.data" />
                 <div v-else class="sql-view">
                   <pre>{{ activeEditorData.generated_sql }}</pre>
                 </div>
@@ -48,19 +37,19 @@
       </template>
 
       <template v-else-if="activeScreen === 'tutorial'">
-        <tutorial/>
+        <tutorial />
       </template>
       <template v-else-if="activeScreen === 'models'">
-        <model-view/>
+        <model-view />
       </template>
       <template v-else-if="activeScreen === 'profile'">
-        <user-profile/>
+        <user-profile />
       </template>
       <template v-else-if="activeScreen === 'settings'">
-       <user-settings/>
+        <user-settings />
       </template>
       <template v-else>
-        <div>How'd you get here?</div>
+        <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
       </template>
 
     </sidebar-layout>
@@ -151,6 +140,7 @@ import ModelView from '../components/Models.vue';
 import UserSettings from '../components/UserSettings.vue';
 import UserProfile from "../components/UserProfile.vue";
 import HintComponent from "../components/HintComponent.vue";
+import WelcomePage from "../components/WelcomePage.vue";
 
 import type { EditorStoreType } from '../stores/editorStore.ts';
 import type { ConnectionStoreType } from '../stores/connectionStore.ts';
@@ -158,14 +148,17 @@ import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore';
 import { inject } from 'vue';
 
+import setupDemo from '../data/tutorial/demoSetup';
+import type { ModelConfigStoreType } from "../stores/modelStore.ts";
+
 export default {
   name: "IDEComponent",
   data() {
     let screen = getDefaultValueFromHash('screen');
     let activeEditor = getDefaultValueFromHash('editor');
     return {
-      activeEditor: activeEditor,
-      activeScreen: screen ? screen : 'editors',
+      activeEditor: activeEditor ? activeEditor : '',
+      activeScreen: screen ? screen : '',
       activeTab: 'results',
     };
   },
@@ -181,21 +174,25 @@ export default {
     UserSettings,
     UserProfile,
     LoadingView,
-    HintComponent
+    HintComponent,
+    WelcomePage
   },
   setup() {
     type ResolverType = typeof AxiosResolver;
     const connectionStore = inject<ConnectionStoreType>('connectionStore');
     const editorStore = inject<EditorStoreType>('editorStore');
+    let modelStore = inject<ModelConfigStoreType>('modelStore');
     const trilogyResolver = inject<ResolverType>('trilogyResolver');
     let saveEditors = inject<Function>('saveEditors');
-    if (!editorStore || !connectionStore || !trilogyResolver) {
-      throw new Error('Editor store and connection store and trilogy resolver are not provided!');
+    let saveConnections = inject<Function>('saveConnections');
+    let saveModels = inject<Function>('saveModels');
+    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !saveConnections || !saveModels) {
+      throw new Error('Requires injection of connection store, editor store, model store, editors, connections, and models saving.');
     }
     if (!saveEditors) {
       saveEditors = () => { };
     }
-    return { connectionStore, editorStore, trilogyResolver, saveEditors };
+    return { connectionStore, editorStore, trilogyResolver, saveEditors, saveConnections, saveModels, modelStore };
   },
   methods: {
     setActiveEditor(editor: string) {
@@ -203,11 +200,17 @@ export default {
       pushHashToUrl('editor', editor)
     },
     setActiveScreen(screen: string) {
-      this.activeScreen = screen
       pushHashToUrl('screen', screen)
+      this.activeScreen = screen
     },
     saveEditorsCall() {
       this.saveEditors()
+    },
+    startDemo() {
+      setupDemo(this.editorStore, this.connectionStore, this.modelStore, this.saveEditors, this.saveConnections, this.saveModels);
+      this.setActiveScreen('editors')
+      this.setActiveEditor('example_query_1')
+
     }
   },
   computed: {
