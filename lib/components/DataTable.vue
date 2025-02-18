@@ -138,9 +138,9 @@ export default {
                 columns: this.tableColumns,
                 // height: this.actualTableHeight,
                 nestedFieldSeparator: false,
-                clipboard: true,
+                clipboard: "copy",
                 keybindings: {
-                    copyToClipboard: false
+                    copyToClipboard: true
                 },
                 downloadConfig: {
                     columnHeaders: true

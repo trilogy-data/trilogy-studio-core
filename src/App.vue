@@ -3,9 +3,9 @@
 import { EditorModel, IDE, Manager } from 'trilogy-studio-core';
 import { LocalStorage } from 'trilogy-studio-core/data';
 import { useEditorStore, useConnectionStore, useModelConfigStore, AxiosTrilogyResolver } from 'trilogy-studio-core/stores';
-import { Tabulator, ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule } from 'tabulator-tables'
+import { Tabulator, ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule, ExportModule } from 'tabulator-tables'
 
-Tabulator.registerModule([ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule]);
+Tabulator.registerModule([ResizeColumnsModule, DownloadModule, FormatModule, FilterModule, SortModule, EditModule, ExportModule]);
 
 const apiUrl = import.meta.env.VITE_RESOLVER_URL ? import.meta.env.VITE_RESOLVER_URL : 'https://trilogy-service.fly.dev';
 
