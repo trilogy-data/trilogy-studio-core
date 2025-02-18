@@ -2,8 +2,6 @@
 // import { Results, ColumnType } from "../editors/results";
 // import { Connection, Request } from 'tedious'
 
-
-
 // export default class SQLServerConnection extends BaseConnection {
 
 //     private connection: Connection | null;

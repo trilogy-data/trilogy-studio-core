@@ -1,1 +1,1 @@
-export { EditorTag, default as Editor } from './editor';
+export { EditorTag, default as Editor } from './editor'

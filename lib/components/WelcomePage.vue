@@ -21,8 +21,8 @@
 </template>
 
 <script setup lang="ts">
-import trilogyIcon from "../static/trilogy.png";
-import EditorCreator from "./EditorCreator.vue";
+import trilogyIcon from '../static/trilogy.png'
+import EditorCreator from './EditorCreator.vue'
 </script>
 
 <style scoped>
@@ -73,7 +73,6 @@ h1 {
 .buttons {
   display: flex;
   gap: 10px;
-
 }
 
 .btn {
@@ -89,7 +88,6 @@ h1 {
 .btn-primary {
   border: 2px solid #007bff;
   background-color: transparent;
-
 }
 
 .btn-primary:hover {
@@ -99,7 +97,6 @@ h1 {
 .btn-secondary {
   border: 2px solid #28a745;
   background-color: transparent;
-
 }
 
 .btn-secondary:hover {

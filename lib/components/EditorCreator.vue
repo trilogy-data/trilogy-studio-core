@@ -1,6 +1,6 @@
 <template>
   <div class="flex relative-container">
-    <slot  :onClick="createEditor">
+    <slot :onClick="createEditor">
       <button @click="createEditor">Add</button>
     </slot>
 
@@ -12,7 +12,8 @@
         </div>
 
         <div>
-          <tooltip position="bottom" content="Use SQL editors to run raw SQL."><label for="editor-type">Type</label>
+          <tooltip position="bottom" content="Use SQL editors to run raw SQL."
+            ><label for="editor-type">Type</label>
           </tooltip>
           <select v-model="editorDetails.type" id="editor-type" required>
             <option value="preql">Trilogy</option>
@@ -23,7 +24,11 @@
         <div>
           <label for="connection-name">Connection</label>
           <select v-model="editorDetails.connection" id="connection-name" required>
-            <option v-for="connection in connections" :key="connection.name" :value="connection.name">
+            <option
+              v-for="connection in connections"
+              :key="connection.name"
+              :value="connection.name"
+            >
               {{ connection.name }}
             </option>
           </select>
@@ -40,7 +45,6 @@
 .button {
   flex: 1;
 }
-
 
 input,
 select {
@@ -66,60 +70,61 @@ option {
 }
 
 label {
-  font-weight: 300
-    /* Dark gray text */
+  font-weight: 300;
+  /* Dark gray text */
 }
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject, } from 'vue';
-import type { EditorStoreType } from '../stores/editorStore';
-import type { ConnectionStoreType } from '../stores/connectionStore';
-import Tooltip from './Tooltip.vue';
+import { defineComponent, ref, inject } from 'vue'
+import type { EditorStoreType } from '../stores/editorStore'
+import type { ConnectionStoreType } from '../stores/connectionStore'
+import Tooltip from './Tooltip.vue'
 export default defineComponent({
   name: 'EditorCreator',
   components: {
-    Tooltip
+    Tooltip,
   },
   setup(_, { emit }) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',
       type: 'preql', // Default value
-      connection: ''
-    });
+      connection: '',
+    })
 
     // Array of available connection names
-    const connectionStore = inject<ConnectionStoreType>('connectionStore');
-    const editorStore = inject<EditorStoreType>('editorStore');
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const editorStore = inject<EditorStoreType>('editorStore')
     if (!connectionStore || !editorStore) {
-      throw ("must inject connectionStore to EditorCreator")
+      throw 'must inject connectionStore to EditorCreator'
     }
 
-
-
-    let connections = connectionStore.connections;
+    let connections = connectionStore.connections
     //visible
-    let visible = ref(false);
-
-
+    let visible = ref(false)
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
       console.log('new editor')
-      visible.value = !visible.value;
-      editorDetails.value.name = ''; // Reset name field
-      editorDetails.value.type = 'preql'; // Reset type dropdown
-      editorDetails.value.connection = ''; // Reset connection selection
-    };
+      visible.value = !visible.value
+      editorDetails.value.name = '' // Reset name field
+      editorDetails.value.type = 'preql' // Reset type dropdown
+      editorDetails.value.connection = '' // Reset connection selection
+    }
 
     // Function to submit the editor details
     const submitEditorCreation = () => {
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
-        visible.value = false;
-        editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection, '');
-        emit("editor-selected", (editorDetails.value.name));
+        visible.value = false
+        editorStore.newEditor(
+          editorDetails.value.name,
+          editorDetails.value.type,
+          editorDetails.value.connection,
+          '',
+        )
+        emit('editor-selected', editorDetails.value.name)
       }
-    };
+    }
 
     return {
       visible,
@@ -127,7 +132,7 @@ export default defineComponent({
       connections,
       createEditor,
       submitEditorCreation,
-    };
-  }
-});
+    }
+  },
+})
 </script>
