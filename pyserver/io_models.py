@@ -32,9 +32,10 @@ class UIConcept(BaseModel):
 
 class UIDatasource(BaseModel):
     name: str
-    location:str
+    location: str
     description: Optional[str] = None
     concepts: List[UIConcept]
+
 
 class Model(BaseModel):
     name: str

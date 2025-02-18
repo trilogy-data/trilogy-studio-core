@@ -37,7 +37,7 @@ jobs:
           working-directory: ./pyserver
           run: |
             # stop the build if there are Python syntax errors or undefined names
-            mypy .
+            mypy . --explicit-package-bases
         - name: Test with pytest lite
           working-directory: ./pyserver
           run: |

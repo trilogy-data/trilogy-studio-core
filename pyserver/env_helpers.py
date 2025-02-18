@@ -160,19 +160,19 @@ def model_to_response(
                 namespace=sconcept.namespace or "",
                 address=skey,
                 lineage=flatten_lineage(sconcept, depth=0),
-                keys=sconcept.keys or [],
+                keys=list(sconcept.keys) if sconcept.keys else [],
             )
         )
     final_concepts.sort(key=lambda x: x.address)
 
     final_datasources: list[UIDatasource] = []
     for dkey, datasource in env.datasources.items():
-        dconcepts:list[UIConcept] = []
-        for sconcept in datasource.concepts:
+        dconcepts: list[UIConcept] = []
+        for cref in datasource.concepts:
             # don't show private concepts
-            if sconcept.name.startswith("_"):
+            if cref.name.startswith("_"):
                 continue
-            sconcept = env.concepts[sconcept]
+            sconcept = env.concepts[cref.address]
             dconcepts.append(
                 UIConcept(
                     name=sconcept.name,
@@ -184,7 +184,7 @@ def model_to_response(
                     namespace=sconcept.namespace or "",
                     address=sconcept.address,
                     lineage=flatten_lineage(sconcept, depth=0),
-                    keys=sconcept.keys or [],
+                    keys=list(sconcept.keys) if sconcept.keys else [],
                 )
             )
         dconcepts.sort(key=lambda x: x.address)
