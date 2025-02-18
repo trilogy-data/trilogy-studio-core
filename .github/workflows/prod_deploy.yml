@@ -42,3 +42,4 @@ jobs:
               local-dir: ./dist/
               server-dir: /trilogy-studio-core/
               protocol: 'ftps'
+              
