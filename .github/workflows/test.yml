@@ -1,0 +1,29 @@
+
+
+name: CI test
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+jobs:
+  setup-build-deploy:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+        # Setup gcloud CLI
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Set up Node
+          uses: actions/setup-node@v4
+          with:
+            node-version: 22
+            cache: 'npm'
+        - name: Install dependencies
+          run: npm ci
+        - name: Run Tests
+          run: npm run test
