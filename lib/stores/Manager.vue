@@ -76,8 +76,8 @@ export default {
     }
     const saveConnections = () => {
       for (let source of props.storageSources) {
-        // @ts-ignore
         source.saveConnections(
+          // @ts-ignore
           Object.values(props.connectionStore.connections).filter(
             (connection) => (connection.storage = source.type),
           ),

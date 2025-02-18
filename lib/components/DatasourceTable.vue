@@ -61,9 +61,9 @@ export default defineComponent({
               // },
 
               {
-                // @ts-ignore
                 title: 'Concepts',
                 field: 'concepts',
+                // @ts-ignore
                 formatter: 'array',
                 formatterParams: {
                   delimiter: ', ',

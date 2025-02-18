@@ -67,9 +67,9 @@ export default defineComponent({
               },
 
               {
-                // @ts-ignore
                 title: 'Keys',
                 field: 'keys',
+                // @ts-ignore
                 formatter: 'array',
                 formatterParams: {
                   delimiter: ', ', //join values using the "|" delimiter
