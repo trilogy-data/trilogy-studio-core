@@ -78,7 +78,15 @@ import { ModelSource } from '../models'
 import Tooltip from './Tooltip.vue';
 
 
-export async function fetchModelImports(modelImport: ModelImport): Promise<{ name: string; alias: string; content: string }[]> {
+
+
+export async function fetchModelImportBase(url: string): Promise<ModelImport> {
+    const response = await fetch(url);
+    const content = await response.text();
+    return JSON.parse(content);
+}
+
+export async function fetchModelImports(modelImport: ModelImport): Promise<{ name: string; alias: string; purpose: EditorTag | null, content: string }[]> {
     return Promise.all(
         modelImport.components.map(async (component) => {
             try {
@@ -90,13 +98,16 @@ export async function fetchModelImports(modelImport: ModelImport): Promise<{ nam
                 return {
                     name: component.name,
                     alias: component.alias,
+                    purpose: component.purpose == 'source' ? EditorTag.SOURCE : null,
                     content,
+
                 };
             } catch (error) {
                 console.error(error);
                 return {
                     name: component.name,
                     alias: component.alias,
+                    purpose: component.purpose == 'source' ? EditorTag.SOURCE : null,
                     content: '', // Return empty content on failure
                 };
             }
@@ -157,58 +168,7 @@ export default defineComponent({
                 }
 
                 if (modelDetails.value.importAddress) {
-                    const data = await fetchModelImports(
-                        new ModelImport(
-                            'thelook_ecommerce',
-                            [
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/distribution_centers.preql',
-                                    'distribution_centers',
-                                    'distribution_centers',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/events.preql',
-                                    'events',
-                                    'events',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/inventory_items.preql',
-                                    'inventory_items',
-                                    'inventory_items',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/order_items.preql',
-                                    'order_items',
-                                    'order_items',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/orders.preql',
-                                    'orders',
-                                    'orders',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/products.preql',
-                                    'products',
-                                    'products',
-                                    'source'
-                                ),
-                                new ImportFile(
-                                    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/refs/heads/main/trilogy_public_models/bigquery/thelook_ecommerce/users.preql',
-                                    'users',
-                                    'users',
-                                    'source'
-                                )
-
-                            ]
-                        )
-
-
-                    )
+                    const data = await fetchModelImports(await fetchModelImportBase(modelDetails.value.importAddress))
                     modelStore.models[modelDetails.value.name].sources = data.map(response => {
                         if (!editorStore.editors[response.name]) {
                             editorStore.newEditor(response.name, 'trilogy', modelDetails.value.name, response.content)
@@ -218,7 +178,9 @@ export default defineComponent({
 
                         }
                         // add source as a tag
-                        editorStore.editors[response.name].tags.push(EditorTag.SOURCE)
+                        if (response.purpose && !editorStore.editors[response.name].tags.includes(response.purpose)) {
+                            editorStore.editors[response.name].tags.push(response.purpose)
+                        }
                         return new ModelSource(response.name, response.alias)
 
                     });
