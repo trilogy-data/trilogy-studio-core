@@ -31,7 +31,7 @@
                   :class="{ active: activeTab === 'results' }"
                   @click="activeTab = 'results'"
                 >
-                  Results
+                 Results ({{ activeEditorData.results.data.length }})
                 </button>
                 <button
                   class="tab-button"
