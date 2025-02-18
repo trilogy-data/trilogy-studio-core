@@ -18,9 +18,9 @@ SELECT
     sum(charge_price) as sum_charge,
     avg(line_item.quantity)-> avg_qty,
     avg(line_item.extended_price)-> avg_price,
-    avg(line_item.discount)->discount,
+    avg(line_item.discount)->avg_discount,
     # you can reuse a concept immediately in the same query
-    avg_price-discounted_price as avg_disc,
+    avg_price-avg_discount as avg_disc,
     count(line_item.id) as count_order
 ORDER BY   
     line_item.return_flag desc,
