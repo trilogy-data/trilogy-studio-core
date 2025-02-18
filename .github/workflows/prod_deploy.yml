@@ -1,14 +1,11 @@
 
 
-name: Build and Deploy to TrilogyData
+name: Build and Deploy to trilogydata.dev
 
 on:
   push:
     branches:
       - 'main'
-      - 'static-deploy'
-
-
 jobs:
   setup-build-deploy:
     name: Deploy Production
