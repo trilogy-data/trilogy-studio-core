@@ -5,19 +5,15 @@
       <div class="circle"></div>
       <div class="circle"></div>
     </div>
-    <div class="loading-text">
-      Running query{{ dots }}
-    </div>
+    <div class="loading-text">Running query{{ dots }}</div>
     <div class="cancel-container">
-    <button v-if="cancel" @click="handleCancel" class="cancel-button">
-      Cancel
-    </button>
-  </div>
+      <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 
 interface Props {
   cancel?: (() => void) | null
@@ -27,42 +23,41 @@ export default defineComponent({
   name: 'LoadingPlaceholder',
   props: {
     cancel: {
-      type: Promise,
-      required: false
+      type: Function,
+      required: false,
     },
   },
   setup(props: Props) {
-    const dots = ref('');
-    let intervalId: number;
+    const dots = ref('')
+    let intervalId: number
 
     const animateDots = () => {
       intervalId = window.setInterval(() => {
-        dots.value = dots.value.length >= 3 ? '' : dots.value + '.';
-      }, 500);
-    };
+        dots.value = dots.value.length >= 3 ? '' : dots.value + '.'
+      }, 500)
+    }
 
     const handleCancel = () => {
       if (props.cancel) {
         props.cancel()
       }
-    };
+    }
 
     onMounted(() => {
-      animateDots();
-    });
+      animateDots()
+    })
 
     onBeforeUnmount(() => {
-      clearInterval(intervalId);
-    });
+      clearInterval(intervalId)
+    })
 
     return {
       dots,
-      handleCancel
-    };
-  }
-});
+      handleCancel,
+    }
+  },
+})
 </script>
-
 
 <style scoped>
 .loading-container {
@@ -72,7 +67,7 @@ export default defineComponent({
   padding: 2rem;
   background: var(--bg-light);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  height:100%;
+  height: 100%;
 }
 
 .loading-animation {
@@ -98,7 +93,6 @@ export default defineComponent({
 }
 
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -114,7 +108,7 @@ export default defineComponent({
   margin-bottom: 1rem;
   min-width: 120px;
   text-align: center;
-  height:24px;
+  height: 24px;
 }
 
 .cancel-button {
@@ -123,7 +117,7 @@ export default defineComponent({
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
-  height:24px !important;
+  height: 24px !important;
   width: 100px;
 }
 
@@ -132,6 +126,6 @@ export default defineComponent({
 }
 
 .cancel-container {
- height:10px;
+  height: 10px;
 }
 </style>

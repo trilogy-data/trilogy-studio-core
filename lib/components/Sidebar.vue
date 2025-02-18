@@ -1,16 +1,27 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-icons">
-      <tooltip content="Trilogy Studio (Alpha)"><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" />
+      <tooltip content="Trilogy Studio (Alpha)"
+        ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" />
       </tooltip>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }">
+      <div
+        v-for="(item, _) in sidebarItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }"
+      >
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
-        @click="selectItem(item.screen)" :class="{ selected: active == item.screen }">
+      <div
+        v-for="(item, _) in sidebarFeatureItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }"
+      >
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
       </div>
       <div class="sidebar-bottom-icons">
@@ -24,7 +35,12 @@
     </div>
 
     <div class="sidebar-content">
-      <EditorList :activeEditor="activeEditor" v-if="active === 'editors'" @editor-selected="editorSelected" @save-editors="saveEditors" />
+      <EditorList
+        :activeEditor="activeEditor"
+        v-if="active === 'editors'"
+        @editor-selected="editorSelected"
+        @save-editors="saveEditors"
+      />
       <ConnectionList v-else-if="active === 'connections'" />
       <ModelSidebar v-else-if="active === 'models'" />
       <TutorialSidebar v-else-if="active === 'tutorial'" />
@@ -33,16 +49,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
-import EditorList from "./EditorList.vue";
-import ConnectionList from "./ConnectionList.vue";
-import TutorialSidebar from "./TutorialSidebar.vue";
-import ModelSidebar from "./ModelSidebar.vue";
-import trilogyIcon from "../static/trilogy.png";
-import Tooltip from "./Tooltip.vue";
-import { getDefaultValueFromHash } from '../stores/urlStore';
+import { defineComponent } from 'vue'
+import EditorList from './EditorList.vue'
+import ConnectionList from './ConnectionList.vue'
+import TutorialSidebar from './TutorialSidebar.vue'
+import ModelSidebar from './ModelSidebar.vue'
+import trilogyIcon from '../static/trilogy.png'
+import Tooltip from './Tooltip.vue'
+import { getDefaultValueFromHash } from '../stores/urlStore'
 export default defineComponent({
-  name: "Sidebar",
+  name: 'Sidebar',
   props: {
     active: {
       type: String,
@@ -58,32 +74,31 @@ export default defineComponent({
   data() {
     let sidebarFeatureItems = [
       {
-        name: "models",
+        name: 'models',
         tooltip: 'Models',
-        icon: "mdi mdi-set-center",
+        icon: 'mdi mdi-set-center',
         screen: 'models',
       },
       {
-        name: "help",
+        name: 'help',
         tooltip: 'Help/Guide',
-        icon: "mdi mdi-help",
+        icon: 'mdi mdi-help',
         screen: 'tutorial',
       },
-    ];
+    ]
     let sideBarItems = [
       {
-        name: "edit",
+        name: 'edit',
         tooltip: 'Editors',
-        icon: "mdi mdi-file-document-edit",
+        icon: 'mdi mdi-file-document-edit',
         screen: 'editors',
       },
       {
-        name: "database",
+        name: 'database',
         tooltip: 'Editor Connections',
-        icon: "mdi mdi-database",
+        icon: 'mdi mdi-database',
         screen: 'connections',
       },
-
 
       //   {
       //     name: "Extensions",
@@ -97,7 +112,7 @@ export default defineComponent({
       trilogyIcon: trilogyIcon,
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
-    };
+    }
   },
   components: {
     EditorList,
@@ -105,30 +120,28 @@ export default defineComponent({
     Tooltip,
     TutorialSidebar,
     ModelSidebar,
-
   },
 
   methods: {
     selectItem(index: string) {
-
-      this.$emit("screen-selected", index);
+      this.$emit('screen-selected', index)
     },
     editorSelected(editor: string) {
-      this.$emit("editor-selected", editor);
+      this.$emit('editor-selected', editor)
     },
     saveEditors() {
-      this.$emit("save-editors");
+      this.$emit('save-editors')
     },
     openSettings() {
-      console.log("Settings clicked");
+      console.log('Settings clicked')
       // Implement settings navigation
     },
     openProfile() {
-      console.log("Profile clicked");
+      console.log('Profile clicked')
       // Implement profile navigation
-    }
+    },
   },
-});
+})
 </script>
 
 <style scoped>

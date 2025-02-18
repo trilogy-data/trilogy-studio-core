@@ -1,5 +1,3 @@
-
-
 export const CUSTOMER_CONTENT = `
 import nation as nation;
 
@@ -123,7 +121,7 @@ datasource partsupp (
 )
 grain (id, supplier.id)
 address \`https://shell.duckdb.org/data/tpch/0_01/parquet/partsupp.parquet\`;
-`;
+`
 
 export const SUPPLIER_CONTENT = `
 import nation as nation;

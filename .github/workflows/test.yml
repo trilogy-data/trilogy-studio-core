@@ -1,0 +1,46 @@
+
+
+name: CI test
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+jobs:
+  setup-build-deploy:
+    name: run CI tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+        # Setup gcloud CLI
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Set up Node
+          uses: actions/setup-node@v4
+          with:
+            node-version: 22
+            cache: 'npm'
+        - name: Install dependencies
+          run: npm ci
+        - name: Run Tests
+          run: npm run test
+        - name: Install dependencies
+          working-directory: ./pyserver
+          run: |
+            python -m pip install --upgrade pip
+            pip install wheel
+            pip install -r requirements.txt
+            pip install -r requirements-test.txt
+        - name: Lint with mypy lite
+          working-directory: ./pyserver
+          run: |
+            # stop the build if there are Python syntax errors or undefined names
+            mypy . --explicit-package-bases
+        - name: Test with pytest lite
+          working-directory: ./pyserver
+          run: |
+            pip install pytest
+            pip install pytest-cov
+            pytest --ignore=docs_src/ --cov=./
