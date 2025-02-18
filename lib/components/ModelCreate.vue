@@ -71,7 +71,7 @@ label {
 import { defineComponent, ref, inject } from 'vue';
 import type { ModelConfigStoreType } from '../stores/modelStore';
 import type { ConnectionStoreType } from '../stores/connectionStore';
-import { ModelImport, ImportFile } from '../models'
+import { ModelImport } from '../models'
 import type { EditorStoreType } from '../stores/editorStore';
 import { EditorTag } from '../editors'
 import { ModelSource } from '../models'

@@ -116,7 +116,7 @@ export default defineComponent({
     const submitEditorCreation = () => {
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
         visible.value = false;
-        editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection);
+        editorStore.newEditor(editorDetails.value.name, editorDetails.value.type, editorDetails.value.connection, '');
         emit("editor-selected", (editorDetails.value.name));
       }
     };
