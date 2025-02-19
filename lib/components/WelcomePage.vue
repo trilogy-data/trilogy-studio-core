@@ -13,16 +13,34 @@
             <button @click="onClick" class="btn btn-primary">New Editor</button>
           </template>
         </editor-creator>
-        <button @click="$emit('demo-started')" class="btn btn-secondary">Start Demo</button>
-        <button @click="$emit('screen-selected', 'tutorial')" class="btn btn-tertiary">Help</button>
+        <button @click="startDemo()" class="btn btn-secondary">
+          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo </span>
+        </button>
+        <button @click="tutorial()" class="btn btn-tertiary">Help</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, defineEmits } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreator from './EditorCreator.vue'
+
+const demoLoading = ref(false)
+const emit = defineEmits(['demo-started', 'screen-selected'])
+const startDemo = () => {
+  demoLoading.value = true
+
+  emit('demo-started')
+  setTimeout(() => {
+    demoLoading.value = false
+  }, 1000)
+}
+
+const tutorial = () => {
+  emit('screen-selected', 'tutorial')
+}
 </script>
 
 <style scoped>
@@ -110,5 +128,25 @@ h1 {
 
 .btn-tertiary:hover {
   background-color: #545b62;
+}
+
+.spinner {
+  display: inline-block;
+  height: 45%;
+  aspect-ratio: 1 / 1;
+  border: 2px solid transparent;
+  border-top-color: var(--color);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
