@@ -39,7 +39,7 @@
 
 <script lang="ts">
 import { defineComponent, inject, ref } from 'vue'
-import { ModelConfig } from '../models' // Adjust the import path
+import { ModelSource, ModelConfig } from '../models' // Adjust the import path
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import ModelConcept from './ModelConcept.vue'
@@ -85,7 +85,6 @@ export default defineComponent({
           modelStore.setModelConfigParseResults(model, parseResults)
         })
         .catch((error) => {
-          console.log(error)
           modelStore.setModelParseError(model, error.message)
           console.error('Failed to fetch parse results:', error)
         })
@@ -99,10 +98,9 @@ export default defineComponent({
         if (target.sources.some((source) => source.editor === sourceDetails.value.name)) {
           console.error('Source already exists in model')
         } else {
-          target.sources.push({
-            alias: sourceDetails.value.alias,
-            editor: sourceDetails.value.name,
-          })
+          target.addModelSource(
+            new ModelSource(sourceDetails.value.name, sourceDetails.value.alias),
+          )
           fetchParseResults(model)
         }
       }

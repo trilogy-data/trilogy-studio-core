@@ -212,6 +212,7 @@ export class ModelConfig {
   sources: ModelSource[]
   parseResults: ModelParseResults | null = null
   parseError: string | null = null
+  changed: boolean = true
 
   constructor({
     name,
@@ -228,15 +229,43 @@ export class ModelConfig {
     this.sources = sources
     this.storage = storage
     this.parseResults = parseResults
+    this.changed = true
+  }
+
+  setParseResults(parseResults: ModelParseResults) {
+    this.parseResults = parseResults
+    this.changed = true
+    this.parseError = null
+  }
+
+  setSources(sources: ModelSource[]) {
+    this.sources = sources
+    this.changed = true
+  }
+
+  addModelSource(source: ModelSource) {
+    //check if address already exists
+    if (this.sources.find((s) => s.alias === source.alias)) {
+      throw new Error(`Alias ${source.alias} already exists`)
+    }
+    this.sources.push(source)
+    this.changed = true
+  }
+
+  setParseError(parseError: string) {
+    this.parseError = parseError
+    this.parseResults = null
+    this.changed = true
   }
 
   static fromJSON(data: any): ModelConfig {
-    console.log(data)
-    return new ModelConfig({
+    let base = new ModelConfig({
       name: data.name,
       storage: data.storage,
       sources: data.sources,
       parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null,
     })
+    base.changed = false
+    return base
   }
 }
