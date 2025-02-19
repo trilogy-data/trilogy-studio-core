@@ -13,8 +13,9 @@
             <button @click="onClick" class="btn btn-primary">New Editor</button>
           </template>
         </editor-creator>
-        <button @click="startDemo()" class="btn btn-secondary"> <span v-if="demoLoading" class="spinner"></span> <span
-            v-else>Start Demo </span> </button>
+        <button @click="startDemo()" class="btn btn-secondary">
+          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo </span>
+        </button>
         <button @click="tutorial()" class="btn btn-tertiary">Help</button>
       </div>
     </div>
@@ -22,27 +23,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue';
+import { ref, defineEmits } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreator from './EditorCreator.vue'
 
-const demoLoading = ref(false);
-const emit = defineEmits(['demo-started', 'screen-selected']);
+const demoLoading = ref(false)
+const emit = defineEmits(['demo-started', 'screen-selected'])
 const startDemo = () => {
-  demoLoading.value = true;
+  demoLoading.value = true
 
-  emit('demo-started');
+  emit('demo-started')
   setTimeout(() => {
-
-    demoLoading.value = false;
-
-  }, 1000);
+    demoLoading.value = false
+  }, 1000)
 }
 
 const tutorial = () => {
-  emit('screen-selected', 'tutorial');
+  emit('screen-selected', 'tutorial')
 }
-
 </script>
 
 <style scoped>

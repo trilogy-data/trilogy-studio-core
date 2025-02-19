@@ -11,9 +11,9 @@ async function createDuckDB() {
   const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES)
   // Instantiate the asynchronus version of DuckDB-wasm
   const worker_url = URL.createObjectURL(
-    new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' })
-  );
-  const worker = new Worker(worker_url);
+    new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
+  )
+  const worker = new Worker(worker_url)
   const logger = new duckdb.ConsoleLogger()
   const db = new duckdb.AsyncDuckDB(logger, worker)
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
