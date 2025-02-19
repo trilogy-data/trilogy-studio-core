@@ -93,13 +93,13 @@ export default class Editor implements EditorInterface {
     this.error = error
   }
 
-  toJSON(): object {
+  toJSON(preserveResults: boolean = false): object {
     return {
       name: this.name,
       type: this.type,
       syntax: this.syntax,
       connection: this.connection,
-      results: this.results.toJSON(), // Serialize the Results instance
+      results: preserveResults ? this.results.toJSON() : null,
       contents: this.contents,
       loading: this.loading,
       error: this.error,
@@ -139,10 +139,10 @@ export default class Editor implements EditorInterface {
     console.log(parsed.tags)
     editor.tags = parsed.tags
       ? parsed.tags
-          .map((tag: string) => {
-            return Object.values(EditorTag).includes(tag as EditorTag) ? (tag as EditorTag) : null
-          })
-          .filter((tag): tag is EditorTag => tag !== null)
+        .map((tag: string) => {
+          return Object.values(EditorTag).includes(tag as EditorTag) ? (tag as EditorTag) : null
+        })
+        .filter((tag): tag is EditorTag => tag !== null)
       : []
 
     return editor
