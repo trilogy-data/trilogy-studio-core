@@ -23,6 +23,7 @@ export interface EditorInterface {
   storage: string
   tags: EditorTag[]
   cancelCallback: (() => void) | null
+  changed: boolean
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -43,6 +44,7 @@ export default class Editor implements EditorInterface {
   storage: string
   tags: EditorTag[]
   cancelCallback: (() => void) | null
+  changed: boolean
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -87,19 +89,39 @@ export default class Editor implements EditorInterface {
     this.storage = storage
     this.tags = tags ? tags : []
     this.cancelCallback = null
+    // default to change for save
+    this.changed = true
   }
 
   setError(error: string | null) {
     this.error = error
+    this.changed = true
   }
 
-  toJSON(): object {
+  setContent(contents: string) {
+    this.contents = contents
+    this.changed = true
+  }
+
+  addTag(tag: EditorTag) {
+    if (!this.tags.includes(tag)) {
+      this.tags.push(tag)
+      this.changed = true
+    }
+  }
+
+  removeTag(tag: EditorTag) {
+    this.tags = this.tags.filter((t) => t !== tag)
+    this.changed = true
+  }
+
+  toJSON(preserveResults: boolean = false): object {
     return {
       name: this.name,
       type: this.type,
       syntax: this.syntax,
       connection: this.connection,
-      results: this.results.toJSON(), // Serialize the Results instance
+      results: preserveResults ? this.results.toJSON() : null,
       contents: this.contents,
       loading: this.loading,
       error: this.error,
@@ -135,8 +157,8 @@ export default class Editor implements EditorInterface {
     editor.duration = parsed.duration || null
     editor.generated_sql = parsed.generated_sql || null
     editor.visible = parsed.visible !== undefined ? parsed.visible : true
+    editor.changed = false
     // rehydrate tags to EditorTag
-    console.log(parsed.tags)
     editor.tags = parsed.tags
       ? parsed.tags
           .map((tag: string) => {

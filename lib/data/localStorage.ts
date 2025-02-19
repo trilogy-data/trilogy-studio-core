@@ -25,9 +25,17 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   saveEditors(editorsList: EditorInterface[]): void {
+    const editors = this.loadEditors()
+    // override editors we've changed
+    editorsList.forEach((editor) => {
+      if (editor.changed) {
+        editors[editor.name] = editor
+        editor.changed = false
+      }
+    })
     localStorage.setItem(
       this.editorStorageKey,
-      JSON.stringify(Object.values(editorsList).map((editor) => editor.toJSON())),
+      JSON.stringify(Object.values(editors).map((editor) => editor.toJSON())),
     )
   }
 
@@ -41,11 +49,15 @@ export default class LocalStorage extends AbstractStorage {
       return acc
     }, {})
   }
+
   deleteEditor(name: string): void {
     const editors = this.loadEditors()
     if (editors[name]) {
       delete editors[name]
-      this.saveEditors(Object.values(editors))
+      localStorage.setItem(
+        this.editorStorageKey,
+        JSON.stringify(Object.values(editors).map((editor) => editor.toJSON())),
+      )
     }
   }
 
@@ -120,7 +132,13 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   saveModelConfig(modelConfig: ModelConfig[]): void {
-    localStorage.setItem(this.modelStorageKey, JSON.stringify(modelConfig))
+    const current = this.loadModelConfig()
+    modelConfig.forEach((model) => {
+      if (model.changed) {
+        current[model.name] = model
+      }
+    })
+    localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }
 
   clearModelConfig(): void {
