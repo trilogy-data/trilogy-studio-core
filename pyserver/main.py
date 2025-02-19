@@ -42,14 +42,9 @@ if os.path.exists(env_path):
                 key, value = line.split("=", 1)  # Split at the first '='
                 os.environ[key.strip()] = value.strip()  # Set environment variable
 
-# Example: Access an environment variable
-print()  # Replace with your actual variable name
-
-
 current_directory = Path(__file__).parent
 
 sys.path.append(str(current_directory))
-
 
 # ruff: noqa: E402
 from io_models import (
