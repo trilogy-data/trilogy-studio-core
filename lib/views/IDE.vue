@@ -243,8 +243,8 @@ export default {
     saveEditorsCall() {
       this.saveEditors()
     },
-    startDemo() {
-      setupDemo(
+    async startDemo() {
+      await setupDemo(
         this.editorStore,
         this.connectionStore,
         this.modelStore,
