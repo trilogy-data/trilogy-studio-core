@@ -30,6 +30,7 @@ export default class LocalStorage extends AbstractStorage {
     editorsList.forEach((editor) => {
       if (editor.changed) {
         editors[editor.name] = editor
+        editor.changed = false
       }
     })
     localStorage.setItem(

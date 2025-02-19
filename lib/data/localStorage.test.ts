@@ -88,6 +88,21 @@ describe('EditorLocalStorage', () => {
     storedEditors = localStorage.loadEditors()
 
     expect(Object.keys(storedEditors)).toHaveLength(0)
+
+    editors[0].setContent('content3')
+    localStorage.saveEditors([new Editor({
+      name: 'editor3',
+      type: 'preql',
+      connection: 'test-connection',
+      storage: 'abc',
+      contents: 'content4',
+    })])
+    localStorage.saveEditors(editors)
+    storedEditors = localStorage.loadEditors()
+    expect(storedEditors['editor1'].contents).toBe('content3')
+    expect(storedEditors['editor3'].contents).toBe('content4')
+
+
   })
 
   it('should delete an editor by name', () => {
@@ -177,10 +192,8 @@ describe('EditorLocalStorage', () => {
   })
 
   it('should clear model configs', () => {
-    const modelConfig = {
-      config1: { id: 'config1', settings: 'settings1' },
-    }
-    // @ts-ignore
+    const modelConfig = [new ModelConfig({ name: 'config1', storage: 'local', sources: [], parseResults: null })]
+
     localStorage.saveModelConfig(modelConfig)
     localStorage.clearModelConfig()
 
