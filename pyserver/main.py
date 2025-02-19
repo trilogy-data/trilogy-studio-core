@@ -28,6 +28,22 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
+import os
+
+# Define the path to the .env file
+env_path = Path(__file__).parent / ".env"
+
+# Load the .env file if it exists
+if os.path.exists(env_path):
+    with open(env_path, "r") as file:
+        for line in file:
+            line = line.strip()
+            if line and not line.startswith("#"):  # Ignore empty lines and comments
+                key, value = line.split("=", 1)  # Split at the first '='
+                os.environ[key.strip()] = value.strip()  # Set environment variable
+
+# Example: Access an environment variable
+print()  # Replace with your actual variable name
 
 
 current_directory = Path(__file__).parent
@@ -69,13 +85,14 @@ allowed_origins = [
 ]
 
 # if not IN_APP_CONFIG.validate:
-allowed_origins += [
-    "http://localhost:8080",
-    "http://localhost:8081",
-    "http://localhost:8090",
-]
-allow_origin_regex = "(https://trilogy-data.github.io)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
+allowed_origins += []
 
+if os.getenv("ALLOWED_ORIGINS") == "dev":
+    allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
+else:
+    allow_origin_regex = (
+        "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)"
+    )
 
 app.add_middleware(
     CORSMiddleware,
