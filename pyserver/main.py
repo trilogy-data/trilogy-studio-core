@@ -28,6 +28,7 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
+
 import os
 
 # Define the path to the .env file
@@ -54,7 +55,11 @@ from io_models import (
     QueryOutColumn,
     ModelInSchema,
     Model,
+    ValidateQueryInSchema,
 )
+
+# ruff: noqa: E402
+from diagnostics import get_diagnostics
 
 
 CONFIG.rendering.parameters = False
@@ -124,6 +129,11 @@ def format_query(query: QueryInSchema):
         text="\n\n".join([renderer.to_string(x) for x in parsed])
     )
     return output
+
+
+@router.post("/validate_query")
+def validate_query(query: ValidateQueryInSchema):
+    return get_diagnostics(query.query)
 
 
 @router.post("/generate_query")

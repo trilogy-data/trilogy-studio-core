@@ -101,7 +101,7 @@ export default defineComponent({
       },
       {
         name: 'database',
-        tooltip: 'Editor Connections',
+        tooltip: 'Connections',
         icon: 'mdi mdi-database',
         screen: 'connections',
       },

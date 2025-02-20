@@ -3,9 +3,7 @@
   <div v-else ref="editor" id="editor" class="editor-fix-styles">
     <div class="absolute-button bottom-run">
       ABC
-      <loading-button class="button-transparent" :action="runQuery"
-        >Run (ctrl-enter)</loading-button
-      >
+      <loading-button class="button-transparent" :action="runQuery">Run (ctrl-enter)</loading-button>
     </div>
   </div>
 </template>
@@ -177,12 +175,50 @@ export default defineComponent({
   },
 
   methods: {
+    async validateQuery(log: boolean = true) {
+      const editor = editorMap.get(this.context)
+      if (this.loading || !editor) {
+        return
+      }
+      // TODO - syntax validation for SQL?
+      if (this.editorData.type === 'sql') {
+        return
+      }
+      try {
+
+        if (log) {
+          // @ts-ignore
+          window.goatcounter.count({
+            path: 'studio-query-validate',
+            title: this.editorData.type,
+            event: true,
+          })
+        }
+      } catch (error) {
+        console.log(error)
+      }
+      const conn = this.connectionStore.connections[this.editorData.connection]
+      if (!conn) {
+        this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
+        return
+      }
+
+
+      let annotations = await this.trilogyResolver.validate_query(editor.getValue())
+      let model = editor.getModel()
+      if (!model) {
+        return
+      }
+      console.log(annotations)
+      monaco.MarkerSeverity.Error
+      monaco.editor.setModelMarkers(model, "owner", annotations.data.items);
+    },
     async runQuery() {
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
       }
-
+      this.validateQuery(false)
       try {
         // @ts-ignore
         window.goatcounter.count({
@@ -219,19 +255,19 @@ export default defineComponent({
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
           : []
 
         // Get selected text or full content
         const selected = editor.getSelection()
         const text =
           selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
+            !(
+              selected.startColumn === selected.endColumn &&
+              selected.startLineNumber === selected.endLineNumber
+            )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
 
@@ -303,14 +339,15 @@ export default defineComponent({
         rules: [
           { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' }, // Green for comments
           { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' }, // Blue for keywords
-          { token: 'definition', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light yellow for function definitions
+          { token: 'definition', foreground: '#E5C07B', fontStyle: 'bold' }, // Light yellow for function definitions
           { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' }, // Teal for types (like int, string, etc.)
           { token: 'string', foreground: '#CE9178' }, // Light orange for strings
           { token: 'number', foreground: '#B5CEA8' }, // Light green for numbers
           { token: 'operator', foreground: '#D4D4D4' }, // Light gray for operators
           { token: 'delimiter', foreground: '#D4D4D4' }, // Light gray for delimiters (like commas, colons)
-          { token: 'function', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
+          { token: 'function', foreground: '#C586C0', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
           { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' }, // hidden should be whitish
+          { token: 'property', foreground: '#BFBFBF' } //italicize properties
         ],
         colors: {
           // 'editor.foreground': '#F8F8F8',
@@ -329,7 +366,9 @@ export default defineComponent({
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
       })
-
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {
+        this.validateQuery()
+      })
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
         this.runQuery()
       })

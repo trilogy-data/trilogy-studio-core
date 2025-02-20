@@ -54,7 +54,7 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
       [/\-\-.*/, 'hidden'],
 
       // Match Keywords (SELECT, WHERE, ORDER, BY)
-      [/(^|\s)(IMPORT|SELECT|WHERE|ORDER|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, 'keyword'],
+      [/(^|\s)(IMPORT|SELECT|WHERE|ORDER|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, 'keyword'],
 
       // Match definitions (auto, property, metric)
       [/(^|\s)(AUTO|PROPERTY|KEY|METRIC)(\s|$)/, 'definition'],
@@ -64,7 +64,10 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
 
       // Match operators (like ->, <-, *, +, -, /, !)
       [/\<\-|\-\>|\*|\+|\-|\/|\!/, 'operator'],
-
+      
+      // match first part of <a,b>.b or a.b
+      [/\<[a-zA-Z0-9_\.\,]+\>\./, 'property'],
+      [/([a-zA-Z0-9]+)\./, 'property'],
       // Match strings (enclosed in single or double quotes)
       [/['"][^'"]*['"]/, 'string'],
 
@@ -77,7 +80,7 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
       // Match variable or property names (e.g., line_item, discounted_price)
       // [/\b[a-zA-Z_][a-zA-Z0-9_]*\b/, "variable"],
       [
-        /(^|\s)(sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)(\s|$)/,
+        /(^|\s)(sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)\(/,
         'function',
       ],
 

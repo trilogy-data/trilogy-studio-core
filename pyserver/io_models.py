@@ -11,7 +11,7 @@ from trilogy.core.models.core import MapType
 from pydantic import BaseModel, Field
 
 from trilogy import Dialects
-
+from enum import Enum
 
 class LineageItem(BaseModel):
     token: str
@@ -84,6 +84,8 @@ class QueryInSchema(BaseModel):
     full_model: ModelInSchema | None = None
     # chart_type: ChartType | None = None
 
+class ValidateQueryInSchema(BaseModel):
+    query: str
 
 class QueryOutColumn(BaseModel):
     name: str
@@ -94,3 +96,20 @@ class QueryOutColumn(BaseModel):
 class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
+
+class Severity(Enum):
+    Error = 8
+    Warning = 4
+    Information = 2
+    Hint = 1
+
+class ValidateItem(BaseModel):
+    startLineNumber: int
+    startColumn: int
+    endLineNumber: int
+    endColumn: int
+    message: str
+    severity: Severity
+
+class ValidateResponse(BaseModel):
+    items: List[ValidateItem]

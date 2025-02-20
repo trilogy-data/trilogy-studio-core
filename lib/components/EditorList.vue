@@ -12,18 +12,22 @@
           :keyCombination="['control', 's']">Save</loading-button>
       </div>
     </template>
-    <div v-for="(connections, storage) in groupedEditors" :key="storage" class="storage-group">
+    <div v-for="(connections, storage) in groupedEditors" :key="storage">
       <h4 class="text-sm" @click="toggleCollapse(storage)">
-        {{ displayKey(storage) }} ({{ Object.values(connections).flat().length }})
+        <i v-if="!collapsed[storage]" class="mdi mdi-menu-down"  ></i>
+        <i v-else class="mdi mdi-menu-right" ></i> {{ displayKey(storage) }} ({{ Object.values(connections).flat().length }})
       </h4>
-      <div v-if="!collapsed[storage]">
+      <div v-if="!collapsed[storage]"  class="storage-group">
         <div v-for="(editors, connection) in connections" :key="connection" class="connection-group">
           <div class="text-sm left-pad" @click="toggleCollapse(connection)">
-            <status-icon v-if="connectionStore.connections[connection]?.connected" status="connected" /> {{ connection }}
+            <i v-if="!collapsed[connection]" class="mdi mdi-menu-down"  ></i>
+            <i v-else class="mdi mdi-menu-right" ></i>
+            <status-icon v-if="connectionStore.connections[connection]?.running" status="running" />
+            <status-icon v-else-if="connectionStore.connections[connection]?.connected" status="connected" /> {{ connection }}
             ({{
               editors.length }})
           </div>
-          <ul class="list" v-if="!collapsed[connection]">
+          <ul class="list storage-group" v-if="!collapsed[connection]">
             <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
               <div class="editor-content" :class="{ 'active-editor': activeEditor === editor.name }">
                 <div class="main-content">
@@ -53,6 +57,10 @@
 </template>
 
 <style scoped>
+.list-icon {
+  vertical-align:middle;
+
+}
 .list {
   padding-top: 0px;
   margin-top: 0px;

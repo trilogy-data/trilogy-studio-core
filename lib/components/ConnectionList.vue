@@ -204,19 +204,6 @@ export default {
     resetConnection(connection: Connection) {
       return this.connectionStore.resetConnection(connection.name)
     },
-    // login() {
-    //   const client = google.accounts.oauth2.initTokenClient({
-    //     client_id: '734709568634-3u732kjmtp8e4bi6te0g7uo9278k104i.apps.googleusercontent.com',
-    //     scope: 'https://www.googleapis.com/auth/calendar.readonly',
-    //     callback: (response) => {
-    //       console.log(response)
-    //     },
-    //     error_callback: (error) => {
-    //       console.log("Handle the error", error)
-    //     },
-    //   });
-    //   client.requestAccessToken()
-    // }
   },
 }
 </script>

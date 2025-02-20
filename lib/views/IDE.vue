@@ -9,7 +9,10 @@
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
-            <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
+            <editor v-else  context="main-sql" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
             <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />

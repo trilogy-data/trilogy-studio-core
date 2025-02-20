@@ -27,6 +27,7 @@ const statusClasses = computed(() => {
   box-shadow: 0 0 8px currentColor;
   animation: pulse 1.5s infinite alternate;
   display: inline-block;
+  line-height:inherit;
   vertical-align: middle;
   text-align:center;
 }

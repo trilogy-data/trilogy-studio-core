@@ -4,6 +4,7 @@ import type { ResultColumn } from '../editors/results'
 
 declare var google: any
 
+const reauthException = 'Request had invalid authentication credentials.' 
 export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
@@ -51,7 +52,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
           },
           scope: 'https://www.googleapis.com/auth/bigquery',
         });
-  
+
         tokenClient.requestAccessToken();
       } catch (error) {
         console.error('Error connecting to BigQuery with OAuth', error);
@@ -59,12 +60,8 @@ export default class BigQueryOauthConnection extends BaseConnection {
       }
     });
   }
-  
-  async query(sql: string): Promise<Results> {
-    if (!this.connected) {
-      console.error(`Cannot execute query. ${this.name} is not connected.`)
-      throw new Error('Connection not established.')
-    }
+
+  async query_core(sql: string): Promise<Results> {
 
     try {
       // Call BigQuery REST API directly
@@ -85,6 +82,10 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
       if (!response.ok) {
         const errorResponse = await response.json()
+        // check for partial match to error patterns that mean we need to reath
+        if (errorResponse.error.message.includes(reauthException)) {
+          this.connected = false
+        }
         throw new Error(`BigQuery query failed: ${errorResponse.error.message}`)
       }
 
