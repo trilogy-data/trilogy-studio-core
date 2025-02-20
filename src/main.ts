@@ -53,11 +53,11 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
       // Match hidden
       [/\-\-.*/, 'hidden'],
 
-      // Match SQL keywords (SELECT, WHERE, ORDER, BY)
-      [/(^|\s)(SELECT|WHERE|ORDER|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, 'keyword'],
+      // Match Keywords (SELECT, WHERE, ORDER, BY)
+      [/(^|\s)(IMPORT|SELECT|WHERE|ORDER|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, 'keyword'],
 
       // Match definitions (auto, property, metric)
-      [/auto|property|metric|import/, 'definition'],
+      [/(^|\s)(AUTO|PROPERTY|KEY|METRIC)(\s|$)/, 'definition'],
 
       // Match types (e.g., ::type, such as ::date or ::int)
       [/::[a-zA-Z0-9_]+/, 'type'],
@@ -77,7 +77,7 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
       // Match variable or property names (e.g., line_item, discounted_price)
       // [/\b[a-zA-Z_][a-zA-Z0-9_]*\b/, "variable"],
       [
-        /\s(sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)\b/,
+        /(^|\s)(sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)(\s|$)/,
         'function',
       ],
 

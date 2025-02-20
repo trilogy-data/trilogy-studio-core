@@ -2,20 +2,14 @@
   <sidebar-list title="Editors">
     <template #actions>
       <!-- Tags as filters -->
-      <span
-        v-for="tag in EditorTag"
-        :key="tag"
-        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
-        class="tag"
-        @click="toggleTagFilter(tag)"
-      >
+      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
+        @click="toggleTagFilter(tag)">
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} editors with {{ tag }} tag
       </span>
       <div class="button-container">
         <editor-creator />
-        <loading-button ref="loadingButton" :action="saveEditors" :keyCombination="['control', 's']"
-          >Save</loading-button
-        >
+        <loading-button ref="loadingButton" :action="saveEditors"
+          :keyCombination="['control', 's']">Save</loading-button>
       </div>
     </template>
     <div v-for="(connections, storage) in groupedEditors" :key="storage" class="storage-group">
@@ -23,25 +17,15 @@
         {{ displayKey(storage) }} ({{ Object.values(connections).flat().length }})
       </h4>
       <div v-if="!collapsed[storage]">
-        <div
-          v-for="(editors, connection) in connections"
-          :key="connection"
-          class="connection-group"
-        >
+        <div v-for="(editors, connection) in connections" :key="connection" class="connection-group">
           <div class="text-sm left-pad" @click="toggleCollapse(connection)">
-            {{ connection }} ({{ editors.length }})
+            <status-icon v-if="connectionStore.connections[connection]?.connected" status="connected" /> {{ connection }}
+            ({{
+              editors.length }})
           </div>
           <ul class="list" v-if="!collapsed[connection]">
-            <li
-              v-for="editor in editors"
-              :key="editor.name"
-              class="editor-item p-1"
-              @click="onEditorClick(editor)"
-            >
-              <div
-                class="editor-content"
-                :class="{ 'active-editor': activeEditor === editor.name }"
-              >
+            <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
+              <div class="editor-content" :class="{ 'active-editor': activeEditor === editor.name }">
                 <div class="main-content">
                   <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'">
                     <i class="mdi mdi-alpha-s-box-outline"></i>
@@ -51,7 +35,7 @@
                   </tooltip>
                   <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{
                     editor.name
-                  }}</span>
+                    }}</span>
                   <span v-for="tag in editor.tags" :key="tag" class="tag">{{ tag }}</span>
                 </div>
                 <tooltip content="Delete Editor" position="left">
@@ -128,9 +112,11 @@
   display: flex;
   align-items: center;
 }
+
 .active-editor {
   background-color: var(--button-bg);
 }
+
 .editor-content {
   display: flex;
   justify-content: space-between;
@@ -173,12 +159,15 @@
 <script lang="ts">
 import { inject, ref, computed } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
+import type { ConnectionStoreType } from '../stores/connectionStore'
 import EditorCreator from './EditorCreator.vue'
 import EditorModel from '../editors/editor'
 import SidebarList from './SidebarList.vue'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
 import { EditorTag } from '../editors'
+import StatusIcon from './StatusIcon.vue'
+import type { Status } from './StatusIcon.vue';
 export default {
   name: 'EditorList',
   props: {
@@ -186,7 +175,8 @@ export default {
   },
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore')
-    if (!editorStore) {
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    if (!editorStore || !connectionStore) {
       throw new Error('Editor store is not provided!')
     }
 
@@ -230,6 +220,7 @@ export default {
       return result
     })
     return {
+      connectionStore,
       editorStore,
       EditorTag,
       toggleTagFilter,
@@ -258,6 +249,7 @@ export default {
     SidebarList,
     Tooltip,
     LoadingButton,
+    StatusIcon,
   },
   methods: {
     // Emit an event when an editor is clicked

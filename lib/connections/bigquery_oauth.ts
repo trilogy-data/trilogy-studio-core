@@ -36,29 +36,30 @@ export default class BigQueryOauthConnection extends BaseConnection {
     return base
   }
   async connect(): Promise<void> {
-    let fun = this
-    try {
-      // @ts-ignore
-      const onTokenResponse = (response) => {
-        fun.accessToken = response.access_token
-      }
-      google.accounts.oauth2
-        .initTokenClient({
+    return new Promise((resolve, reject) => {
+      try {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: '734709568634-3u732kjmtp8e4bi6te0g7uo9278k104i.apps.googleusercontent.com',
-          callback: onTokenResponse,
+          // @ts-ignore
+          callback: (response) => {
+            this.accessToken = response.access_token;
+            resolve();
+          },
           // @ts-ignore
           error_callback: (error) => {
-            throw error
+            reject(error);
           },
           scope: 'https://www.googleapis.com/auth/bigquery',
-        })
-        .requestAccessToken()
-    } catch (error) {
-      console.error('Error connecting to BigQuery with OAuth', error)
-      throw error
-    }
+        });
+  
+        tokenClient.requestAccessToken();
+      } catch (error) {
+        console.error('Error connecting to BigQuery with OAuth', error);
+        reject(error);
+      }
+    });
   }
-
+  
   async query(sql: string): Promise<Results> {
     if (!this.connected) {
       console.error(`Cannot execute query. ${this.name} is not connected.`)

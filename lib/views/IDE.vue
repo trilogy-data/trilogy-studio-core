@@ -2,13 +2,8 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          :active="activeScreen" :activeEditor="activeEditor" />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
@@ -17,41 +12,16 @@
             <editor context="main" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
             <error-message v-else-if="activeEditorData.error">{{
               activeEditorData.error
-            }}</error-message>
-            <div v-else-if="activeEditorData.results" class="results-container">
-              <div class="tabs">
-                <button
-                  class="tab-button"
-                  :class="{ active: activeTab === 'results' }"
-                  @click="activeTab = 'results'"
-                >
-                  Results ({{ activeEditorData.results.data.length }})
-                </button>
-                <button
-                  class="tab-button"
-                  :class="{ active: activeTab === 'sql' }"
-                  @click="activeTab = 'sql'"
-                >
-                  Generated SQL
-                </button>
-              </div>
-              <div class="tab-content">
-                <data-table
-                  v-if="activeTab === 'results'"
-                  :headers="activeEditorData.results.headers"
-                  :results="activeEditorData.results.data"
-                />
-                <div v-else class="sql-view">
-                  <pre>{{ activeEditorData.generated_sql }}</pre>
-                </div>
-              </div>
-            </div>
+            }}
+              <template #action v-if="activeEditorData.error === 'Connection is not active.'"><loading-button
+                  :action="() => connectionStore.resetConnection(activeEditorData?.connection)">Reconnect {{
+                    activeEditorData.connection }}</loading-button></template>
+            </error-message>
+            <results-container v-else-if="activeEditorData.results" :results="activeEditorData.results"
+              :generatedSql="activeEditorData.generated_sql" />
             <hint-component v-else />
           </template>
         </vertical-split-layout>
@@ -68,6 +38,9 @@
       </template>
       <template v-else-if="activeScreen === 'settings'">
         <user-settings />
+      </template>
+      <template v-else-if="activeScreen === 'dashboard'">
+        <dashboard />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -155,12 +128,15 @@ import DataTable from '../components/DataTable.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
+import LoadingButton from '../components/LoadingButton.vue'
 import Tutorial from '../components/Tutorial.vue'
 import ModelView from '../components/Models.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
+import Dashboard from '../components/Dashboard.vue'
+import ResultsContainer from '../components/Results.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -196,6 +172,9 @@ export default {
     LoadingView,
     HintComponent,
     WelcomePage,
+    Dashboard,
+    ResultsContainer,
+    LoadingButton,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
@@ -219,7 +198,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
     return {
       connectionStore,

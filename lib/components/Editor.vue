@@ -200,6 +200,11 @@ export default defineComponent({
         return
       }
 
+      if (!conn.connected) {
+        this.editorData.setError(`Connection is not active.`)
+        return
+      }
+
       // Create an AbortController for cancellation
       const controller = new AbortController()
       this.editorData.cancelCallback = () => {
@@ -285,11 +290,11 @@ export default defineComponent({
       }
       const editor = monaco.editor.create(editorElement, {
         value: this.editorData.contents,
-        language: this.editorData.type === 'trilogy' ? 'trilogy' : 'sql',
+        language: this.editorData.type === 'preql' ? 'trilogy' : 'sql',
         automaticLayout: true,
       })
       editorMap.set(this.context, editor)
-
+      console.log(this.editorData.type)
       editor.layout()
       monaco.editor.defineTheme('trilogyStudio', {
         base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
