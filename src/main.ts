@@ -15,10 +15,20 @@ if (window.matchMedia('(prefers-color-scheme: light)').matches) {
 } else {
   import('tabulator-tables/dist/css/tabulator_midnight.css')
 }
+import { languages } from 'monaco-editor'
+import monacoEditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
-import * as monaco from 'monaco-editor'
-monaco.languages.register({ id: 'trilogy' })
-monaco.languages.setLanguageConfiguration('trilogy', {
+self.MonacoEnvironment = {
+  getWorker: function (_, label) {
+    switch (label) {
+      default:
+        return new monacoEditorWorker()
+    }
+  },
+}
+
+languages.register({ id: 'trilogy' })
+languages.setLanguageConfiguration('trilogy', {
   comments: {
     lineComment: '#',
     blockComment: ['/*', '*/'],
@@ -43,7 +53,7 @@ monaco.languages.setLanguageConfiguration('trilogy', {
   ],
 })
 
-monaco.languages.setMonarchTokensProvider('trilogy', {
+languages.setMonarchTokensProvider('trilogy', {
   ignoreCase: true,
   tokenizer: {
     root: [
