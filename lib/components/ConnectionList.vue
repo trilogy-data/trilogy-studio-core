@@ -31,13 +31,7 @@
         <span>
           {{ item.name }} ({{ item.count }})
           <span class="model-anchor">
-            <button
-              class="button"
-              @click="
-                connectionModelVisible[item.name] = true
-                console.log('test')
-              "
-            >
+            <button class="button" @click="connectionModelVisible[item.name] = true">
               {{ item.connection.model || 'Set Model' }}
             </button>
             <div v-if="connectionModelVisible[item.name]" class="model-form">
