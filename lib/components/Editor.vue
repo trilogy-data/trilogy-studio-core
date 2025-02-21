@@ -3,7 +3,9 @@
   <div v-else ref="editor" id="editor" class="editor-fix-styles">
     <div class="absolute-button bottom-run">
       ABC
-      <loading-button class="button-transparent" :action="runQuery">Run (ctrl-enter)</loading-button>
+      <loading-button class="button-transparent" :action="runQuery"
+        >Run (ctrl-enter)</loading-button
+      >
     </div>
   </div>
 </template>
@@ -185,7 +187,6 @@ export default defineComponent({
         return
       }
       try {
-
         if (log) {
           // @ts-ignore
           window.goatcounter.count({
@@ -203,7 +204,6 @@ export default defineComponent({
         return
       }
 
-
       let annotations = await this.trilogyResolver.validate_query(editor.getValue())
       let model = editor.getModel()
       if (!model) {
@@ -211,14 +211,14 @@ export default defineComponent({
       }
       console.log(annotations)
       monaco.MarkerSeverity.Error
-      monaco.editor.setModelMarkers(model, "owner", annotations.data.items);
+      monaco.editor.setModelMarkers(model, 'owner', annotations.data.items)
     },
     async runQuery() {
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
       }
-      this.validateQuery(false)
+      await this.validateQuery(false)
       try {
         // @ts-ignore
         window.goatcounter.count({
@@ -255,19 +255,19 @@ export default defineComponent({
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor].contents,
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
           : []
 
         // Get selected text or full content
         const selected = editor.getSelection()
         const text =
           selected &&
-            !(
-              selected.startColumn === selected.endColumn &&
-              selected.startLineNumber === selected.endLineNumber
-            )
+          !(
+            selected.startColumn === selected.endColumn &&
+            selected.startLineNumber === selected.endLineNumber
+          )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
 
@@ -347,7 +347,7 @@ export default defineComponent({
           { token: 'delimiter', foreground: '#D4D4D4' }, // Light gray for delimiters (like commas, colons)
           { token: 'function', foreground: '#C586C0', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
           { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' }, // hidden should be whitish
-          { token: 'property', foreground: '#BFBFBF' } //italicize properties
+          { token: 'property', foreground: '#BFBFBF' }, //italicize properties
         ],
         colors: {
           // 'editor.foreground': '#F8F8F8',

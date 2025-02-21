@@ -4,6 +4,7 @@ import type { ResultsInterface } from './results'
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
+  // SCHEDULED = 'scheduled',
 }
 
 export interface EditorInterface {

@@ -2,29 +2,57 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
-          :active="activeScreen" :activeEditor="activeEditor" />
+        <sidebar
+          @editor-selected="setActiveEditor"
+          @screen-selected="setActiveScreen"
+          @save-editors="saveEditorsCall"
+          :active="activeScreen"
+          :activeEditor="activeEditor"
+        />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
-            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
-              @save-editors="saveEditorsCall" />
-            <editor v-else  context="main-sql" :editorName="activeEditor"
-              @save-editors="saveEditorsCall" />
+            <editor
+              v-if="activeEditorData.type == 'preql'"
+              context="main-trilogy"
+              :editorName="activeEditor"
+              @save-editors="saveEditorsCall"
+            />
+            <editor
+              v-else
+              context="main-sql"
+              :editorName="activeEditor"
+              @save-editors="saveEditorsCall"
+            />
           </template>
           <template #results v-if="activeEditorData">
-            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
-            <error-message v-else-if="activeEditorData.error">{{
-              activeEditorData.error
-            }}
-              <template #action v-if="activeEditorData.error === 'Connection is not active.'"><loading-button
-                  :action="() => connectionStore.resetConnection(activeEditorData?.connection)">Reconnect {{
-                    activeEditorData.connection }}</loading-button></template>
+            <loading-view
+              v-if="activeEditorData.loading"
+              :cancel="activeEditorData.cancelCallback"
+            />
+            <error-message v-else-if="activeEditorData.error"
+              >{{ activeEditorData.error }}
+              <template #action v-if="activeEditorData.error === 'Connection is not active.'">
+                <loading-button
+                  :action="
+                    () =>
+                      activeEditorData
+                        ? connectionStore.resetConnection(activeEditorData.connection)
+                        : null
+                  "
+                >
+                  Reconnect
+                  {{ activeEditorData.connection }}
+                </loading-button>
+              </template>
             </error-message>
-            <results-container v-else-if="activeEditorData.results" :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql" />
+            <results-container
+              v-else-if="activeEditorData.results"
+              :results="activeEditorData.results"
+              :generatedSql="activeEditorData.generated_sql || undefined"
+            />
             <hint-component v-else />
           </template>
         </vertical-split-layout>
@@ -201,7 +229,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => { }
+      saveEditors = () => {}
     }
     return {
       connectionStore,

@@ -8,161 +8,104 @@
         >
       </div>
     </template>
-    <!-- <button @click="login">Login Using Google</button> -->
-    <li
-      v-for="connection in connections"
-      :key="connection.name"
-      class="connection-item p-2 cursor-pointer hover:bg-gray-200 rounded"
+
+    <div
+      v-for="item in contentList"
+      :key="item.id"
+      class="stacked-item"
+      :style="{ paddingLeft: `${item.indent * 10}px` }"
     >
-      <div class="connection-content">
-        <tooltip content="DuckDB" v-if="connection.type == 'duckdb'"
+      <div class="stacked-content" @click="toggleCollapse(item.id)">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <tooltip content="DuckDB" v-if="item.connection?.type == 'duckdb'"
           ><i class="mdi mdi-duck"></i>
         </tooltip>
-        <tooltip content="MotherDuck" v-else-if="connection.type == 'motherduck'"
+        <tooltip content="MotherDuck" v-else-if="item.connection?.type == 'motherduck'"
           >M<i class="mdi mdi-duck"></i>
         </tooltip>
 
-        <tooltip content="Bigquery" v-else-if="connection.type == 'bigquery-oauth'">
+        <tooltip content="Bigquery" v-else-if="item.connection?.type == 'bigquery-oauth'">
           <i class="mdi mdi-google"></i>
         </tooltip>
-
-        <div class="button-container connection-parts">
-          <div class="padding-left">
-            <span>{{ connection.name }}</span>
-            <tooltip v-if="connection.connected" content="Connected" position="bottom"
-              ><i class="mdi mdi-check green"></i>
-            </tooltip>
-            <tooltip v-else-if="connection.error" :content="connection.error" position="right"
-              ><i class="mdi mdi-alert-circle-outline red"></i
-            ></tooltip>
-          </div>
-          <div class="flex relative-container button-container float-right">
-            <button class="button" @click="connectionModelVisible[connection.name] = true">
-              {{ connection.model || 'Set Model' }}
+        <span>
+          {{ item.name }} ({{ item.count }})
+          <span class="model-anchor">
+            <button
+              class="button"
+              @click="
+                connectionModelVisible[item.name] = true
+                console.log('test')
+              "
+            >
+              {{ item.connection.model || 'Set Model' }}
             </button>
-
-            <div v-if="connectionModelVisible[connection.name]" class="absolute-form override-left">
-              <form @submit.prevent="submitConnectionModel(connection.name)">
+            <div v-if="connectionModelVisible[item.name]" class="model-form">
+              <form @submit.prevent="submitConnectionModel(item.name)">
                 <div>
-                  <label for="connection-model">Model</label>
-                  <select v-model="connectionDetails.model" id="connection-model" required>
-                    <option v-for="model in modelList" :key="model" :value="model">
+                  <select
+                    class="model-select"
+                    v-model="item.connection.model"
+                    id="connection-model"
+                    required
+                  >
+                    <option
+                      class="model-select-item"
+                      v-for="model in modelList"
+                      :key="model"
+                      :value="model"
+                    >
                       {{ model }}
                     </option>
                   </select>
                 </div>
-
                 <button type="submit">Submit</button>
                 <button
                   type="button"
-                  @click="
-                    connectionModelVisible[connection.name] =
-                      !connectionModelVisible[connection.name]
-                  "
+                  @click="connectionModelVisible[item.name] = !connectionModelVisible[item.name]"
                 >
                   Close
                 </button>
               </form>
             </div>
-          </div>
-
-          <loading-button :action="() => resetConnection(connection)"
-            ><i :class="connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i
-          ></loading-button>
-        </div>
+          </span>
+        </span>
+        <template v-if="item.type === 'connection'">
+          <span class="flag-container">
+            <loading-button class="lb" :action="() => resetConnection(item.connection)"
+              ><i :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i
+            ></loading-button>
+            <status-icon
+              v-if="item.type === 'connection'"
+              :status="
+                connectionStore.connectionStateToStatus(connectionStore.connections[item.name])
+              "
+            />
+          </span>
+        </template>
       </div>
-    </li>
+    </div>
   </sidebar-list>
 </template>
 
-<style scoped>
-.override-left {
-  left: -150px;
-}
-.connection-parts {
-  width: 100%;
-}
-
-.padding-left {
-  padding-left: 5px;
-  flex: 3;
-}
-
-.float-right {
-  flex: 1;
-}
-
-.green {
-  color: green;
-}
-
-.red {
-  color: red;
-}
-
-input,
-select {
-  font-size: 12px;
-  border: 1px solid #ccc;
-  /* Light gray border for inputs */
-  border-radius: 0;
-  /* Sharp corners */
-  width: 95%;
-  /* Full width of the container */
-}
-
-input:focus,
-select:focus {
-  border-color: #4b4b4b;
-  /* Dark gray border on focus */
-  outline: none;
-}
-
-.connection-item {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  /* border: 1px solid var(--border-light); */
-  padding: 2px;
-}
-
-.connection-content {
-  display: flex;
-  justify-content: flex-start;
-  padding-left: 5px;
-  width: 100%;
-  font-size: 15px;
-}
-
-.connection-connection {
-  text-align: right;
-  flex-grow: 1;
-  /* Makes the connection name take up remaining space */
-}
-.button {
-  min-width: 60px;
-  white-space: nowrap;
-}
-</style>
-
 <script lang="ts">
-import { inject, ref } from 'vue'
+import { ref, computed, inject } from 'vue'
+import SidebarList from './SidebarList.vue'
+import ConnectionCreator from './ConnectionCreator.vue'
+import LoadingButton from './LoadingButton.vue'
+import StatusIcon from './StatusIcon.vue'
+import Tooltip from './Tooltip.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
-import ConnectionCreator from './ConnectionCreator.vue'
-import Connection from '../connections/base'
-import SidebarList from './SidebarList.vue'
-import LoadingButton from './LoadingButton.vue'
-import Tooltip from './Tooltip.vue'
+import type { Connection } from '../connections'
 
 export default {
   name: 'ConnectionList',
-  props: {},
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveConnections = inject<Function>('saveConnections')
-    if (!connectionStore || !modelStore || !saveConnections) {
+    const modelStore = inject<ModelConfigStoreType>('modelStore')
+    if (!connectionStore || !saveConnections || !modelStore) {
       throw new Error('Connection store is not provided!')
     }
     const connectionModelVisible = ref<Record<string, boolean>>({})
@@ -176,15 +119,80 @@ export default {
       }
       connectionModelVisible.value[connection] = false
     }
+    const collapsed = ref<Record<string, boolean>>({})
+    const toggleCollapse = (id: string) => {
+      collapsed.value[id] = !collapsed.value[id]
+    }
+
+    const contentList = computed(() => {
+      const list: Array<{
+        id: string
+        name: string
+        indent: number
+        count: number
+        type: string
+        connection: any | undefined
+      }> = []
+      Object.values(connectionStore.connections).forEach((connection) => {
+        let databases = connection.databases ? connection.databases : []
+        list.push({
+          id: connection.name,
+          name: connection.name,
+          indent: 0,
+          count: databases.length,
+          type: 'connection',
+          connection,
+        })
+        if (!collapsed.value[connection.name]) {
+          databases.forEach((db) => {
+            list.push({
+              id: db.name,
+              name: db.name,
+              indent: 1,
+              count: db.tables.length,
+              type: 'database',
+              connection: null,
+            })
+            if (!collapsed.value[db.name]) {
+              db.tables.forEach((table) => {
+                list.push({
+                  id: table.name,
+                  name: table.name,
+                  indent: 2,
+                  count: 0,
+                  type: 'table',
+                  connection: null,
+                })
+              })
+            }
+          })
+        }
+      })
+      return list
+    })
 
     return {
       connectionStore,
-      connectionModelVisible,
-      connectionDetails,
-      submitConnectionModel,
+      contentList,
+      toggleCollapse,
+      collapsed,
       saveConnections,
       modelStore,
+      connectionModelVisible,
+      submitConnectionModel,
     }
+  },
+  components: {
+    SidebarList,
+    ConnectionCreator,
+    LoadingButton,
+    StatusIcon,
+    Tooltip,
+  },
+  methods: {
+    resetConnection(connection: Connection) {
+      return this.connectionStore.resetConnection(connection.name)
+    },
   },
   computed: {
     connections() {
@@ -194,16 +202,82 @@ export default {
       return Object.keys(this.modelStore.models)
     },
   },
-  components: {
-    ConnectionCreator,
-    LoadingButton,
-    SidebarList,
-    Tooltip,
-  },
-  methods: {
-    resetConnection(connection: Connection) {
-      return this.connectionStore.resetConnection(connection.name)
-    },
-  },
 }
 </script>
+
+<style scoped>
+.lb {
+  line-height: 12px;
+  height: 12px;
+  min-height: 12px;
+}
+
+.button {
+  line-height: 12px;
+  height: 16px;
+}
+
+.stacked-item {
+  display: flex;
+  align-items: center;
+  /* padding: 4px; */
+  cursor: pointer;
+  font-size: 13px;
+  height: 22px;
+  line-height: 22px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.stacked-item:hover {
+  background-color: var(--button-mouseover);
+}
+
+.stacked-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.model-anchor {
+  position: relative;
+}
+
+.flag-container {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.model-form {
+  position: absolute;
+  top: 100%;
+  /* Position below the button */
+  background-color: var(--button-bg);
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  z-index: 1001;
+  font-size: 12px;
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.model-select {
+  appearance: none;
+  /* Removes default styling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* border: 1px solid #ccc; */
+  /* background-color: var(--sidebar-bg); */
+  padding: 2px;
+  font-size: 12px;
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border-radius: 0px;
+}
+
+.model-select-item {
+  font-size: 12px;
+  font-weight: 300;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+</style>

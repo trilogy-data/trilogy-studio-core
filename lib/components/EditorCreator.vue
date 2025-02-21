@@ -1,5 +1,5 @@
 <template>
-  <div class="flex relative-container">
+  <div>
     <slot :onClick="createEditor">
       <button @click="createEditor">Add</button>
     </slot>

@@ -1,7 +1,7 @@
 import BaseConnection from './base'
 import { MDConnection } from '@motherduck/wasm-client'
 import { Results, ColumnType } from '../editors/results'
-
+// @ts-ignore
 export default class MotherDuckConnection extends BaseConnection {
   // @ts-ignore
   private connection: MDConnection

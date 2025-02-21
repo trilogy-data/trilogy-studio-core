@@ -13,7 +13,6 @@ interface ModelResponse {
   datasources: Datasource[]
 }
 
-
 interface ValidateItem {
   startLineNumber: number
   startColumn: number
@@ -49,9 +48,7 @@ export default class AxiosResolver {
     }
     return JSON.stringify(base)
   }
-  async validate_query(
-    query: string,
-  ): Promise<ValidateResponse> {
+  async validate_query(query: string): Promise<ValidateResponse> {
     return axios
       .post(`${this.address}/validate_query`, {
         query: query,
@@ -61,7 +58,6 @@ export default class AxiosResolver {
         throw Error(this.getErrorMessage(error))
       })
   }
-
 
   async resolve_query(
     query: string,

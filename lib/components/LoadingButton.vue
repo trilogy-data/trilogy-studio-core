@@ -1,7 +1,11 @@
 <template>
   <div class="relative inline-block button-wrapper">
-    <button :class="[{ 'btn flex': useDefaultStyle }, $attrs.class]" v-bind="$attrs" :disabled="isLoading"
-      @click="handleClick">
+    <button
+      :class="[{ 'btn flex': useDefaultStyle }, $attrs.class]"
+      v-bind="$attrs"
+      :disabled="isLoading"
+      @click="handleClick"
+    >
       <transition name="fade" mode="out-in">
         <span v-if="status === 'success'" class="green">✔</span>
         <span v-else-if="status === 'error'" class="red">✖ ({{ errorMessage }})</span>
@@ -114,7 +118,7 @@ export default {
 }
 
 .btn {
-  min-height: 24px;
+  /* min-height: 24px; */
   border: 2px solid transparent;
   /* width: 100%; */
 }

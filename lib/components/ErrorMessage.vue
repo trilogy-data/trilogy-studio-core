@@ -1,6 +1,5 @@
 <template>
   <div class="error-message">
-    
     <span class="error-text"><span class="error-icon">⚠️</span><slot></slot></span>
     <div class="error-action">
       <slot name="action"></slot>
@@ -11,8 +10,7 @@
 <script lang="ts">
 export default {
   name: 'ErrorMessage',
-  props: {
-  },
+  props: {},
 }
 </script>
 
@@ -23,7 +21,7 @@ export default {
   align-items: center;
   text-align: center;
   background-color: #fef2f2; /* Light red background */
-  color: var(--error-color);/* Bright red text */
+  color: var(--error-color); /* Bright red text */
   border-left: 5px solid #e60000; /* A bold left border for emphasis */
   border-right: 5px solid #e60000; /* A bold left border for emphasis */
   padding: 12px 20px;
@@ -46,7 +44,6 @@ export default {
 .error-text {
   /* flex-grow: 1; */
   font-weight: bold;
-  
 }
 
 .error-action {

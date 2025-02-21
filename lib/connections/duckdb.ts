@@ -19,7 +19,7 @@ async function createDuckDB() {
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
   return await db.connect()
 }
-
+// @ts-ignore
 export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
   private connection: duckdb.AsyncDuckDBConnection

@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed } from 'vue'
 
-export type Status = "connected" | "running" | "failed" | "idle";
+export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled'
 
-const props = defineProps<{ status: Status }>();
+const props = defineProps<{ status: Status }>()
 
 const statusClasses = computed(() => {
-  return {
-    connected: "connected",
-    running: "running",
-    failed: "failed",
-    idle: "idle",
-  }[props.status] || "idle";
-});
+  return (
+    {
+      connected: 'connected',
+      running: 'running',
+      failed: 'failed',
+      idle: 'idle',
+      disabled: 'disabled',
+    }[props.status] || 'idle'
+  )
+})
 </script>
 
 <template>
@@ -27,9 +30,11 @@ const statusClasses = computed(() => {
   box-shadow: 0 0 8px currentColor;
   animation: pulse 1.5s infinite alternate;
   display: inline-block;
-  line-height:inherit;
+  line-height: inherit;
   vertical-align: middle;
-  text-align:center;
+  text-align: center;
+  padding: 1px;
+  margin: 4px;
 }
 
 .connected {
@@ -50,6 +55,11 @@ const statusClasses = computed(() => {
 .idle {
   background-color: gray;
   color: gray;
+}
+
+.disabled {
+  background-color: lightgray;
+  color: lightgray;
 }
 
 @keyframes pulse {

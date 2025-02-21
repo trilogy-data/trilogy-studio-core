@@ -1,186 +1,93 @@
 <template>
   <sidebar-list title="Editors">
     <template #actions>
-      <!-- Tags as filters -->
-      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
-        @click="toggleTagFilter(tag)">
-        {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} editors with {{ tag }} tag
+      <span
+        v-for="tag in EditorTag"
+        :key="tag"
+        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
+        class="tag"
+        @click="toggleTagFilter(tag)"
+      >
+        {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
+        }}{{ tag.slice(1) }} Editors
       </span>
       <div class="button-container">
         <editor-creator />
-        <loading-button ref="loadingButton" :action="saveEditors"
-          :keyCombination="['control', 's']">Save</loading-button>
+        <loading-button
+          ref="loadingButton"
+          :action="saveEditors"
+          :keyCombination="['control', 's']"
+        >
+          Save
+        </loading-button>
       </div>
     </template>
-    <div v-for="(connections, storage) in groupedEditors" :key="storage">
-      <h4 class="text-sm" @click="toggleCollapse(storage)">
-        <i v-if="!collapsed[storage]" class="mdi mdi-menu-down"  ></i>
-        <i v-else class="mdi mdi-menu-right" ></i> {{ displayKey(storage) }} ({{ Object.values(connections).flat().length }})
-      </h4>
-      <div v-if="!collapsed[storage]"  class="storage-group">
-        <div v-for="(editors, connection) in connections" :key="connection" class="connection-group">
-          <div class="text-sm left-pad" @click="toggleCollapse(connection)">
-            <i v-if="!collapsed[connection]" class="mdi mdi-menu-down"  ></i>
-            <i v-else class="mdi mdi-menu-right" ></i>
-            <status-icon v-if="connectionStore.connections[connection]?.running" status="running" />
-            <status-icon v-else-if="connectionStore.connections[connection]?.connected" status="connected" /> {{ connection }}
-            ({{
-              editors.length }})
-          </div>
-          <ul class="list storage-group" v-if="!collapsed[connection]">
-            <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
-              <div class="editor-content" :class="{ 'active-editor': activeEditor === editor.name }">
-                <div class="main-content">
-                  <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'">
-                    <i class="mdi mdi-alpha-s-box-outline"></i>
-                  </tooltip>
-                  <tooltip content="Trilogy Editor" v-else>
-                    <i class="mdi mdi-alpha-t-box-outline"></i>
-                  </tooltip>
-                  <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{
-                    editor.name
-                    }}</span>
-                  <span v-for="tag in editor.tags" :key="tag" class="tag">{{ tag }}</span>
-                </div>
-                <tooltip content="Delete Editor" position="left">
-                  <span class="remove-btn" @click.stop="deleteEditor(editor)">
-                    <i class="mdi mdi-close"></i>
-                  </span>
-                </tooltip>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
+
+    <div
+      v-for="item in contentList"
+      :key="item.key"
+      class="sidebar-item"
+      :class="{ 'sidebar-item-selected': activeEditor === item.label }"
+      @click="clickAction(item.type, item.label, item.key)"
+    >
+      <div v-for="_ in item.indent" class="sidebar-padding"></div>
+      <i
+        v-if="item.type !== 'editor'"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+      >
+      </i>
+      <template v-if="item.type == 'editor'">
+        <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
+          <span class="sql">SQL</span>
+          <!-- <i class="mdi mdi-alpha-s-box-outline"></i> -->
+        </tooltip>
+        <tooltip content="Trilogy Editor" v-else>
+          <img :src="trilogyIcon" class="trilogy-icon" />
+          <!-- <i class="mdi mdi-alpha-t-box-outline"></i> -->
+        </tooltip>
+      </template>
+      <span>
+        {{ item.label }}
+      </span>
+      <template v-if="item.type === 'editor'">
+        <span class="tag-container">
+          <span v-for="tag in item.editor.tags" :key="tag" class="tag">{{ tag }}</span>
+        </span>
+      </template>
+      <template v-else-if="item.type === 'connection'">
+        <span class="tag-container">
+          <status-icon
+            v-if="item.type === 'connection'"
+            :status="connectionStateToStatus(connectionStore.connections[item.label])"
+          />
+        </span>
+      </template>
+
+      <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
+        <span class="remove-btn" @click.stop="deleteEditor(item.editor)">
+          <i class="mdi mdi-close"></i>
+        </span>
+      </tooltip>
     </div>
   </sidebar-list>
 </template>
 
-<style scoped>
-.list-icon {
-  vertical-align:middle;
-
-}
-.list {
-  padding-top: 0px;
-  margin-top: 0px;
-  margin-bottom: 0px;
-}
-
-.padding-left {
-  padding-left: 5px;
-  text-align: left;
-}
-
-.left-pad {
-  margin-left: 5px;
-  text-align: left;
-}
-
-.text-sm {
-  font-weight: 400;
-  margin-top: 0px;
-  /* margin-bottom: 5px; */
-  padding-left: 5px;
-}
-
-.storage-group {
-  margin-top: 5px;
-  border-left: 2px solid var(--border);
-}
-
-.remove-btn {
-  background-color: transparent;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  width: 24px;
-  opacity: 0.5;
-  color: var(--delete-color);
-  text-align: center;
-  /* border: 1px solid var(--border-light); */
-}
-
-.remove-btn:hover {
-  background-color: var(--button-mouseover);
-  /* Lighter gray when hovered */
-}
-
-.editor-item {
-  display: flex;
-  /* justify-content: space-between; */
-  /* align-items: left; */
-  /* border: 1px solid var(--border-light); */
-  padding: 2px;
-}
-
-.main-content {
-  display: flex;
-  align-items: center;
-}
-
-.active-editor {
-  background-color: var(--button-bg);
-}
-
-.editor-content {
-  display: flex;
-  justify-content: space-between;
-  /* This is the key change */
-  padding-left: 5px;
-  width: 100%;
-  font-size: 15px;
-}
-
-.editor-content:hover {
-  background-color: var(--button-mouseover);
-}
-
-.editor-connection {
-  text-align: left;
-  /* font-size: 0.8rem; */
-  opacity: 0.5;
-  flex-grow: 1;
-  padding-left: 4px;
-  /* Makes the connection name take up remaining space */
-}
-
-.tag {
-  cursor: pointer;
-  background: var(--button-bg);
-  padding: 2px 5px;
-  margin: 2px;
-  /* border-radius: 4px; */
-  font-size: 8px;
-}
-
-.tag:hover {
-  background: var(--button-mouseove);
-}
-
-.tag-excluded {
-  background: darkgray;
-}
-</style>
 <script lang="ts">
 import { inject, ref, computed } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import EditorCreator from './EditorCreator.vue'
-import EditorModel from '../editors/editor'
 import SidebarList from './SidebarList.vue'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
 import { EditorTag } from '../editors'
 import StatusIcon from './StatusIcon.vue'
-import type { Status } from './StatusIcon.vue';
+import type { Connection } from '../connections'
+import trilogyIcon from '../static/trilogy.png'
+
 export default {
   name: 'EditorList',
-  props: {
-    activeEditor: String,
-  },
+  props: { activeEditor: String },
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -189,67 +96,99 @@ export default {
     }
 
     const collapsed = ref<Record<string, boolean>>({})
+    const hiddenTags = ref<Set<string>>(new Set(['source']))
+
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]
     }
 
-    const hiddenTags = ref<Set<string>>(new Set(['source']))
     const toggleTagFilter = (tag: string) => {
-      if (hiddenTags.value.has(tag)) {
-        hiddenTags.value.delete(tag)
+      hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
+    }
+
+    const connectionStateToStatus = (connection: Connection | null) => {
+      if (!connection) {
+        return 'disabled'
+      }
+      if (connection.running) {
+        return 'running'
+      } else if (connection.connected) {
+        return 'connected'
       } else {
-        hiddenTags.value.add(tag)
+        return 'disabled'
       }
     }
 
-    const groupedEditors = computed(() => {
-      const result: Record<string, Record<string, EditorModel[]>> = {}
+    const contentList = computed(() => {
+      const list: Array<{
+        key: string
+        label: string
+        type: string
+        indent: Array<number>
+        editor?: any
+      }> = []
+      Object.entries(editorStore.editors).forEach(([_, editor]) => {
+        let storageKey = `s-${editor.storage}`
+        let connectionKey = `c-${editor.connection}`
+        let editorKey = `e-${editor.storage}-${editor.connection}-${editor.name}`
 
-      Object.values(editorStore.editors).forEach((editor) => {
-        if (hiddenTags.value.size > 0 && editor.tags.some((tag) => hiddenTags.value.has(tag))) {
-          return
+        if (!list.some((item) => item.key === storageKey)) {
+          list.push({ key: storageKey, label: editor.storage, type: 'storage', indent: [] })
         }
-        if (!result[editor.storage]) {
-          result[editor.storage] = {}
+        if (!list.some((item) => item.key === connectionKey)) {
+          if (!collapsed.value[storageKey]) {
+            list.push({
+              key: connectionKey,
+              label: editor.connection,
+              type: 'connection',
+              indent: [0],
+            })
+          }
         }
-        if (!result[editor.storage][editor.connection]) {
-          result[editor.storage][editor.connection] = []
+        if (!collapsed.value[storageKey] && !collapsed.value[connectionKey]) {
+          if (
+            !(hiddenTags.value.size > 0 && editor.tags.some((tag) => hiddenTags.value.has(tag)))
+          ) {
+            list.push({
+              key: editorKey,
+              label: editor.name,
+              type: 'editor',
+              indent: [0, 1],
+              editor,
+            })
+          }
         }
-        result[editor.storage][editor.connection].push(editor)
       })
-
-      // Sort the editors alphabetically by name in each group
-      Object.keys(result).forEach((storage) => {
-        Object.keys(result[storage]).forEach((connection) => {
-          result[storage][connection].sort((a, b) => a.name.localeCompare(b.name))
-        })
-      })
-
-      return result
+      return list
     })
+
     return {
       connectionStore,
       editorStore,
       EditorTag,
       toggleTagFilter,
-      groupedEditors,
+      contentList,
       toggleCollapse,
       collapsed,
       hiddenTags,
+      trilogyIcon,
+      connectionStateToStatus,
     }
   },
-  computed: {
-    editorsByStorage() {
-      const editorsByStorage: Record<string, Array<EditorModel>> = {}
-
-      Object.values(this.editorStore.editors).forEach((editor) => {
-        if (!editorsByStorage[editor.storage]) {
-          editorsByStorage[editor.storage] = []
-        }
-        editorsByStorage[editor.storage].push(editor)
-      })
-
-      return editorsByStorage
+  methods: {
+    //@ts-ignore
+    deleteEditor(editor) {
+      this.editorStore.removeEditor(editor.name)
+    },
+    saveEditors() {
+      this.$emit('save-editors')
+    },
+    clickAction(type: string, label: string, key: string) {
+      if (type === 'editor') {
+        this.$emit('editor-selected', label)
+      } else {
+        this.toggleCollapse(key)
+      }
     },
   },
   components: {
@@ -259,30 +198,84 @@ export default {
     LoadingButton,
     StatusIcon,
   },
-  methods: {
-    // Emit an event when an editor is clicked
-    onEditorClick(editor: EditorModel) {
-      this.$emit('editor-selected', editor.name)
-    },
-    deleteEditor(editor: EditorModel) {
-      this.editorStore.removeEditor(editor.name)
-    },
-    saveEditors() {
-      this.$emit('save-editors')
-    },
-    displayKey(key: string) {
-      return key === 'local' ? 'Local Storage' : key
-    },
-    addDemoEditors() {
-      const editor1 = new EditorModel({
-        name: 'Duckdb',
-        type: 'text',
-        connection: 'test-connection',
-        storage: 'local',
-        contents: 'select 1 as fun;',
-      })
-      this.editorStore.addEditor(editor1)
-    },
-  },
 }
 </script>
+
+<style scoped>
+.sql {
+  /* black */
+  color: #000000;
+  font-style: bold;
+  font-size: 8px;
+  margin-right: 5px;
+}
+
+.trilogy {
+  /* reddish */
+  color: #ff4d4d;
+  font-style: bold;
+  margin-right: 5px;
+  font-weight: 500;
+}
+
+.trilogy-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  /* padding: 4px; */
+  cursor: pointer;
+  font-size: 13px;
+  height: 22px;
+  line-height: 22px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar-padding {
+  width: 7px;
+  height: 22px;
+  margin-right: 5px;
+  border-right: 1px solid var(--border-light);
+}
+
+.sidebar-item:hover {
+  background-color: var(--button-mouseover);
+}
+
+.sidebar-item-selected {
+  /*blue 50% transparency background + dark blue border */
+  background-color: hsl(210, 100%, 50%, 0.5);
+  border: 1px solid hsl(210, 100%, 50%, 0.75);
+}
+
+.active-editor {
+  font-weight: bold;
+}
+
+.remove-btn {
+  margin-left: auto;
+  cursor: pointer;
+  flex: 1;
+}
+
+.tag-container {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tag {
+  /* Push to the right */
+  font-size: 8px;
+  /* margin-left: 5px; */
+  border-radius: 3px;
+  padding: 2px;
+  background-color: hsl(210, 100%, 50%, 0.25);
+  border: 1px solid hsl(210, 100%, 50%, 0.5);
+  color: var(--tag-font);
+  line-height: 10px;
+}
+</style>

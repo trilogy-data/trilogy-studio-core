@@ -64,7 +64,7 @@ monaco.languages.setMonarchTokensProvider('trilogy', {
 
       // Match operators (like ->, <-, *, +, -, /, !)
       [/\<\-|\-\>|\*|\+|\-|\/|\!/, 'operator'],
-      
+
       // match first part of <a,b>.b or a.b
       [/\<[a-zA-Z0-9_\.\,]+\>\./, 'property'],
       [/([a-zA-Z0-9]+)\./, 'property'],

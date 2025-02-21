@@ -1,6 +1,53 @@
 // BaseConnection.ts
 
 import { Results } from '../editors/results'
+
+export class Column {
+  name: string
+  type: string
+  nullable: boolean
+  primary: boolean
+  unique: boolean
+  default: string | null
+  autoincrement: boolean
+
+  constructor(
+    name: string,
+    type: string,
+    nullable: boolean,
+    primary: boolean,
+    unique: boolean,
+    default_: string | null,
+    autoincrement: boolean,
+  ) {
+    this.name = name
+    this.type = type
+    this.nullable = nullable
+    this.primary = primary
+    this.unique = unique
+    this.default = default_
+    this.autoincrement = autoincrement
+  }
+}
+export class Table {
+  name: string
+  columns: Column[]
+
+  constructor(name: string, columns: Column[]) {
+    this.name = name
+    this.columns = columns
+  }
+}
+
+export class Database {
+  name: string
+  tables: Table[]
+  constructor(name: string, tables: Table[]) {
+    this.name = name
+    this.tables = tables
+  }
+}
+
 export default abstract class BaseConnection {
   name: string
   type: string
@@ -10,6 +57,7 @@ export default abstract class BaseConnection {
   error: string | null = null
   query_type: string = 'abstract'
   running: boolean = false
+  databases: Database[] | null = null
 
   constructor(name: string, type: string, autoConnect: boolean = true, model?: string) {
     this.name = name
@@ -33,6 +81,11 @@ export default abstract class BaseConnection {
     }
   }
 
+  abstract getDatabases(): Promise<Database[]>
+  abstract getTables(database: string): Promise<Table[]>
+  abstract getColumns(database: string, table: string): Promise<Column[]>
+  abstract getTable(database: string, table: string): Promise<Table>
+
   abstract query_core(sql: string): Promise<Results>
 
   async query(sql: string) {
@@ -55,7 +108,6 @@ export default abstract class BaseConnection {
       throw error
     }
   }
-
 
   abstract connect(): Promise<void>
 
