@@ -108,9 +108,10 @@ export default async function setupDemo(
   // Create and add model configuration
   let mc = new ModelConfig({
     name: modelName,
-    sources: editors.slice(0, 7).map((e) => ({ alias: e.name, editor: e.name })),
+    sources: editors
+      .slice(0, 7)
+      .map((e) => ({ alias: e.name, editor: e.name, concepts: [], datasources: [] })),
     storage: 'local',
-    parseResults: null,
   })
 
   modelStore.addModelConfig(mc)

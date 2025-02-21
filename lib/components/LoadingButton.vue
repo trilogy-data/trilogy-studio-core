@@ -4,7 +4,7 @@
       :class="[{ 'btn flex': useDefaultStyle }, $attrs.class]"
       v-bind="$attrs"
       :disabled="isLoading"
-      @click="handleClick"
+      @click.stop="handleClick"
     >
       <transition name="fade" mode="out-in">
         <span v-if="status === 'success'" class="green">✔</span>

@@ -1,5 +1,13 @@
 from trilogy import Environment
-from io_models import ModelInSchema, Model, LineageItem, UIConcept, UIDatasource
+from io_models import (
+    ModelInSchema,
+    Model,
+    LineageItem,
+    UIConcept,
+    UIDatasource,
+    ModelSource,
+    ModelSourceInSchema,
+)
 
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.parsing.render import Renderer
@@ -15,7 +23,9 @@ from trilogy.authoring import (
     MultiSelectStatement,
     SelectStatement,
     ConceptRef,
+
 )
+from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
 from trilogy.core.models.author import MultiSelectLineage, RowsetItem
 from typing import Any, List, Union
@@ -124,30 +134,33 @@ def flatten_lineage(
     return chain
 
 
-def parse_env_from_full_model(input: ModelInSchema | None) -> Environment:
+def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment:
     if not input:
         return Environment()
 
     resolver = DictImportResolver(
-        content={
-            source.alias: source.contents for idx, source in enumerate(input.sources)
-        }
+        content={source.alias: source.contents for _, source in enumerate(sources)}
     )
     env = Environment(config=EnvironmentOptions(import_resolver=resolver))
 
     return env
 
 
-def model_to_response(
-    name: str, env: Environment, render_to_text: bool = False
-) -> Model:
+def source_to_model_source(
+    source: ModelSourceInSchema, sources: list[ModelSourceInSchema]
+) -> ModelSource:
     final_concepts: list[UIConcept] = []
-    rendered = Renderer().to_string(env) if render_to_text else None
+    final_datasources: list[UIDatasource] = []
+    env = parse_env_from_full_model(sources)
+    env.parse(source.contents)
+
     for skey, sconcept in env.concepts.items():
         # don't show private concepts
         if sconcept.name.startswith("_"):
             continue
         if "__preql_internal" in sconcept.address:
+            continue
+        if sconcept.metadata and sconcept.metadata.concept_source == ConceptSource.AUTO_DERIVED:
             continue
         final_concepts.append(
             UIConcept(
@@ -165,13 +178,13 @@ def model_to_response(
         )
     final_concepts.sort(key=lambda x: x.address)
 
-    final_datasources: list[UIDatasource] = []
     for dkey, datasource in env.datasources.items():
         dconcepts: list[UIConcept] = []
         for cref in datasource.concepts:
             # don't show private concepts
             if cref.name.startswith("_"):
                 continue
+
             sconcept = env.concepts[cref.address]
             dconcepts.append(
                 UIConcept(
@@ -196,9 +209,15 @@ def model_to_response(
         final_datasources.append(
             UIDatasource(name=dkey, location=final_address, concepts=dconcepts)
         )
+    return ModelSource(
+        alias=source.alias, concepts=final_concepts, datasources=final_datasources
+    )
+
+
+def model_to_response(model: ModelInSchema) -> Model:
     return Model(
-        name=name,
-        concepts=final_concepts,
-        rendered=rendered,
-        datasources=final_datasources,
+        name=model.name,
+        sources=[
+            source_to_model_source(source, model.sources) for source in model.sources
+        ],
     )

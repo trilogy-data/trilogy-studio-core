@@ -2,74 +2,290 @@
   <sidebar-list title="Models">
     <template #actions>
       <div class="button-container">
-        <model-create />
-        <loading-button :action="saveModels" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
+        <model-creator />
+        <loading-button :action="saveModels" :key-combination="['control', 's']">
+          Save
+        </loading-button>
       </div>
     </template>
-    <div v-for="(_, index) in modelConfigs" :key="index" class="storage-group">
-      <h4 class="text-sm">{{ index }}</h4>
-      <!-- <li v-for="editor in editors" :key="editor.name" class="editor-item p-1" @click="onEditorClick(editor)">
-        <div class="editor-content">
-          <tooltip content="Raw SQL Editor" v-if="editor.type == 'sql'"><i class="mdi mdi-alpha-s-box-outline"></i>
-          </tooltip>
-          <tooltip content="Trilogy Editor" v-else> <i class="mdi mdi-alpha-t-box-outline"></i></tooltip>
-          <span @click="onEditorClick(editor)" class="padding-left hover:bg-gray-400">{{ editor.name }}</span>
-          <span class="editor-connection"> ({{ editor.connection }})</span>
-          <span class="remove-btn"><i class="mdi mdi-close" @click="deleteEditor(editor)"></i></span>
-        </div>
-      </li> -->
+
+    <div v-for="item in flatList" :key="item.id" class="sidebar-item">
+      <div class="sidebar-content" @click="handleClick(item.id)">
+        <!-- headericons  -->
+        <div
+          v-for="(_, index) in Array.from({ length: item.indent }, () => 0)"
+          :key="index"
+          class="sidebar-padding"
+        ></div>
+
+        <span v-if="['model', 'source', 'datasource'].includes(item.type)">
+          <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+          <i v-else class="mdi mdi-menu-right"></i>
+        </span>
+        <img :src="trilogyIcon" class="trilogy-icon" v-if="item.type == 'source'" />
+        <span
+          v-else-if="item.type == 'concept'"
+          :class="`purpose-${item.concept.purpose.toLowerCase()}`"
+        >
+          {{ item.concept.purpose.charAt(0).toUpperCase() }}
+        </span>
+        <i v-else-if="item.type == 'datasource'" class="mdi mdi-table"></i>
+
+        <!-- item name -->
+        <span
+          >{{ item.name }}
+
+          <!-- item extra -->
+          <span v-if="['model', 'source'].includes(item.type)">({{ item.count }})</span>
+          <!-- <span v-if="['concept'].includes(item.type)" class="faint-text">({{ item.concept.datatype }})</span> -->
+        </span>
+
+        <!-- right container, flex out -->
+        <span class="right-container">
+          <loading-button v-if="item.type === 'model'" :action="() => fetchParseResults(item.name)"
+            >Parse</loading-button
+          >
+        </span>
+      </div>
     </div>
   </sidebar-list>
 </template>
 
 <script lang="ts">
-import { defineComponent, inject } from 'vue'
-import { ModelConfig } from '../models' // Adjust the import path
-import type { ModelConfigStoreType } from '../stores/modelStore'
-import ModelCreate from './ModelCreate.vue'
-import LoadingButton from './LoadingButton.vue'
+import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
-export default defineComponent({
-  name: 'ModelConfigViewer',
+import ModelCreator from './ModelCreate.vue'
+import LoadingButton from './LoadingButton.vue'
+import type { ModelConfigStoreType } from '../stores/modelStore'
+import type { EditorStoreType } from '../stores/editorStore'
+import AxiosResolver from '../stores/resolver'
+import trilogyIcon from '../static/trilogy.png'
+import { KeySeparator } from '../data/constants'
+
+export default {
+  name: 'ModelList',
   setup() {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
-    if (!modelStore || !saveModels) {
+    const editorStore = inject<EditorStoreType>('editorStore')
+    const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+    if (!modelStore || !saveModels || !editorStore || !trilogyResolver) {
       throw new Error('Model store is not provided!')
     }
-    return { modelStore, saveModels }
+
+    let collapsedPre = {} as Record<string, boolean>
+
+    // first loop to pre-collapse
+    Object.values(modelStore.models).forEach((model) => {
+      let modelId = ['model', model.name].join(KeySeparator)
+      collapsedPre[modelId] = true
+
+      model.sources.forEach((source) => {
+        let sourceId = ['source', model.name, source.alias].join(KeySeparator)
+        collapsedPre[sourceId] = true
+
+        source.datasources.forEach((ds) => {
+          let dsId = ['datasource', model.name, source.alias, ds.name].join(KeySeparator)
+          collapsedPre[dsId] = true
+        })
+      })
+    })
+
+    const collapsed = ref<Record<string, boolean>>(collapsedPre)
+
+    const toggleCollapse = (id: string) => {
+      collapsed.value[id] = !collapsed.value[id]
+    }
+    const flatList = computed(() => {
+      const list: Array<{
+        id: string
+        name: string
+        indent: number
+        count: number
+        type: string
+        concept: any
+      }> = []
+
+      Object.values(modelStore.models).forEach((model) => {
+        let modelId = ['model', model.name].join(KeySeparator)
+        list.push({
+          id: modelId,
+          name: model.name,
+          indent: 0,
+          count: model.sources.length,
+          type: 'model',
+          concept: null,
+        })
+
+        if (!collapsed.value[modelId]) {
+          model.sources.forEach((source) => {
+            let sourceId = ['source', model.name, source.alias].join(KeySeparator)
+            list.push({
+              id: sourceId,
+              name: source.alias,
+              indent: 1,
+              count: source.concepts.length,
+              type: 'source',
+              concept: null,
+            })
+            if (!collapsed.value[sourceId]) {
+              source.concepts.forEach((concept) => {
+                list.push({
+                  id: ['concept', model.name, source.alias, concept.namespace, concept.name].join(
+                    KeySeparator,
+                  ),
+                  name:
+                    concept.namespace === 'local'
+                      ? concept.name
+                      : concept.namespace + '.' + concept.name,
+                  indent: 2,
+                  count: 0,
+                  type: 'concept',
+                  concept: concept,
+                })
+              })
+              source.datasources.forEach((ds) => {
+                let dsId = ['datasource', model.name, source.alias, ds.name].join(KeySeparator)
+                list.push({
+                  id: dsId,
+                  name: ds.name,
+                  indent: 2,
+                  count: ds.concepts.length,
+                  type: 'datasource',
+                  concept: null,
+                })
+                if (!collapsed.value[dsId]) {
+                  ds.concepts.forEach((field) => {
+                    list.push({
+                      id: [
+                        'concept',
+                        model.name,
+                        source.alias,
+                        ds.name,
+                        field.namespace,
+                        field.name,
+                      ].join(KeySeparator),
+                      name:
+                        field.namespace === 'local'
+                          ? field.name
+                          : field.namespace + '.' + field.name,
+                      indent: 3,
+                      count: 0,
+                      type: 'concept',
+                      concept: field,
+                    })
+                  })
+                }
+              })
+            }
+          })
+        }
+      })
+      return list
+    })
+
+    const fetchParseResults = (model: string) => {
+      return trilogyResolver
+        .resolveModel(
+          model,
+          modelStore.models[model].sources.map((source) => ({
+            alias: source.alias,
+            contents: (editorStore.editors[source.editor] || { contents: '' }).contents,
+          })),
+        )
+        .then((parseResults) => {
+          modelStore.setModelConfigParseResults(model, parseResults)
+        })
+        .catch((error) => {
+          modelStore.setModelParseError(model, error.message)
+          console.error('Failed to fetch parse results:', error)
+        })
+    }
+
+    return {
+      flatList,
+      toggleCollapse,
+      collapsed,
+      saveModels,
+      fetchParseResults,
+      trilogyIcon,
+    }
   },
-  components: {
-    ModelCreate,
-    LoadingButton,
-    SidebarList,
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    modelConfigs(): Record<string, ModelConfig> {
-      return this.modelStore.models
+  methods: {
+    handleClick(id: string) {
+      this.toggleCollapse(id)
+      this.$emit('model-key-selected', id)
     },
   },
-  methods: {},
-})
+  components: {
+    SidebarList,
+    ModelCreator,
+    LoadingButton,
+  },
+}
 </script>
 
 <style scoped>
-.model-display {
-  padding: 10px;
-  margin: 0 auto;
+.faint-text {
+  color: var(--text-faint);
 }
 
-.model-display ul {
-  list-style: none;
-  padding: 10px;
-  margin-bottom: 1rem;
+.sidebar-item {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  height: 22px;
+  line-height: 22px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar-item:hover {
+  background-color: var(--button-mouseover);
+}
+
+.sidebar-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.right-container {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.trilogy-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.purpose-key {
+  color: #436fe8;
+  font-weight: bold;
+  padding-right: 4px;
+  font-size: 12px;
+}
+
+.purpose-property {
+  color: #de6d2e;
+  font-weight: bold;
+  padding-right: 4px;
+  font-size: 12px;
+}
+
+.purpose-metric {
+  color: #73bd29;
+  font-weight: bold;
+  padding-right: 4px;
+  font-size: 12px;
+}
+
+.sidebar-padding {
+  width: 7px;
+  height: 22px;
+  margin-right: 5px;
+  border-right: 1px solid var(--border-light);
 }
 </style>
