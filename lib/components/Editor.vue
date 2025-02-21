@@ -1,6 +1,6 @@
 <template>
   <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
-  <template v-else>
+  <div v-else class="parent">
     <div class="menu-bar">
       <div class="menu-left">
         <div class="menu-title" @click="startEditing">
@@ -20,8 +20,11 @@
           />
         </div>
         <div class="toggle-group">
-          <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag('source')">
+          <button
+            class="toggle-button"
+            :class="{ 'toggle-active': editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag()"
+          >
             Source
           </button>
           <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
@@ -31,22 +34,29 @@
         </div>
       </div>
       <div class="menu-actions">
-        <button class="button-transparent" @click="()=> validateQuery()">Parse</button>
-        <button class="button-transparent" :class="{ 'button-cancel': editorData.loading }" @click="runQuery">
+        <button class="button-transparent" @click="() => validateQuery()">Parse</button>
+        <button
+          class="button-transparent"
+          :class="{ 'button-cancel': editorData.loading }"
+          @click="runQuery"
+        >
           {{ editorData.loading ? 'Cancel' : 'Run' }}
         </button>
       </div>
     </div>
-    <div ref="editor" id="editor" class="editor-fix-styles">
-    </div>
-  </template>
+    <div ref="editor" id="editor" class="editor-fix-styles"></div>
+  </div>
 </template>
 <style>
-
-.menu-bar {
-  background-color: var(--bg-sidebar);
+.parent {
   display: flex;
-  padding-right:10px;
+  flex-direction: column;
+  height: 100%;
+}
+.menu-bar {
+  background-color: var(--sidebar-bg);
+  display: flex;
+  padding-right: 10px;
   justify-content: space-between;
   align-items: center;
 }
@@ -56,7 +66,6 @@
   align-items: center;
   gap: 1.5rem;
 }
-
 
 .menu-title {
   font-weight: 500;
@@ -107,24 +116,21 @@
   position: relative;
 }
 
-
 .button-transparent {
-  background-color: transparent !important;
-  /* Transparent background */
-  height:24px;
-  color: #007bff;
-  border: 1px solid #007bff;
-  border-radius: 4px;
+  font-weight: 500;
   cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 0px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  margin-left: 0.75rem;
+  margin-right: 0.75rem;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
   z-index: 99;
-  /* height: 24px; */
-  /* min-width: 60px; */
+  height: 100%;
 }
-
-
 </style>
 <script lang="ts">
 import { defineComponent, inject } from 'vue'
@@ -138,7 +144,7 @@ import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
-import {EditorTag} from '../editors';
+import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
@@ -172,7 +178,6 @@ export default defineComponent({
       info: 'Query processing...',
       isEditing: false,
       editableName: '',
-
     }
   },
   components: {
@@ -333,19 +338,19 @@ export default defineComponent({
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor].contents,
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
           : []
 
         // Get selected text or full content
         const selected = editor.getSelection()
         const text =
           selected &&
-            !(
-              selected.startColumn === selected.endColumn &&
-              selected.startLineNumber === selected.endLineNumber
-            )
+          !(
+            selected.startColumn === selected.endColumn &&
+            selected.startLineNumber === selected.endLineNumber
+          )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
 
@@ -451,13 +456,13 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
         this.runQuery()
       })
-      if (this.genAICallback) {
-        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
-          if (!this.loading) {
-            this.genAICallback(editorItem.getValue())
-          }
-        })
-      }
+      // if (this.genAICallback) {
+      //   editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
+      //     if (!this.loading) {
+      //       this.genAICallback(editorItem.getValue())
+      //     }
+      //   })
+      // }
       // if (this.formatTextCallback) {
       //     editor.addAction({
       //         id: 'format-preql',

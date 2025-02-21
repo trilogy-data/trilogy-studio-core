@@ -13,7 +13,7 @@
   border-radius: 0px;
   padding-left: 4px;
   padding-right: 4px;
-  height: 100%;
+  /* height: 100%; */
 }
 .mb-1 {
   font-weight: 400;

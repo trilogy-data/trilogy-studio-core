@@ -1,1 +1,1 @@
-export const KeySeparator = '+';
+export const KeySeparator = '+'

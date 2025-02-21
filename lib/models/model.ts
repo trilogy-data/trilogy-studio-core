@@ -203,19 +203,12 @@ class ModelParseItem {
   static fromJSON(data: any): ModelParseItem {
     return new ModelParseItem(
       data.alias,
-      data.concepts.map(
-        (concept: any) =>
-          Concept.fromJSON(concept)
-      ),
-      data.datasources.map(
-        (datasource: any) =>
-          Datasource.fromJSON(datasource)
-      ),
+      data.concepts.map((concept: any) => Concept.fromJSON(concept)),
+      data.datasources.map((datasource: any) => Datasource.fromJSON(datasource)),
     )
   }
 }
 export class ModelParseResults {
-
   sources: ModelParseItem[]
 
   constructor(sources: ModelParseItem[]) {
@@ -225,8 +218,6 @@ export class ModelParseResults {
   static fromJSON(data: any): ModelParseResults {
     return new ModelParseResults(data.items.map((item: any) => ModelParseItem.fromJSON(item)))
   }
-
-
 }
 
 export class ModelSource {
@@ -263,7 +254,7 @@ export class ModelSource {
           new Datasource(
             datasource.name,
             datasource.address,
-            // 
+            //
             datasource.concepts,
             datasource.grain,
           ),
@@ -297,7 +288,7 @@ export class ModelConfig {
   }
 
   setParseResults(parseResults: ModelParseResults) {
-    //for each source, if 
+    //for each source, if
     this.changed = true
     this.parseError = null
     // for each source, zip in results based on alias
@@ -310,7 +301,6 @@ export class ModelConfig {
         this.parseError = `No parse results found for source ${source.alias}`
       }
     }
-
   }
 
   setSources(sources: ModelSource[]) {
@@ -338,10 +328,7 @@ export class ModelConfig {
       storage: data.storage,
       // map sources to fromJSON
 
-      sources: data.sources.map(
-        (source: any) =>
-          ModelSource.fromJSON(source)
-      ),
+      sources: data.sources.map((source: any) => ModelSource.fromJSON(source)),
       // parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null,
     })
     base.changed = false

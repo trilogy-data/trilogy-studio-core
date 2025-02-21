@@ -3,10 +3,14 @@
     <header class="concept-header">
       <h2>{{ concept.name }}</h2>
       <span class="namespace-badge">{{ concept.namespace }}</span>
-      <span v-if="concept.description" class="text-faint">{{ concept.description }}</span>
     </header>
 
     <div class="concept-content">
+      <div v-if="concept.description" class="concept-section">
+        <label>Description</label>
+        <span>{{ concept.description }}</span>
+      </div>
+
       <div class="concept-section">
         <label>Address</label>
         <span>{{ concept.address }}</span>
@@ -19,19 +23,20 @@
 
       <div class="concept-section">
         <label>Purpose</label>
-        <p>{{ concept.purpose }}</p> <span class="text-faint"> {{getPurposeDescription(concept.purpose)}}</span>
+        <p>{{ concept.purpose }}</p>
+        <span class="text-faint"> {{ getPurposeDescription(concept.purpose) }}</span>
       </div>
       <div class="concept-section">
         <label>Lineage</label>
         <div class="link-list">
-          <a 
-            v-for="item in concept.lineage" 
-            :key="item.id"
+          <a
+            v-for="item in concept.lineage"
+            :key="item.token"
             href="#"
             @click.prevent="handleLineageClick(item)"
             class="lineage-link"
           >
-            {{ item.name }}
+            {{ item.token }}
           </a>
         </div>
       </div>
@@ -54,34 +59,26 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { defineProps } from 'vue'
-
-const props = defineProps({
+import { Concept } from '../models'
+// @ts-ignore
+const _ = defineProps({
   concept: {
-    type: Object,
+    type: Concept,
     required: true,
-    validator: (concept) => {
-      return concept.name && 
-             concept.namespace && 
-             concept.address &&
-             concept.datatype &&
-             concept.purpose &&
-             Array.isArray(concept.lineage) &&
-             Array.isArray(concept.keys)
-    }
-  }
+  },
 })
-
+// @ts-ignore
 const handleLineageClick = (item) => {
   console.log('Lineage item clicked:', item)
 }
-
+// @ts-ignore
 const handleKeyClick = (key) => {
   console.log('Key clicked:', key)
 }
 
-const getPurposeDescription = (purpose) => {
+const getPurposeDescription = (purpose: string) => {
   switch (purpose) {
     case 'property':
       return 'A property is an attribute associated with one or more keys. A customer name is a property of a customer key.'
@@ -125,7 +122,6 @@ const getPurposeDescription = (purpose) => {
   padding: 0.25rem 0.75rem;
   border-radius: 16px;
   font-size: 0.875rem;
-
 }
 
 .concept-content {
@@ -163,8 +159,6 @@ const getPurposeDescription = (purpose) => {
 .lineage-link,
 .key-link {
   display: inline-block;
-  padding: 0.375rem 0.75rem;
-  color: #1971c2;
   text-decoration: none;
   border-radius: 4px;
   font-size: 0.875rem;

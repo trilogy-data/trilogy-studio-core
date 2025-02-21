@@ -63,7 +63,7 @@
         <tutorial />
       </template>
       <template v-else-if="activeScreen === 'models'">
-        <model-view :activeModelKey="activeModelKey" />
+        <model-view :activeModelKey="activeModelKey" @save-editors="saveEditorsCall" />
       </template>
       <template v-else-if="activeScreen === 'profile'">
         <user-profile />

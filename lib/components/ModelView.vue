@@ -1,18 +1,18 @@
 <template>
-  <div v-if = "selectedType==='model' && modelConfigs[selectedModel]" class="model-display">
+  <div v-if="selectedType === 'model' && modelConfigs[selectedModel]" class="model-display">
     <ModelCard :config="modelConfigs[selectedModel]" :index="selectedModel" />
   </div>
-  <div v-else-if = "selectedType==='source' && selectedSourceFull" class="editor-display">
-    <Editor :editorName="selectedSourceFull.editor" context="modelView"/>
+  <div v-else-if="selectedType === 'source' && selectedSourceFull" class="editor-display">
+    <Editor
+      :editorName="selectedSourceFull.editor"
+      context="modelView"
+      @save-editors="saveEditorsCall"
+    />
   </div>
-  <div v-else-if = "selectedType==='concept' && selectedConceptFull" class="model-display">
-    <ModelConcept 
-  :concept="selectedConceptFull"
-/>
+  <div v-else-if="selectedType === 'concept' && selectedConceptFull" class="model-display">
+    <ModelConcept :concept="selectedConceptFull" />
   </div>
-  <div>
-
-  </div>
+  <div></div>
 </template>
 
 <style scoped>
@@ -61,7 +61,7 @@ import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import ModelCard from './ModelCard.vue'
 import Editor from './Editor.vue'
-import {KeySeparator} from '../data/constants'
+import { KeySeparator } from '../data/constants'
 export default defineComponent({
   name: 'ModelConfigViewer',
   props: {
@@ -70,7 +70,7 @@ export default defineComponent({
       required: true,
     },
   },
-  setup(props) {
+  setup() {
     const sourceDetails = ref({
       name: '',
       alias: '',
@@ -153,21 +153,23 @@ export default defineComponent({
     editorList(): string[] {
       return Object.values(this.editorStore.editors).map((editor) => editor.name)
     },
-    
+
     selectedType() {
       return this.activeModelKey.split(KeySeparator)[0]
     },
-    selectedPath(){
+    selectedPath() {
       return this.activeModelKey.split(KeySeparator).slice(1)
     },
-    selectedModel(){
-      return this.activeModelKey.split(KeySeparator,2)[1]
+    selectedModel() {
+      return this.activeModelKey.split(KeySeparator, 2)[1]
     },
     selectedSource() {
       return this.activeModelKey.split(KeySeparator)[2]
     },
     selectedSourceFull() {
-      return this.modelConfigs[this.selectedModel]?.sources.find(x => x.alias === this.selectedSource)
+      return this.modelConfigs[this.selectedModel]?.sources.find(
+        (x) => x.alias === this.selectedSource,
+      )
     },
     selectedConceptNamespace() {
       return this.activeModelKey.split(KeySeparator)[3]
@@ -177,12 +179,18 @@ export default defineComponent({
     },
     selectedConceptFull() {
       return this.modelConfigs[this.selectedModel]?.sources
-    .find(x => x.alias === this.selectedSource)
-    ?.concepts
-    .find(concept => concept.name === this.selectedConceptName && concept.namespace === this.selectedConceptNamespace)
-    }
+        .find((x) => x.alias === this.selectedSource)
+        ?.concepts.find(
+          (concept) =>
+            concept.name === this.selectedConceptName &&
+            concept.namespace === this.selectedConceptNamespace,
+        )
+    },
   },
   methods: {
+    saveEditorsCall() {
+      this.$emit('save-editors')
+    },
     clearSources(model: string) {
       this.modelConfigs[model].sources = []
       this.fetchParseResults(model)

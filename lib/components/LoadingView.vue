@@ -8,7 +8,6 @@
   </div>
 </template>
 
-
 <script lang="ts">
 import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
@@ -41,9 +40,8 @@ export default defineComponent({
       } else {
         const minutes = Math.floor(ms / 60000)
         const remainingSeconds = ((ms % 60000) / 1000).toFixed(1)
-        elapsedTime.value = remainingSeconds !== '0.0' 
-          ? `${minutes} min ${remainingSeconds} sec` 
-          : `${minutes} min`
+        elapsedTime.value =
+          remainingSeconds !== '0.0' ? `${minutes} min ${remainingSeconds} sec` : `${minutes} min`
       }
     }
 
@@ -70,7 +68,6 @@ export default defineComponent({
   },
 })
 </script>
-
 
 <style scoped>
 @keyframes spin {
@@ -100,9 +97,7 @@ export default defineComponent({
   height: 100%;
 }
 
-
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
