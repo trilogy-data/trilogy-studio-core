@@ -1,8 +1,9 @@
 <template>
   <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
+
   <div v-else ref="editor" id="editor" class="editor-fix-styles">
     <div class="absolute-button bottom-run">
-      ABC
+      {{ editorData.type }}
       <loading-button class="button-transparent" :action="runQuery"
         >Run (ctrl-enter)</loading-button
       >
@@ -51,7 +52,7 @@
 <script lang="ts">
 import { defineComponent, inject } from 'vue'
 
-import * as monaco from 'monaco-editor'
+import { MarkerSeverity, editor, KeyMod, KeyCode } from 'monaco-editor'
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
@@ -62,7 +63,7 @@ import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import type { ContentInput } from '../stores/resolver'
 
-let editorMap: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map()
+let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
 
 export default defineComponent({
@@ -112,9 +113,6 @@ export default defineComponent({
       prompt: '',
       generatingPrompt: false,
       info: 'Query processing...',
-      // editor: null as monaco.editor.IStandaloneCodeEditor | null,
-      // editorX: 400,
-      // editorY: 400,
     }
   },
   components: {
@@ -132,7 +130,7 @@ export default defineComponent({
 
     return { connectionStore, modelStore, editorStore, trilogyResolver }
   },
-  mounted() {
+  async mounted() {
     this.$nextTick(() => {
       this.createEditor()
     })
@@ -178,8 +176,8 @@ export default defineComponent({
 
   methods: {
     async validateQuery(log: boolean = true) {
-      const editor = editorMap.get(this.context)
-      if (this.loading || !editor) {
+      const editorItem = editorMap.get(this.context)
+      if (this.loading || !editorItem) {
         return
       }
       // TODO - syntax validation for SQL?
@@ -204,14 +202,13 @@ export default defineComponent({
         return
       }
 
-      let annotations = await this.trilogyResolver.validate_query(editor.getValue())
-      let model = editor.getModel()
+      let annotations = await this.trilogyResolver.validate_query(editorItem.getValue())
+      let model = editorItem.getModel()
       if (!model) {
         return
       }
-      console.log(annotations)
-      monaco.MarkerSeverity.Error
-      monaco.editor.setModelMarkers(model, 'owner', annotations.data.items)
+      MarkerSeverity.Error
+      editor.setModelMarkers(model, 'owner', annotations.data.items)
     },
     async runQuery() {
       const editor = editorMap.get(this.context)
@@ -314,28 +311,29 @@ export default defineComponent({
     getEditor() {
       editorMap.get(this.editorName)
     },
+
     createEditor() {
       let editorElement = document.getElementById('editor')
       if (!editorElement) {
         return
       }
+
       // if we've already set up the editor
       if (editorMap.has(this.context) && mountedMap.get(this.context)) {
         editorMap.get(this.context)?.setValue(this.editorData.contents)
         return
       }
-      const editor = monaco.editor.create(editorElement, {
+
+      const editorItem = editor.create(editorElement, {
         value: this.editorData.contents,
-        language: this.editorData.type === 'preql' ? 'trilogy' : 'sql',
+        language: this.editorData.type === 'sql' ? 'sql' : 'trilogy',
         automaticLayout: true,
       })
-      editorMap.set(this.context, editor)
-      console.log(this.editorData.type)
-      editor.layout()
-      monaco.editor.defineTheme('trilogyStudio', {
+      editorMap.set(this.context, editorItem)
+      editorItem.layout()
+      editor.defineTheme('trilogyStudio', {
         base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
         inherit: true, // can also be false to completely replace the builtin rules
-        // language: 'sql',
         rules: [
           { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' }, // Green for comments
           { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' }, // Blue for keywords
@@ -359,23 +357,23 @@ export default defineComponent({
           // 'editor.inactiveSelectionBackground': '#88000015'
         },
       })
-      monaco.editor.setTheme('trilogyStudio')
-      editor.onDidChangeModelContent(() => {
-        this.editorStore.setEditorContents(this.editorName, editor.getValue())
+      editor.setTheme('trilogyStudio')
+      editorItem.onDidChangeModelContent(() => {
+        this.editorStore.setEditorContents(this.editorName, editorItem.getValue())
 
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
       })
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {
+      editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
         this.validateQuery()
       })
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
         this.runQuery()
       })
       if (this.genAICallback) {
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
+        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
           if (!this.loading) {
-            this.genAICallback(editor.getValue())
+            this.genAICallback(editorItem.getValue())
           }
         })
       }
@@ -383,7 +381,7 @@ export default defineComponent({
       //     editor.addAction({
       //         id: 'format-preql',
       //         label: 'Format Trilogy',
-      //         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI],
+      //         keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI],
       //         run: function () {
 
       //             this.formatTextCallback(editor.getValue()).then((response) => {
@@ -392,7 +390,7 @@ export default defineComponent({
       //         }
       //     });
       // }
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
       })
     },
