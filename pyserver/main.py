@@ -117,7 +117,7 @@ def safe_format_query(input: str) -> str:
 
 @router.post("/format_query")
 def format_query(query: QueryInSchema):
-    env = parse_env_from_full_model(query.full_model)
+    env = parse_env_from_full_model(query.full_model.sources)
     try:
         _, parsed = parse_text(safe_format_query(query.query), env)
     except Exception as e:
@@ -136,7 +136,7 @@ def validate_query(query: ValidateQueryInSchema):
 
 @router.post("/generate_query")
 def generate_query(query: QueryInSchema):
-    env = parse_env_from_full_model(query.full_model)
+    env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
     try:
         _, parsed = parse_text(safe_format_query(query.query), env)
@@ -167,11 +167,8 @@ def generate_query(query: QueryInSchema):
 @router.post("/parse_model")
 def parse_model(model: ModelInSchema) -> Model:
     try:
-        env = parse_env_from_full_model(model)
-        # add all imports by default
-        for idx, source in enumerate(model.sources):
-            env.parse(f"import {source.alias} as {source.alias};")
-        return model_to_response(model.name, env)
+
+        return model_to_response(model)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 

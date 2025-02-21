@@ -1,16 +1,105 @@
 <template>
   <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
-
-  <div v-else ref="editor" id="editor" class="editor-fix-styles">
-    <div class="absolute-button bottom-run">
-      {{ editorData.type }}
-      <loading-button class="button-transparent" :action="runQuery"
-        >Run (ctrl-enter)</loading-button
-      >
+  <template v-else>
+    <div class="menu-bar">
+      <div class="menu-left">
+        <div class="menu-title" @click="startEditing">
+          <span v-if="!isEditing" class="editable-text">
+            {{ editorData.name }}
+            <span class="edit-indicator">✎</span>
+          </span>
+          <input
+            v-else
+            ref="nameInput"
+            v-model="editableName"
+            @blur="finishEditing"
+            @keyup.enter="finishEditing"
+            @keyup.esc="cancelEditing"
+            class="name-input"
+            type="text"
+          />
+        </div>
+        <div class="toggle-group">
+          <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag('source')">
+            Source
+          </button>
+          <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
+            @click="toggleTag('scheduled')">
+            Scheduled
+          </button> -->
+        </div>
+      </div>
+      <div class="menu-actions">
+        <button class="button-transparent" @click="()=> validateQuery()">Parse</button>
+        <button class="button-transparent" :class="{ 'button-cancel': editorData.loading }" @click="runQuery">
+          {{ editorData.loading ? 'Cancel' : 'Run' }}
+        </button>
+      </div>
     </div>
-  </div>
+    <div ref="editor" id="editor" class="editor-fix-styles">
+    </div>
+  </template>
 </template>
 <style>
+
+.menu-bar {
+  background-color: var(--bg-sidebar);
+  display: flex;
+  padding-right:10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+
+.menu-title {
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.menu-title:hover .edit-indicator {
+  opacity: 1;
+}
+
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-indicator {
+  opacity: 0;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+}
+
+.name-input {
+  background: var(--bg-color);
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  font-size: inherit;
+  font-weight: 500;
+  width: auto;
+  min-width: 200px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
+}
+
 .editor-fix-styles {
   text-align: left;
   border: none;
@@ -18,15 +107,11 @@
   position: relative;
 }
 
-.absolute-button {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-}
 
 .button-transparent {
   background-color: transparent !important;
   /* Transparent background */
+  height:24px;
   color: #007bff;
   border: 1px solid #007bff;
   border-radius: 4px;
@@ -39,15 +124,7 @@
   /* min-width: 60px; */
 }
 
-.bottom-run {
-  bottom: 16px;
-  right: 16px;
-}
 
-.bottom-reset {
-  bottom: 16px;
-  right: 100px;
-}
 </style>
 <script lang="ts">
 import { defineComponent, inject } from 'vue'
@@ -61,6 +138,7 @@ import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
+import {EditorTag} from '../editors';
 import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
@@ -77,26 +155,6 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    connection: {
-      type: Object,
-      default: null,
-    },
-    submitCallback: {
-      type: Function,
-      default: null,
-    },
-    genAICallback: {
-      type: Function,
-      default: null,
-    },
-    formatTextCallback: {
-      type: Function,
-      default: null,
-    },
-    saveCallback: {
-      type: Function,
-      default: null,
-    },
     y: {
       type: Number,
       default: 400,
@@ -109,10 +167,12 @@ export default defineComponent({
   data() {
     return {
       last_passed_query_text: null,
-      form: null,
       prompt: '',
       generatingPrompt: false,
       info: 'Query processing...',
+      isEditing: false,
+      editableName: '',
+
     }
   },
   components: {
@@ -128,7 +188,7 @@ export default defineComponent({
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
-    return { connectionStore, modelStore, editorStore, trilogyResolver }
+    return { connectionStore, modelStore, editorStore, trilogyResolver, EditorTag }
   },
   async mounted() {
     this.$nextTick(() => {
@@ -175,6 +235,27 @@ export default defineComponent({
   },
 
   methods: {
+    toggleTag() {
+      this.editorData.tags = this.editorData.tags.includes(EditorTag.SOURCE)
+        ? this.editorData.tags.filter((tag) => tag !== EditorTag.SOURCE)
+        : [...this.editorData.tags, EditorTag.SOURCE]
+    },
+    startEditing() {
+      this.isEditing = true
+      this.editableName = this.editorData.name
+      this.$nextTick(() => {
+        // @ts-ignore
+        this.$refs.nameInput.focus()
+      })
+    },
+    finishEditing() {
+      this.isEditing = false
+      this.editorData.name = this.editableName
+    },
+    cancelEditing() {
+      this.isEditing = false
+    },
+
     async validateQuery(log: boolean = true) {
       const editorItem = editorMap.get(this.context)
       if (this.loading || !editorItem) {
@@ -252,19 +333,19 @@ export default defineComponent({
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
           : []
 
         // Get selected text or full content
         const selected = editor.getSelection()
         const text =
           selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
+            !(
+              selected.startColumn === selected.endColumn &&
+              selected.startLineNumber === selected.endLineNumber
+            )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
 

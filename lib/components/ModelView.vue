@@ -1,8 +1,17 @@
 <template>
-  <div class="model-display">
-    <div v-for="(config, index) in modelConfigs" :key="index" class="card">
-      <ModelCard :config="config" :index="index" />
-    </div>
+  <div v-if = "selectedType==='model' && modelConfigs[selectedModel]" class="model-display">
+    <ModelCard :config="modelConfigs[selectedModel]" :index="selectedModel" />
+  </div>
+  <div v-else-if = "selectedType==='source' && selectedSourceFull" class="editor-display">
+    <Editor :editorName="selectedSourceFull.editor" context="modelView"/>
+  </div>
+  <div v-else-if = "selectedType==='concept' && selectedConceptFull" class="model-display">
+    <ModelConcept 
+  :concept="selectedConceptFull"
+/>
+  </div>
+  <div>
+
   </div>
 </template>
 
@@ -17,6 +26,10 @@
   gap: 24px;
   padding: 20px;
   margin: 0 auto;
+}
+
+.editor-display {
+  height: 100%;
 }
 
 .card {
@@ -48,9 +61,16 @@ import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import ModelCard from './ModelCard.vue'
 import Editor from './Editor.vue'
+import {KeySeparator} from '../data/constants'
 export default defineComponent({
   name: 'ModelConfigViewer',
-  setup() {
+  props: {
+    activeModelKey: {
+      type: String,
+      required: true,
+    },
+  },
+  setup(props) {
     const sourceDetails = ref({
       name: '',
       alias: '',
@@ -99,7 +119,7 @@ export default defineComponent({
           console.error('Source already exists in model')
         } else {
           target.addModelSource(
-            new ModelSource(sourceDetails.value.name, sourceDetails.value.alias),
+            new ModelSource(sourceDetails.value.name, sourceDetails.value.alias, [], []),
           )
           fetchParseResults(model)
         }
@@ -133,6 +153,34 @@ export default defineComponent({
     editorList(): string[] {
       return Object.values(this.editorStore.editors).map((editor) => editor.name)
     },
+    
+    selectedType() {
+      return this.activeModelKey.split(KeySeparator)[0]
+    },
+    selectedPath(){
+      return this.activeModelKey.split(KeySeparator).slice(1)
+    },
+    selectedModel(){
+      return this.activeModelKey.split(KeySeparator,2)[1]
+    },
+    selectedSource() {
+      return this.activeModelKey.split(KeySeparator)[2]
+    },
+    selectedSourceFull() {
+      return this.modelConfigs[this.selectedModel]?.sources.find(x => x.alias === this.selectedSource)
+    },
+    selectedConceptNamespace() {
+      return this.activeModelKey.split(KeySeparator)[3]
+    },
+    selectedConceptName() {
+      return this.activeModelKey.split(KeySeparator)[4]
+    },
+    selectedConceptFull() {
+      return this.modelConfigs[this.selectedModel]?.sources
+    .find(x => x.alias === this.selectedSource)
+    ?.concepts
+    .find(concept => concept.name === this.selectedConceptName && concept.namespace === this.selectedConceptNamespace)
+    }
   },
   methods: {
     clearSources(model: string) {

@@ -276,6 +276,8 @@ export default defineComponent({
           target.sources.push({
             alias: sourceDetails.value.alias,
             editor: sourceDetails.value.name,
+            concepts: [],
+            datasources: [],
           })
           fetchParseResults(model)
         }

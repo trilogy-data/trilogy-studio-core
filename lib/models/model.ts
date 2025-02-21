@@ -131,6 +131,7 @@ export class Concept {
   purpose: Purpose
   description: string | null
   lineage: LineageItem[]
+  keys: string[]
 
   constructor(
     address: string,
@@ -140,6 +141,7 @@ export class Concept {
     purpose: Purpose,
     description?: string,
     lineage: LineageItem[] = [],
+    keys: string[] = [],
   ) {
     this.address = address
     this.name = name
@@ -148,20 +150,43 @@ export class Concept {
     this.purpose = purpose
     this.description = description || null
     this.lineage = lineage
+    this.keys = keys
+  }
+
+  static fromJSON(data: any): Concept {
+    return new Concept(
+      data.address,
+      data.name,
+      data.namespace,
+      data.datatype,
+      data.purpose,
+      data.description,
+      data.lineage,
+      data.keys,
+    )
   }
 }
 
 export class Datasource {
   name: string
   address: string
-  fields: Concept[]
+  concepts: Concept[]
   grain: Concept[]
 
-  constructor(name: string, address: string, fields: Concept[], grain: Concept[]) {
+  constructor(name: string, address: string, concepts: Concept[], grain: Concept[]) {
     this.name = name
     this.address = address
-    this.fields = fields
+    this.concepts = concepts
     this.grain = grain
+  }
+
+  static fromJSON(data: any): Datasource {
+    return new Datasource(
+      data.name,
+      data.address,
+      data.concepts.map((field: any) => Concept.fromJSON(field)),
+      data.grain.map((field: any) => Concept.fromJSON(field)),
+    )
   }
 }
 
@@ -180,36 +205,28 @@ class ModelParseItem {
       data.alias,
       data.concepts.map(
         (concept: any) =>
-          new Concept(
-            concept.key,
-            concept.name,
-            concept.namespace,
-            concept.datatype,
-            concept.purpose,
-            concept.description,
-            concept.lineage,
-          ),
+          Concept.fromJSON(concept)
       ),
       data.datasources.map(
         (datasource: any) =>
-          new Datasource(datasource.name, datasource.address, datasource.fields, datasource.grain),
+          Datasource.fromJSON(datasource)
       ),
     )
   }
 }
 export class ModelParseResults {
 
-  items: ModelParseItem[]
+  sources: ModelParseItem[]
 
-  constructor(items: ModelParseItem[]) {
-    this.items = items
+  constructor(sources: ModelParseItem[]) {
+    this.sources = sources
   }
 
   static fromJSON(data: any): ModelParseResults {
     return new ModelParseResults(data.items.map((item: any) => ModelParseItem.fromJSON(item)))
   }
 
-  
+
 }
 
 export class ModelSource {
@@ -221,8 +238,37 @@ export class ModelSource {
   constructor(editor: string, alias: string, concepts: Concept[], datasources: Datasource[]) {
     this.editor = editor
     this.alias = alias
-    this.concepts = concepts
-    this.datasources = datasources
+    this.concepts = concepts || []
+    this.datasources = datasources || []
+  }
+
+  static fromJSON(source: any): ModelSource {
+    return new ModelSource(
+      source.editor,
+      source.alias,
+      (source.concepts || []).map(
+        (concept: any) =>
+          new Concept(
+            concept.address,
+            concept.name,
+            concept.namespace,
+            concept.datatype,
+            concept.purpose,
+            concept.description,
+            concept.lineage,
+          ),
+      ),
+      (source.datasources || []).map(
+        (datasource: any) =>
+          new Datasource(
+            datasource.name,
+            datasource.address,
+            // 
+            datasource.concepts,
+            datasource.grain,
+          ),
+      ),
+    )
   }
 }
 
@@ -242,7 +288,6 @@ export class ModelConfig {
     name: string
     sources: ModelSource[]
     storage: string
-    parseResults: ModelParseResults | null
   }) {
     this.name = name
     this.sources = sources
@@ -257,7 +302,7 @@ export class ModelConfig {
     this.parseError = null
     // for each source, zip in results based on alias
     for (let source of this.sources) {
-      let result = parseResults.items.find((item) => item.alias === source.alias)
+      let result = parseResults.sources.find((item) => item.alias === source.alias)
       if (result) {
         source.concepts = result.concepts
         source.datasources = result.datasources
@@ -291,8 +336,13 @@ export class ModelConfig {
     let base = new ModelConfig({
       name: data.name,
       storage: data.storage,
-      sources: data.sources,
-      parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null,
+      // map sources to fromJSON
+
+      sources: data.sources.map(
+        (source: any) =>
+          ModelSource.fromJSON(source)
+      ),
+      // parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null,
     })
     base.changed = false
     return base

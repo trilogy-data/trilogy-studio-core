@@ -6,6 +6,7 @@
           @editor-selected="setActiveEditor"
           @screen-selected="setActiveScreen"
           @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
         />
@@ -62,7 +63,7 @@
         <tutorial />
       </template>
       <template v-else-if="activeScreen === 'models'">
-        <model-view />
+        <model-view :activeModelKey="activeModelKey" />
       </template>
       <template v-else-if="activeScreen === 'profile'">
         <user-profile />
@@ -161,7 +162,7 @@ import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
 import Tutorial from '../components/Tutorial.vue'
-import ModelView from '../components/Models.vue'
+import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
@@ -183,9 +184,11 @@ export default {
   data() {
     let screen = getDefaultValueFromHash('screen')
     let activeEditor = getDefaultValueFromHash('editor')
+    let activeModelKey = getDefaultValueFromHash('modelKey')
     return {
       activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
+      activeModelKey: activeModelKey ? activeModelKey : '',
       activeTab: 'results',
     }
   },
@@ -249,6 +252,10 @@ export default {
     setActiveScreen(screen: string) {
       pushHashToUrl('screen', screen)
       this.activeScreen = screen
+    },
+    setActiveModelKey(modelKey: string) {
+      pushHashToUrl('modelKey', modelKey)
+      this.activeModelKey = modelKey
     },
     saveEditorsCall() {
       this.saveEditors()

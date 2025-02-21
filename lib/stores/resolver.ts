@@ -7,10 +7,14 @@ interface QueryResponse {
   }
 }
 
-interface ModelResponse {
-  name: string
+interface ModelItemResponse {
+  alias: string
   concepts: Concept[]
   datasources: Datasource[]
+}
+
+interface ModelResponse {
+  sources: ModelItemResponse[]
 }
 
 interface ValidateItem {
