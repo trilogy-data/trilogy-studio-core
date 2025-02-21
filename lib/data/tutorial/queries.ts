@@ -41,10 +41,10 @@ datasource orders(
     o_orderstatus: status,
     o_totalprice: total_price,
     o_orderdate: date,
-    o_orderpriority:priority,
+    o_orderpriority:priority, #1-URGENT, 2-HIGH, 3-MEDIUM, 4-NOT SPECIFIED
     o_clerk:clerk,
     o_comment:comment,
-    o_shippriority:ship_priority
+    o_shippriority:ship_priority  #1-URGENT, 2-HIGH, 3-MEDIUM, 4-NOT SPECIFIED
 )
 grain (id)
 address \`https://shell.duckdb.org/data/tpch/0_01/parquet/order.parquet\`;
