@@ -29,8 +29,6 @@ from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 
-import os
-
 # Define the path to the .env file
 env_path = Path(__file__).parent / ".env"
 

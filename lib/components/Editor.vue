@@ -215,7 +215,7 @@ export default defineComponent({
       if (this.loading || !editor) {
         return
       }
-      await this.validateQuery(false)
+
       try {
         // @ts-ignore
         window.goatcounter.count({
@@ -248,7 +248,7 @@ export default defineComponent({
 
       try {
         this.editorData.loading = true
-
+        await this.validateQuery(false)
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({

@@ -165,17 +165,19 @@ export class Datasource {
   }
 }
 
-export class ModelParseResults {
+class ModelParseItem {
+  alias: string
   concepts: Concept[]
   datasources: Datasource[]
 
-  constructor(concepts: Concept[], datasources: Datasource[]) {
+  constructor(alias: string, concepts: Concept[], datasources: Datasource[]) {
+    this.alias = alias
     this.concepts = concepts
     this.datasources = datasources
   }
-
-  static fromJSON(data: any): ModelParseResults {
-    return new ModelParseResults(
+  static fromJSON(data: any): ModelParseItem {
+    return new ModelParseItem(
+      data.alias,
       data.concepts.map(
         (concept: any) =>
           new Concept(
@@ -195,14 +197,32 @@ export class ModelParseResults {
     )
   }
 }
+export class ModelParseResults {
+
+  items: ModelParseItem[]
+
+  constructor(items: ModelParseItem[]) {
+    this.items = items
+  }
+
+  static fromJSON(data: any): ModelParseResults {
+    return new ModelParseResults(data.items.map((item: any) => ModelParseItem.fromJSON(item)))
+  }
+
+  
+}
 
 export class ModelSource {
   editor: string
   alias: string
+  concepts: Concept[]
+  datasources: Datasource[]
 
-  constructor(editor: string, alias: string) {
+  constructor(editor: string, alias: string, concepts: Concept[], datasources: Datasource[]) {
     this.editor = editor
     this.alias = alias
+    this.concepts = concepts
+    this.datasources = datasources
   }
 }
 
@@ -210,7 +230,7 @@ export class ModelConfig {
   name: string
   storage: string
   sources: ModelSource[]
-  parseResults: ModelParseResults | null = null
+  // parseResults: ModelParseResults | null = null
   parseError: string | null = null
   changed: boolean = true
 
@@ -218,7 +238,6 @@ export class ModelConfig {
     name,
     sources,
     storage,
-    parseResults = null,
   }: {
     name: string
     sources: ModelSource[]
@@ -228,14 +247,25 @@ export class ModelConfig {
     this.name = name
     this.sources = sources
     this.storage = storage
-    this.parseResults = parseResults
+    // this.parseResults = parseResults
     this.changed = true
   }
 
   setParseResults(parseResults: ModelParseResults) {
-    this.parseResults = parseResults
+    //for each source, if 
     this.changed = true
     this.parseError = null
+    // for each source, zip in results based on alias
+    for (let source of this.sources) {
+      let result = parseResults.items.find((item) => item.alias === source.alias)
+      if (result) {
+        source.concepts = result.concepts
+        source.datasources = result.datasources
+      } else {
+        this.parseError = `No parse results found for source ${source.alias}`
+      }
+    }
+
   }
 
   setSources(sources: ModelSource[]) {
@@ -254,7 +284,6 @@ export class ModelConfig {
 
   setParseError(parseError: string) {
     this.parseError = parseError
-    this.parseResults = null
     this.changed = true
   }
 

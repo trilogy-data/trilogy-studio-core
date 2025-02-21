@@ -1,5 +1,5 @@
 <template>
-  <span class="flex relative-container">
+  <span>
     <button @click="createModel">New</button>
     <div v-if="visible" class="absolute-form">
       <form @submit.prevent="submitModelCreation">

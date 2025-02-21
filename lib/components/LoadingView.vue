@@ -1,19 +1,17 @@
 <template>
   <div class="loading-container">
-    <div class="loading-animation">
-      <div class="circle"></div>
-      <div class="circle"></div>
-      <div class="circle"></div>
-    </div>
-    <div class="loading-text">Running query{{ dots }}</div>
+    <img :src="trilogyIcon" class="trilogy-icon" />
+    <div class="loading-text">Executing ({{ elapsedTime }})</div>
     <div class="cancel-container">
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </div>
   </div>
 </template>
 
+
 <script lang="ts">
 import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
+import trilogyIcon from '../static/trilogy.png'
 
 interface Props {
   cancel?: (() => void) | null
@@ -28,13 +26,25 @@ export default defineComponent({
     },
   },
   setup(props: Props) {
-    const dots = ref('')
-    let intervalId: number
+    const startTime = ref(Date.now())
+    const elapsedTime = ref('0.0 sec')
+    let interval: ReturnType<typeof setInterval> | null = null
 
-    const animateDots = () => {
-      intervalId = window.setInterval(() => {
-        dots.value = dots.value.length >= 3 ? '' : dots.value + '.'
-      }, 500)
+    const updateElapsedTime = () => {
+      const ms = Date.now() - startTime.value
+      const seconds = (ms / 1000).toFixed(1) // Show tenths of a second
+
+      if (ms < 1000) {
+        elapsedTime.value = `${ms} ms`
+      } else if (ms < 60000) {
+        elapsedTime.value = `${seconds} sec`
+      } else {
+        const minutes = Math.floor(ms / 60000)
+        const remainingSeconds = ((ms % 60000) / 1000).toFixed(1)
+        elapsedTime.value = remainingSeconds !== '0.0' 
+          ? `${minutes} min ${remainingSeconds} sec` 
+          : `${minutes} min`
+      }
     }
 
     const handleCancel = () => {
@@ -44,55 +54,55 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      animateDots()
+      startTime.value = Date.now()
+      interval = setInterval(updateElapsedTime, 100) // Update every 100ms
     })
 
     onBeforeUnmount(() => {
-      clearInterval(intervalId)
+      if (interval) clearInterval(interval)
     })
 
     return {
-      dots,
       handleCancel,
+      trilogyIcon,
+      elapsedTime,
     }
   },
 })
 </script>
 
+
 <style scoped>
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.trilogy-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  height: 30px;
+  width: 30px;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-top: 40px;
   padding: 2rem;
   background: var(--bg-light);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   height: 100%;
 }
 
-.loading-animation {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 1rem;
-}
-
-.circle {
-  width: 12px;
-  height: 12px;
-  background-color: #3498db;
-  border-radius: 50%;
-  animation: bounce 0.6s infinite;
-}
-
-.circle:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.circle:nth-child(3) {
-  animation-delay: 0.4s;
-}
 
 @keyframes bounce {
+
   0%,
   100% {
     transform: translateY(0);
@@ -112,11 +122,12 @@ export default defineComponent({
 }
 
 .cancel-button {
-  background-color: #e74c3c;
-  color: white;
+  color: var(--text);
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+  border: 2px solid #e74d3c82;
+  background-color: transparent;
   height: 24px !important;
   width: 100px;
 }
