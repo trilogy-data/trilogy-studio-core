@@ -118,9 +118,9 @@ export default {
 }
 
 .btn {
-  min-height: 24px;
+  /* min-height: 24px; */
   border: 2px solid transparent;
-  width: 100%;
+  /* width: 100%; */
 }
 
 .spinner {

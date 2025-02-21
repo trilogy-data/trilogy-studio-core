@@ -73,6 +73,12 @@ export default defineComponent({
   },
   data() {
     let sidebarFeatureItems = [
+      // {
+      //     name: 'dashboard',
+      //     tooltip: 'Dashboard',
+      //     icon: 'mdi mdi-chart-areaspline',
+      //     screen: 'dashboard',
+      //   },
       {
         name: 'models',
         tooltip: 'Models',
@@ -95,7 +101,7 @@ export default defineComponent({
       },
       {
         name: 'database',
-        tooltip: 'Editor Connections',
+        tooltip: 'Connections',
         icon: 'mdi mdi-database',
         screen: 'connections',
       },

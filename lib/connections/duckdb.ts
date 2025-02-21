@@ -19,7 +19,7 @@ async function createDuckDB() {
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
   return await db.connect()
 }
-
+// @ts-ignore
 export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
   private connection: duckdb.AsyncDuckDBConnection
@@ -51,14 +51,7 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   // Example of a custom method for MotherDuck
-  async query(sql: string): Promise<Results> {
-    if (!this.connected) {
-      console.error(`Cannot execute query. ${this.name} is not connected.`)
-      throw new Error(`Connection ${this.name} not established. Reset connection.`)
-    }
-    if (!sql) {
-      throw new Error('Query is empty.')
-    }
+  async query_core(sql: string): Promise<Results> {
     const result = await this.connection.query(sql)
     // Map headers (columns) from the result schema
     const schema = result.schema.fields // Assuming `fields` is the column metadata

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex relative-container">
+  <div>
     <button @click="createConnection">Add</button>
 
     <div v-if="visible" class="absolute-form">

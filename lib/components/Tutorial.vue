@@ -197,6 +197,7 @@ export default {
   padding: 1rem;
   color: var(--text-color);
   overflow-y: scroll;
+  max-width: 800px;
 }
 
 .tutorial-section {

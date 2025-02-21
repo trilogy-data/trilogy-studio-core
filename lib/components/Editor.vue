@@ -177,12 +177,48 @@ export default defineComponent({
   },
 
   methods: {
+    async validateQuery(log: boolean = true) {
+      const editor = editorMap.get(this.context)
+      if (this.loading || !editor) {
+        return
+      }
+      // TODO - syntax validation for SQL?
+      if (this.editorData.type === 'sql') {
+        return
+      }
+      try {
+        if (log) {
+          // @ts-ignore
+          window.goatcounter.count({
+            path: 'studio-query-validate',
+            title: this.editorData.type,
+            event: true,
+          })
+        }
+      } catch (error) {
+        console.log(error)
+      }
+      const conn = this.connectionStore.connections[this.editorData.connection]
+      if (!conn) {
+        this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
+        return
+      }
+
+      let annotations = await this.trilogyResolver.validate_query(editor.getValue())
+      let model = editor.getModel()
+      if (!model) {
+        return
+      }
+      console.log(annotations)
+      monaco.MarkerSeverity.Error
+      monaco.editor.setModelMarkers(model, 'owner', annotations.data.items)
+    },
     async runQuery() {
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
       }
-
+      await this.validateQuery(false)
       try {
         // @ts-ignore
         window.goatcounter.count({
@@ -197,6 +233,11 @@ export default defineComponent({
       const conn = this.connectionStore.connections[this.editorData.connection]
       if (!conn) {
         this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
+        return
+      }
+
+      if (!conn.connected) {
+        this.editorData.setError(`Connection is not active.`)
         return
       }
 
@@ -285,11 +326,11 @@ export default defineComponent({
       }
       const editor = monaco.editor.create(editorElement, {
         value: this.editorData.contents,
-        language: this.editorData.type === 'trilogy' ? 'trilogy' : 'sql',
+        language: this.editorData.type === 'preql' ? 'trilogy' : 'sql',
         automaticLayout: true,
       })
       editorMap.set(this.context, editor)
-
+      console.log(this.editorData.type)
       editor.layout()
       monaco.editor.defineTheme('trilogyStudio', {
         base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
@@ -298,14 +339,15 @@ export default defineComponent({
         rules: [
           { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' }, // Green for comments
           { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' }, // Blue for keywords
-          { token: 'definition', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light yellow for function definitions
+          { token: 'definition', foreground: '#E5C07B', fontStyle: 'bold' }, // Light yellow for function definitions
           { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' }, // Teal for types (like int, string, etc.)
           { token: 'string', foreground: '#CE9178' }, // Light orange for strings
           { token: 'number', foreground: '#B5CEA8' }, // Light green for numbers
           { token: 'operator', foreground: '#D4D4D4' }, // Light gray for operators
           { token: 'delimiter', foreground: '#D4D4D4' }, // Light gray for delimiters (like commas, colons)
-          { token: 'function', foreground: '#DCDCAA', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
+          { token: 'function', foreground: '#C586C0', fontStyle: 'bold' }, // Light gray for delimiters (like commas, colons)
           { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' }, // hidden should be whitish
+          { token: 'property', foreground: '#BFBFBF' }, //italicize properties
         ],
         colors: {
           // 'editor.foreground': '#F8F8F8',
@@ -324,7 +366,9 @@ export default defineComponent({
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
       })
-
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {
+        this.validateQuery()
+      })
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
         this.runQuery()
       })

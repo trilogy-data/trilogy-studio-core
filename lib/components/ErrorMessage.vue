@@ -1,44 +1,54 @@
 <template>
   <div class="error-message">
-    <span class="error-icon">⚠️</span>
-    <span class="error-text"><slot></slot></span>
+    <span class="error-text"><span class="error-icon">⚠️</span><slot></slot></span>
+    <div class="error-action">
+      <slot name="action"></slot>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
 export default {
   name: 'ErrorMessage',
-  props: {
-    // message: {
-    //   type: String,
-    //   required: true,
-    // },
-  },
+  props: {},
 }
 </script>
 
 <style scoped>
 .error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   background-color: #fef2f2; /* Light red background */
-  color: #e60000; /* Bright red text */
+  color: var(--error-color); /* Bright red text */
   border-left: 5px solid #e60000; /* A bold left border for emphasis */
   border-right: 5px solid #e60000; /* A bold left border for emphasis */
   padding: 12px 20px;
+  padding-top: 40px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   font-family: 'Arial', sans-serif;
   font-size: 14px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow to lift the banner */
+  height: 100%;
+  vertical-align: middle;
 }
 
 .error-icon {
-  margin-right: 12px;
+  /* margin-right: 12px; */
   font-size: 18px;
 }
 
 .error-text {
-  flex-grow: 1;
+  /* flex-grow: 1; */
   font-weight: bold;
+}
+
+.error-action {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 </style>

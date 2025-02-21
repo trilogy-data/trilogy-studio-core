@@ -21,6 +21,19 @@ const useConnectionStore = defineStore('connections', {
       }
     },
 
+    connectionStateToStatus(connection: Connection | null) {
+      if (!connection) {
+        return 'disabled'
+      }
+      if (connection.running) {
+        return 'running'
+      } else if (connection.connected) {
+        return 'connected'
+      } else {
+        return 'disabled'
+      }
+    },
+
     newConnection(name: string, type: string, options: Record<string, any>) {
       console.log('creating noew')
       if (this.connections[name]) {

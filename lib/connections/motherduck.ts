@@ -1,7 +1,7 @@
 import BaseConnection from './base'
 import { MDConnection } from '@motherduck/wasm-client'
 import { Results, ColumnType } from '../editors/results'
-
+// @ts-ignore
 export default class MotherDuckConnection extends BaseConnection {
   // @ts-ignore
   private connection: MDConnection
@@ -42,10 +42,6 @@ export default class MotherDuckConnection extends BaseConnection {
 
   // Example of a custom method for MotherDuck
   async query(sql: string): Promise<Results> {
-    if (!this.connected) {
-      console.error(`Cannot execute query. ${this.name} is not connected.`)
-      throw new Error('Connection not established.')
-    }
     const result = await this.connection.evaluateQuery(sql)
     let headers = new Map(
       result.data

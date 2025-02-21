@@ -17,8 +17,9 @@
 }
 .mb-1 {
   font-weight: 400;
+  font-size: 14px;
   margin-top: 5px;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 </style>
 <script lang="ts">

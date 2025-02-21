@@ -13,6 +13,20 @@ interface ModelResponse {
   datasources: Datasource[]
 }
 
+interface ValidateItem {
+  startLineNumber: number
+  startColumn: number
+  endLineNumber: number
+  endColumn: number
+  message: string
+  severity: number
+}
+interface ValidateResponse {
+  data: {
+    items: ValidateItem[]
+  }
+}
+
 export interface ContentInput {
   alias: string
   contents: string
@@ -33,6 +47,16 @@ export default class AxiosResolver {
       }
     }
     return JSON.stringify(base)
+  }
+  async validate_query(query: string): Promise<ValidateResponse> {
+    return axios
+      .post(`${this.address}/validate_query`, {
+        query: query,
+      })
+      .catch((error: Error) => {
+        console.log(error)
+        throw Error(this.getErrorMessage(error))
+      })
   }
 
   async resolve_query(
