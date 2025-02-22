@@ -144,11 +144,11 @@ describe('EditorLocalStorage', () => {
 
     // @ts-ignore
     localStorage.saveConnections(Object.values(connections))
-    const loadedConnections = localStorage.loadConnections()
-
-    expect(Object.keys(loadedConnections)).toHaveLength(2)
-    expect(loadedConnections['conn1'].name).toBe('conn1')
-    expect(loadedConnections['conn2'].name).toBe('conn2')
+    localStorage.loadConnections().then((loadedConnections) => {
+      expect(Object.keys(loadedConnections)).toHaveLength(2)
+      expect(loadedConnections['conn1'].name).toBe('conn1')
+      expect(loadedConnections['conn2'].name).toBe('conn2')
+    })
   })
 
   it('should delete a connection by name', () => {
@@ -158,11 +158,12 @@ describe('EditorLocalStorage', () => {
     }
     // @ts-ignore
     localStorage.saveConnections(Object.values(connections))
-    localStorage.deleteConnection('conn1')
-
-    const loadedConnections = localStorage.loadConnections()
-    expect(Object.keys(loadedConnections)).toHaveLength(1)
-    expect(loadedConnections['conn2'].name).toBe('conn2')
+    localStorage.deleteConnection('conn1').then(() => {
+      localStorage.loadConnections().then((loadedConnections) => {
+        expect(Object.keys(loadedConnections)).toHaveLength(1)
+        expect(loadedConnections['conn2'].name).toBe('conn2')
+      })
+    })
   })
 
   it('should save and load model configs', () => {
