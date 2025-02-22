@@ -7,6 +7,7 @@
           @screen-selected="setActiveScreen"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
+          @documentation-key-selected="setActiveDocumentationKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
         />
@@ -60,7 +61,7 @@
       </template>
 
       <template v-else-if="activeScreen === 'tutorial'">
-        <tutorial />
+        <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
       </template>
       <template v-else-if="activeScreen === 'models'">
         <model-view :activeModelKey="activeModelKey" @save-editors="saveEditorsCall" />
@@ -161,7 +162,7 @@ import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-import Tutorial from '../components/Tutorial.vue'
+import TutorialPage from '../components/TutorialPage.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
@@ -185,10 +186,12 @@ export default {
     let screen = getDefaultValueFromHash('screen')
     let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
+    let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
     return {
       activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
+      activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeTab: 'results',
     }
   },
@@ -199,7 +202,7 @@ export default {
     SidebarLayout,
     VerticalSplitLayout,
     ErrorMessage,
-    Tutorial,
+    TutorialPage,
     ModelView,
     UserSettings,
     UserProfile,
@@ -256,6 +259,10 @@ export default {
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey
+    },
+    setActiveDocumentationKey(documentationKey: string) {
+      pushHashToUrl('documentationKey', documentationKey)
+      this.activeDocumentationKey = documentationKey
     },
     saveEditorsCall() {
       this.saveEditors()

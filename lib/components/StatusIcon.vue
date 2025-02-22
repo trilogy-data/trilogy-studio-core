@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Tooltip from './Tooltip.vue'
 
 export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled'
 
-const props = defineProps<{ status: Status }>()
+const props = defineProps<{ status: Status; message?: string }>()
 
 const statusClasses = computed(() => {
   return (
@@ -19,7 +20,10 @@ const statusClasses = computed(() => {
 </script>
 
 <template>
-  <span class="indicator" :class="statusClasses"></span>
+  <tooltip v-if="message" :content="message" position="left">
+    <span class="indicator" :class="statusClasses"></span>
+  </tooltip>
+  <span v-else class="indicator" :class="statusClasses"></span>
 </template>
 
 <style scoped>

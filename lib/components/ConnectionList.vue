@@ -74,6 +74,11 @@
               :status="
                 connectionStore.connectionStateToStatus(connectionStore.connections[item.name])
               "
+              :message="
+                connectionStore.connections[item.name].error
+                  ? connectionStore.connections[item.name].error || ''
+                  : ''
+              "
             />
           </span>
         </template>
