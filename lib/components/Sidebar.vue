@@ -43,7 +43,10 @@
       />
       <ConnectionList v-else-if="active === 'connections'" />
       <ModelSidebar v-else-if="active === 'models'" @model-key-selected="modelKeySelected" />
-      <TutorialSidebar v-else-if="active === 'tutorial'" />
+      <TutorialSidebar
+        v-else-if="active === 'tutorial'"
+        @documentation-key-selected="documentationKeySelected"
+      />
     </div>
   </div>
 </template>
@@ -137,6 +140,9 @@ export default defineComponent({
     },
     modelKeySelected(key: string) {
       this.$emit('model-key-selected', key)
+    },
+    documentationKeySelected(key: string) {
+      this.$emit('documentation-key-selected', key)
     },
     saveEditors() {
       this.$emit('save-editors')

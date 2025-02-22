@@ -58,6 +58,12 @@
   </section>
 </template>
 <style scoped>
+.model-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
 .button {
   flex: 0.25;
 }

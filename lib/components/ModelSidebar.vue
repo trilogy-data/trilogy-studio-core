@@ -61,6 +61,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import AxiosResolver from '../stores/resolver'
 import trilogyIcon from '../static/trilogy.png'
 import { KeySeparator } from '../data/constants'
+import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'ModelList',
@@ -69,21 +70,42 @@ export default {
     const saveModels = inject<Function>('saveModels')
     const editorStore = inject<EditorStoreType>('editorStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+
+    const current = getDefaultValueFromHash('modelKey') || ''
+    const currentType = current.split(KeySeparator)[0]
+    let currentModel = ''
+    let currentSource = ''
+    let splits = current.split(KeySeparator)
+    if (currentType === 'model') {
+      currentModel = splits[1]
+    } else if (currentType === 'source') {
+      currentModel = splits[1]
+      currentSource = splits[2]
+    } else if (currentType === 'datasource') {
+      currentModel = splits[1]
+      currentSource = splits[2]
+    } else if (currentType === 'concept') {
+      currentModel = splits[1]
+      currentSource = splits[2]
+    }
+
     if (!modelStore || !saveModels || !editorStore || !trilogyResolver) {
       throw new Error('Model store is not provided!')
     }
 
     let collapsedPre = {} as Record<string, boolean>
-
     // first loop to pre-collapse
     Object.values(modelStore.models).forEach((model) => {
       let modelId = ['model', model.name].join(KeySeparator)
-      collapsedPre[modelId] = true
+      if (model.name !== currentModel) {
+        collapsedPre[modelId] = true
+      }
 
       model.sources.forEach((source) => {
         let sourceId = ['source', model.name, source.alias].join(KeySeparator)
-        collapsedPre[sourceId] = true
-
+        if (model.name !== currentModel || source.alias !== currentSource) {
+          collapsedPre[sourceId] = true
+        }
         source.datasources.forEach((ds) => {
           let dsId = ['datasource', model.name, source.alias, ds.name].join(KeySeparator)
           collapsedPre[dsId] = true
