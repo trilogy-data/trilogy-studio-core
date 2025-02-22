@@ -38,7 +38,7 @@ select 3 as id, 'alice' as name
 
     response = test_client.post("/parse_model", data=model.model_dump_json())  # type: ignore
     assert response.status_code == 200
-    assert response.json()["concepts"][0]["address"] == "test.cuid"
+    assert response.json()["sources"][0]["concepts"][0]["address"] == "local.cuid"
 
 
 # def test_read_models(test_client: TestClient):

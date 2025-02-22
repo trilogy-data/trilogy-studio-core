@@ -277,5 +277,6 @@ export default {
   border: 1px solid hsl(210, 100%, 50%, 0.5);
   color: var(--tag-font);
   line-height: 10px;
+  cursor: pointer;
 }
 </style>

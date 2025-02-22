@@ -10,7 +10,7 @@ const useModelConfigStore = defineStore('models', {
   },
   actions: {
     newModelConfig(name: string) {
-      let model = new ModelConfig({ name: name, storage: 'local', sources: [], parseResults: null })
+      let model = new ModelConfig({ name: name, storage: 'local', sources: [] })
       if (name in this.models) {
         throw Error(`ModelConfig with ${name} already exists.`)
       }

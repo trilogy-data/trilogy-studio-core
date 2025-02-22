@@ -41,10 +41,10 @@ datasource orders(
     o_orderstatus: status,
     o_totalprice: total_price,
     o_orderdate: date,
-    o_orderpriority:priority,
+    o_orderpriority:priority, #1-URGENT, 2-HIGH, 3-MEDIUM, 4-NOT SPECIFIED
     o_clerk:clerk,
     o_comment:comment,
-    o_shippriority:ship_priority
+    o_shippriority:ship_priority  #1-URGENT, 2-HIGH, 3-MEDIUM, 4-NOT SPECIFIED
 )
 grain (id)
 address \`https://shell.duckdb.org/data/tpch/0_01/parquet/order.parquet\`;
@@ -153,8 +153,8 @@ import part as part;
 key id int;
 property id.quantity float;
 property id.extended_price float;
-property id.discount float;
-property id.tax float;
+property id.discount float; # percent discount
+property id.tax float; # tax, as percentage
 property id.return_flag string;
 property id.line_status string;
 property id.ship_date date;
@@ -164,6 +164,7 @@ property id.ship_instruct string;
 property id.ship_mode string;
 property id.comment string;
 
+auto total_revenue <- sum(extended_price* (1 - discount)); # total revenue is based on the extended price minus discount.
 
 datasource lineitem(
     l_orderkey: order.id,

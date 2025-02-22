@@ -5,86 +5,58 @@
       <loading-button class="button" :action="() => fetchParseResults(index)">
         Parse
       </loading-button>
-      <div class="flex relative-container">
-        <button class="button" @click="newSourceVisible[index] = true">Add New Source</button>
-
-        <div v-if="newSourceVisible[index]" class="absolute-form">
-          <form @submit.prevent="submitSourceAddition(index)">
-            <div>
-              <label for="connection-name">Alias</label>
-              <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
-              <label for="connection-name">Editor</label>
-
-              <select v-model="sourceDetails.name" id="editor-name" required>
-                <option v-for="editor in editorList" :key="editor" :value="editor">
-                  {{ editor }}
-                </option>
-              </select>
-            </div>
-
-            <button type="submit">Submit</button>
-            <button type="button" @click="newSourceVisible[index] = !newSourceVisible[index]">
-              Cancel
-            </button>
-          </form>
-        </div>
-      </div>
+      <button class="button" @click="toggleNewSource(index)">Add New Source</button>
       <button class="button" @click="clearSources(index)">Clear Sources</button>
       <button class="button" @click="remove(index)">Delete</button>
     </div>
-    <ul class="source-list">
-      <li v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-        <div class="editor-source" @click="onEditorClick(source)">
-          <div class="flex relative-container">
-            {{ source.editor }}
-            <span class="editor-source-alias"> (importable as {{ source.alias }})</span>
-            <button class="button delete-button" @click="removeSource(index, sourceIndex)">
-              Remove
-            </button>
-          </div>
-          <Editor
-            :context="source.editor"
-            class="editor-inline"
-            v-if="isEditorExpanded[source.editor]"
-            :editorName="source.editor"
-          />
-        </div>
-      </li>
-    </ul>
+
+    <div v-if="newSourceVisible[index]" class="absolute-form">
+      <form @submit.prevent="submitSourceAddition(index)">
+        <label for="editor-alias">Alias</label>
+        <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
+        <label for="editor-name">Editor</label>
+        <select v-model="sourceDetails.name" id="editor-name" required>
+          <option v-for="editor in editorList" :key="editor" :value="editor">
+            {{ editor }}
+          </option>
+        </select>
+        <button type="submit">Submit</button>
+        <button type="button" @click="toggleNewSource(index)">Cancel</button>
+      </form>
+    </div>
+    <h3 class="parse-results">Model Sources</h3>
     <div v-if="config.parseError" class="parse-error">
-      <error-message
-        ><span>Error fetching parse results: {{ config.parseError }}</span></error-message
-      >
+      <error-message>Error fetching parse results: {{ config.parseError }}</error-message>
     </div>
-    <div v-else-if="config.parseResults" class="parse-results">
-      <div>
-        <div class="toggle-concepts" @click="toggleConcepts(index)">
-          {{ isExpanded[index] ? 'Hide' : 'Show' }} Concepts ({{
-            config.parseResults.concepts.length
-          }})
+
+    <div v-else>
+      <div v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
+        <div>
+          <h4>{{ source.alias }} ({{ source.editor }})</h4>
+          <button class="button delete-button" @click.stop="removeSource(index, sourceIndex)">
+            Remove
+          </button>
+        </div>
+        <div class="toggle-concepts" @click="toggleConcepts(source.alias)">
+          {{ isExpanded[source.alias] ? 'Hide' : 'Show' }} Concepts ({{ source.concepts.length }})
+        </div>
+        <div v-if="isExpanded[source.alias]">
+          <ConceptTable :concepts="source.concepts" />
+        </div>
+        <div class="datasources">
+          <div class="toggle-concepts" @click="toggleDatasources(source.alias)">
+            {{ isDatasourceExpanded[source.alias] ? 'Hide' : 'Show' }} Datasources ({{
+              source.datasources.length
+            }})
+          </div>
+          <div v-if="isDatasourceExpanded[source.alias]">
+            <DatasourceTable :datasources="source.datasources" />
+          </div>
         </div>
       </div>
-      <div v-if="isExpanded[index]">
-        <!-- <ModelConcept :config="config.parseResults" /> -->
-        <ConceptTable :concepts="config.parseResults.concepts" />
-      </div>
-      <div class="datasources">
-        <div class="toggle-concepts" @click="toggleDatasources(index)">
-          {{ isDatasourceExpanded[index] ? 'Hide' : 'Show' }} Datasources ({{
-            config.parseResults.datasources.length
-          }})
-        </div>
-        <div v-if="isDatasourceExpanded[index]">
-          <DatasourceTable :datasources="config.parseResults.datasources" />
-        </div>
-      </div>
-    </div>
-    <div v-else class="no-results">
-      <em>No parse results available.</em>
     </div>
   </section>
 </template>
-
 <style scoped>
 .button {
   flex: 0.25;
@@ -246,7 +218,9 @@ export default defineComponent({
     }
 
     const newSourceVisible = ref<Record<string, boolean>>({})
-
+    const toggleNewSource = (index: string) => {
+      newSourceVisible.value[index] = !newSourceVisible.value[index]
+    }
     const fetchParseResults = (model: string) => {
       return trilogyResolver
         .resolveModel(
@@ -276,6 +250,8 @@ export default defineComponent({
           target.sources.push({
             alias: sourceDetails.value.alias,
             editor: sourceDetails.value.name,
+            concepts: [],
+            datasources: [],
           })
           fetchParseResults(model)
         }
@@ -296,6 +272,7 @@ export default defineComponent({
       fetchParseResults,
       isEditorExpanded,
       index,
+      toggleNewSource,
     }
   },
   components: {

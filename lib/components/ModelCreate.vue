@@ -1,5 +1,5 @@
 <template>
-  <span class="flex relative-container">
+  <div>
     <button @click="createModel">New</button>
     <div v-if="visible" class="absolute-form">
       <form @submit.prevent="submitModelCreation">
@@ -57,7 +57,7 @@
         <button type="button" @click="visible = !visible">Cancel</button>
       </form>
     </div>
-  </span>
+  </div>
 </template>
 
 <style scoped>
@@ -217,7 +217,7 @@ export default defineComponent({
             ) {
               editorStore.editors[response.name].tags.push(response.purpose)
             }
-            return new ModelSource(response.name, response.alias)
+            return new ModelSource(response.name, response.alias, [], [])
           })
         }
       }

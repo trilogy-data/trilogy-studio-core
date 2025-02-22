@@ -1,16 +1,154 @@
 <template>
   <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
-
-  <div v-else ref="editor" id="editor" class="editor-fix-styles">
-    <div class="absolute-button bottom-run">
-      {{ editorData.type }}
-      <loading-button class="button-transparent" :action="runQuery"
-        >Run (ctrl-enter)</loading-button
-      >
+  <div v-else class="parent">
+    <div class="menu-bar">
+      <div class="menu-left">
+        <div class="menu-title" @click="startEditing">
+          <span v-if="!isEditing" class="editable-text">
+            {{ editorData.name }}
+            <span class="edit-indicator">✎</span>
+          </span>
+          <input
+            v-else
+            ref="nameInput"
+            v-model="editableName"
+            @blur="finishEditing"
+            @keyup.enter="finishEditing"
+            @keyup.esc="cancelEditing"
+            class="name-input"
+            type="text"
+          />
+        </div>
+        <div class="toggle-group">
+          <button
+            class="toggle-button tag-inactive"
+            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag()"
+          >
+            {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
+          </button>
+          <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
+            @click="toggleTag('scheduled')">
+            Scheduled
+          </button> -->
+        </div>
+      </div>
+      <div class="menu-actions">
+        <loading-button
+          :useDefaultStyle="false"
+          class="button-transparent action-item"
+          :action="validateQuery"
+          >Parse</loading-button
+        >
+        <div>
+          <button
+            class="button-transparent action-item"
+            :class="{ 'button-cancel': editorData.loading }"
+            @click="runQuery"
+          >
+            {{ editorData.loading ? 'Cancel' : 'Run' }}
+          </button>
+        </div>
+      </div>
     </div>
+    <div ref="editor" id="editor" class="editor-fix-styles"></div>
   </div>
 </template>
 <style>
+.tag {
+  /* Push to the right */
+  font-size: 8px;
+  /* margin-left: 5px; */
+  border-radius: 3px;
+  padding: 2px;
+  background-color: hsl(210, 100%, 50%, 0.25);
+  border: 1px solid hsl(210, 100%, 50%, 0.5);
+  color: var(--tag-font);
+  line-height: 10px;
+}
+
+.tag-inactive {
+  /* Push to the right */
+  font-size: 8px;
+  /* margin-left: 5px; */
+  border-radius: 3px;
+  padding: 2px;
+  color: var(--tag-font);
+  line-height: 10px;
+}
+
+.parent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.menu-bar {
+  background-color: var(--sidebar-bg);
+  display: flex;
+  padding-right: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-item {
+  height: 25px;
+  width: 80px;
+}
+
+.menu-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.menu-title {
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.menu-title:hover .edit-indicator {
+  opacity: 1;
+}
+
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-indicator {
+  opacity: 0;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+}
+
+.name-input {
+  background: var(--bg-color);
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  font-size: inherit;
+  font-weight: 500;
+  width: auto;
+  min-width: 200px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
+}
+
 .editor-fix-styles {
   text-align: left;
   border: none;
@@ -18,35 +156,24 @@
   position: relative;
 }
 
-.absolute-button {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-}
-
 .button-transparent {
-  background-color: transparent !important;
-  /* Transparent background */
-  color: #007bff;
-  border: 1px solid #007bff;
-  border-radius: 4px;
+  font-weight: 500;
   cursor: pointer;
+  border-radius: 0px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  margin-left: 0.75rem;
+  margin-right: 0.75rem;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
-  z-index: 99;
-  /* height: 24px; */
-  /* min-width: 60px; */
+  flex: 1;
 }
 
-.bottom-run {
-  bottom: 16px;
-  right: 16px;
-}
-
-.bottom-reset {
-  bottom: 16px;
-  right: 100px;
+.button-cancel {
+  background-color: var(--error-color);
+  color: white;
+  border: 1px solid var(--error-color);
 }
 </style>
 <script lang="ts">
@@ -61,6 +188,7 @@ import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
+import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
@@ -77,26 +205,6 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    connection: {
-      type: Object,
-      default: null,
-    },
-    submitCallback: {
-      type: Function,
-      default: null,
-    },
-    genAICallback: {
-      type: Function,
-      default: null,
-    },
-    formatTextCallback: {
-      type: Function,
-      default: null,
-    },
-    saveCallback: {
-      type: Function,
-      default: null,
-    },
     y: {
       type: Number,
       default: 400,
@@ -109,10 +217,11 @@ export default defineComponent({
   data() {
     return {
       last_passed_query_text: null,
-      form: null,
       prompt: '',
       generatingPrompt: false,
       info: 'Query processing...',
+      isEditing: false,
+      editableName: '',
     }
   },
   components: {
@@ -128,7 +237,7 @@ export default defineComponent({
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
-    return { connectionStore, modelStore, editorStore, trilogyResolver }
+    return { connectionStore, modelStore, editorStore, trilogyResolver, EditorTag }
   },
   async mounted() {
     this.$nextTick(() => {
@@ -175,6 +284,27 @@ export default defineComponent({
   },
 
   methods: {
+    toggleTag() {
+      this.editorData.tags = this.editorData.tags.includes(EditorTag.SOURCE)
+        ? this.editorData.tags.filter((tag) => tag !== EditorTag.SOURCE)
+        : [...this.editorData.tags, EditorTag.SOURCE]
+    },
+    startEditing() {
+      this.isEditing = true
+      this.editableName = this.editorData.name
+      this.$nextTick(() => {
+        // @ts-ignore
+        this.$refs.nameInput.focus()
+      })
+    },
+    finishEditing() {
+      this.isEditing = false
+      this.editorData.name = this.editableName
+    },
+    cancelEditing() {
+      this.isEditing = false
+    },
+
     async validateQuery(log: boolean = true) {
       const editorItem = editorMap.get(this.context)
       if (this.loading || !editorItem) {
@@ -215,7 +345,7 @@ export default defineComponent({
       if (this.loading || !editor) {
         return
       }
-      await this.validateQuery(false)
+
       try {
         // @ts-ignore
         window.goatcounter.count({
@@ -248,7 +378,7 @@ export default defineComponent({
 
       try {
         this.editorData.loading = true
-
+        await this.validateQuery(false)
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
@@ -370,13 +500,13 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
         this.runQuery()
       })
-      if (this.genAICallback) {
-        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
-          if (!this.loading) {
-            this.genAICallback(editorItem.getValue())
-          }
-        })
-      }
+      // if (this.genAICallback) {
+      //   editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
+      //     if (!this.loading) {
+      //       this.genAICallback(editorItem.getValue())
+      //     }
+      //   })
+      // }
       // if (this.formatTextCallback) {
       //     editor.addAction({
       //         id: 'format-preql',

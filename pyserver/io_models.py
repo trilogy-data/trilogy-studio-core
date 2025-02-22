@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from trilogy import Dialects
 from enum import Enum
 
+
 class LineageItem(BaseModel):
     token: str
     depth: int
@@ -37,11 +38,15 @@ class UIDatasource(BaseModel):
     concepts: List[UIConcept]
 
 
-class Model(BaseModel):
-    name: str
+class ModelSource(BaseModel):
+    alias: str
     concepts: List[UIConcept]
     datasources: List[UIDatasource]
-    rendered: str | None = None
+
+
+class Model(BaseModel):
+    name: str
+    sources: list[ModelSource]
 
 
 class ListModelResponse(BaseModel):
@@ -81,11 +86,13 @@ class ModelInSchema(BaseModel):
 class QueryInSchema(BaseModel):
     query: str
     dialect: Dialects
-    full_model: ModelInSchema | None = None
+    full_model: ModelInSchema
     # chart_type: ChartType | None = None
+
 
 class ValidateQueryInSchema(BaseModel):
     query: str
+
 
 class QueryOutColumn(BaseModel):
     name: str
@@ -97,11 +104,13 @@ class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
 
+
 class Severity(Enum):
     Error = 8
     Warning = 4
     Information = 2
     Hint = 1
+
 
 class ValidateItem(BaseModel):
     startLineNumber: int
@@ -110,6 +119,7 @@ class ValidateItem(BaseModel):
     endColumn: int
     message: str
     severity: Severity
+
 
 class ValidateResponse(BaseModel):
     items: List[ValidateItem]
