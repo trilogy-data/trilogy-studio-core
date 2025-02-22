@@ -47,7 +47,11 @@ const useConnectionStore = defineStore('connections', {
       } else if (type === 'bigquery') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'motherduck') {
-        this.connections[name] = new MotherDuckConnection(name, options.mdToken, options.saveCredential)
+        this.connections[name] = new MotherDuckConnection(
+          name,
+          options.mdToken,
+          options.saveCredential,
+        )
       }
       // else if (type === 'sqlserver') {
       //   this.connections[name] = new SQLServerConnection(name, options.username, options.password);

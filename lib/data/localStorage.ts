@@ -1,6 +1,6 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
-import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection, Connection } from '../connections'
+import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
@@ -77,27 +77,32 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
   }
 
-
-  async loadConnections(): Promise<Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>> {
-    const storedData = localStorage.getItem(this.connectionStorageKey);
-    const raw = storedData ? JSON.parse(storedData) : [];
-    const connections: Record<string, Connection> = {};
+  async loadConnections(): Promise<
+    Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>
+  > {
+    const storedData = localStorage.getItem(this.connectionStorageKey)
+    const raw = storedData ? JSON.parse(storedData) : []
+    const connections: Record<
+      string,
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection
+    > = {}
 
     // Process each connection sequentially
     for (const connection of raw) {
       switch (connection.type) {
         case 'bigquery-oauth':
-          connections[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection));
-          break;
+          // @ts-ignore
+          connections[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection))
+          break
         case 'duckdb':
-          connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection));
-          break;
+          // @ts-ignore
+          connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
+          break
         case 'motherduck':
           // Handle the async operation properly
-          connections[connection.name] = reactive(
-            await MotherDuckConnection.fromJSON(connection)
-          );
-          break;
+          // @ts-ignore
+          connections[connection.name] = reactive(await MotherDuckConnection.fromJSON(connection))
+          break
         // Uncomment if needed:
         // case "sqlserver":
         //   connections[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
@@ -105,7 +110,7 @@ export default class LocalStorage extends AbstractStorage {
       }
     }
 
-    return connections;
+    return connections
   }
 
   async deleteConnection(name: string): Promise<void> {

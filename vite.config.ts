@@ -11,14 +11,14 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Embedder-Policy': 'require-corp',
       // 'Cross-Origin-Opener-Policy': 'same-origin'
-    }
+    },
   },
   plugins: [
     vue(),
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     nodePolyfills({ include: ['events', 'dns', 'stream'] }),
-    
+
     {
       name: 'configure-response-headers',
       configureServer: (server) => {

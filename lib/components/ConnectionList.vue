@@ -107,7 +107,7 @@ import StatusIcon from './StatusIcon.vue'
 import Tooltip from './Tooltip.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
-import type { Connection } from '../connections'
+import type { Connection, MotherDuckConnection } from '../connections'
 
 export default {
   name: 'ConnectionList',
@@ -131,7 +131,7 @@ export default {
       connectionModelVisible.value[connection] = false
     }
 
-    const updateMotherDuckToken = (connection: Connection) => {
+    const updateMotherDuckToken = (connection: MotherDuckConnection) => {
       if (connection.type === 'motherduck' && mdTokens.value[connection.name]) {
         connection.mdToken = mdTokens.value[connection.name]
         mdTokens.value[connection.name] = '' // Clear the input after setting
@@ -202,7 +202,7 @@ export default {
       connectionModelVisible,
       submitConnectionModel,
       mdTokens,
-      updateMotherDuckToken
+      updateMotherDuckToken,
     }
   },
   components: {

@@ -6,7 +6,7 @@ import { getDatabaseCredential, storeDatabaseCredential } from '../data/secure'
 export default class MotherDuckConnection extends BaseConnection {
   // @ts-ignore
   private connection: MDConnection
-  private mdToken: string
+  public mdToken: string
   private saveCredential: boolean
 
   constructor(name: string, mdToken: string, saveCredential: boolean = false, model?: string) {
@@ -34,7 +34,7 @@ export default class MotherDuckConnection extends BaseConnection {
   }): Promise<MotherDuckConnection> {
     let mdToken = await getDatabaseCredential(`trilogy-motherduck-${fields.name}`)
     if (!mdToken) {
-      mdToken = { label:`trilogy-motherduck-${fields.name}`, value: '' }
+      mdToken = { label: `trilogy-motherduck-${fields.name}`, value: '' }
     }
     let base = new MotherDuckConnection(fields.name, mdToken.value)
     if (fields.model) {
@@ -43,7 +43,7 @@ export default class MotherDuckConnection extends BaseConnection {
     return base
   }
 
-  async connect():Promise<boolean> {
+  async connect(): Promise<boolean> {
     if (!this.mdToken) {
       console.log('Missing MotherDuck token.')
       this.error = 'Missing MotherDuck token.'
@@ -52,12 +52,11 @@ export default class MotherDuckConnection extends BaseConnection {
     this.connection = MDConnection.create({
       mdToken: this.mdToken,
     })
-    this.error = null;
+    this.error = null
     if (this.saveCredential) {
       await storeDatabaseCredential(`trilogy-motherduck-${this.name}`, this.mdToken)
     }
     return true
-
   }
 
   // Example of a custom method for MotherDuck

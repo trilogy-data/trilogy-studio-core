@@ -71,8 +71,9 @@ export default abstract class BaseConnection {
     if (autoConnect) {
       this.connect()
         .then((res) => {
-          if (res) { this.connected = true }
-
+          if (res) {
+            this.connected = true
+          }
         })
         .catch((error) => {
           if (error instanceof Error) {

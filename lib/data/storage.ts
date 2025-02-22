@@ -19,10 +19,9 @@ export default abstract class AbstractStorage {
   abstract saveConnections(
     connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>,
   ): void
-  abstract loadConnections(): Promise<Record<
-    string,
-    BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection
-  >>
+  abstract loadConnections(): Promise<
+    Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>
+  >
   abstract deleteConnection(name: string): void
 
   abstract loadModelConfig(): Record<string, ModelConfig>

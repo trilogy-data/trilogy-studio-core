@@ -28,7 +28,12 @@
             required
           />
           <label for="save-credential">Save Credential?</label>
-          <input type='checkbox' id='save-credential' v-model="connectionDetails.options.saveCredential" label="Save Credential?" />
+          <input
+            type="checkbox"
+            id="save-credential"
+            v-model="connectionDetails.options.saveCredential"
+            label="Save Credential?"
+          />
         </div>
 
         <div v-if="connectionDetails.type === 'bigquery'">
@@ -45,7 +50,12 @@
           <label for="username">Username</label>
           <input type="text" v-model="connectionDetails.options.username" id="username" required />
           <label for="password">Password</label>
-          <input type="password" v-model="connectionDetails.options.password" id="username" required />
+          <input
+            type="password"
+            v-model="connectionDetails.options.password"
+            id="username"
+            required
+          />
         </div>
 
         <button type="submit">Submit</button>
@@ -117,7 +127,13 @@ export default defineComponent({
       visible.value = !visible.value
       connectionDetails.value.name = ''
       connectionDetails.value.type = 'duckdb'
-      connectionDetails.value.options = { mdToken: '', projectId: '', username: '', password: '', saveCredential: false } // Reset options
+      connectionDetails.value.options = {
+        mdToken: '',
+        projectId: '',
+        username: '',
+        password: '',
+        saveCredential: false,
+      } // Reset options
     }
 
     const submitConnectionCreation = () => {
