@@ -5,7 +5,6 @@ from trilogy.parsing.parse_engine import PARSER
 from io_models import ValidateItem, ValidateResponse, Severity
 
 
-
 def user_repr(error: Union[UnexpectedToken]):
     if isinstance(error, UnexpectedToken):
         expected = ", ".join(error.accepts or error.expected)
@@ -25,7 +24,7 @@ def get_diagnostics(doctext: str) -> ValidateResponse:
                 startLineNumber=e.line,
                 startColumn=e.column,
                 endLineNumber=e.line,
-                endColumn=e.column+len(e.token),
+                endColumn=e.column + len(e.token),
                 severity=Severity.Error,
                 message=user_repr(e),
             )

@@ -86,7 +86,7 @@ class ModelInSchema(BaseModel):
 class QueryInSchema(BaseModel):
     query: str
     dialect: Dialects
-    full_model: ModelInSchema | None = None
+    full_model: ModelInSchema
     # chart_type: ChartType | None = None
 
 

@@ -23,7 +23,6 @@ from trilogy.authoring import (
     MultiSelectStatement,
     SelectStatement,
     ConceptRef,
-
 )
 from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
@@ -135,7 +134,7 @@ def flatten_lineage(
 
 
 def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment:
-    if not input:
+    if not sources:
         return Environment()
 
     resolver = DictImportResolver(
@@ -160,7 +159,10 @@ def source_to_model_source(
             continue
         if "__preql_internal" in sconcept.address:
             continue
-        if sconcept.metadata and sconcept.metadata.concept_source == ConceptSource.AUTO_DERIVED:
+        if (
+            sconcept.metadata
+            and sconcept.metadata.concept_source == ConceptSource.AUTO_DERIVED
+        ):
             continue
         final_concepts.append(
             UIConcept(

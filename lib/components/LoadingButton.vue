@@ -1,19 +1,21 @@
 <template>
-  <div class="relative inline-block button-wrapper">
+  <div class="button-wrapper">
     <button
-      :class="[{ 'btn flex': useDefaultStyle }, $attrs.class]"
+      :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
       v-bind="$attrs"
       :disabled="isLoading"
       @click.stop="handleClick"
     >
-      <transition name="fade" mode="out-in">
-        <span v-if="status === 'success'" class="green">✔</span>
-        <span v-else-if="status === 'error'" class="red">✖ ({{ errorMessage }})</span>
-        <span v-else-if="isLoading" class="spinner"></span>
-        <span v-else>
-          <slot></slot>
-        </span>
-      </transition>
+      <span :class="{ 'hidden-text': isLoading }">
+        <slot></slot>
+      </span>
+      <span v-if="status === 'success'" class="status success overlay">✔</span>
+      <span v-else-if="status === 'error'" class="status error overlay"
+        >✖ ({{ errorMessage }})</span
+      >
+      <span v-else-if="isLoading" class="status loading overlay">
+        <span class="spinner"></span>
+      </span>
     </button>
   </div>
 </template>
@@ -69,16 +71,18 @@ export default {
         localStatus = 'error'
         if (error instanceof Error) {
           errorMessage.value = error.message
+        } else {
+          errorMessage.value = 'An unknown error occurred'
         }
       } finally {
         const elapsedTime = Date.now() - startTime
         const remainingTime = Math.max(500 - elapsedTime, 0)
         await new Promise((resolve) => setTimeout(resolve, remainingTime))
         status.value = localStatus
-        isLoading.value = false
         // Clear status after a brief delay
         setTimeout(() => {
           status.value = null
+          isLoading.value = false
           errorMessage.value = null
         }, 1500)
       }
@@ -109,18 +113,33 @@ export default {
   flex: 1;
 }
 
-.red {
-  color: red;
+.hidden-text {
+  visibility: hidden;
 }
 
-.green {
+.status.overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success {
   color: green;
+}
+
+.error {
+  color: red;
 }
 
 .btn {
   /* min-height: 24px; */
   border: 2px solid transparent;
   /* width: 100%; */
+  position: relative;
 }
 
 .spinner {

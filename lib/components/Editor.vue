@@ -21,11 +21,11 @@
         </div>
         <div class="toggle-group">
           <button
-            class="toggle-button"
-            :class="{ 'toggle-active': editorData.tags.includes(EditorTag.SOURCE) }"
+            class="toggle-button tag-inactive"
+            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
             @click="toggleTag()"
           >
-            Source
+            {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
           </button>
           <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
             @click="toggleTag('scheduled')">
@@ -34,31 +34,71 @@
         </div>
       </div>
       <div class="menu-actions">
-        <button class="button-transparent" @click="() => validateQuery()">Parse</button>
-        <button
-          class="button-transparent"
-          :class="{ 'button-cancel': editorData.loading }"
-          @click="runQuery"
+        <loading-button
+          :useDefaultStyle="false"
+          class="button-transparent action-item"
+          :action="validateQuery"
+          >Parse</loading-button
         >
-          {{ editorData.loading ? 'Cancel' : 'Run' }}
-        </button>
+        <div>
+          <button
+            class="button-transparent action-item"
+            :class="{ 'button-cancel': editorData.loading }"
+            @click="runQuery"
+          >
+            {{ editorData.loading ? 'Cancel' : 'Run' }}
+          </button>
+        </div>
       </div>
     </div>
     <div ref="editor" id="editor" class="editor-fix-styles"></div>
   </div>
 </template>
 <style>
+.tag {
+  /* Push to the right */
+  font-size: 8px;
+  /* margin-left: 5px; */
+  border-radius: 3px;
+  padding: 2px;
+  background-color: hsl(210, 100%, 50%, 0.25);
+  border: 1px solid hsl(210, 100%, 50%, 0.5);
+  color: var(--tag-font);
+  line-height: 10px;
+}
+
+.tag-inactive {
+  /* Push to the right */
+  font-size: 8px;
+  /* margin-left: 5px; */
+  border-radius: 3px;
+  padding: 2px;
+  color: var(--tag-font);
+  line-height: 10px;
+}
+
 .parent {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
+
 .menu-bar {
   background-color: var(--sidebar-bg);
   display: flex;
   padding-right: 10px;
   justify-content: space-between;
   align-items: center;
+}
+
+.menu-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-item {
+  height: 25px;
+  width: 80px;
 }
 
 .menu-left {
@@ -119,7 +159,6 @@
 .button-transparent {
   font-weight: 500;
   cursor: pointer;
-  padding: 0.375rem;
   border-radius: 0px;
   border: 1px solid var(--border-color);
   cursor: pointer;
@@ -128,8 +167,13 @@
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
-  z-index: 99;
-  height: 100%;
+  flex: 1;
+}
+
+.button-cancel {
+  background-color: var(--error-color);
+  color: white;
+  border: 1px solid var(--error-color);
 }
 </style>
 <script lang="ts">
