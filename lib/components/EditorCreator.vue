@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="relative-parent">
     <slot :onClick="createEditor">
       <button @click="createEditor">Add</button>
     </slot>
@@ -45,7 +45,9 @@
 .button {
   flex: 1;
 }
-
+.relative-parent {
+  position: relative;
+}
 input,
 select {
   font-size: 12px;

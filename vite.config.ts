@@ -7,11 +7,18 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { resolve } from 'node:path'
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      // 'Cross-Origin-Opener-Policy': 'same-origin'
+    }
+  },
   plugins: [
     vue(),
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     nodePolyfills({ include: ['events', 'dns', 'stream'] }),
+    
     {
       name: 'configure-response-headers',
       configureServer: (server) => {

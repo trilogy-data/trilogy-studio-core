@@ -58,6 +58,7 @@ export default abstract class BaseConnection {
   query_type: string = 'abstract'
   running: boolean = false
   databases: Database[] | null = null
+  secureFields: string[] = []
 
   constructor(name: string, type: string, autoConnect: boolean = true, model?: string) {
     this.name = name
@@ -69,8 +70,9 @@ export default abstract class BaseConnection {
     this.connected = false // Default to disconnected
     if (autoConnect) {
       this.connect()
-        .then(() => {
-          this.connected = true
+        .then((res) => {
+          if (res) { this.connected = true }
+
         })
         .catch((error) => {
           if (error instanceof Error) {
@@ -79,6 +81,7 @@ export default abstract class BaseConnection {
           throw error
         })
     }
+    this.secureFields = []
   }
 
   abstract getDatabases(): Promise<Database[]>
@@ -109,7 +112,7 @@ export default abstract class BaseConnection {
     }
   }
 
-  abstract connect(): Promise<void>
+  abstract connect(): Promise<boolean>
 
   setModel(model: string) {
     this.model = model

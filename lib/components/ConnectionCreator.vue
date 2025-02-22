@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="relative-parent">
     <button @click="createConnection">Add</button>
 
     <div v-if="visible" class="absolute-form">
@@ -21,12 +21,14 @@
         <div v-if="connectionDetails.type === 'motherduck'">
           <label for="md-token">MotherDuck Token</label>
           <input
-            type="text"
+            type="password"
             v-model="connectionDetails.options.mdToken"
             id="md-token"
             placeholder="MotherDuck Token"
             required
           />
+          <label for="save-credential">Save Credential?</label>
+          <input type='checkbox' id='save-credential' v-model="connectionDetails.options.saveCredential" label="Save Credential?" />
         </div>
 
         <div v-if="connectionDetails.type === 'bigquery'">
@@ -43,7 +45,7 @@
           <label for="username">Username</label>
           <input type="text" v-model="connectionDetails.options.username" id="username" required />
           <label for="password">Password</label>
-          <input type="text" v-model="connectionDetails.options.password" id="username" required />
+          <input type="password" v-model="connectionDetails.options.password" id="username" required />
         </div>
 
         <button type="submit">Submit</button>
@@ -54,6 +56,9 @@
 </template>
 
 <style scoped>
+.relative-parent {
+  position: relative;
+}
 .button {
   flex: 1;
 }
@@ -97,7 +102,7 @@ export default defineComponent({
     const connectionDetails = ref({
       name: '',
       type: 'duckdb',
-      options: { mdToken: '', projectId: '', username: '', password: '' },
+      options: { mdToken: '', projectId: '', username: '', password: '', saveCredential: false },
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -112,7 +117,7 @@ export default defineComponent({
       visible.value = !visible.value
       connectionDetails.value.name = ''
       connectionDetails.value.type = 'duckdb'
-      connectionDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
+      connectionDetails.value.options = { mdToken: '', projectId: '', username: '', password: '', saveCredential: false } // Reset options
     }
 
     const submitConnectionCreation = () => {

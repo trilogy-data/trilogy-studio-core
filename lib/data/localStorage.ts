@@ -1,6 +1,6 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
-import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
+import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection, Connection } from '../connections'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
@@ -77,46 +77,39 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
   }
 
-  loadConnections(): Record<
-    string,
-    BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection
-  > {
-    const storedData = localStorage.getItem(this.connectionStorageKey)
-    let raw = storedData ? JSON.parse(storedData) : []
-    // map raw into appropriate connection form using the connection.type field on the connection object
-    return raw.reduce(
-      (
-        acc: Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>,
-        connection: BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection,
-      ) => {
-        switch (connection.type) {
-          case 'bigquery-oauth':
-            // @ts-ignore
-            acc[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection))
-            break
-          case 'duckdb':
-            // @ts-ignore
-            acc[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
-            break
-          case 'motherduck':
-            // @ts-ignore
-            acc[connection.name] = reactive(MotherDuckConnection.fromJSON(connection))
-            break
-          // case "sqlserver":
-          //     // @ts-ignore
-          //     acc[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
-          //     break;
-          default:
-            break
-        }
-        return acc
-      },
-      {},
-    )
+
+  async loadConnections(): Promise<Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>> {
+    const storedData = localStorage.getItem(this.connectionStorageKey);
+    const raw = storedData ? JSON.parse(storedData) : [];
+    const connections: Record<string, Connection> = {};
+
+    // Process each connection sequentially
+    for (const connection of raw) {
+      switch (connection.type) {
+        case 'bigquery-oauth':
+          connections[connection.name] = reactive(BigQueryOauthConnection.fromJSON(connection));
+          break;
+        case 'duckdb':
+          connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection));
+          break;
+        case 'motherduck':
+          // Handle the async operation properly
+          connections[connection.name] = reactive(
+            await MotherDuckConnection.fromJSON(connection)
+          );
+          break;
+        // Uncomment if needed:
+        // case "sqlserver":
+        //   connections[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
+        //   break;
+      }
+    }
+
+    return connections;
   }
 
-  deleteConnection(name: string): void {
-    const connections = this.loadConnections()
+  async deleteConnection(name: string): Promise<void> {
+    const connections = await this.loadConnections()
     if (connections[name]) {
       delete connections[name]
       this.saveConnections(Object.values(connections))

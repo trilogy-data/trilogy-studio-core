@@ -37,19 +37,22 @@ export default class BigQueryOauthConnection extends BaseConnection {
     }
     return base
   }
-  async connect(): Promise<void> {
+  async connect(): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
         const tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: '734709568634-3u732kjmtp8e4bi6te0g7uo9278k104i.apps.googleusercontent.com',
           // @ts-ignore
           callback: (response) => {
+            console.log('BigQuery OAuth response', response)
             this.accessToken = response.access_token
-            resolve()
+            
+            return resolve(true)
           },
           // @ts-ignore
           error_callback: (error) => {
-            reject(error)
+            console.error('BigQuery OAuth error', error)
+            resolve(false)
           },
           scope: 'https://www.googleapis.com/auth/bigquery',
         })
@@ -57,7 +60,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
         tokenClient.requestAccessToken()
       } catch (error) {
         console.error('Error connecting to BigQuery with OAuth', error)
-        reject(error)
+        return false
       }
     })
   }

@@ -53,11 +53,13 @@ export default {
       }
     }
     for (let source of props.storageSources) {
-      let connections = source.loadConnections()
-      for (let connection of Object.values(connections)) {
-        props.connectionStore.addConnection(connection)
-      }
+      source.loadConnections().then((connections) => {
+        for (let connection of Object.values(connections)) {
+          props.connectionStore.addConnection(connection)
+        }
+      })
     }
+
     for (let source of props.storageSources) {
       let connections = source.loadModelConfig()
       for (let modelConfig of Object.values(connections)) {

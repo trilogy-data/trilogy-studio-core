@@ -78,6 +78,22 @@
           </span>
         </template>
       </div>
+      <!-- Add MotherDuck token input when connection is expanded -->
+      <div
+        v-if="!collapsed[item.id] && item.connection?.type === 'motherduck'"
+        class="md-token-container"
+        @click.stop
+      >
+        <form @submit.prevent="updateMotherDuckToken(item.connection)">
+          <input
+            type="password"
+            v-model="mdTokens[item.connection.name]"
+            placeholder="Enter MotherDuck Token"
+            class="md-token-input"
+          />
+          <button type="submit" class="md-token-button">Set Token</button>
+        </form>
+      </div>
     </div>
   </sidebar-list>
 </template>
@@ -106,6 +122,7 @@ export default {
     const connectionDetails = ref({
       model: '',
     })
+    const mdTokens = ref<Record<string, string>>({})
 
     const submitConnectionModel = (connection: string) => {
       if (connectionDetails.value.model) {
@@ -113,6 +130,16 @@ export default {
       }
       connectionModelVisible.value[connection] = false
     }
+
+    const updateMotherDuckToken = (connection: Connection) => {
+      if (connection.type === 'motherduck' && mdTokens.value[connection.name]) {
+        connection.mdToken = mdTokens.value[connection.name]
+        mdTokens.value[connection.name] = '' // Clear the input after setting
+        // saveConnections() // Save the updated connection
+        connectionStore.resetConnection(connection.name)
+      }
+    }
+
     const collapsed = ref<Record<string, boolean>>({})
     const toggleCollapse = (id: string) => {
       collapsed.value[id] = !collapsed.value[id]
@@ -174,6 +201,8 @@ export default {
       modelStore,
       connectionModelVisible,
       submitConnectionModel,
+      mdTokens,
+      updateMotherDuckToken
     }
   },
   components: {
@@ -213,23 +242,22 @@ export default {
 
 .stacked-item {
   display: flex;
-  align-items: center;
-  /* padding: 4px; */
+  flex-direction: column;
   cursor: pointer;
   font-size: 13px;
-  height: 22px;
-  line-height: 22px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.stacked-item:hover {
-  background-color: var(--button-mouseover);
 }
 
 .stacked-content {
   display: flex;
   align-items: center;
   width: 100%;
+  height: 22px;
+  line-height: 22px;
+}
+
+.stacked-item:hover > .stacked-content {
+  background-color: var(--button-mouseover);
 }
 
 .model-anchor {
@@ -245,7 +273,6 @@ export default {
 .model-form {
   position: absolute;
   top: 100%;
-  /* Position below the button */
   background-color: var(--button-bg);
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
@@ -257,11 +284,8 @@ export default {
 
 .model-select {
   appearance: none;
-  /* Removes default styling */
   -webkit-appearance: none;
   -moz-appearance: none;
-  /* border: 1px solid #ccc; */
-  /* background-color: var(--sidebar-bg); */
   padding: 2px;
   font-size: 12px;
   text-align: center;
@@ -273,5 +297,34 @@ export default {
   font-size: 12px;
   font-weight: 300;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.md-token-container {
+  padding: 4px 0 4px 20px;
+  background-color: var(--sidebar-bg);
+  width: 100%;
+}
+
+.md-token-input {
+  padding: 2px 4px;
+  font-size: 12px;
+  width: 180px;
+  margin-right: 4px;
+  border: 1px solid var(--border);
+  background-color: var(--button-bg);
+  color: var(--text);
+}
+
+.md-token-button {
+  padding: 2px 8px;
+  font-size: 12px;
+  background-color: var(--button-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.md-token-button:hover {
+  background-color: var(--button-mouseover);
 }
 </style>
