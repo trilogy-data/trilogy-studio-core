@@ -1,23 +1,24 @@
 <template>
   <sidebar-list title="Documentation">
     <template #actions></template>
-
     <div v-for="node in documentationNodes" :key="node.id" class="sidebar-item">
-      <div class="sidebar-content" @click="handleClick(node.id)">
+      <div
+        class="sidebar-content"
+        @click="handleClick(node.id)"
+        :class="{ 'sidebar-content--active': isActiveNode(node.id) }"
+      >
         <!-- Indentation -->
         <div
           v-for="(_, index) in Array.from({ length: node.indent }, () => 0)"
           :key="index"
           class="sidebar-padding"
         ></div>
-
         <!-- Toggle Icons for Collapsible Nodes -->
         <span v-if="node.type === 'documentation'">
           <i v-if="!collapsed[node.id]" class="mdi mdi-menu-down"></i>
           <i v-else class="mdi mdi-menu-right"></i>
         </span>
-        <i v-else-if="node.type === 'article'" class="mdi mdi-text-box-outline"></i>
-
+        <i v-else-if="node.type === 'article'" class="mdi mdi-text-box-outline node-icon"></i>
         <!-- Node Name with Extra Info -->
         <span>
           {{ node.name }}
@@ -29,32 +30,45 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
-// import { getDefaultValueFromHash } from '../stores/urlStore';
+import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'DocumentationSidebar',
-  setup() {
+  props: {
+    activeDocumentationKey: {
+      type: String,
+      default: '',
+      optional: true,
+    },
+  },
+  setup(props) {
     const editorStore = inject<EditorStoreType>('editorStore')
     if (!editorStore) {
       throw new Error('Editor store is not provided!')
     }
 
-    // const current = getDefaultValueFromHash('modelKey') || '';
-    // let currentDocumentation = '';
-    // let splits = current.split(KeySeparator);
-
-    // if (currentType === 'documentation') {
-    //   currentDocumentation = splits[1];
-    // } else if (currentType === 'article') {
-    //   currentDocumentation = splits[1];
-    // }
+    const current = getDefaultValueFromHash('documentationKey') || ''
 
     const collapsed = ref<Record<string, boolean>>({})
+
+    // Initialize current path and collapse states
+    onMounted(() => {
+      const splits = current.split(KeySeparator)
+      const documentationTitle = splits[1]
+      let currentPath = `documentation${KeySeparator}${documentationTitle}`
+      console.log(currentPath)
+      // Initialize all nodes as collapsed except those in current path
+      documentation.forEach((topic) => {
+        const topicId = `documentation${KeySeparator}${topic.title}`
+        console.log(topicId)
+        collapsed.value[topicId] = !currentPath.startsWith(topicId)
+      })
+    })
 
     const documentationNodes = computed(() => {
       const list: Array<{ id: string; name: string; indent: number; count: number; type: string }> =
@@ -86,6 +100,10 @@ export default {
       return list
     })
 
+    const isActiveNode = (id: string) => {
+      return id === props.activeDocumentationKey
+    }
+
     const toggleCollapse = (id: string) => {
       collapsed.value[id] = !collapsed.value[id]
     }
@@ -94,14 +112,17 @@ export default {
       documentationNodes,
       toggleCollapse,
       collapsed,
+      isActiveNode,
     }
   },
+
   methods: {
     handleClick(id: string) {
       this.toggleCollapse(id)
       this.$emit('documentation-key-selected', id)
     },
   },
+
   components: {
     SidebarList,
   },
@@ -118,6 +139,10 @@ export default {
   line-height: 22px;
 }
 
+.node-icon {
+  padding-right: 5px;
+}
+
 .sidebar-item:hover {
   background-color: var(--button-mouseover);
 }
@@ -126,6 +151,11 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
+  padding: 0 4px;
+}
+
+.sidebar-content--active {
+  background-color: var(--sidebar-selector-bg);
 }
 
 .sidebar-padding {

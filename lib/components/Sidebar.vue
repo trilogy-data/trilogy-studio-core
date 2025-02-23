@@ -46,6 +46,7 @@
       <TutorialSidebar
         v-else-if="active === 'tutorial'"
         @documentation-key-selected="documentationKeySelected"
+        :activeDocumentationKey="activeDocumentationKey"
       />
     </div>
   </div>
@@ -71,6 +72,11 @@ export default defineComponent({
     activeEditor: {
       type: String,
       default: getDefaultValueFromHash('editor'),
+      optional: true,
+    },
+    activeDocumentationKey: {
+      type: String,
+      default: getDefaultValueFromHash('documentationKey'),
       optional: true,
     },
   },
