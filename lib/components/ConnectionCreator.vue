@@ -13,7 +13,8 @@
           <label for="connection-type">Type</label>
           <select v-model="connectionDetails.type" id="connection-type" required>
             <option value="duckdb">DuckDB</option>
-            <option value="motherduck">MotherDuck</option>
+            <!-- Need to figure out CORS to support this and bigquery-->
+            <!-- <option value="motherduck">MotherDuck</option> -->
             <option value="bigquery">Bigquery Oauth</option>
           </select>
         </div>

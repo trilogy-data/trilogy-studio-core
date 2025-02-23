@@ -10,6 +10,7 @@
           @documentation-key-selected="setActiveDocumentationKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey"
         />
       </template>
 
