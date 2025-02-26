@@ -1,8 +1,9 @@
 <template>
   <div class="sidebar-container">
-    <div class="sidebar-icons">
+    <div class="sidebar-icons" :style="{width: `${sidebarWidth}px`}">
       <tooltip content="Trilogy Studio (Alpha)"
-        ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" />
+        ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" /> 
+        <template v-if="sidebarWidth>=50"><div>Home</div></template>
       </tooltip>
       <div class="sidebar-divider"></div>
       <div
@@ -12,7 +13,13 @@
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }"
       >
+      <template v-if="sidebarWidth<50">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+      </template>
+      <template v-else>
+        <i :class="item.icon"></i> {{ item.tooltip }}
+      </template>
+        
       </div>
       <div class="sidebar-divider"></div>
       <div
@@ -22,7 +29,12 @@
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }"
       >
+      <template v-if="sidebarWidth<50">
         <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+      </template>
+      <template v-else>
+        <i :class="item.icon"></i> {{ item.tooltip }}
+      </template>
       </div>
       <div class="sidebar-bottom-icons">
         <div class="sidebar-icon" @click="selectItem('settings')">
@@ -79,6 +91,10 @@ export default defineComponent({
       default: getDefaultValueFromHash('documentationKey'),
       optional: true,
     },
+    sidebarWidth: {
+      type: Number,
+      default: 40
+    }
   },
   data() {
     let sidebarFeatureItems = [
@@ -182,7 +198,7 @@ export default defineComponent({
   background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   padding-top: 10px;
-  width: 40px;
+  /* width: 40px; */
   display: flex;
   flex-direction: column;
   align-items: center;

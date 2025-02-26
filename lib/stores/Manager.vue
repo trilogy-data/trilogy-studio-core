@@ -3,7 +3,6 @@
 </template>
 
 <script lang="ts">
-import IDE from '../views/IDE.vue'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
@@ -14,7 +13,6 @@ import { Storage } from '../data'
 export default {
   name: 'ContextManager',
   components: {
-    IDE,
   },
   props: {
     connectionStore: {

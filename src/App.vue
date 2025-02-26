@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // @ts-ignore
-import { EditorModel, IDE, Manager } from 'trilogy-studio-core'
+import { EditorModel, IDE, MobileIDE, Manager } from 'trilogy-studio-core'
 import { LocalStorage } from 'trilogy-studio-core/data'
 import {
   useEditorStore,
@@ -44,6 +44,7 @@ let store = useEditorStore()
 let connections = useConnectionStore()
 
 let models = useModelConfigStore()
+
 </script>
 
 <template>
