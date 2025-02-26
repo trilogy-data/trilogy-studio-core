@@ -249,7 +249,6 @@ export default {
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  font-size: 13px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -257,8 +256,9 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
-  height: 22px;
-  line-height: 22px;
+  font-size: var(--sidebar-list-item-font-size);
+  height: var(--sidebar-list-item-height);
+  line-height: var(--sidebar-list-item-height);
 }
 
 .stacked-item:hover > .stacked-content {

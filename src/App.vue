@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // @ts-ignore
-import { EditorModel, IDE, MobileIDE, Manager } from 'trilogy-studio-core'
+import { Manager } from 'trilogy-studio-core'
 import { LocalStorage } from 'trilogy-studio-core/data'
 import {
   useEditorStore,
   useConnectionStore,
   useModelConfigStore,
+  useUserSettingsStore,
   AxiosTrilogyResolver,
 } from 'trilogy-studio-core/stores'
 import {
@@ -33,7 +34,14 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
   : 'https://trilogy-service.fly.dev'
 
-let resolver = new AxiosTrilogyResolver(apiUrl)
+
+let userSettingsStore = useUserSettingsStore()
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+userSettingsStore.updateSetting('trilogyResolver', apiUrl)
+userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
+userSettingsStore.toggleTheme()
+
+let resolver = new AxiosTrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
 
 let localStorage = new LocalStorage()
 
@@ -49,14 +57,8 @@ let models = useModelConfigStore()
 
 <template>
   <div class="main">
-    <Manager
-      :connectionStore="connections"
-      :editorStore="store"
-      :trilogyResolver="resolver"
-      :modelStore="models"
-      :storageSources="contentSources"
-    >
-      <IDE />
+    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
+      :storageSources="contentSources" :userSettingsStore="userSettingsStore">
     </Manager>
   </div>
 </template>

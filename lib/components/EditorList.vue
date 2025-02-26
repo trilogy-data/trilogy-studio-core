@@ -228,9 +228,9 @@ export default {
   align-items: center;
   /* padding: 4px; */
   cursor: pointer;
-  font-size: 13px;
-  height: 22px;
-  line-height: 22px;
+  font-size: var(--sidebar-list-item-font-size);
+  height: var(--sidebar-list-item-height);
+  line-height: var(--sidebar-list-item-height);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 

@@ -13,7 +13,7 @@
 }
 
 /* Dark Mode Colors */
-:root {
+:root.dark-theme {
 
   --text-color: #FFFFFF;
   --text-faint: #B3B3B3;
@@ -40,45 +40,56 @@
   --button-bg: #4D4D4D;
   --button-mouseover: #3C3C3C;
 
-
-  a:hover {
-    color: #535bf2;
-  }
 }
 
 
+:root.light-theme {
+  --text-color: #333333;
+  --text-faint: #B3B3B3;
+  --special-text: #0066cc;
+  color: var(--text-color);
+  --delete-color: #ff0000;
 
-@media (prefers-color-scheme: light) {
+  --error-color: #ff7c7c;
+
+  --sidebar-selector-bg: #E8E8E8;
+  --sidebar-selector-font: #333333;
+  --sidebar-selector-selected-bg: #FFFFFF;
+
+  --sidebar-bg: #F2F2F2;
+  --sidebar-font: #4D4D4D;
+
+  --query-window-bg: #FFFFFF;
+  --query-window-font: #2E2E2E;
+
+  --result-window-bg: #F9F9F9;
+  --result-window-font: #3C3C3C;
+
+  --border: #7171715e;
+  --border-light: #E5E5E5;
+  --button-bg: #dfdfdff0;
+  --button-mouseover: #cfcfcf;
+
+
+
+}
+
+
+/* sizing */
+:root {
+  --sidebar-width: 200px;
+  --sidebar-icon-width: 40px;
+
+  --sidebar-list-item-height: 22px;
+  --sidebar-list-item-font-size: 13px;
+}
+
+@media screen and (max-width: 768px) {
   :root {
-    --text-color: #333333;
-    --text-faint: #B3B3B3;
-    --special-text: #0066cc;
-    color: var(--text-color);
-    --delete-color: #ff0000;
-  
-    --error-color: #ff7c7c;
-
-    --sidebar-selector-bg: #E8E8E8;
-    --sidebar-selector-font: #333333;
-    --sidebar-selector-selected-bg: #FFFFFF;
-
-    --sidebar-bg: #F2F2F2;
-    --sidebar-font: #4D4D4D;
-
-    --query-window-bg: #FFFFFF;
-    --query-window-font: #2E2E2E;
-
-    --result-window-bg: #F9F9F9;
-    --result-window-font: #3C3C3C;
-
-    --border: #7171715e;
-    --border-light: #E5E5E5;
-    --button-bg: #dfdfdff0;
-    --button-mouseover: #cfcfcf;
-  }
-
-  a:hover {
-    color: #747bff;
+    --sidebar-width: 100px;
+    --sidebar-icon-width: 100px;
+    --sidebar-list-item-height: 40px;
+    --sidebar-list-item-font-size: 18px;
   }
 }
 
@@ -136,22 +147,24 @@ button:focus-visible {
 }
 
 .relative-container {
-  position: relative; /* Ensures the absolute positioning is relative to this container */
+  position: relative;
+  /* Ensures the absolute positioning is relative to this container */
   padding: 0px;
   flex: 1;
 }
 
-.relative-container button{
+.relative-container button {
   float: left;
 }
 
 .absolute-form {
   position: absolute;
-  top: 100%; /* Position below the button */
+  top: 100%;
+  /* Position below the button */
   background-color: var(--button-bg);
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); 
-  border: 1px solid var(--border); 
-  z-index: 1001; 
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  z-index: 1001;
   width: 250px;
   font-size: 15px;
   text-align: center;

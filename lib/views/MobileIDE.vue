@@ -2,8 +2,9 @@
   <div class="main">
     <mobile-sidebar-layout @menu-toggled="menuOpen = !menuOpen" :menuOpen="menuOpen" :activeScreen="activeScreen">
       <template #sidebar>
-        <sidebar :sidebarWidth="100" @editor-selected="setActiveEditor" @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall" :active="activeScreen" :activeEditor="activeEditor" :menuOpen="menuOpen" />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+          :active="activeScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey" />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
@@ -18,9 +19,9 @@
             <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}
               <template #action v-if="activeEditorData.error === 'Connection is not active.'">
                 <loading-button :action="() =>
-                    activeEditorData
-                      ? connectionStore.resetConnection(activeEditorData.connection)
-                      : null
+                  activeEditorData
+                    ? connectionStore.resetConnection(activeEditorData.connection)
+                    : null
                   ">
                   Reconnect
                   {{ activeEditorData.connection }}
@@ -38,7 +39,7 @@
         <tutorial />
       </template>
       <template v-else-if="activeScreen === 'models'">
-        <model-view />
+        <model-view :activeModelKey="activeModelKey" @save-editors="saveEditorsCall" />
       </template>
       <template v-else-if="activeScreen === 'profile'">
         <user-profile />
@@ -139,7 +140,7 @@ import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
 import Tutorial from '../components/Tutorial.vue'
-import ModelView from '../components/Models.vue'
+import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
@@ -157,16 +158,19 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 
 export default {
-  name: 'IDEComponent',
+  name: 'MobileIDEComponent',
   data() {
     let screen = getDefaultValueFromHash('screen')
     let activeEditor = getDefaultValueFromHash('editor')
+    let activeModelKey = getDefaultValueFromHash('modelKey')
+    let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
     return {
       activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
+      activeModelKey: activeModelKey ? activeModelKey : '',
+      activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeTab: 'results',
-      menuOpen: true
-
+      menuOpen: true,
     }
   },
   components: {
@@ -232,6 +236,16 @@ export default {
     setActiveScreen(screen: string) {
       pushHashToUrl('screen', screen)
       this.activeScreen = screen
+    },
+    setActiveModelKey(modelKey: string) {
+      pushHashToUrl('modelKey', modelKey)
+      this.activeModelKey = modelKey
+      this.menuOpen = false
+    },
+    setActiveDocumentationKey(documentationKey: string) {
+      pushHashToUrl('documentationKey', documentationKey)
+      this.activeDocumentationKey = documentationKey
+      this.menuOpen = false
     },
     saveEditorsCall() {
       this.saveEditors()

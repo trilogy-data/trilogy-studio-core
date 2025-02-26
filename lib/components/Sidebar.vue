@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar-container">
-    <div class="sidebar-icons" :style="{width: `${sidebarWidth}px`}">
+    <div class="sidebar-icons">
       <tooltip content="Trilogy Studio (Alpha)"
         ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" /> 
         <template v-if="sidebarWidth>=50"><div>Home</div></template>
@@ -198,7 +198,7 @@ export default defineComponent({
   background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   padding-top: 10px;
-  /* width: 40px; */
+  width: var(--sidebar-icon-width);
   display: flex;
   flex-direction: column;
   align-items: center;
