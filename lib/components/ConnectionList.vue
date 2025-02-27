@@ -235,14 +235,14 @@ export default {
 
 <style scoped>
 .lb {
-  line-height: 12px;
-  height: 12px;
-  min-height: 12px;
+  line-height: var(--sidebar-list-item-height);
+  height: var(--sidebar-list-item-height);
+  min-height: var(--sidebar-list-item-height);
 }
 
 .button {
-  line-height: 12px;
-  height: 16px;
+  line-height: var(--sidebar-list-item-height);
+  height: var(--sidebar-list-item-height);
 }
 
 .stacked-item {

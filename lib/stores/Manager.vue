@@ -107,6 +107,9 @@ export default {
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
+    provide('isMobile', () => {
+      return window.innerWidth > 768 ? false : true
+    })
   },
   data() {
     return {

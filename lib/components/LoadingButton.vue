@@ -1,5 +1,5 @@
 <template>
-  <div class="button-wrapper">
+
     <button
       :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
       v-bind="$attrs"
@@ -17,7 +17,7 @@
         <span class="spinner"></span>
       </span>
     </button>
-  </div>
+
 </template>
 
 <script lang="ts">
@@ -109,9 +109,7 @@ export default {
 </script>
 
 <style>
-.button-wrapper {
-  flex: 1;
-}
+
 
 .hidden-text {
   visibility: hidden;

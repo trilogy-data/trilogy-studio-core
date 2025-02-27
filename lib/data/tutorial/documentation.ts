@@ -208,7 +208,55 @@ export const documentation: DocumentationNode[] = [
         'What Are Concepts?',
         'Concepts are core semantic building blocks in Trilogy. They represent keys, properties, or metrics: Keys (unique identifiers), Properties (additional values), and Metrics (aggregatable values).',
       ),
-      new Paragraph('Example', 'SELECT\n    customer_name,\n    total_spent;', 'code'),
+      new Paragraph('Example', 'key product_id int;# the unique identifier of a product \nproperty product_id.product_name string;# the name of a product \nmetric product_count <-count(product.id); # the count of products', 'code'),
+      new Paragraph(
+        'Keys',
+        'Keys represent a unique conceptual grain. A combination of one or more keys will uniquely identify a set of properties. If familiar with databases, think of them as your primary/foreign keys. More generally, you can thing of them as something like a passport number, a product ID, a URL, or a stock ticker - a unique shorthand for an entity.',
+      ),
+      new Paragraph(
+        'Key Syntax',
+        'Keys have straight forward syntax; the keyword, the name, and the type.',
+      ),
+      new Paragraph(
+        'Example',
+        'key product_id int;# the unique identifier of a product',
+        'code',
+      ),
+      new Paragraph(
+        'Properties',
+        'Properties are values associated with one or more keys',
+      ),
+      new Paragraph(
+        'Property Syntax',
+        'Properties have a richer syntax than keys - they require the associated keys, within <>, before the property name.. syntax: `"property" <key1, key2, ..> "." IDENTIFIER type;`',
+      ),
+      new Paragraph(
+        'Single Key Property',
+        'A property can be associated with a single key with a shorthand syntax without the full <> group. syntax: `"property" key "." IDENTIFIER type;`',
+        'tip'
+      ),
+      new Paragraph(
+        'code',
+        'property product_id.product_name string;# the name of a product',
+        'code',
+      ),
+      new Paragraph(
+        'Metrics',
+        'Metrics are aggregatable values, and can come from properties, keys, or other metrics. Like keys, they have a grain, though this is inferred from the aggregation',
+      ),
+      new Paragraph(
+        'Example',
+        'metric product_count <-count(product.id); # the count of products',
+        'code',
+      ),
+      new Paragraph(
+        'Dynamic Grain',
+        'A basic metric - like `metric product_count <- count(product_id);` - will have a dynamic aggregation level that corresponds to the query it is used in.',
+      ),
+      new Paragraph(
+        'Static Grain',
+        'A metric can be created by an aggregation with a defined grain, ex: `metric product_count <-count(product_id) by store;`, in which case it behaves similar to a property. However, where conditions for a select will still be pushed inside these aggregates.',
+      ),
     ]),
     new Article('Datasources and Joins', [
       new Paragraph(

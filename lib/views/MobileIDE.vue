@@ -6,13 +6,13 @@
           @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
           :active="activeScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey" />
       </template>
-
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <tabbed-layout>
-          <template #editor v-if="activeEditor && activeEditorData">
+          <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @query-started="slotProps.onQueryStarted" @save-editors="saveEditorsCall" />
+            <editor @query-started="slotProps.onQueryStarted" v-else context="main-sql" :editorName="activeEditor"
               @save-editors="saveEditorsCall" />
-            <editor v-else context="main-sql" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
             <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
@@ -36,7 +36,7 @@
       </template>
 
       <template v-else-if="activeScreen === 'tutorial'">
-        <tutorial />
+        <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
       </template>
       <template v-else-if="activeScreen === 'models'">
         <model-view :activeModelKey="activeModelKey" @save-editors="saveEditorsCall" />
@@ -139,7 +139,6 @@ import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-import Tutorial from '../components/Tutorial.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
@@ -147,7 +146,7 @@ import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
-
+import TutorialPage from '../components/TutorialPage.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
@@ -180,7 +179,7 @@ export default {
     SidebarLayout,
     VerticalSplitLayout,
     ErrorMessage,
-    Tutorial,
+    TutorialPage,
     ModelView,
     UserSettings,
     UserProfile,
@@ -245,7 +244,9 @@ export default {
     setActiveDocumentationKey(documentationKey: string) {
       pushHashToUrl('documentationKey', documentationKey)
       this.activeDocumentationKey = documentationKey
-      this.menuOpen = false
+      if (documentationKey.startsWith('article')) {
+        this.menuOpen = false
+      }
     },
     saveEditorsCall() {
       this.saveEditors()

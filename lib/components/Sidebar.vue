@@ -1,40 +1,35 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-icons">
-      <tooltip content="Trilogy Studio (Alpha)"
-        ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" /> 
-        <template v-if="sidebarWidth>=50"><div>Home</div></template>
-      </tooltip>
+      <div>
+        <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"><img @click="selectItem('')"
+            :src="trilogyIcon" />
+          <template v-if="isMobile"></template>
+        </tooltip>
+      </div>
+      <div>Home</div>
       <div class="sidebar-divider"></div>
-      <div
-        v-for="(item, _) in sidebarItems"
-        :key="item.name"
-        class="sidebar-icon"
-        @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }"
-      >
-      <template v-if="sidebarWidth<50">
-        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
-      </template>
-      <template v-else>
-        <i :class="item.icon"></i> {{ item.tooltip }}
-      </template>
-        
+      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }">
+        <template v-if="!isMobile">
+          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        </template>
+        <template v-else>
+          <i :class="item.icon"></i>
+          <div> {{ item.tooltip }}</div>
+        </template>
+
       </div>
       <div class="sidebar-divider"></div>
-      <div
-        v-for="(item, _) in sidebarFeatureItems"
-        :key="item.name"
-        class="sidebar-icon"
-        @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }"
-      >
-      <template v-if="sidebarWidth<50">
-        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
-      </template>
-      <template v-else>
-        <i :class="item.icon"></i> {{ item.tooltip }}
-      </template>
+      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
+        @click="selectItem(item.screen)" :class="{ selected: active == item.screen }">
+        <template v-if="!isMobile">
+          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        </template>
+        <template v-else>
+          <i :class="item.icon"></i>
+          <div> {{ item.tooltip }} </div>
+        </template>
       </div>
       <div class="sidebar-bottom-icons">
         <div class="sidebar-icon" @click="selectItem('settings')">
@@ -47,25 +42,18 @@
     </div>
 
     <div class="sidebar-content">
-      <EditorList
-        :activeEditor="activeEditor"
-        v-if="active === 'editors'"
-        @editor-selected="editorSelected"
-        @save-editors="saveEditors"
-      />
+      <EditorList :activeEditor="activeEditor" v-if="active === 'editors'" @editor-selected="editorSelected"
+        @save-editors="saveEditors" />
       <ConnectionList v-else-if="active === 'connections'" />
       <ModelSidebar v-else-if="active === 'models'" @model-key-selected="modelKeySelected" />
-      <TutorialSidebar
-        v-else-if="active === 'tutorial'"
-        @documentation-key-selected="documentationKeySelected"
-        :activeDocumentationKey="activeDocumentationKey"
-      />
+      <TutorialSidebar v-else-if="active === 'tutorial'" @documentation-key-selected="documentationKeySelected"
+        :activeDocumentationKey="activeDocumentationKey" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, inject } from 'vue'
 import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
@@ -90,10 +78,6 @@ export default defineComponent({
       type: String,
       default: getDefaultValueFromHash('documentationKey'),
       optional: true,
-    },
-    sidebarWidth: {
-      type: Number,
-      default: 40
     }
   },
   data() {
@@ -112,7 +96,7 @@ export default defineComponent({
       },
       {
         name: 'help',
-        tooltip: 'Help/Guide',
+        tooltip: 'Docs',
         icon: 'mdi mdi-help',
         screen: 'tutorial',
       },
@@ -137,12 +121,14 @@ export default defineComponent({
       //     component: "Extensions", // Replace with your actual component
       //   },
     ]
+    let isMobile = inject('isMobile')
     return {
       // index of the sidebarItem where the screen == active
       // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
       trilogyIcon: trilogyIcon,
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
+      isMobile,
     }
   },
   components: {
@@ -185,6 +171,9 @@ export default defineComponent({
 .trilogy-icon {
   width: 30px;
   height: 30px;
+  display: flex;
+  text-align: center;
+  /* justify-content: flex-start; */
 }
 
 .sidebar-container {

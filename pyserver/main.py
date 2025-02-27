@@ -110,6 +110,8 @@ router = APIRouter()
 
 def safe_format_query(input: str) -> str:
     input = input.strip()
+    if len(input) == 0:
+        return ""
     if input[-1] != ";":
         return input + ";"
     return input

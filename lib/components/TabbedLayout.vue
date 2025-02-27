@@ -1,16 +1,19 @@
 <template>
     <div class="results-container">
         <div class="tabs">
-            <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="activeTab = 'results'">
+            <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="activeTab = 'sql'">
                 Editor
             </button>
-            <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="activeTab = 'sql'">
+            <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="activeTab = 'results'">
                 Results
             </button>
         </div>
         <div class="tab-content">
-            <div v-if="activeTab === 'results'" class="editor-entry">
-                <slot name="editor"></slot>
+            <div v-if="activeTab === 'sql'" class="editor-entry"
+                >
+                <slot name="editor" 
+                :onQueryStarted="(event) => activeTab = 'results'"
+                ></slot>
             </div>
 
             <div v-else class="edit-results">
@@ -23,7 +26,7 @@
 <script lang="ts">
 
 export default {
-    name: 'TabbedLayoutr',
+    name: 'TabbedLayout',
     props: {
         // results: {
         //     type: Results,
@@ -33,7 +36,7 @@ export default {
     },
     data() {
         return {
-            activeTab: 'results',
+            activeTab: 'sql',
         }
     },
 }
@@ -41,21 +44,22 @@ export default {
 
 <style scoped>
 .editor-entry {
-  display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  /* flex: 1 1 calc(100%-60px); */
-  height: calc(100% - 24px);
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    /* flex: 1 1 calc(100%-60px); */
+    height: calc(100% - 24px);
 }
 
 .editor-results {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 0;
-  flex-shrink: 1;
-  /* flex-wrap: wrap; */
-  height: calc(100% - 24px);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 1;
+    /* flex-wrap: wrap; */
+    height: calc(100% - 24px);
 }
+
 .results-container {
     display: flex;
     flex-direction: column;
@@ -66,7 +70,7 @@ export default {
     display: flex;
     border-bottom: 1px solid var(--border-light);
     background: var(--sidebar-bg);
-    height:40px;
+    height: 40px;
 }
 
 .tab-button {
@@ -93,8 +97,4 @@ export default {
     flex: 1;
     overflow: auto;
 }
-
-
-
-
 </style>
