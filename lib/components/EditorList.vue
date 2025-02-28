@@ -236,7 +236,7 @@ export default {
 
 .sidebar-padding {
   width: 7px;
-  height: 22px;
+  height: var(--sidebar-list-item-height);
   margin-right: 5px;
   border-right: 1px solid var(--border-light);
 }

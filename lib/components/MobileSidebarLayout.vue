@@ -134,8 +134,17 @@ export default {
       if (this.menuOpen) {
         return 'Menu'
       }
-      if (this.activeScreen ==='editors') {
-        return 'IDE'
+      else if (this.activeScreen === 'connections') {
+        return 'Connections'
+      }
+      else if (this.activeScreen ==='settings') {
+        return 'Settings'
+      }
+      else if (this.activeScreen === 'help') {
+        return 'Help'
+      }
+      else if (this.activeScreen === 'about') {
+        return 'About'
       }
       return this.activeScreen
     }

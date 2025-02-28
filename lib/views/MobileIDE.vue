@@ -168,8 +168,8 @@ export default {
       activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
-      activeTab: 'results',
-      menuOpen: true,
+      activeTab: 'editor',
+      menuOpen: false,
     }
   },
   components: {

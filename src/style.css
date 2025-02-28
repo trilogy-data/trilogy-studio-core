@@ -137,7 +137,7 @@ button {
   background-color: var(--button-bg);
   cursor: pointer;
   transition: border-color 0.25s;
-  flex: 1;
+  /* flex: 1; */
 }
 
 button:focus,

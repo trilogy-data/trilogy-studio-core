@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar-list">
-    <h3 class="font-sans mb-1">{{ title }}</h3>
+    <h3 v-if= "!isMobile" class="font-sans mb-1">{{ title }}</h3>
     <slot name="actions"> </slot>
     <div>
       <slot></slot>
@@ -23,7 +23,7 @@
 }
 </style>
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, inject } from 'vue'
 
 export default defineComponent({
   name: 'SidebarList',
@@ -34,8 +34,10 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const isMobile = inject<boolean>('isMobile')
     return {
       title: props.title,
+      isMobile
     }
   },
 })
