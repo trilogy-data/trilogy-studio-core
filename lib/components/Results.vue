@@ -21,6 +21,7 @@
         v-if="activeTab === 'results'"
         :headers="results.headers"
         :results="results.data"
+        :containerHeight="containerHeight"
       />
       <div v-else class="sql-view">
         <pre>{{ generatedSql }}</pre>
@@ -41,6 +42,7 @@ export default {
       type: Results,
       required: true,
     },
+    containerHeight: Number,
     generatedSql: String,
   },
   data() {
@@ -72,6 +74,7 @@ export default {
   border-bottom: 2px solid transparent;
   padding-left: 20px;
   padding-right: 20px;
+  color: var(--text-color);
   /* max-width:100px; */
 }
 
@@ -90,17 +93,20 @@ export default {
 }
 
 .sql-view {
+  background: var(--result-window-bg);
+  color: var(--text-color);
   padding: 1rem;
   height: 100%;
 }
 
 .sql-view pre {
   margin: 0;
-  background: var(--bg-light);
+
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.5;
+  height:100%;
 }
 </style>

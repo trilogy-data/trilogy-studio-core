@@ -5,7 +5,7 @@
       <div
         class="sidebar-content"
         @click="handleClick(node.id)"
-        :class="{ 'sidebar-content--active': isActiveNode(node.id) }"
+        :class="{  'sidebar-item-selected': isActiveNode(node.id) }"
       >
         <!-- Indentation -->
         <div
@@ -130,14 +130,6 @@ export default {
 </script>
 
 <style scoped>
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: var(--sidebar-list-item-font-size);
-  height: var(--sidebar-list-item-height);
-  line-height: var(--sidebar-list-item-height);
-}
 
 .node-icon {
   padding-right: 5px;
@@ -154,9 +146,6 @@ export default {
   padding: 0 4px;
 }
 
-.sidebar-content--active {
-  background-color: var(--sidebar-selector-bg);
-}
 
 .sidebar-padding {
   width: 7px;

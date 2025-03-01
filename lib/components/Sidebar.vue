@@ -6,7 +6,7 @@
             :src="trilogyIcon" />
         </tooltip>
       </div>
-      <div v-if = "!isMobile">Home</div>
+      <div v-if = "isMobile">Home</div>
       <div class="sidebar-divider"></div>
       <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }">
@@ -44,7 +44,7 @@
       <EditorList :activeEditor="activeEditor" v-if="active === 'editors'" @editor-selected="editorSelected"
         @save-editors="saveEditors" />
       <ConnectionList v-else-if="active === 'connections'" />
-      <ModelSidebar v-else-if="active === 'models'" @model-key-selected="modelKeySelected" />
+      <ModelSidebar v-else-if="active === 'models'"  @model-key-selected="modelKeySelected" :activeModelKey="activeModelKey" />
       <TutorialSidebar v-else-if="active === 'tutorial'" @documentation-key-selected="documentationKeySelected"
         :activeDocumentationKey="activeDocumentationKey" />
     </div>
@@ -71,6 +71,11 @@ export default defineComponent({
     activeEditor: {
       type: String,
       default: getDefaultValueFromHash('editor'),
+      optional: true,
+    },
+    activeModelKey: {
+      type: String,
+      default: getDefaultValueFromHash('model'),
       optional: true,
     },
     activeDocumentationKey: {

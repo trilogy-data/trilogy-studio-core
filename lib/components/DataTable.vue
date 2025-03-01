@@ -74,6 +74,7 @@ export default {
       type: Array as PropType<readonly Row[]>,
       required: true,
     },
+    containerHeight: Number,
   },
   setup() {
     // Inject the store that has been provided elsewhere in the app
@@ -96,6 +97,16 @@ export default {
       },
       deep: true,
     },
+    containerHeight: {
+      handler() {
+        this.$nextTick(() => {
+          if (this.tabulator && this.containerHeight) {
+            this.tabulator.setHeight(this.containerHeight)
+          }
+        })
+
+      }
+    }
   },
   computed: {
     tableData() {
@@ -145,7 +156,6 @@ export default {
         maxHeight: '100%',
         minHeight: '100%',
         minWidth: '100%',
-        height: '300px',
         rowHeight: 30,
         data: this.tableData, //assign data to table
         columns: this.tableColumns,

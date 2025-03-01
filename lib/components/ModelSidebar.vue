@@ -9,7 +9,9 @@
       </div>
     </template>
 
-    <div v-for="item in flatList" :key="item.id" class="sidebar-item">
+    <div v-for="item in flatList" :key="item.id" class="sidebar-item"
+          :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
+    >
       <div class="sidebar-content" @click="handleClick(item.id)">
         <!-- headericons  -->
         <div
@@ -65,6 +67,7 @@ import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'ModelList',
+  props: { activeModelKey: String },
   setup() {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
@@ -252,19 +255,6 @@ export default {
   color: var(--text-faint);
 }
 
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: var(--sidebar-list-item-font-size);
-  height: var(--sidebar-list-item-height);
-  line-height: var(--sidebar-list-item-height);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.sidebar-item:hover {
-  background-color: var(--button-mouseover);
-}
 
 .sidebar-content {
   display: flex;

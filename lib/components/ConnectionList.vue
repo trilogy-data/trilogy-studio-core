@@ -3,7 +3,9 @@
     <template #actions>
       <div class="button-container">
         <connection-creator />
+        <div>
         <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+      </div>
       </div>
     </template>
 
@@ -50,12 +52,14 @@
         <span class="flag-container">
           <loading-button class="lb" :action="() => resetConnection(item.connection)"><i
               :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i></loading-button>
-          <status-icon v-if="item.type === 'connection'" :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])
+
+        </span>
+        <span class="spacer"></span>
+        <status-icon v-if="item.type === 'connection'" :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])
             " :message="connectionStore.connections[item.name].error
               ? connectionStore.connections[item.name].error || ''
               : ''
               " />
-        </span>
       </template>
 
       <!-- Add MotherDuck token input when connection is expanded -->
@@ -219,25 +223,13 @@ export default {
 }
 
 .button {
-  font-size:16px;
+  font-size:var(--button-font-size);
 }
 
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  /* padding: 4px; */
-  cursor: pointer;
-  font-size: var(--sidebar-list-item-font-size);
-  height: var(--sidebar-list-item-height);
-  line-height: var(--sidebar-list-item-height);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
 
-.sidebar-padding {
-  width: 7px;
-  height: var(--sidebar-list-item-height);
+
+.spacer {
   margin-right: 5px;
-  border-right: 1px solid var(--border-light);
 }
 
 .stacked-item:hover>.stacked-content {

@@ -135,7 +135,7 @@ export default {
 
 .btn {
   /* min-height: 24px; */
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   /* width: 100%; */
   position: relative;
 }

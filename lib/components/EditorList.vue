@@ -1,6 +1,19 @@
 <template>
   <sidebar-list title="Editors">
     <template #actions>
+
+      <div class="button-container">
+        <editor-creator />
+        <div>
+        <loading-button
+          ref="loadingButton"
+          :action="saveEditors"
+          :keyCombination="['control', 's']"
+        >
+          Save
+        </loading-button>
+      </div>
+      </div>
       <span
         v-for="tag in EditorTag"
         :key="tag"
@@ -11,16 +24,6 @@
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
         }}{{ tag.slice(1) }} Editors
       </span>
-      <div class="button-container">
-        <editor-creator />
-        <loading-button
-          ref="loadingButton"
-          :action="saveEditors"
-          :keyCombination="['control', 's']"
-        >
-          Save
-        </loading-button>
-      </div>
     </template>
 
     <div
@@ -223,33 +226,8 @@ export default {
   height: 12px;
 }
 
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  /* padding: 4px; */
-  cursor: pointer;
-  font-size: var(--sidebar-list-item-font-size);
-  height: var(--sidebar-list-item-height);
-  line-height: var(--sidebar-list-item-height);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
 
-.sidebar-padding {
-  width: 7px;
-  height: var(--sidebar-list-item-height);
-  margin-right: 5px;
-  border-right: 1px solid var(--border-light);
-}
 
-.sidebar-item:hover {
-  background-color: var(--button-mouseover);
-}
-
-.sidebar-item-selected {
-  /*blue 50% transparency background + dark blue border */
-  background-color: hsl(210, 100%, 50%, 0.5);
-  border: 1px solid hsl(210, 100%, 50%, 0.75);
-}
 
 .active-editor {
   font-weight: bold;

@@ -26,6 +26,8 @@
   gap: 24px;
   padding: 20px;
   margin: 0 auto;
+  background-color: var(--query-window-bg);
+  height:100%;
 }
 
 .editor-display {

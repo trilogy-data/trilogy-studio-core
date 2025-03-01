@@ -11,6 +11,7 @@
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
+          :activeModelKey="activeModelKey"
         />
       </template>
 
@@ -30,7 +31,7 @@
               @save-editors="saveEditorsCall"
             />
           </template>
-          <template #results v-if="activeEditorData">
+          <template #results="{ containerHeight }" v-if="activeEditorData">
             <loading-view
               v-if="activeEditorData.loading"
               :cancel="activeEditorData.cancelCallback"
@@ -55,6 +56,7 @@
               v-else-if="activeEditorData.results"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
+              :containerHeight="containerHeight"
             />
             <hint-component v-else />
           </template>
