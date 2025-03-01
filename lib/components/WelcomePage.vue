@@ -1,21 +1,22 @@
 <template>
   <div class="container">
     <div class="content">
-      <h1>Welcome to Trilogy Studio</h1>
+
       <div class="logo">
         <img :src="trilogyIcon" alt="Logo" class="logo-image" />
       </div>
-
-      <p>Dive into a new editor, try the demo model, or review the help page to get started.</p>
+      <h1>Welcome to Trilogy Studio</h1>
+      <p>To get started: try the demo model, dive into a new editor, or review documentation.</p>
       <div class="buttons">
+        <button @click="startDemo()" class="btn btn-secondary">
+          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo </span>
+        </button>
         <editor-creator>
           <template v-slot="{ onClick }">
             <button @click="onClick" class="btn btn-primary">New Editor</button>
           </template>
         </editor-creator>
-        <button @click="startDemo()" class="btn btn-secondary">
-          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo </span>
-        </button>
+
         <button @click="tutorial()" class="btn btn-tertiary">Help</button>
       </div>
     </div>
@@ -91,6 +92,8 @@ h1 {
 .buttons {
   display: flex;
   gap: 10px;
+  text-align:center;
+  justify-content: center;
 }
 
 .btn {

@@ -2,62 +2,37 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+          :active="activeScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
+          :activeModelKey="activeModelKey" />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
-            <editor
-              v-if="activeEditorData.type == 'preql'"
-              context="main-trilogy"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
-            <editor
-              v-else
-              context="main-sql"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
+            <editor v-else context="main-sql" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <error-message v-else-if="activeEditorData.error"
-              >{{ activeEditorData.error }}
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
+            <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}
               <template #action v-if="activeEditorData.error === 'Connection is not active.'">
-                <loading-button
-                  :action="
-                    () =>
-                      activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection)
-                        : null
-                  "
-                >
+                <loading-button :action="() => {
+                    activeEditorData
+                      ? connectionStore.resetConnection(activeEditorData.connection).then(() => { activeEditorData ? activeEditorData.error = null : null })
+                      : null;
+
+                  }
+                  ">
                   Reconnect
                   {{ activeEditorData.connection }}
                 </loading-button>
               </template>
             </error-message>
-            <results-container
-              v-else-if="activeEditorData.results"
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :containerHeight="containerHeight"
-            />
+            <results-container v-else-if="activeEditorData.results" :results="activeEditorData.results"
+              :generatedSql="activeEditorData.generated_sql || undefined" :containerHeight="containerHeight" />
             <hint-component v-else />
           </template>
         </vertical-split-layout>
@@ -238,7 +213,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
     return {
       connectionStore,

@@ -8,6 +8,7 @@ export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
   private connectionStorageKey: string
   private modelStorageKey: string
+  private userSettingsStorageKey: string
   public type: string
 
   constructor(prefix: string = '') {
@@ -15,6 +16,7 @@ export default class LocalStorage extends AbstractStorage {
     this.editorStorageKey = prefix + 'editors'
     this.connectionStorageKey = prefix + 'connections'
     this.modelStorageKey = prefix + 'modelConfig'
+    this.userSettingsStorageKey = prefix + 'userSettings'
     this.type = 'local'
   }
 
@@ -141,5 +143,17 @@ export default class LocalStorage extends AbstractStorage {
 
   clearModelConfig(): void {
     localStorage.removeItem(this.modelStorageKey)
+  }
+
+  // user Setting Storage
+
+  loadUserSettings(): Record<string, any> {
+    const storedData = localStorage.getItem(this.userSettingsStorageKey)
+    let raw = storedData ? JSON.parse(storedData): {}
+    return reactive(raw)
+  }
+
+  saveUserSettings(settings: Record<string, any>):void {
+    localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
   }
 }

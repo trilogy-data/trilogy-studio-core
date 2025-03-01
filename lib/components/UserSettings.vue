@@ -1,7 +1,6 @@
 <template>
   <div class="settings-container">
-    <h2>Settings</h2>
-    {{ settings }}
+    <h2>Settings</h2> 
     <div class="setting" v-for="(value, key) in settings" :key="key">
       <label :for="key">{{ formatLabel(key) }}</label>
       <input v-if="typeof value === 'boolean'" type="checkbox" :id="key" v-model="settings[key]"
@@ -15,7 +14,7 @@
         @input="updateSetting(key, settings[key])" />
     </div>
     <div class="actions">
-      <button @click="saveSettings" :disabled="isLoading || !hasChanges">Save</button>
+      <!-- <button @click="saveSettings" :disabled="isLoading || !hasChanges">Save</button> -->
       <button @click="resetToDefaults" :disabled="isLoading">Reset to Defaults</button>
     </div>
   </div>

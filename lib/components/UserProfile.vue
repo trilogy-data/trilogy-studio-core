@@ -1,18 +1,17 @@
 <template>
   <div class="profile-container">
-    <h2>User Profile (placeholder)</h2>
+    <h2>Profile</h2>
 
     <div class="profile-info">
       <img :src="trilogyIcon" alt="User Avatar" class="avatar" />
       <div class="details">
-        <p><strong>Name:</strong> {{ profile.name }}</p>
-        <p><strong>Email:</strong> {{ profile.email }}</p>
-        <p><strong>Organization:</strong> {{ profile.organization }}</p>
-        <p><strong>Role:</strong> {{ profile.role }}</p>
+        <p><strong>User Name:</strong> {{ profile.name }}</p>
+        <p v-if="profile.email"><strong>Email:</strong> {{ profile.email }}</p>
+        <p v-if="profile.organization"><strong>Organization:</strong> {{ profile.organization }}</p>
       </div>
     </div>
 
-    <button @click="editProfile">Edit Profile</button>
+    <!-- <button @click="editProfile">Edit Profile</button> -->
   </div>
 </template>
 
@@ -27,11 +26,10 @@ export default defineComponent({
   setup() {
     // Mock user profile (to be replaced with Pinia store later)
     const profile = reactive({
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      organization: 'Doe Inc.',
-      role: 'Admin',
-      avatar: 'https://via.placeholder.com/100',
+      name: 'Anonymous',
+      email: null,
+      organization: null
+      // role: 'Admin',
     })
 
     const editProfile = () => {
