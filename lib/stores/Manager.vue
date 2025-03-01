@@ -10,7 +10,7 @@ import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import QueryResolver from './resolver'
-import { provide } from 'vue'
+import { provide, computed } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 import { IDE, MobileIDE } from '../views'
@@ -107,9 +107,8 @@ export default {
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
-    provide('isMobile', () => {
-      return window.innerWidth > 768 ? false : true
-    })
+    const isMobile = computed(() => window.innerWidth <= 768)
+    provide('isMobile', isMobile)
   },
   data() {
     return {

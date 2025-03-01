@@ -55,6 +55,8 @@ import { Tabulator } from 'tabulator-tables'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import type { PropType } from 'vue'
+import { shallowRef, computed, inject } from 'vue'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
 export default {
   data() {
@@ -73,6 +75,20 @@ export default {
       required: true,
     },
   },
+  setup() {
+    // Inject the store that has been provided elsewhere in the app
+    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    if (!settingsStore) {
+      throw new Error('userSettingsStore not provided')
+    }
+    // Create a computed property for the current theme
+    const currentTheme = computed(() => settingsStore.settings.theme)
+
+    return {
+      settingsStore,
+      currentTheme
+    }
+  },
   watch: {
     results: {
       handler() {
@@ -84,9 +100,6 @@ export default {
   computed: {
     tableData() {
       return this.results
-    },
-    prefersLight() {
-      return window.matchMedia('(prefers-color-scheme: light)')
     },
     tableColumns(): ColumnDefinition[] {
       // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
@@ -122,15 +135,18 @@ export default {
   methods: {
     create() {
       // @ts-ignore
-      this.tabulator = new Tabulator(this.$refs.tabulator, {
+      this.tabulator = shallowRef(new Tabulator(this.$refs.tabulator, {
         // data: this.tableData, //link data to table
         pagination: true, //enable pagination
-        paginationMode: 'remote', //enable remote pagination
+        // paginationMode: 'remote', //enable remote pagination
         // reactiveData: true,
         renderHorizontal: 'virtual',
         // columns: this.tableColumns, //define table columns
         maxHeight: '100%',
         minHeight: '100%',
+        minWidth: '100%',
+        height: '300px',
+        rowHeight: 30,
         data: this.tableData, //assign data to table
         columns: this.tableColumns,
         // height: this.actualTableHeight,
@@ -143,7 +159,8 @@ export default {
           columnHeaders: true,
         },
         resizableColumns: true,
-      })
+      }))
+      this.updateTableTheme()
     },
     updateTable() {
       if (this.tabulator) {
@@ -152,6 +169,23 @@ export default {
       }
       this.create()
     },
+    updateTableTheme() {
+      if (!this.tabulator) return
+
+      const table = this.tabulator
+      const theme = this.currentTheme
+
+      if (theme === 'dark') {
+        // Apply dark theme styles
+        table.element.classList.remove('light-theme-table')
+        table.element.classList.add('dark-theme-table')
+      } else {
+        // Apply light theme styles
+        table.element.classList.remove('dark-theme-table')
+        table.element.classList.add('light-theme-table')
+      }
+
+    }
   },
 }
 </script>

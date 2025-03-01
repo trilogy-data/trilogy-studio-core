@@ -2,7 +2,7 @@
 
 
   <div id="interface" class="interface">
-    <div class="select-bar"><i @click="$emit('menu-toggled'); console.log('fun')"
+    <div class="select-bar"><i @click="$emit('menu-toggled');"
         class="mdi mdi-menu hamburger-icon"></i><span class="header">{{ screenTitle
         }}</span></div>
     <div class="interface-wrap">

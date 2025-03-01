@@ -18,6 +18,7 @@ import {
   SortModule,
   EditModule,
   ExportModule,
+  PageModule,
 } from 'tabulator-tables'
 
 Tabulator.registerModule([
@@ -28,6 +29,7 @@ Tabulator.registerModule([
   SortModule,
   EditModule,
   ExportModule,
+  PageModule,
 ])
 
 const apiUrl = import.meta.env.VITE_RESOLVER_URL

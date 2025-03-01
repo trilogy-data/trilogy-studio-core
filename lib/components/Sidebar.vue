@@ -4,10 +4,9 @@
       <div>
         <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"><img @click="selectItem('')"
             :src="trilogyIcon" />
-          <template v-if="isMobile"></template>
         </tooltip>
       </div>
-      <div>Home</div>
+      <div v-if = "!isMobile">Home</div>
       <div class="sidebar-divider"></div>
       <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }">
@@ -121,7 +120,10 @@ export default defineComponent({
       //     component: "Extensions", // Replace with your actual component
       //   },
     ]
-    let isMobile = inject('isMobile')
+    let isMobile = inject<CallableFunction>('isMobile')
+    if (!isMobile) {
+     throw new Error('isMobile is not provided')
+    }
     return {
       // index of the sidebarItem where the screen == active
       // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
