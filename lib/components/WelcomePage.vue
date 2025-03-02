@@ -1,7 +1,6 @@
 <template>
   <div class="container">
     <div class="content">
-
       <div class="logo">
         <img :src="trilogyIcon" alt="Logo" class="logo-image" />
       </div>
@@ -92,7 +91,7 @@ h1 {
 .buttons {
   display: flex;
   gap: 10px;
-  text-align:center;
+  text-align: center;
   justify-content: center;
 }
 

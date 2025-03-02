@@ -64,7 +64,10 @@ languages.setMonarchTokensProvider('trilogy', {
       [/\-\-.*/, 'hidden'],
 
       // Match Keywords (SELECT, WHERE, ORDER, BY)
-      [/(^|\s)(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(?=\s|$|,)/, 'keyword'],
+      [
+        /(^|\s)(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(?=\s|$|,)/,
+        'keyword',
+      ],
 
       // Match definitions (auto, property, metric)
       [/(^|\s)(AUTO|PROPERTY|KEY|METRIC)(\s|$)/, 'definition'],

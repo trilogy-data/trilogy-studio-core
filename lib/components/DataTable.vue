@@ -87,7 +87,7 @@ export default {
 
     return {
       settingsStore,
-      currentTheme
+      currentTheme,
     }
   },
   watch: {
@@ -104,9 +104,8 @@ export default {
             this.tabulator.setHeight(this.containerHeight)
           }
         })
-
-      }
-    }
+      },
+    },
   },
   computed: {
     tableData() {
@@ -146,30 +145,32 @@ export default {
   methods: {
     create() {
       // @ts-ignore
-      this.tabulator = shallowRef(new Tabulator(this.$refs.tabulator, {
-        // data: this.tableData, //link data to table
-        pagination: true, //enable pagination
-        // paginationMode: 'remote', //enable remote pagination
-        // reactiveData: true,
-        renderHorizontal: 'virtual',
-        // columns: this.tableColumns, //define table columns
-        maxHeight: '100%',
-        minHeight: '100%',
-        minWidth: '100%',
-        rowHeight: 30,
-        data: this.tableData, //assign data to table
-        columns: this.tableColumns,
-        // height: this.actualTableHeight,
-        nestedFieldSeparator: false,
-        clipboard: 'copy',
-        keybindings: {
-          copyToClipboard: true,
-        },
-        downloadConfig: {
-          columnHeaders: true,
-        },
-        resizableColumns: true,
-      }))
+      this.tabulator = shallowRef(
+        new Tabulator(this.$refs.tabulator, {
+          // data: this.tableData, //link data to table
+          pagination: true, //enable pagination
+          // paginationMode: 'remote', //enable remote pagination
+          // reactiveData: true,
+          renderHorizontal: 'virtual',
+          // columns: this.tableColumns, //define table columns
+          maxHeight: '100%',
+          minHeight: '100%',
+          minWidth: '100%',
+          rowHeight: 30,
+          data: this.tableData, //assign data to table
+          columns: this.tableColumns,
+          // height: this.actualTableHeight,
+          nestedFieldSeparator: false,
+          clipboard: 'copy',
+          keybindings: {
+            copyToClipboard: true,
+          },
+          downloadConfig: {
+            columnHeaders: true,
+          },
+          resizableColumns: true,
+        }),
+      )
       this.updateTableTheme()
     },
     updateTable() {
@@ -194,8 +195,7 @@ export default {
         table.element.classList.remove('dark-theme-table')
         table.element.classList.add('light-theme-table')
       }
-
-    }
+    },
   },
 }
 </script>

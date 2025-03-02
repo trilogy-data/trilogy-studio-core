@@ -5,5 +5,5 @@ export { default as VerticalSplitLayout } from './components/VerticalSplitLayout
 export { default as EditorModel } from './editors/editor'
 export { default as EditorList } from './components/EditorList.vue'
 export { default as IDE } from './views/IDE.vue'
-export {default as MobileIDE} from './views/MobileIDE.vue'
+export { default as MobileIDE } from './views/MobileIDE.vue'
 export { default as Manager } from './stores/Manager.vue'

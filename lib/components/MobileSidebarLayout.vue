@@ -1,10 +1,9 @@
 <template>
-
-
   <div id="interface" class="interface">
-    <div class="select-bar"><i @click="$emit('menu-toggled');"
-        class="mdi mdi-menu hamburger-icon"></i><span class="header">{{ screenTitle
-        }}</span></div>
+    <div class="select-bar">
+      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i
+      ><span class="header">{{ screenTitle }}</span>
+    </div>
     <div class="interface-wrap">
       <div v-if="menuOpen" ref="sidebar" class="sidebar">
         <slot name="sidebar"></slot>
@@ -21,7 +20,7 @@
   font-size: 20px;
   height: 30px;
   display: inline-block;
-  vertical-align:middle;
+  vertical-align: middle;
 }
 
 .select-bar {
@@ -116,7 +115,6 @@
 }
 </style>
 <script lang="ts">
-
 export default {
   name: 'MobileSidebarLayout',
   props: {
@@ -133,23 +131,18 @@ export default {
     screenTitle() {
       if (this.menuOpen) {
         return 'Menu'
-      }
-      else if (this.activeScreen === 'connections') {
+      } else if (this.activeScreen === 'connections') {
         return 'Connections'
-      }
-      else if (this.activeScreen ==='settings') {
+      } else if (this.activeScreen === 'settings') {
         return 'Settings'
-      }
-      else if (this.activeScreen === 'help') {
+      } else if (this.activeScreen === 'help') {
         return 'Help'
-      }
-      else if (this.activeScreen === 'about') {
+      } else if (this.activeScreen === 'about') {
         return 'About'
       }
       return this.activeScreen
-    }
+    },
   },
-  methods: {
-  }
+  methods: {},
 }
 </script>

@@ -2,32 +2,41 @@
   <div class="sidebar-container">
     <div class="sidebar-icons">
       <div>
-        <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"><img @click="selectItem('')"
-            :src="trilogyIcon" />
+        <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"
+          ><img @click="selectItem('')" :src="trilogyIcon" />
         </tooltip>
       </div>
-      <div v-if = "isMobile">Home</div>
+      <div v-if="isMobile">Home</div>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }">
+      <div
+        v-for="(item, _) in sidebarItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }"
+      >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
         <template v-else>
           <i :class="item.icon"></i>
-          <div> {{ item.tooltip }}</div>
+          <div>{{ item.tooltip }}</div>
         </template>
-
       </div>
       <div class="sidebar-divider"></div>
-      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
-        @click="selectItem(item.screen)" :class="{ selected: active == item.screen }">
+      <div
+        v-for="(item, _) in sidebarFeatureItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen }"
+      >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
         <template v-else>
           <i :class="item.icon"></i>
-          <div> {{ item.tooltip }} </div>
+          <div>{{ item.tooltip }}</div>
         </template>
       </div>
       <div class="sidebar-bottom-icons">
@@ -41,12 +50,23 @@
     </div>
 
     <div class="sidebar-content">
-      <EditorList :activeEditor="activeEditor" v-if="active === 'editors'" @editor-selected="editorSelected"
-        @save-editors="saveEditors" />
+      <EditorList
+        :activeEditor="activeEditor"
+        v-if="active === 'editors'"
+        @editor-selected="editorSelected"
+        @save-editors="saveEditors"
+      />
       <ConnectionList v-else-if="active === 'connections'" />
-      <ModelSidebar v-else-if="active === 'models'"  @model-key-selected="modelKeySelected" :activeModelKey="activeModelKey" />
-      <TutorialSidebar v-else-if="active === 'tutorial'" @documentation-key-selected="documentationKeySelected"
-        :activeDocumentationKey="activeDocumentationKey" />
+      <ModelSidebar
+        v-else-if="active === 'models'"
+        @model-key-selected="modelKeySelected"
+        :activeModelKey="activeModelKey"
+      />
+      <TutorialSidebar
+        v-else-if="active === 'tutorial'"
+        @documentation-key-selected="documentationKeySelected"
+        :activeDocumentationKey="activeDocumentationKey"
+      />
     </div>
   </div>
 </template>
@@ -82,7 +102,7 @@ export default defineComponent({
       type: String,
       default: getDefaultValueFromHash('documentationKey'),
       optional: true,
-    }
+    },
   },
   data() {
     let sidebarFeatureItems = [
@@ -127,7 +147,7 @@ export default defineComponent({
     ]
     let isMobile = inject<CallableFunction>('isMobile')
     if (!isMobile) {
-     throw new Error('isMobile is not provided')
+      throw new Error('isMobile is not provided')
     }
     return {
       // index of the sidebarItem where the screen == active

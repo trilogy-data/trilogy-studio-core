@@ -1,7 +1,6 @@
 <template>
   <IDE v-if="currentLayout === 'Desktop'" />
   <MobileIDE v-else />
-
 </template>
 
 <script lang="ts">
@@ -113,22 +112,22 @@ export default {
   data() {
     return {
       windowWidth: window.innerWidth,
-    };
+    }
   },
   computed: {
     currentLayout() {
-      return this.windowWidth > 768 ? 'Desktop' : 'Mobile';
+      return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
     },
   },
   mounted() {
-    window.addEventListener('resize', this.handleResize);
+    window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize);
+    window.removeEventListener('resize', this.handleResize)
   },
   methods: {
     handleResize() {
-      this.windowWidth = window.innerWidth;
+      this.windowWidth = window.innerWidth
     },
   },
 }

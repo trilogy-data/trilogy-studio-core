@@ -1,17 +1,13 @@
 <template>
   <sidebar-list title="Editors">
     <template #actions>
-
       <div class="button-container">
         <editor-creator />
         <div>
-        <loading-button
-          :action="saveEditors"
-          :keyCombination="['control', 's']"
-        >
-          Save
-        </loading-button>
-      </div>
+          <loading-button :action="saveEditors" :keyCombination="['control', 's']">
+            Save
+          </loading-button>
+        </div>
       </div>
       <span
         v-for="tag in EditorTag"
@@ -224,9 +220,6 @@ export default {
   width: 12px;
   height: 12px;
 }
-
-
-
 
 .active-editor {
   font-weight: bold;

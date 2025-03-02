@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar-list">
-    <h3 v-if= "!isMobile" class="font-sans mb-1">{{ title }}</h3>
+    <h3 v-if="!isMobile" class="font-sans mb-1">{{ title }}</h3>
     <slot name="actions"> </slot>
     <div>
       <slot></slot>
@@ -37,7 +37,7 @@ export default defineComponent({
     const isMobile = inject<boolean>('isMobile')
     return {
       title: props.title,
-      isMobile
+      isMobile,
     }
   },
 })

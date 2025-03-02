@@ -1,5 +1,4 @@
 <template>
-
   <div class="parent">
     <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
     <template v-else>
@@ -10,12 +9,23 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing" class="name-input" type="text" />
+            <input
+              v-else
+              ref="nameInput"
+              v-model="editableName"
+              @blur="finishEditing"
+              @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing"
+              class="name-input"
+              type="text"
+            />
           </div>
           <div class="toggle-group">
-            <button class="toggle-button tag-inactive" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-              @click="toggleTag()">
+            <button
+              class="toggle-button tag-inactive"
+              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+              @click="toggleTag()"
+            >
               {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
             </button>
             <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
@@ -25,19 +35,24 @@
           </div>
         </div>
         <div class="menu-actions">
-
           <button class="button-transparent action-item" @click="$emit('save-editors')">
             Save
           </button>
 
-          <loading-button :useDefaultStyle="false" class="button-transparent action-item"
-            :action="validateQuery">Parse</loading-button>
+          <loading-button
+            :useDefaultStyle="false"
+            class="button-transparent action-item"
+            :action="validateQuery"
+            >Parse</loading-button
+          >
 
-          <button class="button-transparent action-item" :class="{ 'button-cancel': editorData.loading }"
-            @click="runQuery">
+          <button
+            class="button-transparent action-item"
+            :class="{ 'button-cancel': editorData.loading }"
+            @click="runQuery"
+          >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
-
         </div>
       </div>
       <div ref="editor" id="editor" class="editor-fix-styles"></div>
@@ -221,7 +236,14 @@ export default defineComponent({
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
-    return { connectionStore, modelStore, editorStore, trilogyResolver, EditorTag, userSettingsStore }
+    return {
+      connectionStore,
+      modelStore,
+      editorStore,
+      trilogyResolver,
+      EditorTag,
+      userSettingsStore,
+    }
   },
   async mounted() {
     this.$nextTick(() => {
@@ -287,7 +309,6 @@ export default defineComponent({
     },
 
     async validateQuery(log: boolean = true) {
-
       const editorItem = editorMap.get(this.context)
       if (this.loading || !editorItem) {
         return
@@ -365,9 +386,9 @@ export default defineComponent({
         // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor].contents,
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
           : []
 
         // Get selected text or full content
@@ -375,10 +396,10 @@ export default defineComponent({
         console.log(selected)
         let text =
           selected &&
-            !(
-              selected.startColumn === selected.endColumn &&
-              selected.startLineNumber === selected.endLineNumber
-            )
+          !(
+            selected.startColumn === selected.endColumn &&
+            selected.startLineNumber === selected.endLineNumber
+          )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
         // hack for mobile? getValue not returning values

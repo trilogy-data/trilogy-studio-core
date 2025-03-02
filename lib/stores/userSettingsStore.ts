@@ -10,22 +10,22 @@ export const useUserSettingsStore = defineStore('userSettings', {
   state: () => ({
     settings: {
       theme: 'dark',
-      trilogyResolver: 'https://trilogy-service.fly.dev'
+      trilogyResolver: 'https://trilogy-service.fly.dev',
     } as UserSettings,
     defaults: {
       theme: 'dark',
-      trilogyResolver: 'https://trilogy-service.fly.dev'
+      trilogyResolver: 'https://trilogy-service.fly.dev',
     } as UserSettings,
     isLoading: false,
-    hasChanges: false
+    hasChanges: false,
   }),
-  
+
   getters: {
     getSettings: (state) => state.settings,
     getDefaults: (state) => state.defaults,
-    hasUnsavedChanges: (state) => state.hasChanges
+    hasUnsavedChanges: (state) => state.hasChanges,
   },
-  
+
   actions: {
     /**
      * Update a single setting value
@@ -37,20 +37,20 @@ export const useUserSettingsStore = defineStore('userSettings', {
       }
       this.hasChanges = true
     },
-    
+
     toggleTheme() {
       // Remove any existing theme classes
       console.log('toggling')
-      document.documentElement.classList.remove('dark-theme', 'light-theme');
+      document.documentElement.classList.remove('dark-theme', 'light-theme')
 
       // Toggle to opposite theme
       if (this.settings['theme'] === 'light') {
         console.log('adding light')
-        document.documentElement.classList.add('light-theme');
+        document.documentElement.classList.add('light-theme')
         // localStorage.setItem('theme', 'light');
       } else {
         console.log('adding dark')
-        document.documentElement.classList.add('dark-theme');
+        document.documentElement.classList.add('dark-theme')
         // localStorage.setItem('theme', 'dark');
       }
     },
@@ -62,7 +62,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.settings = { ...this.settings, ...newSettings }
       this.hasChanges = true
     },
-    
+
     /**
      * Reset settings to defaults
      */
@@ -70,13 +70,13 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.settings = { ...this.defaults }
       this.hasChanges = true
     },
-    
+
     /**
      * Save settings (e.g. to localStorage or API)
      */
     async saveSettings() {
       this.isLoading = true
-      
+
       try {
         // Here you would typically save to an API or localStorage
         localStorage.setItem('userSettings', JSON.stringify(this.settings))
@@ -89,13 +89,13 @@ export const useUserSettingsStore = defineStore('userSettings', {
         this.isLoading = false
       }
     },
-    
+
     /**
      * Load settings from storage
      */
     loadSettings() {
       this.isLoading = true
-      
+
       try {
         const savedSettings = localStorage.getItem('userSettings')
         if (savedSettings) {
@@ -106,8 +106,8 @@ export const useUserSettingsStore = defineStore('userSettings', {
       } finally {
         this.isLoading = false
       }
-    }
-  }
+    },
+  },
 })
 
 export type UserSettingsStoreType = ReturnType<typeof useUserSettingsStore>

@@ -1,23 +1,19 @@
 <template>
-
-    <button
-      :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
-      v-bind="$attrs"
-      :disabled="isLoading"
-      @click.stop="handleClick"
-    >
-      <span :class="{ 'hidden-text': isLoading }">
-        <slot></slot>
-      </span>
-      <span v-if="status === 'success'" class="status success overlay">✔</span>
-      <span v-else-if="status === 'error'" class="status error overlay"
-        >✖ ({{ errorMessage }})</span
-      >
-      <span v-else-if="isLoading" class="status loading overlay">
-        <span class="spinner"></span>
-      </span>
-    </button>
-
+  <button
+    :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
+    v-bind="$attrs"
+    :disabled="isLoading"
+    @click.stop="handleClick"
+  >
+    <span :class="{ 'hidden-text': isLoading }">
+      <slot></slot>
+    </span>
+    <span v-if="status === 'success'" class="status success overlay">✔</span>
+    <span v-else-if="status === 'error'" class="status error overlay">✖ ({{ errorMessage }})</span>
+    <span v-else-if="isLoading" class="status loading overlay">
+      <span class="spinner"></span>
+    </span>
+  </button>
 </template>
 
 <script lang="ts">
@@ -109,8 +105,6 @@ export default {
 </script>
 
 <style>
-
-
 .hidden-text {
   visibility: hidden;
 }

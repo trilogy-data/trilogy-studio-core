@@ -5,7 +5,7 @@
       <div
         class="sidebar-content"
         @click="handleClick(node.id)"
-        :class="{  'sidebar-item-selected': isActiveNode(node.id) }"
+        :class="{ 'sidebar-item-selected': isActiveNode(node.id) }"
       >
         <!-- Indentation -->
         <div
@@ -130,7 +130,6 @@ export default {
 </script>
 
 <style scoped>
-
 .node-icon {
   padding-right: 5px;
 }
@@ -145,7 +144,6 @@ export default {
   width: 100%;
   padding: 0 4px;
 }
-
 
 .sidebar-padding {
   width: 7px;

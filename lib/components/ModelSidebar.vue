@@ -4,15 +4,18 @@
       <div class="button-container">
         <model-creator />
         <div>
-        <loading-button :action="saveModels" :key-combination="['control', 's']">
-          Save
-        </loading-button>
-      </div>
+          <loading-button :action="saveModels" :key-combination="['control', 's']">
+            Save
+          </loading-button>
+        </div>
       </div>
     </template>
 
-    <div v-for="item in flatList" :key="item.id" class="sidebar-item"
-          :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
+    <div
+      v-for="item in flatList"
+      :key="item.id"
+      class="sidebar-item"
+      :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
     >
       <div class="sidebar-content" @click="handleClick(item.id)">
         <!-- headericons  -->
@@ -256,7 +259,6 @@ export default {
 .faint-text {
   color: var(--text-faint);
 }
-
 
 .sidebar-content {
   display: flex;

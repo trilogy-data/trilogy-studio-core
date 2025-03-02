@@ -28,7 +28,7 @@ export default defineComponent({
     const profile = reactive({
       name: 'Anonymous',
       email: null,
-      organization: null
+      organization: null,
       // role: 'Admin',
     })
 

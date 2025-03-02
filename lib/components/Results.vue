@@ -107,6 +107,6 @@ export default {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.5;
-  height:100%;
+  height: 100%;
 }
 </style>

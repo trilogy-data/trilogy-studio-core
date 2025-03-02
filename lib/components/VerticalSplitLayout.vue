@@ -4,7 +4,7 @@
       <slot name="editor"></slot>
     </div>
     <div class="editor-results editor-color" ref="results">
-      <slot name="results"  :containerHeight="resultsHeight"></slot>
+      <slot name="results" :containerHeight="resultsHeight"></slot>
     </div>
   </div>
 </template>
@@ -75,11 +75,10 @@ export default defineComponent({
       },
       onDragEnd: () => {
         window.dispatchEvent(new Event('resize'))
-      }
-      
+      },
     })
     window.addEventListener('resize', this.updateResultsHeight)
-    
+
     // Initialize the results height
     this.updateResultsHeight()
   },
@@ -97,7 +96,7 @@ export default defineComponent({
         // @ts-ignore
         this.resultsHeight = this.$refs.results.getBoundingClientRect().height
       }
-    }
+    },
   },
 })
 </script>

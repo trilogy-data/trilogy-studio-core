@@ -27,7 +27,7 @@
   padding: 20px;
   margin: 0 auto;
   background-color: var(--query-window-bg);
-  height:100%;
+  height: 100%;
 }
 
 .editor-display {

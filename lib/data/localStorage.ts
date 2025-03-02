@@ -149,11 +149,11 @@ export default class LocalStorage extends AbstractStorage {
 
   loadUserSettings(): Record<string, any> {
     const storedData = localStorage.getItem(this.userSettingsStorageKey)
-    let raw = storedData ? JSON.parse(storedData): {}
+    let raw = storedData ? JSON.parse(storedData) : {}
     return reactive(raw)
   }
 
-  saveUserSettings(settings: Record<string, any>):void {
+  saveUserSettings(settings: Record<string, any>): void {
     localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
   }
 }

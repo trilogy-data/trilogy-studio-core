@@ -34,15 +34,15 @@ export const documentation: DocumentationNode[] = [
     new Article('Goal', [
       new Paragraph(
         'Purpose',
-        'Trilogy Studio is intended as an accessible demonstration of the Trilogy language, which would otherwise have a high barrier to experimentation. It is not intended to be a replacement for dedicated SQL IDEs or dashboarding tools. It is open source and feature requests and contributions are welcome.'),
-      new Paragraph(
-        'Tip',
-        "For Trilogy specific features, the studio relies on a pseudo-language server (there is a proper LSP available for vs-code, used in the vs-code extension, as well). By default this will use a cloud-hosted backend but studio can be configured to use a local address as well. ",
-   
+        'Trilogy Studio is intended as an accessible demonstration of the Trilogy language, which would otherwise have a high barrier to experimentation. It is not intended to be a replacement for dedicated SQL IDEs or dashboarding tools. It is open source and feature requests and contributions are welcome.',
       ),
       new Paragraph(
         'Tip',
-        "Trilogy Studio requires internet access to download certain dependencies - such as DuckDB WASM - on demand when utilizing a relevant connection. It can then be used offline if a local backend server is running. A pure offline option may be available in the future.",
+        'For Trilogy specific features, the studio relies on a pseudo-language server (there is a proper LSP available for vs-code, used in the vs-code extension, as well). By default this will use a cloud-hosted backend but studio can be configured to use a local address as well. ',
+      ),
+      new Paragraph(
+        'Tip',
+        'Trilogy Studio requires internet access to download certain dependencies - such as DuckDB WASM - on demand when utilizing a relevant connection. It can then be used offline if a local backend server is running. A pure offline option may be available in the future.',
         'tip',
       ),
     ]),
@@ -121,7 +121,7 @@ export const documentation: DocumentationNode[] = [
     new Article('Challenges', [
       new Paragraph(
         'Demo',
-        "Update the model to add a calculated field for the users first name, using the split function. Find the most common first names in customers, then the first name that spent the most money.",
+        'Update the model to add a calculated field for the users first name, using the split function. Find the most common first names in customers, then the first name that spent the most money.',
       ),
     ]),
   ]),
@@ -229,7 +229,11 @@ export const documentation: DocumentationNode[] = [
         'What Are Concepts?',
         'Concepts are core semantic building blocks in Trilogy. They represent keys, properties, or metrics: Keys (unique identifiers), Properties (additional values), and Metrics (aggregatable values).',
       ),
-      new Paragraph('Example', 'key product_id int;# the unique identifier of a product \nproperty product_id.product_name string;# the name of a product \nmetric product_count <-count(product.id); # the count of products', 'code'),
+      new Paragraph(
+        'Example',
+        'key product_id int;# the unique identifier of a product \nproperty product_id.product_name string;# the name of a product \nmetric product_count <-count(product.id); # the count of products',
+        'code',
+      ),
       new Paragraph(
         'Keys',
         'Keys represent a unique conceptual grain. A combination of one or more keys will uniquely identify a set of properties. If familiar with databases, think of them as your primary/foreign keys. More generally, you can thing of them as something like a passport number, a product ID, a URL, or a stock ticker - a unique shorthand for an entity.',
@@ -238,15 +242,8 @@ export const documentation: DocumentationNode[] = [
         'Key Syntax',
         'Keys have straight forward syntax; the keyword, the name, and the type.',
       ),
-      new Paragraph(
-        'Example',
-        'key product_id int;# the unique identifier of a product',
-        'code',
-      ),
-      new Paragraph(
-        'Properties',
-        'Properties are values associated with one or more keys',
-      ),
+      new Paragraph('Example', 'key product_id int;# the unique identifier of a product', 'code'),
+      new Paragraph('Properties', 'Properties are values associated with one or more keys'),
       new Paragraph(
         'Property Syntax',
         'Properties have a richer syntax than keys - they require the associated keys, within <>, before the property name.. syntax: `"property" <key1, key2, ..> "." IDENTIFIER type;`',
@@ -254,7 +251,7 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Single Key Property',
         'A property can be associated with a single key with a shorthand syntax without the full <> group. syntax: `"property" key "." IDENTIFIER type;`',
-        'tip'
+        'tip',
       ),
       new Paragraph(
         'code',
@@ -310,7 +307,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'What Is a Grain?',
-        'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.'
+        'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
       ),
     ]),
     new Article('Modeling', [

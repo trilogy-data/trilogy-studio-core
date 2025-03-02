@@ -5,8 +5,16 @@
         {{ config.name }}
         <span class="edit-indicator">✎</span>
       </span>
-      <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
-        @keyup.esc="cancelEditing" class="name-input" type="text" />
+      <input
+        v-else
+        ref="nameInput"
+        v-model="editableName"
+        @blur="finishEditing"
+        @keyup.enter="finishEditing"
+        @keyup.esc="cancelEditing"
+        class="name-input"
+        type="text"
+      />
     </div>
     <div class="button-container">
       <loading-button class="button" :action="() => fetchParseResults(index)">
@@ -38,7 +46,7 @@
 
     <div v-else>
       <h3 class="parse-results">Model Sources ({{ config.sources.length }})</h3>
-      <div class='model-source' v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
+      <div class="model-source" v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
         <div>
           <div class="source-title">{{ source.alias }} ({{ source.editor }})</div>
           <div class="action-bar">
@@ -69,7 +77,7 @@
 </template>
 <style scoped>
 .action-bar {
-  padding-bottom:10px;
+  padding-bottom: 10px;
 }
 .editable-text {
   display: flex;
@@ -83,7 +91,6 @@
   transition: opacity 0.2s ease;
 }
 
-
 .model-title {
   font-weight: 500;
   cursor: pointer;
@@ -93,7 +100,6 @@
   align-items: center;
   font-size: 24px;
 }
-
 
 .model-title:hover .edit-indicator {
   opacity: 1;
@@ -148,7 +154,6 @@
   font-size: 18px;
   padding-bottom: 10px;
 }
-
 
 .delete-button {
   width: 100px;
@@ -294,8 +299,8 @@ export default defineComponent({
     }
     const isExpanded = ref<Record<string, boolean>>({})
     const isDatasourceExpanded = ref<Record<string, boolean>>({})
-    const isEditing = ref<boolean>(false);
-    const editableName = ref<string>('');
+    const isEditing = ref<boolean>(false)
+    const editableName = ref<string>('')
 
     const isEditorExpanded = ref<Record<string, boolean>>({})
 
@@ -355,14 +360,14 @@ export default defineComponent({
       editableName.value = props.config.name
       nextTick(() => {
         // @ts-ignore
-        if (nameInput) { nameInput.value.focus() }
-
+        if (nameInput) {
+          nameInput.value.focus()
+        }
       })
     }
 
     const cancelEditing = () => {
       isEditing.value = false
-
     }
 
     const finishEditing = () => {
@@ -390,7 +395,7 @@ export default defineComponent({
       editableName,
       finishEditing,
       cancelEditing,
-      nameInput
+      nameInput,
     }
   },
   components: {

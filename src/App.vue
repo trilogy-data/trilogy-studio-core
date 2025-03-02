@@ -36,9 +36,8 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
   : 'https://trilogy-service.fly.dev'
 
-
 let userSettingsStore = useUserSettingsStore()
-const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 userSettingsStore.updateSetting('trilogyResolver', apiUrl)
 userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
 console.log(userSettingsStore.settings.theme)
@@ -56,13 +55,18 @@ let store = useEditorStore()
 let connections = useConnectionStore()
 
 let models = useModelConfigStore()
-
 </script>
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
-      :storageSources="contentSources" :userSettingsStore="userSettingsStore">
+    <Manager
+      :connectionStore="connections"
+      :editorStore="store"
+      :trilogyResolver="resolver"
+      :modelStore="models"
+      :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
+    >
     </Manager>
   </div>
 </template>
