@@ -4,7 +4,7 @@
       <slot name="editor"></slot>
     </div>
     <div class="editor-results editor-color" ref="results">
-      <slot name="results"></slot>
+      <slot name="results" :containerHeight="resultsHeight"></slot>
     </div>
   </div>
 </template>
@@ -38,7 +38,6 @@
 
 .editor-color {
   background-color: var(--main-bg-color);
-  filter: brightness(85%);
 }
 </style>
 <script lang="ts">
@@ -49,9 +48,7 @@ export default defineComponent({
   name: 'VerticalSplitLayout',
   data() {
     return {
-      loaded: false, // Return data as an object inside a function
-      editorX: 400,
-      editorY: 400,
+      resultsHeight: 0,
       split: null as Split.SplitInstance | null,
     }
   },
@@ -72,17 +69,32 @@ export default defineComponent({
       minSize: 200,
       expandToMin: true,
       gutterSize: 0,
+      onDrag: () => {
+        window.dispatchEvent(new Event('resize'))
+      },
+      onDragEnd: () => {
+        window.dispatchEvent(new Event('resize'))
+      },
     })
+    window.addEventListener('resize', this.updateResultsHeight)
+
+    // Initialize the results height
+    this.updateResultsHeight()
+  },
+  beforeUnmount() {
+    if (this.split) {
+      this.split.destroy()
+      this.split = null
+    }
+    window.removeEventListener('resize', this.updateResultsHeight)
   },
   methods: {
-    // @ts-ignore
-    resize(type, pane) {
+    updateResultsHeight() {
       // @ts-ignore
-      let editorPane = pane[0]
-
-      // @ts-ignore
-      var clientHeight = document.getElementById('editorPane').clientHeight
-      this.editorY = (editorPane.size / 100.0) * clientHeight
+      if (this.$refs.results) {
+        // @ts-ignore
+        this.resultsHeight = this.$refs.results.getBoundingClientRect().height
+      }
     },
   },
 })

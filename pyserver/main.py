@@ -28,6 +28,9 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
+from trilogy import __version__
+
+print(f"Starting Trilogy Server v{__version__}")
 
 # Define the path to the .env file
 env_path = Path(__file__).parent / ".env"
@@ -110,6 +113,8 @@ router = APIRouter()
 
 def safe_format_query(input: str) -> str:
     input = input.strip()
+    if len(input) == 0:
+        return ""
     if input[-1] != ";":
         return input + ";"
     return input

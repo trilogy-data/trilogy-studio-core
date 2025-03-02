@@ -5,16 +5,11 @@ window.Buffer = Buffer
 // @ts-ignore
 Error.captureStackTrace = (targetObject: object, constructorOpt?: Function) => {}
 import { createApp } from 'vue'
-import './style.css'
 import App from './App.vue'
 import { createPinia } from 'pinia'
 import '@mdi/font/css/materialdesignicons.css'
-import 'tabulator-tables/dist/css/tabulator.min.css'
-if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-  import('tabulator-tables/dist/css/tabulator_simple.css')
-} else {
-  import('tabulator-tables/dist/css/tabulator_midnight.css')
-}
+import './style.css'
+import './tabulator-style.css'
 import { languages } from 'monaco-editor'
 import monacoEditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
@@ -64,7 +59,10 @@ languages.setMonarchTokensProvider('trilogy', {
       [/\-\-.*/, 'hidden'],
 
       // Match Keywords (SELECT, WHERE, ORDER, BY)
-      [/(^|\s)(IMPORT|SELECT|WHERE|ORDER|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(\s|$)/, 'keyword'],
+      [
+        /(^|\s)(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(?=\s|$|,)/,
+        'keyword',
+      ],
 
       // Match definitions (auto, property, metric)
       [/(^|\s)(AUTO|PROPERTY|KEY|METRIC)(\s|$)/, 'definition'],
@@ -79,7 +77,7 @@ languages.setMonarchTokensProvider('trilogy', {
       [/\<[a-zA-Z0-9_\.\,]+\>\./, 'property'],
       [/([a-zA-Z0-9]+)\./, 'property'],
       // Match strings (enclosed in single or double quotes)
-      [/['"][^'"]*['"]/, 'string'],
+      [/['"`][^'"]*['"`]/, 'string'],
 
       // Match numbers (integers and floats)
       [/\b\d+(\.\d+)?\b/, 'number'],

@@ -1,23 +1,19 @@
 <template>
-  <div class="button-wrapper">
-    <button
-      :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
-      v-bind="$attrs"
-      :disabled="isLoading"
-      @click.stop="handleClick"
-    >
-      <span :class="{ 'hidden-text': isLoading }">
-        <slot></slot>
-      </span>
-      <span v-if="status === 'success'" class="status success overlay">✔</span>
-      <span v-else-if="status === 'error'" class="status error overlay"
-        >✖ ({{ errorMessage }})</span
-      >
-      <span v-else-if="isLoading" class="status loading overlay">
-        <span class="spinner"></span>
-      </span>
-    </button>
-  </div>
+  <button
+    :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
+    v-bind="$attrs"
+    :disabled="isLoading"
+    @click.stop="handleClick"
+  >
+    <span :class="{ 'hidden-text': isLoading }">
+      <slot></slot>
+    </span>
+    <span v-if="status === 'success'" class="status success overlay">✔</span>
+    <span v-else-if="status === 'error'" class="status error overlay">✖ ({{ errorMessage }})</span>
+    <span v-else-if="isLoading" class="status loading overlay">
+      <span class="spinner"></span>
+    </span>
+  </button>
 </template>
 
 <script lang="ts">
@@ -109,10 +105,6 @@ export default {
 </script>
 
 <style>
-.button-wrapper {
-  flex: 1;
-}
-
 .hidden-text {
   visibility: hidden;
 }
@@ -137,7 +129,7 @@ export default {
 
 .btn {
   /* min-height: 24px; */
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   /* width: 100%; */
   position: relative;
 }

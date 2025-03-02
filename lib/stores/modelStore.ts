@@ -26,6 +26,11 @@ const useModelConfigStore = defineStore('models', {
         throw new Error(`ModelConfig with name "${name}" not found.`)
       }
     },
+    updateModelName(name: string, newName: string) {
+      this.models[newName] = this.models[name]
+      this.models[newName].name = newName
+      delete this.models[name]
+    },
     addModelConfigSource(name: string, contents: ModelSource) {
       if (this.models[name]) {
         this.models[name].sources.push(contents)

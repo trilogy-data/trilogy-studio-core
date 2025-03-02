@@ -3,19 +3,22 @@
     <template #actions>
       <div class="button-container">
         <connection-creator />
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
+        <div>
+          <loading-button :action="saveConnections" :key-combination="['control', 's']"
+            >Save</loading-button
+          >
+        </div>
       </div>
     </template>
 
     <div
       v-for="item in contentList"
       :key="item.id"
-      class="stacked-item"
-      :style="{ paddingLeft: `${item.indent * 10}px` }"
+      class="sidebar-item"
+      @click="toggleCollapse(item.id)"
     >
-      <div class="stacked-content" @click="toggleCollapse(item.id)">
+      <div v-for="_ in item.indent" class="sidebar-padding"></div>
+      <template v-if="item.type === 'connection'">
         <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
         <i v-else class="mdi mdi-menu-right"></i>
         <tooltip content="DuckDB" v-if="item.connection?.type == 'duckdb'"
@@ -28,67 +31,66 @@
         <tooltip content="Bigquery" v-else-if="item.connection?.type == 'bigquery-oauth'">
           <i class="mdi mdi-google"></i>
         </tooltip>
-        <span>
-          {{ item.name }} ({{ item.count }})
-          <span class="model-anchor">
-            <button class="button" @click="connectionModelVisible[item.name] = true">
-              {{ item.connection.model || 'Set Model' }}
-            </button>
-            <div v-if="connectionModelVisible[item.name]" class="model-form">
-              <form @submit.prevent="submitConnectionModel(item.name)">
-                <div>
-                  <select
-                    class="model-select"
-                    v-model="item.connection.model"
-                    id="connection-model"
-                    required
-                  >
-                    <option
-                      class="model-select-item"
-                      v-for="model in modelList"
-                      :key="model"
-                      :value="model"
-                    >
-                      {{ model }}
-                    </option>
-                  </select>
-                </div>
-                <button type="submit">Submit</button>
-                <button
-                  type="button"
-                  @click="connectionModelVisible[item.name] = !connectionModelVisible[item.name]"
+        <span class="title-pad-left"> {{ item.name }} ({{ item.count }}) </span>
+      </template>
+
+      <span class="model-anchor" v-if="item.type === 'model'">
+        <button class="button" @click="connectionModelVisible[item.connection.name] = true">
+          {{ item.connection.model || 'Set Model' }}
+        </button>
+        <div v-if="connectionModelVisible[item.connection.name]" class="model-form">
+          <form @submit.prevent="submitConnectionModel(item.name)">
+            <div>
+              <select
+                class="model-select"
+                v-model="item.connection.model"
+                id="connection-model"
+                required
+              >
+                <option
+                  class="model-select-item"
+                  v-for="model in modelList"
+                  :key="model"
+                  :value="model"
                 >
-                  Close
-                </button>
-              </form>
+                  {{ model }}
+                </option>
+              </select>
             </div>
-          </span>
+            <button type="submit">Submit</button>
+            <button
+              type="button"
+              @click="
+                connectionModelVisible[item.connection.name] =
+                  !connectionModelVisible[item.connection.name]
+              "
+            >
+              Close
+            </button>
+          </form>
+        </div>
+      </span>
+
+      <template v-if="item.type === 'connection'">
+        <span class="flag-container">
+          <loading-button class="lb" :action="() => resetConnection(item.connection)"
+            ><i :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i
+          ></loading-button>
         </span>
-        <template v-if="item.type === 'connection'">
-          <span class="flag-container">
-            <loading-button class="lb" :action="() => resetConnection(item.connection)"
-              ><i :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i
-            ></loading-button>
-            <status-icon
-              v-if="item.type === 'connection'"
-              :status="
-                connectionStore.connectionStateToStatus(connectionStore.connections[item.name])
-              "
-              :message="
-                connectionStore.connections[item.name].error
-                  ? connectionStore.connections[item.name].error || ''
-                  : ''
-              "
-            />
-          </span>
-        </template>
-      </div>
+        <span class="spacer"></span>
+        <status-icon
+          v-if="item.type === 'connection'"
+          :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])"
+          :message="
+            connectionStore.connections[item.name].error
+              ? connectionStore.connections[item.name].error || ''
+              : ''
+          "
+        />
+      </template>
+
       <!-- Add MotherDuck token input when connection is expanded -->
-      <div
-        v-if="!collapsed[item.id] && item.connection?.type === 'motherduck'"
-        class="md-token-container"
-        @click.stop
-      >
+      <div v-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
         <form @submit.prevent="updateMotherDuckToken(item.connection)">
           <input
             type="password"
@@ -159,7 +161,16 @@ export default {
         type: string
         connection: any | undefined
       }> = []
-      Object.values(connectionStore.connections).forEach((connection) => {
+      const sorted = Object.values(connectionStore.connections).sort((a, b) => {
+        if (a.connected && !b.connected) {
+          return -1
+        } else if (!a.connected && b.connected) {
+          return 1
+        } else {
+          return a.name.localeCompare(b.name)
+        }
+      })
+      sorted.forEach((connection) => {
         let databases = connection.databases ? connection.databases : []
         list.push({
           id: connection.name,
@@ -170,6 +181,24 @@ export default {
           connection,
         })
         if (!collapsed.value[connection.name]) {
+          list.push({
+            id: `${connection.name}-model`,
+            name: 'Set Model',
+            indent: 1,
+            count: 0,
+            type: 'model',
+            connection,
+          })
+          if (connection.type === 'motherduck') {
+            list.push({
+              id: `${connection.name}-md-token`,
+              name: 'MotherDuck Token',
+              indent: 1,
+              count: 0,
+              type: 'motherduck-token',
+              connection,
+            })
+          }
           databases.forEach((db) => {
             list.push({
               id: db.name,
@@ -234,31 +263,21 @@ export default {
 </script>
 
 <style scoped>
+.title-pad-left {
+  padding-left: 5px;
+}
 .lb {
-  line-height: 12px;
-  height: 12px;
-  min-height: 12px;
+  line-height: var(--sidebar-list-item-height);
+  height: var(--sidebar-list-item-height);
+  min-height: var(--sidebar-list-item-height);
 }
 
 .button {
-  line-height: 12px;
-  height: 16px;
+  font-size: var(--button-font-size);
 }
 
-.stacked-item {
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.stacked-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 22px;
-  line-height: 22px;
+.spacer {
+  margin-right: 5px;
 }
 
 .stacked-item:hover > .stacked-content {
@@ -305,14 +324,14 @@ export default {
 }
 
 .md-token-container {
-  padding: 4px 0 4px 20px;
+  /* padding: 4px 0 4px 20px; */
   background-color: var(--sidebar-bg);
   width: 100%;
 }
 
 .md-token-input {
   padding: 2px 4px;
-  font-size: 12px;
+  font-size: var(--button-font-size);
   width: 180px;
   margin-right: 4px;
   border: 1px solid var(--border);
@@ -322,7 +341,7 @@ export default {
 
 .md-token-button {
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--button-font-size);
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   color: var(--text);

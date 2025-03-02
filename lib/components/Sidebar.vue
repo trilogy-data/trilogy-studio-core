@@ -1,9 +1,12 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-icons">
-      <tooltip content="Trilogy Studio (Alpha)"
-        ><img @click="selectItem('')" class="trilogy-icon" :src="trilogyIcon" />
-      </tooltip>
+      <div>
+        <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"
+          ><img @click="selectItem('')" :src="trilogyIcon" />
+        </tooltip>
+      </div>
+      <div v-if="isMobile">Home</div>
       <div class="sidebar-divider"></div>
       <div
         v-for="(item, _) in sidebarItems"
@@ -12,7 +15,13 @@
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }"
       >
-        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        <template v-if="!isMobile">
+          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        </template>
+        <template v-else>
+          <i :class="item.icon"></i>
+          <div>{{ item.tooltip }}</div>
+        </template>
       </div>
       <div class="sidebar-divider"></div>
       <div
@@ -22,7 +31,13 @@
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }"
       >
-        <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        <template v-if="!isMobile">
+          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+        </template>
+        <template v-else>
+          <i :class="item.icon"></i>
+          <div>{{ item.tooltip }}</div>
+        </template>
       </div>
       <div class="sidebar-bottom-icons">
         <div class="sidebar-icon" @click="selectItem('settings')">
@@ -42,7 +57,11 @@
         @save-editors="saveEditors"
       />
       <ConnectionList v-else-if="active === 'connections'" />
-      <ModelSidebar v-else-if="active === 'models'" @model-key-selected="modelKeySelected" />
+      <ModelSidebar
+        v-else-if="active === 'models'"
+        @model-key-selected="modelKeySelected"
+        :activeModelKey="activeModelKey"
+      />
       <TutorialSidebar
         v-else-if="active === 'tutorial'"
         @documentation-key-selected="documentationKeySelected"
@@ -53,7 +72,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, inject } from 'vue'
 import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
@@ -72,6 +91,11 @@ export default defineComponent({
     activeEditor: {
       type: String,
       default: getDefaultValueFromHash('editor'),
+      optional: true,
+    },
+    activeModelKey: {
+      type: String,
+      default: getDefaultValueFromHash('model'),
       optional: true,
     },
     activeDocumentationKey: {
@@ -96,7 +120,7 @@ export default defineComponent({
       },
       {
         name: 'help',
-        tooltip: 'Help/Guide',
+        tooltip: 'Docs',
         icon: 'mdi mdi-help',
         screen: 'tutorial',
       },
@@ -121,12 +145,17 @@ export default defineComponent({
       //     component: "Extensions", // Replace with your actual component
       //   },
     ]
+    let isMobile = inject<CallableFunction>('isMobile')
+    if (!isMobile) {
+      throw new Error('isMobile is not provided')
+    }
     return {
       // index of the sidebarItem where the screen == active
       // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
       trilogyIcon: trilogyIcon,
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
+      isMobile,
     }
   },
   components: {
@@ -169,6 +198,9 @@ export default defineComponent({
 .trilogy-icon {
   width: 30px;
   height: 30px;
+  display: flex;
+  text-align: center;
+  /* justify-content: flex-start; */
 }
 
 .sidebar-container {
@@ -182,7 +214,7 @@ export default defineComponent({
   background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   padding-top: 10px;
-  width: 40px;
+  width: var(--sidebar-icon-width);
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -5,7 +5,7 @@
       <div
         class="sidebar-content"
         @click="handleClick(node.id)"
-        :class="{ 'sidebar-content--active': isActiveNode(node.id) }"
+        :class="{ 'sidebar-item-selected': isActiveNode(node.id) }"
       >
         <!-- Indentation -->
         <div
@@ -61,11 +61,9 @@ export default {
       const splits = current.split(KeySeparator)
       const documentationTitle = splits[1]
       let currentPath = `documentation${KeySeparator}${documentationTitle}`
-      console.log(currentPath)
       // Initialize all nodes as collapsed except those in current path
       documentation.forEach((topic) => {
         const topicId = `documentation${KeySeparator}${topic.title}`
-        console.log(topicId)
         collapsed.value[topicId] = !currentPath.startsWith(topicId)
       })
     })
@@ -130,15 +128,6 @@ export default {
 </script>
 
 <style scoped>
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 13px;
-  height: 22px;
-  line-height: 22px;
-}
-
 .node-icon {
   padding-right: 5px;
 }
@@ -152,10 +141,6 @@ export default {
   align-items: center;
   width: 100%;
   padding: 0 4px;
-}
-
-.sidebar-content--active {
-  background-color: var(--sidebar-selector-bg);
 }
 
 .sidebar-padding {

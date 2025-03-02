@@ -1,21 +1,27 @@
 <template>
-  <div v-if="selectedType === 'model' && modelConfigs[selectedModel]" class="model-display">
-    <ModelCard :config="modelConfigs[selectedModel]" :index="selectedModel" />
+  <div class="view-container">
+    <div v-if="selectedType === 'model' && modelConfigs[selectedModel]" class="model-display">
+      <ModelCard :config="modelConfigs[selectedModel]" :index="selectedModel" />
+    </div>
+    <div v-else-if="selectedType === 'source' && selectedSourceFull" class="editor-display">
+      <Editor
+        :editorName="selectedSourceFull.editor"
+        context="modelView"
+        @save-editors="saveEditorsCall"
+      />
+    </div>
+    <div v-else-if="selectedType === 'concept' && selectedConceptFull" class="model-display">
+      <ModelConcept :concept="selectedConceptFull" />
+    </div>
   </div>
-  <div v-else-if="selectedType === 'source' && selectedSourceFull" class="editor-display">
-    <Editor
-      :editorName="selectedSourceFull.editor"
-      context="modelView"
-      @save-editors="saveEditorsCall"
-    />
-  </div>
-  <div v-else-if="selectedType === 'concept' && selectedConceptFull" class="model-display">
-    <ModelConcept :concept="selectedConceptFull" />
-  </div>
-  <div></div>
 </template>
 
 <style scoped>
+.view-container {
+  height: 100%;
+  background-color: var(--query-window-bg);
+}
+
 .editor-inline {
   height: 400px;
 }
@@ -26,6 +32,8 @@
   gap: 24px;
   padding: 20px;
   margin: 0 auto;
+  background-color: var(--query-window-bg);
+  height: 100%;
 }
 
 .editor-display {
@@ -63,7 +71,7 @@ import ModelCard from './ModelCard.vue'
 import Editor from './Editor.vue'
 import { KeySeparator } from '../data/constants'
 export default defineComponent({
-  name: 'ModelConfigViewer',
+  name: 'ModelView',
   props: {
     activeModelKey: {
       type: String,

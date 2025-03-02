@@ -97,15 +97,13 @@ const getPurposeDescription = (purpose: string) => {
   color: var(--text-faint);
 }
 .concept-container {
-  background: var(--bg-light);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--result-window-bg);
   margin: 1rem;
   overflow: hidden;
 }
 
 .concept-header {
-  background: var(--bg-light);
+  background: var(--result-window-bg);
   padding: 1.5rem;
   border-bottom: 1px solid var(--border-light);
   display: flex;

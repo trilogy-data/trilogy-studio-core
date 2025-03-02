@@ -31,10 +31,25 @@ class DocumentationNode {
 
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
+    new Article('Goal', [
+      new Paragraph(
+        'Purpose',
+        'Trilogy Studio is intended as an accessible demonstration of the Trilogy language, which would otherwise have a high barrier to experimentation. It is not intended to be a replacement for dedicated SQL IDEs or dashboarding tools. It is open source and feature requests and contributions are welcome.',
+      ),
+      new Paragraph(
+        'Tip',
+        'For Trilogy specific features, the studio relies on a pseudo-language server (there is a proper LSP available for vs-code, used in the vs-code extension, as well). By default this will use a cloud-hosted backend but studio can be configured to use a local address as well. ',
+      ),
+      new Paragraph(
+        'Tip',
+        'Trilogy Studio requires internet access to download certain dependencies - such as DuckDB WASM - on demand when utilizing a relevant connection. It can then be used offline if a local backend server is running. A pure offline option may be available in the future.',
+        'tip',
+      ),
+    ]),
     new Article('Navigation', [
       new Paragraph(
         'Navigation',
-        'Trilogy Studio uses a left-hand navigation bar, a sidebar with context, and a main pane (which may be split) to present information. The sidebar is further split into sections; the first icons change the sidebar for the query editor, while the next section configures entirely new main screen experiences. Configuration/profile are accessible at the bottom.',
+        'ON desktop, Trilogy Studio uses a left-hand navigation bar, a sidebar with context, and a main pane (which may be split) to present information. The sidebar is further split into sections; the first icons change the sidebar for the query editor, while the next section configures entirely new main screen experiences. Configuration/profile are accessible at the bottom. On mobile, Trilogy will instead use a top menu to access a navigation screen, and the main display will show only one particular field at a time.',
       ),
       new Paragraph(
         'Tip',
@@ -45,7 +60,7 @@ export const documentation: DocumentationNode[] = [
     new Article('Querying', [
       new Paragraph(
         'Querying',
-        'A core feature of Trilogy Studio is running in Trilogy or SQL against connections representing backend databases.',
+        'A core goal of Trilogy Studio is to enable seamless running of Trilogy against backends. Raw SQL is fully supported as well to help with debugging, diagnostics, and other development tasks.',
       ),
       new Paragraph(
         'Editor Selection',
@@ -83,7 +98,7 @@ export const documentation: DocumentationNode[] = [
     ]),
   ]),
   new DocumentationNode('Demo', [
-    new Article('Demo', [
+    new Article('Overview', [
       new Paragraph(
         'Demo',
         "The demo will set up a DuckDB connection to query the TPC-H dataset using publicly available parquet files as model inputs. It's the best way to dive into querying right away. Try the example_query_1 and example_query_2 queries to see how the model can be used to generate SQL. Clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state. Take care with this, as it will revert any changes you have made.",
@@ -95,12 +110,18 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'TPC-H',
-        "You can read more about the benchmark in the official guide <a href='https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf' target='_blank'>here</a>. Or just google it! There are lots of blogs; see if you can recreate some queries.",
+        "You can read more about the benchmark in the official guide <a href='https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf' target='_blank'>here</a>. Or just google it! There are lots of online examples; attempting to recreate other queries can be a great introduction to Trilogy syntax.",
       ),
       new Paragraph(
         'Reset',
         "If this is your first visit, then the demo will be set up automatically. If you make changes, clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state. Take care with this, as it will revert any changes you have made.",
         'tip',
+      ),
+    ]),
+    new Article('Challenges', [
+      new Paragraph(
+        'Demo',
+        'Update the model to add a calculated field for the users first name, using the split function. Find the most common first names in customers, then the first name that spent the most money.',
       ),
     ]),
   ]),
@@ -155,7 +176,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Usage',
-        'Trilogy is designed to be easy to learn and use, and to be incrementally adopted. It can be run directly as a CLI, in a GUI, or compiled to SQL and run in standard SQL tooling.',
+        'Trilogy is designed to be easy to learn and use, and to be incrementally adopted. Trilogy can be used outside of Trilogy studio as a CLI or build tool.',
       ),
     ]),
 
@@ -208,7 +229,52 @@ export const documentation: DocumentationNode[] = [
         'What Are Concepts?',
         'Concepts are core semantic building blocks in Trilogy. They represent keys, properties, or metrics: Keys (unique identifiers), Properties (additional values), and Metrics (aggregatable values).',
       ),
-      new Paragraph('Example', 'SELECT\n    customer_name,\n    total_spent;', 'code'),
+      new Paragraph(
+        'Example',
+        'key product_id int;# the unique identifier of a product \nproperty product_id.product_name string;# the name of a product \nmetric product_count <-count(product.id); # the count of products',
+        'code',
+      ),
+      new Paragraph(
+        'Keys',
+        'Keys represent a unique conceptual grain. A combination of one or more keys will uniquely identify a set of properties. If familiar with databases, think of them as your primary/foreign keys. More generally, you can thing of them as something like a passport number, a product ID, a URL, or a stock ticker - a unique shorthand for an entity.',
+      ),
+      new Paragraph(
+        'Key Syntax',
+        'Keys have straight forward syntax; the keyword, the name, and the type.',
+      ),
+      new Paragraph('Example', 'key product_id int;# the unique identifier of a product', 'code'),
+      new Paragraph('Properties', 'Properties are values associated with one or more keys'),
+      new Paragraph(
+        'Property Syntax',
+        'Properties have a richer syntax than keys - they require the associated keys, within <>, before the property name.. syntax: `"property" <key1, key2, ..> "." IDENTIFIER type;`',
+      ),
+      new Paragraph(
+        'Single Key Property',
+        'A property can be associated with a single key with a shorthand syntax without the full <> group. syntax: `"property" key "." IDENTIFIER type;`',
+        'tip',
+      ),
+      new Paragraph(
+        'code',
+        'property product_id.product_name string;# the name of a product',
+        'code',
+      ),
+      new Paragraph(
+        'Metrics',
+        'Metrics are aggregatable values, and can come from properties, keys, or other metrics. Like keys, they have a grain, though this is inferred from the aggregation',
+      ),
+      new Paragraph(
+        'Example',
+        'metric product_count <-count(product.id); # the count of products',
+        'code',
+      ),
+      new Paragraph(
+        'Dynamic Grain',
+        'A basic metric - like `metric product_count <- count(product_id);` - will have a dynamic aggregation level that corresponds to the query it is used in.',
+      ),
+      new Paragraph(
+        'Static Grain',
+        'A metric can be created by an aggregation with a defined grain, ex: `metric product_count <-count(product_id) by store;`, in which case it behaves similar to a property. However, where conditions for a select will still be pushed inside these aggregates.',
+      ),
     ]),
     new Article('Datasources and Joins', [
       new Paragraph(
@@ -232,12 +298,16 @@ export const documentation: DocumentationNode[] = [
     new Article('Grains and Aggregation', [
       new Paragraph(
         'What Is a Grain?',
-        'A grain represents the unique combination of dimensions stored in a table/query.',
+        'A grain represents the unique combination of keys. Tables and aggregations both have grains, which determine the minimum keys required on a row of data. For example, finding the total sales by customer might be an aggregation to the grain of a customer id. Properties of a key are implicitly dropped from any grain that includes that key, though a grain without the key associated with a property will include that property in the grain.',
       ),
       new Paragraph(
         'Example',
-        'SELECT\n    order_date,\n    SUM(total_spent) AS total_revenue;',
+        'SELECT\n    order_date,\n    order_year,\n    SUM(total_spent) AS total_revenue;',
         'code',
+      ),
+      new Paragraph(
+        'What Is a Grain?',
+        'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
       ),
     ]),
     new Article('Modeling', [
@@ -254,11 +324,11 @@ export const documentation: DocumentationNode[] = [
     new Article('Advanced Features', [
       new Paragraph(
         'Filtering',
-        'Filtering can be done via WHERE Clause, Rowset Filtering, or Filtered Concepts.',
+        'Filtering can happen in two locations; the having clause or the where clause. Where clause filtering happens first, and reduces the space of potential results by the filtering criteria. This is applied prior to any aggregation happening in a query, and can reference any field that can be associated in the model. Having clause filtering is used to reduce the final result set, and is restricted to only filter on fields in the output projection.',
       ),
       new Paragraph(
         'Example',
-        'SELECT\n    product_name,\n    revenue\nWHERE\n    revenue > 1000;',
+        'WHERE\n sales.year = 2000 \nSELECT\n    product_name,\n    sum(revenue) as total_revenue HAVING total_revenue>1000;',
         'code',
       ),
       new Paragraph('Functions', 'Functions allow reusable expressions.'),
@@ -392,7 +462,7 @@ export const documentation: DocumentationNode[] = [
       new Paragraph('Last Updated', 'February 22, 2025'),
       new Paragraph(
         'Service Description',
-        'The Trilogy Studio Integrated Development Environment ("IDE") enables users to interact with their own databases. The IDE communicates with non-user services only to do basic telemetry and transform the text of a Trilogy query into SQL, which is returned to the browser to actually communicate with the database.',
+        'The Trilogy Studio Integrated Development Environment (referred to as "IDE" henceforth) enables users to interact with their own databases. The IDE communicates with non-user services only to do basic telemetry and preprocessing of Trilogy code using the default language server (if a local one is not configured). The primary purpose of this preprocessing is to generate SQL to be returned to the browser for execution.',
         'section',
       ),
       new Paragraph(
@@ -438,11 +508,6 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Liability Limitations',
         'We are not liable for data loss or corruption, database connection issues, browser performance problems, security breaches in your database, misuse of the IDE, or consequential damages.',
-        'section',
-      ),
-      new Paragraph(
-        'Intellectual Property',
-        'The IDE, including its code and interface, remains our intellectual property.',
         'section',
       ),
       new Paragraph(

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // @ts-ignore
-import { EditorModel, IDE, Manager } from 'trilogy-studio-core'
+import { Manager } from 'trilogy-studio-core'
 import { LocalStorage } from 'trilogy-studio-core/data'
 import {
   useEditorStore,
   useConnectionStore,
   useModelConfigStore,
+  useUserSettingsStore,
   AxiosTrilogyResolver,
 } from 'trilogy-studio-core/stores'
 import {
@@ -17,6 +18,7 @@ import {
   SortModule,
   EditModule,
   ExportModule,
+  PageModule,
 } from 'tabulator-tables'
 
 Tabulator.registerModule([
@@ -27,13 +29,22 @@ Tabulator.registerModule([
   SortModule,
   EditModule,
   ExportModule,
+  PageModule,
 ])
 
 const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
   : 'https://trilogy-service.fly.dev'
 
-let resolver = new AxiosTrilogyResolver(apiUrl)
+let userSettingsStore = useUserSettingsStore()
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+userSettingsStore.updateSetting('trilogyResolver', apiUrl)
+userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
+console.log(userSettingsStore.settings.theme)
+userSettingsStore.toggleTheme()
+userSettingsStore.toggleTheme()
+
+let resolver = new AxiosTrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
 
 let localStorage = new LocalStorage()
 
@@ -54,8 +65,8 @@ let models = useModelConfigStore()
       :trilogyResolver="resolver"
       :modelStore="models"
       :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
     >
-      <IDE />
     </Manager>
   </div>
 </template>

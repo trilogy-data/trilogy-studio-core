@@ -1,6 +1,10 @@
 <template>
   <div class="main">
-    <sidebar-layout>
+    <mobile-sidebar-layout
+      @menu-toggled="menuOpen = !menuOpen"
+      :menuOpen="menuOpen"
+      :activeScreen="activeScreen"
+    >
       <template #sidebar>
         <sidebar
           @editor-selected="setActiveEditor"
@@ -11,27 +15,27 @@
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey"
         />
       </template>
-
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
-        <vertical-split-layout>
-          <template #editor v-if="activeEditor && activeEditorData">
+        <tabbed-layout>
+          <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor
               v-if="activeEditorData.type == 'preql'"
               context="main-trilogy"
               :editorName="activeEditor"
+              @query-started="slotProps.onQueryStarted"
               @save-editors="saveEditorsCall"
             />
             <editor
+              @query-started="slotProps.onQueryStarted"
               v-else
               context="main-sql"
               :editorName="activeEditor"
               @save-editors="saveEditorsCall"
             />
           </template>
-          <template #results="{ containerHeight }" v-if="activeEditorData">
+          <template #results v-if="activeEditorData">
             <loading-view
               v-if="activeEditorData.loading"
               :cancel="activeEditorData.cancelCallback"
@@ -41,13 +45,10 @@
               <template #action v-if="activeEditorData.error === 'Connection is not active.'">
                 <loading-button
                   :action="
-                    () => {
+                    () =>
                       activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection).then(() => {
-                            activeEditorData ? (activeEditorData.error = null) : null
-                          })
+                        ? connectionStore.resetConnection(activeEditorData.connection)
                         : null
-                    }
                   "
                 >
                   Reconnect
@@ -55,16 +56,14 @@
                 </loading-button>
               </template>
             </error-message>
-            <!-- v-else-if="Object.keys(activeEditorData.results.headers).length > 0" -->
             <results-container
-              v-else-if="activeEditorData.results"
+              v-else-if="Object.keys(activeEditorData.results).length > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
-              :containerHeight="containerHeight"
             />
             <hint-component v-else />
           </template>
-        </vertical-split-layout>
+        </tabbed-layout>
       </template>
 
       <template v-else-if="activeScreen === 'tutorial'">
@@ -85,7 +84,7 @@
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
       </template>
-    </sidebar-layout>
+    </mobile-sidebar-layout>
   </div>
 </template>
 
@@ -162,14 +161,15 @@ aside {
 
 <script lang="ts">
 import SidebarLayout from '../components/SidebarLayout.vue'
+import MobileSidebarLayout from '../components/MobileSidebarLayout.vue'
 import Sidebar from '../components/Sidebar.vue'
 import Editor from '../components/Editor.vue'
 import DataTable from '../components/DataTable.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
+import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-import TutorialPage from '../components/TutorialPage.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
@@ -177,7 +177,7 @@ import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
-
+import TutorialPage from '../components/TutorialPage.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
@@ -188,7 +188,7 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 
 export default {
-  name: 'IDEComponent',
+  name: 'MobileIDEComponent',
   data() {
     let screen = getDefaultValueFromHash('screen')
     let activeEditor = getDefaultValueFromHash('editor')
@@ -199,7 +199,8 @@ export default {
       activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
-      activeTab: 'results',
+      activeTab: 'editor',
+      menuOpen: false,
     }
   },
   components: {
@@ -219,6 +220,8 @@ export default {
     Dashboard,
     ResultsContainer,
     LoadingButton,
+    TabbedLayout,
+    MobileSidebarLayout,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
@@ -258,6 +261,7 @@ export default {
     setActiveEditor(editor: string) {
       this.activeEditor = editor
       pushHashToUrl('editor', editor)
+      this.menuOpen = false
     },
     setActiveScreen(screen: string) {
       pushHashToUrl('screen', screen)
@@ -266,10 +270,14 @@ export default {
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey
+      this.menuOpen = false
     },
     setActiveDocumentationKey(documentationKey: string) {
       pushHashToUrl('documentationKey', documentationKey)
       this.activeDocumentationKey = documentationKey
+      if (documentationKey.startsWith('article')) {
+        this.menuOpen = false
+      }
     },
     saveEditorsCall() {
       this.saveEditors()

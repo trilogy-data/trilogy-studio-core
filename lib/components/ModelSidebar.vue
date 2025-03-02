@@ -3,13 +3,20 @@
     <template #actions>
       <div class="button-container">
         <model-creator />
-        <loading-button :action="saveModels" :key-combination="['control', 's']">
-          Save
-        </loading-button>
+        <div>
+          <loading-button :action="saveModels" :key-combination="['control', 's']">
+            Save
+          </loading-button>
+        </div>
       </div>
     </template>
 
-    <div v-for="item in flatList" :key="item.id" class="sidebar-item">
+    <div
+      v-for="item in flatList"
+      :key="item.id"
+      class="sidebar-item"
+      :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
+    >
       <div class="sidebar-content" @click="handleClick(item.id)">
         <!-- headericons  -->
         <div
@@ -65,6 +72,7 @@ import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'ModelList',
+  props: { activeModelKey: String },
   setup() {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
@@ -127,8 +135,8 @@ export default {
         type: string
         concept: any
       }> = []
-
-      Object.values(modelStore.models).forEach((model) => {
+      let sorted = Object.values(modelStore.models).sort((a, b) => a.name.localeCompare(b.name))
+      sorted.forEach((model) => {
         let modelId = ['model', model.name].join(KeySeparator)
         list.push({
           id: modelId,
@@ -250,20 +258,6 @@ export default {
 <style scoped>
 .faint-text {
   color: var(--text-faint);
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 13px;
-  height: 22px;
-  line-height: 22px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.sidebar-item:hover {
-  background-color: var(--button-mouseover);
 }
 
 .sidebar-content {

@@ -13,7 +13,11 @@
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Models'">
       <model-card :config="demoConfig" />
     </section>
-    <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Demo'">
+    <section
+      id="navigation"
+      class="tutorial-section"
+      v-if="currentTopic === 'Overview' && currentNode === 'Demo'"
+    >
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Connections'">

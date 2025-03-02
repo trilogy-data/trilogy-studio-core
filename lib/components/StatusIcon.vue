@@ -20,7 +20,7 @@ const statusClasses = computed(() => {
 </script>
 
 <template>
-  <tooltip v-if="message" :content="message" position="left">
+  <tooltip class="indicator-container" v-if="message" :content="message" position="left">
     <span class="indicator" :class="statusClasses"></span>
   </tooltip>
   <span v-else class="indicator" :class="statusClasses"></span>
@@ -39,6 +39,13 @@ const statusClasses = computed(() => {
   text-align: center;
   padding: 1px;
   margin: 4px;
+}
+
+.indicator-container {
+  display: inline-block;
+  line-height: inherit;
+  vertical-align: middle;
+  text-align: center;
 }
 
 .connected {

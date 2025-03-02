@@ -1,46 +1,51 @@
 <template>
-  <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
-  <div v-else class="parent">
-    <div class="menu-bar">
-      <div class="menu-left">
-        <div class="menu-title" @click="startEditing">
-          <span v-if="!isEditing" class="editable-text">
-            {{ editorData.name }}
-            <span class="edit-indicator">✎</span>
-          </span>
-          <input
-            v-else
-            ref="nameInput"
-            v-model="editableName"
-            @blur="finishEditing"
-            @keyup.enter="finishEditing"
-            @keyup.esc="cancelEditing"
-            class="name-input"
-            type="text"
-          />
-        </div>
-        <div class="toggle-group">
-          <button
-            class="toggle-button tag-inactive"
-            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag()"
-          >
-            {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
-          </button>
-          <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
+  <div class="parent">
+    <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
+    <template v-else>
+      <div class="menu-bar">
+        <div class="menu-left">
+          <div class="menu-title" @click="startEditing">
+            <span v-if="!isEditing" class="editable-text">
+              {{ editorData.name }}
+              <span class="edit-indicator">✎</span>
+            </span>
+            <input
+              v-else
+              ref="nameInput"
+              v-model="editableName"
+              @blur="finishEditing"
+              @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing"
+              class="name-input"
+              type="text"
+            />
+          </div>
+          <div class="toggle-group">
+            <button
+              class="toggle-button tag-inactive"
+              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+              @click="toggleTag()"
+            >
+              {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
+            </button>
+            <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
             @click="toggleTag('scheduled')">
             Scheduled
           </button> -->
+          </div>
         </div>
-      </div>
-      <div class="menu-actions">
-        <loading-button
-          :useDefaultStyle="false"
-          class="button-transparent action-item"
-          :action="validateQuery"
-          >Parse</loading-button
-        >
-        <div>
+        <div class="menu-actions">
+          <button class="button-transparent action-item" @click="$emit('save-editors')">
+            Save
+          </button>
+
+          <loading-button
+            :useDefaultStyle="false"
+            class="button-transparent action-item"
+            :action="validateQuery"
+            >Parse</loading-button
+          >
+
           <button
             class="button-transparent action-item"
             :class="{ 'button-cancel': editorData.loading }"
@@ -50,8 +55,8 @@
           </button>
         </div>
       </div>
-    </div>
-    <div ref="editor" id="editor" class="editor-fix-styles"></div>
+      <div ref="editor" id="editor" class="editor-fix-styles"></div>
+    </template>
   </div>
 </template>
 <style>
@@ -163,7 +168,7 @@
   border: 1px solid var(--border-color);
   cursor: pointer;
   margin-left: 0.75rem;
-  margin-right: 0.75rem;
+  /* margin-right: 0.75rem; */
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
@@ -183,6 +188,7 @@ import { MarkerSeverity, editor, KeyMod, KeyCode } from 'monaco-editor'
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import { Results } from '../editors/results'
 import AxiosResolver from '../stores/resolver'
@@ -205,14 +211,6 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    y: {
-      type: Number,
-      default: 400,
-    },
-    x: {
-      type: Number,
-      default: 400,
-    },
   },
   data() {
     return {
@@ -233,11 +231,19 @@ export default defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
-    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore) {
+    const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
-    return { connectionStore, modelStore, editorStore, trilogyResolver, EditorTag }
+    return {
+      connectionStore,
+      modelStore,
+      editorStore,
+      trilogyResolver,
+      EditorTag,
+      userSettingsStore,
+    }
   },
   async mounted() {
     this.$nextTick(() => {
@@ -251,9 +257,6 @@ export default defineComponent({
     mountedMap.delete(this.context)
   },
   computed: {
-    prefersLight() {
-      return window.matchMedia('(prefers-color-scheme: light)').matches
-    },
     editorData() {
       return this.editorStore.editors[this.editorName]
     },
@@ -341,6 +344,7 @@ export default defineComponent({
       editor.setModelMarkers(model, 'owner', annotations.data.items)
     },
     async runQuery() {
+      this.$emit('query-started')
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
@@ -389,7 +393,8 @@ export default defineComponent({
 
         // Get selected text or full content
         const selected = editor.getSelection()
-        const text =
+        console.log(selected)
+        let text =
           selected &&
           !(
             selected.startColumn === selected.endColumn &&
@@ -397,7 +402,14 @@ export default defineComponent({
           )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
-
+        // hack for mobile? getValue not returning values
+        if (!text) {
+          text = this.editorData.contents
+        }
+        if (!text) {
+          this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
+          return
+        }
         // First promise: Resolve query
         const resolveResponse = await Promise.race([
           this.trilogyResolver.resolve_query(text, conn.query_type, this.editorData.type, sources),
@@ -462,7 +474,7 @@ export default defineComponent({
       editorMap.set(this.context, editorItem)
       editorItem.layout()
       editor.defineTheme('trilogyStudio', {
-        base: this.prefersLight ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
+        base: this.userSettingsStore.getSettings.theme == 'light' ? 'vs' : 'vs-dark', // can also be vs-dark or hc-black
         inherit: true, // can also be false to completely replace the builtin rules
         rules: [
           { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' }, // Green for comments

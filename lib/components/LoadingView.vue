@@ -123,7 +123,6 @@ export default defineComponent({
   transition: background-color 0.2s;
   border: 2px solid #e74d3c82;
   background-color: transparent;
-  height: 24px !important;
   width: 100px;
 }
 
