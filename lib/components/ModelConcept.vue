@@ -98,7 +98,6 @@ const getPurposeDescription = (purpose: string) => {
 }
 .concept-container {
   background: var(--result-window-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin: 1rem;
   overflow: hidden;
 }

@@ -104,7 +104,7 @@ export default async function setupDemo(
   ]
 
   editors.forEach((editor) => editorStore.addEditor(editor))
-
+  console.log(editorStore.editors['example_query_1'])
   // Create and add model configuration
   let mc = new ModelConfig({
     name: modelName,

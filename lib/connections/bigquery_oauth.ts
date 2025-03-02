@@ -44,7 +44,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
           client_id: '734709568634-3u732kjmtp8e4bi6te0g7uo9278k104i.apps.googleusercontent.com',
           // @ts-ignore
           callback: (response) => {
-            console.log('BigQuery OAuth response', response)
             this.accessToken = response.access_token
 
             return resolve(true)

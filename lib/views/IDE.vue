@@ -55,6 +55,7 @@
                 </loading-button>
               </template>
             </error-message>
+            <!-- v-else-if="Object.keys(activeEditorData.results.headers).length > 0" -->
             <results-container
               v-else-if="activeEditorData.results"
               :results="activeEditorData.results"

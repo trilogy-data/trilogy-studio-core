@@ -21,10 +21,10 @@ const useEditorStore = defineStore('editors', {
       if (name in this.editors) {
         throw Error(`Editor with ${name} already exists.`)
       }
-      this.editors[editor.name] = editor // Add editor using object notation
+      this.editors[editor.name] = editor
     },
     addEditor(editor: Editor) {
-      this.editors[editor.name] = editor // Add editor using object notation
+      this.editors[editor.name] = editor
     },
     updateEditorName(name: string, newName: string) {
       this.editors[newName] = this.editors[name]

@@ -135,8 +135,8 @@ export default {
         type: string
         concept: any
       }> = []
-
-      Object.values(modelStore.models).forEach((model) => {
+      let sorted = Object.values(modelStore.models).sort((a, b) => a.name.localeCompare(b.name))
+      sorted.forEach((model) => {
         let modelId = ['model', model.name].join(KeySeparator)
         list.push({
           id: modelId,

@@ -359,8 +359,7 @@ export default defineComponent({
       isEditing.value = true
       editableName.value = props.config.name
       nextTick(() => {
-        // @ts-ignore
-        if (nameInput) {
+        if (nameInput.value) {
           nameInput.value.focus()
         }
       })

@@ -38,7 +38,6 @@
 
 .editor-color {
   background-color: var(--main-bg-color);
-  filter: brightness(85%);
 }
 </style>
 <script lang="ts">

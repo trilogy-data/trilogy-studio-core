@@ -107,7 +107,6 @@ export default defineComponent({
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
-      console.log('new editor')
       visible.value = !visible.value
       editorDetails.value.name = '' // Reset name field
       editorDetails.value.type = 'preql' // Reset type dropdown

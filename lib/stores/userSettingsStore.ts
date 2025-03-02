@@ -40,16 +40,13 @@ export const useUserSettingsStore = defineStore('userSettings', {
 
     toggleTheme() {
       // Remove any existing theme classes
-      console.log('toggling')
       document.documentElement.classList.remove('dark-theme', 'light-theme')
 
       // Toggle to opposite theme
       if (this.settings['theme'] === 'light') {
-        console.log('adding light')
         document.documentElement.classList.add('light-theme')
         // localStorage.setItem('theme', 'light');
       } else {
-        console.log('adding dark')
         document.documentElement.classList.add('dark-theme')
         // localStorage.setItem('theme', 'dark');
       }

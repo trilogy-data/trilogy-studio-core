@@ -61,7 +61,8 @@
   --query-window-bg: #FFFFFF;
   --query-window-font: #2E2E2E;
 
-  --result-window-bg: #F9F9F9;
+  /* --result-window-bg: #fefefe; */
+  --result-window-bg: white;
   --result-window-font: #3C3C3C;
 
   --border: #7171715e;

@@ -57,7 +57,7 @@
               </template>
             </error-message>
             <results-container
-              v-else-if="activeEditorData.results"
+              v-else-if="Object.keys(activeEditorData.results).length > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
             />

@@ -61,11 +61,9 @@ export default {
       const splits = current.split(KeySeparator)
       const documentationTitle = splits[1]
       let currentPath = `documentation${KeySeparator}${documentationTitle}`
-      console.log(currentPath)
       // Initialize all nodes as collapsed except those in current path
       documentation.forEach((topic) => {
         const topicId = `documentation${KeySeparator}${topic.title}`
-        console.log(topicId)
         collapsed.value[topicId] = !currentPath.startsWith(topicId)
       })
     })

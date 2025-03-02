@@ -125,9 +125,16 @@ export default {
         indent: Array<number>
         editor?: any
       }> = []
-      Object.entries(editorStore.editors).forEach(([_, editor]) => {
+      // sort for rendering
+      const sorted = Object.values(editorStore.editors).sort(
+        (a, b) =>
+          a.storage.localeCompare(b.storage) ||
+          a.connection.localeCompare(b.connection) ||
+          a.name.localeCompare(b.name),
+      )
+      sorted.forEach((editor) => {
         let storageKey = `s-${editor.storage}`
-        let connectionKey = `c-${editor.connection}`
+        let connectionKey = `c-${editor.storage}-${editor.connection}`
         let editorKey = `e-${editor.storage}-${editor.connection}-${editor.name}`
 
         if (!list.some((item) => item.key === storageKey)) {

@@ -90,11 +90,7 @@
       </template>
 
       <!-- Add MotherDuck token input when connection is expanded -->
-      <div
-        v-if="!collapsed[item.id] && item.connection?.type === 'motherduck'"
-        class="md-token-container"
-        @click.stop
-      >
+      <div v-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
         <form @submit.prevent="updateMotherDuckToken(item.connection)">
           <input
             type="password"
@@ -165,7 +161,16 @@ export default {
         type: string
         connection: any | undefined
       }> = []
-      Object.values(connectionStore.connections).forEach((connection) => {
+      const sorted = Object.values(connectionStore.connections).sort((a, b) => {
+        if (a.connected && !b.connected) {
+          return -1
+        } else if (!a.connected && b.connected) {
+          return 1
+        } else {
+          return a.name.localeCompare(b.name)
+        }
+      })
+      sorted.forEach((connection) => {
         let databases = connection.databases ? connection.databases : []
         list.push({
           id: connection.name,
@@ -184,6 +189,16 @@ export default {
             type: 'model',
             connection,
           })
+          if (connection.type === 'motherduck') {
+            list.push({
+              id: `${connection.name}-md-token`,
+              name: 'MotherDuck Token',
+              indent: 1,
+              count: 0,
+              type: 'motherduck-token',
+              connection,
+            })
+          }
           databases.forEach((db) => {
             list.push({
               id: db.name,
@@ -309,14 +324,14 @@ export default {
 }
 
 .md-token-container {
-  padding: 4px 0 4px 20px;
+  /* padding: 4px 0 4px 20px; */
   background-color: var(--sidebar-bg);
   width: 100%;
 }
 
 .md-token-input {
   padding: 2px 4px;
-  font-size: 12px;
+  font-size: var(--button-font-size);
   width: 180px;
   margin-right: 4px;
   border: 1px solid var(--border);
@@ -326,7 +341,7 @@ export default {
 
 .md-token-button {
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--button-font-size);
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   color: var(--text);

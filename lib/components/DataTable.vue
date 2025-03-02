@@ -19,7 +19,7 @@
 }
 
 .tabulator .tabulator-tableholder .tabulator-table {
-  background-color: transparent;
+  /* background-color: transparent; */
   color: var(--text);
 }
 
@@ -32,17 +32,16 @@
 }
 
 .tabulator-row {
-  background: transparent;
+  /* background: transparent; */
   width: min-content;
   min-width: 100%;
 }
 
 .tabulator {
   position: relative;
-  font-size: 12px;
   border: 0;
   width: 100%;
-  background: transparent;
+  /* background: transparent; */
 }
 
 .tabulator-cell {
@@ -120,12 +119,14 @@ export default {
 
           // titleFormatter: 'plaintext',
           field: details.name,
+          formatter: details.type === 'float' ? 'money' : 'plaintext',
           // formatter: this.cellFormatter,
           // tooltip: this.cellTooltip,
           // contextMenu: this.cellContextMenu,
           // headerContextMenu: this.headerContextMenu,
           // cellClick: this.cellClick.bind(this)
         }
+        // @ts-ignore
         calculated.push(result)
       })
       return calculated
@@ -146,6 +147,7 @@ export default {
     create() {
       // @ts-ignore
       this.tabulator = shallowRef(
+        // @ts-ignore
         new Tabulator(this.$refs.tabulator, {
           // data: this.tableData, //link data to table
           pagination: true, //enable pagination

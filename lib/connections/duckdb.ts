@@ -7,6 +7,11 @@ const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles()
 
 // Select a bundle based on browser checks
 
+interface DuckDBType {
+  typeId: number
+  precision?: number
+}
+
 async function createDuckDB() {
   const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES)
   // Instantiate the asynchronus version of DuckDB-wasm
@@ -73,17 +78,16 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   // Helper to map DuckDB column types to your ColumnType enum
-  private mapDuckDBTypeToColumnType(duckDBType: string): ColumnType {
-    switch (duckDBType) {
-      case 'VARCHAR':
+  private mapDuckDBTypeToColumnType(duckDBType: DuckDBType): ColumnType {
+    console.log(duckDBType)
+    switch (duckDBType.typeId) {
+      case 5:
         return ColumnType.STRING
-      case 'INT32':
-      case 'INT64':
+      case 2:
         return ColumnType.INTEGER
-      case 'FLOAT':
-      case 'DOUBLE':
+      case 3:
         return ColumnType.FLOAT
-      case 'BOOLEAN':
+      case 6:
         return ColumnType.BOOLEAN
       default:
         return ColumnType.UNKNOWN // Use a fallback if necessary

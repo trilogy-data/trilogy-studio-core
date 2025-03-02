@@ -138,7 +138,7 @@ export default class Editor implements EditorInterface {
 
   static fromJSON(json: string | Partial<Editor>): Editor {
     const parsed: Partial<Editor> = typeof json === 'string' ? JSON.parse(json) : json
-
+    console.log(json)
     // Initialize a new Editor instance
     const editor = new Editor({
       name: parsed.name || '',
