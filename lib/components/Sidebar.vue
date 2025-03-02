@@ -119,6 +119,12 @@ export default defineComponent({
         screen: 'models',
       },
       {
+        name: 'community-models',
+        tooltip: 'Community Models',
+        icon: 'mdi mdi-library',
+        screen: 'community-models',
+      },
+      {
         name: 'help',
         tooltip: 'Docs',
         icon: 'mdi mdi-help',

@@ -38,7 +38,6 @@ const useConnectionStore = defineStore('connections', {
     },
 
     newConnection(name: string, type: string, options: Record<string, any>) {
-      console.log('creating noew')
       if (this.connections[name]) {
         throw new Error(`Connection with name "${name}" already exists.`)
       }

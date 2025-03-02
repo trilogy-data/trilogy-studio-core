@@ -1,7 +1,7 @@
 <template>
   <div>
-    <button @click="createModel">New</button>
-    <div v-if="visible" class="absolute-form">
+    <loading-button :action="createModel">{{text}}</loading-button>
+    <div v-if="visible" :class="{'absolute-form': absolute, 'fixed-form': !absolute}">
       <form @submit.prevent="submitModelCreation">
         <div>
           <label for="model-name">Name</label>
@@ -98,6 +98,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import { EditorTag } from '../editors'
 import { ModelSource } from '../models'
 import Tooltip from './Tooltip.vue'
+import LoadingButton from './LoadingButton.vue'
 
 export async function fetchModelImportBase(url: string): Promise<ModelImport> {
   const response = await fetch(url)
@@ -139,13 +140,30 @@ export default defineComponent({
   name: 'ModelCreator',
   components: {
     Tooltip,
+    LoadingButton
   },
-  setup() {
+  props: {
+    formDefaults: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+    absolute: {
+      type: Boolean,
+      required: false,
+      default: true,
+    },
+  },
+  setup(props) {
+    // display text
+    const text = props.formDefaults.importAddress ? 'Import' : 'New'
+
+
     // Placeholder for editor details
     const modelDetails = ref({
-      name: '',
-      importAddress: '',
-      connection: '',
+      name: props.formDefaults.name || '',
+      importAddress: props.formDefaults.importAddress,
+      connection: props.formDefaults.connection || '',
       options: { mdToken: '', projectId: '', username: '', password: '' },
     })
 
@@ -161,19 +179,20 @@ export default defineComponent({
     //visible
     let visible = ref(false)
 
+
     // Function to create the editor by collecting details from the form
     const createModel = () => {
       visible.value = !visible.value
-      modelDetails.value.name = '' // Reset name field
-      modelDetails.value.importAddress = '' // Reset import field
-      modelDetails.value.connection = ''
+      modelDetails.value.name = props.formDefaults.name || '',
+      modelDetails.value.importAddress = props.formDefaults.importAddress,
+      modelDetails.value.connection = props.formDefaults.connection || '',
       modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
     }
 
     // Function to submit the editor details
     const submitModelCreation = async () => {
       if (modelDetails.value.name) {
-        visible.value = false
+        
         // check if it already exists
         if (!modelStore.models[modelDetails.value.name]) {
           modelStore.newModelConfig(modelDetails.value.name)
@@ -189,12 +208,10 @@ export default defineComponent({
               password: modelDetails.value.options.password,
             },
           )
-        } else {
-          connectionStore.connections[modelDetails.value.connection].setModel(
+        }
+        connectionStore.connections[modelDetails.value.connection].setModel(
             modelDetails.value.name,
           )
-        }
-
         if (modelDetails.value.importAddress) {
           const data = await fetchModelImports(
             await fetchModelImportBase(modelDetails.value.importAddress),
@@ -220,6 +237,7 @@ export default defineComponent({
             return new ModelSource(response.name, response.alias, [], [])
           })
         }
+        visible.value = false
       }
     }
 
@@ -229,6 +247,7 @@ export default defineComponent({
       connections,
       createModel,
       submitModelCreation,
+      text
     }
   },
 })

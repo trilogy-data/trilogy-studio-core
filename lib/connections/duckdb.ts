@@ -79,7 +79,6 @@ export default class DuckDBConnection extends BaseConnection {
 
   // Helper to map DuckDB column types to your ColumnType enum
   private mapDuckDBTypeToColumnType(duckDBType: DuckDBType): ColumnType {
-    console.log(duckDBType)
     switch (duckDBType.typeId) {
       case 5:
         return ColumnType.STRING

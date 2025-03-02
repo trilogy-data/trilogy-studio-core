@@ -116,6 +116,8 @@ h1 {
   line-height: 1.1;
 }
 
+/* BUTTONS */
+
 button:hover {
   background-color: var(--button-mouseover)
     /* Lighter gray when hovered */
@@ -164,12 +166,25 @@ button:focus-visible {
 .absolute-form {
   position: absolute;
   top: 100%;
+
   /* Position below the button */
   background-color: var(--button-bg);
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
   z-index: 1001;
   width: 250px;
+  font-size: 15px;
+  text-align: center;
+
+}
+
+.fixed-form {
+  /* Position below the button */
+  background-color: transparent;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  z-index: 1001;
+  max-width: 300px;
   font-size: 15px;
   text-align: center;
 
@@ -208,4 +223,9 @@ button:focus-visible {
 
 .main {
   background-color: var(--query-window-bg);
+}
+
+/* TEXT */
+.text-faint{
+  color: var(--text-faint);
 }
