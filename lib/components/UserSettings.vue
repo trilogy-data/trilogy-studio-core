@@ -1,12 +1,10 @@
 <template>
   <div class="settings-container">
-    <h2>Settings</h2> 
+    <h2>Settings</h2>
     <div class="setting" v-for="(value, key) in settings" :key="key">
       <label :for="key">{{ formatLabel(key) }}</label>
-      <input v-if="typeof value === 'boolean'" type="checkbox" :id="key" v-model="settings[key]"
-        @change="updateSetting(key, settings[key])" />
-      <select v-else-if="key === 'theme'"  v-model="settings[key]"
-        @input="updateSetting(key, settings[key])">
+      <input v-if="typeof value === 'boolean'" type="checkbox" :id="key" v-model="settings[key]" />
+      <select v-else-if="key === 'theme'" v-model="settings[key]" @input="(event) => { toggleTheme() }">
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
@@ -21,7 +19,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, onMounted, inject } from 'vue'
+import { defineComponent, computed, onMounted, inject, nextTick } from 'vue'
 import type { UserSettingsStoreType } from "../stores/userSettingsStore";
 import { storeToRefs } from 'pinia';
 
@@ -30,7 +28,9 @@ export default defineComponent({
   setup() {
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore');
 
-    // Use storeToRefs to make Pinia state reactive
+    if (!userSettingsStore) {
+      throw new Error('User Settings Store is required')
+    }
     const { settings, isLoading, hasChanges } = storeToRefs(userSettingsStore);
 
     // Load settings when component mounts
@@ -38,9 +38,15 @@ export default defineComponent({
       userSettingsStore.loadSettings();
     });
 
-    const updateSetting = (key: string, value: any) => {
-      userSettingsStore.updateSetting(key, value);
+    const updateSetting = (key: string, value: any, event) => {
+      // userSettingsStore.updateSetting(key, value);
     };
+
+    const toggleTheme = () => {
+      nextTick(() => {
+        userSettingsStore.toggleTheme()
+      })
+    }
 
     const saveSettings = async () => {
       const success = await userSettingsStore.saveSettings();
@@ -65,6 +71,7 @@ export default defineComponent({
       saveSettings,
       resetToDefaults,
       formatLabel,
+      toggleTheme,
     };
   },
 });

@@ -79,7 +79,7 @@ languages.setMonarchTokensProvider('trilogy', {
       [/\<[a-zA-Z0-9_\.\,]+\>\./, 'property'],
       [/([a-zA-Z0-9]+)\./, 'property'],
       // Match strings (enclosed in single or double quotes)
-      [/['"][^'"]*['"]/, 'string'],
+      [/['"`][^'"]*['"`]/, 'string'],
 
       // Match numbers (integers and floats)
       [/\b\d+(\.\d+)?\b/, 'number'],

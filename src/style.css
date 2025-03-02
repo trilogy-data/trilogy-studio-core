@@ -13,7 +13,7 @@
 }
 
 /* Dark Mode Colors */
-:root.light-theme {
+:root.dark-theme {
   --text-color: #FFFFFF;
   --text-faint: #B3B3B3;
   --special-text: #cc6900;
@@ -42,7 +42,7 @@
 }
 
 
-:root.dark-theme {
+:root.light-theme {
   --text-color: #333333;
   --text-faint: #B3B3B3;
   --special-text: #0066cc;

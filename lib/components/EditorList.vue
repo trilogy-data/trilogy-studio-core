@@ -99,7 +99,7 @@ export default {
     }
 
     const collapsed = ref<Record<string, boolean>>({})
-    const hiddenTags = ref<Set<string>>(new Set(['source']))
+    const hiddenTags = ref<Set<string>>(new Set([]))
 
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]

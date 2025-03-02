@@ -41,6 +41,8 @@ let userSettingsStore = useUserSettingsStore()
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 userSettingsStore.updateSetting('trilogyResolver', apiUrl)
 userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
+console.log(userSettingsStore.settings.theme)
+userSettingsStore.toggleTheme()
 userSettingsStore.toggleTheme()
 
 let resolver = new AxiosTrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
