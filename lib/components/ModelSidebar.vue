@@ -3,9 +3,11 @@
     <template #actions>
       <div class="button-container">
         <model-creator />
+        <div>
         <loading-button :action="saveModels" :key-combination="['control', 's']">
           Save
         </loading-button>
+      </div>
       </div>
     </template>
 

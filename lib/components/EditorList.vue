@@ -6,7 +6,6 @@
         <editor-creator />
         <div>
         <loading-button
-          ref="loadingButton"
           :action="saveEditors"
           :keyCombination="['control', 's']"
         >

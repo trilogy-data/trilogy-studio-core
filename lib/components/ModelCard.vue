@@ -1,6 +1,13 @@
 <template>
   <section :id="config.name" class="model-section">
-    <h3 class="card-title">{{ config.name }}</h3>
+    <div class="model-title" @click="startEditing">
+      <span v-if="!isEditing" class="editable-text">
+        {{ config.name }}
+        <span class="edit-indicator">✎</span>
+      </span>
+      <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
+        @keyup.esc="cancelEditing" class="name-input" type="text" />
+    </div>
     <div class="button-container">
       <loading-button class="button" :action="() => fetchParseResults(index)">
         Parse
@@ -24,18 +31,21 @@
         <button type="button" @click="toggleNewSource(index)">Cancel</button>
       </form>
     </div>
-    <h3 class="parse-results">Model Sources</h3>
+
     <div v-if="config.parseError" class="parse-error">
       <error-message>Error fetching parse results: {{ config.parseError }}</error-message>
     </div>
 
     <div v-else>
-      <div v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
+      <h3 class="parse-results">Model Sources ({{ config.sources.length }})</h3>
+      <div class='model-source' v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
         <div>
-          <h4>{{ source.alias }} ({{ source.editor }})</h4>
-          <button class="button delete-button" @click.stop="removeSource(index, sourceIndex)">
-            Remove
-          </button>
+          <div class="source-title">{{ source.alias }} ({{ source.editor }})</div>
+          <div class="action-bar">
+            <button class="button delete-button" @click.stop="removeSource(index, sourceIndex)">
+              Remove
+            </button>
+          </div>
         </div>
         <div class="toggle-concepts" @click="toggleConcepts(source.alias)">
           {{ isExpanded[source.alias] ? 'Hide' : 'Show' }} Concepts ({{ source.concepts.length }})
@@ -58,15 +68,87 @@
   </section>
 </template>
 <style scoped>
+.action-bar {
+  padding-bottom:10px;
+}
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-indicator {
+  opacity: 0;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+}
+
+
+.model-title {
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 24px;
+}
+
+
+.model-title:hover .edit-indicator {
+  opacity: 1;
+}
+
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-indicator {
+  opacity: 0;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+}
+
+.name-input {
+  background: var(--bg-color);
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  font-size: inherit;
+  font-weight: 500;
+  width: auto;
+  min-width: 200px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
+}
+
 .model-section {
   margin-bottom: 20px;
-  padding: 20px;
+  padding: 10px;
   border: 1px solid var(--border);
+}
+
+.model-source {
+  border-left: 1px solid var(--border);
+  padding: 10px;
+}
+
+.source-title {
+  font-weight: 500;
+  cursor: pointer;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  padding-bottom: 10px;
 }
-.button {
-  flex: 0.25;
-}
+
 
 .delete-button {
   width: 100px;
@@ -109,7 +191,6 @@
 
 .button {
   border: none;
-  border-radius: 4px;
   cursor: pointer;
   font-size: 0.875rem;
   transition: background-color 0.2s;
@@ -141,6 +222,7 @@
   font-size: 1.1rem;
   background-color: var(--sidebar-bg);
   padding: 4px;
+  margin-bottom: 5px;
 }
 
 .toggle-concepts:hover {
@@ -179,7 +261,7 @@ select:focus {
 </style>
 
 <script lang="ts">
-import { defineComponent, inject, ref, computed } from 'vue'
+import { defineComponent, inject, ref, computed, nextTick } from 'vue'
 import { ModelConfig } from '../models' // Adjust the import path
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
@@ -212,6 +294,8 @@ export default defineComponent({
     }
     const isExpanded = ref<Record<string, boolean>>({})
     const isDatasourceExpanded = ref<Record<string, boolean>>({})
+    const isEditing = ref<boolean>(false);
+    const editableName = ref<string>('');
 
     const isEditorExpanded = ref<Record<string, boolean>>({})
 
@@ -264,6 +348,28 @@ export default defineComponent({
       }
     }
     let index = computed(() => props.config.name)
+
+    const nameInput = ref<HTMLDivElement | null>(null)
+    const startEditing = () => {
+      isEditing.value = true
+      editableName.value = props.config.name
+      nextTick(() => {
+        // @ts-ignore
+        if (nameInput) { nameInput.value.focus() }
+
+      })
+    }
+
+    const cancelEditing = () => {
+      isEditing.value = false
+
+    }
+
+    const finishEditing = () => {
+      isEditing.value = false
+      modelStore.updateModelName(props.config.name, editableName.value)
+    }
+
     return {
       modelStore,
       editorStore,
@@ -279,6 +385,12 @@ export default defineComponent({
       isEditorExpanded,
       index,
       toggleNewSource,
+      isEditing,
+      startEditing,
+      editableName,
+      finishEditing,
+      cancelEditing,
+      nameInput
     }
   },
   components: {

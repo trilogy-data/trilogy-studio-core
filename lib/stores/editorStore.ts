@@ -26,6 +26,12 @@ const useEditorStore = defineStore('editors', {
     addEditor(editor: Editor) {
       this.editors[editor.name] = editor // Add editor using object notation
     },
+    updateEditorName(name:string, newName:string) {
+      this.editors[newName] = this.editors[name]
+      this.editors[newName].name = newName
+      delete this.editors[name]
+
+    },
     removeEditor(name: string) {
       if (this.editors[name]) {
         delete this.editors[name]
