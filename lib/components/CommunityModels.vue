@@ -28,7 +28,7 @@
             </div>
         </div>
         <p v-if="error" class="text-error">{{ error }}</p>
-        <p v-else class="text-loading">Loading community models...</p>
+        <p v-else-if="!error && !files.length" class="text-loading">Loading community models...</p>
     </div>
 </template>
 
