@@ -46,6 +46,13 @@
       </template>
       <span>
         {{ item.label }}
+        <span class="text-light" v-if="item.type === 'connection'">
+          ({{
+            connectionStore.connections[item.label]?.model
+              ? connectionStore.connections[item.label]?.model
+              : 'No Model Set'
+          }})</span
+        >
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -54,11 +61,9 @@
       </template>
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
-          <status-icon
-            v-if="item.type === 'connection'"
-            :status="connectionStateToStatus(connectionStore.connections[item.label])"
-          />
+          <editor-creator :connection="item.label" :offsetRight="true" />
         </span>
+        <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
@@ -255,5 +260,13 @@ export default {
   color: var(--tag-font);
   line-height: 10px;
   cursor: pointer;
+}
+
+.tag-container {
+  vertical-align: middle;
+}
+
+.text-light {
+  color: var(--text-faint);
 }
 </style>

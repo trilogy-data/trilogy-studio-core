@@ -39,7 +39,7 @@
           {{ item.connection.model || 'Set Model' }}
         </button>
         <div v-if="connectionModelVisible[item.connection.name]" class="model-form">
-          <form @submit.prevent="submitConnectionModel(item.name)">
+          <form @submit.prevent="submitConnectionModel(item.connection.name)">
             <div>
               <select
                 class="model-select"
@@ -136,6 +136,7 @@ export default {
         connectionStore.connections[connection].model = connectionDetails.value.model
       }
       connectionModelVisible.value[connection] = false
+      saveConnections()
     }
 
     const updateMotherDuckToken = (connection: MotherDuckConnection) => {

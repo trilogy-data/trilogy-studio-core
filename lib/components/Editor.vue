@@ -393,7 +393,6 @@ export default defineComponent({
 
         // Get selected text or full content
         const selected = editor.getSelection()
-        console.log(selected)
         let text =
           selected &&
           !(

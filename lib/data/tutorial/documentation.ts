@@ -49,7 +49,7 @@ export const documentation: DocumentationNode[] = [
     new Article('Navigation', [
       new Paragraph(
         'Navigation',
-        'ON desktop, Trilogy Studio uses a left-hand navigation bar, a sidebar with context, and a main pane (which may be split) to present information. The sidebar is further split into sections; the first icons change the sidebar for the query editor, while the next section configures entirely new main screen experiences. Configuration/profile are accessible at the bottom. On mobile, Trilogy will instead use a top menu to access a navigation screen, and the main display will show only one particular field at a time.',
+        'On desktop, Trilogy Studio uses a left-hand navigation bar, a sidebar with context, and a main pane (which may be split) to present information. The sidebar is further split into sections; the first icons change the sidebar for the query editor, while the next section configures entirely new main screen experiences. Configuration/profile are accessible at the bottom. On mobile, Trilogy will instead use a top menu to access a navigation screen, and the main display will show only one particular field at a time.',
       ),
       new Paragraph(
         'Tip',
@@ -96,6 +96,13 @@ export const documentation: DocumentationNode[] = [
         "A model contains all the processed metadata of your source trilogy files. If you haven't deleted the demo model, it will be visible below. (You can reset the demo to restore it). Models are automatically parsed on query submission but also support on-demand validation. Click the 'parse' button to parse the model. This will send the model to a backend server to be parsed and type-checked and generate metadata for visibility. You can click on an editor name to view and edit it. This can be useful to fix parse errors easily.",
       ),
     ]),
+    new Article('Public Models', [
+      new Paragraph(
+        'Models',
+        'The studio contains a public model store, accessible from the left hand nav. Use this to import models defined by others. You can contribute your own models to be visible in the store by submitting a PR to <a href="https://github.com/trilogy-data/trilogy-public-models">trilogy-public-models</a>.',
+      ),
+
+    ]),
   ]),
   new DocumentationNode('Demo', [
     new Article('Overview', [
@@ -118,10 +125,16 @@ export const documentation: DocumentationNode[] = [
         'tip',
       ),
     ]),
-    new Article('Challenges', [
+    new Article('Things to Explore', [
       new Paragraph(
         'Demo',
         'Update the model to add a calculated field for the users first name, using the split function. Find the most common first names in customers, then the first name that spent the most money.',
+      ),
+    ]),
+    new Article('Next Steps', [
+      new Paragraph(
+        'Demo',
+        'A public model repository is available, accessible from the nav bar. You can use this to browse and select models to import. This is a great way to continue exploring Trilogy and some of the rich datasets available online. After that, dive into modeling your own data!',
       ),
     ]),
   ]),

@@ -61,7 +61,7 @@
 <script lang="ts">
 import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
-import ModelCreator from './ModelCreate.vue'
+import ModelCreator from './ModelCreator.vue'
 import LoadingButton from './LoadingButton.vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'

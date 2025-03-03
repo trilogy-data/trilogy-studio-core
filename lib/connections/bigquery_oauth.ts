@@ -103,6 +103,11 @@ export default class BigQueryOauthConnection extends BaseConnection {
           },
         ]),
       ) as Map<string, ResultColumn>
+
+      if (!result.rows) {
+        return new Results(headers, [])
+      }
+
       // @ts-ignore
       const rows = result.rows.map((row) => {
         const rowData: Record<string, string | number | null> = {}

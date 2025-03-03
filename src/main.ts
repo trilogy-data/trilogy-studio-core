@@ -60,7 +60,7 @@ languages.setMonarchTokensProvider('trilogy', {
 
       // Match Keywords (SELECT, WHERE, ORDER, BY)
       [
-        /(^|\s)(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(?=\s|$|,)/,
+        /(^|\s)(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|AS)(?=\s|$|,|;)/,
         'keyword',
       ],
 
@@ -74,8 +74,8 @@ languages.setMonarchTokensProvider('trilogy', {
       [/\<\-|\-\>|\*|\+|\-|\/|\!/, 'operator'],
 
       // match first part of <a,b>.b or a.b
-      [/\<[a-zA-Z0-9_\.\,]+\>\./, 'property'],
-      [/([a-zA-Z0-9]+)\./, 'property'],
+      [/\<[a-zA-Z0-9\_\.\,]+\>\./, 'property'],
+      [/([a-zA-Z0-9\_]+)\./, 'property'],
       // Match strings (enclosed in single or double quotes)
       [/['"`][^'"]*['"`]/, 'string'],
 

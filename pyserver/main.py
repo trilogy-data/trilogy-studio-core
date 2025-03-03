@@ -15,7 +15,7 @@ from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
-from trilogy.authoring import SelectStatement, MultiSelectStatement
+from trilogy.authoring import SelectStatement, MultiSelectStatement, RawSQLStatement
 
 from logging import getLogger
 import click
@@ -146,6 +146,11 @@ def generate_query(query: QueryInSchema):
     try:
         _, parsed = parse_text(safe_format_query(query.query), env)
         final = parsed[-1]
+        if isinstance(final, RawSQLStatement):
+            output = QueryOut(
+            generated_sql=final.text, columns=[]
+            )
+            return output
         if not isinstance(final, (SelectStatement, MultiSelectStatement)):
             columns = []
             generated = None

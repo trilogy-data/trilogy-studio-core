@@ -57,7 +57,7 @@
             </error-message>
             <!-- v-else-if="Object.keys(activeEditorData.results.headers).length > 0" -->
             <results-container
-              v-else-if="activeEditorData.results"
+              v-else-if="Object.keys(activeEditorData.results.headers).length > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"
@@ -81,6 +81,9 @@
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
         <dashboard />
+      </template>
+      <template v-else-if="activeScreen === 'community-models'">
+        <community-models />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -177,6 +180,7 @@ import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
+import CommunityModels from '../components/CommunityModels.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -219,6 +223,7 @@ export default {
     Dashboard,
     ResultsContainer,
     LoadingButton,
+    CommunityModels,
   },
   setup() {
     type ResolverType = typeof AxiosResolver

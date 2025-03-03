@@ -1,10 +1,10 @@
 <template>
-  <div class="relative-parent">
+  <div @click.stop class="relative-parent">
     <slot :onClick="createEditor">
-      <button @click="createEditor">Add</button>
+      <button @click.stop="createEditor">New</button>
     </slot>
 
-    <div v-if="visible" class="absolute-form">
+    <div v-if="visible" class="absolute-form" :class="{ 'offset-right': offsetRight }">
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>
@@ -42,6 +42,9 @@
 </template>
 
 <style scoped>
+.offset-right {
+  right: 100%;
+}
 .button {
   flex: 1;
 }
@@ -86,15 +89,26 @@ export default defineComponent({
   components: {
     Tooltip,
   },
-  setup(_, { emit }) {
+  props: {
+    connection: {
+      type: String,
+      required: false,
+      default: '',
+    },
+    offsetRight: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+  },
+  setup(props, { emit }) {
     // Placeholder for editor details
     const editorDetails = ref({
       name: '',
       type: 'preql', // Default value
-      connection: '',
+      connection: props.connection,
     })
 
-    // Array of available connection names
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     if (!connectionStore || !editorStore) {
@@ -102,7 +116,7 @@ export default defineComponent({
     }
 
     let connections = connectionStore.connections
-    //visible
+
     let visible = ref(false)
 
     // Function to create the editor by collecting details from the form
@@ -110,7 +124,7 @@ export default defineComponent({
       visible.value = !visible.value
       editorDetails.value.name = '' // Reset name field
       editorDetails.value.type = 'preql' // Reset type dropdown
-      editorDetails.value.connection = '' // Reset connection selection
+      editorDetails.value.connection = props.connection // Reset connection selection
     }
 
     // Function to submit the editor details
