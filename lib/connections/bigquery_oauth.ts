@@ -103,7 +103,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
           },
         ]),
       ) as Map<string, ResultColumn>
-      
+
       if (!result.rows) {
         return new Results(headers, [])
       }

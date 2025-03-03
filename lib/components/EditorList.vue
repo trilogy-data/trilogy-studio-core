@@ -9,18 +9,30 @@
           </loading-button>
         </div>
       </div>
-      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
-        @click="toggleTagFilter(tag)">
+      <span
+        v-for="tag in EditorTag"
+        :key="tag"
+        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
+        class="tag"
+        @click="toggleTagFilter(tag)"
+      >
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
         }}{{ tag.slice(1) }} Editors
       </span>
     </template>
 
-    <div v-for="item in contentList" :key="item.key" class="sidebar-item"
+    <div
+      v-for="item in contentList"
+      :key="item.key"
+      class="sidebar-item"
       :class="{ 'sidebar-item-selected': activeEditor === item.label }"
-      @click="clickAction(item.type, item.label, item.key)">
+      @click="clickAction(item.type, item.label, item.key)"
+    >
       <div v-for="_ in item.indent" class="sidebar-padding"></div>
-      <i v-if="item.type !== 'editor'" :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
+      <i
+        v-if="item.type !== 'editor'"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+      >
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -33,8 +45,14 @@
         </tooltip>
       </template>
       <span>
-        {{ item.label }} <span class="text-light" v-if="item.type === 'connection'"> ({{
-          connectionStore.connections[item.label]?.model ? connectionStore.connections[item.label]?.model : 'No Model Set' }})</span>
+        {{ item.label }}
+        <span class="text-light" v-if="item.type === 'connection'">
+          ({{
+            connectionStore.connections[item.label]?.model
+              ? connectionStore.connections[item.label]?.model
+              : 'No Model Set'
+          }})</span
+        >
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -42,7 +60,6 @@
         </span>
       </template>
       <template v-else-if="item.type === 'connection'">
-
         <span class="tag-container">
           <editor-creator :connection="item.label" :offsetRight="true" />
         </span>

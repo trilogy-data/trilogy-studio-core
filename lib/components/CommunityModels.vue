@@ -3,13 +3,18 @@
         <div class="model-title">Community Models</div>
         <div v-if="files.length">
             <div v-for="file in files" :key="file.name">
-
                 <h3 class="font-semibold">{{ file.name }}</h3>
-                <model-creator
-                    :formDefaults="{ importAddress: file.downloadUrl, connection: `new-${file.engine}`, name: file.name }"
-                    :absolute="false" />
-                <div><span class="text-faint">Description:</span> <span>{{ file.description }} </span></div>
-                <div><span class="text-faint">Engine:</span> <span>{{ file.engine }}</span></div>
+                <model-creator :formDefaults="{
+                    importAddress: file.downloadUrl,
+                    connection: `new-${file.engine}`,
+                    name: file.name,
+                }" :absolute="false" />
+                <div>
+                    <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
+                </div>
+                <div>
+                    <span class="text-faint">Engine:</span> <span>{{ file.engine }}</span>
+                </div>
 
                 <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
                     {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{ file.components.length }})
@@ -22,56 +27,68 @@
                 </ul>
             </div>
         </div>
-        <p v-else class="text-gray-500">Loading files...</p>
+        <p v-if="error" class="text-error">{{ error }}</p>
+        <p v-else class="text-loading">Loading community models...</p>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted } from 'vue'
 import ModelCreator from './ModelCreator.vue'
 interface Component {
-    url: string;
-    name?: string;
-    alias?: string;
-    purpose?: string;
+    url: string
+    name?: string
+    alias?: string
+    purpose?: string
 }
 
 interface FileData {
-    name: string;
-    description: string;
-    engine: string;
-    downloadUrl: string;
-    components: Component[];
+    name: string
+    description: string
+    engine: string
+    downloadUrl: string
+    components: Component[]
 }
 
-const files = ref<FileData[]>([]);
+const files = ref<FileData[]>([])
 const isExpanded = ref<Record<string, boolean>>({})
+const error = ref<string | null>(null)
 const toggleComponents = (index: string) => {
     isExpanded.value[index] = !isExpanded.value[index]
 }
 const fetchFiles = async () => {
+    error.value = null
     try {
         const response = await fetch(
-            'https://api.github.com/repos/trilogy-data/trilogy-public-models/contents/studio?ref=studio-integration'
-        );
-        const data: { name: string; download_url: string }[] = await response.json();
-
+            'https://api.github.com/repos/trilogy-data/trilogy-public-models/contents/studio',
+        )
+        
+        if (response.status != 200) {
+            throw new Error(`Error fetching community data: ${await response.text()}`)
+        }
+        const data: { name: string; download_url: string }[] = await response.json()
         const filePromises = data
-            .filter(file => file.name.endsWith('.json'))
+            .filter((file) => file.name.endsWith('.json'))
             .map(async (file) => {
-                const fileResponse = await fetch(file.download_url);
-                const fileData: FileData = await fileResponse.json();
-                fileData.downloadUrl = file.download_url;
-                return fileData;
-            });
+                const fileResponse = await fetch(file.download_url)
+                const fileData: FileData = await fileResponse.json()
+                fileData.downloadUrl = file.download_url
+                return fileData
+            })
 
-        files.value = await Promise.all(filePromises);
-    } catch (error) {
-        console.error('Error fetching files:', error);
+        files.value = await Promise.all(filePromises)
+    } catch (rawError) {
+        if (rawError instanceof Error) {
+            error.value = rawError.message
+        }
+        else {
+            error.value = "Error fetching files"
+        }
+        console.error('Error fetching community data:', error)
     }
-};
+}
 
-onMounted(fetchFiles);
+onMounted(fetchFiles)
 </script>
 
 <style scoped>
@@ -83,6 +100,10 @@ onMounted(fetchFiles);
     padding: 10px;
 }
 
+.text-loading {
+    color: var(--text-faint);
+    font-size: 24px;
+}
 
 .text-faint {
     color: var(--text-faint);

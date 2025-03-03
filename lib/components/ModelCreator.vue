@@ -1,7 +1,7 @@
 <template>
   <div>
-    <loading-button :action="createModel">{{text}}</loading-button>
-    <div v-if="visible" :class="{'absolute-form': absolute, 'fixed-form': !absolute}">
+    <loading-button :action="createModel">{{ text }}</loading-button>
+    <div v-if="visible" :class="{ 'absolute-form': absolute, 'fixed-form': !absolute }">
       <form @submit.prevent="submitModelCreation">
         <div>
           <label for="model-name">Name</label>
@@ -140,7 +140,7 @@ export default defineComponent({
   name: 'ModelCreator',
   components: {
     Tooltip,
-    LoadingButton
+    LoadingButton,
   },
   props: {
     formDefaults: {
@@ -157,7 +157,6 @@ export default defineComponent({
   setup(props) {
     // display text
     const text = props.formDefaults.importAddress ? 'Import' : 'New'
-
 
     // Placeholder for editor details
     const modelDetails = ref({
@@ -179,20 +178,18 @@ export default defineComponent({
     //visible
     let visible = ref(false)
 
-
     // Function to create the editor by collecting details from the form
     const createModel = () => {
       visible.value = !visible.value
-      modelDetails.value.name = props.formDefaults.name || '',
-      modelDetails.value.importAddress = props.formDefaults.importAddress,
-      modelDetails.value.connection = props.formDefaults.connection || '',
-      modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
+      ;(modelDetails.value.name = props.formDefaults.name || ''),
+        (modelDetails.value.importAddress = props.formDefaults.importAddress),
+        (modelDetails.value.connection = props.formDefaults.connection || ''),
+        (modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' }) // Reset options
     }
 
     // Function to submit the editor details
     const submitModelCreation = async () => {
       if (modelDetails.value.name) {
-        
         // check if it already exists
         if (!modelStore.models[modelDetails.value.name]) {
           modelStore.newModelConfig(modelDetails.value.name)
@@ -209,9 +206,7 @@ export default defineComponent({
             },
           )
         }
-        connectionStore.connections[modelDetails.value.connection].setModel(
-            modelDetails.value.name,
-          )
+        connectionStore.connections[modelDetails.value.connection].setModel(modelDetails.value.name)
         if (modelDetails.value.importAddress) {
           const data = await fetchModelImports(
             await fetchModelImportBase(modelDetails.value.importAddress),
@@ -247,7 +242,7 @@ export default defineComponent({
       connections,
       createModel,
       submitModelCreation,
-      text
+      text,
     }
   },
 })

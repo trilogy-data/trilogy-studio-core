@@ -57,7 +57,7 @@
             </error-message>
             <!-- v-else-if="Object.keys(activeEditorData.results.headers).length > 0" -->
             <results-container
-              v-else-if="activeEditorData.results"
+              v-else-if="Object.keys(activeEditorData.results.headers).length > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"

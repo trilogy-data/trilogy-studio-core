@@ -2,7 +2,7 @@
   <div class="expand layout-center hints">
     <div class="shortcuts">
       <div v-for="shortcut in shortcuts" class="shortcut-item">
-        <div>{{ shortcut.name }}</div>
+        <div class="shortcut-name">{{ shortcut.name }}</div>
         <div class="shortcut">
           <span>{{ icon }}</span
           ><span v-for="key in shortcut.keys">{{ key }}</span>
@@ -14,32 +14,28 @@
 <style scoped>
 .hints {
   height: 100%;
+  text-align: center;
 }
-
 .shortcuts {
   display: table;
   border-spacing: 5px;
+  margin: 0 auto; /* Center the table */
 }
-
 .shortcut-item {
   display: table-row;
   color: var(--text-lighter);
-  text-align: right;
   font-size: 95%;
-
   > div {
     display: table-cell;
   }
-
-  /* .new {
-    margin-right: $gutter-h;
-  } */
 }
-
+.shortcut-name {
+  padding-right: 10px; /* Add some spacing between name and shortcut */
+  text-align: right;
+}
 .shortcut {
   text-align: left;
   margin-right: 5px;
-
   & > span {
     display: inline-block;
     padding: 0 0.35rem;
@@ -53,7 +49,6 @@
     vertical-align: baseline;
     border: 1px solid gray;
     border-radius: 5px;
-
     /* background: rgba(var(--main-bg-color), 0.15); */
     background: var(--light-bg-color);
     color: var(--text);
@@ -75,7 +70,7 @@ export default {
           keys: ['Enter'],
         },
         {
-          name: 'Save Open Editor',
+          name: 'Save All Editors',
           keys: ['S'],
         },
         // {
@@ -124,7 +119,6 @@ export default {
       // }
       return this.staticShortcuts
     },
-
     icon() {
       if (this.sysType == 'mac') {
         return '⌘'
