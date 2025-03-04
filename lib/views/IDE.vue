@@ -55,9 +55,8 @@
                 </loading-button>
               </template>
             </error-message>
-            <!-- v-else-if="Object.keys(activeEditorData.results.headers).length > 0" -->
             <results-container
-              v-else-if="Object.keys(activeEditorData.results.headers).length > 0"
+              v-else-if="activeEditorData.results.headers && activeEditorData.results.headers.size > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"

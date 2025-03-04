@@ -76,7 +76,7 @@
 </template>
 
 <script lang="ts">
-import { inject, ref, computed } from 'vue'
+import { inject, ref, computed, onMounted } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import EditorCreator from './EditorCreator.vue'
@@ -87,6 +87,7 @@ import { EditorTag } from '../editors'
 import StatusIcon from './StatusIcon.vue'
 import type { Connection } from '../connections'
 import trilogyIcon from '../static/trilogy.png'
+import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'EditorList',
@@ -102,13 +103,15 @@ export default {
     const hiddenTags = ref<Set<string>>(new Set([]))
 
     const toggleCollapse = (key: string) => {
+      console.log(key)
       collapsed.value[key] = !collapsed.value[key]
+      console.log(collapsed.value[key])
     }
 
     const toggleTagFilter = (tag: string) => {
       hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
     }
-
+    const current = getDefaultValueFromHash('editor') || ''
     const connectionStateToStatus = (connection: Connection | null) => {
       if (!connection) {
         return 'disabled'
@@ -121,6 +124,36 @@ export default {
         return 'disabled'
       }
     }
+    //one time set initial collapse vlaues
+    onMounted(() => {
+      Object.values(editorStore.editors).forEach((item) => {
+
+        let storageKey = `s-${item.storage}`
+        let connectionKey = `c-${item.storage}-${item.connection}`
+        if (current === item.name) {
+          collapsed.value[storageKey] = false
+          collapsed.value[connectionKey] = false
+        } else {
+          // if it's not in collapsed, default to true
+          // but if it is, keep it false if it's false
+          if (collapsed.value[storageKey] === undefined) {
+            collapsed.value[storageKey] = true
+          }
+          else if (collapsed.value[storageKey] === false) {
+            collapsed.value[storageKey] = false
+          }
+          
+
+          if (collapsed.value[connectionKey] === undefined) {
+            collapsed.value[connectionKey] = true
+          }
+          else if (collapsed.value[connectionKey] === false) {
+            collapsed.value[connectionKey] = false
+          }
+
+        }
+      })
+    })
 
     const contentList = computed(() => {
       const list: Array<{
@@ -141,7 +174,7 @@ export default {
         let storageKey = `s-${editor.storage}`
         let connectionKey = `c-${editor.storage}-${editor.connection}`
         let editorKey = `e-${editor.storage}-${editor.connection}-${editor.name}`
-
+        
         if (!list.some((item) => item.key === storageKey)) {
           list.push({ key: storageKey, label: editor.storage, type: 'storage', indent: [] })
         }
