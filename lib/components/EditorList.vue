@@ -103,9 +103,7 @@ export default {
     const hiddenTags = ref<Set<string>>(new Set([]))
 
     const toggleCollapse = (key: string) => {
-      console.log(key)
       collapsed.value[key] = !collapsed.value[key]
-      console.log(collapsed.value[key])
     }
 
     const toggleTagFilter = (tag: string) => {

@@ -4,28 +4,21 @@
       <div class="button-container">
         <connection-creator />
         <div>
-          <loading-button :action="saveConnections" :key-combination="['control', 's']"
-            >Save</loading-button
-          >
+          <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
         </div>
       </div>
     </template>
 
-    <div
-      v-for="item in contentList"
-      :key="item.id"
-      class="sidebar-item"
-      @click="toggleCollapse(item.id)"
-    >
+    <div v-for="item in contentList" :key="item.id" class="sidebar-item"
+      @click="toggleCollapse(item.id, item.connection.name, item.type)">
       <div v-for="_ in item.indent" class="sidebar-padding"></div>
       <template v-if="item.type === 'connection'">
         <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
         <i v-else class="mdi mdi-menu-right"></i>
-        <tooltip content="DuckDB" v-if="item.connection?.type == 'duckdb'"
-          ><i class="mdi mdi-duck"></i>
+        <tooltip content="DuckDB" v-if="item.connection?.type == 'duckdb'"><i class="mdi mdi-duck"></i>
         </tooltip>
-        <tooltip content="MotherDuck" v-else-if="item.connection?.type == 'motherduck'"
-          >M<i class="mdi mdi-duck"></i>
+        <tooltip content="MotherDuck" v-else-if="item.connection?.type == 'motherduck'">
+          <img :src="motherduckIcon" class="motherduck-icon" />
         </tooltip>
 
         <tooltip content="Bigquery" v-else-if="item.connection?.type == 'bigquery-oauth'">
@@ -34,37 +27,38 @@
         <span class="title-pad-left"> {{ item.name }} ({{ item.count }}) </span>
       </template>
 
+      <template v-else-if="item.type === 'database'">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
+      <template v-else-if="item.type === 'table'">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
+      <template v-else-if="item.type === 'column'">
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
       <span class="model-anchor" v-if="item.type === 'model'">
+        <i class="mdi mdi-set-center"></i>
         <button class="button" @click="connectionModelVisible[item.connection.name] = true">
           {{ item.connection.model || 'Set Model' }}
         </button>
         <div v-if="connectionModelVisible[item.connection.name]" class="model-form">
           <form @submit.prevent="submitConnectionModel(item.connection.name)">
             <div>
-              <select
-                class="model-select"
-                v-model="item.connection.model"
-                id="connection-model"
-                required
-              >
-                <option
-                  class="model-select-item"
-                  v-for="model in modelList"
-                  :key="model"
-                  :value="model"
-                >
+              <select class="model-select" v-model="item.connection.model" id="connection-model" required>
+                <option class="model-select-item" v-for="model in modelList" :key="model" :value="model">
                   {{ model }}
                 </option>
               </select>
             </div>
             <button type="submit">Submit</button>
-            <button
-              type="button"
-              @click="
-                connectionModelVisible[item.connection.name] =
-                  !connectionModelVisible[item.connection.name]
-              "
-            >
+            <button type="button" @click="
+              connectionModelVisible[item.connection.name] =
+              !connectionModelVisible[item.connection.name]
+              ">
               Close
             </button>
           </form>
@@ -73,31 +67,22 @@
 
       <template v-if="item.type === 'connection'">
         <span class="flag-container">
-          <loading-button class="lb" :action="() => resetConnection(item.connection)"
-            ><i :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i
-          ></loading-button>
+          <loading-button class="lb" :action="() => resetConnection(item.connection)"><i
+              :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i></loading-button>
         </span>
         <span class="spacer"></span>
-        <status-icon
-          v-if="item.type === 'connection'"
-          :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])"
-          :message="
-            connectionStore.connections[item.name].error
-              ? connectionStore.connections[item.name].error || ''
-              : ''
-          "
-        />
+        <status-icon v-if="item.type === 'connection'"
+          :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])" :message="connectionStore.connections[item.name].error
+            ? connectionStore.connections[item.name].error || ''
+            : ''
+            " />
       </template>
 
       <!-- Add MotherDuck token input when connection is expanded -->
       <div v-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
         <form @submit.prevent="updateMotherDuckToken(item.connection)">
-          <input
-            type="password"
-            v-model="mdTokens[item.connection.name]"
-            placeholder="Enter MotherDuck Token"
-            class="md-token-input"
-          />
+          <input type="password" v-model="mdTokens[item.connection.name]" placeholder="Enter MotherDuck Token"
+            class="md-token-input" />
           <button type="submit" class="md-token-button">Set Token</button>
         </form>
       </div>
@@ -106,7 +91,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreator from './ConnectionCreator.vue'
 import LoadingButton from './LoadingButton.vue'
@@ -115,7 +100,7 @@ import Tooltip from './Tooltip.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { Connection, MotherDuckConnection } from '../connections'
-
+import motherduckIcon from '../static/motherduck.png'
 export default {
   name: 'ConnectionList',
   setup() {
@@ -149,9 +134,54 @@ export default {
     }
 
     const collapsed = ref<Record<string, boolean>>({})
-    const toggleCollapse = (id: string) => {
+    const toggleCollapse = async (id: string, connection: string, type: string) => {
+      console.log('toggling Collapse')
+      console.log(collapsed.value[id])
+      // if we are expanding a connection, get the databases
+      if (type === 'connection' && collapsed.value[id]) {
+        console.log('getting databases')
+        let databases = await connectionStore.connections[connection].getDatabases()
+        connectionStore.connections[connection].databases = databases
+        console.log(databases)
+        for (let db of databases) {
+          collapsed.value[db.name] = true
+        }
+      }
+      if (type === 'database' && collapsed.value[id]) {
+        console.log('getting tables')
+        let tables = await connectionStore.connections[connection].getTables(id)
+        let db = connectionStore.connections[connection].databases?.find(db => db.name === id)
+        if (db) {
+          db.tables = tables
+          console.log(db.tables)
+        }
+        console.log(tables)
+        for (let table of tables) {
+          collapsed.value[`${connection}-${id}-${table.name}`] = true
+        }
+      }
+      if (type === 'table' && collapsed.value[id]) {
+        console.log('getting columns')
+        let dbid = id.split('-')[1]
+        let tableid = id.split('-')[2]
+        let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
+        let tableFull = connectionStore.connections[connection].databases?.find(db => db.name == dbid)?.tables.find(table => table.name === tableid)
+        if (tableFull) {
+          tableFull.columns = nTable.columns
+        }
+        console.log(nTable.columns)
+      }
       collapsed.value[id] = !collapsed.value[id]
     }
+
+    onMounted(() => {
+      Object.values(connectionStore.connections).forEach((item) => {
+
+        let connectionKey = `${item.name}`
+        collapsed.value[connectionKey] = true
+      })
+    })
+
 
     const contentList = computed(() => {
       const list: Array<{
@@ -207,21 +237,37 @@ export default {
               indent: 1,
               count: db.tables.length,
               type: 'database',
-              connection: null,
+              connection
             })
             if (!collapsed.value[db.name]) {
               db.tables.forEach((table) => {
                 list.push({
-                  id: table.name,
+                  id: `${connection.name}-${db.name}-${table.name}`,
                   name: table.name,
                   indent: 2,
                   count: 0,
                   type: 'table',
-                  connection: null,
+                  connection
                 })
+                if (!collapsed.value[`${connection.name}-${db.name}-${table.name}`]) {
+                  table.columns.forEach((column) => {
+                    list.push({
+                      id: `${connection.name}-${db.name}-${table.name}-${column.name}`,
+                      name: column.name,
+                      indent: 3,
+                      count: 0,
+                      type: 'column',
+                      connection
+                    })
+                  })
+                }
               })
             }
           })
+
+
+
+
         }
       })
       return list
@@ -238,6 +284,7 @@ export default {
       submitConnectionModel,
       mdTokens,
       updateMotherDuckToken,
+      motherduckIcon,
     }
   },
   components: {
@@ -264,9 +311,17 @@ export default {
 </script>
 
 <style scoped>
+.motherduck-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+
 .title-pad-left {
   padding-left: 5px;
 }
+
 .lb {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
@@ -281,7 +336,7 @@ export default {
   margin-right: 5px;
 }
 
-.stacked-item:hover > .stacked-content {
+.stacked-item:hover>.stacked-content {
   background-color: var(--button-mouseover);
 }
 
