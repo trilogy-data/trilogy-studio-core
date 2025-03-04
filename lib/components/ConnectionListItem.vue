@@ -13,7 +13,7 @@
       <!-- Expandable Item Icons -->
       <template v-if="isExpandable">
         <i 
-          v-if="!isCollapsed" 
+          v-if="isCollapsed === false" 
           class="mdi mdi-menu-down"
         ></i>
         <i 

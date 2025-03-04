@@ -103,7 +103,7 @@ export default {
           let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
 
           nTable.columns = await connectionStore.connections[connection].getColumns(dbid, tableid)
-          
+
         }
         delete isErrored.value[id]
       }
@@ -122,21 +122,21 @@ export default {
       // if we are expanding a connection, get the databases
 
       console.log('toggle', id, connection, type)
-
-      if (type === 'connection' && collapsed.value[id]) {
-        if (!connectionStore.connections[connection].databases) {
+      console.log(collapsed.value[id])
+      if (type === 'connection' && collapsed.value[id] !== false) {
+        if (connectionStore.connections[connection].databases?.length === 0) {
           await refreshId(id, connection, type)
         }
 
       }
-      if (type === 'database' && collapsed.value[id]) {
+      if (type === 'database' && collapsed.value[id] !== false) {
         let dbid = id.split(KeySeparator)[1]
         let db = connectionStore.connections[connection].databases?.find(db => db.name === dbid)
-        if (!db || !db.tables) {
+        if (db && db.tables?.length === 0) {
           await refreshId(id, connection, type)
         }
       }
-      if (type === 'table' && collapsed.value[id]) {
+      if (type === 'table' && collapsed.value[id] !== false) {
         let dbid = id.split(KeySeparator)[1]
         let tableid = id.split(KeySeparator)[2]
         let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
@@ -153,6 +153,8 @@ export default {
         collapsed.value[connectionKey] = true
       })
     })
+
+    console.log(collapsed)
 
 
     const contentList = computed(() => {
@@ -263,7 +265,7 @@ export default {
             }
             if (!collapsed.value[dbId]) {
               db.tables.forEach((table) => {
-                let tableId = `${connection.name}${KeySeparator}${db.name}${KeySeparator}${table.name}`
+                let tableId = `${dbId}${KeySeparator}${table.name}`
                 list.push({
                   id: tableId,
                   name: table.name,
