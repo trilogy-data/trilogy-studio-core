@@ -208,7 +208,7 @@ export default {
         if (!collapsed.value[connection.name]) {
           list.push({
             id: `${connection.name}-model`,
-            name: 'Set Model',
+            name: 'Model',
             indent: 1,
             count: 0,
             type: 'model',

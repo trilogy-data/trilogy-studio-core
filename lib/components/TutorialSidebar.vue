@@ -20,7 +20,7 @@
         </span>
         <i v-else-if="node.type === 'article'" class="mdi mdi-text-box-outline node-icon"></i>
         <!-- Node Name with Extra Info -->
-        <span>
+        <span class="truncate-text">
           {{ node.name }}
           <span v-if="node.type === 'documentation'">({{ node.count }})</span>
         </span>

@@ -10,7 +10,7 @@
     </div>
   </div>
 </template>
-<style>
+<style scoped>
 .interface {
   position: relative;
   display: flex;

@@ -29,10 +29,10 @@
       />
   
       <!-- Item Name -->
-      <div class = 'refresh' v-if="item.type === 'refresh'" @click="handleRefreshClick">
+      <div class = 'refresh title-pad-left truncate-text' v-if="item.type === 'refresh'" @click="handleRefreshClick">
         {{item.name}}
       </div>
-      <span class="title-pad-left" :class="{ 'error-indicator': item.type === 'error' }">
+      <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
         {{ item.name }}
         <span v-if="item.count !== undefined && item.count > 0">
           ({{ item.count }})

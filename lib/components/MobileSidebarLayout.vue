@@ -1,8 +1,8 @@
 <template>
   <div id="interface" class="interface">
     <div class="select-bar">
-      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i
-      ><span class="header">{{ screenTitle }}</span>
+      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i><span class="header">{{ screenTitle
+        }}</span>
     </div>
     <div class="interface-wrap">
       <div v-if="menuOpen" ref="sidebar" class="sidebar">
@@ -14,26 +14,31 @@
     </div>
   </div>
 </template>
-<style>
-.header {
-  margin-bottom: 20px;
-  font-size: 20px;
-  height: 30px;
-  display: inline-block;
-  vertical-align: middle;
-}
-
+<style scoped>
 .select-bar {
   height: 40px;
   padding-bottom: 5px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .hamburger-icon {
-  height: 30px;
-  width: 30px;
+  height: 100%;
+  /* width: 30px; */
   font-size: 30px;
-  padding: 5px;
+  /* padding: 5px; */
+  /* position: absolute; */
+  left: 10px;
+  /* Keep the menu button on the left */
+}
+
+.header {
+  font-size: 20px;
+  height: 30px;
+  text-align: center;
 }
 
 .interface {
@@ -68,7 +73,6 @@
 .nested-page-content {
   flex: 1 1 auto;
   max-height: 100%;
-  min-width: 350px;
   z-index: 1;
   overflow: scroll;
 }
@@ -130,18 +134,18 @@ export default {
   computed: {
     screenTitle() {
       if (this.menuOpen) {
-        return 'Menu'
-      } else if (this.activeScreen === 'connections') {
-        return 'Connections'
-      } else if (this.activeScreen === 'settings') {
-        return 'Settings'
-      } else if (this.activeScreen === 'help') {
-        return 'Help'
-      } else if (this.activeScreen === 'about') {
-        return 'About'
+        return 'Menu';
       }
-      return this.activeScreen
-    },
+
+      if (this.activeScreen) {
+        return this.activeScreen
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+
+      return 'Trilogy';
+    }
   },
   methods: {},
 }

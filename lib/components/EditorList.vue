@@ -44,7 +44,7 @@
           <!-- <i class="mdi mdi-alpha-t-box-outline"></i> -->
         </tooltip>
       </template>
-      <span>
+      <span class="truncate-text">
         {{ item.label }}
         <span class="text-light" v-if="item.type === 'connection'">
           ({{
@@ -243,6 +243,8 @@ export default {
 </script>
 
 <style scoped>
+
+
 .sql {
   /* black */
   color: #000000;

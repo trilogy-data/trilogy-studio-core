@@ -107,7 +107,6 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
-  min-width: 320px;
   min-height: 100vh;
 }
 
@@ -228,4 +227,11 @@ button:focus-visible {
 /* TEXT */
 .text-faint{
   color: var(--text-faint);
+}
+
+.truncate-text {
+  width: 200px;      /* Ensure a fixed or max width */
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

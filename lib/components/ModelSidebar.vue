@@ -40,6 +40,7 @@
 
         <!-- item name -->
         <span
+        class="truncate-text"
           >{{ item.name }}
 
           <!-- item extra -->

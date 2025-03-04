@@ -85,20 +85,31 @@
 .parent {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height:100%;
+
 }
 
 .menu-bar {
   background-color: var(--sidebar-bg);
   display: flex;
-  padding-right: 10px;
+  flex-wrap: wrap; /* Allow content to wrap to a new line */
+  gap: 0.5rem; /* Add some spacing between wrapped elements */
+  padding: 0.25rem;
   justify-content: space-between;
-  align-items: center;
+  padding-right: .5rem;
+  
+
 }
 
 .menu-actions {
   display: flex;
+  flex-wrap: wrap; /* Allow buttons to move to a new line */
+  justify-content: flex-end;
+  gap: 0.5rem; /* Spacing between buttons */
   align-items: center;
+  flex-grow: 1;
+
+  
 }
 
 .action-item {

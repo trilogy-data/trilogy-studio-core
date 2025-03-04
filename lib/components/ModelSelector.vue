@@ -4,7 +4,7 @@
         class="button" 
         @click="toggleModelForm"
       >
-        {{ connection.model || 'Set Model' }}
+        {{ connection.model || 'Set' }}
       </button>
       
       <div 
