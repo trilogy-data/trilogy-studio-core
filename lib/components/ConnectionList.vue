@@ -9,7 +9,8 @@
       </div>
     </template>
     <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
-      @toggle="toggleCollapse" @refresh="refreshId"  />
+      @toggle="toggleCollapse" @refresh="refreshId" @updateMotherduckToken="updateMotherDuckToken"
+      @updateBigqueryProject="updateBigqueryProject" />
   </sidebar-list>
 </template>
 
@@ -39,22 +40,17 @@ export default {
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
 
-    const mdTokens = ref<Record<string, string>>({})
-    const billingProjects = ref<Record<string, string>>({})
 
-
-    const updateMotherDuckToken = (connection: MotherDuckConnection) => {
-      if (connection.type === 'motherduck' && mdTokens.value[connection.name]) {
-        connection.mdToken = mdTokens.value[connection.name]
-        mdTokens.value[connection.name] = '' // Clear the input after setting
+    const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
+      if (connection.type === 'motherduck') {
+        connection.mdToken = token
         connectionStore.resetConnection(connection.name)
       }
     }
 
-    const updateBigqueryProject = (connection: BigQueryOauthConnection) => {
-      if (connection.type === 'bigquery-oauth' && billingProjects.value[connection.name]) {
-        connection.projectId = billingProjects.value[connection.name]
-        billingProjects.value[connection.name] = '' // Clear the input after setting
+    const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {
+      if (connection.type === 'bigquery-oauth') {
+        connection.projectId = project
         connectionStore.resetConnection(connection.name)
       }
     }
@@ -320,11 +316,9 @@ export default {
       saveConnections,
       modelStore,
       connectionModelVisible,
-      mdTokens,
       updateMotherDuckToken,
       motherduckIcon,
       updateBigqueryProject,
-      billingProjects,
       refreshId,
       rightSplit,
     }

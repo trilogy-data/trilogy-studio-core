@@ -1,10 +1,10 @@
 <template>
     <div class="model-anchor">
       <button 
-        class="button" 
+        class="button truncate-text" 
         @click="toggleModelForm"
       >
-        {{ connection.model || 'Set' }}
+        {{ connection.model || 'Set Model' }}
       </button>
       
       <div 
