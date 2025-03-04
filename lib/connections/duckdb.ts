@@ -1,5 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm'
 import BaseConnection from './base'
+import { Database, Table, Column } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 
@@ -92,4 +93,57 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.UNKNOWN // Use a fallback if necessary
     }
   }
+
+  async getDatabases(): Promise<Database[]> {
+    return await this.connection.query('SHOW DATABASES').then((result) => {
+      console.log(result.toArray())
+      return this.mapShowDatabasesResult(result.toArray().map((row) => row.toJSON()))
+    })
+  }
+
+  async getTables(database: string): Promise<Table[]> {
+    return await this.connection.query('SHOW ALL TABLES').then((result) => {
+      return this.mapShowTablesResult(result.toArray().map((row) => row.toJSON()), database)
+    })
+  }
+
+  async getColumns(database: string, table: string): Promise<Column[]> {
+    return await this.connection.query(`DESCRIBE ${database}.${table}`).then((result) => {
+      return this.mapDescribeResult(result.toArray().map((row) => row.toJSON()))
+    })
+  }
+
+  mapDescribeResult(describeResult: any[]): Column[] {
+    return describeResult.map((row) => {
+      const name = row[0]
+      const type = row[1]
+      const nullable = row[2] === 'YES'
+      const key = row[3]
+      const defaultValue = row[4]
+      const extra = row[5]
+      return new Column(name, type, nullable, key === 'PRI', key === 'UNI', defaultValue, extra === 'auto_increment')
+    })
+  }
+
+  mapShowTablesResult(showTablesResult: any[], database: string): Table[] {
+    let columns: Column[] = [];
+    return showTablesResult.map((row) => {
+      return new Table(
+        row.name,
+        columns
+      )
+    }
+    );
+  }
+
+  mapShowDatabasesResult(showDatabaseResult: any[]): Database[] {
+    // Convert map to Database[] array
+    let tables: Table[] = [];
+    return showDatabaseResult.map((row) => {
+      console.log(row)
+      return new Database(row.database_name, tables)
+    }
+    );
+  }
+
 }

@@ -10,7 +10,7 @@ const reauthException = 'Request had invalid authentication credentials.'
 export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
-  private projectId: string
+  public projectId: string
 
   constructor(name: string, projectId: string, model?: string) {
     super(name, 'bigquery-oauth', false), model
@@ -115,7 +115,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
       for (const dataset of data.datasets || []) {
         const datasetId = dataset.datasetReference.datasetId;
         // const tables = await this.getTables(datasetId);
-        const tables = [];
+        const tables:Table[] = [];
         databases.push(new Database(datasetId, tables));
       }
 
@@ -135,8 +135,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
       for (const table of data.tables || []) {
         const tableId = table.tableReference.tableId;
-        // const columns = await this.getColumns(database, tableId);
-        const columns = [];
+        const columns:Column[] = [];
         tables.push(new Table(tableId, columns));
       }
 

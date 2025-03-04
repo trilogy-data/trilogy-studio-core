@@ -8,8 +8,110 @@
         </div>
       </div>
     </template>
-    <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
-      @toggle="toggleCollapse" @refresh="refreshId"  />
+    <connection-list-item
+      v-for="item in contentList"
+      :key="item.id"
+      :item="item"
+      :is-collapsed="collapsed[item.id]"
+      @toggle="toggleCollapse"
+      @refresh="refreshId"
+    />
+    <div v-for="item in contentList" :key="item.id" class="sidebar-item"
+  
+      @click="toggleCollapse(item.id, item.connection.name, item.type)">
+      <div v-for="_ in item.indent" class="sidebar-padding"></div>
+      <template v-if="item.type === 'connection'">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <tooltip content="DuckDB" v-if="item.connection?.type == 'duckdb'"><i class="mdi mdi-duck"></i>
+        </tooltip>
+        <tooltip content="MotherDuck" v-else-if="item.connection?.type == 'motherduck'">
+          <img :src="motherduckIcon" class="motherduck-icon" />
+        </tooltip>
+
+        <tooltip content="Bigquery" v-else-if="item.connection?.type == 'bigquery-oauth'">
+          <i class="mdi mdi-google"></i>
+        </tooltip>
+        <span class="title-pad-left"> {{ item.name }} ({{ item.count }}) </span>
+      </template>
+
+      <template v-else-if="item.type === 'database'">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
+      <template v-else-if="item.type === 'table'">
+        <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
+        <i v-else class="mdi mdi-menu-right"></i>
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
+      <template v-else-if="item.type === 'column'">
+        <span class="title-pad-left"> {{ item.name }} </span>
+      </template>
+      <template v-else-if="item.type === 'loading'">
+        <span class="loading-indicator"> </span>
+      </template>
+      <template v-else-if="item.type === 'error'">
+        <span class="error-indicator">{{ item.name }} </span>
+      </template>
+      <span class="model-anchor" v-if="item.type === 'model'">
+        <i class="mdi mdi-set-center"></i>
+        <button class="button" @click="connectionModelVisible[item.connection.name] = true">
+          {{ item.connection.model || 'Set Model' }}
+        </button>
+        <div v-if="connectionModelVisible[item.connection.name]" class="model-form">
+          <form @submit.prevent="submitConnectionModel(item.connection.name)">
+            <div>
+              <select class="model-select" v-model="item.connection.model" id="connection-model" required>
+                <option class="model-select-item" v-for="model in modelList" :key="model" :value="model">
+                  {{ model }}
+                </option>
+              </select>
+            </div>
+            <button type="submit">Submit</button>
+            <button type="button" @click="
+              connectionModelVisible[item.connection.name] =
+              !connectionModelVisible[item.connection.name]
+              ">
+              Close
+            </button>
+          </form>
+        </div>
+      </span>
+
+      <template v-if="item.type === 'connection'">
+        <span class="flag-container">
+          <loading-button class="lb" :action="() => resetConnection(item.connection)"><i
+              :class="item.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-connection'"></i></loading-button>
+        </span>
+        <span class="spacer"></span>
+        <status-icon v-if="item.type === 'connection'"
+          :status="connectionStore.connectionStateToStatus(connectionStore.connections[item.name])" :message="connectionStore.connections[item.name].error
+            ? connectionStore.connections[item.name].error || ''
+            : ''
+            " />
+      </template>
+
+      <!-- actions -->
+      <div class = 'refresh' v-if="item.type === 'refresh'" @click="refreshId(rightSplit(item.id), item.connection.name, 'connection')">
+        {{item.name}}
+      </div>
+      <!-- Add MotherDuck token input when connection is expanded -->
+      <div v-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
+        <form @submit.prevent="updateMotherDuckToken(item.connection)">
+          <input type="password" v-model="mdTokens[item.connection.name]" placeholder="Enter MotherDuck Token"
+            class="md-token-input" />
+          <button type="submit" class="md-token-button">Set Token</button>
+        </form>
+      </div>
+      <div v-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
+        <form @submit.prevent="updateBigqueryProject(item.connection)">
+          <input type="text" v-model="mdTokens[item.connection.name]" placeholder="Enter Billing Project"
+            class="md-token-input" />
+          <button type="submit" class="md-token-button">Set Project</button>
+        </form>
+      </div>
+    </div>
   </sidebar-list>
 </template>
 
@@ -38,10 +140,19 @@ export default {
     const connectionModelVisible = ref<Record<string, boolean>>({})
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
-
+    const connectionDetails = ref({
+      model: '',
+    })
     const mdTokens = ref<Record<string, string>>({})
     const billingProjects = ref<Record<string, string>>({})
 
+    const submitConnectionModel = (connection: string) => {
+      if (connectionDetails.value.model) {
+        connectionStore.connections[connection].model = connectionDetails.value.model
+      }
+      connectionModelVisible.value[connection] = false
+      saveConnections()
+    }
 
     const updateMotherDuckToken = (connection: MotherDuckConnection) => {
       if (connection.type === 'motherduck' && mdTokens.value[connection.name]) {
@@ -62,11 +173,6 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
-      console.log('refresh', id, connection, type)
-      if (!connectionStore.connections[connection]?.connected) {
-        isErrored.value[id] = `Not connected; cannot load tables.`
-        return
-      }
       try {
         isLoading.value[id] = true
         if (type === 'connection') {
@@ -75,24 +181,22 @@ export default {
           console.log('databases', databases)
           connectionStore.connections[connection].databases = databases
           for (let db of databases) {
-            let dbid = `${connection}${KeySeparator}${db.name}`
-            collapsed.value[dbid] = true
+            collapsed.value[db.name] = true
           }
 
 
         }
         if (type === 'database') {
           console.log('getting tables')
-          let dbid = id.split(KeySeparator)[1]
-          let db = connectionStore.connections[connection].databases?.find(db => db.name === dbid)
+          let db = connectionStore.connections[connection].databases?.find(db => db.name === id)
 
-          let tables = await connectionStore.connections[connection].getTables(dbid)
+          let tables = await connectionStore.connections[connection].getTables(id)
 
           if (db) {
             db.tables = tables
           }
           for (let table of tables) {
-            collapsed.value[`${connection}${KeySeparator}${dbid}${KeySeparator}${table.name}`] = true
+            collapsed.value[`${connection}-${id}-${table.name}`] = true
           }
 
         }
@@ -103,9 +207,8 @@ export default {
           let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
 
           nTable.columns = await connectionStore.connections[connection].getColumns(dbid, tableid)
-          
+
         }
-        delete isErrored.value[id]
       }
       catch (error) {
         // check if it's an Error
@@ -121,8 +224,6 @@ export default {
     const toggleCollapse = async (id: string, connection: string, type: string) => {
       // if we are expanding a connection, get the databases
 
-      console.log('toggle', id, connection, type)
-
       if (type === 'connection' && collapsed.value[id]) {
         if (!connectionStore.connections[connection].databases) {
           await refreshId(id, connection, type)
@@ -130,8 +231,7 @@ export default {
 
       }
       if (type === 'database' && collapsed.value[id]) {
-        let dbid = id.split(KeySeparator)[1]
-        let db = connectionStore.connections[connection].databases?.find(db => db.name === dbid)
+        let db = connectionStore.connections[connection].databases?.find(db => db.name === id)
         if (!db || !db.tables) {
           await refreshId(id, connection, type)
         }
@@ -212,7 +312,14 @@ export default {
             type: 'model',
             connection,
           })
-
+          list.push({
+            id: `${connection.name}${KeySeparator}refresh`,
+            name: 'Refresh Tables',
+            indent: 1,
+            count: 0,
+            type: 'refresh',
+            connection,
+          })
           if (connection.type === 'motherduck') {
             list.push({
               id: `${connection.name}-md-token`,
@@ -226,32 +333,23 @@ export default {
           if (connection.type === 'bigquery-oauth') {
             list.push({
               id: `${connection.name}-billing-project`,
-              name: 'Billing Project',
+              name: 'BigqueryProject',
               indent: 1,
               count: 0,
               type: 'bigquery-project',
               connection,
             })
           }
-          list.push({
-            id: `${connection.name}${KeySeparator}refresh`,
-            name: 'Refresh Tables',
-            indent: 1,
-            count: 0,
-            type: 'refresh',
-            connection,
-          })
           databases.forEach((db) => {
-            let dbId = `${connection.name}${KeySeparator}${db.name}`
             list.push({
-              id: dbId,
+              id: db.name,
               name: db.name,
               indent: 1,
               count: db.tables.length,
               type: 'database',
               connection
             })
-            if (isLoading.value[dbId]) {
+            if (isLoading.value[db.name]) {
               list.push({
                 id: `${connection.name}-loading`,
                 name: 'Loading...',
@@ -261,7 +359,7 @@ export default {
                 connection,
               })
             }
-            if (!collapsed.value[dbId]) {
+            if (!collapsed.value[db.name]) {
               db.tables.forEach((table) => {
                 let tableId = `${connection.name}${KeySeparator}${db.name}${KeySeparator}${table.name}`
                 list.push({
@@ -318,6 +416,7 @@ export default {
       saveConnections,
       modelStore,
       connectionModelVisible,
+      submitConnectionModel,
       mdTokens,
       updateMotherDuckToken,
       motherduckIcon,
@@ -358,7 +457,6 @@ export default {
   font-size: 12px;
   color: var(--text);
 }
-
 .error-indicator {
   color: red;
   font: 12px;
