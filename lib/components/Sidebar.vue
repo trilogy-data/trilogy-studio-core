@@ -3,7 +3,7 @@
     <div class="sidebar-icons">
       <div>
         <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"
-          ><img @click="selectItem('')" :src="trilogyIcon" />
+          ><img @click="selectItem('welcome')" :src="trilogyIcon" />
         </tooltip>
       </div>
       <div v-if="isMobile">Home</div>
@@ -56,7 +56,11 @@
         @editor-selected="editorSelected"
         @save-editors="saveEditors"
       />
-      <ConnectionList v-else-if="active === 'connections'" />
+      <ConnectionList
+        v-else-if="active === 'connections'"
+        @connection-key-selected="connectionKeySelected"
+        :activeConnectionKey="activeConnectionKey"
+      />
       <ModelSidebar
         v-else-if="active === 'models'"
         @model-key-selected="modelKeySelected"
@@ -101,6 +105,11 @@ export default defineComponent({
     activeDocumentationKey: {
       type: String,
       default: getDefaultValueFromHash('documentationKey'),
+      optional: true,
+    },
+    activeConnectionKey: {
+      type: String,
+      default: getDefaultValueFromHash('connection'),
       optional: true,
     },
   },
@@ -184,6 +193,9 @@ export default defineComponent({
     },
     documentationKeySelected(key: string) {
       this.$emit('documentation-key-selected', key)
+    },
+    connectionKeySelected(key: string) {
+      this.$emit('connection-key-selected', key)
     },
     saveEditors() {
       this.$emit('save-editors')

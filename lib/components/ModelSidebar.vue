@@ -39,7 +39,7 @@
         <i v-else-if="item.type == 'datasource'" class="mdi mdi-table"></i>
 
         <!-- item name -->
-        <span
+        <span class="truncate-text"
           >{{ item.name }}
 
           <!-- item extra -->

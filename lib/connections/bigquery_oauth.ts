@@ -1,15 +1,21 @@
 import BaseConnection from './base'
+import { Database, Table, Column } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
+import { DateTime } from 'luxon'
 
 declare var google: any
+
+function parseTimestamp(value: string): DateTime {
+  return DateTime.fromMillis(parseFloat(value) * 1000)
+}
 
 const reauthException = 'Request had invalid authentication credentials.'
 // @ts-ignore
 export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
-  private projectId: string
+  public projectId: string
 
   constructor(name: string, projectId: string, model?: string) {
     super(name, 'bigquery-oauth', false), model
@@ -64,34 +70,136 @@ export default class BigQueryOauthConnection extends BaseConnection {
     })
   }
 
-  async query_core(sql: string): Promise<Results> {
-    try {
-      // Call BigQuery REST API directly
-      const response = await fetch(
-        `https://bigquery.googleapis.com/bigquery/v2/projects/${this.projectId}/queries`,
+  async fetchEndpoint(endpoint: string, args: any, method: string): Promise<any> {
+    let response = null
+    if (method == 'GET') {
+      response = await fetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${this.projectId}/${endpoint}`,
         {
-          method: 'POST',
+          method: method,
           headers: {
             Authorization: `Bearer ${this.accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            query: sql,
-            useLegacySql: false, // Use standard SQL
-          }),
         },
       )
+    } else if (method == 'POST') {
+      response = await fetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${this.projectId}/${endpoint}`,
+        {
+          method: method,
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: args ? JSON.stringify(args) : null,
+        },
+      )
+    } else {
+      throw new Error(`Unsupported method ${method}`)
+    }
+    if (!response.ok) {
+      const errorResponse = await response.json()
+      // check for partial match to error patterns that mean we need to reath
+      if (errorResponse.error.message.includes(reauthException)) {
+        this.connected = false
+      }
+      throw new Error(`BigQuery request failed: ${errorResponse.error.message}`)
+    }
+    return await response.json()
+  }
 
-      if (!response.ok) {
-        const errorResponse = await response.json()
-        // check for partial match to error patterns that mean we need to reath
-        if (errorResponse.error.message.includes(reauthException)) {
-          this.connected = false
-        }
-        throw new Error(`BigQuery query failed: ${errorResponse.error.message}`)
+  async getDatabases(): Promise<Database[]> {
+    try {
+      const data = await this.fetchEndpoint('datasets', {}, 'GET')
+      const databases: Database[] = []
+
+      for (const dataset of data.datasets || []) {
+        const datasetId = dataset.datasetReference.datasetId
+        // const tables = await this.getTables(datasetId);
+        const tables: Table[] = []
+        databases.push(new Database(datasetId, tables))
       }
 
-      const result = await response.json()
+      return databases
+    } catch (error) {
+      console.error('Error fetching databases:', error)
+      throw error
+    }
+  }
+
+  async getTables(database: string): Promise<Table[]> {
+    try {
+      const data = await this.fetchEndpoint(`datasets/${database}/tables`, {}, 'GET')
+
+      const tables: Table[] = []
+
+      for (const table of data.tables || []) {
+        const tableId = table.tableReference.tableId
+        const columns: Column[] = []
+        tables.push(new Table(tableId, columns))
+      }
+
+      return tables
+    } catch (error) {
+      console.error(`Error fetching tables for database ${database}:`, error)
+      throw error
+    }
+  }
+
+  async getTable(database: string, table: string): Promise<Table> {
+    try {
+      const columns = await this.getColumns(database, table)
+      return new Table(table, columns)
+    } catch (error) {
+      console.error(`Error fetching table ${database}.${table}:`, error)
+      throw error
+    }
+  }
+
+  async getColumns(database: string, table: string): Promise<Column[]> {
+    try {
+      const tableData = await this.fetchEndpoint(`datasets/${database}/tables/${table}`, {}, 'GET')
+
+      if (!tableData.schema || !tableData.schema.fields) {
+        return []
+      }
+
+      return tableData.schema.fields.map((field: any) => {
+        // Mapping BigQuery schema fields to Column objects
+        const isPrimary =
+          field.mode === 'REQUIRED' &&
+          (field.name.toLowerCase() === 'id' || field.name.toLowerCase().endsWith('_id'))
+
+        const isUnique = isPrimary // Assuming primary keys are unique
+
+        return new Column(
+          field.name,
+          field.type,
+          field.mode !== 'REQUIRED', // nullable if not REQUIRED
+          isPrimary,
+          isUnique,
+          null, // BigQuery doesn't expose default values through this API
+          false, // BigQuery doesn't have autoincrement in the same way as SQL databases
+        )
+      })
+    } catch (error) {
+      console.error(`Error fetching columns for ${database}.${table}:`, error)
+      throw error
+    }
+  }
+
+  async query_core(sql: string): Promise<Results> {
+    try {
+      const result = await this.fetchEndpoint(
+        'queries',
+        {
+          query: sql,
+          useLegacySql: false,
+        },
+        'POST',
+      )
+
       // Map schema to headers
       const headers = new Map(
         result.schema.fields.map((field: any) => [
@@ -117,15 +225,18 @@ export default class BigQueryOauthConnection extends BaseConnection {
           const value = fieldValue.v
 
           // Parse the value according to the column type
-          const columnType = result.schema.fields[index].type
+          const columnType = this.mapBigQueryTypeToColumnType(result.schema.fields[index].type)
           rowData[columnName] =
             value === null
               ? null
-              : columnType === 'INTEGER'
+              : columnType === ColumnType.INTEGER
                 ? parseInt(value, 10)
-                : columnType === 'FLOAT'
+                : columnType === ColumnType.FLOAT
                   ? parseFloat(value)
-                  : value // Default to string for other types
+                  : columnType == ColumnType.TIMESTAMP
+                    ? parseTimestamp(value)
+                    : value // Default to string for other types
+          console.log(rowData)
         })
         return rowData
       })
@@ -151,10 +262,13 @@ export default class BigQueryOauthConnection extends BaseConnection {
       case 'bool':
         return ColumnType.BOOLEAN
       case 'timestamp':
-      case 'date':
+        return ColumnType.TIMESTAMP
       case 'datetime':
-      case 'time':
+        return ColumnType.DATETIME
+      case 'date':
         return ColumnType.DATE
+      case 'time':
+        return ColumnType.TIME
       default:
         return ColumnType.UNKNOWN
     }

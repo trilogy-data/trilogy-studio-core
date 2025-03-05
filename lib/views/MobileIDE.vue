@@ -12,12 +12,18 @@
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
+          :activeConnectionKey="activeConnectionKey"
         />
       </template>
-      <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
+      <template
+        v-if="
+          activeScreen && activeScreen !== '' && ['editors', 'connections'].includes(activeScreen)
+        "
+      >
         <tabbed-layout>
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor
@@ -80,6 +86,9 @@
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
         <dashboard />
+      </template>
+      <template v-else-if="activeScreen === 'community-models'">
+        <community-models />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -183,6 +192,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject } from 'vue'
+import CommunityModels from '../components/CommunityModels.vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -194,11 +204,13 @@ export default {
     let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
     let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
+    let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
       activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
+      activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'editor',
       menuOpen: false,
     }
@@ -222,6 +234,7 @@ export default {
     LoadingButton,
     TabbedLayout,
     MobileSidebarLayout,
+    CommunityModels,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
@@ -266,6 +279,9 @@ export default {
     setActiveScreen(screen: string) {
       pushHashToUrl('screen', screen)
       this.activeScreen = screen
+      if (['community-models', 'welcome', 'profile', 'settings'].includes(screen)) {
+        this.menuOpen = false
+      }
     },
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
@@ -278,6 +294,11 @@ export default {
       if (documentationKey.startsWith('article')) {
         this.menuOpen = false
       }
+    },
+    setActiveConnectionKey(connectionKey: string) {
+      pushHashToUrl('connection', connectionKey)
+      this.activeConnectionKey = connectionKey
+      this.menuOpen = false
     },
     saveEditorsCall() {
       this.saveEditors()

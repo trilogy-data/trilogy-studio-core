@@ -35,19 +35,14 @@
           </div>
         </div>
         <div class="menu-actions">
-          <button class="button-transparent action-item" @click="$emit('save-editors')">
-            Save
-          </button>
+          <button class="action-item" @click="$emit('save-editors')">Save</button>
 
-          <loading-button
-            :useDefaultStyle="false"
-            class="button-transparent action-item"
-            :action="validateQuery"
+          <loading-button :useDefaultStyle="false" class="action-item" :action="validateQuery"
             >Parse</loading-button
           >
 
           <button
-            class="button-transparent action-item"
+            class="action-item"
             :class="{ 'button-cancel': editorData.loading }"
             @click="runQuery"
           >
@@ -91,19 +86,39 @@
 .menu-bar {
   background-color: var(--sidebar-bg);
   display: flex;
-  padding-right: 10px;
+  flex-wrap: wrap;
+  /* Allow content to wrap to a new line */
+  gap: 0.5rem;
+  /* Add some spacing between wrapped elements */
+  padding: 0.25rem;
   justify-content: space-between;
-  align-items: center;
+  padding-right: 0.5rem;
 }
 
 .menu-actions {
   display: flex;
+  flex-wrap: wrap;
+  /* Allow buttons to move to a new line */
+  justify-content: flex-end;
+  gap: 0.5rem;
+  /* Spacing between buttons */
   align-items: center;
+  flex-grow: 1;
 }
 
 .action-item {
   height: 25px;
   width: 80px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  margin-left: 0.75rem;
+  /* margin-right: 0.75rem; */
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .menu-left {
@@ -159,20 +174,6 @@
   border: none;
   height: 100%;
   position: relative;
-}
-
-.button-transparent {
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 0px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  margin-left: 0.75rem;
-  /* margin-right: 0.75rem; */
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-  flex: 1;
 }
 
 .button-cancel {

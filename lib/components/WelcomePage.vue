@@ -100,7 +100,7 @@ h1 {
   border: none;
   border-radius: 5px;
   font-size: 16px;
-  height: 46px;
+  min-height: 46px;
   cursor: pointer;
   transition: background-color 0.2s;
 }

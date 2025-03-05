@@ -51,11 +51,79 @@
 
 <script lang="ts">
 import { Tabulator } from 'tabulator-tables'
+import { DateTime } from 'luxon'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
+import { ColumnType } from '../editors/results'
 import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
+
+function typeToFormatter(type: ColumnType) {
+  let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  switch (type) {
+    case ColumnType.FLOAT:
+      return {
+        formatter: 'money',
+        formatterParams: {
+          precision: 2,
+          symbol: '$',
+        },
+      }
+    case ColumnType.DATETIME:
+      return {
+        formatter: 'datetime',
+        formatterParams: {
+          inputFormat: 'iso',
+          outputFormat: 'dd/MM/yyyy HH:mm',
+          invalidPlaceholder: '(invalid datetime)',
+          timezone: tz,
+        },
+      }
+    case ColumnType.TIMESTAMP:
+      return {
+        formatter: 'plaintext',
+        formatterParams: {
+          outputFormat: 'dd/MM/yyyy HH:mm:ss Z',
+          invalidPlaceholder: '(invalid timestamp)',
+          timezone: tz,
+        },
+      }
+    case ColumnType.DATE:
+      return {
+        formatter: 'datetime',
+        formatterParams: {
+          inputFormat: 'yyyy-MM-dd',
+          outputFormat: 'dd/MM/yyyy',
+          invalidPlaceholder: '(invalid date)',
+          timezone: tz,
+        },
+      }
+    case ColumnType.TIME:
+      return {
+        formatter: 'datetime',
+        formatterParams: {
+          inputFormat: 'HH:mm:ss',
+          outputFormat: 'HH:mm',
+          invalidPlaceholder: '(invalid time)',
+          timezone: tz,
+        },
+      }
+    case ColumnType.BOOLEAN:
+      return {
+        formatter: 'tickCross',
+        formatterParams: {
+          allowEmpty: true,
+          tickElement: '✓',
+          crossElement: '✗',
+        },
+      }
+    default:
+      return {
+        formatter: 'plaintext',
+      }
+  }
+}
 
 export default {
   data() {
@@ -114,12 +182,15 @@ export default {
       // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
       const calculated: ColumnDefinition[] = []
       this.headers.forEach((details, _) => {
+        let formatting = typeToFormatter(details.type)
+        console.log('formatting', formatting)
         const result = {
           title: details.name,
 
           // titleFormatter: 'plaintext',
           field: details.name,
-          formatter: details.type === 'float' ? 'money' : 'plaintext',
+          formatter: formatting.formatter,
+          formatterParams: formatting.formatterParams,
           // formatter: this.cellFormatter,
           // tooltip: this.cellTooltip,
           // contextMenu: this.cellContextMenu,
@@ -171,6 +242,9 @@ export default {
             columnHeaders: true,
           },
           resizableColumns: true,
+          dependencies: {
+            DateTime: DateTime,
+          },
         }),
       )
       this.updateTableTheme()
