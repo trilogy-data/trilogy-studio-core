@@ -82,6 +82,8 @@
 
   --sidebar-list-item-height: 22px;
   --sidebar-list-item-font-size: 13px;
+  --sidebar-sub-item-height: 18px;
+  --sidebar-sub-item-font-size: 12px;
   --button-font-size: .70em;
 }
 
@@ -90,7 +92,9 @@
     --sidebar-width: 100px;
     --sidebar-icon-width: 100px;
     --sidebar-list-item-height: 40px;
+    --sidebar-sub-item-height: 24px;
     --sidebar-list-item-font-size: 18px;
+    --sidebar-sub-item-font-size: 14px;
     --button-font-size: 1.1em;
   }
 }
@@ -230,7 +234,6 @@ button:focus-visible {
 }
 
 .truncate-text {
-  width: 200px;      /* Ensure a fixed or max width */
   white-space: nowrap; 
   overflow: hidden;
   text-overflow: ellipsis;

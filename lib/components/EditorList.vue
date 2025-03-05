@@ -125,7 +125,6 @@ export default {
     //one time set initial collapse vlaues
     onMounted(() => {
       Object.values(editorStore.editors).forEach((item) => {
-
         let storageKey = `s-${item.storage}`
         let connectionKey = `c-${item.storage}-${item.connection}`
         if (current === item.name) {
@@ -136,19 +135,15 @@ export default {
           // but if it is, keep it false if it's false
           if (collapsed.value[storageKey] === undefined) {
             collapsed.value[storageKey] = true
-          }
-          else if (collapsed.value[storageKey] === false) {
+          } else if (collapsed.value[storageKey] === false) {
             collapsed.value[storageKey] = false
           }
-          
 
           if (collapsed.value[connectionKey] === undefined) {
             collapsed.value[connectionKey] = true
-          }
-          else if (collapsed.value[connectionKey] === false) {
+          } else if (collapsed.value[connectionKey] === false) {
             collapsed.value[connectionKey] = false
           }
-
         }
       })
     })
@@ -172,7 +167,7 @@ export default {
         let storageKey = `s-${editor.storage}`
         let connectionKey = `c-${editor.storage}-${editor.connection}`
         let editorKey = `e-${editor.storage}-${editor.connection}-${editor.name}`
-        
+
         if (!list.some((item) => item.key === storageKey)) {
           list.push({ key: storageKey, label: editor.storage, type: 'storage', indent: [] })
         }
@@ -243,8 +238,6 @@ export default {
 </script>
 
 <style scoped>
-
-
 .sql {
   /* black */
   color: #000000;

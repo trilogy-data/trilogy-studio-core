@@ -1,8 +1,8 @@
 <template>
   <div id="interface" class="interface">
     <div class="select-bar">
-      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i><span class="header">{{ screenTitle
-        }}</span>
+      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i
+      ><span class="header">{{ screenTitle }}</span>
     </div>
     <div class="interface-wrap">
       <div v-if="menuOpen" ref="sidebar" class="sidebar">
@@ -134,18 +134,18 @@ export default {
   computed: {
     screenTitle() {
       if (this.menuOpen) {
-        return 'Menu';
+        return 'Menu'
       }
 
       if (this.activeScreen) {
         return this.activeScreen
           .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
       }
 
-      return 'Trilogy';
-    }
+      return 'Trilogy'
+    },
   },
   methods: {},
 }

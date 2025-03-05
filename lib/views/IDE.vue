@@ -8,10 +8,12 @@
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeModelKey="activeModelKey"
+          :activeConnectionKey="activeConnectionKey"
         />
       </template>
 
@@ -56,7 +58,9 @@
               </template>
             </error-message>
             <results-container
-              v-else-if="activeEditorData.results.headers && activeEditorData.results.headers.size > 0"
+              v-else-if="
+                activeEditorData.results.headers && activeEditorData.results.headers.size > 0
+              "
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"
@@ -197,11 +201,13 @@ export default {
     let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
     let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
+    let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
       activeEditor: activeEditor ? activeEditor : '',
       activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
+      activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'results',
     }
   },
@@ -274,6 +280,10 @@ export default {
     setActiveDocumentationKey(documentationKey: string) {
       pushHashToUrl('documentationKey', documentationKey)
       this.activeDocumentationKey = documentationKey
+    },
+    setActiveConnectionKey(connectionKey: string) {
+      pushHashToUrl('connection', connectionKey)
+      this.activeConnectionKey = connectionKey
     },
     saveEditorsCall() {
       this.saveEditors()

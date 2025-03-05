@@ -101,7 +101,6 @@ export const documentation: DocumentationNode[] = [
         'Models',
         'The studio contains a public model store, accessible from the left hand nav. Use this to import models defined by others. You can contribute your own models to be visible in the store by submitting a PR to <a href="https://github.com/trilogy-data/trilogy-public-models">trilogy-public-models</a>.',
       ),
-
     ]),
   ]),
   new DocumentationNode('Demo', [

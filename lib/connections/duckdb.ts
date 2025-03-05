@@ -103,7 +103,10 @@ export default class DuckDBConnection extends BaseConnection {
 
   async getTables(database: string): Promise<Table[]> {
     return await this.connection.query('SHOW ALL TABLES').then((result) => {
-      return this.mapShowTablesResult(result.toArray().map((row) => row.toJSON()), database)
+      return this.mapShowTablesResult(
+        result.toArray().map((row) => row.toJSON()),
+        database,
+      )
     })
   }
 
@@ -121,29 +124,33 @@ export default class DuckDBConnection extends BaseConnection {
       const key = row[3]
       const defaultValue = row[4]
       const extra = row[5]
-      return new Column(name, type, nullable, key === 'PRI', key === 'UNI', defaultValue, extra === 'auto_increment')
+      return new Column(
+        name,
+        type,
+        nullable,
+        key === 'PRI',
+        key === 'UNI',
+        defaultValue,
+        extra === 'auto_increment',
+      )
     })
   }
 
   mapShowTablesResult(showTablesResult: any[], database: string): Table[] {
-    let columns: Column[] = [];
-    return showTablesResult.map((row) => {
-      return new Table(
-        row.name,
-        columns
-      )
-    }
-    );
+    let columns: Column[] = []
+    return showTablesResult
+      .filter((row) => row.database === database)
+      .map((row) => {
+        return new Table(row.name, columns)
+      })
   }
 
   mapShowDatabasesResult(showDatabaseResult: any[]): Database[] {
     // Convert map to Database[] array
-    let tables: Table[] = [];
+    let tables: Table[] = []
     return showDatabaseResult.map((row) => {
       console.log(row)
       return new Database(row.database_name, tables)
-    }
-    );
+    })
   }
-
 }
