@@ -24,7 +24,7 @@
         :containerHeight="containerHeight"
       />
       <div v-else class="sql-view">
-        <pre>{{ generatedSql }}</pre>
+        <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
       </div>
     </div>
   </div>
@@ -33,6 +33,8 @@
 <script lang="ts">
 import DataTable from './DataTable.vue'
 import { Results } from '../editors/results'
+import { ref, onMounted, onUpdated } from 'vue'
+import Prism from 'prismjs'
 
 export default {
   name: 'ResultsContainer',
@@ -48,6 +50,29 @@ export default {
   data() {
     return {
       activeTab: 'results',
+    }
+  },
+  setup() {
+    const codeBlock = ref<HTMLElement | null>(null)
+    const updateRefs = () => {
+      if (codeBlock.value) {
+        if (Array.isArray(codeBlock.value)) {
+          codeBlock.value.forEach((block) => {
+            if (block) Prism.highlightElement(block)
+          })
+        } else if (codeBlock.value) {
+          Prism.highlightElement(codeBlock.value)
+        }
+      }
+    }
+    onMounted(() => {
+      updateRefs()
+    })
+    onUpdated(() => {
+      updateRefs()
+    })
+    return {
+      codeBlock,
     }
   },
 }

@@ -67,9 +67,24 @@ function typeToFormatter(type: ColumnType) {
         formatter: 'money',
         formatterParams: {
           precision: 2,
-          symbol: '$',
         },
       }
+    case ColumnType.MONEY:
+      return {
+        formatter: 'money',
+        formatterParams: {
+          symbol: '$',
+          precision: 4,
+        },
+      }
+    case ColumnType.PERCENT:
+      return {
+        //@ts-ignore
+        formatter: (cell) => {
+          return (cell.getValue() * 100).toFixed(2) + '%'
+        },
+      }
+
     case ColumnType.DATETIME:
       return {
         formatter: 'datetime',
@@ -183,7 +198,6 @@ export default {
       const calculated: ColumnDefinition[] = []
       this.headers.forEach((details, _) => {
         let formatting = typeToFormatter(details.type)
-        console.log('formatting', formatting)
         const result = {
           title: details.name,
 

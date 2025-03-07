@@ -96,7 +96,6 @@ export default class DuckDBConnection extends BaseConnection {
 
   async getDatabases(): Promise<Database[]> {
     return await this.connection.query('SHOW DATABASES').then((result) => {
-      console.log(result.toArray())
       return this.mapShowDatabasesResult(result.toArray().map((row) => row.toJSON()))
     })
   }
@@ -149,7 +148,6 @@ export default class DuckDBConnection extends BaseConnection {
     // Convert map to Database[] array
     let tables: Table[] = []
     return showDatabaseResult.map((row) => {
-      console.log(row)
       return new Database(row.database_name, tables)
     })
   }

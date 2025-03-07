@@ -206,34 +206,91 @@ export const documentation: DocumentationNode[] = [
     new Article('Syntax', [
       new Paragraph(
         'Basic SELECT Statement',
-        'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause.',
+        'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause. A basic select could look like this:',
       ),
       new Paragraph(
         'Example',
         "SELECT\n    1 -> constant_one,\n    1 AS constant_one_2,\n    '2' -> constant_string_two;",
         'code',
       ),
-      new Paragraph('Select', 'select_statement: "select"i select_list where? order_by? limit?'),
+      new Paragraph(
+        'Select',
+        'The general form of a select statement below. The where clause can also go after, but is idiomatically first.',
+      ),
+      new Paragraph(
+        'Select',
+        `where? 
+"select"i 
+select_list 
+having? 
+order_by? 
+limit?`,
+        'code',
+      ),
+      new Paragraph(
+        'select_list',
+        'A select list has one or more expressions, each with an optional alias. Aliased fields can be immediately referenced.',
+      ),
+      new Paragraph(
+        'select_list',
+        `select_item ("," select_item)* ","?
+select_item: expression "->" IDENTIFIER ","?`,
+        'code',
+      ),
+      new Paragraph(
+        'where',
+        'The where clause restricts data before the select expression. It can reference any field in the model, not just those in the select list. It cannot reference aggregates calculated in the select.',
+      ),
+      new Paragraph('where', `where_clause: "where"i expression ("," expression)* ","?`, 'code'),
+      new Paragraph(
+        'having',
+        'The having clause restricts data after the select expression. It can reference any field in the select list, including aggregates.',
+      ),
+      new Paragraph('having', `having_clause: "where"i expression ("," expression)* ","?`, 'code'),
+      new Paragraph(
+        'Select List',
+        'A multiselect statement can merge multiple select statements into a unified rowset by defining output keys to align on. This is rarely required, but can be used to produce certain outputs.',
+      ),
       new Paragraph(
         'Multi-Select',
-        'multi_select_statement: select_statement ("merge" select_statement)+ "align"i align_clause where? order_by? limit?',
+        `where? select_statement ( "merge" select_statement)+ 
+"align"i align_clause 
+having?
+order_by? 
+limit?`,
+        'code',
       ),
       new Paragraph(
         'Align Clause',
-        'align_item: IDENTIFIER ":" IDENTIFIER ("," IDENTIFIER)* ","?\nalign_clause: align_item ("," align_item)* ","?',
+        `align_item: IDENTIFIER ":" IDENTIFIER ("," IDENTIFIER)* ","?
+align_clause: align_item ("," align_item)* ","?`,
+        'code',
       ),
+      new Paragraph('datasource text', 'A datasource defines a warehouse table to pull data from'),
       new Paragraph(
         'Datasource',
-        '"datasource" IDENTIFIER "(" column_assignment_list "")" grain_clause? (address | query)',
+        `"datasource" IDENTIFIER 
+"(" column_assignment_list ")" 
+grain_clause?
+complete_for_clause?
+(address='string' | query='''string''')
+`,
+        'code',
       ),
-      new Paragraph('Merge', 'merge_statement: "merge" IDENTIFIER ("," IDENTIFIER)_ ","? comment_'),
+      new Paragraph(
+        'Merge',
+        'merge_statement: "merge" IDENTIFIER ("," IDENTIFIER)_ ","? comment_',
+        'code',
+      ),
       new Paragraph(
         'Import',
         'import_statement: "import" (IDENTIFIER ".") * IDENTIFIER "as" IDENTIFIER',
+        'code',
       ),
       new Paragraph(
         'Function Definition',
         'function_derivation: "def" "(" (IDENTIFIER ",")* ")" -> EXPR;',
+        'code',
       ),
     ]),
     new Article('Concepts', [

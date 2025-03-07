@@ -24,6 +24,13 @@ export enum ColumnType {
   TIMESTAMP = 'timestamp',
   FLOAT = 'float',
   UNKNOWN = 'unknown',
+
+  // CUSTOM TYPES
+  MONEY = 'money',
+  PERCENT = 'percent',
+  URL = 'url',
+  EMAIL = 'email',
+  PHONE = 'phone',
 }
 
 export type Row = Readonly<Record<string, any>> // Represents a row, with column names as keys

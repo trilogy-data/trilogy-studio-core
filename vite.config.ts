@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import prism from 'vite-plugin-prismjs'
 
 import { resolve } from 'node:path'
 // https://vite.dev/config/
@@ -18,7 +19,12 @@ export default defineConfig({
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     nodePolyfills({ include: ['events', 'dns', 'stream'] }),
-
+    prism({
+      languages: ['sql'],
+      plugins: ['line-numbers'],
+      theme: 'default',
+      css: true,
+    }),
     {
       name: 'configure-response-headers',
       configureServer: (server) => {

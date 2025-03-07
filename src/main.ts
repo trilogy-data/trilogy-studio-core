@@ -13,6 +13,10 @@ import './tabulator-style.css'
 import { languages } from 'monaco-editor'
 import monacoEditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
+import 'prismjs/plugins/line-numbers/prism-line-numbers.css'
+import 'prismjs'
+import 'prismjs/components/prism-sql'
+
 self.MonacoEnvironment = {
   getWorker: function (_, label) {
     switch (label) {

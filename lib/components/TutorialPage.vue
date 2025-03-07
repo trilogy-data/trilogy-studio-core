@@ -6,7 +6,10 @@
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
         >
-        <pre v-else-if="paragraph.type === 'code'">{{ paragraph.content }}</pre>
+
+        <pre
+          v-else-if="paragraph.type === 'code'"
+        ><code ref="codeBlock" class="language-sql">{{ paragraph.content }}</code></pre>
         <p v-else v-html="paragraph.content"></p>
       </template>
     </section>
@@ -27,7 +30,7 @@
 </template>
 
 <script lang="ts">
-import { inject } from 'vue'
+import { inject, ref, onMounted, onUpdated } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
@@ -39,6 +42,7 @@ import ConnectionList from './ConnectionList.vue'
 import setupDemo from '../data/tutorial/demoSetup'
 import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
+import Prism from 'prismjs'
 export default {
   name: 'TutorialComponent',
   props: {
@@ -48,6 +52,7 @@ export default {
       optional: true,
     },
   },
+
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -55,6 +60,24 @@ export default {
     const saveEditors = inject<Function>('saveEditors')
     const saveConnections = inject<Function>('saveConnections')
     const saveModels = inject<Function>('saveModels')
+    const codeBlock = ref<HTMLElement | null>(null)
+    const updateRefs = () => {
+      if (codeBlock.value) {
+        if (Array.isArray(codeBlock.value)) {
+          codeBlock.value.forEach((block) => {
+            if (block) Prism.highlightElement(block)
+          })
+        } else if (codeBlock.value) {
+          Prism.highlightElement(codeBlock.value)
+        }
+      }
+    }
+    onMounted(() => {
+      updateRefs()
+    })
+    onUpdated(() => {
+      updateRefs()
+    })
     if (
       !editorStore ||
       !connectionStore ||
@@ -65,7 +88,15 @@ export default {
     ) {
       throw new Error('Editor store is not provided!')
     }
-    return { editorStore, connectionStore, modelStore, saveEditors, saveConnections, saveModels }
+    return {
+      editorStore,
+      connectionStore,
+      modelStore,
+      saveEditors,
+      saveConnections,
+      saveModels,
+      codeBlock,
+    }
   },
   components: {
     LoadingButton,
