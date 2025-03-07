@@ -191,7 +191,8 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
-import { Results } from '../editors/results'
+import { Results, ColumnType } from '../editors/results'
+
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
@@ -426,9 +427,12 @@ export default defineComponent({
         }
         // @ts-ignore
         this.editorData.generated_sql = resolveResponse.data.generated_sql
+        // @ts-ignore
+        const headers = resolveResponse.data.columns
 
         // Second promise: Execute query
-        const sqlResponse = await Promise.race([
+        // @ts-ignore
+        const sqlResponse: Results = await Promise.race([
           // @ts-ignore
           conn.query(resolveResponse.data.generated_sql),
           new Promise((_, reject) => {
@@ -438,6 +442,24 @@ export default defineComponent({
           }),
         ])
         // @ts-ignore
+        if (this.editorData.type === 'trilogy') {
+          // loop through resolveResponse.columns
+          // for each column, find the corresponding column in sqlResponse
+          // and enrich based on trilogy type information
+          for (let i = 0; i < headers.length; i++) {
+            let header = headers[i]
+            let column = sqlResponse.headers.get(header.name)
+            // this is hardcoded; TODO generalize
+            if (column && (header.datatype?.traits || []).includes('money')) {
+              column.type = ColumnType.MONEY
+              sqlResponse.headers.set(header.name, column)
+            } else if (column && (header.datatype?.traits || []).includes('percent')) {
+              column.type = ColumnType.PERCENT
+              sqlResponse.headers.set(header.name, column)
+            }
+          }
+        }
+        console.log(sqlResponse)
         this.editorStore.setEditorResults(this.editorName, sqlResponse)
       } catch (error) {
         if (error instanceof Error) {

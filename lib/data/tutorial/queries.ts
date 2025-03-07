@@ -146,13 +146,16 @@ address \`https://shell.duckdb.org/data/tpch/0_01/parquet/supplier.parquet\`;
 `
 
 export const LINE_ITEM_CONTENT = `
+
 import order as order;
 import supplier as supplier;
 import part as part;
 
+type money float;
+
 key id int;
 property id.quantity float;
-property id.extended_price float;
+property id.extended_price float::money;
 property id.discount float; # percent discount
 property id.tax float; # tax, as percentage
 property id.return_flag string;

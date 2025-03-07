@@ -37,6 +37,7 @@ import type { BigQueryOauthConnection, Connection, MotherDuckConnection } from '
 import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
+
 export default {
   name: 'ConnectionList',
   props: {
@@ -47,6 +48,7 @@ export default {
     },
   },
   setup(_, { emit }) {
+    console.log('running setup')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
@@ -171,22 +173,25 @@ export default {
       }
     }
 
-    onMounted(() => {
-      Object.values(connectionStore.connections).forEach((item) => {
-        let connectionKey = `${item.name}`
-        collapsed.value[connectionKey] = true
-        item.databases?.forEach((db) => {
-          let dbKey = `${connectionKey}${KeySeparator}${db.name}`
-          collapsed.value[dbKey] = true
-          db.tables.forEach((table) => {
-            let tableKey = `${dbKey}${KeySeparator}${table.name}`
-            collapsed.value[tableKey] = true
-          })
+    // hydrate the initial collapse list
+    Object.values(connectionStore.connections).forEach((item) => {
+      let connectionKey = `${item.name}`
+      collapsed.value[connectionKey] = true
+      item.databases?.forEach((db) => {
+        let dbKey = `${connectionKey}${KeySeparator}${db.name}`
+        collapsed.value[dbKey] = true
+        db.tables.forEach((table) => {
+          let tableKey = `${dbKey}${KeySeparator}${table.name}`
+          collapsed.value[tableKey] = true
         })
       })
     })
 
-    console.log(collapsed.value)
+    onMounted(() => {
+      console.log('mounted')
+      console.log(collapsed.value)
+    })
+
     const contentList = computed(() => {
       const list: Array<{
         id: string

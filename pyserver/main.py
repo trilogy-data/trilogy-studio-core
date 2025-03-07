@@ -15,7 +15,12 @@ from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
-from trilogy.authoring import SelectStatement, MultiSelectStatement, RawSQLStatement
+from trilogy.authoring import (
+    SelectStatement,
+    MultiSelectStatement,
+    RawSQLStatement,
+    DEFAULT_NAMESPACE,
+)
 
 from logging import getLogger
 import click
@@ -147,9 +152,7 @@ def generate_query(query: QueryInSchema):
         _, parsed = parse_text(safe_format_query(query.query), env)
         final = parsed[-1]
         if isinstance(final, RawSQLStatement):
-            output = QueryOut(
-            generated_sql=final.text, columns=[]
-            )
+            output = QueryOut(generated_sql=final.text, columns=[])
             return output
         if not isinstance(final, (SelectStatement, MultiSelectStatement)):
             columns = []
@@ -157,7 +160,7 @@ def generate_query(query: QueryInSchema):
         else:
             columns = [
                 QueryOutColumn(
-                    name=x.address,
+                    name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
                     datatype=env.concepts[x.address].datatype,
                     purpose=env.concepts[x.address].purpose,
                 )

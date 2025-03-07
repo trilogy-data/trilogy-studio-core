@@ -52,22 +52,22 @@
     <div class="sidebar-content">
       <EditorList
         :activeEditor="activeEditor"
-        v-if="active === 'editors'"
+        v-show="active === 'editors'"
         @editor-selected="editorSelected"
         @save-editors="saveEditors"
       />
       <ConnectionList
-        v-else-if="active === 'connections'"
+        v-show="active === 'connections'"
         @connection-key-selected="connectionKeySelected"
         :activeConnectionKey="activeConnectionKey"
       />
       <ModelSidebar
-        v-else-if="active === 'models'"
+        v-show="active === 'models'"
         @model-key-selected="modelKeySelected"
         :activeModelKey="activeModelKey"
       />
       <TutorialSidebar
-        v-else-if="active === 'tutorial'"
+        v-show="active === 'tutorial'"
         @documentation-key-selected="documentationKeySelected"
         :activeDocumentationKey="activeDocumentationKey"
       />
