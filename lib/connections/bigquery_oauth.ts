@@ -236,7 +236,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
                   : columnType == ColumnType.TIMESTAMP
                     ? parseTimestamp(value)
                     : value // Default to string for other types
-          console.log(rowData)
         })
         return rowData
       })

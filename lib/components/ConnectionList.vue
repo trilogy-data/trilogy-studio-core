@@ -48,7 +48,6 @@ export default {
     },
   },
   setup(_, { emit }) {
-    console.log('running setup')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
@@ -86,7 +85,6 @@ export default {
         if (type === 'connection') {
           console.log('getting databases')
           let databases = await connectionStore.connections[connection].getDatabases()
-          console.log('databases', databases)
           connectionStore.connections[connection].databases = databases
           for (let db of databases) {
             let dbid = `${connection}${KeySeparator}${db.name}`
@@ -187,10 +185,6 @@ export default {
       })
     })
 
-    onMounted(() => {
-      console.log('mounted')
-      console.log(collapsed.value)
-    })
 
     const contentList = computed(() => {
       const list: Array<{
