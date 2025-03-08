@@ -47,7 +47,6 @@
   z-index: 1;
   overflow: scroll;
 }
-
 </style>
 <script lang="ts">
 import Split from 'split.js'

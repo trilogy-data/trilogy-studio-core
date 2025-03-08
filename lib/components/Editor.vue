@@ -9,12 +9,23 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing" class="name-input" type="text" />
+            <input
+              v-else
+              ref="nameInput"
+              v-model="editableName"
+              @blur="finishEditing"
+              @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing"
+              class="name-input"
+              type="text"
+            />
           </div>
           <div class="toggle-group">
-            <button class="toggle-button tag-inactive" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-              @click="toggleTag()">
+            <button
+              class="toggle-button tag-inactive"
+              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+              @click="toggleTag()"
+            >
               {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
             </button>
             <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
@@ -26,9 +37,19 @@
         <div class="menu-actions">
           <button class="action-item" @click="$emit('save-editors')">Save</button>
 
-          <loading-button :useDefaultStyle="false" class="action-item" :action="validateQuery">Parse</loading-button>
+          <loading-button
+            v-if="editorData.type === 'trilogy'"
+            :useDefaultStyle="false"
+            class="action-item"
+            :action="validateQuery"
+            >Parse</loading-button
+          >
 
-          <button @click="runQuery" class="action-item" :class="{ 'button-cancel': editorData.loading }">
+          <button
+            @click="() => runQuery()"
+            class="action-item"
+            :class="{ 'button-cancel': editorData.loading }"
+          >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
@@ -320,9 +341,9 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor].contents,
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
@@ -384,9 +405,9 @@ export default defineComponent({
         this.editorData.loading = true
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor].contents,
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
           : []
         try {
           await this.validateQuery(false, sources)
@@ -399,10 +420,10 @@ export default defineComponent({
         const selected = editor.getSelection()
         let text =
           selected &&
-            !(
-              selected.startColumn === selected.endColumn &&
-              selected.startLineNumber === selected.endLineNumber
-            )
+          !(
+            selected.startColumn === selected.endColumn &&
+            selected.startLineNumber === selected.endLineNumber
+          )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
         // hack for mobile? getValue not returning values
