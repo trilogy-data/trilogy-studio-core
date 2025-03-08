@@ -52,8 +52,22 @@ def get_diagnostics(doctext: str, sources: List[ModelSource]) -> ValidateRespons
 
     try:
         tree = PARSER.parse(doctext, on_error=on_error)  # type: ignore
-    except Exception as e:
-        tree = PARSER.parse(truncate_to_last_semicolon(doctext), on_error=on_error)  # type: ignore
+    except Exception:
+        try:
+            tree = PARSER.parse(truncate_to_last_semicolon(doctext), on_error=on_error)  # type: ignore
+        except Exception:
+            logging.exception("parse error")
+            diagnostics.append(
+                ValidateItem(
+                    startLineNumber=0,
+                    startColumn=0,
+                    endLineNumber=0,
+                    endColumn=0,
+                    severity=Severity.Error,
+                    message="Parse error",
+                )
+            )
+            return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
         env = parse_env_from_full_model(sources)
         seen = set()

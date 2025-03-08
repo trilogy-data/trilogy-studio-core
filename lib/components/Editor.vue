@@ -296,9 +296,6 @@ export default defineComponent({
 
     async validateQuery(log: boolean = true, sources: ContentInput[] | null = null) {
       const editorItem = editorMap.get(this.context)
-      if (this.loading || !editorItem) {
-        return
-      }
       // TODO - syntax validation for SQL?
       if (this.editorData.type === 'sql') {
         return
@@ -391,7 +388,11 @@ export default defineComponent({
             contents: this.editorStore.editors[source.editor].contents,
           }))
           : []
-        await this.validateQuery(false, sources)
+        try {
+          await this.validateQuery(false, sources)
+        } catch (error) {
+          console.log('Validation failed.')
+        }
         // Prepare sources if model exists
 
         // Get selected text or full content
@@ -495,6 +496,8 @@ export default defineComponent({
         autoClosingBrackets: 'always',
         autoClosingOvertype: 'always',
         autoClosingQuotes: 'always',
+        acceptSuggestionOnEnter: 'off',
+        tabCompletion: 'on'
       })
       editorMap.set(this.context, editorItem)
       editorItem.layout()
@@ -525,11 +528,26 @@ export default defineComponent({
         },
       })
       editor.setTheme('trilogyStudio')
+      let suggestDebounceTimer: number | null = null;
       editorItem.onDidChangeModelContent(() => {
+
         this.editorStore.setEditorContents(this.editorName, editorItem.getValue())
         // editorItem.getAction("editor.action.triggerSuggest")?.run();
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
+
+        // Clear previous timer
+        if (suggestDebounceTimer) {
+          clearTimeout(suggestDebounceTimer);
+        }
+
+        // Set new timer
+        suggestDebounceTimer = window.setTimeout(() => {
+
+          if (editorItem.hasTextFocus() && !editorItem.getSelection()?.isEmpty()) {
+            editorItem.trigger('completion', 'editor.action.triggerSuggest', { auto: true });
+          }
+        }, 200); // Adjust delay as needed
       })
       editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
         this.validateQuery()

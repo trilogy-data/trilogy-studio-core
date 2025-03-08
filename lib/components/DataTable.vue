@@ -90,7 +90,7 @@ function typeToFormatter(type: ColumnType) {
         formatter: 'datetime',
         formatterParams: {
           inputFormat: 'iso',
-          outputFormat: 'dd/MM/yyyy HH:mm',
+          outputFormat: 'yyyy-MM-dd HH:mm',
           invalidPlaceholder: '(invalid datetime)',
           timezone: tz,
         },
@@ -99,7 +99,7 @@ function typeToFormatter(type: ColumnType) {
       return {
         formatter: 'plaintext',
         formatterParams: {
-          outputFormat: 'dd/MM/yyyy HH:mm:ss Z',
+          outputFormat: 'yyyy-MM-dd HH:mm:ss Z',
           invalidPlaceholder: '(invalid timestamp)',
           timezone: tz,
         },
@@ -109,7 +109,7 @@ function typeToFormatter(type: ColumnType) {
         formatter: 'datetime',
         formatterParams: {
           inputFormat: 'yyyy-MM-dd',
-          outputFormat: 'dd/MM/yyyy',
+          outputFormat: 'yyyy-MM-dd',
           invalidPlaceholder: '(invalid date)',
           timezone: tz,
         },

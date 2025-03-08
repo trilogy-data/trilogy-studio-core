@@ -106,9 +106,6 @@ export default class Editor implements EditorInterface {
   }
 
   getAutocomplete(word: string): CompetionSymbol[] {
-    console.log(this.completionSymbols.length)
-    console.log(word)
-    console.log(this.completionSymbols)
     return this.completionSymbols.filter((symbol) => symbol.label.startsWith(word))
   }
 

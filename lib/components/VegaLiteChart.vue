@@ -20,7 +20,7 @@
         class="chart-icon"
         :class="{ 'selected': internalConfig.chartType === type.value }">
         <div class="icon-container">
-          <Tooltip :content="type.label">
+          <Tooltip :content="type.label" position="bottom">
             <i :class="type.icon"></i>
           </Tooltip>
         </div>
@@ -256,7 +256,7 @@ export default defineComponent({
       } else {
         // Auto select chart type and fields based on data types
         const configDefaults = determineDefaultConfig();
-        console.log(configDefaults)
+
         internalConfig.value = { ...internalConfig.value, ...configDefaults };
       }
     };
@@ -478,7 +478,7 @@ export default defineComponent({
           } else {
             spec = { ...spec, ...barSpec };
           }
-          console.log(barSpec)
+
           break;
 
         case 'barh':

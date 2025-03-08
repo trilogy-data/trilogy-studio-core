@@ -2,6 +2,7 @@
 // @ts-ignore
 import { Manager } from 'trilogy-studio-core'
 import { LocalStorage } from 'trilogy-studio-core/data'
+import { dataTypes } from 'trilogy-studio-core/language'
 import {
   useEditorStore,
   useConnectionStore,
@@ -62,121 +63,72 @@ function getModelCompletions(word: string, range: monaco.Range) {
   // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
   // here you could do a server side lookup
   let completions = store.getCurrentEditorAutocomplete(word)
-  console.log(completions.length)
   return completions.map((completion) => {
     return {
       label: completion.label,
       kind: monaco.languages.CompletionItemKind.Variable,
       insertText: completion.insertText,
-      range: range
+      range: range,
+      commitCharacters: ['\t']
     }
   })
 }
 
-function getLastDotSegment(text: string): string | null {
-  const regex = /(?:^|[\s(])([a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)+)$/;
-  const match = text.match(regex);
-
-  if (match && match[1]) {
-    return match[1];
-  }
-
-  return null;
-}
-
 function getLastContiguousToken(line: string): string | null {
-    const match = line.match(/\S+$/);
-    return match ? match[0] : null;
+  const match = line.match(/(\S+)(?:\s*$)/);
+  return match ? match[0] : null;
 }
+
+interface Completion {
+  label: string;
+  kind: monaco.languages.CompletionItemKind;
+  insertText: string;
+  range: monaco.Range;
+}
+
 
 monaco.languages.registerCompletionItemProvider("trilogy", {
   provideCompletionItems: function (model, position) {
     // const word = model.getWordUntilPosition(position);
     const lineContent = model.getLineContent(position.lineNumber);
     const cursorIndex = position.column - 1; // Convert Monaco 1-based column to 0-based index
-
     // Extract all non-whitespace characters before `.`
-    console.log(lineContent)
-    console.log(lineContent.substring(0, cursorIndex))
-    const match = getLastDotSegment(lineContent.substring(0, cursorIndex));
-    console.log('FINAL')
-    console.log(match)
-
-    let fullIdentifier = match ? match[0] + "." : ""; // Include the `.`
-
+    const lineToCursor = lineContent.substring(0, cursorIndex);
+    const match = getLastContiguousToken(lineToCursor);
+    let fullIdentifier = match ? match : ''
     const range = new monaco.Range(
       position.lineNumber,
       position.column - fullIdentifier.length,
       position.lineNumber,
       position.column
     );
+    let suggestions: Completion[] = [];
+    if (fullIdentifier === '') {
+      suggestions = [];
+    }
+
+    else if (
+      fullIdentifier.endsWith('::')
+    ) {
+      suggestions = dataTypes.map(type => ({
+        label: `${fullIdentifier}${type.label}`,
+        kind: monaco.languages.CompletionItemKind.Enum,
+        insertText: `${fullIdentifier}${type.label}`,
+        range: range,
+        commitCharacters: ['\t']
+      }));
+
+    }
+    else { suggestions = getModelCompletions(fullIdentifier, range); }
+
     return {
-      suggestions: getModelCompletions(fullIdentifier, range)
+      suggestions: suggestions
     };
   },
   triggerCharacters: ["."]
 });
 
-// monaco.languages.registerCompletionItemProvider("trilogy", {
-//   provideCompletionItems: function (model, position) {
-//     const lineContent = model.getLineContent(position.lineNumber);
-//     const cursorIndex = position.column - 1; // Convert Monaco 1-based column to 0-based index
 
-//     // Check if text before cursor ends with ::
-//     const textUntilPosition = lineContent.substring(0, cursorIndex);
-//     if (!textUntilPosition.endsWith("::")) {
-//       return { suggestions: [] };
-//     }
-
-//     // Define data types from the enum
-//     const dataTypes = [
-//       // PRIMITIVES
-//       { label: "string", detail: "String type", documentation: "Basic string data type" },
-//       { label: "bool", detail: "Boolean type", documentation: "True/False boolean value" },
-//       { label: "map", detail: "Map type", documentation: "Key-value pair collection" },
-//       { label: "list", detail: "List type", documentation: "Ordered collection of items" },
-//       { label: "number", detail: "Number type", documentation: "Generic number type" },
-//       { label: "float", detail: "Float type", documentation: "Floating-point number" },
-//       { label: "numeric", detail: "Numeric type", documentation: "Arbitrary precision number" },
-//       { label: "int", detail: "Integer type", documentation: "Integer value" },
-//       { label: "bigint", detail: "Big Integer type", documentation: "Large integer value" },
-//       { label: "date", detail: "Date type", documentation: "Calendar date without time" },
-//       { label: "datetime", detail: "DateTime type", documentation: "Date with time" },
-//       { label: "timestamp", detail: "Timestamp type", documentation: "Point in time" },
-//       { label: "array", detail: "Array type", documentation: "Collection of items" },
-//       { label: "date_part", detail: "Date Part type", documentation: "Part of a date" },
-//       { label: "struct", detail: "Struct type", documentation: "Composite data structure" },
-//       { label: "null", detail: "Null type", documentation: "Null/absent value" },
-//       // GRANULAR
-//       { label: "unix_seconds", detail: "Unix Seconds type", documentation: "Unix timestamp in seconds" },
-//       // PARSING
-//       { label: "unknown", detail: "Unknown type", documentation: "Type couldn't be determined" }
-//     ];
-
-//     // Create range for replacing text
-//     const range = new monaco.Range(
-//       position.lineNumber,
-//       textUntilPosition.length - 1, // Start from the first colon
-//       position.lineNumber,
-//       position.column
-//     );
-
-//     // Create completion items
-//     const suggestions = dataTypes.map(type => ({
-//       label: type.label,
-//       kind: monaco.languages.CompletionItemKind.Enum,
-//       detail: type.detail,
-//       documentation: type.documentation,
-//       insertText: type.label,
-//       range: range
-//     }));
-
-//     return {
-//       suggestions: suggestions
-//     };
-//   },
-//   triggerCharacters: [":"]
-// });
 
 </script>
 
