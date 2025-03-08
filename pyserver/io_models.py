@@ -92,6 +92,7 @@ class QueryInSchema(BaseModel):
 
 class ValidateQueryInSchema(BaseModel):
     query: str
+    sources: List[ModelSourceInSchema]
 
 
 class QueryOutColumn(BaseModel):
@@ -121,5 +122,13 @@ class ValidateItem(BaseModel):
     severity: Severity
 
 
+class CompletionItem(BaseModel):
+    label: str
+    type: str
+    insertText: str
+    description: str | None = None
+
+
 class ValidateResponse(BaseModel):
     items: List[ValidateItem]
+    completion_items: list[CompletionItem]

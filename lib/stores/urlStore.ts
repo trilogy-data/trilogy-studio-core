@@ -1,10 +1,10 @@
-export function getDefaultValueFromHash(key: string): string | null {
+export function getDefaultValueFromHash(key: string, fallback: string | null = null): string | null {
   // Get the current hash from the URL
   const hash = window.location.hash
 
   // Ensure the hash starts with `#`
   if (!hash || !hash.startsWith('#')) {
-    return null
+    return fallback
   }
 
   // Parse the hash into key-value pairs

@@ -9,23 +9,12 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input
-              v-else
-              ref="nameInput"
-              v-model="editableName"
-              @blur="finishEditing"
-              @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing"
-              class="name-input"
-              type="text"
-            />
+            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing" class="name-input" type="text" />
           </div>
           <div class="toggle-group">
-            <button
-              class="toggle-button tag-inactive"
-              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-              @click="toggleTag()"
-            >
+            <button class="toggle-button tag-inactive" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+              @click="toggleTag()">
               {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
             </button>
             <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
@@ -37,15 +26,9 @@
         <div class="menu-actions">
           <button class="action-item" @click="$emit('save-editors')">Save</button>
 
-          <loading-button :useDefaultStyle="false" class="action-item" :action="validateQuery"
-            >Parse</loading-button
-          >
+          <loading-button :useDefaultStyle="false" class="action-item" :action="validateQuery">Parse</loading-button>
 
-          <button
-            class="action-item"
-            :class="{ 'button-cancel': editorData.loading }"
-            @click="runQuery"
-          >
+          <button class="action-item" :class="{ 'button-cancel': editorData.loading }" @onClick="runQuery">
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
@@ -250,6 +233,7 @@ export default defineComponent({
   async mounted() {
     this.$nextTick(() => {
       this.createEditor()
+      this.validateQuery(false)
     })
     mountedMap.set(this.context, true)
   },
@@ -310,7 +294,7 @@ export default defineComponent({
       this.isEditing = false
     },
 
-    async validateQuery(log: boolean = true) {
+    async validateQuery(log: boolean = true, sources: ContentInput[] | null = null) {
       const editorItem = editorMap.get(this.context)
       if (this.loading || !editorItem) {
         return
@@ -336,16 +320,24 @@ export default defineComponent({
         this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
         return
       }
-
-      let annotations = await this.trilogyResolver.validate_query(editorItem.getValue())
+      if (!sources) {
+        sources = conn.model
+          ? this.modelStore.models[conn.model].sources.map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
+          : []
+      }
+      let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
       let model = editorItem.getModel()
       if (!model) {
         return
       }
-      MarkerSeverity.Error
+
       editor.setModelMarkers(model, 'owner', annotations.data.items)
+      this.editorData.completionSymbols = annotations.data.completion_items
     },
-    async runQuery() {
+    async runQuery(isRetry: boolean = false): Promise<any> {
       this.$emit('query-started')
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
@@ -370,8 +362,17 @@ export default defineComponent({
       }
 
       if (!conn.connected) {
-        this.editorData.setError(`Connection is not active.`)
-        return
+
+
+        if (!isRetry) {
+          this.editorData.setError(`Connection is not active... Attempting to automatically reconnect.`)
+          await this.connectionStore.resetConnection(this.editorData.connection)
+          return this.runQuery(true)
+        }
+        else {
+          this.editorData.setError(`Connection is not active.`)
+          return
+        }
       }
 
       // Create an AbortController for cancellation
@@ -384,23 +385,23 @@ export default defineComponent({
 
       try {
         this.editorData.loading = true
-        await this.validateQuery(false)
-        // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
           : []
+        await this.validateQuery(false, sources)
+        // Prepare sources if model exists
 
         // Get selected text or full content
         const selected = editor.getSelection()
         let text =
           selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
+            !(
+              selected.startColumn === selected.endColumn &&
+              selected.startLineNumber === selected.endLineNumber
+            )
             ? (editor.getModel()?.getValueInRange(selected) as string)
             : editor.getValue()
         // hack for mobile? getValue not returning values
@@ -491,6 +492,9 @@ export default defineComponent({
         value: this.editorData.contents,
         language: this.editorData.type === 'sql' ? 'sql' : 'trilogy',
         automaticLayout: true,
+        autoClosingBrackets: 'always',
+        autoClosingOvertype: 'always',
+        autoClosingQuotes: 'always',
       })
       editorMap.set(this.context, editorItem)
       editorItem.layout()
@@ -523,7 +527,7 @@ export default defineComponent({
       editor.setTheme('trilogyStudio')
       editorItem.onDidChangeModelContent(() => {
         this.editorStore.setEditorContents(this.editorName, editorItem.getValue())
-
+        // editorItem.getAction("editor.action.triggerSuggest")?.run();
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
       })
@@ -556,6 +560,7 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
       })
+
     },
   },
 })

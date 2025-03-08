@@ -141,7 +141,7 @@ def format_query(query: QueryInSchema):
 
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
-    return get_diagnostics(query.query)
+    return get_diagnostics(query.query, query.sources)
 
 
 @router.post("/generate_query")
