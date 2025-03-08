@@ -10,7 +10,6 @@ from io_models import (
     CompletionItem,
 )
 from env_helpers import parse_env_from_full_model
-from trilogy.parser import parse_text
 from trilogy.parsing.parse_engine import ParseToObjects
 
 
