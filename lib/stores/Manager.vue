@@ -8,6 +8,7 @@ import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
+import type { LLMConnectionStoreType } from './llmStore'
 import QueryResolver from './resolver'
 import { provide, computed } from 'vue'
 import type { PropType } from 'vue'
@@ -36,6 +37,10 @@ export default {
       type: Object as PropType<UserSettingsStoreType>,
       required: true,
     },
+    llmConnectioStore: {
+      type: Object as PropType<LLMConnectionStoreType>,
+      required: true,
+    },
     trilogyResolver: {
       type: QueryResolver,
       required: true,
@@ -54,6 +59,7 @@ export default {
     provide('trilogyResolver', props.trilogyResolver)
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
+    provide('llmConnectionStore', props.llmConnectionStore)
     for (let source of props.storageSources) {
       let editors = source.loadEditors()
       for (let editor of Object.values(editors)) {

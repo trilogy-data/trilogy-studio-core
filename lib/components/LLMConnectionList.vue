@@ -1,0 +1,344 @@
+<template>
+    <sidebar-list title="LLM Connections">
+      <template #actions>
+        <div class="button-container">
+          <!-- <llm-connection-creator /> -->
+          <div>
+            <loading-button :action="saveConnections" :key-combination="['control', 's']"
+              >Save</loading-button
+            >
+          </div>
+        </div>
+      </template>
+      <llm-connection-list-item
+        v-for="item in contentList"
+        :key="item.id"
+        :item="item"
+        :is-collapsed="collapsed[item.id]"
+        :isSelected="item.id === activeConnectionKey"
+        @toggle="toggleCollapse"
+        @refresh="refreshId"
+        @updateApiKey="updateApiKey"
+      />
+    </sidebar-list>
+  </template>
+  
+  <script lang="ts">
+  import { ref, computed, inject } from 'vue'
+  import SidebarList from './SidebarList.vue'
+  import LoadingButton from './LoadingButton.vue'
+  import StatusIcon from './StatusIcon.vue'
+  import Tooltip from './Tooltip.vue'
+  import type { LLMConnectionStoreType } from '../stores/llmStore'
+  import { KeySeparator } from '../data/constants'
+  import { LLMProvider } from '../llm/base'
+  import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
+  import LLMConnectionListItem from './LLMConnectionListItem.vue'
+//   import LLMConnectionCreator from './LLMConnectionCreator.vue'
+  
+  export default {
+    name: 'LLMConnectionList',
+    props: {
+      activeConnectionKey: {
+        type: String,
+        default: '',
+        optional: true,
+      },
+    },
+    setup(props, { emit }) {
+      const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
+      const saveConnections = inject<Function>('saveConnections')
+      if (!llmConnectionStore || !saveConnections) {
+        throw new Error('LLM connection store is not provided!')
+      }
+      const isLoading = ref<Record<string, boolean>>({})
+      const isErrored = ref<Record<string, string>>({})
+  
+      const updateApiKey = (connection: LLMProvider, apiKey: string) => {
+        // This would need to be implemented based on your provider structure
+        const providerName = connection.constructor.name
+        if (apiKey && providerName) {
+          // Create a new connection with the updated API key
+          let newConnection
+          
+          if (connection instanceof AnthropicProvider) {
+            newConnection = new AnthropicProvider(apiKey)
+          } else if (connection instanceof OpenAIProvider) {
+            newConnection = new OpenAIProvider(apiKey)
+          } else if (connection instanceof MistralProvider) {
+            newConnection = new MistralProvider(apiKey)
+          }
+          
+          if (newConnection) {
+            // Replace the old connection
+            llmConnectionStore.connections[providerName] = newConnection
+            // Reset/test the connection
+            llmConnectionStore.resetConnection(providerName)
+          }
+        }
+      }
+  
+      const collapsed = ref<Record<string, boolean>>({})
+  
+      const refreshId = async (id: string, connectionName: string, type: string) => {
+        console.log('refresh', id, connectionName, type)
+        if (!llmConnectionStore.connections[connectionName]) {
+          isErrored.value[id] = `Connection not found`
+          return
+        }
+        
+        try {
+          isLoading.value[id] = true
+          if (type === 'connection') {
+            // Test the connection
+            const connection = llmConnectionStore.connections[connectionName] as any
+            if (connection.testConnection) {
+              await connection.testConnection()
+            }
+          }
+          if (type === 'models') {
+            // Fetch available models
+            const connection = llmConnectionStore.connections[connectionName] as any
+            if (connection.listModels) {
+              const models = await connection.listModels()
+              // Store the models in some property of the connection
+              connection.availableModels = models
+            }
+          }
+          delete isErrored.value[id]
+        } catch (error) {
+          if (error instanceof Error) {
+            isErrored.value[id] = error.message
+          } else {
+            isErrored.value[id] = 'An error occurred'
+          }
+        }
+        delete isLoading.value[id]
+      }
+      
+      const toggleCollapse = async (id: string, connectionName: string, type: string) => {
+        // Emit selection event for connections
+        if (['connection', 'model'].includes(type)) {
+          emit('connection-key-selected', id)
+        }
+  
+        // If expanding a connection, fetch its details
+        if (
+          type === 'connection' &&
+          (collapsed.value[id] === undefined || collapsed.value[id] === true)
+        ) {
+          const connection = llmConnectionStore.connections[connectionName] as any
+          if (!connection.availableModels || connection.availableModels.length === 0) {
+            await refreshId(id, connectionName, 'models')
+          }
+        }
+        
+        // Toggle collapsed state
+        if (collapsed.value[id] === undefined) {
+          collapsed.value[id] = false
+        } else {
+          collapsed.value[id] = !collapsed.value[id]
+        }
+      }
+  
+      // Initialize collapse state for existing connections
+      Object.entries(llmConnectionStore.connections).forEach(([name, provider]) => {
+        let connectionKey = name
+        collapsed.value[connectionKey] = true
+      })
+  
+      const contentList = computed(() => {
+        const list: Array<{
+          id: string
+          name: string
+          indent: number
+          count: number
+          type: string
+          connection: any | undefined
+        }> = []
+        
+        // Sort connections by status and name
+        const sorted = Object.entries(llmConnectionStore.connections).sort(([nameA, a], [nameB, b]) => {
+          const providerA = a as any
+          const providerB = b as any
+          
+          if (providerA.connected && !providerB.connected) {
+            return -1
+          } else if (!providerA.connected && providerB.connected) {
+            return 1
+          } else {
+            return nameA.localeCompare(nameB)
+          }
+        })
+        
+        sorted.forEach(([name, provider]) => {
+          const connection = provider as any
+          const modelCount = connection.availableModels?.length || 0
+          
+          // Add the connection itself
+          list.push({
+            id: name,
+            name: name,
+            indent: 0,
+            count: modelCount,
+            type: 'connection',
+            connection,
+          })
+  
+          // If expanded, show connection details
+          if (collapsed.value[name] === false) {
+            // API Key setting
+            list.push({
+              id: `${name}-api-key`,
+              name: 'API Key',
+              indent: 1,
+              count: 0,
+              type: 'api-key',
+              connection,
+            })
+            
+            // Available models
+            list.push({
+              id: `${name}${KeySeparator}models`,
+              name: 'Models',
+              indent: 1,
+              count: modelCount,
+              type: 'models-category',
+              connection,
+            })
+            
+            // Refresh button
+            list.push({
+              id: `${name}${KeySeparator}refresh`,
+              name: 'Refresh Connection',
+              indent: 1,
+              count: 0,
+              type: 'refresh-connection',
+              connection,
+            })
+            
+            // Loading indicator
+            if (isLoading.value[name]) {
+              list.push({
+                id: `${name}-loading`,
+                name: 'Loading...',
+                indent: 1,
+                count: 0,
+                type: 'loading',
+                connection,
+              })
+            }
+            
+            // Error message
+            if (isErrored.value[name]) {
+              list.push({
+                id: `${name}-error`,
+                name: isErrored.value[name],
+                indent: 1,
+                count: 0,
+                type: 'error',
+                connection,
+              })
+            }
+            
+            // List available models if any
+            if (connection.availableModels && connection.availableModels.length > 0) {
+              connection.availableModels.forEach((model: string) => {
+                list.push({
+                  id: `${name}${KeySeparator}${model}`,
+                  name: model,
+                  indent: 2,
+                  count: 0,
+                  type: 'model',
+                  connection,
+                })
+              })
+            }
+          }
+        })
+        
+        return list
+      })
+  
+      const rightSplit = (str: string) => {
+        const index = str.lastIndexOf(KeySeparator)
+        return index !== -1 ? str.substring(0, index) : str
+      }
+      
+      return {
+        llmConnectionStore,
+        contentList,
+        toggleCollapse,
+        collapsed,
+        saveConnections,
+        updateApiKey,
+        refreshId,
+        rightSplit,
+      }
+    },
+    components: {
+      SidebarList,
+    //   LLMConnectionCreator,
+      LoadingButton,
+      StatusIcon,
+      Tooltip,
+      LLMConnectionListItem,
+    },
+    methods: {
+      resetConnection(connection: LLMProvider) {
+        return this.llmConnectionStore.resetConnection(connection.constructor.name)
+      },
+      
+      setActiveConnection(connectionName: string) {
+        // Could emit an event or use another mechanism to set active connection
+        this.$emit('update:activeConnectionKey', connectionName)
+      }
+    },
+    computed: {
+      connections() {
+        return Object.values(this.llmConnectionStore.connections)
+      }
+    },
+  }
+  </script>
+  
+  <style scoped>
+  .error-indicator {
+    color: red;
+    font-size: 12px;
+    overflow-y: hidden;
+    white-space: nowrap;
+  }
+  
+  .loading-indicator {
+    display: block;
+    width: 100%;
+    line-height: var(--sidebar-list-item-height);
+    height: var(--sidebar-list-item-height);
+    min-height: var(--sidebar-list-item-height);
+    background: linear-gradient(
+      to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%
+    );
+    background-size: 200% 100%;
+    animation: loading-gradient 2s infinite linear;
+  }
+  
+  @keyframes loading-gradient {
+    0% {
+      background-position: -100% 0;
+    }
+  
+    100% {
+      background-position: 100% 0;
+    }
+  }
+  
+  .provider-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  </style>
