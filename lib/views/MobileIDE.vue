@@ -298,7 +298,6 @@ export default {
     setActiveConnectionKey(connectionKey: string) {
       pushHashToUrl('connection', connectionKey)
       this.activeConnectionKey = connectionKey
-      this.menuOpen = false
     },
     saveEditorsCall() {
       this.saveEditors()

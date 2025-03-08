@@ -83,6 +83,7 @@
   --sidebar-list-item-height: 22px;
   --sidebar-list-item-font-size: 13px;
   --sidebar-sub-item-height: 18px;
+  --font-size: 14px;
   --sidebar-sub-item-font-size: 12px;
   --button-font-size: .70em;
 }
@@ -93,6 +94,7 @@
     --sidebar-icon-width: 100px;
     --sidebar-list-item-height: 40px;
     --sidebar-sub-item-height: 24px;
+    --font-size: 16px;
     --sidebar-list-item-font-size: 18px;
     --sidebar-sub-item-font-size: 14px;
     --button-font-size: 1.1em;

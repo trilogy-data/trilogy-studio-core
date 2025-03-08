@@ -21,7 +21,7 @@
       </div>
 
       <div class="control-group" v-if="['boxplot', 'heatmap'].includes(internalConfig.chartType)">
-        <label for="group-by">Group By:</label>
+        <label for="group-by">Group By</label>
         <select id="group-by" v-model="internalConfig.groupField" class="form-select">
           <option
             v-for="column in filteredColumns('categorical')"
@@ -34,7 +34,7 @@
       </div>
 
       <div class="control-group" v-if="internalConfig.chartType === 'barh'">
-        <label for="y-axis">Category Axis:</label>
+        <label for="y-axis">Category Axis</label>
         <select id="y-axis" v-model="internalConfig.yField" class="form-select">
           <option
             v-for="column in filteredColumns('categorical')"
@@ -47,7 +47,7 @@
       </div>
 
       <div class="control-group" v-if="internalConfig.chartType === 'barh'">
-        <label for="x-axis">Value Axis:</label>
+        <label for="x-axis">Value Axis</label>
         <select id="x-axis" v-model="internalConfig.xField" class="form-select">
           <option
             v-for="column in filteredColumns('numeric')"
@@ -63,7 +63,7 @@
         class="control-group"
         v-if="!['barh', 'heatmap', 'boxplot'].includes(internalConfig.chartType)"
       >
-        <label for="x-axis">X Axis:</label>
+        <label for="x-axis">X Axis</label>
         <select id="x-axis" v-model="internalConfig.xField" class="form-select">
           <option
             v-for="column in filteredColumns(internalConfig.chartType === 'line' ? 'all' : 'all')"
@@ -79,7 +79,7 @@
         class="control-group"
         v-if="!['barh', 'heatmap', 'boxplot'].includes(internalConfig.chartType)"
       >
-        <label for="y-axis">Y Axis:</label>
+        <label for="y-axis">Y Axis</label>
         <select id="y-axis" v-model="internalConfig.yField" class="form-select">
           <option
             v-for="column in filteredColumns('numeric')"
@@ -92,7 +92,7 @@
       </div>
 
       <div class="control-group" v-if="internalConfig.chartType === 'heatmap'">
-        <label for="color-field">Value Field:</label>
+        <label for="color-field">Value Field</label>
         <select id="color-field" v-model="internalConfig.colorField" class="form-select">
           <option
             v-for="column in filteredColumns('numeric')"
@@ -105,7 +105,7 @@
       </div>
 
       <div class="control-group" v-if="!['heatmap', 'boxplot'].includes(internalConfig.chartType)">
-        <label for="color-by">Color By (optional):</label>
+        <label for="color-by">Color By (optional)</label>
         <select id="color-by" v-model="internalConfig.colorField" class="form-select">
           <option value="">None</option>
           <option
@@ -119,7 +119,7 @@
       </div>
 
       <div class="control-group" v-if="internalConfig.chartType === 'line' && hasTrellisOption">
-        <label for="trellisField">Split Chart By:</label>
+        <label for="trellisField">Split Chart By</label>
         <select id="trellisField" v-model="internalConfig.trellisField" class="form-select">
           <option value="">None</option>
           <option
@@ -762,15 +762,19 @@ export default defineComponent({
 .chart-controls {
   display: flex;
   flex-wrap: wrap;
-  justify-content: end;
+  justify-content: center;
   vertical-align: middle;
+  font-size: var(--font-size);
+  padding-bottom: .5rem;
+  padding-left: .5rem;
+  padding-right: .5rem;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
   min-width: 150px;
-  font-size: var(--button-font-size);
+  font-size: var(--font-size);
 }
 
 .form-select {
