@@ -5,6 +5,7 @@ import { Results } from '../editors/results'
 const useEditorStore = defineStore('editors', {
   state: () => ({
     editors: {} as Record<string, Editor>, // Use an object instead of Map
+    activeEditorName: '',
   }),
   getters: {
     editorList: (state) => Object.keys(state.editors).map((key) => state.editors[key]),
@@ -54,6 +55,10 @@ const useEditorStore = defineStore('editors', {
       } else {
         throw new Error(`Editor with name "${name}" not found.`)
       }
+    },
+    getCurrentEditorAutocomplete(word: string) {
+      let activeEditor = this.editors[this.activeEditorName]
+      return activeEditor.getAutocomplete(word)
     },
   },
 })

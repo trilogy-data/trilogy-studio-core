@@ -25,7 +25,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreator from './ConnectionCreator.vue'
 import LoadingButton from './LoadingButton.vue'
@@ -184,7 +184,6 @@ export default {
         })
       })
     })
-
 
     const contentList = computed(() => {
       const list: Array<{

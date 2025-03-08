@@ -47,6 +47,17 @@ export interface ResultsInterface {
   data: readonly Row[]
 }
 
+// Chart configuration interface
+export interface ChartConfig {
+  chartType: string
+  xField?: string
+  yField?: string
+  yAggregation?: string
+  colorField?: string
+  groupField?: string
+  trellisField?: string
+}
+
 type SerializableValue =
   | string
   | number

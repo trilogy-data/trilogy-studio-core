@@ -25,9 +25,17 @@ interface ValidateItem {
   message: string
   severity: number
 }
+
+interface CompletionItem {
+  label: string
+  description: string
+  type: string
+  insertText: string
+}
 interface ValidateResponse {
   data: {
     items: ValidateItem[]
+    completion_items: CompletionItem[]
   }
 }
 
@@ -52,10 +60,14 @@ export default class AxiosResolver {
     }
     return JSON.stringify(base)
   }
-  async validate_query(query: string): Promise<ValidateResponse> {
+  async validate_query(
+    query: string,
+    sources: ContentInput[] | null = null,
+  ): Promise<ValidateResponse> {
     return axios
       .post(`${this.address}/validate_query`, {
         query: query,
+        sources: sources || [],
       })
       .catch((error: Error) => {
         console.log(error)

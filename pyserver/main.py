@@ -141,7 +141,10 @@ def format_query(query: QueryInSchema):
 
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
-    return get_diagnostics(query.query)
+    try:
+        return get_diagnostics(query.query, query.sources)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
 @router.post("/generate_query")

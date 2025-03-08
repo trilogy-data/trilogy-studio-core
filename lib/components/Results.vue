@@ -4,15 +4,18 @@
       <button
         class="tab-button"
         :class="{ active: activeTab === 'results' }"
-        @click="activeTab = 'results'"
+        @click="setTab('results')"
       >
         Results ({{ results.data.length }})
       </button>
       <button
         class="tab-button"
-        :class="{ active: activeTab === 'sql' }"
-        @click="activeTab = 'sql'"
+        :class="{ active: activeTab === 'visualize' }"
+        @click="setTab('visualize')"
       >
+        Visualize
+      </button>
+      <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="setTab('sql')">
         Generated SQL
       </button>
     </div>
@@ -23,6 +26,9 @@
         :results="results.data"
         :containerHeight="containerHeight"
       />
+      <div v-else-if="activeTab === 'visualize'" class="sql-view">
+        <vega-lite-chart :data="results.data" :columns="results.headers" />
+      </div>
       <div v-else class="sql-view">
         <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
       </div>
@@ -33,24 +39,36 @@
 <script lang="ts">
 import DataTable from './DataTable.vue'
 import { Results } from '../editors/results'
+// import type {ChartConfig} from '../editors/results'
 import { ref, onMounted, onUpdated } from 'vue'
 import Prism from 'prismjs'
+import VegaLiteChart from './VegaLiteChart.vue'
+import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable },
+  components: { DataTable, VegaLiteChart },
   props: {
     results: {
       type: Results,
       required: true,
+    },
+    chartConfig: {
+      required: false,
     },
     containerHeight: Number,
     generatedSql: String,
   },
   data() {
     return {
-      activeTab: 'results',
+      activeTab: getDefaultValueFromHash('activeEditorTab', 'results'),
     }
+  },
+  methods: {
+    setTab(tab: string) {
+      this.activeTab = tab
+      pushHashToUrl('activeEditorTab', tab)
+    },
   },
   setup() {
     const codeBlock = ref<HTMLElement | null>(null)
@@ -71,6 +89,7 @@ export default {
     onUpdated(() => {
       updateRefs()
     })
+
     return {
       codeBlock,
     }
@@ -89,6 +108,8 @@ export default {
   /* display: flex; */
   border-bottom: 1px solid var(--border-light);
   background: var(--sidebar-bg);
+  min-height:30px;
+  z-index:99;
 }
 
 .tab-button {
@@ -120,8 +141,6 @@ export default {
 .sql-view {
   background: var(--result-window-bg);
   color: var(--text-color);
-  padding: 1rem;
-  height: 100%;
 }
 
 .sql-view pre {

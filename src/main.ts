@@ -92,7 +92,7 @@ languages.setMonarchTokensProvider('trilogy', {
       // Match variable or property names (e.g., line_item, discounted_price)
       // [/\b[a-zA-Z_][a-zA-Z0-9_]*\b/, "variable"],
       [
-        /(^|\s)(sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)\(/,
+        /(^|\s)(current_date|current_datetime|cast|sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)(?=\()/,
         'function',
       ],
 

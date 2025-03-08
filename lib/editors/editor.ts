@@ -1,10 +1,17 @@
 import { Results } from './results'
-import type { ResultsInterface } from './results'
+import type { ResultsInterface, ChartConfig } from './results'
 
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
   // SCHEDULED = 'scheduled',
+}
+
+interface CompetionSymbol {
+  label: string
+  description: string
+  type: string
+  insertText: string
 }
 
 export interface EditorInterface {
@@ -25,6 +32,7 @@ export interface EditorInterface {
   tags: EditorTag[]
   cancelCallback: (() => void) | null
   changed: boolean
+  chartConfig?: ChartConfig
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -46,6 +54,8 @@ export default class Editor implements EditorInterface {
   tags: EditorTag[]
   cancelCallback: (() => void) | null
   changed: boolean
+  chartConfig?: ChartConfig
+  completionSymbols: any[]
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -92,6 +102,11 @@ export default class Editor implements EditorInterface {
     this.cancelCallback = null
     // default to change for save
     this.changed = true
+    this.completionSymbols = []
+  }
+
+  getAutocomplete(word: string): CompetionSymbol[] {
+    return this.completionSymbols.filter((symbol) => symbol.label.startsWith(word))
   }
 
   setError(error: string | null) {
@@ -133,6 +148,7 @@ export default class Editor implements EditorInterface {
       visible: this.visible,
       storage: this.storage,
       tags: this.tags,
+      chartConfig: this.chartConfig,
     }
   }
 
@@ -166,7 +182,7 @@ export default class Editor implements EditorInterface {
           })
           .filter((tag): tag is EditorTag => tag !== null)
       : []
-
+    editor.chartConfig = parsed.chartConfig || undefined
     return editor
   }
 }

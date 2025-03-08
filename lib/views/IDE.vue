@@ -234,6 +234,7 @@ export default {
     type ResolverType = typeof AxiosResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     const trilogyResolver = inject<ResolverType>('trilogyResolver')
     let saveEditors = inject<Function>('saveEditors')
@@ -254,6 +255,10 @@ export default {
     if (!saveEditors) {
       saveEditors = () => {}
     }
+    let editor = getDefaultValueFromHash('editor')
+    if (editor) {
+      editorStore.activeEditorName = editor
+    }
     return {
       connectionStore,
       editorStore,
@@ -267,6 +272,7 @@ export default {
   methods: {
     setActiveEditor(editor: string) {
       this.activeEditor = editor
+      this.editorStore.activeEditorName = editor
       pushHashToUrl('editor', editor)
     },
     setActiveScreen(screen: string) {

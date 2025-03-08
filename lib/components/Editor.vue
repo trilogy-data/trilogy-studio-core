@@ -44,7 +44,7 @@
           <button
             class="action-item"
             :class="{ 'button-cancel': editorData.loading }"
-            @click="runQuery"
+            @onClick="runQuery"
           >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
@@ -185,7 +185,7 @@
 <script lang="ts">
 import { defineComponent, inject } from 'vue'
 
-import { MarkerSeverity, editor, KeyMod, KeyCode } from 'monaco-editor'
+import { editor, KeyMod, KeyCode } from 'monaco-editor'
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
@@ -250,6 +250,7 @@ export default defineComponent({
   async mounted() {
     this.$nextTick(() => {
       this.createEditor()
+      this.validateQuery(false)
     })
     mountedMap.set(this.context, true)
   },
@@ -310,13 +311,10 @@ export default defineComponent({
       this.isEditing = false
     },
 
-    async validateQuery(log: boolean = true) {
+    async validateQuery(log: boolean = true, sources: ContentInput[] | null = null) {
       const editorItem = editorMap.get(this.context)
-      if (this.loading || !editorItem) {
-        return
-      }
       // TODO - syntax validation for SQL?
-      if (this.editorData.type === 'sql') {
+      if (!editorItem || this.editorData.type === 'sql') {
         return
       }
       try {
@@ -336,17 +334,26 @@ export default defineComponent({
         this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
         return
       }
-
-      let annotations = await this.trilogyResolver.validate_query(editorItem.getValue())
+      if (!sources) {
+        sources = conn.model
+          ? this.modelStore.models[conn.model].sources.map((source) => ({
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor].contents,
+            }))
+          : []
+      }
+      let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
       let model = editorItem.getModel()
       if (!model) {
         return
       }
-      MarkerSeverity.Error
+
       editor.setModelMarkers(model, 'owner', annotations.data.items)
+      this.editorData.completionSymbols = annotations.data.completion_items
     },
-    async runQuery() {
+    async runQuery(isRetry: boolean = false): Promise<any> {
       this.$emit('query-started')
+      this.editorData.setError(null)
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
@@ -370,8 +377,16 @@ export default defineComponent({
       }
 
       if (!conn.connected) {
-        this.editorData.setError(`Connection is not active.`)
-        return
+        if (!isRetry) {
+          this.editorData.setError(
+            `Connection is not active... Attempting to automatically reconnect.`,
+          )
+          await this.connectionStore.resetConnection(this.editorData.connection)
+          return this.runQuery(true)
+        } else {
+          this.editorData.setError(`Connection is not active.`)
+          return
+        }
       }
 
       // Create an AbortController for cancellation
@@ -384,14 +399,18 @@ export default defineComponent({
 
       try {
         this.editorData.loading = true
-        await this.validateQuery(false)
-        // Prepare sources if model exists
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
               alias: source.alias,
               contents: this.editorStore.editors[source.editor].contents,
             }))
           : []
+        try {
+          await this.validateQuery(false, sources)
+        } catch (error) {
+          console.log('Validation failed.')
+        }
+        // Prepare sources if model exists
 
         // Get selected text or full content
         const selected = editor.getSelection()
@@ -491,6 +510,11 @@ export default defineComponent({
         value: this.editorData.contents,
         language: this.editorData.type === 'sql' ? 'sql' : 'trilogy',
         automaticLayout: true,
+        autoClosingBrackets: 'always',
+        autoClosingOvertype: 'always',
+        autoClosingQuotes: 'always',
+        acceptSuggestionOnEnter: 'off',
+        tabCompletion: 'on',
       })
       editorMap.set(this.context, editorItem)
       editorItem.layout()
@@ -521,11 +545,24 @@ export default defineComponent({
         },
       })
       editor.setTheme('trilogyStudio')
+      let suggestDebounceTimer: number | null = null
       editorItem.onDidChangeModelContent(() => {
         this.editorStore.setEditorContents(this.editorName, editorItem.getValue())
-
+        // editorItem.getAction("editor.action.triggerSuggest")?.run();
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
+
+        // Clear previous timer
+        if (suggestDebounceTimer) {
+          clearTimeout(suggestDebounceTimer)
+        }
+
+        // Set new timer
+        suggestDebounceTimer = window.setTimeout(() => {
+          if (editorItem.hasTextFocus() && !editorItem.getSelection()?.isEmpty()) {
+            editorItem.trigger('completion', 'editor.action.triggerSuggest', { auto: true })
+          }
+        }, 200) // Adjust delay as needed
       })
       editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
         this.validateQuery()

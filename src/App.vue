@@ -2,6 +2,7 @@
 // @ts-ignore
 import { Manager } from 'trilogy-studio-core'
 import { LocalStorage } from 'trilogy-studio-core/data'
+import { dataTypes } from 'trilogy-studio-core/language'
 import {
   useEditorStore,
   useConnectionStore,
@@ -20,6 +21,7 @@ import {
   ExportModule,
   PageModule,
 } from 'tabulator-tables'
+import * as monaco from 'monaco-editor'
 
 Tabulator.registerModule([
   ResizeColumnsModule,
@@ -40,7 +42,6 @@ let userSettingsStore = useUserSettingsStore()
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 userSettingsStore.updateSetting('trilogyResolver', apiUrl)
 userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
-console.log(userSettingsStore.settings.theme)
 userSettingsStore.toggleTheme()
 userSettingsStore.toggleTheme()
 
@@ -55,6 +56,71 @@ let store = useEditorStore()
 let connections = useConnectionStore()
 
 let models = useModelConfigStore()
+
+// add model autocompletion
+function getModelCompletions(word: string, range: monaco.Range) {
+  // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
+  // here you could do a server side lookup
+  let completions = store.getCurrentEditorAutocomplete(word)
+  return completions.map((completion) => {
+    return {
+      label: completion.label,
+      kind: monaco.languages.CompletionItemKind.Variable,
+      insertText: completion.insertText,
+      range: range,
+      commitCharacters: ['\t'],
+    }
+  })
+}
+
+function getLastContiguousToken(line: string): string | null {
+  const match = line.match(/(\S+)(?:\s*$)/)
+  return match ? match[0] : null
+}
+
+interface Completion {
+  label: string
+  kind: monaco.languages.CompletionItemKind
+  insertText: string
+  range: monaco.Range
+}
+
+monaco.languages.registerCompletionItemProvider('trilogy', {
+  provideCompletionItems: function (model, position) {
+    // const word = model.getWordUntilPosition(position);
+    const lineContent = model.getLineContent(position.lineNumber)
+    const cursorIndex = position.column - 1 // Convert Monaco 1-based column to 0-based index
+    // Extract all non-whitespace characters before `.`
+    const lineToCursor = lineContent.substring(0, cursorIndex)
+    const match = getLastContiguousToken(lineToCursor)
+    let fullIdentifier = match ? match : ''
+    const range = new monaco.Range(
+      position.lineNumber,
+      position.column - fullIdentifier.length,
+      position.lineNumber,
+      position.column,
+    )
+    let suggestions: Completion[] = []
+    if (fullIdentifier === '') {
+      suggestions = []
+    } else if (fullIdentifier.endsWith('::')) {
+      suggestions = dataTypes.map((type) => ({
+        label: `${fullIdentifier}${type.label}`,
+        kind: monaco.languages.CompletionItemKind.Enum,
+        insertText: `${fullIdentifier}${type.label}`,
+        range: range,
+        commitCharacters: ['\t'],
+      }))
+    } else {
+      suggestions = getModelCompletions(fullIdentifier, range)
+    }
+
+    return {
+      suggestions: suggestions,
+    }
+  },
+  triggerCharacters: ['.'],
+})
 </script>
 
 <template>
