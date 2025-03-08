@@ -47,8 +47,8 @@
     },
     setup(props, { emit }) {
       const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
-      const saveConnections = inject<Function>('saveConnections')
-      if (!llmConnectionStore || !saveConnections) {
+      const saveConnections = inject<Function>('saveLLMConnections')
+      if (!llmConnectionStore) {
         throw new Error('LLM connection store is not provided!')
       }
       const isLoading = ref<Record<string, boolean>>({})

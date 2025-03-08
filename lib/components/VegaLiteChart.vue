@@ -138,12 +138,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed } from 'vue'
+import { defineComponent, ref, watch, onMounted, computed, inject } from 'vue'
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
 import { ColumnType } from '../editors/results'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
+import { UserSettingsStoreType } from '../stores/userSettingsStore'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -207,6 +208,12 @@ export default defineComponent({
   },
 
   setup(props) {
+    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    if (!settingsStore) {
+      throw new Error('userSettingsStore not provided')
+    }
+    // Create a computed property for the current theme
+    const currentTheme = computed(() => settingsStore.settings.theme)
     const vegaContainer = ref<HTMLElement | null>(null)
 
     // Flag to determine if we should show the trellis option
@@ -698,6 +705,7 @@ export default defineComponent({
       try {
         await vegaEmbed(vegaContainer.value, spec, {
           actions: true,
+          theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         })
       } catch (error) {

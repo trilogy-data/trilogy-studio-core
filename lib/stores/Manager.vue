@@ -37,7 +37,7 @@ export default {
       type: Object as PropType<UserSettingsStoreType>,
       required: true,
     },
-    llmConnectioStore: {
+    llmConnectionStore: {
       type: Object as PropType<LLMConnectionStoreType>,
       required: true,
     },
@@ -109,9 +109,19 @@ export default {
       }
       console.log('Models saved')
     }
+    const saveLLMConnections = () => {
+      for (let source of props.storageSources) {
+        source.saveLLMConnectionConfig(
+          Object.values(props.llmConnectionStore.llmConnections).filter(
+            (llmConnection) => llmConnection.storage == source.type,
+          ),
+        )
+      }
+    }
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
+    provide('saveLLMConnections', saveLLMConnections)
     const isMobile = computed(() => window.innerWidth <= 768)
     provide('isMobile', isMobile)
   },
@@ -121,7 +131,7 @@ export default {
     }
   },
   computed: {
-    currentLayout() {
+    currentLayout():string {
       return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
     },
   },
