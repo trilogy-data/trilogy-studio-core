@@ -22,6 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap:8px;
   position: relative;
 }
 
@@ -76,7 +77,6 @@
   z-index: 1;
   overflow: scroll;
 }
-
 </style>
 <script lang="ts">
 export default {

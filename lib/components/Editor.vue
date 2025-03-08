@@ -37,14 +37,18 @@
         <div class="menu-actions">
           <button class="action-item" @click="$emit('save-editors')">Save</button>
 
-          <loading-button :useDefaultStyle="false" class="action-item" :action="validateQuery"
+          <loading-button
+            v-if="editorData.type === 'trilogy'"
+            :useDefaultStyle="false"
+            class="action-item"
+            :action="validateQuery"
             >Parse</loading-button
           >
 
           <button
+            @click="() => runQuery()"
             class="action-item"
             :class="{ 'button-cancel': editorData.loading }"
-            @onClick="runQuery"
           >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>

@@ -20,18 +20,18 @@
       </button>
     </div>
     <div class="tab-content">
+      <div v-if="activeTab === 'visualize'" class="sql-view">
+        <vega-lite-chart :data="results.data" :columns="results.headers" />
+      </div>
+      <div v-else-if="activeTab === 'sql'" class="sql-view">
+        <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
+      </div>
       <data-table
-        v-if="activeTab === 'results'"
+        v-else
         :headers="results.headers"
         :results="results.data"
         :containerHeight="containerHeight"
       />
-      <div v-else-if="activeTab === 'visualize'" class="sql-view">
-        <vega-lite-chart :data="results.data" :columns="results.headers" />
-      </div>
-      <div v-else class="sql-view">
-        <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
-      </div>
     </div>
   </div>
 </template>
@@ -108,8 +108,8 @@ export default {
   /* display: flex; */
   border-bottom: 1px solid var(--border-light);
   background: var(--sidebar-bg);
-  min-height:30px;
-  z-index:99;
+  min-height: 30px;
+  z-index: 99;
 }
 
 .tab-button {
