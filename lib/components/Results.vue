@@ -15,14 +15,9 @@
       >
         Visualize
       </button>
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'sql' }"
-        @click="setTab('sql')"
-      >
+      <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="setTab('sql')">
         Generated SQL
       </button>
-
     </div>
     <div class="tab-content">
       <data-table
@@ -31,18 +26,19 @@
         :results="results.data"
         :containerHeight="containerHeight"
       />
-      <div v-else-if="activeTab === 'visualize'" class="sql-view"><vega-lite-chart :data="results.data" :columns="results.headers"/></div>
+      <div v-else-if="activeTab === 'visualize'" class="sql-view">
+        <vega-lite-chart :data="results.data" :columns="results.headers" />
+      </div>
       <div v-else class="sql-view">
         <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
       </div>
     </div>
-    
   </div>
 </template>
 
 <script lang="ts">
 import DataTable from './DataTable.vue'
-import { Results, } from '../editors/results'
+import { Results } from '../editors/results'
 // import type {ChartConfig} from '../editors/results'
 import { ref, onMounted, onUpdated } from 'vue'
 import Prism from 'prismjs'
@@ -112,6 +108,8 @@ export default {
   /* display: flex; */
   border-bottom: 1px solid var(--border-light);
   background: var(--sidebar-bg);
+  min-height:30px;
+  z-index:99;
 }
 
 .tab-button {
@@ -143,8 +141,6 @@ export default {
 .sql-view {
   background: var(--result-window-bg);
   color: var(--text-color);
-  padding: 1rem;
-  height: 100%;
 }
 
 .sql-view pre {

@@ -77,46 +77,6 @@
   overflow: scroll;
 }
 
-.gutter {
-  position: relative;
-
-  &.gutter-horizontal,
-  &.gutter-vertical {
-    display: flex;
-    background-color: transparent;
-    z-index: 60;
-  }
-
-  &.gutter-horizontal {
-    width: 0 !important;
-    background-color: transparent;
-    cursor: ew-resize;
-
-    &:after {
-      height: 100%;
-      width: 8px;
-      left: -2px;
-    }
-  }
-
-  &.gutter-vertical {
-    cursor: ns-resize;
-    height: 0 !important;
-
-    &:after {
-      height: 8px;
-      width: 100%;
-      top: -4px;
-    }
-  }
-
-  &:after {
-    content: '';
-    display: block;
-    position: absolute;
-    z-index: 60;
-  }
-}
 </style>
 <script lang="ts">
 export default {

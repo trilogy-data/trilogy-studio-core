@@ -177,10 +177,10 @@ export default class Editor implements EditorInterface {
     // rehydrate tags to EditorTag
     editor.tags = parsed.tags
       ? parsed.tags
-        .map((tag: string) => {
-          return Object.values(EditorTag).includes(tag as EditorTag) ? (tag as EditorTag) : null
-        })
-        .filter((tag): tag is EditorTag => tag !== null)
+          .map((tag: string) => {
+            return Object.values(EditorTag).includes(tag as EditorTag) ? (tag as EditorTag) : null
+          })
+          .filter((tag): tag is EditorTag => tag !== null)
       : []
     editor.chartConfig = parsed.chartConfig || undefined
     return editor

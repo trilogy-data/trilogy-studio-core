@@ -3,7 +3,7 @@ import BaseConnection from './base'
 import { Database, Table, Column } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
-import { DateTime } from 'luxon';
+import { DateTime } from 'luxon'
 const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles()
 
 // Select a bundle based on browser checks
@@ -75,16 +75,14 @@ export default class DuckDBConnection extends BaseConnection {
     // Map data rows
     const data = result.toArray().map((row) => row.toJSON())
     //if any field type is a integer, convert it from BigInt to Number
-    let tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     data.forEach((row) => {
       Object.keys(row).forEach((key) => {
         if (headers.get(key)?.type === ColumnType.INTEGER) {
           row[key] = Number(row[key])
-        }
-        else if (headers.get(key)?.type === ColumnType.DATE) {
-          row[key] = DateTime.fromMillis(row[key], { zone: tz })
-        }
-        else if (headers.get(key)?.type === ColumnType.DATETIME) {
+        } else if (headers.get(key)?.type === ColumnType.DATE) {
+          row[key] = DateTime.fromMillis(row[key], { zone: 'UTC' })
+        } else if (headers.get(key)?.type === ColumnType.DATETIME) {
           row[key] = DateTime.fromMillis(row[key], { zone: tz })
         }
       })

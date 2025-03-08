@@ -49,13 +49,13 @@ export interface ResultsInterface {
 
 // Chart configuration interface
 export interface ChartConfig {
-  chartType: string;
-  xField?: string;
-  yField?: string;
-  yAggregation?: string;
-  colorField?: string;
-  groupField?: string;
-  trellisField?: string;
+  chartType: string
+  xField?: string
+  yField?: string
+  yAggregation?: string
+  colorField?: string
+  groupField?: string
+  trellisField?: string
 }
 
 type SerializableValue =

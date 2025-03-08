@@ -1,4 +1,7 @@
-export function getDefaultValueFromHash(key: string, fallback: string | null = null): string | null {
+export function getDefaultValueFromHash(
+  key: string,
+  fallback: string | null = null,
+): string | null {
   // Get the current hash from the URL
   const hash = window.location.hash
 

@@ -56,10 +56,10 @@ const useEditorStore = defineStore('editors', {
         throw new Error(`Editor with name "${name}" not found.`)
       }
     },
-    getCurrentEditorAutocomplete(word:string) {
+    getCurrentEditorAutocomplete(word: string) {
       let activeEditor = this.editors[this.activeEditorName]
       return activeEditor.getAutocomplete(word)
-    }
+    },
   },
 })
 

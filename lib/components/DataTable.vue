@@ -111,7 +111,7 @@ function typeToFormatter(type: ColumnType) {
           inputFormat: 'yyyy-MM-dd',
           outputFormat: 'yyyy-MM-dd',
           invalidPlaceholder: '(invalid date)',
-          timezone: tz,
+          timezone: 'UTC',
         },
       }
     case ColumnType.TIME:

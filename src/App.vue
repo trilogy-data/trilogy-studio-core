@@ -23,7 +23,6 @@ import {
 } from 'tabulator-tables'
 import * as monaco from 'monaco-editor'
 
-
 Tabulator.registerModule([
   ResizeColumnsModule,
   DownloadModule,
@@ -69,73 +68,71 @@ function getModelCompletions(word: string, range: monaco.Range) {
       kind: monaco.languages.CompletionItemKind.Variable,
       insertText: completion.insertText,
       range: range,
-      commitCharacters: ['\t']
+      commitCharacters: ['\t'],
     }
   })
 }
 
 function getLastContiguousToken(line: string): string | null {
-  const match = line.match(/(\S+)(?:\s*$)/);
-  return match ? match[0] : null;
+  const match = line.match(/(\S+)(?:\s*$)/)
+  return match ? match[0] : null
 }
 
 interface Completion {
-  label: string;
-  kind: monaco.languages.CompletionItemKind;
-  insertText: string;
-  range: monaco.Range;
+  label: string
+  kind: monaco.languages.CompletionItemKind
+  insertText: string
+  range: monaco.Range
 }
 
-
-monaco.languages.registerCompletionItemProvider("trilogy", {
+monaco.languages.registerCompletionItemProvider('trilogy', {
   provideCompletionItems: function (model, position) {
     // const word = model.getWordUntilPosition(position);
-    const lineContent = model.getLineContent(position.lineNumber);
-    const cursorIndex = position.column - 1; // Convert Monaco 1-based column to 0-based index
+    const lineContent = model.getLineContent(position.lineNumber)
+    const cursorIndex = position.column - 1 // Convert Monaco 1-based column to 0-based index
     // Extract all non-whitespace characters before `.`
-    const lineToCursor = lineContent.substring(0, cursorIndex);
-    const match = getLastContiguousToken(lineToCursor);
+    const lineToCursor = lineContent.substring(0, cursorIndex)
+    const match = getLastContiguousToken(lineToCursor)
     let fullIdentifier = match ? match : ''
     const range = new monaco.Range(
       position.lineNumber,
       position.column - fullIdentifier.length,
       position.lineNumber,
-      position.column
-    );
-    let suggestions: Completion[] = [];
+      position.column,
+    )
+    let suggestions: Completion[] = []
     if (fullIdentifier === '') {
-      suggestions = [];
-    }
-
-    else if (
-      fullIdentifier.endsWith('::')
-    ) {
-      suggestions = dataTypes.map(type => ({
+      suggestions = []
+    } else if (fullIdentifier.endsWith('::')) {
+      suggestions = dataTypes.map((type) => ({
         label: `${fullIdentifier}${type.label}`,
         kind: monaco.languages.CompletionItemKind.Enum,
         insertText: `${fullIdentifier}${type.label}`,
         range: range,
-        commitCharacters: ['\t']
-      }));
-
+        commitCharacters: ['\t'],
+      }))
+    } else {
+      suggestions = getModelCompletions(fullIdentifier, range)
     }
-    else { suggestions = getModelCompletions(fullIdentifier, range); }
 
     return {
-      suggestions: suggestions
-    };
+      suggestions: suggestions,
+    }
   },
-  triggerCharacters: ["."]
-});
-
-
-
+  triggerCharacters: ['.'],
+})
 </script>
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
-      :storageSources="contentSources" :userSettingsStore="userSettingsStore">
+    <Manager
+      :connectionStore="connections"
+      :editorStore="store"
+      :trilogyResolver="resolver"
+      :modelStore="models"
+      :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
+    >
     </Manager>
   </div>
 </template>
