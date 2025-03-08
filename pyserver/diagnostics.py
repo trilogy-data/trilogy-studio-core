@@ -1,15 +1,15 @@
 from typing import List, Union, Any
 import logging
-from lark import UnexpectedToken, Token
+from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
 from io_models import (
     ValidateItem,
     ValidateResponse,
     Severity,
-    ModelSource,
+    ModelSourceInSchema,
     CompletionItem,
 )
-from env_helpers import ModelInSchema, parse_env_from_full_model
+from env_helpers import parse_env_from_full_model
 from trilogy.parser import parse_text
 from trilogy.parsing.parse_engine import ParseToObjects
 
@@ -33,7 +33,7 @@ def truncate_to_last_semicolon(text):
         return text  # Return original string if no semicolon is found
 
 
-def get_diagnostics(doctext: str, sources: List[ModelSource]) -> ValidateResponse:
+def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
 
