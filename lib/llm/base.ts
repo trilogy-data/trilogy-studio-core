@@ -25,6 +25,7 @@ export abstract class LLMProvider {
   public models: string[]
   public name: string
   public model:string
+  public type: string = 'generic'
 
   constructor(name: string, apiKey: string, model:string) {
     this.apiKey = apiKey
@@ -41,24 +42,22 @@ export abstract class LLMProvider {
     if (!options.prompt) {
       throw new Error('Prompt is required')
     }
-    if (!options.model) {
-      throw new Error('Model is required')
-    }
   }
 
   // Convert instance to JSON
-  toJSON(): string {
-    return JSON.stringify({
+  toJSON(): object {
+    return {
       name: this.name,
-      models: this.models,
-    });
+      model: this.model,
+      type: this.type,
+      apiKey:this.apiKey
+    };
   }
 
   // Create instance from JSON
-  static fromJSON<T extends LLMProvider>(this: new (name: string, apiKey: string) => T, json: string, apiKey: string): T {
-    const data = JSON.parse(json);
-    const instance = new this(data.name, apiKey);
-    instance.models = data.models;
+  static fromJSON(json:string | Partial<LLMProvider>): LLMProvider{
+    typeof json === 'string' ? JSON.parse(json) : json
+    const instance = new this(json.name, json.apiKey, json.model);
     return instance;
   }
 }

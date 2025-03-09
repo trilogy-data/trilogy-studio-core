@@ -164,7 +164,7 @@ export default class LocalStorage extends AbstractStorage {
   saveLLMConnections(
     connections: Array<OpenAIProvider | AnthropicProvider | MistralProvider>,
   ): void {
-    localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
+    localStorage.setItem(this.llmConnectionStorageKey, JSON.stringify(connections.map((connection)=>connection.toJSON())))
   }
 
   async loadLLMConnections(): Promise<
@@ -176,27 +176,24 @@ export default class LocalStorage extends AbstractStorage {
       string,
       OpenAIProvider | AnthropicProvider | MistralProvider
     > = {}
-
     // Process each connection sequentially
     for (const connection of raw) {
       switch (connection.type) {
         case 'openai':
           // @ts-ignore
-          connections[connection.name] = reactive(OpenAi.fromJSON(connection))
+          connections[connection.name] = reactive(OpenAIProvider.fromJSON(connection))
           break
         case 'mistral':
           // @ts-ignore
-          connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
+          connections[connection.name] = reactive(MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // Handle the async operation properly
           // @ts-ignore
-          connections[connection.name] = reactive(await MotherDuckConnection.fromJSON(connection))
+          connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
           break
-        // Uncomment if needed:
-        // case "sqlserver":
-        //   connections[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
-        //   break;
+        default:
+          console.log(connection.type)
       }
     }
 
@@ -209,5 +206,9 @@ export default class LocalStorage extends AbstractStorage {
       delete connections[name]
       this.saveLLMConnections(Object.values(connections))
     }
+  }
+
+  async clearLLMConnections(): Promise<void> {
+    localStorage.removeItem(this.llmConnectionStorageKey)
   }
 }

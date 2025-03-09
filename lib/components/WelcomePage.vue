@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue'
+import { ref } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreator from './EditorCreator.vue'
 

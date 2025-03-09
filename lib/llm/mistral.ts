@@ -3,7 +3,7 @@ import type { LLMRequestOptions, LLMResponse } from './base'
 
 export class MistralProvider extends LLMProvider {
   private baseUrl = 'https://api.mistral.ai/v1/chat/completions'
-  
+  public type:string = 'mistral'
   constructor(name:string, apiKey: string, model:string) {
     super(name, apiKey, model)
   }

@@ -5,6 +5,8 @@ import type { LLMRequestOptions, LLMResponse } from './base';
 export class OpenAIProvider extends LLMProvider {
   private baseUrl: string = 'https://api.openai.com/v1/chat/completions'
   public models: string[]
+  public type: string = 'openai'
+  
   constructor(name: string,  apiKey: string, model:string) {
     super(name, apiKey, model)
     this.models = ['o3-mini']

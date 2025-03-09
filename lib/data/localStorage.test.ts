@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import LocalStorage from './localStorage'
 import Editor from '../editors/editor'
 import { ModelConfig } from '../models'
+import type { LLMRequestOptions, LLMResponse  } from '../llm'
+import { LLMProvider } from '../llm'
 
 vi.mock('../connections', () => ({
   BigQueryOauthConnection: {
@@ -14,6 +16,21 @@ vi.mock('../connections', () => ({
     fromJSON: vi.fn().mockImplementation((data) => ({ ...data })),
   },
 }))
+
+class MockLLMProvider extends LLMProvider {
+  type: string = 'openai'
+  async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {
+    return {
+      text: 'Mock response',
+      model: this.model,
+      usage: {
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+      },
+    };
+  }
+}
 
 // Mock localStorage globally for the tests
 beforeEach(() => {
@@ -199,4 +216,50 @@ describe('EditorLocalStorage', () => {
     const loadedModelConfig = localStorage.loadModelConfig()
     expect(loadedModelConfig).toHaveLength(0)
   })
-})
+
+
+
+  it('should save and load LLM connections', () => {
+    const connections = {
+      conn1: new MockLLMProvider('conn1', 'mock-api-key', 'gpt-4'),
+      conn2: new MockLLMProvider('conn2', 'mock-api-key', 'claude-2'),
+    };
+
+    localStorage.saveLLMConnections(Object.values(connections));
+    localStorage.loadLLMConnections().then((loadedConnections) => {
+      expect(Object.keys(loadedConnections)).toHaveLength(2);
+      expect(loadedConnections['conn1'].name).toBe('conn1');
+      expect(loadedConnections['conn1'].model).toBe('gpt-4');
+      expect(loadedConnections['conn2'].name).toBe('conn2');
+      expect(loadedConnections['conn2'].model).toBe('claude-2');
+    });
+  });
+
+  it('should delete an LLM connection by name', () => {
+    const connections = {
+      conn1: new MockLLMProvider('conn1' , 'mock-api-key', 'gpt-4'),
+      conn2: new MockLLMProvider('conn2',  'mock-api-key', 'claude-2'),
+    };
+
+    localStorage.saveLLMConnections(Object.values(connections));
+    localStorage.deleteLLMConnection('conn1').then(() => {
+      localStorage.loadLLMConnections().then((loadedConnections) => {
+        console.log(loadedConnections)
+        expect(Object.keys(loadedConnections)).toHaveLength(1);
+        // expect(loadedConnections['conn2'].type).toBe('Anthropic');
+        expect(loadedConnections['conn2'].model).toBe('claude-2');
+      });
+    });
+  });
+
+  it('should clear all LLM connections', () => {
+    const llmConnections = [new MockLLMProvider('OpenAI', 'mock-api-key', 'gpt-4')];
+
+    localStorage.saveLLMConnections(llmConnections);
+    localStorage.clearLLMConnections();
+
+    localStorage.loadLLMConnections().then((loadedConnections) => {
+      expect(Object.keys(loadedConnections)).toHaveLength(0);
+    });
+  });
+});
