@@ -2,69 +2,41 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey"
-          @connection-key-selected="setActiveConnectionKey"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey"
-          :activeConnectionKey="activeConnectionKey"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey" :active="activeScreen" :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey" :activeModelKey="activeModelKey"
+          :activeConnectionKey="activeConnectionKey" />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
-            <editor
-              v-if="activeEditorData.type == 'preql'"
-              context="main-trilogy"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
-            <editor
-              v-else
-              context="main-sql"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
+            <editor v-else context="main-sql" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <error-message v-else-if="activeEditorData.error"
-              >{{ activeEditorData.error }}
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
+            <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}
               <template #action v-if="activeEditorData.error === 'Connection is not active.'">
-                <loading-button
-                  :action="
-                    () => {
-                      activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection).then(() => {
-                            activeEditorData ? (activeEditorData.error = null) : null
-                          })
-                        : null
-                    }
-                  "
-                >
+                <loading-button :action="() => {
+                    activeEditorData
+                      ? connectionStore.resetConnection(activeEditorData.connection).then(() => {
+                        activeEditorData ? (activeEditorData.error = null) : null
+                      })
+                      : null
+                  }
+                  ">
                   Reconnect
                   {{ activeEditorData.connection }}
                 </loading-button>
               </template>
             </error-message>
-            <results-container
-              v-else-if="
-                activeEditorData.results.headers && activeEditorData.results.headers.size > 0
-              "
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :containerHeight="containerHeight"
-            />
+            <results-container v-else-if="
+              activeEditorData.results.headers && activeEditorData.results.headers.size > 0
+            " :results="activeEditorData.results" :generatedSql="activeEditorData.generated_sql || undefined"
+              :containerHeight="containerHeight" :type="activeEditorData.type" />
             <hint-component v-else />
           </template>
         </vertical-split-layout>
@@ -87,6 +59,9 @@
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
+      </template>
+      <template v-else-if="activeScreen === 'llms'">
+        <LLMView />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -184,6 +159,7 @@ import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
 import CommunityModels from '../components/CommunityModels.vue'
+import LLMView from '../components/LLMView.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -229,6 +205,7 @@ export default {
     ResultsContainer,
     LoadingButton,
     CommunityModels,
+    LLMView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
@@ -253,7 +230,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
     let editor = getDefaultValueFromHash('editor')
     if (editor) {

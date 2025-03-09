@@ -12,7 +12,7 @@
         <i v-else class="mdi mdi-menu-right"></i>
       </template>
       <!-- Connection Type Icons -->
-      <llm-provider-icon v-if="item.type === 'connection'" :provider-type="getProviderType(item.connection)" />
+      <LLMProviderIcon v-if="item.type === 'connection'" :provider-type="getProviderType(item.connection)" />
       <i v-else-if="item.type === 'models-category'" class="mdi mdi-format-list-bulleted"></i>
       <i v-else-if="item.type === 'model'" class="mdi mdi-brain"></i>
       <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
@@ -74,17 +74,16 @@
   <script lang="ts">
   import { ref, computed, defineComponent } from 'vue'
   import type {PropType} from 'vue'
-  import { LLMProvider } from '../llm/base'
   import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
   import LLMProviderIcon from './LLMProviderIcon.vue'
-  import LLMConnectionRefresh from './ConnectionRefresh.vue'
+  import ConnectionRefresh from './ConnectionRefresh.vue'
   import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
   
   export default defineComponent({
     name: 'LLMConnectionListItem',
     components: {
       LLMProviderIcon,
-      LLMConnectionRefresh,
+      ConnectionRefresh,
       ConnectionStatusIcon
     },
     props: {

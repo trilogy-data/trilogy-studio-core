@@ -4,8 +4,8 @@ import type { LLMRequestOptions, LLMResponse } from './base';
 export class AnthropicProvider extends LLMProvider {
     private baseUrl: string = 'https://api.anthropic.com/v1/messages'
   
-    constructor(apiKey: string) {
-      super(apiKey)
+    constructor(name:string, apiKey: string, model:string) {
+      super(name, apiKey, model)
     }
   
     async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {

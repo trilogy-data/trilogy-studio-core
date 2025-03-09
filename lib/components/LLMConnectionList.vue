@@ -2,7 +2,7 @@
     <sidebar-list title="LLM Connections">
       <template #actions>
         <div class="button-container">
-          <!-- <llm-connection-creator /> -->
+          <LLMConnectionCreator />
           <div>
             <loading-button :action="saveConnections" :key-combination="['control', 's']"
               >Save</loading-button
@@ -10,7 +10,7 @@
           </div>
         </div>
       </template>
-      <llm-connection-list-item
+      <LLMConnectionListItem
         v-for="item in contentList"
         :key="item.id"
         :item="item"
@@ -34,7 +34,7 @@
   import { LLMProvider } from '../llm/base'
   import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
   import LLMConnectionListItem from './LLMConnectionListItem.vue'
-//   import LLMConnectionCreator from './LLMConnectionCreator.vue'
+  import LLMConnectionCreator from './LLMConnectionCreator.vue'
   
   export default {
     name: 'LLMConnectionList',
@@ -48,7 +48,7 @@
     setup(props, { emit }) {
       const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
       const saveConnections = inject<Function>('saveLLMConnections')
-      if (!llmConnectionStore) {
+      if (!llmConnectionStore || !saveConnections) {
         throw new Error('LLM connection store is not provided!')
       }
       const isLoading = ref<Record<string, boolean>>({})
@@ -96,15 +96,7 @@
               await connection.testConnection()
             }
           }
-          if (type === 'models') {
-            // Fetch available models
-            const connection = llmConnectionStore.connections[connectionName] as any
-            if (connection.listModels) {
-              const models = await connection.listModels()
-              // Store the models in some property of the connection
-              connection.availableModels = models
-            }
-          }
+
           delete isErrored.value[id]
         } catch (error) {
           if (error instanceof Error) {
@@ -127,8 +119,10 @@
           type === 'connection' &&
           (collapsed.value[id] === undefined || collapsed.value[id] === true)
         ) {
+          console.log(connectionName)
+          
           const connection = llmConnectionStore.connections[connectionName] as any
-          if (!connection.availableModels || connection.availableModels.length === 0) {
+          if (!connection.models || connection.models.length === 0) {
             await refreshId(id, connectionName, 'models')
           }
         }
@@ -278,11 +272,11 @@
     },
     components: {
       SidebarList,
-    //   LLMConnectionCreator,
+      LLMConnectionListItem,
+      LLMConnectionCreator,
       LoadingButton,
       StatusIcon,
-      Tooltip,
-      LLMConnectionListItem,
+      Tooltip
     },
     methods: {
       resetConnection(connection: LLMProvider) {

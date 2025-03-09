@@ -1,12 +1,14 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
+import { OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
 export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
   private connectionStorageKey: string
+  private llmConnectionStorageKey: string
   private modelStorageKey: string
   private userSettingsStorageKey: string
   public type: string
@@ -15,6 +17,7 @@ export default class LocalStorage extends AbstractStorage {
     super()
     this.editorStorageKey = prefix + 'editors'
     this.connectionStorageKey = prefix + 'connections'
+    this.llmConnectionStorageKey = prefix + 'llmConnections'
     this.modelStorageKey = prefix + 'modelConfig'
     this.userSettingsStorageKey = prefix + 'userSettings'
     this.type = 'local'
@@ -155,5 +158,56 @@ export default class LocalStorage extends AbstractStorage {
 
   saveUserSettings(settings: Record<string, any>): void {
     localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
+  }
+
+
+  saveLLMConnections(
+    connections: Array<OpenAIProvider | AnthropicProvider | MistralProvider>,
+  ): void {
+    localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
+  }
+
+  async loadLLMConnections(): Promise<
+    Record<string, OpenAIProvider | AnthropicProvider | MistralProvider>
+  > {
+    const storedData = localStorage.getItem(this.llmConnectionStorageKey)
+    const raw = storedData ? JSON.parse(storedData) : []
+    const connections: Record<
+      string,
+      OpenAIProvider | AnthropicProvider | MistralProvider
+    > = {}
+
+    // Process each connection sequentially
+    for (const connection of raw) {
+      switch (connection.type) {
+        case 'openai':
+          // @ts-ignore
+          connections[connection.name] = reactive(OpenAi.fromJSON(connection))
+          break
+        case 'mistral':
+          // @ts-ignore
+          connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
+          break
+        case 'anthropic':
+          // Handle the async operation properly
+          // @ts-ignore
+          connections[connection.name] = reactive(await MotherDuckConnection.fromJSON(connection))
+          break
+        // Uncomment if needed:
+        // case "sqlserver":
+        //   connections[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
+        //   break;
+      }
+    }
+
+    return connections
+  }
+
+  async deleteLLMConnection(name: string): Promise<void> {
+    const connections = await this.loadLLMConnections()
+    if (connections[name]) {
+      delete connections[name]
+      this.saveLLMConnections(Object.values(connections))
+    }
   }
 }

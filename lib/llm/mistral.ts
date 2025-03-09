@@ -4,8 +4,8 @@ import type { LLMRequestOptions, LLMResponse } from './base'
 export class MistralProvider extends LLMProvider {
   private baseUrl = 'https://api.mistral.ai/v1/chat/completions'
   
-  constructor(apiKey: string) {
-    super(apiKey)
+  constructor(name:string, apiKey: string, model:string) {
+    super(name, apiKey, model)
   }
   
   async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {

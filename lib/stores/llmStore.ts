@@ -11,7 +11,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
   actions: {
     addConnection(connection: LLMProvider) {
       // Use provider's constructor name or a unique property as identifier
-      const name = connection.constructor.name
+      const name = connection.name
       this.connections[name] = connection
       return connection
     },
@@ -53,11 +53,11 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       }
       
       if (type === 'anthropic') {
-        this.connections[name] = new AnthropicProvider(options.apiKey)
+        this.connections[name] = new AnthropicProvider(name, options.apiKey, options.model)
       } else if (type === 'openai') {
-        this.connections[name] = new OpenAIProvider(options.apiKey)
+        this.connections[name] = new OpenAIProvider(name, options.apiKey, options.model)
       } else if (type === 'mistral') {
-        this.connections[name] = new MistralProvider(options.apiKey)
+        this.connections[name] = new MistralProvider(name, options.apiKey, options.model)
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
