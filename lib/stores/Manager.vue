@@ -65,21 +65,23 @@ export default {
       for (let editor of Object.values(editors)) {
         props.editorStore.addEditor(editor)
       }
-    }
-    for (let source of props.storageSources) {
       source.loadConnections().then((connections) => {
         for (let connection of Object.values(connections)) {
           props.connectionStore.addConnection(connection)
         }
       })
+      source.loadModelConfig().then((models)=> {
+        for (let modelConfig of Object.values(models)) {
+          props.modelStore.addModelConfig(modelConfig)
+        }
+      })
+      source.loadLLMConnections().then((llmConnections) => {
+        for (let llmConnection of Object.values(llmConnections)) {
+          props.llmConnectionStore.addConnection(llmConnection)
+        }
+      })
     }
 
-    for (let source of props.storageSources) {
-      let connections = source.loadModelConfig()
-      for (let modelConfig of Object.values(connections)) {
-        props.modelStore.addModelConfig(modelConfig)
-      }
-    }
     const saveEditors = () => {
       for (let source of props.storageSources) {
         source.saveEditors(
@@ -109,10 +111,11 @@ export default {
       }
       console.log('Models saved')
     }
-    const saveLLMConnections = () => {
+    const saveLLMConnections = async () => {
+      console.log('saving connections')
       for (let source of props.storageSources) {
-        source.saveLLMConnectionConfig(
-          Object.values(props.llmConnectionStore.llmConnections).filter(
+        await source.saveLLMConnections(
+          Object.values(props.llmConnectionStore.connections).filter(
             (llmConnection) => llmConnection.storage == source.type,
           ),
         )
@@ -131,7 +134,7 @@ export default {
     }
   },
   computed: {
-    currentLayout():string {
+    currentLayout(): string {
       return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
     },
   },

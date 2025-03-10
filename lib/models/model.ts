@@ -316,6 +316,9 @@ export class ModelConfig {
     this.sources.push(source)
     this.changed = true
   }
+  addModelSourceSimple(editor: string, alias: string) {
+    this.addModelSource(new ModelSource(editor, alias, [], []))
+  }
 
   setParseError(parseError: string) {
     this.parseError = parseError

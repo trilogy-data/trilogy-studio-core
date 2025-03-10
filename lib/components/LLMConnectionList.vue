@@ -19,6 +19,8 @@
         @toggle="toggleCollapse"
         @refresh="refreshId"
         @updateApiKey="updateApiKey"
+        @updateModel="updateModel"
+        @setActive="setActiveConnection"
       />
     </sidebar-list>
   </template>
@@ -32,7 +34,6 @@
   import type { LLMConnectionStoreType } from '../stores/llmStore'
   import { KeySeparator } from '../data/constants'
   import { LLMProvider } from '../llm/base'
-  import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
   import LLMConnectionListItem from './LLMConnectionListItem.vue'
   import LLMConnectionCreator from './LLMConnectionCreator.vue'
   
@@ -55,26 +56,23 @@
       const isErrored = ref<Record<string, string>>({})
   
       const updateApiKey = (connection: LLMProvider, apiKey: string) => {
+        if (apiKey) {
+
+          // Replace the old connection
+          llmConnectionStore.connections[connection.name].setApiKey(apiKey)
+          // Reset/test the connection
+          llmConnectionStore.resetConnection(connection.name)
+          
+        }
+      }
+
+      const updateModel = (connection: LLMProvider, model: string) => {
         // This would need to be implemented based on your provider structure
-        const providerName = connection.constructor.name
-        if (apiKey && providerName) {
-          // Create a new connection with the updated API key
-          let newConnection
-          
-          if (connection instanceof AnthropicProvider) {
-            newConnection = new AnthropicProvider(apiKey)
-          } else if (connection instanceof OpenAIProvider) {
-            newConnection = new OpenAIProvider(apiKey)
-          } else if (connection instanceof MistralProvider) {
-            newConnection = new MistralProvider(apiKey)
-          }
-          
-          if (newConnection) {
-            // Replace the old connection
-            llmConnectionStore.connections[providerName] = newConnection
-            // Reset/test the connection
-            llmConnectionStore.resetConnection(providerName)
-          }
+        if (model) {
+          // Replace the old connection
+          llmConnectionStore.connections[connection.name].model=model
+          // Reset/test the connection
+          llmConnectionStore.resetConnection(connection.name)
         }
       }
   
@@ -122,6 +120,10 @@
           console.log(connectionName)
           
           const connection = llmConnectionStore.connections[connectionName] as any
+          if (!connection) {
+            console.log(`Connection not found ${connection}` )
+            return
+          }
           if (!connection.models || connection.models.length === 0) {
             await refreshId(id, connectionName, 'models')
           }
@@ -190,26 +192,15 @@
               type: 'api-key',
               connection,
             })
-            
-            // Available models
             list.push({
-              id: `${name}${KeySeparator}models`,
-              name: 'Models',
-              indent: 1,
-              count: modelCount,
-              type: 'models-category',
-              connection,
-            })
-            
-            // Refresh button
-            list.push({
-              id: `${name}${KeySeparator}refresh`,
-              name: 'Refresh Connection',
+              id: `${name}-model`,
+              name: 'Model',
               indent: 1,
               count: 0,
-              type: 'refresh-connection',
+              type: 'model',
               connection,
             })
+                
             
             // Loading indicator
             if (isLoading.value[name]) {
@@ -235,19 +226,6 @@
               })
             }
             
-            // List available models if any
-            if (connection.availableModels && connection.availableModels.length > 0) {
-              connection.availableModels.forEach((model: string) => {
-                list.push({
-                  id: `${name}${KeySeparator}${model}`,
-                  name: model,
-                  indent: 2,
-                  count: 0,
-                  type: 'model',
-                  connection,
-                })
-              })
-            }
           }
         })
         
@@ -266,6 +244,7 @@
         collapsed,
         saveConnections,
         updateApiKey,
+        updateModel,
         refreshId,
         rightSplit,
       }
@@ -280,12 +259,12 @@
     },
     methods: {
       resetConnection(connection: LLMProvider) {
-        return this.llmConnectionStore.resetConnection(connection.constructor.name)
+        return this.llmConnectionStore.resetConnection(connection.name)
       },
       
       setActiveConnection(connectionName: string) {
-        // Could emit an event or use another mechanism to set active connection
-        this.$emit('update:activeConnectionKey', connectionName)
+        console.log('set active llm connection')
+        this.llmConnectionStore.activeConnection=connectionName
       }
     },
     computed: {

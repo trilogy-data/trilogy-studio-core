@@ -32,7 +32,9 @@ def truncate_to_last_semicolon(text):
         return text  # Return original string if no semicolon is found
 
 
-def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> ValidateResponse:
+def get_diagnostics(
+    doctext: str, sources: List[ModelSourceInSchema]
+) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
 
@@ -76,6 +78,7 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
             completions.append(
                 CompletionItem(
                     label=k,
+                    datatype=str(v.datatype),
                     description=v.metadata.description,
                     type="concept",
                     insertText=k,
@@ -94,6 +97,7 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
                 completions.append(
                     CompletionItem(
                         label=k,
+                        datatype=str(v.datatype),
                         description=v.metadata.description,
                         type="concept",
                         insertText=k,

@@ -4,17 +4,17 @@
       <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="setTab('results')">
         Results ({{ results.data.length }})
       </button>
-      <button class="tab-button" v-if="type === 'trilogy'" :class="{ active: activeTab === 'visualize' }"
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'visualize' }"
         @click="setTab('visualize')">
         Visualize
       </button>
-      <button class="tab-button" v-if="type === 'trilogy'" :class="{ active: activeTab === 'sql' }"
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'sql' }"
         @click="setTab('sql')">
         Generated SQL
       </button>
     </div>
     <div class="tab-content">
-      <div v-if="activeTab === 'visualize' && type === 'trilogy'" class="sql-view">
+      <div v-if="activeTab === 'visualize'" class="sql-view">
         <vega-lite-chart :data="results.data" :columns="results.headers" />
       </div>
       <div v-else-if="activeTab === 'sql'" class="sql-view">

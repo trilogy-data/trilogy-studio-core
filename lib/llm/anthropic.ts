@@ -19,7 +19,7 @@ export class AnthropicProvider extends LLMProvider {
           // 'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: options.model,
+          model: this.model,
           messages: [{ role: 'user', content: options.prompt }],
           max_tokens: options.maxTokens || 1000,
           temperature: options.temperature || 0.7,
@@ -35,7 +35,6 @@ export class AnthropicProvider extends LLMProvider {
   
       return {
         text: data.content[0].text,
-        model: data.model,
         usage: {
           promptTokens: data.usage.input_tokens,
           completionTokens: data.usage.output_tokens,

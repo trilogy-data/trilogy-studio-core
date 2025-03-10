@@ -1,129 +1,97 @@
 <template>
-  <div class="llm-chat-container">
-    <div class="connection-controls">
-      <div class="provider-selector">
-        <label for="provider-select">Provider:</label>
-        <select id="provider-select" v-model="selectedProvider">
-          <option v-for="provider in availableProviders" :key="provider" :value="provider">
-            {{ provider }} 
-            <span v-if="getConnectionStatus(provider)">
-              ({{ getConnectionStatus(provider) }})
-            </span>
-          </option>
-        </select>
-        <span class="status-indicator" :class="getConnectionStatus(selectedProvider)"></span>
-      </div>
-
-      <div class="model-selector">
-        <label for="model-select">Model:</label>
-        <select id="model-select" v-model="selectedModel">
-          <option v-for="model in availableModels" :key="model" :value="model">{{ model }}</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="parameters-container" v-if="showAdvancedOptions">
-      <div class="parameter">
-        <label for="temperature">Temperature:</label>
-        <input 
-          id="temperature" 
-          type="range" 
-          v-model.number="temperature" 
-          min="0" 
-          max="1" 
-          step="0.1"
-        />
-        <span>{{ temperature }}</span>
-      </div>
-      
-      <div class="parameter">
-        <label for="max-tokens">Max Tokens:</label>
-        <input 
-          id="max-tokens" 
-          type="number" 
-          v-model.number="maxTokens" 
-          min="1" 
-          max="4096"
-        />
-      </div>
-      
-      <div class="parameter">
-        <label for="top-p">Top P:</label>
-        <input 
-          id="top-p" 
-          type="range" 
-          v-model.number="topP" 
-          min="0" 
-          max="1" 
-          step="0.1"
-        />
-        <span>{{ topP }}</span>
-      </div>
-    </div>
-
-    <div class="toggle-options">
-      <button @click="showAdvancedOptions = !showAdvancedOptions">
-        {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
-      </button>
-    </div>
-
-    <div class="chat-messages" ref="messagesContainer">
-      <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
-        <div class="message-header">
-          <strong>{{ message.role === 'user' ? 'You' : 'AI' }}</strong>
-          <span v-if="message.role === 'assistant' && message.modelInfo" class="model-info">
-            {{ message.modelInfo.model }} ({{ message.modelInfo.totalTokens }} tokens)
-          </span>
+  <div class="debug-container">
+    <!-- Left side: LLM Chat -->
+    <div class="llm-chat-container">
+      <div class="section-header">LLM Validation <span class="text-faint text-small">Test that your LLM connection
+          will deliver acceptable experience.</span></div>
+      <div class="connection-controls">
+        <div class="provider-selector">
+          <label for="provider-select">Provider:</label>
+          <select id="provider-select" v-model="selectedProvider">
+            <option v-for="provider in availableProviders" :key="provider" :value="provider">
+              {{ provider }}
+              <span v-if="getConnectionStatus(provider)">
+                ({{ getConnectionStatus(provider) }})
+              </span>
+            </option>
+          </select>
+          <span class="status-indicator" :class="getConnectionStatus(selectedProvider)"></span>
         </div>
-        <div class="message-content">{{ message.content }}</div>
+      </div>
+
+      <div class="chat-messages" ref="messagesContainer">
+        <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
+          <div class="message-header">
+            <strong>{{ message.role === 'user' ? 'You' : 'AI' }}</strong>
+            <span v-if="message.role === 'assistant' && message.modelInfo" class="model-info">
+              {{ message.modelInfo.totalTokens }} tokens
+            </span>
+          </div>
+          <div class="message-content">{{ message.content }}</div>
+          <div v-if="message.testResult" :class="['test-result', message.testResult.passed ? 'passed' : 'failed']">
+            Test: {{ message.testResult.passed ? 'PASSED ✓' : 'FAILED ✗' }}
+            <div v-if="!message.testResult.passed" class="failure-reason">
+              {{ message.testResult.reason }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <textarea v-model="userInput" @keydown.enter.ctrl="sendPrompt"
+          placeholder="Type your message here... (Ctrl+Enter to send)" :disabled="isLoading || !isProviderSelected">
+        </textarea>
+        <button @click="sendPrompt" :disabled="isLoading || !userInput.trim() || !isProviderSelected">
+          {{ isLoading ? 'Sending...' : 'Send' }}
+        </button>
+      </div>
+
+      <div v-if="error" class="error-message">
+        {{ error }}
       </div>
     </div>
 
-    <div class="input-container">
-      <textarea 
-        v-model="userInput" 
-        @keydown.enter.ctrl="sendPrompt"
-        placeholder="Type your message here... (Ctrl+Enter to send)"
-        :disabled="isLoading || !isProviderSelected"
-      ></textarea>
-      <button 
-        @click="sendPrompt" 
-        :disabled="isLoading || !userInput.trim() || !isProviderSelected"
-      >
-        {{ isLoading ? 'Sending...' : 'Send' }}
-      </button>
-    </div>
+    <!-- Right side: Scenarios -->
+    <div class="scenarios-container">
+      <div class="section-header">Test Scenarios <span class="pass-indicator text-small"
+          v-if="Object.values(scenarioResults).length == scenarios.length && Object.values(scenarioResults).every(v => v?.passed)">✓ All passed, LLM integration should meet
+          expectations!</span></div>
 
-    <div v-if="error" class="error-message">
-      {{ error }}
+      <div class="scenarios-list">
+        <div v-for="(scenario, index) in scenarios" :key="index"
+          :class="['scenario-item', { 'passed': scenarioResults[index]?.passed }]" @click="runScenario(index)">
+          <div class="scenario-name">{{ scenario.name }}</div>
+          <div class="scenario-description">{{ scenario.description }}</div>
+          <div v-if="scenarioResults[index]" class="scenario-result-indicator">
+            <span v-if="scenarioResults[index].passed" class="pass-indicator">✓</span>
+            <span v-else class="fail-indicator">✗</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, nextTick, watch, inject } from 'vue';
-import type { LLMRequestOptions, LLMResponse } from '../llm'; // Adjust path as needed
-import type { LLMConnectionStoreType } from '../stores/llmStore'; // Adjust path as needed
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm';
+import type { LLMConnectionStoreType } from '../stores/llmStore';
+import testCases from '../llm/data/testCases';
+import type { TestScenario } from '../llm/data/testCases'
+// This interface would normally be imported
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  modelInfo?: {
-    model: string;
-    totalTokens: number;
-  };
+interface TestResult {
+  passed: boolean;
+  reason?: string;
 }
 
-// Provider model mapping - could be moved to a configuration file
-const providerModels: Record<string, string[]> = {
-  'AnthropicProvider': ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-  'OpenAIProvider': ['gpt-4', 'gpt-3.5-turbo'],
-  'MistralProvider': ['mistral-large', 'mistral-medium', 'mistral-small']
-};
+interface MessageWithTest extends LLMMessage {
+  testResult?: TestResult;
+}
 
 export default defineComponent({
-  name: 'LLMChatComponent',
-  
+  name: 'LLMChatDebugComponent',
+
   props: {
     initialProvider: {
       type: String,
@@ -134,54 +102,36 @@ export default defineComponent({
       default: ''
     }
   },
-  
-  setup(props, ) {
+
+  setup(props) {
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType;
-    
+
     // Chat state
-    const messages = ref<ChatMessage[]>([]);
+    const messages = ref<MessageWithTest[]>([]);
     const userInput = ref('');
     const isLoading = ref(false);
     const error = ref('');
     const messagesContainer = ref<HTMLElement | null>(null);
-    
+    const scenarioResults = ref<(TestResult | null)[]>([]);
+
     // Connection state
-    const selectedProvider = ref(props.initialProvider || '');
-    const selectedModel = ref(props.initialModel || '');
-    
-    // Advanced options
-    const showAdvancedOptions = ref(false);
-    const temperature = ref(0.7);
-    const maxTokens = ref(1024);
-    const topP = ref(1.0);
-    
+    const selectedProvider = ref(Object.keys(llmConnectionStore.connections).length > 0
+      ? Object.keys(llmConnectionStore.connections)[0]
+      : '');
+
+    // Sample test scenarios - would normally be imported
+    const scenarios = ref<TestScenario[]>(testCases);
+
     // Computed properties
     const availableProviders = computed(() => {
       return Object.keys(llmConnectionStore.connections);
     });
-    
-    const availableModels = computed(() => {
-      if (!selectedProvider.value) return [];
-      return providerModels[selectedProvider.value] || [];
-    });
-    
+
     const isProviderSelected = computed(() => {
       return !!selectedProvider.value && llmConnectionStore.getConnection(selectedProvider.value) !== null;
     });
-    
-    // When provider changes, select the first model in that provider's list
-    watch(selectedProvider, (newProvider) => {
-      if (newProvider && providerModels[newProvider] && providerModels[newProvider].length > 0) {
-        selectedModel.value = providerModels[newProvider][0];
-      } else {
-        selectedModel.value = '';
-      }
-      
-      // Reset error when changing providers
-      error.value = '';
-    });
-    
+
     // Scroll to bottom when messages are updated
     watch(messages, () => {
       nextTick(() => {
@@ -190,47 +140,104 @@ export default defineComponent({
         }
       });
     });
-    
+
     // Get the connection status for display
     const getConnectionStatus = (providerName: string) => {
-      if (!providerName) return 'disabled';
+      if (!providerName) return 'disconnected';
       return llmConnectionStore.getConnectionStatus(providerName);
     };
-    
+
+    // Evaluate if the AI response meets the test criteria
+    const evaluateResponse = (response: string, criteria: TestScenario['expectedResponse']): TestResult => {
+      const result: TestResult = { passed: true };
+
+      // Check for required phrases
+      if (criteria.contains) {
+        for (const phrase of criteria.contains) {
+          if (!response.toLowerCase().includes(phrase.toLowerCase())) {
+            result.passed = false;
+            result.reason = `Response missing expected phrase: "${phrase}"`;
+            return result;
+          }
+        }
+      }
+
+      // Check for forbidden phrases
+      if (criteria.notContains) {
+        for (const phrase of criteria.notContains) {
+          if (response.toLowerCase().includes(phrase.toLowerCase())) {
+            result.passed = false;
+            result.reason = `Response contains forbidden phrase: "${phrase}"`;
+            return result;
+          }
+        }
+      }
+
+      // Check for required issue identification
+      if (criteria.mustIdentify) {
+        const lowerResponse = response.toLowerCase();
+        const mustIdentify = criteria.mustIdentify.toLowerCase();
+
+        if (!lowerResponse.includes(mustIdentify)) {
+          // Check for synonyms or related phrases
+          const identified = checkForIssueSynonyms(lowerResponse, mustIdentify);
+
+          if (!identified) {
+            result.passed = false;
+            result.reason = `Response did not identify the issue: "${criteria.mustIdentify}"`;
+            return result;
+          }
+        }
+      }
+
+      return result;
+    };
+
+    // Helper function to check for synonyms or related phrases
+    const checkForIssueSynonyms = (response: string, issue: string): boolean => {
+      // Simple implementation - in a real scenario this would be more sophisticated
+      const synonymMap: Record<string, string[]> = {
+        "missing index": ["no index", "should create index", "index would improve", "needs an index"],
+        "n+1 query problem": ["multiple queries", "separate queries", "query for each", "batch fetch"],
+        "function in where clause": ["non-sargable", "can't use index", "prevents index", "function on column"]
+      };
+
+      if (issue in synonymMap) {
+        return synonymMap[issue].some(synonym => response.includes(synonym));
+      }
+
+      return false;
+    };
+
     const sendPrompt = async () => {
       if (!userInput.value.trim() || isLoading.value || !selectedProvider.value) return;
-      
+
       // Add user message
       messages.value.push({
         role: 'user',
         content: userInput.value
       });
-      
+
       const prompt = userInput.value;
       userInput.value = ''; // Clear input field
       isLoading.value = true;
       error.value = '';
-      
+
       try {
         const options: LLMRequestOptions = {
           prompt,
-          model: selectedModel.value,
-          maxTokens: maxTokens.value,
-          temperature: temperature.value,
-          topP: topP.value
         };
-        
+
         const response: LLMResponse = await llmConnectionStore.generateCompletion(
-          selectedProvider.value, 
+          selectedProvider.value,
           options
         );
-        
+
         // Add AI response
         messages.value.push({
           role: 'assistant',
           content: response.text,
           modelInfo: {
-            model: response.model,
             totalTokens: response.usage.totalTokens
           }
         });
@@ -240,71 +247,198 @@ export default defineComponent({
         isLoading.value = false;
       }
     };
-    
+
+    const runScenario = async (index: number) => {
+      if (isLoading.value || !selectedProvider.value) return;
+
+      const scenario = scenarios.value[index];
+
+      // Clear existing messages
+      messages.value = [];
+
+      // Add test description message
+      messages.value.push({
+        role: 'user',
+        content: `RUNNING TEST: ${scenario.name}\n\n${scenario.prompt}`
+      });
+
+      isLoading.value = true;
+      error.value = '';
+
+      try {
+        const options: LLMRequestOptions = {
+          prompt: scenario.prompt,
+        };
+
+        const response: LLMResponse = await llmConnectionStore.generateCompletion(
+          selectedProvider.value,
+          options
+        );
+
+        // Evaluate the response
+        const testResult = evaluateResponse(response.text, scenario.expectedResponse);
+
+        // Update scenario results
+        scenarioResults.value[index] = testResult;
+
+        // Add AI response with test results
+        messages.value.push({
+          role: 'assistant',
+          content: response.text,
+          modelInfo: {
+            totalTokens: response.usage.totalTokens
+          },
+          testResult: testResult
+        });
+
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : 'An unknown error occurred';
+
+        // Update scenario result for failure
+        scenarioResults.value[index] = {
+          passed: false,
+          reason: `Error: ${error.value}`
+        };
+
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
     // Initialize providers list on mount if none are available
     onMounted(() => {
       if (availableProviders.value.length === 0) {
         error.value = 'No LLM providers available. Please configure providers in settings.';
       }
     });
-    
+
     return {
       messages,
       userInput,
       isLoading,
       error,
       selectedProvider,
-      selectedModel,
       availableProviders,
-      availableModels,
       isProviderSelected,
-      showAdvancedOptions,
-      temperature,
-      maxTokens,
-      topP,
       messagesContainer,
       getConnectionStatus,
-      sendPrompt
+      sendPrompt,
+      scenarios,
+      runScenario,
+      scenarioResults
     };
   }
 });
 </script>
 
 <style scoped>
+.debug-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.section-header {
+  font-size: 1.2em;
+  font-weight: bold;
+  padding: 10px;
+  background-color: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.text-small {
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
 .llm-chat-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  width: 60%;
+  border: 1px solid var(--border-color);
   overflow: hidden;
+}
+
+.scenarios-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 40%;
+  border-right: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.scenarios-list {
+  overflow-y: auto;
+  height: 100%;
+}
+
+.scenario-item {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.scenario-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.scenario-item.passed {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.scenario-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.scenario-description {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.scenario-result-indicator {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 1.2em;
+}
+
+.pass-indicator {
+  color: #4CAF50;
+}
+
+.fail-indicator {
+  color: #F44336;
 }
 
 .connection-controls {
   display: flex;
   flex-wrap: wrap;
   padding: 10px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
   gap: 15px;
 }
 
-.provider-selector, .model-selector {
+.provider-selector {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.provider-selector label, .model-selector label {
+.provider-selector label {
   font-weight: bold;
 }
 
-.provider-selector select, .model-selector select {
+.provider-selector select {
   padding: 5px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
 }
 
 .status-indicator {
@@ -316,49 +450,15 @@ export default defineComponent({
 }
 
 .status-indicator.connected {
-  background-color: #4caf50;
+  background-color: #4CAF50;
 }
 
-.status-indicator.running {
-  background-color: #2196f3;
+.status-indicator.connecting {
+  background-color: #FFC107;
 }
 
-.status-indicator.failed {
-  background-color: #f44336;
-}
-
-.status-indicator.disabled {
-  background-color: #9e9e9e;
-}
-
-.parameters-container {
-  padding: 10px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.parameter {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.toggle-options {
-  padding: 5px 10px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.toggle-options button {
-  background: none;
-  border: none;
-  color: #2c3e50;
-  cursor: pointer;
-  font-size: 0.9em;
-  text-decoration: underline;
+.status-indicator.disconnected {
+  background-color: #F44336;
 }
 
 .chat-messages {
@@ -368,7 +468,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background-color: #f9f9f9;
+  background-color: var(--editor-bg);
 }
 
 .message {
@@ -380,14 +480,14 @@ export default defineComponent({
 
 .message.user {
   align-self: flex-end;
-  background-color: #e3f2fd;
-  border: 1px solid #bbdefb;
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
 }
 
 .message.assistant {
   align-self: flex-start;
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
 }
 
 .message-header {
@@ -399,21 +499,48 @@ export default defineComponent({
 
 .model-info {
   font-size: 0.8em;
-  color: #757575;
+}
+
+.message-content {
+  margin-bottom: 8px;
+}
+
+.test-result {
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.test-result.passed {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #2E7D32;
+}
+
+.test-result.failed {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #C62828;
+}
+
+.failure-reason {
+  font-weight: normal;
+  font-size: 0.9em;
+  margin-top: 5px;
 }
 
 .input-container {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #e0e0e0;
-  background-color: #ffffff;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--editor-bg);
 }
 
 .input-container textarea {
   flex-grow: 1;
   min-height: 60px;
   padding: 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   resize: vertical;
   font-family: inherit;
@@ -423,9 +550,9 @@ export default defineComponent({
   margin-left: 10px;
   padding: 0 15px;
   background-color: #2196f3;
-  color: white;
   border: none;
   border-radius: 4px;
+  color: var(--button-bg-color);
   cursor: pointer;
   transition: background-color 0.2s;
 }

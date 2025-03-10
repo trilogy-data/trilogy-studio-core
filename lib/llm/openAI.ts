@@ -1,21 +1,51 @@
 import { LLMProvider } from './base';
-import type { LLMRequestOptions, LLMResponse } from './base';
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base';
 
 
 export class OpenAIProvider extends LLMProvider {
-  private baseUrl: string = 'https://api.openai.com/v1/chat/completions'
+  private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
+  private baseModelUrl: string = 'https://api.openai.com/v1/models'
   public models: string[]
   public type: string = 'openai'
-  
-  constructor(name: string,  apiKey: string, model:string) {
+
+  constructor(name: string, apiKey: string, model: string) {
     super(name, apiKey, model)
-    this.models = ['o3-mini']
+    this.models = []
   }
 
-  async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {
-    this.validateRequestOptions(options)
+  async reset(): Promise<void> {
+    try {
+      let models = await fetch(this.baseModelUrl, {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        method: 'GET',
+      }).then((response) => response.json())
+      this.models = models.data.map((model: any) => model.id)
+      this.connected = true
+    }
+    catch (e) {
+      if (e instanceof Error) {
+        this.error = e.message
+      }
+      else {
+        this.error = 'Unknown error'
+      }
+      this.connected = false
+    }
+  }
 
-    const response = await fetch(this.baseUrl, {
+  async generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null = null): Promise<LLMResponse> {
+    this.validateRequestOptions(options)
+    let messages: LLMMessage[] = []
+    if (history) {
+      messages = [...history, { role: 'user', content: options.prompt }]
+    }
+    else {
+      messages = [{ role: 'user', content: options.prompt }]
+    }
+
+    const response = await fetch(this.baseCompletionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,10 +53,10 @@ export class OpenAIProvider extends LLMProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        messages: [{ role: 'user', content: options.prompt }],
-        max_tokens: options.maxTokens || 1000,
-        temperature: options.temperature || 0.7,
-        top_p: options.topP || 1.0,
+        messages: messages,
+        // max_completion_tokens: options.maxTokens || 1000,
+        // temperature: options.temperature || 0.4,
+        // top_p: options.topP || 1.0,
       }),
     })
 
@@ -38,7 +68,6 @@ export class OpenAIProvider extends LLMProvider {
 
     return {
       text: data.choices[0].message.content,
-      model: data.model,
       usage: {
         promptTokens: data.usage.prompt_tokens,
         completionTokens: data.usage.completion_tokens,

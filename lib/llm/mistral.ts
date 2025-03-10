@@ -15,7 +15,7 @@ export class MistralProvider extends LLMProvider {
     try {
       // Map our generic request options to Mistral API format
       const requestBody = {
-        model: options.model,
+        model: this.model,
         messages: [
           { role: 'user', content: options.prompt }
         ],
@@ -44,7 +44,6 @@ export class MistralProvider extends LLMProvider {
       // Map Mistral response to our generic LLMResponse format
       return {
         text: data.choices[0].message.content,
-        model: options.model,
         usage: {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,

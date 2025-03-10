@@ -8,12 +8,14 @@
 import { computed, inject } from 'vue'
 import LoadingButton from './LoadingButton.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
 
 interface RefreshButtonProps {
   connection: {
     name: string
     connected: boolean
   }
+  type?: string,
   isConnected?: boolean
 }
 
@@ -21,8 +23,14 @@ const props = defineProps<RefreshButtonProps>()
 const emit = defineEmits<{
   (e: 'refresh', connectionName: string): void
 }>()
+let connectionStore: ConnectionStoreType | LLMConnectionStoreType | undefined
+if (props.type === 'llm') {
+  connectionStore = inject<ConnectionStoreType>('llmConnectionStore')
+}
+else {
+  connectionStore = inject<ConnectionStoreType>('connectionStore')
+}
 
-const connectionStore = inject<ConnectionStoreType>('connectionStore')
 if (!connectionStore) {
   throw new Error('Connection store is not provided!')
 }
@@ -32,8 +40,10 @@ const buttonIcon = computed(() =>
 )
 
 const handleRefresh = async () => {
+  console.log('resetting')
   try {
     await connectionStore.resetConnection(props.connection.name)
+    console.log('reset')
     emit('refresh', props.connection.name)
   } catch (error) {
     console.error('Refresh failed:', error)

@@ -76,6 +76,7 @@
         v-if="item.type === 'connection'"
         :connection="item.connection"
         :is-connected="item.connection.connected"
+
       />
 
       <!-- Status Indicator -->
@@ -127,7 +128,9 @@ const isExpandable = computed(() => ['connection', 'database', 'table'].includes
 
 // Click handler for item expansion/toggling
 const handleItemClick = () => {
+  console.log('click')
   if (isExpandable.value) {
+    console.log('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
 }

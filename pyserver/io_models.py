@@ -125,6 +125,7 @@ class ValidateItem(BaseModel):
 class CompletionItem(BaseModel):
     label: str
     type: str
+    datatype:str
     insertText: str
     description: str | None = None
 

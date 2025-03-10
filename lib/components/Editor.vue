@@ -9,23 +9,12 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input
-              v-else
-              ref="nameInput"
-              v-model="editableName"
-              @blur="finishEditing"
-              @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing"
-              class="name-input"
-              type="text"
-            />
+            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing" class="name-input" type="text" />
           </div>
           <div class="toggle-group">
-            <button
-              class="toggle-button tag-inactive"
-              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-              @click="toggleTag()"
-            >
+            <button class="toggle-button tag-inactive" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+              @click="toggleTag()">
               {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
             </button>
             <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
@@ -36,20 +25,10 @@
         </div>
         <div class="menu-actions">
           <button class="action-item" @click="$emit('save-editors')">Save</button>
+          <loading-button v-if="!(editorData.type === 'sql')" :useDefaultStyle="false" class="action-item"
+            :action="validateQuery">Parse</loading-button>
 
-          <loading-button
-            v-if="editorData.type === 'trilogy'"
-            :useDefaultStyle="false"
-            class="action-item"
-            :action="validateQuery"
-            >Parse</loading-button
-          >
-
-          <button
-            @click="() => runQuery()"
-            class="action-item"
-            :class="{ 'button-cancel': editorData.loading }"
-          >
+          <button @click="() => runQuery()" class="action-item" :class="{ 'button-cancel': editorData.loading }">
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
@@ -97,6 +76,7 @@
   padding: 0.25rem;
   justify-content: space-between;
   padding-right: 0.5rem;
+  min-height: 40px;
 }
 
 .menu-actions {
@@ -189,12 +169,14 @@
 <script lang="ts">
 import { defineComponent, inject } from 'vue'
 
-import { editor, KeyMod, KeyCode } from 'monaco-editor'
+import { editor, KeyMod, KeyCode, } from 'monaco-editor'
+import type { IRange } from 'monaco-editor';
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
+import type { LLMConnectionStoreType } from '../stores/llmStore.ts'
 import { Results, ColumnType } from '../editors/results'
 
 import AxiosResolver from '../stores/resolver'
@@ -205,6 +187,48 @@ import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
+
+function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): string {
+  const selected = editor.getSelection()
+  let text =
+    selected &&
+      !(
+        selected.startColumn === selected.endColumn &&
+        selected.startLineNumber === selected.endLineNumber
+      )
+      ? (editor.getModel()?.getValueInRange(selected) as string)
+      : editor.getValue()
+  // hack for mobile? getValue not returning values
+  if (!text) {
+    text = fallback
+  }
+  return text
+}
+
+function getEditorRange(editor: editor.IStandaloneCodeEditor): IRange {
+  const selection = editor.getSelection();
+
+  // Check if there's a valid selection (not just a cursor position)
+  if (selection &&
+    !(selection.startColumn === selection.endColumn &&
+      selection.startLineNumber === selection.endLineNumber)) {
+    // Return the selected range
+    return {
+      startLineNumber: selection.startLineNumber,
+      startColumn: selection.startColumn,
+      endLineNumber: selection.endLineNumber,
+      endColumn: selection.endColumn
+    };
+  } else {
+    // No selection, return a range representing the start of the editor
+    return {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 1,
+      endColumn: 1
+    };
+  }
+}
 
 export default defineComponent({
   name: 'Editor',
@@ -236,6 +260,7 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
+    const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore) {
@@ -245,6 +270,7 @@ export default defineComponent({
     return {
       connectionStore,
       modelStore,
+      llmStore,
       editorStore,
       trilogyResolver,
       EditorTag,
@@ -295,6 +321,17 @@ export default defineComponent({
 
   methods: {
     toggleTag() {
+      let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
+      
+      if (!isSource) {
+        let model = this.connectionStore.connections[this.editorData.connection].model
+        console.log('model')
+        if (model) {
+          console.log('pushing new model source')
+          this.modelStore.models[model].addModelSourceSimple(this.editorData.name, this.editorData.name)
+        }
+
+      }
       this.editorData.tags = this.editorData.tags.includes(EditorTag.SOURCE)
         ? this.editorData.tags.filter((tag) => tag !== EditorTag.SOURCE)
         : [...this.editorData.tags, EditorTag.SOURCE]
@@ -341,9 +378,9 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
@@ -405,9 +442,9 @@ export default defineComponent({
         this.editorData.loading = true
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor].contents,
+          }))
           : []
         try {
           await this.validateQuery(false, sources)
@@ -417,19 +454,7 @@ export default defineComponent({
         // Prepare sources if model exists
 
         // Get selected text or full content
-        const selected = editor.getSelection()
-        let text =
-          selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
-            ? (editor.getModel()?.getValueInRange(selected) as string)
-            : editor.getValue()
-        // hack for mobile? getValue not returning values
-        if (!text) {
-          text = this.editorData.contents
-        }
+        let text = getEditorText(editor, this.editorData.contents)
         if (!text) {
           this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
           return
@@ -574,13 +599,42 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
         this.runQuery()
       })
-      // if (this.genAICallback) {
-      //   editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
-      //     if (!this.loading) {
-      //       this.genAICallback(editorItem.getValue())
-      //     }
-      //   })
-      // }
+      if (this.editorData.type !== 'sql') {
+        console.log('adding AI AUTOCOMPLETE!')
+        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, async () => {
+          console.log('running AI AUTOCOMPLETE!')
+          console.log(this.llmStore)
+
+          if (!this.loading && this.llmStore) {
+            this.editorData.loading = true
+            console.log('past validation')
+            await this.validateQuery(false)
+            let text = getEditorText(editorItem, this.editorData.contents)
+            // run our async call
+            let concepts = this.editorData.completionSymbols.map((item) => ({ name: item.label, type: item.datatype }))
+            console.log(concepts)
+            Promise.all([this.llmStore.generateQueryCompletion(text, concepts)]).then((results) => {
+              let query = results[0]
+              console.log(query)
+              if (query) {
+                let op = { range: getEditorRange(editorItem), text: query, forceMoveMarkers: true }
+                editorItem.executeEdits('gen-ai-prompt-shortcut', [op])
+              }
+              else {
+                throw new Error('LLM could not successfully generate query.')
+              }
+
+            }).catch((error) => {
+              this.editorData.setError(error);
+              throw error
+            }
+            ).finally(() => {
+              this.editorData.loading = false
+            })
+
+          }
+        })
+      }
       // if (this.formatTextCallback) {
       //     editor.addAction({
       //         id: 'format-preql',

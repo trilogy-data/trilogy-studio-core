@@ -1,11 +1,18 @@
 import { defineStore } from 'pinia'
 import { LLMProvider } from '../llm'
-import type { LLMResponse, LLMRequestOptions} from '../llm'
-import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
+import type { LLMRequestOptions, LLMMessage, ModelConceptInput } from '../llm'
+import { AnthropicProvider, OpenAIProvider, MistralProvider, createPrompt } from '../llm'
+
+const extractLastTripleQuotedText = (input: string): string | null => {
+  // Use the 's' flag (dotAll) to make the dot match newlines as well
+  const matches = input.match(/"""([\s\S]*?)"""/gs);
+  return matches ? matches[matches.length - 1].slice(3, -3) : null;
+};
 
 const useLLMConnectionStore = defineStore('llmConnections', {
   state: () => ({
     connections: {} as Record<string, LLMProvider>,
+    activeConnection: '' as String | null,
   }),
 
   actions: {
@@ -15,26 +22,25 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       this.connections[name] = connection
       return connection
     },
-    
+
+
     resetConnection(name: string) {
       if (this.connections[name]) {
-        // Implement reset functionality if needed
-        // This would depend on your LLMProvider implementation
-        return Promise.resolve(this.connections[name])
+        return this.connections[name].reset()
       } else {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
     },
-    
+
     connectionStateToStatus(connection: LLMProvider | null) {
       if (!connection) {
         return 'disabled'
       }
-      
+
       // You may need to extend LLMProvider to include these properties
       // or use a different approach to determine status
       const connectionState = connection as any
-      
+
       if (connectionState.error) {
         return 'failed'
       }
@@ -46,12 +52,12 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         return 'disabled'
       }
     },
-    
+
     newConnection(name: string, type: string, options: Record<string, any>) {
       if (this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" already exists.`)
       }
-      
+
       if (type === 'anthropic') {
         this.connections[name] = new AnthropicProvider(name, options.apiKey, options.model)
       } else if (type === 'openai') {
@@ -61,33 +67,44 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
-      
+
       return this.connections[name]
     },
-    
-    async generateCompletion(name: string, options: LLMRequestOptions) {
+
+    async generateQueryCompletion(inputString: string, concepts: ModelConceptInput[]) {
+      if (!this.activeConnection) {
+        throw new Error('No active LLM connection')
+      }
+      let raw = await this.generateCompletion(this.activeConnection, { prompt: createPrompt(inputString, concepts) })
+      console.log(raw)
+      console.log(raw.text)
+      return extractLastTripleQuotedText(raw.text)
+    },
+
+    async generateCompletion(name: string, options: LLMRequestOptions, history: [LLMMessage] | null = null) {
+
       if (!this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
-      
-      return await this.connections[name].generateCompletion(options)
+
+      return await this.connections[name].generateCompletion(options, history)
     }
   },
-  
+
   getters: {
     getConnection: (state) => {
       return (name: string) => state.connections[name] || null
     },
-    
+
     getAllConnections: (state) => {
       return Object.values(state.connections)
     },
-    
+
     getConnectionStatus: (state) => {
       return (name: string) => {
         const connection = state.connections[name]
         if (!connection) return 'disabled'
-        
+
         const connectionState = connection as any
         if (connectionState.error) return 'failed'
         if (connectionState.running) return 'running'

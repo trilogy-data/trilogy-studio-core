@@ -5,13 +5,13 @@
       <div v-if="visible" class="absolute-form">
         <form @submit.prevent="submitConnectionCreation">
           <div>
-            <label for="connection-name">Name</label>
-            <input type="text" v-model="connectionDetails.name" id="connection-name" required />
+            <label for="llm-connection-name">Name</label>
+            <input type="text" v-model="connectionDetails.name" id="llm-connection-name" required />
           </div>
   
           <div>
-            <label for="provider-type">Provider</label>
-            <select v-model="connectionDetails.type" id="provider-type" required>
+            <label for="llm-provider-type">Provider</label>
+            <select v-model="connectionDetails.type" id="llm-provider-type" required>
               <option value="openai">OpenAI</option>
               <option value="anthropic">Anthropic</option>
               <option value="cohere">Cohere</option>
@@ -21,57 +21,15 @@
   
           <!-- Dynamic Fields Based on Provider Type -->
           <div>
-            <label for="api-key">API Key</label>
+            <label for="llm-api-key">API Key</label>
             <input
               type="password"
               v-model="connectionDetails.options.apiKey"
-              id="api-key"
+              id="llm-api-key"
               placeholder="API Key"
               required
             />
           </div>
-  
-          <!-- OpenAI specific options -->
-          <div v-if="connectionDetails.type === 'openai'">
-            <label for="openai-model">Model</label>
-            <select v-model="connectionDetails.options.defaultModel" id="openai-model">
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              <option value="gpt-3o-mini">GPT-3o Mini</option>
-            </select>
-          </div>
-  
-          <!-- Anthropic specific options -->
-          <div v-if="connectionDetails.type === 'anthropic'">
-            <label for="anthropic-model">Model</label>
-            <select v-model="connectionDetails.options.defaultModel" id="anthropic-model">
-              <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-              <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-              <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-            </select>
-          </div>
-  
-          <!-- Cohere specific options -->
-          <div v-if="connectionDetails.type === 'cohere'">
-            <label for="cohere-model">Model</label>
-            <select v-model="connectionDetails.options.defaultModel" id="cohere-model">
-              <option value="command">Command</option>
-              <option value="command-light">Command Light</option>
-              <option value="command-r">Command R</option>
-            </select>
-          </div>
-  
-          <!-- Mistral AI specific options -->
-          <div v-if="connectionDetails.type === 'mistral'">
-            <label for="mistral-model">Model</label>
-            <select v-model="connectionDetails.options.defaultModel" id="mistral-model">
-              <option value="mistral-large-latest">Mistral Large</option>
-              <option value="mistral-medium-latest">Mistral Medium</option>
-              <option value="mistral-small-latest">Mistral Small</option>
-            </select>
-          </div>
-  
           <div>
             <label for="save-credential">Save Credential?</label>
             <input

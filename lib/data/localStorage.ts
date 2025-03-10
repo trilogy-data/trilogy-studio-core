@@ -128,14 +128,14 @@ export default class LocalStorage extends AbstractStorage {
 
   // model config storage
 
-  loadModelConfig(): Record<string, ModelConfig> {
+  async loadModelConfig(): Promise<Record<string, ModelConfig>> {
     const storedData = localStorage.getItem(this.modelStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
     return raw.map((modelConfig: ModelConfig) => reactive(ModelConfig.fromJSON(modelConfig)))
   }
 
-  saveModelConfig(modelConfig: ModelConfig[]): void {
-    const current = this.loadModelConfig()
+  async saveModelConfig(modelConfig: ModelConfig[]): Promise<void> {
+    const current = await this.loadModelConfig()
     modelConfig.forEach((model) => {
       if (model.changed) {
         current[model.name] = model
@@ -164,6 +164,7 @@ export default class LocalStorage extends AbstractStorage {
   saveLLMConnections(
     connections: Array<OpenAIProvider | AnthropicProvider | MistralProvider>,
   ): void {
+    console.log('saving connections', connections)
     localStorage.setItem(this.llmConnectionStorageKey, JSON.stringify(connections.map((connection)=>connection.toJSON())))
   }
 
