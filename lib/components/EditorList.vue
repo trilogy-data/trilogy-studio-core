@@ -71,7 +71,6 @@
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
-
     </div>
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
@@ -225,11 +224,11 @@ export default {
   data() {
     return {
       showDeleteConfirmationState: false,
-      editorToDelete: null
+      editorToDelete: null,
     }
   },
   methods: {
-    // Modified delete methods
+    // @ts-ignore
     showDeleteConfirmation(editor) {
       this.editorToDelete = editor
       this.showDeleteConfirmationState = true
@@ -239,14 +238,14 @@ export default {
       this.editorToDelete = null
     },
     confirmDelete() {
-      if (this.editorToDelete){
+      if (this.editorToDelete) {
         this.editorStore.removeEditor(this.editorToDelete)
       }
-      
+
       this.showDeleteConfirmationState = false
       this.editorToDelete = null
     },
-    // Keep original methods
+    // @ts-ignore
     deleteEditor(editor) {
       // Replace direct deletion with confirmation
       this.showDeleteConfirmation(editor)

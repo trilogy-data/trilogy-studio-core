@@ -1,21 +1,10 @@
 import axios from 'axios'
-import { Concept, Datasource } from '../models'
 import {ModelConfig} from '../models'
 
 interface QueryResponse {
   data: {
     generated_sql: string
   }
-}
-
-interface ModelItemResponse {
-  alias: string
-  concepts: Concept[]
-  datasources: Datasource[]
-}
-
-interface ModelResponse {
-  sources: ModelItemResponse[]
 }
 
 interface ValidateItem {

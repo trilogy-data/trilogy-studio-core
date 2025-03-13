@@ -3,7 +3,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import { DuckDBConnection } from '../../connections'
 import { Editor, EditorTag } from '../../editors'
-import { ModelConfig } from '../../models'
+import { ModelConfig, ModelSource } from '../../models'
 import {
   CUSTOMER_CONTENT,
   ORDER_CONTENT,
@@ -110,7 +110,7 @@ export default async function setupDemo(
     name: modelName,
     sources: editors
       .slice(0, 7)
-      .map((e) => ({ alias: e.name, editor: e.name, concepts: [], datasources: [] })),
+      .map((e) => (ModelSource.fromJSON({ alias: e.name, editor: e.name, concepts: [], datasources: [] }))),
     storage: 'local',
   })
 

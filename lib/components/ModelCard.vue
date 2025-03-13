@@ -5,8 +5,16 @@
         {{ config.name }}
         <span class="edit-indicator">✎</span>
       </span>
-      <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
-        @keyup.esc="cancelEditing" class="name-input" type="text" />
+      <input
+        v-else
+        ref="nameInput"
+        v-model="editableName"
+        @blur="finishEditing"
+        @keyup.enter="finishEditing"
+        @keyup.esc="cancelEditing"
+        class="name-input"
+        type="text"
+      />
     </div>
     <div class="button-container">
       <loading-button class="button" :action="() => fetchParseResults(index)">
@@ -30,8 +38,6 @@
       </div>
       <button class="button" @click="remove(index)">Delete</button>
     </div>
-
-
 
     <div v-if="config.parseError" class="parse-error">
       <error-message>Error fetching parse results: {{ config.parseError }}</error-message>
@@ -341,12 +347,14 @@ export default defineComponent({
         if (target.sources.some((source) => source.editor === sourceDetails.value.name)) {
           console.error('Source already exists in model')
         } else {
-          target.sources.push(ModelSource.fromJSON({
-            alias: sourceDetails.value.alias,
-            editor: sourceDetails.value.name,
-            concepts: [],
-            datasources: [],
-          }))
+          target.sources.push(
+            ModelSource.fromJSON({
+              alias: sourceDetails.value.alias,
+              editor: sourceDetails.value.name,
+              concepts: [],
+              datasources: [],
+            }),
+          )
           fetchParseResults(model)
         }
       }
@@ -410,10 +418,12 @@ export default defineComponent({
       return this.modelStore.models
     },
     editorList(): string[] {
-      let matchedConnections = Object.values(this.connectionStore.connections).filter(
-        (connection) => connection.model === this.config.name,
-      ).map((connection) => connection.name)
-      return Object.values(this.editorStore.editors).filter((editor) => matchedConnections.includes(editor.connection)).map((editor) => editor.name)
+      let matchedConnections = Object.values(this.connectionStore.connections)
+        .filter((connection) => connection.model === this.config.name)
+        .map((connection) => connection.name)
+      return Object.values(this.editorStore.editors)
+        .filter((editor) => matchedConnections.includes(editor.connection))
+        .map((editor) => editor.name)
     },
   },
   methods: {
