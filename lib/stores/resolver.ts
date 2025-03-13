@@ -1,20 +1,10 @@
 import axios from 'axios'
-import { Concept, Datasource } from '../models'
+import { ModelConfig } from '../models'
 
 interface QueryResponse {
   data: {
     generated_sql: string
   }
-}
-
-interface ModelItemResponse {
-  alias: string
-  concepts: Concept[]
-  datasources: Datasource[]
-}
-
-interface ModelResponse {
-  sources: ModelItemResponse[]
 }
 
 interface ValidateItem {
@@ -36,12 +26,18 @@ interface ValidateResponse {
   data: {
     items: ValidateItem[]
     completion_items: CompletionItem[]
+    imports: Import[]
   }
 }
 
 export interface ContentInput {
   alias: string
   contents: string
+}
+
+export interface Import {
+  name: string
+  alias: string
 }
 
 export default class AxiosResolver {
@@ -80,6 +76,7 @@ export default class AxiosResolver {
     dialect: string,
     type: string,
     sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -90,6 +87,7 @@ export default class AxiosResolver {
         query: query,
         dialect: dialect,
         full_model: { name: '', sources: sources || [] },
+        imports: imports || [],
       })
       .catch((error: Error) => {
         console.log(error)
@@ -97,14 +95,14 @@ export default class AxiosResolver {
       })
   }
 
-  async resolveModel(name: string, sources: ContentInput[]): Promise<ModelResponse> {
+  async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {
     return axios
       .post(`${this.address}/parse_model`, {
         name: name,
         sources: sources,
       })
       .then((response) => {
-        return response.data
+        return ModelConfig.fromJSON(response.data)
       })
       .catch((error: Error) => {
         throw Error(this.getErrorMessage(error))

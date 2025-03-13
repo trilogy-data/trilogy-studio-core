@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <div class="control-group" v-if="['boxplot', 'heatmap'].includes(internalConfig.chartType)">
+      <div class="control-group" v-if="['boxplot'].includes(internalConfig.chartType)">
         <label for="group-by">Group By</label>
         <select id="group-by" v-model="internalConfig.groupField" class="form-select">
           <option
@@ -59,10 +59,7 @@
         </select>
       </div>
 
-      <div
-        class="control-group"
-        v-if="!['barh', 'heatmap', 'boxplot'].includes(internalConfig.chartType)"
-      >
+      <div class="control-group" v-if="!['barh', 'boxplot'].includes(internalConfig.chartType)">
         <label for="x-axis">X Axis</label>
         <select id="x-axis" v-model="internalConfig.xField" class="form-select">
           <option
@@ -77,7 +74,7 @@
 
       <div
         class="control-group"
-        v-if="!['barh', 'heatmap', 'boxplot'].includes(internalConfig.chartType)"
+        v-if="!['barh', 'boxplot', 'heatmap', 'scatterplot'].includes(internalConfig.chartType)"
       >
         <label for="y-axis">Y Axis</label>
         <select id="y-axis" v-model="internalConfig.yField" class="form-select">
@@ -90,7 +87,17 @@
           </option>
         </select>
       </div>
-
+      <div
+        class="control-group"
+        v-if="['heatmap', 'scatterplot'].includes(internalConfig.chartType)"
+      >
+        <label for="y-axis">Y Axis</label>
+        <select id="y-axis" v-model="internalConfig.yField" class="form-select">
+          <option v-for="column in filteredColumns('all')" :key="column.name" :value="column.name">
+            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+          </option>
+        </select>
+      </div>
       <div class="control-group" v-if="internalConfig.chartType === 'heatmap'">
         <label for="color-field">Value Field</label>
         <select id="color-field" v-model="internalConfig.colorField" class="form-select">
@@ -118,6 +125,19 @@
         </select>
       </div>
 
+      <div class="control-group" v-if="['scatterplot'].includes(internalConfig.chartType)">
+        <label for="size">Size (optional)</label>
+        <select id="size" v-model="internalConfig.sizeField" class="form-select">
+          <option value="">None</option>
+          <option
+            v-for="column in filteredColumns('numeric')"
+            :key="column.name"
+            :value="column.name"
+          >
+            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+          </option>
+        </select>
+      </div>
       <div class="control-group" v-if="internalConfig.chartType === 'line' && hasTrellisOption">
         <label for="trellisField">Split Chart By</label>
         <select id="trellisField" v-model="internalConfig.trellisField" class="form-select">
@@ -138,12 +158,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed } from 'vue'
+import { defineComponent, ref, watch, onMounted, computed, inject } from 'vue'
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
 import { ColumnType } from '../editors/results'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -207,6 +228,12 @@ export default defineComponent({
   },
 
   setup(props) {
+    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    if (!settingsStore) {
+      throw new Error('userSettingsStore not provided')
+    }
+    // Create a computed property for the current theme
+    const currentTheme = computed(() => settingsStore.settings.theme)
     const vegaContainer = ref<HTMLElement | null>(null)
 
     // Flag to determine if we should show the trellis option
@@ -221,6 +248,7 @@ export default defineComponent({
       yField: '',
       yAggregation: 'sum',
       colorField: '',
+      sizeField: '',
       groupField: '',
       trellisField: '',
     })
@@ -698,6 +726,7 @@ export default defineComponent({
       try {
         await vegaEmbed(vegaContainer.value, spec, {
           actions: true,
+          theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         })
       } catch (error) {
@@ -765,9 +794,9 @@ export default defineComponent({
   justify-content: center;
   vertical-align: middle;
   font-size: var(--font-size);
-  padding-bottom: .5rem;
-  padding-left: .5rem;
-  padding-right: .5rem;
+  padding-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .control-group {

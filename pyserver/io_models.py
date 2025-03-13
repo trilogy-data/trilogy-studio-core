@@ -36,6 +36,7 @@ class UIDatasource(BaseModel):
     location: str
     description: Optional[str] = None
     concepts: List[UIConcept]
+    grain: List[UIConcept] = Field(default_factory=list)
 
 
 class ModelSource(BaseModel):
@@ -51,16 +52,6 @@ class Model(BaseModel):
 
 class ListModelResponse(BaseModel):
     models: List[Model]
-
-
-class GenAIQueryInSchema(BaseModel):
-    connection: str
-    text: str
-    genai_connection: str
-
-
-class GenAIQueryOutSchema(BaseModel):
-    text: str
 
 
 class FormatQueryOutSchema(BaseModel):
@@ -83,7 +74,13 @@ class ModelInSchema(BaseModel):
     sources: List[ModelSourceInSchema]
 
 
+class Import(BaseModel):
+    name: str
+    alias: str | None = None
+
+
 class QueryInSchema(BaseModel):
+    imports: list[Import]
     query: str
     dialect: Dialects
     full_model: ModelInSchema
@@ -125,6 +122,7 @@ class ValidateItem(BaseModel):
 class CompletionItem(BaseModel):
     label: str
     type: str
+    datatype: str
     insertText: str
     description: str | None = None
 
@@ -132,3 +130,4 @@ class CompletionItem(BaseModel):
 class ValidateResponse(BaseModel):
     items: List[ValidateItem]
     completion_items: list[CompletionItem]
+    imports: list[Import] = Field(default_factory=list)

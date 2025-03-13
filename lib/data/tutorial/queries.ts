@@ -47,7 +47,7 @@ datasource orders(
     o_shippriority:ship_priority  #1-URGENT, 2-HIGH, 3-MEDIUM, 4-NOT SPECIFIED
 )
 grain (id)
-address \`https://shell.duckdb.org/data/tpch/0_01/parquet/order.parquet\`;
+address \`https://shell.duckdb.org/data/tpch/0_01/parquet/orders.parquet\`;
 `
 
 export const NATION_CONTENT = `
@@ -152,12 +152,13 @@ import supplier as supplier;
 import part as part;
 
 type money float;
+type percent float;
 
 key id int;
 property id.quantity float;
 property id.extended_price float::money;
-property id.discount float; # percent discount
-property id.tax float; # tax, as percentage
+property id.discount float::percent; # percent discount
+property id.tax float::percent; # tax, as percentage
 property id.return_flag string;
 property id.line_status string;
 property id.ship_date date;

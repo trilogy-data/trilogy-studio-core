@@ -36,9 +36,8 @@
         </div>
         <div class="menu-actions">
           <button class="action-item" @click="$emit('save-editors')">Save</button>
-
           <loading-button
-            v-if="editorData.type === 'trilogy'"
+            v-if="!(editorData.type === 'sql')"
             :useDefaultStyle="false"
             class="action-item"
             :action="validateQuery"
@@ -46,7 +45,7 @@
           >
 
           <button
-            @click="() => runQuery()"
+            @click="() => (editorData.loading ? cancelQuery() : runQuery())"
             class="action-item"
             :class="{ 'button-cancel': editorData.loading }"
           >
@@ -97,6 +96,7 @@
   padding: 0.25rem;
   justify-content: space-between;
   padding-right: 0.5rem;
+  min-height: 40px;
 }
 
 .menu-actions {
@@ -190,14 +190,17 @@
 import { defineComponent, inject } from 'vue'
 
 import { editor, KeyMod, KeyCode } from 'monaco-editor'
+import type { IRange } from 'monaco-editor'
 
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
+import type { LLMConnectionStoreType } from '../stores/llmStore.ts'
 import { Results, ColumnType } from '../editors/results'
 
 import AxiosResolver from '../stores/resolver'
+import type { Import } from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import { EditorTag } from '../editors'
@@ -205,6 +208,52 @@ import type { ContentInput } from '../stores/resolver'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
+
+function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): string {
+  const selected = editor.getSelection()
+  let text =
+    selected &&
+    !(
+      selected.startColumn === selected.endColumn &&
+      selected.startLineNumber === selected.endLineNumber
+    )
+      ? (editor.getModel()?.getValueInRange(selected) as string)
+      : editor.getValue()
+  // hack for mobile? getValue not returning values
+  if (!text) {
+    text = fallback
+  }
+  return text
+}
+
+function getEditorRange(editor: editor.IStandaloneCodeEditor): IRange {
+  const selection = editor.getSelection()
+
+  // Check if there's a valid selection (not just a cursor position)
+  if (
+    selection &&
+    !(
+      selection.startColumn === selection.endColumn &&
+      selection.startLineNumber === selection.endLineNumber
+    )
+  ) {
+    // Return the selected range
+    return {
+      startLineNumber: selection.startLineNumber,
+      startColumn: selection.startColumn,
+      endLineNumber: selection.endLineNumber,
+      endColumn: selection.endColumn,
+    }
+  } else {
+    // No selection, return a range representing the start of the editor
+    return {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 1,
+      endColumn: 1,
+    }
+  }
+}
 
 export default defineComponent({
   name: 'Editor',
@@ -236,6 +285,7 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
+    const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore) {
@@ -245,6 +295,7 @@ export default defineComponent({
     return {
       connectionStore,
       modelStore,
+      llmStore,
       editorStore,
       trilogyResolver,
       EditorTag,
@@ -295,6 +346,18 @@ export default defineComponent({
 
   methods: {
     toggleTag() {
+      let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
+
+      if (!isSource) {
+        let model = this.connectionStore.connections[this.editorData.connection].model
+        if (model) {
+          this.modelStore.models[model].addModelSourceSimple(
+            this.editorData.name,
+            this.editorData.name,
+          )
+          this.$emit('save-models')
+        }
+      }
       this.editorData.tags = this.editorData.tags.includes(EditorTag.SOURCE)
         ? this.editorData.tags.filter((tag) => tag !== EditorTag.SOURCE)
         : [...this.editorData.tags, EditorTag.SOURCE]
@@ -315,11 +378,14 @@ export default defineComponent({
       this.isEditing = false
     },
 
-    async validateQuery(log: boolean = true, sources: ContentInput[] | null = null) {
+    async validateQuery(
+      log: boolean = true,
+      sources: ContentInput[] | null = null,
+    ): Promise<Import[] | null> {
       const editorItem = editorMap.get(this.context)
       // TODO - syntax validation for SQL?
       if (!editorItem || this.editorData.type === 'sql') {
-        return
+        return null
       }
       try {
         if (log) {
@@ -336,24 +402,33 @@ export default defineComponent({
       const conn = this.connectionStore.connections[this.editorData.connection]
       if (!conn) {
         this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
-        return
+        return null
       }
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
               alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
             }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
       let model = editorItem.getModel()
       if (!model) {
-        return
+        return null
       }
 
       editor.setModelMarkers(model, 'owner', annotations.data.items)
       this.editorData.completionSymbols = annotations.data.completion_items
+      return annotations.data.imports
+    },
+    async cancelQuery() {
+      if (this.editorData.cancelCallback) {
+        await this.editorData.cancelCallback()
+      }
+      this.editorData.loading = false
     },
     async runQuery(isRetry: boolean = false): Promise<any> {
       this.$emit('query-started')
@@ -400,43 +475,39 @@ export default defineComponent({
         this.editorData.loading = false
         this.editorData.cancelCallback = null
       }
-
+      let imports: Import[] = []
       try {
         this.editorData.loading = true
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
               alias: source.alias,
-              contents: this.editorStore.editors[source.editor].contents,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
             }))
           : []
         try {
-          await this.validateQuery(false, sources)
+          imports = (await this.validateQuery(false, sources)) || []
         } catch (error) {
           console.log('Validation failed.')
         }
         // Prepare sources if model exists
 
         // Get selected text or full content
-        const selected = editor.getSelection()
-        let text =
-          selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
-            ? (editor.getModel()?.getValueInRange(selected) as string)
-            : editor.getValue()
-        // hack for mobile? getValue not returning values
-        if (!text) {
-          text = this.editorData.contents
-        }
+        let text = getEditorText(editor, this.editorData.contents)
         if (!text) {
           this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
           return
         }
         // First promise: Resolve query
         const resolveResponse = await Promise.race([
-          this.trilogyResolver.resolve_query(text, conn.query_type, this.editorData.type, sources),
+          this.trilogyResolver.resolve_query(
+            text,
+            conn.query_type,
+            this.editorData.type,
+            sources,
+            imports,
+          ),
           new Promise((_, reject) => {
             controller.signal.addEventListener('abort', () =>
               reject(new Error('Query cancelled by user')),
@@ -574,13 +645,57 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
         this.runQuery()
       })
-      // if (this.genAICallback) {
-      //   editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyG, () => {
-      //     if (!this.loading) {
-      //       this.genAICallback(editorItem.getValue())
-      //     }
-      //   })
-      // }
+      if (this.editorData.type !== 'sql') {
+        editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, async () => {
+          if (!this.loading && this.llmStore) {
+            try {
+              this.editorData.loading = true
+              this.editorData.setError(null)
+              await this.validateQuery(false)
+              let text = getEditorText(editorItem, this.editorData.contents)
+              // get range at time of submission
+              let range = getEditorRange(editorItem)
+              // run our async call
+              let concepts = this.editorData.completionSymbols.map((item) => ({
+                name: item.label,
+                type: item.datatype,
+                description: item.description,
+              }))
+              if (concepts.length === 0) {
+                this.editorData.setError('There are no imported concepts for LLM generation')
+                throw new Error(
+                  'Invalid editor for LLM generation - there are no parsed concepts. Check imports and concept definitions.',
+                )
+              }
+              await Promise.all([this.llmStore.generateQueryCompletion(text, concepts)])
+                .then((results) => {
+                  let query = results[0]
+                  console.log(query)
+                  if (query) {
+                    let op = { range: range, text: `${text}\n${query}`, forceMoveMarkers: true }
+                    editorItem.executeEdits('gen-ai-prompt-shortcut', [op])
+                    this.editorData.contents = editorItem.getValue()
+                  } else {
+                    throw new Error('LLM could not successfully generate query.')
+                  }
+                })
+                .catch((error) => {
+                  this.editorData.setError(error)
+                  throw error
+                })
+                .finally(() => {})
+            } catch (error) {
+              if (error instanceof Error) {
+                this.editorData.setError(error.message)
+              } else {
+                this.editorData.setError('Unknown error occured')
+              }
+            } finally {
+              this.editorData.loading = false
+            }
+          }
+        })
+      }
       // if (this.formatTextCallback) {
       //     editor.addAction({
       //         id: 'format-preql',
@@ -596,6 +711,11 @@ export default defineComponent({
       // }
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
+      })
+
+      editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () => {
+        editorItem.trigger('ide', 'undo', {})
+        this.editorData.contents = editorItem.getValue()
       })
     },
   },

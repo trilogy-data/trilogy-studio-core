@@ -1,12 +1,14 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
+import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
 export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
   private connectionStorageKey: string
+  private llmConnectionStorageKey: string
   private modelStorageKey: string
   private userSettingsStorageKey: string
   public type: string
@@ -15,6 +17,7 @@ export default class LocalStorage extends AbstractStorage {
     super()
     this.editorStorageKey = prefix + 'editors'
     this.connectionStorageKey = prefix + 'connections'
+    this.llmConnectionStorageKey = prefix + 'llmConnections'
     this.modelStorageKey = prefix + 'modelConfig'
     this.userSettingsStorageKey = prefix + 'userSettings'
     this.type = 'local'
@@ -125,19 +128,24 @@ export default class LocalStorage extends AbstractStorage {
 
   // model config storage
 
-  loadModelConfig(): Record<string, ModelConfig> {
+  async loadModelConfig(): Promise<Record<string, ModelConfig>> {
     const storedData = localStorage.getItem(this.modelStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
-    return raw.map((modelConfig: ModelConfig) => reactive(ModelConfig.fromJSON(modelConfig)))
+    let modelConfigList: Record<string, ModelConfig> = {}
+    raw.forEach((modelConfig: ModelConfig) => {
+      modelConfigList[modelConfig.name] = reactive(ModelConfig.fromJSON(modelConfig))
+    })
+    return modelConfigList
   }
 
-  saveModelConfig(modelConfig: ModelConfig[]): void {
-    const current = this.loadModelConfig()
+  async saveModelConfig(modelConfig: ModelConfig[]): Promise<void> {
+    const current = await this.loadModelConfig()
     modelConfig.forEach((model) => {
-      if (model.changed) {
+      if (model.changed || !(model.name in current)) {
         current[model.name] = model
       }
     })
+    console.log(current)
     localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }
 
@@ -155,5 +163,52 @@ export default class LocalStorage extends AbstractStorage {
 
   saveUserSettings(settings: Record<string, any>): void {
     localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
+  }
+
+  saveLLMConnections(connections: Array<LLMProvider>): void {
+    localStorage.setItem(
+      this.llmConnectionStorageKey,
+      JSON.stringify(connections.map((connection) => connection.toJSON())),
+    )
+  }
+
+  async loadLLMConnections(): Promise<Record<string, LLMProvider>> {
+    const storedData = localStorage.getItem(this.llmConnectionStorageKey)
+    const raw = storedData ? JSON.parse(storedData) : []
+    const connections: Record<string, LLMProvider> = {}
+    // Process each connection sequentially
+    for (const connection of raw) {
+      switch (connection.type) {
+        case 'openai':
+          // @ts-ignore
+          connections[connection.name] = reactive(OpenAIProvider.fromJSON(connection))
+          break
+        case 'mistral':
+          // @ts-ignore
+          connections[connection.name] = reactive(MistralProvider.fromJSON(connection))
+          break
+        case 'anthropic':
+          // Handle the async operation properly
+          // @ts-ignore
+          connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
+          break
+        default:
+          console.log(connection.type)
+      }
+    }
+
+    return connections
+  }
+
+  async deleteLLMConnection(name: string): Promise<void> {
+    const connections = await this.loadLLMConnections()
+    if (connections[name]) {
+      delete connections[name]
+      this.saveLLMConnections(Object.values(connections))
+    }
+  }
+
+  async clearLLMConnections(): Promise<void> {
+    localStorage.removeItem(this.llmConnectionStorageKey)
   }
 }

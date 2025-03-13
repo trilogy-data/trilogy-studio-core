@@ -9,6 +9,7 @@ import {
   useModelConfigStore,
   useUserSettingsStore,
   AxiosTrilogyResolver,
+  useLLMConnectionStore,
 } from 'trilogy-studio-core/stores'
 import {
   Tabulator,
@@ -56,6 +57,8 @@ let store = useEditorStore()
 let connections = useConnectionStore()
 
 let models = useModelConfigStore()
+
+let llms = useLLMConnectionStore()
 
 // add model autocompletion
 function getModelCompletions(word: string, range: monaco.Range) {
@@ -132,6 +135,7 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
       :modelStore="models"
       :storageSources="contentSources"
       :userSettingsStore="userSettingsStore"
+      :llmConnectionStore="llms"
     >
     </Manager>
   </div>

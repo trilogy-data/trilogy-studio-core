@@ -66,6 +66,7 @@
               v-else-if="Object.keys(activeEditorData.results).length > 0"
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
+              :type="activeEditorData.type"
             />
             <hint-component v-else />
           </template>

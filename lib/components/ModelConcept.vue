@@ -60,7 +60,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
 import { Concept } from '../models'
 // @ts-ignore
 const _ = defineProps({

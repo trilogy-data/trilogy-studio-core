@@ -22,22 +22,21 @@
       </loading-button>
       <button class="button" @click="toggleNewSource(index)">Add New Source</button>
       <button class="button" @click="clearSources(index)">Clear Sources</button>
+      <div v-if="newSourceVisible[index]" class="absolute-form">
+        <form @submit.prevent="submitSourceAddition(index)">
+          <label for="editor-alias">Alias</label>
+          <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
+          <label for="editor-name">Editor</label>
+          <select v-model="sourceDetails.name" id="editor-name" required>
+            <option v-for="editor in editorList" :key="editor" :value="editor">
+              {{ editor }}
+            </option>
+          </select>
+          <button type="submit">Submit</button>
+          <button type="button" @click="toggleNewSource(index)">Cancel</button>
+        </form>
+      </div>
       <button class="button" @click="remove(index)">Delete</button>
-    </div>
-
-    <div v-if="newSourceVisible[index]" class="absolute-form">
-      <form @submit.prevent="submitSourceAddition(index)">
-        <label for="editor-alias">Alias</label>
-        <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
-        <label for="editor-name">Editor</label>
-        <select v-model="sourceDetails.name" id="editor-name" required>
-          <option v-for="editor in editorList" :key="editor" :value="editor">
-            {{ editor }}
-          </option>
-        </select>
-        <button type="submit">Submit</button>
-        <button type="button" @click="toggleNewSource(index)">Cancel</button>
-      </form>
     </div>
 
     <div v-if="config.parseError" class="parse-error">
@@ -76,9 +75,14 @@
   </section>
 </template>
 <style scoped>
+.button-container {
+  position: relative;
+}
+
 .action-bar {
   padding-bottom: 10px;
 }
+
 .editable-text {
   display: flex;
   align-items: center;
@@ -266,9 +270,10 @@ select:focus {
 
 <script lang="ts">
 import { defineComponent, inject, ref, computed, nextTick } from 'vue'
-import { ModelConfig } from '../models' // Adjust the import path
+import { ModelConfig, ModelSource } from '../models' // Adjust the import path
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
+import type { ConnectionStoreType } from '../stores/connectionStore'
 import ModelConcept from './ModelConcept.vue'
 import AxiosResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
@@ -292,8 +297,9 @@ export default defineComponent({
 
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
-    if (!modelStore || !editorStore || !trilogyResolver) {
+    if (!modelStore || !editorStore || !trilogyResolver || !connectionStore) {
       throw new Error('Missing model store or editor store!')
     }
     const isExpanded = ref<Record<string, boolean>>({})
@@ -341,12 +347,14 @@ export default defineComponent({
         if (target.sources.some((source) => source.editor === sourceDetails.value.name)) {
           console.error('Source already exists in model')
         } else {
-          target.sources.push({
-            alias: sourceDetails.value.alias,
-            editor: sourceDetails.value.name,
-            concepts: [],
-            datasources: [],
-          })
+          target.sources.push(
+            ModelSource.fromJSON({
+              alias: sourceDetails.value.alias,
+              editor: sourceDetails.value.name,
+              concepts: [],
+              datasources: [],
+            }),
+          )
           fetchParseResults(model)
         }
       }
@@ -376,6 +384,7 @@ export default defineComponent({
     return {
       modelStore,
       editorStore,
+      connectionStore,
       isExpanded,
       toggleConcepts,
       isDatasourceExpanded,
@@ -409,7 +418,12 @@ export default defineComponent({
       return this.modelStore.models
     },
     editorList(): string[] {
-      return Object.values(this.editorStore.editors).map((editor) => editor.name)
+      let matchedConnections = Object.values(this.connectionStore.connections)
+        .filter((connection) => connection.model === this.config.name)
+        .map((connection) => connection.name)
+      return Object.values(this.editorStore.editors)
+        .filter((editor) => matchedConnections.includes(editor.connection))
+        .map((editor) => editor.name)
     },
   },
   methods: {

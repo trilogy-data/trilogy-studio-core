@@ -10,12 +10,18 @@
       </button>
       <button
         class="tab-button"
+        v-if="!(type === 'sql')"
         :class="{ active: activeTab === 'visualize' }"
         @click="setTab('visualize')"
       >
         Visualize
       </button>
-      <button class="tab-button" :class="{ active: activeTab === 'sql' }" @click="setTab('sql')">
+      <button
+        class="tab-button"
+        v-if="!(type === 'sql')"
+        :class="{ active: activeTab === 'sql' }"
+        @click="setTab('sql')"
+      >
         Generated SQL
       </button>
     </div>
@@ -49,6 +55,10 @@ export default {
   name: 'ResultsContainer',
   components: { DataTable, VegaLiteChart },
   props: {
+    type: {
+      type: String,
+      required: true,
+    },
     results: {
       type: Results,
       required: true,

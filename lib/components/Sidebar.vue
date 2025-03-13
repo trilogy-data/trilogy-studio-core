@@ -61,6 +61,11 @@
         @connection-key-selected="connectionKeySelected"
         :activeConnectionKey="activeConnectionKey"
       />
+      <LLMConnectionList
+        v-show="active === 'llms'"
+        @llm-connection-key-selected="connectionKeySelected"
+        :activeLLMKey="activeLLMKey"
+      />
       <ModelSidebar
         v-show="active === 'models'"
         @model-key-selected="modelKeySelected"
@@ -81,9 +86,11 @@ import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
+import LLMConnectionList from './LLMConnectionList.vue'
 import trilogyIcon from '../static/trilogy.png'
 import Tooltip from './Tooltip.vue'
 import { getDefaultValueFromHash } from '../stores/urlStore'
+
 export default defineComponent({
   name: 'Sidebar',
   props: {
@@ -110,6 +117,11 @@ export default defineComponent({
     activeConnectionKey: {
       type: String,
       default: getDefaultValueFromHash('connection'),
+      optional: true,
+    },
+    activeLLMKey: {
+      type: String,
+      default: getDefaultValueFromHash('llm'),
       optional: true,
     },
   },
@@ -153,6 +165,12 @@ export default defineComponent({
         icon: 'mdi mdi-database',
         screen: 'connections',
       },
+      {
+        name: 'llm',
+        tooltip: 'LLMs',
+        icon: 'mdi mdi-creation',
+        screen: 'llms',
+      },
 
       //   {
       //     name: "Extensions",
@@ -179,6 +197,7 @@ export default defineComponent({
     Tooltip,
     TutorialSidebar,
     ModelSidebar,
+    LLMConnectionList,
   },
 
   methods: {
@@ -196,6 +215,9 @@ export default defineComponent({
     },
     connectionKeySelected(key: string) {
       this.$emit('connection-key-selected', key)
+    },
+    llmKeySelected(key: string) {
+      this.$emit('llm-key-selected', key)
     },
     saveEditors() {
       this.$emit('save-editors')

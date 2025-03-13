@@ -2,15 +2,20 @@ from typing import List, Union, Any
 import logging
 from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
+from trilogy.core.statements.author import ImportStatement
 from io_models import (
     ValidateItem,
     ValidateResponse,
     Severity,
     ModelSourceInSchema,
     CompletionItem,
+    Import,
 )
 from env_helpers import parse_env_from_full_model
 from trilogy.parsing.parse_engine import ParseToObjects
+from logging import getLogger
+
+logger = getLogger("diagnostics")
 
 
 def user_repr(error: Union[UnexpectedToken]):
@@ -32,9 +37,12 @@ def truncate_to_last_semicolon(text):
         return text  # Return original string if no semicolon is found
 
 
-def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> ValidateResponse:
+def get_diagnostics(
+    doctext: str, sources: List[ModelSourceInSchema]
+) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
+    imports: list[Import] = []
 
     def on_error(e: UnexpectedToken) -> Any:
         diagnostics.append(
@@ -76,6 +84,7 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
             completions.append(
                 CompletionItem(
                     label=k,
+                    datatype=str(v.datatype),
                     description=v.metadata.description,
                     type="concept",
                     insertText=k,
@@ -84,7 +93,15 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
             seen.add(k)
         try:
             # get a partial parse tree
-            ParseToObjects(environment=env).transform(tree)
+            parser = ParseToObjects(environment=env)
+            parser.prepare_parse()
+            parser.transform(tree)
+            pass_two = parser.run_second_parse_pass()
+            for x in pass_two:
+                logger.info(x)
+                if isinstance(x, ImportStatement):
+                    imports.append(Import(name=str(x.path), alias=x.alias))
+
         except Exception:
             logging.exception("text parse error, may have partial results")
         for k, v in env.concepts.items():
@@ -94,6 +111,7 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
                 completions.append(
                     CompletionItem(
                         label=k,
+                        datatype=str(v.datatype),
                         description=v.metadata.description,
                         type="concept",
                         insertText=k,
@@ -102,4 +120,6 @@ def get_diagnostics(doctext: str, sources: List[ModelSourceInSchema]) -> Validat
 
     except Exception:
         logging.exception("completion generation raised exception")
-    return ValidateResponse(items=diagnostics, completion_items=completions)
+    return ValidateResponse(
+        items=diagnostics, completion_items=completions, imports=imports
+    )

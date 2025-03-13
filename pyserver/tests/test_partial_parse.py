@@ -27,6 +27,7 @@ auto customer_count <- count(cuid);
 
     assert diagnostics.completion_items[0].label == "cust.cuid"
 
+
 def test_get_diagnostics_two():
     model = ModelInSchema(
         name="test_parse",

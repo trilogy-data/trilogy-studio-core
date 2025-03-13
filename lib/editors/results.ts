@@ -54,6 +54,7 @@ export interface ChartConfig {
   yField?: string
   yAggregation?: string
   colorField?: string
+  sizeField?: string
   groupField?: string
   trellisField?: string
 }

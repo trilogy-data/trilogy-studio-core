@@ -70,6 +70,10 @@ export default {
           keys: ['Enter'],
         },
         {
+          name: 'Generate Query From Text (if LLM connection set)',
+          keys: ['Shift', 'Enter'],
+        },
+        {
           name: 'Save All Editors',
           keys: ['S'],
         },

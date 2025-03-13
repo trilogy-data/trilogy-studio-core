@@ -43,6 +43,8 @@ const useConnectionStore = defineStore('connections', {
       }
       if (type === 'duckdb') {
         this.connections[name] = new DuckDBConnection(name)
+      } else if (type === 'bigquery-ouath') {
+        this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'motherduck') {

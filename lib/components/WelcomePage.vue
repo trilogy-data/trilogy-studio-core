@@ -8,7 +8,7 @@
       <p>To get started: try the demo model, dive into a new editor, or review documentation.</p>
       <div class="buttons">
         <button @click="startDemo()" class="btn btn-secondary">
-          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo </span>
+          <span v-if="demoLoading" class="spinner"></span> <span v-else>Start Demo</span>
         </button>
         <editor-creator>
           <template v-slot="{ onClick }">
@@ -16,14 +16,14 @@
           </template>
         </editor-creator>
 
-        <button @click="tutorial()" class="btn btn-tertiary">Help</button>
+        <button @click="tutorial()" class="btn btn-tertiary">Docs</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue'
+import { ref } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreator from './EditorCreator.vue'
 

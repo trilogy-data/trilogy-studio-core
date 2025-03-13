@@ -8,6 +8,7 @@ import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
+import type { LLMConnectionStoreType } from './llmStore'
 import QueryResolver from './resolver'
 import { provide, computed } from 'vue'
 import type { PropType } from 'vue'
@@ -36,6 +37,10 @@ export default {
       type: Object as PropType<UserSettingsStoreType>,
       required: true,
     },
+    llmConnectionStore: {
+      type: Object as PropType<LLMConnectionStoreType>,
+      required: true,
+    },
     trilogyResolver: {
       type: QueryResolver,
       required: true,
@@ -54,26 +59,29 @@ export default {
     provide('trilogyResolver', props.trilogyResolver)
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
+    provide('llmConnectionStore', props.llmConnectionStore)
     for (let source of props.storageSources) {
       let editors = source.loadEditors()
       for (let editor of Object.values(editors)) {
         props.editorStore.addEditor(editor)
       }
-    }
-    for (let source of props.storageSources) {
       source.loadConnections().then((connections) => {
         for (let connection of Object.values(connections)) {
           props.connectionStore.addConnection(connection)
         }
       })
+      source.loadModelConfig().then((models) => {
+        for (let modelConfig of Object.values(models)) {
+          props.modelStore.addModelConfig(modelConfig)
+        }
+      })
+      source.loadLLMConnections().then((llmConnections) => {
+        for (let llmConnection of Object.values(llmConnections)) {
+          props.llmConnectionStore.addConnection(llmConnection)
+        }
+      })
     }
 
-    for (let source of props.storageSources) {
-      let connections = source.loadModelConfig()
-      for (let modelConfig of Object.values(connections)) {
-        props.modelStore.addModelConfig(modelConfig)
-      }
-    }
     const saveEditors = () => {
       for (let source of props.storageSources) {
         source.saveEditors(
@@ -103,9 +111,20 @@ export default {
       }
       console.log('Models saved')
     }
+    const saveLLMConnections = async () => {
+      console.log('saving connections')
+      for (let source of props.storageSources) {
+        await source.saveLLMConnections(
+          Object.values(props.llmConnectionStore.connections).filter(
+            (llmConnection) => llmConnection.storage == source.type,
+          ),
+        )
+      }
+    }
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
+    provide('saveLLMConnections', saveLLMConnections)
     const isMobile = computed(() => window.innerWidth <= 768)
     provide('isMobile', isMobile)
   },
@@ -115,7 +134,7 @@ export default {
     }
   },
   computed: {
-    currentLayout() {
+    currentLayout(): string {
       return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
     },
   },

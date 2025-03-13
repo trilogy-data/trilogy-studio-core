@@ -64,6 +64,7 @@
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"
+              :type="activeEditorData.type"
             />
             <hint-component v-else />
           </template>
@@ -87,6 +88,9 @@
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
+      </template>
+      <template v-else-if="activeScreen === 'llms'">
+        <LLMView />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -184,6 +188,7 @@ import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
 import CommunityModels from '../components/CommunityModels.vue'
+import LLMView from '../components/LLMView.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -229,6 +234,7 @@ export default {
     ResultsContainer,
     LoadingButton,
     CommunityModels,
+    LLMView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
