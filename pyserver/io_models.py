@@ -73,9 +73,12 @@ class ModelInSchema(BaseModel):
     name: str
     sources: List[ModelSourceInSchema]
 
+
 class Import(BaseModel):
-    name:str
+    name: str
     alias: str | None = None
+
+
 class QueryInSchema(BaseModel):
     imports: list[Import]
     query: str
@@ -119,7 +122,7 @@ class ValidateItem(BaseModel):
 class CompletionItem(BaseModel):
     label: str
     type: str
-    datatype:str
+    datatype: str
     insertText: str
     description: str | None = None
 
@@ -127,4 +130,4 @@ class CompletionItem(BaseModel):
 class ValidateResponse(BaseModel):
     items: List[ValidateItem]
     completion_items: list[CompletionItem]
-    imports:list[Import] = Field(default_factory=list)
+    imports: list[Import] = Field(default_factory=list)

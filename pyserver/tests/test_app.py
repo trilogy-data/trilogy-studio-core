@@ -22,7 +22,7 @@ datasource customers (
     id: cuid,
     name: name,
 )
-grain (id,)
+grain (cuid,)
 query '''
 select 1 as id, 'bob' as name
 union all

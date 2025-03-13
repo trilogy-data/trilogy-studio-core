@@ -201,7 +201,8 @@ def source_to_model_source(
                 location=final_address,
                 concepts=dconcepts,
                 grain=[
-                    concept_to_ui_concept(env.concepts[x]) for x in datasource.grain.components
+                    concept_to_ui_concept(env.concepts[x])
+                    for x in datasource.grain.components
                 ],
             )
         )

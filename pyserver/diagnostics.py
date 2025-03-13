@@ -9,13 +9,14 @@ from io_models import (
     Severity,
     ModelSourceInSchema,
     CompletionItem,
-    Import
+    Import,
 )
 from env_helpers import parse_env_from_full_model
 from trilogy.parsing.parse_engine import ParseToObjects
 from logging import getLogger
 
-logger = getLogger('diagnostics')
+logger = getLogger("diagnostics")
+
 
 def user_repr(error: Union[UnexpectedToken]):
     if isinstance(error, UnexpectedToken):
@@ -41,7 +42,8 @@ def get_diagnostics(
 ) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
-    imports:list[Import] = []
+    imports: list[Import] = []
+
     def on_error(e: UnexpectedToken) -> Any:
         diagnostics.append(
             ValidateItem(
@@ -118,4 +120,6 @@ def get_diagnostics(
 
     except Exception:
         logging.exception("completion generation raised exception")
-    return ValidateResponse(items=diagnostics, completion_items=completions, imports=imports)
+    return ValidateResponse(
+        items=diagnostics, completion_items=completions, imports=imports
+    )

@@ -177,7 +177,7 @@ def generate_query(query: QueryInSchema):
             ]
             generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
-        
+
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     if not generated:
         return QueryOut(generated_sql=None, columns=columns)
