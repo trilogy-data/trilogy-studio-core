@@ -53,16 +53,6 @@ class ListModelResponse(BaseModel):
     models: List[Model]
 
 
-class GenAIQueryInSchema(BaseModel):
-    connection: str
-    text: str
-    genai_connection: str
-
-
-class GenAIQueryOutSchema(BaseModel):
-    text: str
-
-
 class FormatQueryOutSchema(BaseModel):
     text: str
 
@@ -82,8 +72,11 @@ class ModelInSchema(BaseModel):
     name: str
     sources: List[ModelSourceInSchema]
 
-
+class Import(BaseModel):
+    name:str
+    alias: str | None = None
 class QueryInSchema(BaseModel):
+    imports: list[Import]
     query: str
     dialect: Dialects
     full_model: ModelInSchema
@@ -133,3 +126,4 @@ class CompletionItem(BaseModel):
 class ValidateResponse(BaseModel):
     items: List[ValidateItem]
     completion_items: list[CompletionItem]
+    imports:list[Import] = Field(default_factory=list)

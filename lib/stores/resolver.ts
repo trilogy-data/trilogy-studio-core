@@ -36,12 +36,18 @@ interface ValidateResponse {
   data: {
     items: ValidateItem[]
     completion_items: CompletionItem[]
+    imports: Import[]
   }
 }
 
 export interface ContentInput {
   alias: string
   contents: string
+}
+
+export interface Import {
+  name: string
+  alias: string
 }
 
 export default class AxiosResolver {
@@ -80,6 +86,7 @@ export default class AxiosResolver {
     dialect: string,
     type: string,
     sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -90,6 +97,7 @@ export default class AxiosResolver {
         query: query,
         dialect: dialect,
         full_model: { name: '', sources: sources || [] },
+        imports: imports || [],
       })
       .catch((error: Error) => {
         console.log(error)

@@ -2,8 +2,12 @@
   <div class="debug-container">
     <!-- Left side: LLM Chat -->
     <div class="llm-chat-container">
-      <div class="section-header">LLM Validation <span class="text-faint text-small">Test that your LLM connection
-          will deliver acceptable experience.</span></div>
+      <div class="section-header">
+        LLM Validation
+        <span class="text-faint text-small"
+          >Test that your LLM connection will deliver acceptable experience.</span
+        >
+      </div>
       <div class="connection-controls">
         <div class="provider-selector">
           <label for="provider-select">Provider:</label>
@@ -28,7 +32,10 @@
             </span>
           </div>
           <div class="message-content">{{ message.content }}</div>
-          <div v-if="message.testResult" :class="['test-result', message.testResult.passed ? 'passed' : 'failed']">
+          <div
+            v-if="message.testResult"
+            :class="['test-result', message.testResult.passed ? 'passed' : 'failed']"
+          >
             Test: {{ message.testResult.passed ? 'PASSED ✓' : 'FAILED ✗' }}
             <div v-if="!message.testResult.passed" class="failure-reason">
               {{ message.testResult.reason }}
@@ -38,10 +45,17 @@
       </div>
 
       <div class="input-container">
-        <textarea v-model="userInput" @keydown.enter.ctrl="sendPrompt"
-          placeholder="Type your message here... (Ctrl+Enter to send)" :disabled="isLoading || !isProviderSelected">
+        <textarea
+          v-model="userInput"
+          @keydown.enter.ctrl="sendPrompt"
+          placeholder="Type your message here... (Ctrl+Enter to send)"
+          :disabled="isLoading || !isProviderSelected"
+        >
         </textarea>
-        <button @click="sendPrompt" :disabled="isLoading || !userInput.trim() || !isProviderSelected">
+        <button
+          @click="sendPrompt"
+          :disabled="isLoading || !userInput.trim() || !isProviderSelected"
+        >
           {{ isLoading ? 'Sending...' : 'Send' }}
         </button>
       </div>
@@ -53,13 +67,25 @@
 
     <!-- Right side: Scenarios -->
     <div class="scenarios-container">
-      <div class="section-header">Test Scenarios <span class="pass-indicator text-small"
-          v-if="Object.values(scenarioResults).length == scenarios.length && Object.values(scenarioResults).every(v => v?.passed)">✓ All passed, LLM integration should meet
-          expectations!</span></div>
+      <div class="section-header">
+        Test Scenarios
+        <span
+          class="pass-indicator text-small"
+          v-if="
+            Object.values(scenarioResults).length == scenarios.length &&
+            Object.values(scenarioResults).every((v) => v?.passed)
+          "
+          >✓ All passed, LLM integration should meet expectations!</span
+        >
+      </div>
 
       <div class="scenarios-list">
-        <div v-for="(scenario, index) in scenarios" :key="index"
-          :class="['scenario-item', { 'passed': scenarioResults[index]?.passed }]" @click="runScenario(index)">
+        <div
+          v-for="(scenario, index) in scenarios"
+          :key="index"
+          :class="['scenario-item', { passed: scenarioResults[index]?.passed }]"
+          @click="runScenario(index)"
+        >
           <div class="scenario-name">{{ scenario.name }}</div>
           <div class="scenario-description">{{ scenario.description }}</div>
           <div v-if="scenarioResults[index]" class="scenario-result-indicator">
@@ -73,20 +99,20 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, nextTick, watch, inject } from 'vue';
-import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm';
-import type { LLMConnectionStoreType } from '../stores/llmStore';
-import testCases from '../llm/data/testCases';
+import { defineComponent, ref, computed, onMounted, nextTick, watch, inject } from 'vue'
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
+import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
 // This interface would normally be imported
 
 interface TestResult {
-  passed: boolean;
-  reason?: string;
+  passed: boolean
+  reason?: string
 }
 
 interface MessageWithTest extends LLMMessage {
-  testResult?: TestResult;
+  testResult?: TestResult
 }
 
 export default defineComponent({
@@ -95,69 +121,77 @@ export default defineComponent({
   props: {
     initialProvider: {
       type: String,
-      default: ''
+      default: '',
     },
     initialModel: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
   },
 
-  setup(props) {
+  setup(_) {
     // Inject the store
-    const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType;
+    const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
 
     // Chat state
-    const messages = ref<MessageWithTest[]>([]);
-    const userInput = ref('');
-    const isLoading = ref(false);
-    const error = ref('');
-    const messagesContainer = ref<HTMLElement | null>(null);
-    const scenarioResults = ref<(TestResult | null)[]>([]);
+    const messages = ref<MessageWithTest[]>([])
+    const userInput = ref('')
+    const isLoading = ref(false)
+    const error = ref('')
+    const messagesContainer = ref<HTMLElement | null>(null)
+    const scenarioResults = ref<(TestResult | null)[]>([])
 
     // Connection state
-    const selectedProvider = ref(Object.keys(llmConnectionStore.connections).length > 0
-      ? Object.keys(llmConnectionStore.connections)[0]
-      : '');
+    const selectedProvider = ref(
+      Object.keys(llmConnectionStore.connections).length > 0
+        ? Object.keys(llmConnectionStore.connections)[0]
+        : '',
+    )
 
     // Sample test scenarios - would normally be imported
-    const scenarios = ref<TestScenario[]>(testCases);
+    const scenarios = ref<TestScenario[]>(testCases)
 
     // Computed properties
     const availableProviders = computed(() => {
-      return Object.keys(llmConnectionStore.connections);
-    });
+      return Object.keys(llmConnectionStore.connections)
+    })
 
     const isProviderSelected = computed(() => {
-      return !!selectedProvider.value && llmConnectionStore.getConnection(selectedProvider.value) !== null;
-    });
+      return (
+        !!selectedProvider.value &&
+        llmConnectionStore.getConnection(selectedProvider.value) !== null
+      )
+    })
 
     // Scroll to bottom when messages are updated
     watch(messages, () => {
       nextTick(() => {
         if (messagesContainer.value) {
-          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
         }
-      });
-    });
+      })
+    })
 
     // Get the connection status for display
     const getConnectionStatus = (providerName: string) => {
-      if (!providerName) return 'disconnected';
-      return llmConnectionStore.getConnectionStatus(providerName);
-    };
+      if (!providerName) return 'disconnected'
+      return llmConnectionStore.getConnectionStatus(providerName)
+    }
 
     // Evaluate if the AI response meets the test criteria
-    const evaluateResponse = (response: string, criteria: TestScenario['expectedResponse']): TestResult => {
-      const result: TestResult = { passed: true };
+    const evaluateResponse = (
+      response: string,
+      criteria: TestScenario['expectedResponse'],
+    ): TestResult => {
+      const result: TestResult = { passed: true }
 
       // Check for required phrases
       if (criteria.contains) {
         for (const phrase of criteria.contains) {
           if (!response.toLowerCase().includes(phrase.toLowerCase())) {
-            result.passed = false;
-            result.reason = `Response missing expected phrase: "${phrase}"`;
-            return result;
+            result.passed = false
+            result.reason = `Response missing expected phrase: "${phrase}"`
+            return result
           }
         }
       }
@@ -166,151 +200,164 @@ export default defineComponent({
       if (criteria.notContains) {
         for (const phrase of criteria.notContains) {
           if (response.toLowerCase().includes(phrase.toLowerCase())) {
-            result.passed = false;
-            result.reason = `Response contains forbidden phrase: "${phrase}"`;
-            return result;
+            result.passed = false
+            result.reason = `Response contains forbidden phrase: "${phrase}"`
+            return result
           }
         }
       }
 
       // Check for required issue identification
       if (criteria.mustIdentify) {
-        const lowerResponse = response.toLowerCase();
-        const mustIdentify = criteria.mustIdentify.toLowerCase();
+        const lowerResponse = response.toLowerCase()
+        const mustIdentify = criteria.mustIdentify.toLowerCase()
 
         if (!lowerResponse.includes(mustIdentify)) {
           // Check for synonyms or related phrases
-          const identified = checkForIssueSynonyms(lowerResponse, mustIdentify);
+          const identified = checkForIssueSynonyms(lowerResponse, mustIdentify)
 
           if (!identified) {
-            result.passed = false;
-            result.reason = `Response did not identify the issue: "${criteria.mustIdentify}"`;
-            return result;
+            result.passed = false
+            result.reason = `Response did not identify the issue: "${criteria.mustIdentify}"`
+            return result
           }
         }
       }
 
-      return result;
-    };
+      return result
+    }
 
     // Helper function to check for synonyms or related phrases
     const checkForIssueSynonyms = (response: string, issue: string): boolean => {
       // Simple implementation - in a real scenario this would be more sophisticated
       const synonymMap: Record<string, string[]> = {
-        "missing index": ["no index", "should create index", "index would improve", "needs an index"],
-        "n+1 query problem": ["multiple queries", "separate queries", "query for each", "batch fetch"],
-        "function in where clause": ["non-sargable", "can't use index", "prevents index", "function on column"]
-      };
-
-      if (issue in synonymMap) {
-        return synonymMap[issue].some(synonym => response.includes(synonym));
+        'missing index': [
+          'no index',
+          'should create index',
+          'index would improve',
+          'needs an index',
+        ],
+        'n+1 query problem': [
+          'multiple queries',
+          'separate queries',
+          'query for each',
+          'batch fetch',
+        ],
+        'function in where clause': [
+          'non-sargable',
+          "can't use index",
+          'prevents index',
+          'function on column',
+        ],
       }
 
-      return false;
-    };
+      if (issue in synonymMap) {
+        return synonymMap[issue].some((synonym) => response.includes(synonym))
+      }
+
+      return false
+    }
 
     const sendPrompt = async () => {
-      if (!userInput.value.trim() || isLoading.value || !selectedProvider.value) return;
+      if (!userInput.value.trim() || isLoading.value || !selectedProvider.value) return
 
       // Add user message
       messages.value.push({
         role: 'user',
-        content: userInput.value
-      });
+        content: userInput.value,
+      })
 
-      const prompt = userInput.value;
-      userInput.value = ''; // Clear input field
-      isLoading.value = true;
-      error.value = '';
+      const prompt = userInput.value
+      userInput.value = '' // Clear input field
+      isLoading.value = true
+      error.value = ''
 
       try {
         const options: LLMRequestOptions = {
           prompt,
-        };
+        }
 
         const response: LLMResponse = await llmConnectionStore.generateCompletion(
           selectedProvider.value,
-          options
-        );
+          options,
+        )
 
         // Add AI response
         messages.value.push({
           role: 'assistant',
           content: response.text,
           modelInfo: {
-            totalTokens: response.usage.totalTokens
-          }
-        });
+            totalTokens: response.usage.totalTokens,
+          },
+        })
       } catch (err) {
-        error.value = err instanceof Error ? err.message : 'An unknown error occurred';
+        error.value = err instanceof Error ? err.message : 'An unknown error occurred'
       } finally {
-        isLoading.value = false;
+        isLoading.value = false
       }
-    };
+    }
 
     const runScenario = async (index: number) => {
-      if (isLoading.value || !selectedProvider.value) return;
+      if (isLoading.value || !selectedProvider.value) return
 
-      const scenario = scenarios.value[index];
+      const scenario = scenarios.value[index]
 
       // Clear existing messages
-      messages.value = [];
+      messages.value = []
 
       // Add test description message
       messages.value.push({
         role: 'user',
-        content: `RUNNING TEST: ${scenario.name}\n\n${scenario.prompt}`
-      });
+        content: `RUNNING TEST: ${scenario.name}\n\n${scenario.prompt}`,
+      })
 
-      isLoading.value = true;
-      error.value = '';
+      isLoading.value = true
+      error.value = ''
 
       try {
         const options: LLMRequestOptions = {
           prompt: scenario.prompt,
-        };
+        }
 
         const response: LLMResponse = await llmConnectionStore.generateCompletion(
           selectedProvider.value,
-          options
-        );
+          options,
+        )
 
         // Evaluate the response
-        const testResult = evaluateResponse(response.text, scenario.expectedResponse);
+        const testResult = evaluateResponse(response.text, scenario.expectedResponse)
 
         // Update scenario results
-        scenarioResults.value[index] = testResult;
+        scenarioResults.value[index] = testResult
 
         // Add AI response with test results
         messages.value.push({
           role: 'assistant',
           content: response.text,
           modelInfo: {
-            totalTokens: response.usage.totalTokens
+            totalTokens: response.usage.totalTokens,
           },
-          testResult: testResult
-        });
-
+          testResult: testResult,
+        })
       } catch (err) {
-        error.value = err instanceof Error ? err.message : 'An unknown error occurred';
+        error.value = err instanceof Error ? err.message : 'An unknown error occurred'
 
         // Update scenario result for failure
         scenarioResults.value[index] = {
           passed: false,
-          reason: `Error: ${error.value}`
-        };
-
+          reason: `Error: ${error.value}`,
+        }
       } finally {
-        isLoading.value = false;
+        isLoading.value = false
       }
-    };
+    }
 
     // Initialize providers list on mount if none are available
     onMounted(() => {
       if (availableProviders.value.length === 0) {
-        error.value = 'No LLM providers available. Please configure providers in settings.';
+        error.value = 'No LLM providers available. Please configure providers in settings.'
       }
-    });
+    })
 
     return {
       messages,
@@ -325,10 +372,10 @@ export default defineComponent({
       sendPrompt,
       scenarios,
       runScenario,
-      scenarioResults
-    };
-  }
-});
+      scenarioResults,
+    }
+  },
+})
 </script>
 
 <style scoped>
@@ -411,11 +458,11 @@ export default defineComponent({
 }
 
 .pass-indicator {
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 .fail-indicator {
-  color: #F44336;
+  color: #f44336;
 }
 
 .connection-controls {
@@ -450,15 +497,15 @@ export default defineComponent({
 }
 
 .status-indicator.connected {
-  background-color: #4CAF50;
+  background-color: #4caf50;
 }
 
 .status-indicator.connecting {
-  background-color: #FFC107;
+  background-color: #ffc107;
 }
 
 .status-indicator.disconnected {
-  background-color: #F44336;
+  background-color: #f44336;
 }
 
 .chat-messages {
@@ -515,12 +562,12 @@ export default defineComponent({
 
 .test-result.passed {
   background-color: rgba(76, 175, 80, 0.1);
-  color: #2E7D32;
+  color: #2e7d32;
 }
 
 .test-result.failed {
   background-color: rgba(244, 67, 54, 0.1);
-  color: #C62828;
+  color: #c62828;
 }
 
 .failure-reason {

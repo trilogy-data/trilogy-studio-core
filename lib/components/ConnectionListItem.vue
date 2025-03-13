@@ -76,7 +76,6 @@
         v-if="item.type === 'connection'"
         :connection="item.connection"
         :is-connected="item.connection.connected"
-
       />
 
       <!-- Status Indicator -->

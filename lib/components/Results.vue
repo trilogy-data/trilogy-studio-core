@@ -1,15 +1,27 @@
 <template>
   <div class="results-container">
     <div class="tabs">
-      <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="setTab('results')">
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'results' }"
+        @click="setTab('results')"
+      >
         Results ({{ results.data.length }})
       </button>
-      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'visualize' }"
-        @click="setTab('visualize')">
+      <button
+        class="tab-button"
+        v-if="!(type === 'sql')"
+        :class="{ active: activeTab === 'visualize' }"
+        @click="setTab('visualize')"
+      >
         Visualize
       </button>
-      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'sql' }"
-        @click="setTab('sql')">
+      <button
+        class="tab-button"
+        v-if="!(type === 'sql')"
+        :class="{ active: activeTab === 'sql' }"
+        @click="setTab('sql')"
+      >
         Generated SQL
       </button>
     </div>
@@ -20,7 +32,12 @@
       <div v-else-if="activeTab === 'sql'" class="sql-view">
         <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
       </div>
-      <data-table v-else :headers="results.headers" :results="results.data" :containerHeight="containerHeight" />
+      <data-table
+        v-else
+        :headers="results.headers"
+        :results="results.data"
+        :containerHeight="containerHeight"
+      />
     </div>
   </div>
 </template>
@@ -40,7 +57,7 @@ export default {
   props: {
     type: {
       type: String,
-      required: true
+      required: true,
     },
     results: {
       type: Results,

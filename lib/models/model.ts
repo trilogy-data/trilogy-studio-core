@@ -310,7 +310,11 @@ export class ModelConfig {
 
   addModelSource(source: ModelSource) {
     //check if address already exists
-    if (this.sources.find((s) => s.alias === source.alias)) {
+    let existing = this.sources.find((s) => s.alias === source.alias)
+    if (existing) {
+      if (existing.editor === source.editor) {
+        return true
+      }
       throw new Error(`Alias ${source.alias} already exists`)
     }
     this.sources.push(source)

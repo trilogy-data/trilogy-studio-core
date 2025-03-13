@@ -1,7 +1,7 @@
 <template>
   <div class="relative-parent">
-    <button @click="createModel" v-if="isPopupControl">New2</button>
-    <loading-button v-else  :action="createModel">{{ text }}</loading-button>
+    <button @click="createModel" v-if="isPopupControl">New</button>
+    <loading-button v-else :action="createModel">{{ text }}</loading-button>
     <div v-if="visible" :class="{ 'absolute-form': absolute, 'fixed-form': !absolute }">
       <form @submit.prevent="submitModelCreation">
         <div>
@@ -161,7 +161,7 @@ export default defineComponent({
   setup(props) {
     // display text
     const text = props.formDefaults.importAddress ? 'Import' : 'New'
-    const isPopupControl = props.formDefaults.importAddress ? false: true
+    const isPopupControl = props.formDefaults.importAddress ? false : true
 
     // Placeholder for editor details
     const modelDetails = ref({
@@ -248,7 +248,7 @@ export default defineComponent({
       createModel,
       submitModelCreation,
       text,
-      isPopupControl
+      isPopupControl,
     }
   },
 })

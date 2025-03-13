@@ -152,6 +152,12 @@ def generate_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
     try:
+        for imp in query.imports:
+            if imp.alias:
+                imp_string = f"import {imp.name} as {imp.alias};"
+            else:
+                imp_string = f"import {imp.name};"
+            parse_text(imp_string, env)
         _, parsed = parse_text(safe_format_query(query.query), env)
         final = parsed[-1]
         if isinstance(final, RawSQLStatement):
@@ -171,6 +177,7 @@ def generate_query(query: QueryInSchema):
             ]
             generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
+        
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     if not generated:
         return QueryOut(generated_sql=None, columns=columns)

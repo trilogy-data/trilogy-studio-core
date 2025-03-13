@@ -1,4 +1,3 @@
-
 // Generic interface for LLM responses
 export interface LLMResponse {
   text: string
@@ -21,11 +20,10 @@ export interface LLMMessage {
   role: string
   content: string
   modelInfo?: {
-    totalTokens: number;
+    totalTokens: number
   }
 }
 
-// Abstract base class for LLM providers
 export abstract class LLMProvider {
   protected apiKey: string
   public models: string[]
@@ -44,7 +42,6 @@ export abstract class LLMProvider {
     this.storage = 'local'
     this.connected = false
     this.error = null
-    
   }
 
   setApiKey(apiKey: string): void {
@@ -54,9 +51,11 @@ export abstract class LLMProvider {
   abstract reset(): void
 
   // Abstract method to be implemented by specific providers
-  abstract generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null): Promise<LLMResponse>
+  abstract generateCompletion(
+    options: LLMRequestOptions,
+    history: LLMMessage[] | null,
+  ): Promise<LLMResponse>
 
-  // Common utility methods could be added here
   protected validateRequestOptions(options: LLMRequestOptions): void {
     if (!options.prompt) {
       throw new Error('Prompt is required')
@@ -70,13 +69,17 @@ export abstract class LLMProvider {
       model: this.model,
       type: this.type,
       apiKey: this.apiKey,
-    };
+    }
   }
 
   // Create instance from JSON
-  static fromJSON(json: string | Partial<LLMProvider>): LLMProvider {
+  static fromJSON<T extends LLMProvider>(
+    this: new (name: string, apiKey: string, model: string) => T,
+    json: string | Partial<LLMProvider>,
+  ): T {
     let restored = typeof json === 'string' ? JSON.parse(json) : json
-    const instance = new this(restored.name, restored.apiKey, restored.model);
-    return instance;
+
+    const instance = new this(restored.name, restored.apiKey, restored.model)
+    return instance
   }
 }

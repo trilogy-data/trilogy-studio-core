@@ -1,7 +1,7 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
-import { OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
+import { LLMProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
@@ -160,23 +160,18 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
   }
 
-
-  saveLLMConnections(
-    connections: Array<OpenAIProvider | AnthropicProvider | MistralProvider>,
-  ): void {
+  saveLLMConnections(connections: Array<LLMProvider>): void {
     console.log('saving connections', connections)
-    localStorage.setItem(this.llmConnectionStorageKey, JSON.stringify(connections.map((connection)=>connection.toJSON())))
+    localStorage.setItem(
+      this.llmConnectionStorageKey,
+      JSON.stringify(connections.map((connection) => connection.toJSON())),
+    )
   }
 
-  async loadLLMConnections(): Promise<
-    Record<string, OpenAIProvider | AnthropicProvider | MistralProvider>
-  > {
+  async loadLLMConnections(): Promise<Record<string, LLMProvider>> {
     const storedData = localStorage.getItem(this.llmConnectionStorageKey)
     const raw = storedData ? JSON.parse(storedData) : []
-    const connections: Record<
-      string,
-      OpenAIProvider | AnthropicProvider | MistralProvider
-    > = {}
+    const connections: Record<string, LLMProvider> = {}
     // Process each connection sequentially
     for (const connection of raw) {
       switch (connection.type) {

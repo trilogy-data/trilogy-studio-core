@@ -62,9 +62,9 @@
         :activeConnectionKey="activeConnectionKey"
       />
       <LLMConnectionList
-      v-show="active === 'llms'"
-      @llm-connection-key-selected="connectionKeySelected"
-      :activeLLMKey="activeLLMKey"
+        v-show="active === 'llms'"
+        @llm-connection-key-selected="connectionKeySelected"
+        :activeLLMKey="activeLLMKey"
       />
       <ModelSidebar
         v-show="active === 'models'"
@@ -86,11 +86,11 @@ import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
-import LLMConnectionListItem from './LLMConnectionListItem.vue'
+import LLMConnectionList from './LLMConnectionList.vue'
 import trilogyIcon from '../static/trilogy.png'
 import Tooltip from './Tooltip.vue'
 import { getDefaultValueFromHash } from '../stores/urlStore'
-import LLMConnectionList from './LLMConnectionList.vue'
+
 export default defineComponent({
   name: 'Sidebar',
   props: {
@@ -216,7 +216,7 @@ export default defineComponent({
     connectionKeySelected(key: string) {
       this.$emit('connection-key-selected', key)
     },
-    llmKeySelected(key:string) {
+    llmKeySelected(key: string) {
       this.$emit('llm-key-selected', key)
     },
     saveEditors() {

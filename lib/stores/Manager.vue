@@ -70,7 +70,7 @@ export default {
           props.connectionStore.addConnection(connection)
         }
       })
-      source.loadModelConfig().then((models)=> {
+      source.loadModelConfig().then((models) => {
         for (let modelConfig of Object.values(models)) {
           props.modelStore.addModelConfig(modelConfig)
         }

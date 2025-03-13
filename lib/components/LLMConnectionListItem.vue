@@ -1,5 +1,9 @@
 <template>
-  <div class="sidebar-item" @click="handleItemClick" :class="{ 'sidebar-item-selected': isSelected }">
+  <div
+    class="sidebar-item"
+    @click="handleItemClick"
+    :class="{ 'sidebar-item-selected': isSelected }"
+  >
     <!-- Indentation -->
     <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
     <!-- Expandable Item Icons -->
@@ -8,17 +12,28 @@
       <i v-else class="mdi mdi-menu-right"></i>
     </template>
     <!-- Connection Type Icons -->
-    <LLMProviderIcon v-if="item.type === 'connection'" :provider-type="getProviderType(item.connection)" />
+    <LLMProviderIcon
+      v-if="item.type === 'connection'"
+      :provider-type="getProviderType(item.connection)"
+    />
     <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
     <!-- Item Name -->
-    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-if="item.type === 'refresh-connection'"
-      @click="handleRefreshConnectionClick">
+    <div
+      class="refresh title-pad-left truncate-text sidebar-sub-item"
+      v-if="item.type === 'refresh-connection'"
+      @click="handleRefreshConnectionClick"
+    >
       {{ item.name }}
     </div>
     <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
       <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
         <button type="submit" class="customize-button">Update API Key</button>
-        <input type="password" v-model="apiKeyInput" placeholder="API Key" class="connection-customize" />
+        <input
+          type="password"
+          v-model="apiKeyInput"
+          placeholder="API Key"
+          class="connection-customize"
+        />
       </form>
     </div>
     <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
@@ -29,20 +44,32 @@
         </select>
       </form>
     </div>
-    <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
+    <span
+      v-else
+      class="title-pad-left truncate-text"
+      :class="{ 'error-indicator': item.type === 'error' }"
+    >
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
     <!-- Connection-specific Actions -->
     <div class="connection-actions">
       <!-- Set Active Button for Connection -->
-      <button v-if="item.type === 'connection' && !isSelected" class="set-active-btn" @click.stop="setAsActive(item.id)"
-        title="Set as active connection">
-        <i class="mdi mdi-check-circle-outline"></i>
-      </button>
+      <LoadingButton
+        class="loading-button"
+        @click.stop
+        :action="() => setAsActive(item.id)"
+        title="Set as active connection"
+      >
+        <i class="mdi mdi-check-circle-outline"></i
+      ></LoadingButton>
       <!-- Refresh Button for Connection -->
-      <connection-refresh v-if="item.type === 'connection'" :connection="item.connection" type="llm"
-        :is-connected="isConnected(item.connection)" />
+      <connection-refresh
+        v-if="item.type === 'connection'"
+        :connection="item.connection"
+        type="llm"
+        :is-connected="isConnected(item.connection)"
+      />
       <!-- Status Indicator -->
       <connection-status-icon v-if="item.type === 'connection'" :connection="item.connection" />
     </div>
@@ -56,13 +83,15 @@ import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
 import LLMProviderIcon from './LLMProviderIcon.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
+import LoadingButton from './LoadingButton.vue'
 
 export default defineComponent({
   name: 'LLMConnectionListItem',
   components: {
     LLMProviderIcon,
     ConnectionRefresh,
-    ConnectionStatusIcon
+    ConnectionStatusIcon,
+    LoadingButton,
   },
   props: {
     item: {
@@ -74,16 +103,16 @@ export default defineComponent({
         type: string
         connection: any
       }>,
-      required: true
+      required: true,
     },
     isCollapsed: {
       type: Boolean,
-      default: true
+      default: true,
     },
     isSelected: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   emits: ['toggle', 'setActive', 'refresh', 'updateApiKey', 'updateModel'],
   setup(props, { emit }) {
@@ -151,13 +180,18 @@ export default defineComponent({
       isConnected,
       setAsActive,
       updateApiKey,
-      updateModel
+      updateModel,
     }
-  }
+  },
 })
 </script>
 
 <style scoped>
+.loading-button {
+  font-size: 16px;
+  height: var(--sidebar-list-item-height);
+  min-height: var(--sidebar-list-item-height);
+}
 .sidebar-item {
   display: flex;
   align-items: center;

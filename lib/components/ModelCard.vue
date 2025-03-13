@@ -76,6 +76,9 @@
   </section>
 </template>
 <style scoped>
+.button-container {
+  position: relative;
+}
 .action-bar {
   padding-bottom: 10px;
 }

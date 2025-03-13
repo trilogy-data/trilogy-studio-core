@@ -68,9 +68,20 @@
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
         <span class="remove-btn" @click.stop="deleteEditor(item.editor)">
-          <i class="mdi mdi-close"></i>
+          <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
+
+    </div>
+    <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
+      <div class="confirmation-dialog">
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
+        <div class="dialog-actions">
+          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
+          <button class="confirm-btn" @click="confirmDelete">Delete</button>
+        </div>
+      </div>
     </div>
   </sidebar-list>
 </template>
@@ -211,10 +222,34 @@ export default {
       connectionStateToStatus,
     }
   },
+  data() {
+    return {
+      showDeleteConfirmationState: false,
+      editorToDelete: null
+    }
+  },
   methods: {
-    //@ts-ignore
+    // Modified delete methods
+    showDeleteConfirmation(editor) {
+      this.editorToDelete = editor
+      this.showDeleteConfirmationState = true
+    },
+    cancelDelete() {
+      this.showDeleteConfirmationState = false
+      this.editorToDelete = null
+    },
+    confirmDelete() {
+      if (this.editorToDelete){
+        this.editorStore.removeEditor(this.editorToDelete)
+      }
+      
+      this.showDeleteConfirmationState = false
+      this.editorToDelete = null
+    },
+    // Keep original methods
     deleteEditor(editor) {
-      this.editorStore.removeEditor(editor.name)
+      // Replace direct deletion with confirmation
+      this.showDeleteConfirmation(editor)
     },
     saveEditors() {
       this.$emit('save-editors')
@@ -294,5 +329,49 @@ export default {
 
 .text-light {
   color: var(--text-faint);
+}
+
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-dialog {
+  background-color: var(--background-color, white);
+  padding: 20px;
+  width: 300px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.cancel-btn {
+  background-color: var(--button-bg, #f5f5f5);
+  border: 1px solid var(--border-color, #ddd);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>

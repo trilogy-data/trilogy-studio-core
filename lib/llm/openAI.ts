@@ -1,6 +1,5 @@
-import { LLMProvider } from './base';
-import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base';
-
+import { LLMProvider } from './base'
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 
 export class OpenAIProvider extends LLMProvider {
   private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
@@ -23,25 +22,25 @@ export class OpenAIProvider extends LLMProvider {
       }).then((response) => response.json())
       this.models = models.data.map((model: any) => model.id)
       this.connected = true
-    }
-    catch (e) {
+    } catch (e) {
       if (e instanceof Error) {
         this.error = e.message
-      }
-      else {
+      } else {
         this.error = 'Unknown error'
       }
       this.connected = false
     }
   }
 
-  async generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null = null): Promise<LLMResponse> {
+  async generateCompletion(
+    options: LLMRequestOptions,
+    history: LLMMessage[] | null = null,
+  ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
     let messages: LLMMessage[] = []
     if (history) {
       messages = [...history, { role: 'user', content: options.prompt }]
-    }
-    else {
+    } else {
       messages = [{ role: 'user', content: options.prompt }]
     }
 

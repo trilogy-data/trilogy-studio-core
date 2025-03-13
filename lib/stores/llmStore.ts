@@ -5,14 +5,14 @@ import { AnthropicProvider, OpenAIProvider, MistralProvider, createPrompt } from
 
 const extractLastTripleQuotedText = (input: string): string | null => {
   // Use the 's' flag (dotAll) to make the dot match newlines as well
-  const matches = input.match(/"""([\s\S]*?)"""/gs);
-  return matches ? matches[matches.length - 1].slice(3, -3) : null;
-};
+  const matches = input.match(/"""([\s\S]*?)"""/gs)
+  return matches ? matches[matches.length - 1].slice(3, -3) : null
+}
 
 const useLLMConnectionStore = defineStore('llmConnections', {
   state: () => ({
     connections: {} as Record<string, LLMProvider>,
-    activeConnection: '' as String | null,
+    activeConnection: '',
   }),
 
   actions: {
@@ -22,7 +22,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       this.connections[name] = connection
       return connection
     },
-
 
     resetConnection(name: string) {
       if (this.connections[name]) {
@@ -72,23 +71,28 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     },
 
     async generateQueryCompletion(inputString: string, concepts: ModelConceptInput[]) {
-      if (!this.activeConnection) {
+      let connection: string = this.activeConnection || ''
+      if (connection === '') {
         throw new Error('No active LLM connection')
       }
-      let raw = await this.generateCompletion(this.activeConnection, { prompt: createPrompt(inputString, concepts) })
-      console.log(raw)
-      console.log(raw.text)
+      let raw = await this.generateCompletion(connection, {
+        prompt: createPrompt(inputString, concepts),
+      })
+
       return extractLastTripleQuotedText(raw.text)
     },
 
-    async generateCompletion(name: string, options: LLMRequestOptions, history: [LLMMessage] | null = null) {
-
+    async generateCompletion(
+      name: string,
+      options: LLMRequestOptions,
+      history: [LLMMessage] | null = null,
+    ) {
       if (!this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
 
       return await this.connections[name].generateCompletion(options, history)
-    }
+    },
   },
 
   getters: {
@@ -111,8 +115,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         if (connectionState.connected) return 'connected'
         return 'disabled'
       }
-    }
-  }
+    },
+  },
 })
 
 export type LLMConnectionStoreType = ReturnType<typeof useLLMConnectionStore>

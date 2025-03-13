@@ -5,7 +5,6 @@
 </template>
 
 <script setup lang="ts">
-
 defineProps<{ type: 'tip' | 'warning' | 'caution' }>()
 </script>
 

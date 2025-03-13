@@ -15,7 +15,7 @@ interface RefreshButtonProps {
     name: string
     connected: boolean
   }
-  type?: string,
+  type?: string
   isConnected?: boolean
 }
 
@@ -26,8 +26,7 @@ const emit = defineEmits<{
 let connectionStore: ConnectionStoreType | LLMConnectionStoreType | undefined
 if (props.type === 'llm') {
   connectionStore = inject<ConnectionStoreType>('llmConnectionStore')
-}
-else {
+} else {
   connectionStore = inject<ConnectionStoreType>('connectionStore')
 }
 
@@ -54,7 +53,6 @@ const handleRefresh = async () => {
 
 <style scoped>
 .refresh-button {
-  line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
 }

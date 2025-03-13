@@ -1,7 +1,7 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
-import { LLMProvider, MistralProvider, OpenAIProvider, AnthropicProvider } from '../llm'
+import { LLMProvider } from '../llm'
 export default abstract class AbstractStorage {
   public type: string
 
@@ -28,10 +28,7 @@ export default abstract class AbstractStorage {
   abstract saveModelConfig(modelConfig: ModelConfig[]): void
   abstract clearModelConfig(): void
 
-  abstract saveLLMConnections(
-    connections: Array<LLMProvider>,
-  ): void
-  abstract loadLLMConnections(
-  ): Promise<Record<string, OpenAIProvider | AnthropicProvider | MistralProvider>>
+  abstract saveLLMConnections(connections: Array<LLMProvider>): void
+  abstract loadLLMConnections(): Promise<Record<string, LLMProvider>>
   abstract deleteLLMConnection(name: string): void
 }
