@@ -191,12 +191,16 @@ describe('EditorLocalStorage', () => {
     let c1 = new ModelConfig({
       name: 'config1',
       storage: 'local',
-      sources: [ModelSource.fromJSON({ editor: 'source1', alias: 'alias1', concepts: [], datasources: [] })],
+      sources: [
+        ModelSource.fromJSON({ editor: 'source1', alias: 'alias1', concepts: [], datasources: [] }),
+      ],
     })
     let c2 = new ModelConfig({
       name: 'config2',
       storage: 'local',
-      sources: [ModelSource.fromJSON({ editor: 'source2', alias: 'alias2', concepts: [], datasources: [] })],
+      sources: [
+        ModelSource.fromJSON({ editor: 'source2', alias: 'alias2', concepts: [], datasources: [] }),
+      ],
     })
     const modelConfigList = {
       config1: c1,
@@ -209,7 +213,6 @@ describe('EditorLocalStorage', () => {
     expect(Object.keys(loadedModelConfig)).toHaveLength(2)
     expect(loadedModelConfig['config1'].name).toBe('config1')
     expect(loadedModelConfig['config2'].name).toBe('config2')
-
   })
 
   it('should clear model configs', () => {
@@ -221,7 +224,6 @@ describe('EditorLocalStorage', () => {
     localStorage.loadModelConfig().then((loadedModelConfig) => {
       expect(Object.keys(loadedModelConfig)).toHaveLength(0)
     })
-
   })
 
   it('should save and load LLM connections', () => {

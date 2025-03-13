@@ -1,5 +1,5 @@
 import axios from 'axios'
-import {ModelConfig} from '../models'
+import { ModelConfig } from '../models'
 
 interface QueryResponse {
   data: {

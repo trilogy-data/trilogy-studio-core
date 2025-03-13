@@ -16,12 +16,10 @@ export class MistralProvider extends LLMProvider {
       // Map our generic request options to Mistral API format
       const requestBody = {
         model: this.model,
-        messages: [
-          { role: 'user', content: options.prompt }
-        ],
+        messages: [{ role: 'user', content: options.prompt }],
         max_tokens: options.maxTokens || 1000,
         temperature: options.temperature || 0.7,
-        top_p: options.topP || 1.0
+        top_p: options.topP || 1.0,
       }
 
       // Make API request to Mistral
@@ -29,9 +27,9 @@ export class MistralProvider extends LLMProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -47,8 +45,8 @@ export class MistralProvider extends LLMProvider {
         usage: {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,
-          totalTokens: data.usage.total_tokens
-        }
+          totalTokens: data.usage.total_tokens,
+        },
       }
     } catch (error) {
       throw error instanceof Error
@@ -63,8 +61,8 @@ export class MistralProvider extends LLMProvider {
       const response = await fetch('https://api.mistral.ai/v1/models', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
+          Authorization: `Bearer ${this.apiKey}`,
+        },
       })
 
       if (!response.ok) {
@@ -79,12 +77,9 @@ export class MistralProvider extends LLMProvider {
     }
   }
 
-
-
   // Method to test connection
   async testConnection(): Promise<boolean> {
     try {
-
       const models = await this.listModels()
       this.connected = models.length > 0
       return this.connected

@@ -397,7 +397,7 @@ export class ModelConfig {
     return {
       name: this.name,
       storage: this.storage,
-      sources: this.sources.map((source) => (source.toJSON())),
+      sources: this.sources.map((source) => source.toJSON()),
     }
   }
 }

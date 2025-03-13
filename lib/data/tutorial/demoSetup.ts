@@ -110,7 +110,9 @@ export default async function setupDemo(
     name: modelName,
     sources: editors
       .slice(0, 7)
-      .map((e) => (ModelSource.fromJSON({ alias: e.name, editor: e.name, concepts: [], datasources: [] }))),
+      .map((e) =>
+        ModelSource.fromJSON({ alias: e.name, editor: e.name, concepts: [], datasources: [] }),
+      ),
     storage: 'local',
   })
 
