@@ -60,6 +60,7 @@
         @click.stop
         :action="() => setAsActive(item.id)"
         title="Set as active connection"
+        v-if="item.type === 'connection'"
       >
         <i class="mdi mdi-check-circle-outline"></i
       ></LoadingButton>
