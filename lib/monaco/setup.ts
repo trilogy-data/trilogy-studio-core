@@ -41,7 +41,7 @@ export function configureTrilogy(languages) {
 
         // Match Keywords (SELECT, WHERE, ORDER, BY)
         [
-          /(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|\sAS)(?=\s|$|,|;)/,
+          /\b(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|\sAS)(?=\s|$|,|;)/,
           'keyword',
         ],
 
@@ -73,7 +73,7 @@ export function configureTrilogy(languages) {
         // Additional special handling for `->` or `as` for renaming (like `sum(line_item.extended_price)-> base_price`)
         [/\->|\bas\b/, 'operator'],
       ],
-      afterDot: [[/[a-zA-Z0-9\_]+/, { token: 'property', next: '@pop' }]],
+      afterDot: [[/[a-zA-Z0-9\_]+/, { token: 'variable', next: '@pop' }]],
     },
   })
 }

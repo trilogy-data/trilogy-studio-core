@@ -153,6 +153,19 @@ export class Concept {
     this.keys = keys
   }
 
+  toJSON() {
+    return {
+      address: this.address,
+      name: this.name,
+      namespace: this.namespace,
+      datatype: this.datatype,
+      purpose: this.purpose,
+      description: this.description,
+      lineage: this.lineage,
+      keys: this.keys,
+    }
+  }
+
   static fromJSON(data: any): Concept {
     return new Concept(
       data.address,
@@ -179,7 +192,14 @@ export class Datasource {
     this.concepts = concepts
     this.grain = grain
   }
-
+  toJSON() {
+    return {
+      name: this.name,
+      address: this.address,
+      concepts: this.concepts.map((concept) => concept.toJSON()),
+      grain: this.grain.map((concept) => concept.toJSON()),
+    }
+  }
   static fromJSON(data: any): Datasource {
     return new Datasource(
       data.name,
@@ -233,6 +253,15 @@ export class ModelSource {
     this.datasources = datasources || []
   }
 
+  toJSON() {
+    return {
+      editor: this.editor,
+      alias: this.alias,
+      concepts: this.concepts.map((concept) => concept.toJSON()),
+      datasources: this.datasources.map((datasource) => datasource.toJSON()),
+    }
+  }
+
   static fromJSON(source: any): ModelSource {
     return new ModelSource(
       source.editor,
@@ -255,8 +284,30 @@ export class ModelSource {
             datasource.name,
             datasource.address,
             //
-            datasource.concepts,
-            datasource.grain,
+            (datasource.concepts || []).map(
+              (concept: any) =>
+                new Concept(
+                  concept.address,
+                  concept.name,
+                  concept.namespace,
+                  concept.datatype,
+                  concept.purpose,
+                  concept.description,
+                  concept.lineage,
+                ),
+            ),
+            (datasource.grain || []).map(
+              (concept: any) =>
+                new Concept(
+                  concept.address,
+                  concept.name,
+                  concept.namespace,
+                  concept.datatype,
+                  concept.purpose,
+                  concept.description,
+                  concept.lineage,
+                ),
+            ),
           ),
       ),
     )
@@ -340,5 +391,13 @@ export class ModelConfig {
     })
     base.changed = false
     return base
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      storage: this.storage,
+      sources: this.sources.map((source) => (source.toJSON())),
+    }
   }
 }

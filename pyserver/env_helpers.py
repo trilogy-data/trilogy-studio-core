@@ -145,6 +145,19 @@ def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment
     return env
 
 
+def concept_to_ui_concept(concept: Concept) -> UIConcept:
+    return UIConcept(
+        name=concept.name,
+        datatype=concept.datatype,
+        purpose=concept.purpose,
+        description=(concept.metadata.description if concept.metadata else None),
+        namespace=concept.namespace or "",
+        address=concept.address,
+        lineage=flatten_lineage(concept, depth=0),
+        keys=list(concept.keys) if concept.keys else [],
+    )
+
+
 def source_to_model_source(
     source: ModelSourceInSchema, sources: list[ModelSourceInSchema]
 ) -> ModelSource:
@@ -164,20 +177,7 @@ def source_to_model_source(
             and sconcept.metadata.concept_source == ConceptSource.AUTO_DERIVED
         ):
             continue
-        final_concepts.append(
-            UIConcept(
-                name=sconcept.name,
-                datatype=sconcept.datatype,
-                purpose=sconcept.purpose,
-                description=(
-                    sconcept.metadata.description if sconcept.metadata else None
-                ),
-                namespace=sconcept.namespace or "",
-                address=skey,
-                lineage=flatten_lineage(sconcept, depth=0),
-                keys=list(sconcept.keys) if sconcept.keys else [],
-            )
-        )
+        final_concepts.append(concept_to_ui_concept(sconcept))
     final_concepts.sort(key=lambda x: x.address)
 
     for dkey, datasource in env.datasources.items():
@@ -188,20 +188,7 @@ def source_to_model_source(
                 continue
 
             sconcept = env.concepts[cref.address]
-            dconcepts.append(
-                UIConcept(
-                    name=sconcept.name,
-                    datatype=sconcept.datatype,
-                    purpose=sconcept.purpose,
-                    description=(
-                        sconcept.metadata.description if sconcept.metadata else None
-                    ),
-                    namespace=sconcept.namespace or "",
-                    address=sconcept.address,
-                    lineage=flatten_lineage(sconcept, depth=0),
-                    keys=list(sconcept.keys) if sconcept.keys else [],
-                )
-            )
+            dconcepts.append(concept_to_ui_concept(sconcept))
         dconcepts.sort(key=lambda x: x.address)
         if isinstance(datasource.address, Address):
             final_address = datasource.address.location
@@ -209,7 +196,14 @@ def source_to_model_source(
             final_address = datasource.address
 
         final_datasources.append(
-            UIDatasource(name=dkey, location=final_address, concepts=dconcepts)
+            UIDatasource(
+                name=dkey,
+                location=final_address,
+                concepts=dconcepts,
+                grain=[
+                    concept_to_ui_concept(env.concepts[x]) for x in datasource.grain.components
+                ],
+            )
         )
     return ModelSource(
         alias=source.alias, concepts=final_concepts, datasources=final_datasources

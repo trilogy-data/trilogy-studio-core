@@ -42,6 +42,16 @@ export default defineComponent({
                 headerFilter: 'input',
               },
               { title: 'Address', field: 'location', sorter: 'string', resizable: true },
+              {
+                title: 'Grain',
+                field: 'grain',
+                // @ts-ignore
+                formatter: 'array',
+                formatterParams: {
+                  delimiter: ', ',
+                  valueMap: 'address',
+                },
+              },
               // {
               //     title: 'Lineage',
               //     field: 'lineage',

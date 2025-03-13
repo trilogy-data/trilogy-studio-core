@@ -712,6 +712,11 @@ export default defineComponent({
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
       })
+
+      editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () => {
+        editorItem.trigger("ide", "undo", {});
+        this.editorData.contents = editorItem.getValue();
+      })
     },
   },
 })

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { Concept, Datasource } from '../models'
+import {ModelConfig} from '../models'
 
 interface QueryResponse {
   data: {
@@ -105,14 +106,14 @@ export default class AxiosResolver {
       })
   }
 
-  async resolveModel(name: string, sources: ContentInput[]): Promise<ModelResponse> {
+  async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {
     return axios
       .post(`${this.address}/parse_model`, {
         name: name,
         sources: sources,
       })
       .then((response) => {
-        return response.data
+        return ModelConfig.fromJSON(response.data)
       })
       .catch((error: Error) => {
         throw Error(this.getErrorMessage(error))

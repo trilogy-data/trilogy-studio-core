@@ -36,6 +36,7 @@ class UIDatasource(BaseModel):
     location: str
     description: Optional[str] = None
     concepts: List[UIConcept]
+    grain: List[UIConcept] = Field(default_factory=list)
 
 
 class ModelSource(BaseModel):

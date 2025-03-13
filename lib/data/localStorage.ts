@@ -1,7 +1,7 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
 import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
-import { LLMProvider } from '../llm'
+import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 
@@ -131,16 +131,21 @@ export default class LocalStorage extends AbstractStorage {
   async loadModelConfig(): Promise<Record<string, ModelConfig>> {
     const storedData = localStorage.getItem(this.modelStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
-    return raw.map((modelConfig: ModelConfig) => reactive(ModelConfig.fromJSON(modelConfig)))
+    let modelConfigList: Record<string, ModelConfig> = {}
+    raw.forEach((modelConfig: ModelConfig) => {
+      modelConfigList[modelConfig.name] = reactive(ModelConfig.fromJSON(modelConfig))
+    })
+    return modelConfigList
   }
 
   async saveModelConfig(modelConfig: ModelConfig[]): Promise<void> {
     const current = await this.loadModelConfig()
     modelConfig.forEach((model) => {
-      if (model.changed) {
+      if (model.changed || !(model.name in current)) {
         current[model.name] = model
       }
     })
+    console.log(current)
     localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }
 
@@ -161,7 +166,6 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   saveLLMConnections(connections: Array<LLMProvider>): void {
-    console.log('saving connections', connections)
     localStorage.setItem(
       this.llmConnectionStorageKey,
       JSON.stringify(connections.map((connection) => connection.toJSON())),

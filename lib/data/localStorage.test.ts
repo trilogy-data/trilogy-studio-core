@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import LocalStorage from './localStorage'
 import Editor from '../editors/editor'
-import { ModelConfig } from '../models'
+import { ModelConfig, ModelSource } from '../models'
 import type { LLMRequestOptions, LLMResponse } from '../llm'
 import { LLMProvider } from '../llm'
 
@@ -187,28 +187,29 @@ describe('EditorLocalStorage', () => {
     })
   })
 
-  it('should save and load model configs', () => {
+  it('should save and load model configs', async () => {
     let c1 = new ModelConfig({
       name: 'config1',
       storage: 'local',
-      sources: [{ editor: 'source1', alias: 'alias1', concepts: [], datasources: [] }],
+      sources: [ModelSource.fromJSON({ editor: 'source1', alias: 'alias1', concepts: [], datasources: [] })],
     })
     let c2 = new ModelConfig({
       name: 'config2',
       storage: 'local',
-      sources: [{ editor: 'source2', alias: 'alias2', concepts: [], datasources: [] }],
+      sources: [ModelSource.fromJSON({ editor: 'source2', alias: 'alias2', concepts: [], datasources: [] })],
     })
     const modelConfigList = {
       config1: c1,
       config2: c2,
     }
 
-    localStorage.saveModelConfig(Object.values(modelConfigList))
-    localStorage.loadModelConfig().then((loadedModelConfig) => {
-      expect(loadedModelConfig).toHaveLength(2)
-      expect(loadedModelConfig[0].name).toBe('config1')
-      expect(loadedModelConfig[1].name).toBe('config2')
-    })
+    await localStorage.saveModelConfig(Object.values(modelConfigList))
+    let loadedModelConfig = await localStorage.loadModelConfig()
+
+    expect(Object.keys(loadedModelConfig)).toHaveLength(2)
+    expect(loadedModelConfig['config1'].name).toBe('config1')
+    expect(loadedModelConfig['config2'].name).toBe('config2')
+
   })
 
   it('should clear model configs', () => {
@@ -217,8 +218,10 @@ describe('EditorLocalStorage', () => {
     localStorage.saveModelConfig(modelConfig)
     localStorage.clearModelConfig()
 
-    const loadedModelConfig = localStorage.loadModelConfig()
-    expect(loadedModelConfig).toHaveLength(0)
+    localStorage.loadModelConfig().then((loadedModelConfig) => {
+      expect(Object.keys(loadedModelConfig)).toHaveLength(0)
+    })
+
   })
 
   it('should save and load LLM connections', () => {
