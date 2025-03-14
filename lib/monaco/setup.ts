@@ -37,7 +37,7 @@ export function configureTrilogy(languages) {
         [/\-\-.*/, 'hidden'],
         // match first part of <a,b>.b or a.b
         [/\<[a-zA-Z0-9\_\.\,]+\>\./, 'property'],
-        [/([a-zA-Z0-9\_]+)\./, { token: 'property', next: '@afterDot' }],
+        [/([a-zA-Z0-9\_\.]+)\./, { token: 'property', next: '@afterDot' }],
 
         // Match Keywords (SELECT, WHERE, ORDER, BY)
         [

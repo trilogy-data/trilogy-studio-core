@@ -31,10 +31,100 @@ class DocumentationNode {
 
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
-    new Article('Goal', [
+    new Article('Welcome', [
       new Paragraph(
         'Purpose',
-        'Trilogy Studio is intended as an accessible demonstration of the Trilogy language, which would otherwise have a high barrier to experimentation. It is not intended to be a replacement for dedicated SQL IDEs or dashboarding tools. It is open source and feature requests and contributions are welcome.',
+        'Trilogy Studio is intended as an accessible demonstration of the features of the Trilogy language, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'Trilogy is SQL with a built in semantic layer; it should feel like SQL, but faster and more expressive. The boilerplate of SQL is delegated to the semantic engine, while the expressiveness of SQL is still fully available. You can read more about the language in the Trilogy reference section.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'If this is your first time, we recommend that you use the demo model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections, however. ',
+        'tip'
+      ),
+      new Paragraph(
+        'Purpose',
+        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Click below to import the model.',
+      ),
+      new Paragraph(
+        'Purpose',
+        '<MODEL PLACEHOLDER>',
+      ),
+      new Paragraph(
+        'Purpose',
+        `Now that you have the model imported, we want to associate it with a connection. The demo model must be run on a DuckDB connection, which runs on your browser with DuckDB-WASM. <br>- Click "add" below to create the connection, name it "demo-connection", and submit. <br>- Once submitted, click the plug icon to connect to it.<br>- Finally, click the connection name to toggle details, and click the model dropdown and select the "demo-model"`,
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connections"
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connection-validator"
+      ),
+      new Paragraph(
+        'Purpose',
+        'When the above indicator is green, you are good to move on! Note that normally, you will manage connections through the connection panel available on the sidebar - this component is just embedded here as well for the tutorial.',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a editor named "my-first-editor" associated with the demo connection.',
+      ),
+      new Paragraph(
+        'Purpose',
+        '',
+        'editors'
+      ),
+      new Paragraph(
+        'Purpose',
+        '',
+        'editor-validator'
+      ),
+      new Paragraph(
+        'Purpose',
+        'When the above indicator is green, you are good to move on! Note again that normally editors are managed through the sidebar. You will also see that some editors are marked as sources - these are importable by other editors on the model. As these often are metadata only, you can use the toggle at the top to hide these if desired. Any editor can be made a source by toggling a button in the editor.',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        `Editors are your interactive SQL experience. Write Trilogy, then click run. This will run either the full editor or the highlighted chunk of code (though we will still include any imports). Try running the following queries.`,),
+
+      new Paragraph(
+        'Purpose',
+        'SELECT unnest([1,2,3,4]) as constant;',
+        'code'),
+      new Paragraph(
+        'Purpose',
+        `SELECT
+    sum(lineitem.extended_price)->sales,
+    lineitem.supplier.nation.name,
+order by
+    sales desc;`,
+        'code'),
+      new Paragraph(
+        'Purpose',
+        '',
+        'demo-editor'),
+      new Paragraph(
+        'Purpose',
+        'For the second query, could you figure out how to visualize the data?',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',),
+    ]),
+    new Article('Functionality', [
+      new Paragraph(
+        'Tip',
+        'Trilogy Studio is a statically hosted website that uses a mix of precompiled scripts and dynamic imports for some connections to reduce bundle size.',
       ),
       new Paragraph(
         'Tip',
@@ -79,6 +169,11 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Managing Connections',
         "You can view current connections below. Edit the model associated with a connection by clicking the model name next to it (or 'set model' if not set). Connections will not automatically connect on startup by default; click the connection button to connect. This connection view is always accessible through the connections page on the left side.",
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connections"
       ),
     ]),
     new Article('Models', [

@@ -230,7 +230,7 @@ export default {
   methods: {
     // @ts-ignore
     showDeleteConfirmation(editor) {
-      this.editorToDelete = editor
+      this.editorToDelete = editor.name
       this.showDeleteConfirmationState = true
     },
     cancelDelete() {
