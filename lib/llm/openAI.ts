@@ -7,8 +7,8 @@ export class OpenAIProvider extends LLMProvider {
   public models: string[]
   public type: string = 'openai'
 
-  constructor(name: string, apiKey: string, model: string) {
-    super(name, apiKey, model)
+  constructor(name: string, apiKey: string, model: string, saveCredential: boolean=false) {
+    super(name, apiKey, model, saveCredential)
     this.models = []
   }
 
@@ -20,7 +20,7 @@ export class OpenAIProvider extends LLMProvider {
         },
         method: 'GET',
       }).then((response) => response.json())
-      this.models = models.data.map((model: any) => model.id)
+      this.models = models.data.map((model: any) => model.id).sort()
       this.connected = true
     } catch (e) {
       if (e instanceof Error) {

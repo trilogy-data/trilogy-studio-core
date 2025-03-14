@@ -1,24 +1,55 @@
 <template>
   <div class="model-page">
     <div class="model-title">Community Models</div>
-    <div v-if="files.length">
-      <div v-for="file in files" :key="file.name">
+
+    <div class="filters my-4">
+      <div class="filter-row flex gap-4 mb-2">
+        <div class="search-box flex-grow">
+          <label class="text-faint filter-label">Name</label>
+          <input type="text" v-model="searchQuery" placeholder="Search by model name..." />
+        </div>
+
+        <div class="engine-filter">
+          <label class="text-faint filter-label">Model Engine</label>
+          <select v-model="selectedEngine" class="px-3 py-2 border rounded">
+            <option value="">All Engines</option>
+            <option v-for="engine in availableEngines" :key="engine" :value="engine">
+              {{ engine }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="branch-selector flex gap-4 items-center">
+        <label class="text-faint filter-label">Public Repo Branch</label>
+        <select v-model="selectedBranch" class="px-3 py-2 border rounded" @change="fetchFiles">
+          <option v-for="branch in branches" :key="branch" :value="branch">
+            {{ branch }}
+          </option>
+        </select>
+        <!-- <button 
+          @click="fetchFiles" 
+          class="px-3 py-2 border rounded bg-button hover:bg-button-hover"
+        >
+          Refresh
+        </button> -->
+      </div>
+    </div>
+
+    <div v-if="filteredFiles.length">
+      <div v-for="file in filteredFiles" :key="file.name">
         <h3 class="font-semibold">{{ file.name }}</h3>
-        <model-creator
-          :formDefaults="{
-            importAddress: file.downloadUrl,
-            connection: `new-${file.engine}`,
-            name: file.name,
-          }"
-          :absolute="false"
-        />
+        <model-creator :formDefaults="{
+          importAddress: file.downloadUrl,
+          connection: `new-${file.engine}`,
+          name: file.name,
+        }" :absolute="false" />
         <div>
           <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
         </div>
         <div>
           <span class="text-faint">Engine:</span> <span>{{ file.engine }}</span>
         </div>
-
         <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
           {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{ file.components.length }})
         </div>
@@ -31,13 +62,15 @@
       </div>
     </div>
     <p v-if="error" class="text-error">{{ error }}</p>
-    <p v-else-if="!error && !files.length" class="text-loading">Loading community models...</p>
+    <p v-else-if="loading" class="text-loading">Loading community models...</p>
+    <p v-else-if="!filteredFiles.length" class="text-faint mt-4">No models match your search criteria.</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import ModelCreator from './ModelCreator.vue'
+
 interface Component {
   url: string
   name?: string
@@ -56,26 +89,82 @@ interface FileData {
 const files = ref<FileData[]>([])
 const isExpanded = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
+const searchQuery = ref('')
+const selectedEngine = ref('')
+const loading = ref(false)
+
+// GitHub branch support
+const selectedBranch = ref('main')
+const branches = ref(['main', 'develop', 'staging'])
+
+const repoOwner = 'trilogy-data'
+const repoName = 'trilogy-public-models'
+
 const toggleComponents = (index: string) => {
   isExpanded.value[index] = !isExpanded.value[index]
 }
-const fetchFiles = async () => {
-  error.value = null
+
+const availableEngines = computed(() => {
+  const engines = new Set<string>()
+  files.value.forEach(file => {
+    if (file.engine) {
+      engines.add(file.engine)
+    }
+  })
+  return Array.from(engines).sort()
+})
+
+const filteredFiles = computed(() => {
+  return files.value.filter(file => {
+    const nameMatch = file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const engineMatch = !selectedEngine.value || file.engine === selectedEngine.value
+    return nameMatch && engineMatch
+  })
+})
+
+const fetchBranches = async () => {
   try {
     const response = await fetch(
-      'https://api.github.com/repos/trilogy-data/trilogy-public-models/contents/studio',
+      `https://api.github.com/repos/${repoOwner}/${repoName}/branches`
     )
+    if (response.status === 200) {
+      const branchData = await response.json()
+      branches.value = branchData.map((branch: { name: string }) => branch.name)
+    }
+  } catch (err) {
+    console.error('Error fetching branches:', err)
+    // Keep default branches if we can't fetch them
+  }
+}
+
+const fetchFiles = async () => {
+  error.value = null
+  loading.value = true
+  files.value = []
+
+  try {
+    const contentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/studio?ref=${selectedBranch.value}`
+    const response = await fetch(contentsUrl)
 
     if (response.status != 200) {
       throw new Error(`Error fetching community data: ${await response.text()}`)
     }
+
     const data: { name: string; download_url: string }[] = await response.json()
+
     const filePromises = data
       .filter((file) => file.name.endsWith('.json'))
       .map(async (file) => {
-        const fileResponse = await fetch(file.download_url)
+        // Construct raw content URL with the selected branch
+        const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${selectedBranch.value}/studio/${file.name}`
+        const fileResponse = await fetch(rawUrl)
+
+        if (!fileResponse.ok) {
+          throw new Error(`Error fetching file ${file.name}: ${fileResponse.statusText}`)
+        }
+
         const fileData: FileData = await fileResponse.json()
-        fileData.downloadUrl = file.download_url
+        fileData.downloadUrl = rawUrl
         return fileData
       })
 
@@ -86,14 +175,23 @@ const fetchFiles = async () => {
     } else {
       error.value = 'Error fetching files'
     }
-    console.error('Error fetching community data:', error)
+    console.error('Error fetching community data:', rawError)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(fetchFiles)
+onMounted(async () => {
+  await fetchBranches()
+  await fetchFiles()
+})
 </script>
 
 <style scoped>
+.filter-label {
+  padding-right: 4px;
+}
+
 .model-page {
   width: 100%;
   height: 100%;
@@ -118,5 +216,34 @@ onMounted(fetchFiles)
   display: flex;
   align-items: center;
   font-size: 24px;
+}
+
+.toggle-concepts {
+  cursor: pointer;
+  color: var(--link-color);
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.filters {
+  background-color: var(--surface-color, #f5f5f5);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.text-error {
+  color: var(--error-color, #e53935);
+}
+
+.branch-selector {
+  margin-top: 8px;
+}
+
+.bg-button {
+  background-color: var(--button-bg, #e0e0e0);
+}
+
+.bg-button-hover:hover {
+  background-color: var(--button-hover-bg, #d0d0d0);
 }
 </style>

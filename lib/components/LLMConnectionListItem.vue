@@ -27,9 +27,11 @@
     </div>
     <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
       <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
+
         <button type="submit" class="customize-button">Update API Key</button>
         <input
           type="password"
+          id="api-key"
           v-model="apiKeyInput"
           placeholder="API Key"
           class="connection-customize"
@@ -39,7 +41,7 @@
     <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
       <form @submit.prevent="updateModel(item.connection, modelInput)">
         <button type="submit" class="customize-button">Update Model</button>
-        <select v-model="modelInput" id="connection-type" required>
+        <select v-model="modelInput" id="connection-type" required class="connection-customize">
           <option v-for="model in item.connection.models" :value="model">{{ model }}</option>
         </select>
       </form>
@@ -189,25 +191,8 @@ export default defineComponent({
 
 <style scoped>
 .loading-button {
-  font-size: 16px;
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-}
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  cursor: pointer;
-  min-height: var(--sidebar-list-item-height);
-  user-select: none;
-}
-
-.sidebar-item:hover {
-  background-color: var(--sidebar-item-hover-bg);
-}
-
-.sidebar-item-selected {
-  background-color: var(--sidebar-item-selected-bg);
 }
 
 .sidebar-padding {
@@ -258,20 +243,20 @@ export default defineComponent({
   background-color: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  padding: 4px 8px;
+  /* padding: 4px 8px; */
   color: var(--text-color);
   margin-left: 8px;
-  font-size: 0.9em;
+  font-size: 0.8em;
 }
 
 .customize-button {
   background-color: var(--primary-color);
-  color: white;
   border: none;
   border-radius: 4px;
   padding: 4px 8px;
   cursor: pointer;
-  font-size: 0.8em;
+  font-size: 0.6em;
+  border: 1px solid var(--border-color);
 }
 
 .customize-button:hover {

@@ -9,6 +9,7 @@
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @connection-key-selected="setActiveConnectionKey"
+          @llm-key-selected="setActiveLLMConnectionKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
@@ -295,6 +296,10 @@ export default {
     },
     setActiveConnectionKey(connectionKey: string) {
       pushHashToUrl('connection', connectionKey)
+      this.activeConnectionKey = connectionKey
+    },
+    setActiveLLMConnectionKey(connectionKey: string) {
+      pushHashToUrl('llm', connectionKey)
       this.activeConnectionKey = connectionKey
     },
     saveEditorsCall() {

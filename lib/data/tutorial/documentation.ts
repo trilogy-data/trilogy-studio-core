@@ -51,11 +51,17 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Purpose',
-        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Click below to import the model.',
+        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it.',
       ),
       new Paragraph(
         'Purpose',
-        '<MODEL PLACEHOLDER>',
+        '<PLACEHOLDER>',
+        'community-models',
+      ),
+      new Paragraph(
+        'ModelList',
+        "",
+        "model-validator"
       ),
       new Paragraph(
         'Purpose',
@@ -176,6 +182,20 @@ order by
         "connections"
       ),
     ]),
+    new Article('LLM Connections', [
+      new Paragraph(
+        'Connections',
+        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.' ),
+      new Paragraph(
+        'Managing Connections',
+        "You can view current LLM connections below. Only one LLM connection can be the default at a time.",
+      ),
+      new Paragraph(
+        'LLMList',
+        "",
+        "llm-connections"
+      ),
+    ]),
     new Article('Models', [
       new Paragraph(
         'Models',
@@ -232,7 +252,7 @@ order by
       ),
     ]),
   ]),
-  new DocumentationNode('Trilogy Documentation', [
+  new DocumentationNode('Reference', [
     new Article('Overview/Goals', [
       new Paragraph(
         'Introduction',
@@ -298,7 +318,7 @@ order by
         'code',
       ),
     ]),
-    new Article('Syntax', [
+    new Article('Statements', [
       new Paragraph(
         'Basic SELECT Statement',
         'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause. A basic select could look like this:',
@@ -474,6 +494,26 @@ complete_for_clause?
         'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
       ),
     ]),
+    new Article('Functions', [
+      new Paragraph(
+        'Defining Functions',
+        'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are referencved with the @ prefix.',
+      ),
+      new Paragraph(
+        'Example',
+        `const scale_factor<-2;\ndef square_scale(x) -> x * x *scale_factor;\n\nSELECT\n    number,\n    @square_scale(number) AS squared;`,
+        'code',
+      ),
+      new Paragraph(
+        'Defining Functions',
+        'Functions may have optional defaults',
+      ),
+      new Paragraph(
+        'Example',
+        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n    @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
+        'code',
+      ),
+    ]),
     new Article('Modeling', [
       new Paragraph(
         'Defining Concepts',
@@ -543,22 +583,22 @@ complete_for_clause?
       ),
       new Paragraph(
         'Remote Processing',
-        'Query formatting and optimization occurs on secure servers. Code generation uses anonymized inputs. All remote processing is temporary with no data retention.',
+        'Query formatting and optimization occurs on stateless servers. The full content of your editors is sent. All remote processing is temporary with no data retention.',
         'subsection',
       ),
       new Paragraph(
         'Third-Party Services',
-        "GoatTrack Analytics processes anonymous usage statistics, subject to GoatTrack's privacy policy, with data retention limited to 90 days.",
+        "GoatTrack processes anonymous usage statistics.",
         'section',
       ),
       new Paragraph(
         'Query Processing Service',
-        'Temporary processing for formatting and generation, no data retention, encrypted transmission.',
+        'Temporary processing for formatting and generation, no data retention, HTTPS transmission.',
         'subsection',
       ),
       new Paragraph(
         'Security Measures',
-        'All communications use TLS encryption. Telemetry data is anonymized before transmission. Query data is encrypted end-to-end.',
+        'All communications use TLS encryption. Telemetry data is anonymized before transmission.',
         'section',
       ),
       new Paragraph(
@@ -604,13 +644,23 @@ complete_for_clause?
     new Article('Stored Info', [
       new Paragraph(
         'Secret Storage',
-        'For databases that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to local browser storage. If preferred, you can use a password manager to autofill conenction details.',
+        'For databases that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to local browser storage. Local storage is only accessible per website but has some risk from cross-site scripting attacks.',
+      ),
+      new Paragraph(
+        'Secret Storage',
+        'Local storage is convenient, but if you have a browser secret manager, that is a great place to store secrets as well!',
+        'tip'
+      ),
+      new Paragraph(
+        'Secret Storage',
+        'A best practice is to use unique API tokens (such as for LLMs) and passwords in the studio, both to easily track usage and make rotation simple.',
+        'tip'
       ),
     ]),
     new Article('Google Account', [
       new Paragraph(
         'Google Account',
-        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. It is used to communicate directly with Bigquery with the google javascript client library.',
+        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This oken is only used to communicate directly with Bigquery with the google javascript client library.',
       ),
     ]),
     new Article('Telemetry', [

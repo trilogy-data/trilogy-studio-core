@@ -9,27 +9,37 @@
         <pre
           v-else-if="paragraph.type === 'code'"><code ref="codeBlock" class="language-sql">{{ paragraph.content }}</code></pre>
         <connection-list v-else-if="paragraph.type === 'connections'" :connections="connectionStore.connections" />
+        <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
+          <LLMConnectionList :connections="llmConnectionStore.connections" />
+        </div>
         <editor-list v-else-if="paragraph.type === 'editors'" :connections="editorStore.editors" />
-        <div v-else-if="paragraph.type === 'connection-validator'" :connections="connectionStore.connections">
+        <div v-else-if="paragraph.type === 'connection-validator'">
           <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']">
             State: {{ demoConnectionCorrect ? '"demo-connection" found and connected with right model ✓' :
-            '"demo-connection" not found, wrong model, or not connected ✗' }}
+              '"demo-connection" not found, wrong model, or not connected ✗' }}
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'editor-validator'" :connections="connectionStore.connections">
+        <div v-else-if="paragraph.type === 'editor-validator'">
           <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']">
             State: {{ demoEditorCorrect ? '"my-first-editor" found and connected with right model ✓' :
-            '"my-first-editor" not found under demo-connection' }}
+              '"my-first-editor" not found under demo-connection' }}
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect " class="editor" >
+        <div v-else-if="paragraph.type === 'model-validator'">
+          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']">
+            State: {{ demoModelCorrect ? '"demo-model" found ✓' :
+              '"demo-model" not found under local models' }}
+          </div>
+        </div>
+        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" class="editor">
           <div class="editor-top">
-          <editor context="main-trilogy" editorName="my-first-editor" @save-editors="saveEditorsCall" />
+            <editor context="main-trilogy" editorName="my-first-editor" @save-editors="saveEditorsCall" />
           </div>
           <div class="editor-bottom">
-          <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="300" />
+            <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="300" />
+          </div>
         </div>
-        </div>
+        <community-models v-else-if="paragraph.type === 'community-models'" />
         <p v-else v-html="paragraph.content"></p>
 
       </template>
@@ -49,6 +59,7 @@ import { inject, ref, onMounted, onUpdated } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
 import LoadingButton from './LoadingButton.vue'
 
 import HighlightComponent from './HighlightComponent.vue'
@@ -61,6 +72,8 @@ import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
 import Prism from 'prismjs'
 import ResultsView from './ResultsView.vue'
+import CommunityModels from './CommunityModels.vue'
+import LLMConnectionList from './LLMConnectionList.vue'
 
 const defaultDocumentationKey = 'Studio'
 const defaultDocumentationTopic = 'Welcome'
@@ -80,6 +93,7 @@ export default {
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
+    const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const saveEditors = inject<Function>('saveEditors')
     const saveConnections = inject<Function>('saveConnections')
     const saveModels = inject<Function>('saveModels')
@@ -105,6 +119,7 @@ export default {
       !editorStore ||
       !connectionStore ||
       !modelStore ||
+      !llmConnectionStore ||
       !saveEditors ||
       !saveConnections ||
       !saveModels
@@ -114,6 +129,7 @@ export default {
     return {
       editorStore,
       connectionStore,
+      llmConnectionStore,
       modelStore,
       saveEditors,
       saveConnections,
@@ -124,15 +140,20 @@ export default {
   components: {
     LoadingButton,
     ConnectionList,
+    LLMConnectionList,
     EditorList,
     ModelCard,
     HighlightComponent,
     Editor,
     ResultsView,
+    CommunityModels,
   },
   computed: {
     demoConfig() {
       return this.modelStore.models['demo-model']
+    },
+    demoModelCorrect() {
+      return this.modelStore.models['demo-model']?.name === 'demo-model'
     },
     demoConnectionCorrect() {
       return this.connectionStore.connections['demo-connection']?.connected && this.connectionStore.connections['demo-connection']?.model === 'demo-model'
@@ -198,12 +219,15 @@ export default {
   height: 600px;
   border: 1px solid var(--border-color);
 }
+
 .editor-top {
-  height:300px;
+  height: 300px;
 }
+
 .editor-bottom {
-  height:300px;
+  height: 300px;
 }
+
 .test-result {
   margin-top: 8px;
   padding: 5px 10px;

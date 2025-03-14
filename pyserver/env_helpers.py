@@ -9,8 +9,8 @@ from io_models import (
     ModelSourceInSchema,
 )
 
+from trilogy.parsing.parse_engine import ParseError
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
-from trilogy.parsing.render import Renderer
 from trilogy.authoring import (
     Concept,
     DataType,
@@ -164,7 +164,12 @@ def source_to_model_source(
     final_concepts: list[UIConcept] = []
     final_datasources: list[UIDatasource] = []
     env = parse_env_from_full_model(sources)
-    env.parse(source.contents)
+    try:
+        env.parse(source.contents)
+    except ParseError as e:
+        raise ParseError(
+            f"Unable to process '{source.alias}', parsing error: {e}"
+        ) from e
 
     for skey, sconcept in env.concepts.items():
         # don't show private concepts

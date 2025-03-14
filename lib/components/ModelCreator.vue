@@ -234,7 +234,7 @@ export default defineComponent({
             ) {
               editorStore.editors[response.name].tags.push(response.purpose)
             }
-            return new ModelSource(response.name, response.alias, [], [])
+            return new ModelSource(response.name, response.alias || response.name, [], [])
           })
         }
         visible.value = false
