@@ -329,48 +329,4 @@ export default {
 .text-light {
   color: var(--text-faint);
 }
-
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.confirmation-dialog {
-  background-color: var(--background-color, white);
-  padding: 20px;
-  width: 300px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.cancel-btn {
-  background-color: var(--button-bg, #f5f5f5);
-  border: 1px solid var(--border-color, #ddd);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.confirm-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 </style>

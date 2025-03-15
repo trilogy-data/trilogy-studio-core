@@ -20,7 +20,20 @@
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
+      :delete-connection="deleteConnection"
     />
+    <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
+      <div class="confirmation-dialog">
+        <h3>Confirm Deletion</h3>
+        <p>
+          Are you sure you want to delete this connection? All associated editors will be deleted.
+        </p>
+        <div class="dialog-actions">
+          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
+          <button class="confirm-btn" @click="confirmDelete">Delete</button>
+        </div>
+      </div>
+    </div>
   </sidebar-list>
 </template>
 
@@ -33,6 +46,7 @@ import StatusIcon from './StatusIcon.vue'
 import Tooltip from './Tooltip.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
+import type { EditorStoreType } from '../stores/editorStore'
 import type { BigQueryOauthConnection, Connection, MotherDuckConnection } from '../connections'
 import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../data/constants'
@@ -47,11 +61,18 @@ export default {
       optional: true,
     },
   },
+  data() {
+    return {
+      showDeleteConfirmationState: false,
+      connectionToDelete: '',
+    }
+  },
   setup(_, { emit }) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
-    if (!connectionStore || !saveConnections || !modelStore) {
+    const editorStore = inject<EditorStoreType>('editorStore')
+    if (!connectionStore || !saveConnections || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
     const connectionModelVisible = ref<Record<string, boolean>>({})
@@ -348,6 +369,7 @@ export default {
     }
     return {
       connectionStore,
+      editorStore,
       contentList,
       toggleCollapse,
       collapsed,
@@ -372,6 +394,32 @@ export default {
   methods: {
     resetConnection(connection: Connection) {
       return this.connectionStore.resetConnection(connection.name)
+    },
+    showDeleteConfirmation(connection: Connection) {
+      this.connectionToDelete = connection.name
+      this.showDeleteConfirmationState = true
+    },
+    cancelDelete() {
+      this.showDeleteConfirmationState = false
+      this.connectionToDelete = ''
+    },
+    confirmDelete() {
+      if (this.connectionToDelete) {
+        for (const editor of Object.values(this.editorStore.editors)) {
+          if (editor.connection === this.connectionToDelete) {
+            this.editorStore.removeEditor(editor.name)
+          }
+        }
+        this.connectionStore.removeConnection(this.connectionToDelete)
+      }
+
+      this.showDeleteConfirmationState = false
+      this.connectionToDelete = ''
+    },
+    // @ts-ignore
+    deleteConnection(editor) {
+      // Replace direct deletion with confirmation
+      this.showDeleteConfirmation(editor)
     },
   },
   computed: {

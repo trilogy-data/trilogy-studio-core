@@ -47,22 +47,14 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Purpose',
         'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections, however. ',
-        'tip'
+        'tip',
       ),
       new Paragraph(
         'Purpose',
         'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
       ),
-      new Paragraph(
-        'Purpose',
-        '<PLACEHOLDER>',
-        'community-models',
-      ),
-      new Paragraph(
-        'ModelList',
-        "",
-        "model-validator"
-      ),
+      new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
+      new Paragraph('ModelList', '', 'model-validator'),
       new Paragraph(
         'Purpose',
         `Now that you have the model imported and associated with a connection, we just need to click the plug icon to connect to it.`,
@@ -71,53 +63,37 @@ export const documentation: DocumentationNode[] = [
         'Purpose',
         `If you had set up the connection first, you could click the connection name to toggle details, and click the model dropdown and select the "demo-model".`,
 
-        'tip'
+        'tip',
       ),
       new Paragraph(
         'Purpose',
         `You can also run normal SQL against a connection, using a 'sql' typed editor. This is a good way to debug or test queries that you are not sure how to write in Trilogy, or to manage databases.`,
-        'tip'
+        'tip',
       ),
-      new Paragraph(
-        'ConnectionList',
-        "",
-        "connections"
-      ),
-      new Paragraph(
-        'ConnectionList',
-        "",
-        "connection-validator"
-      ),
+      new Paragraph('ConnectionList', '', 'connections'),
+      new Paragraph('ConnectionList', '', 'connection-validator'),
       new Paragraph(
         'Purpose',
         'When the above indicator is green, you are good to move on! Note that normally, you will manage connections through the connection panel available on the sidebar - this component is just embedded here as well for the tutorial.',
-        'tip'),
+        'tip',
+      ),
       new Paragraph(
         'Purpose',
         'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
       ),
-      new Paragraph(
-        'Purpose',
-        '',
-        'editors'
-      ),
-      new Paragraph(
-        'Purpose',
-        '',
-        'editor-validator'
-      ),
+      new Paragraph('Purpose', '', 'editors'),
+      new Paragraph('Purpose', '', 'editor-validator'),
       new Paragraph(
         'Purpose',
         'When the above indicator is green, you are good to move on! Note again that normally editors are managed through the sidebar. You will also see that some editors are marked as sources - these are importable by other editors on the model. As these often are metadata only, you can use the toggle at the top to hide these if desired. Any editor can be made a source by toggling a button in the editor.',
-        'tip'),
+        'tip',
+      ),
       new Paragraph(
         'Purpose',
-        `Editors are your interactive SQL experience. Write Trilogy, then click run. This will run either the full editor or the highlighted chunk of code (though we will still include any imports). Try running the following queries.`,),
+        `Editors are your interactive SQL experience. Write Trilogy, then click run. This will run either the full editor or the highlighted chunk of code (though we will still include any imports). Try running the following queries.`,
+      ),
 
-      new Paragraph(
-        'Purpose',
-        'SELECT unnest([1,2,3,4]) as constant;',
-        'code'),
+      new Paragraph('Purpose', 'SELECT unnest([1,2,3,4]) as constant;', 'code'),
       new Paragraph(
         'Purpose',
         `import lineitem as lineitem;
@@ -126,18 +102,18 @@ SELECT
     lineitem.supplier.nation.name,
 order by
     sales desc;`,
-        'code'),
-      new Paragraph(
-        'Purpose',
-        '',
-        'demo-editor'),
+        'code',
+      ),
+      new Paragraph('Purpose', '', 'demo-editor'),
       new Paragraph(
         'Purpose',
         'For the second query, could you figure out how to visualize the data?',
-        'tip'),
+        'tip',
+      ),
       new Paragraph(
         'Purpose',
-        'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',),
+        'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',
+      ),
     ]),
     new Article('Functionality', [
       new Paragraph(
@@ -188,25 +164,18 @@ order by
         'Managing Connections',
         "You can view current connections below. Edit the model associated with a connection by clicking the model name next to it (or 'set model' if not set). Connections will not automatically connect on startup by default; click the connection button to connect. This connection view is always accessible through the connections page on the left side.",
       ),
-      new Paragraph(
-        'ConnectionList',
-        "",
-        "connections"
-      ),
+      new Paragraph('ConnectionList', '', 'connections'),
     ]),
     new Article('LLM Connections', [
       new Paragraph(
         'Connections',
-        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.'),
+        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.',
+      ),
       new Paragraph(
         'Managing Connections',
-        "You can view current LLM connections below. Only one LLM connection can be the default at a time.",
+        'You can view current LLM connections below. Only one LLM connection can be the default at a time.',
       ),
-      new Paragraph(
-        'LLMList',
-        "",
-        "llm-connections"
-      ),
+      new Paragraph('LLMList', '', 'llm-connections'),
     ]),
     new Article('Models', [
       new Paragraph(
@@ -516,10 +485,7 @@ complete_for_clause?
         `const scale_factor<-2;\ndef square_scale(x) -> x * x *scale_factor;\n\nSELECT\n    number,\n    @square_scale(number) AS squared;`,
         'code',
       ),
-      new Paragraph(
-        'Defining Functions',
-        'Functions may have optional defaults',
-      ),
+      new Paragraph('Defining Functions', 'Functions may have optional defaults'),
       new Paragraph(
         'Example',
         `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n    @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
@@ -600,7 +566,7 @@ complete_for_clause?
       ),
       new Paragraph(
         'Third-Party Services',
-        "GoatTrack processes anonymous usage statistics.",
+        'GoatTrack processes anonymous usage statistics.',
         'section',
       ),
       new Paragraph(
@@ -661,12 +627,12 @@ complete_for_clause?
       new Paragraph(
         'Secret Storage',
         'Local storage is convenient, but if you have a browser secret manager, that is a great place to store secrets as well!',
-        'tip'
+        'tip',
       ),
       new Paragraph(
         'Secret Storage',
         'A best practice is to use unique API tokens (such as for LLMs) and passwords in the studio, both to easily track usage and make rotation simple.',
-        'tip'
+        'tip',
       ),
     ]),
     new Article('Google Account', [

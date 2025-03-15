@@ -4,7 +4,9 @@
     <div class="llm-chat-container">
       <div class="section-header">
         LLM Validation
-        <span class="text-faint text-small">Test that your LLM connection will deliver acceptable experience.</span>
+        <span class="text-faint text-small"
+          >Test that your LLM connection will deliver acceptable experience.</span
+        >
       </div>
       <div class="connection-controls">
         <div class="provider-selector">
@@ -34,7 +36,10 @@
           <div class="message-content">
             <pre>{{ message.content }}</pre>
           </div>
-          <div v-if="message.testResult" :class="['test-result', message.testResult.passed ? 'passed' : 'failed']">
+          <div
+            v-if="message.testResult"
+            :class="['test-result', message.testResult.passed ? 'passed' : 'failed']"
+          >
             Test: {{ message.testResult.passed ? 'PASSED ✓' : 'FAILED ✗' }}
             <div v-if="!message.testResult.passed" class="failure-reason">
               {{ message.testResult.reason }}
@@ -44,30 +49,43 @@
       </div>
 
       <div class="input-container">
-        <textarea v-model="userInput" @keydown.enter.ctrl="sendPrompt"
-          placeholder="Type your message here... (Ctrl+Enter to send)" :disabled="isLoading || !isProviderSelected">
+        <textarea
+          v-model="userInput"
+          @keydown.enter.ctrl="sendPrompt"
+          placeholder="Type your message here... (Ctrl+Enter to send)"
+          :disabled="isLoading || !isProviderSelected"
+        >
         </textarea>
-        <button @click="sendPrompt" :disabled="isLoading || !userInput.trim() || !isProviderSelected">
+        <button
+          @click="sendPrompt"
+          :disabled="isLoading || !userInput.trim() || !isProviderSelected"
+        >
           {{ isLoading ? 'Sending...' : 'Send' }}
         </button>
       </div>
-
-
     </div>
 
     <!-- Right side: Scenarios -->
     <div class="scenarios-container">
       <div class="section-header">
         Test Scenarios
-        <span class="pass-indicator text-small" v-if="
-          Object.values(scenarioResults).length == scenarios.length &&
-          Object.values(scenarioResults).every((v) => v?.passed)
-        ">✓ All passed, LLM integration should meet expectations!</span>
+        <span
+          class="pass-indicator text-small"
+          v-if="
+            Object.values(scenarioResults).length == scenarios.length &&
+            Object.values(scenarioResults).every((v) => v?.passed)
+          "
+          >✓ All passed, LLM integration should meet expectations!</span
+        >
       </div>
 
       <div class="scenarios-list">
-        <div v-for="(scenario, index) in scenarios" :key="index"
-          :class="['scenario-item', { passed: scenarioResults[index]?.passed }]" @click="runScenario(index)">
+        <div
+          v-for="(scenario, index) in scenarios"
+          :key="index"
+          :class="['scenario-item', { passed: scenarioResults[index]?.passed }]"
+          @click="runScenario(index)"
+        >
           <div class="scenario-name">{{ scenario.name }}</div>
           <div class="scenario-description">{{ scenario.description }}</div>
           <div v-if="scenarioResults[index]" class="scenario-result-indicator">
@@ -181,12 +199,12 @@ export default defineComponent({
       // Check for forbidden phrases
       if (criteria.notContains) {
         for (const phrase of criteria.notContains) {
-          const lines = response.split("\n"); // Split response into lines
+          const lines = response.split('\n') // Split response into lines
           for (const line of lines) {
-            if (!line.trim().startsWith("#") && line.toLowerCase().includes(phrase.toLowerCase())) {
-              result.passed = false;
-              result.reason = `Response contains forbidden phrase: "${phrase}"`;
-              return result;
+            if (!line.trim().startsWith('#') && line.toLowerCase().includes(phrase.toLowerCase())) {
+              result.passed = false
+              result.reason = `Response contains forbidden phrase: "${phrase}"`
+              return result
             }
           }
         }

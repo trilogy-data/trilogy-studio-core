@@ -115,8 +115,6 @@ export default {
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
       ) {
-        console.log(connectionName)
-
         const connection = llmConnectionStore.connections[connectionName] as any
         if (!connection) {
           console.log(`Connection not found ${connection}`)

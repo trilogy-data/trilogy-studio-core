@@ -35,24 +35,19 @@ const app = createApp(App)
 app.use(Pinia)
 
 function removeLoadingScreen() {
-  console.log("Attempting to remove loading screen...");
-  const loadingElement = document.getElementById('loading-screen');
-  
+  const loadingElement = document.getElementById('loading-screen')
+
   if (loadingElement) {
-      console.log("Loading screen found, removing...");
-      // Direct removal without transitions
-      if (loadingElement.parentNode) {
-          loadingElement.parentNode.removeChild(loadingElement);
-          console.log("Loading screen removed successfully");
-      } else {
-          console.error("Parent node not found");
-      }
+    // Direct removal without transitions
+    if (loadingElement.parentNode) {
+      loadingElement.parentNode.removeChild(loadingElement)
+    } else {
+      console.error('Loading screen element parent not found')
+    }
   } else {
-      console.error("Loading screen element not found");
+    console.error('Loading screen element not found')
   }
 }
 
-removeLoadingScreen();
+removeLoadingScreen()
 app.mount('#app')
-
-

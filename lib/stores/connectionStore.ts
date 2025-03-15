@@ -21,6 +21,13 @@ const useConnectionStore = defineStore('connections', {
       }
     },
 
+    removeConnection(name: string) {
+      if (this.connections[name]) {
+        // this.connections[name].close()
+        delete this.connections[name]
+      }
+    },
+
     connectionStateToStatus(connection: Connection | null) {
       if (!connection) {
         return 'disabled'
@@ -43,7 +50,7 @@ const useConnectionStore = defineStore('connections', {
       }
       if (type === 'duckdb') {
         this.connections[name] = new DuckDBConnection(name)
-      } else if (type === 'bigquery-ouath') {
+      } else if (type === 'bigquery-oauth') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)

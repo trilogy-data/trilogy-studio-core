@@ -145,7 +145,6 @@ export default class LocalStorage extends AbstractStorage {
         current[model.name] = model
       }
     })
-    console.log(current)
     localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }
 

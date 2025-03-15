@@ -67,25 +67,15 @@
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
 
-    <!-- Connection-specific Actions -->
-    <div class="connection-actions">
-      <!-- Model Selection for Connection -->
-
-      <!-- Refresh Button for Connection -->
-      <connection-refresh
-        v-if="item.type === 'connection'"
-        :connection="item.connection"
-        :is-connected="item.connection.connected"
-      />
-
-      <!-- Status Indicator -->
-      <connection-status-icon v-if="item.type === 'connection'" :connection="item.connection" />
+    <div class="connection-actions" v-if="item.type === 'connection'">
+      <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
+      <connection-status-icon :connection="item.connection" />
+      <tooltip content="Delete Connection" position="left">
+        <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
+          <i class="mdi mdi-trash-can"></i>
+        </span>
+      </tooltip>
     </div>
-
-    <!-- Loading/Error States -->
-    <!-- <template v-if="item.type === 'loading'">
-      <span class="loading-indicator"></span>
-    </template> -->
   </div>
 </template>
 
@@ -97,6 +87,7 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import { BigQueryOauthConnection, MotherDuckConnection } from '../connections'
 import { KeySeparator, rsplit } from '../data/constants'
+import Tooltip from './Tooltip.vue'
 // Define prop types
 interface ConnectionListItemProps {
   item: {
@@ -109,6 +100,7 @@ interface ConnectionListItemProps {
   }
   isCollapsed?: boolean
   isSelected?: boolean
+  deleteConnection: (connection: any) => void
 }
 
 // Props definition

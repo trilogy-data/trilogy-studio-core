@@ -35,7 +35,7 @@ export abstract class LLMProvider {
   public error: string | null = null
   public saveCredential: boolean
 
-  constructor(name: string, apiKey: string, model: string, saveCredential: boolean=false) {
+  constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     this.apiKey = apiKey
     this.models = []
     this.name = name
@@ -71,19 +71,24 @@ export abstract class LLMProvider {
       name: this.name,
       model: this.model,
       type: this.type,
-      apiKey: this.saveCredential? this.apiKey : null,
-      saveCredential: this.saveCredential
+      apiKey: this.saveCredential ? this.apiKey : null,
+      saveCredential: this.saveCredential,
     }
   }
 
   // Create instance from JSON
   static fromJSON<T extends LLMProvider>(
-    this: new (name: string, apiKey: string, model: string, saveCredential:boolean) => T,
+    this: new (name: string, apiKey: string, model: string, saveCredential: boolean) => T,
     json: string | Partial<LLMProvider>,
   ): T {
     let restored = typeof json === 'string' ? JSON.parse(json) : json
 
-    const instance = new this(restored.name, restored.apiKey, restored.model, restored.saveCredential)
+    const instance = new this(
+      restored.name,
+      restored.apiKey,
+      restored.model,
+      restored.saveCredential,
+    )
     return instance
   }
 }

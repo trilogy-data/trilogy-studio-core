@@ -5,7 +5,7 @@ export class AnthropicProvider extends LLMProvider {
   private baseUrl: string = 'https://api.anthropic.com/v1/messages'
   private baseModelUrl: string = 'https://api.anthropic.com/v1/models'
   public type: string = 'anthropic'
-  constructor(name: string, apiKey: string, model: string, saveCredential: boolean=false) {
+  constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
   }
 

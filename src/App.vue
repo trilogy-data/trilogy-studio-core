@@ -24,7 +24,6 @@ import {
 } from 'tabulator-tables'
 import * as monaco from 'monaco-editor'
 
-
 Tabulator.registerModule([
   ResizeColumnsModule,
   DownloadModule,
@@ -98,7 +97,6 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
     const lineToCursor = lineContent.substring(0, cursorIndex)
     const match = getLastContiguousToken(lineToCursor)
     let fullIdentifier = match ? match : ''
-    console.log(fullIdentifier)
     const range = new monaco.Range(
       position.lineNumber,
       position.column - fullIdentifier.length,
@@ -119,7 +117,6 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
     } else {
       suggestions = getModelCompletions(fullIdentifier, range)
     }
-    console.log(suggestions)
     return {
       suggestions: suggestions,
     }
@@ -130,8 +127,15 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
-      :storageSources="contentSources" :userSettingsStore="userSettingsStore" :llmConnectionStore="llms">
+    <Manager
+      :connectionStore="connections"
+      :editorStore="store"
+      :trilogyResolver="resolver"
+      :modelStore="models"
+      :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
+      :llmConnectionStore="llms"
+    >
     </Manager>
   </div>
 </template>

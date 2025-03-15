@@ -59,6 +59,28 @@
 		pointer-events: none;
 	}
 
+	.loading-container .tooltip {
+		visibility: hidden;
+		width: 120px;
+		text-align: center;
+		color: #B3B3B3;
+		padding: 5px 0;
+		border-radius: 6px;
+		position: absolute;
+		z-index: 1;
+		top: 52%;
+		left: 50%;
+		margin-left: -60px;
+		opacity: 0;
+		transition: opacity 0.3s ease, visibility 0.3s ease;
+	}
+
+
+	.loading-logo:hover+.tooltip {
+		visibility: visible;
+		opacity: 1;
+	}
+
 	@keyframes bounce-spin {
 
 		0%,
@@ -76,7 +98,10 @@
 
 <body>
 	<div class="loading-container" id="loading-screen">
+
 		<img src="public/trilogy.png" alt="Trilogy Logo" class="loading-logo" id="loading-icon">
+		<span class="tooltip">Reticulating Splines...</span>
+	</div>
 	</div>
 	<div id="app">
 	</div>
