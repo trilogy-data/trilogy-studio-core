@@ -59,14 +59,14 @@ import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
-function typeToFormatter(type: ColumnType) {
+function typeToFormatter(col: ResultColumn) {
   let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  switch (type) {
+  switch (col.type) {
     case ColumnType.FLOAT:
       return {
         formatter: 'money',
         formatterParams: {
-          precision: 2,
+          precision: col.precision? col.precision : 2,
         },
       }
     case ColumnType.MONEY:
@@ -197,7 +197,7 @@ export default {
       // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
       const calculated: ColumnDefinition[] = []
       this.headers.forEach((details, _) => {
-        let formatting = typeToFormatter(details.type)
+        let formatting = typeToFormatter(details)
         const result = {
           title: details.name,
 

@@ -31,10 +31,118 @@ class DocumentationNode {
 
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
-    new Article('Goal', [
+    new Article('Welcome', [
       new Paragraph(
         'Purpose',
-        'Trilogy Studio is intended as an accessible demonstration of the Trilogy language, which would otherwise have a high barrier to experimentation. It is not intended to be a replacement for dedicated SQL IDEs or dashboarding tools. It is open source and feature requests and contributions are welcome.',
+        'Trilogy Studio is intended as an accessible demonstration of the features of the Trilogy language, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'Trilogy is SQL with a built in semantic layer; it should feel like SQL, but faster and more expressive. The boilerplate of SQL is delegated to the semantic engine, while the expressiveness of SQL is still fully available. You can read more about the language in the Trilogy reference section.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'If this is your first time, we recommend that you use the demo model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
+      ),
+      new Paragraph(
+        'Purpose',
+        'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections, however. ',
+        'tip'
+      ),
+      new Paragraph(
+        'Purpose',
+        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
+      ),
+      new Paragraph(
+        'Purpose',
+        '<PLACEHOLDER>',
+        'community-models',
+      ),
+      new Paragraph(
+        'ModelList',
+        "",
+        "model-validator"
+      ),
+      new Paragraph(
+        'Purpose',
+        `Now that you have the model imported and associated with a connection, we just need to click the plug icon to connect to it.`,
+      ),
+      new Paragraph(
+        'Purpose',
+        `If you had set up the connection first, you could click the connection name to toggle details, and click the model dropdown and select the "demo-model".`,
+
+        'tip'
+      ),
+      new Paragraph(
+        'Purpose',
+        `You can also run normal SQL against a connection, using a 'sql' typed editor. This is a good way to debug or test queries that you are not sure how to write in Trilogy, or to manage databases.`,
+        'tip'
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connections"
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connection-validator"
+      ),
+      new Paragraph(
+        'Purpose',
+        'When the above indicator is green, you are good to move on! Note that normally, you will manage connections through the connection panel available on the sidebar - this component is just embedded here as well for the tutorial.',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
+      ),
+      new Paragraph(
+        'Purpose',
+        '',
+        'editors'
+      ),
+      new Paragraph(
+        'Purpose',
+        '',
+        'editor-validator'
+      ),
+      new Paragraph(
+        'Purpose',
+        'When the above indicator is green, you are good to move on! Note again that normally editors are managed through the sidebar. You will also see that some editors are marked as sources - these are importable by other editors on the model. As these often are metadata only, you can use the toggle at the top to hide these if desired. Any editor can be made a source by toggling a button in the editor.',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        `Editors are your interactive SQL experience. Write Trilogy, then click run. This will run either the full editor or the highlighted chunk of code (though we will still include any imports). Try running the following queries.`,),
+
+      new Paragraph(
+        'Purpose',
+        'SELECT unnest([1,2,3,4]) as constant;',
+        'code'),
+      new Paragraph(
+        'Purpose',
+        `import lineitem as lineitem;
+SELECT
+    sum(lineitem.extended_price)->sales,
+    lineitem.supplier.nation.name,
+order by
+    sales desc;`,
+        'code'),
+      new Paragraph(
+        'Purpose',
+        '',
+        'demo-editor'),
+      new Paragraph(
+        'Purpose',
+        'For the second query, could you figure out how to visualize the data?',
+        'tip'),
+      new Paragraph(
+        'Purpose',
+        'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',),
+    ]),
+    new Article('Functionality', [
+      new Paragraph(
+        'Tip',
+        'Trilogy Studio is a statically hosted website that uses a mix of precompiled scripts and dynamic imports for some connections to reduce bundle size.',
       ),
       new Paragraph(
         'Tip',
@@ -79,6 +187,25 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Managing Connections',
         "You can view current connections below. Edit the model associated with a connection by clicking the model name next to it (or 'set model' if not set). Connections will not automatically connect on startup by default; click the connection button to connect. This connection view is always accessible through the connections page on the left side.",
+      ),
+      new Paragraph(
+        'ConnectionList',
+        "",
+        "connections"
+      ),
+    ]),
+    new Article('LLM Connections', [
+      new Paragraph(
+        'Connections',
+        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.'),
+      new Paragraph(
+        'Managing Connections',
+        "You can view current LLM connections below. Only one LLM connection can be the default at a time.",
+      ),
+      new Paragraph(
+        'LLMList',
+        "",
+        "llm-connections"
       ),
     ]),
     new Article('Models', [
@@ -137,7 +264,7 @@ export const documentation: DocumentationNode[] = [
       ),
     ]),
   ]),
-  new DocumentationNode('Trilogy Documentation', [
+  new DocumentationNode('Reference', [
     new Article('Overview/Goals', [
       new Paragraph(
         'Introduction',
@@ -203,7 +330,7 @@ export const documentation: DocumentationNode[] = [
         'code',
       ),
     ]),
-    new Article('Syntax', [
+    new Article('Statements', [
       new Paragraph(
         'Basic SELECT Statement',
         'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause. A basic select could look like this:',
@@ -379,6 +506,26 @@ complete_for_clause?
         'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
       ),
     ]),
+    new Article('Functions', [
+      new Paragraph(
+        'Defining Functions',
+        'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are referencved with the @ prefix.',
+      ),
+      new Paragraph(
+        'Example',
+        `const scale_factor<-2;\ndef square_scale(x) -> x * x *scale_factor;\n\nSELECT\n    number,\n    @square_scale(number) AS squared;`,
+        'code',
+      ),
+      new Paragraph(
+        'Defining Functions',
+        'Functions may have optional defaults',
+      ),
+      new Paragraph(
+        'Example',
+        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n    @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
+        'code',
+      ),
+    ]),
     new Article('Modeling', [
       new Paragraph(
         'Defining Concepts',
@@ -448,22 +595,22 @@ complete_for_clause?
       ),
       new Paragraph(
         'Remote Processing',
-        'Query formatting and optimization occurs on secure servers. Code generation uses anonymized inputs. All remote processing is temporary with no data retention.',
+        'Query formatting and optimization occurs on stateless servers. The full content of your editors is sent. All remote processing is temporary with no data retention.',
         'subsection',
       ),
       new Paragraph(
         'Third-Party Services',
-        "GoatTrack Analytics processes anonymous usage statistics, subject to GoatTrack's privacy policy, with data retention limited to 90 days.",
+        "GoatTrack processes anonymous usage statistics.",
         'section',
       ),
       new Paragraph(
         'Query Processing Service',
-        'Temporary processing for formatting and generation, no data retention, encrypted transmission.',
+        'Temporary processing for formatting and generation, no data retention, HTTPS transmission.',
         'subsection',
       ),
       new Paragraph(
         'Security Measures',
-        'All communications use TLS encryption. Telemetry data is anonymized before transmission. Query data is encrypted end-to-end.',
+        'All communications use TLS encryption. Telemetry data is anonymized before transmission.',
         'section',
       ),
       new Paragraph(
@@ -509,13 +656,23 @@ complete_for_clause?
     new Article('Stored Info', [
       new Paragraph(
         'Secret Storage',
-        'For databases that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to local browser storage. If preferred, you can use a password manager to autofill conenction details.',
+        'For databases that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to local browser storage. Local storage is only accessible per website but has some risk from cross-site scripting attacks.',
+      ),
+      new Paragraph(
+        'Secret Storage',
+        'Local storage is convenient, but if you have a browser secret manager, that is a great place to store secrets as well!',
+        'tip'
+      ),
+      new Paragraph(
+        'Secret Storage',
+        'A best practice is to use unique API tokens (such as for LLMs) and passwords in the studio, both to easily track usage and make rotation simple.',
+        'tip'
       ),
     ]),
     new Article('Google Account', [
       new Paragraph(
         'Google Account',
-        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. It is used to communicate directly with Bigquery with the google javascript client library.',
+        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This oken is only used to communicate directly with Bigquery with the google javascript client library.',
       ),
     ]),
     new Article('Telemetry', [

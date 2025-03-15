@@ -15,7 +15,7 @@
       :key="item.id"
       :item="item"
       :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey"
+      :isSelected="item.id === llmConnectionStore.activeConnection"
       @toggle="toggleCollapse"
       @refresh="refreshId"
       @updateApiKey="updateApiKey"
@@ -40,7 +40,7 @@ import LLMConnectionCreator from './LLMConnectionCreator.vue'
 export default {
   name: 'LLMConnectionList',
   props: {
-    activeConnectionKey: {
+    activeLLMKey: {
       type: String,
       default: '',
       optional: true,

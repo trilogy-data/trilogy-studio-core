@@ -39,6 +39,8 @@ export interface ResultColumn {
   name: string
   type: ColumnType
   description?: string
+  scale?: number
+  precision?: number
   // purpose: string
 }
 

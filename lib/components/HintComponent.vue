@@ -61,8 +61,39 @@
 }
 </style>
 <script lang="ts">
+function detectOperatingSystem(): string {
+  // Browser environment
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.indexOf('win') !== -1) return 'Windows';
+    if (userAgent.indexOf('mac') !== -1) return 'MacOS';
+    if (userAgent.indexOf('iphone') !== -1 || userAgent.indexOf('ipad') !== -1) return 'iOS';
+    if (userAgent.indexOf('android') !== -1) return 'Android';
+    if (userAgent.indexOf('linux') !== -1) return 'Linux';
+    
+    return 'Unknown';
+  }
+  
+  // Node.js environment
+  if (typeof process !== 'undefined' && process.platform) {
+    switch (process.platform) {
+      case 'win32': return 'Windows';
+      case 'darwin': return 'MacOS';
+      case 'linux': return 'Linux';
+      case 'android': return 'Android';
+      case 'freebsd': return 'FreeBSD';
+      case 'openbsd': return 'OpenBSD';
+      case 'sunos': return 'SunOS';
+      default: return process.platform;
+    }
+  }
+  
+  return 'Unknown';
+}
 export default {
   data() {
+    let os = detectOperatingSystem()
     return {
       staticShortcuts: [
         {
@@ -102,14 +133,15 @@ export default {
         //     keys: ['B']
         // }
       ],
+      sysType: os
     }
   },
-  props: {
-    sysType: {
-      type: String,
-      required: false,
-    },
-  },
+  // props: {
+  //   sysType: {
+  //     type: String,
+  //     required: false,
+  //   },
+  // },
   mounted() {},
   computed: {
     shortcuts(): Array<any> {
@@ -124,7 +156,7 @@ export default {
       return this.staticShortcuts
     },
     icon() {
-      if (this.sysType == 'mac') {
+      if (this.sysType == 'MacOS') {
         return '⌘'
       }
       return 'Ctrl'

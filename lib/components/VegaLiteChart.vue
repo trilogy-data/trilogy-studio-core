@@ -20,130 +20,20 @@
         </div>
       </div>
 
-      <div class="control-group" v-if="['boxplot'].includes(internalConfig.chartType)">
-        <label for="group-by">Group By</label>
-        <select id="group-by" v-model="internalConfig.groupField" class="form-select">
-          <option
-            v-for="column in filteredColumns('categorical')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="control-group" v-if="internalConfig.chartType === 'barh'">
-        <label for="y-axis">Category Axis</label>
-        <select id="y-axis" v-model="internalConfig.yField" class="form-select">
-          <option
-            v-for="column in filteredColumns('categorical')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="control-group" v-if="internalConfig.chartType === 'barh'">
-        <label for="x-axis">Value Axis</label>
-        <select id="x-axis" v-model="internalConfig.xField" class="form-select">
-          <option
-            v-for="column in filteredColumns('numeric')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="control-group" v-if="!['barh', 'boxplot'].includes(internalConfig.chartType)">
-        <label for="x-axis">X Axis</label>
-        <select id="x-axis" v-model="internalConfig.xField" class="form-select">
-          <option
-            v-for="column in filteredColumns(internalConfig.chartType === 'line' ? 'all' : 'all')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div
+      <div 
+        v-for="control in visibleControls" 
+        :key="control.id"
         class="control-group"
-        v-if="!['barh', 'boxplot', 'heatmap', 'scatterplot'].includes(internalConfig.chartType)"
       >
-        <label for="y-axis">Y Axis</label>
-        <select id="y-axis" v-model="internalConfig.yField" class="form-select">
+        <label :for="control.id">{{ control.label }}</label>
+        <select 
+          :id="control.id" 
+          v-model="internalConfig[control.field]" 
+          class="form-select"
+        >
+          <option v-if="control.allowEmpty" value="">None</option>
           <option
-            v-for="column in filteredColumns('numeric')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-      <div
-        class="control-group"
-        v-if="['heatmap', 'scatterplot'].includes(internalConfig.chartType)"
-      >
-        <label for="y-axis">Y Axis</label>
-        <select id="y-axis" v-model="internalConfig.yField" class="form-select">
-          <option v-for="column in filteredColumns('all')" :key="column.name" :value="column.name">
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-      <div class="control-group" v-if="internalConfig.chartType === 'heatmap'">
-        <label for="color-field">Value Field</label>
-        <select id="color-field" v-model="internalConfig.colorField" class="form-select">
-          <option
-            v-for="column in filteredColumns('numeric')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="control-group" v-if="!['heatmap', 'boxplot'].includes(internalConfig.chartType)">
-        <label for="color-by">Color By (optional)</label>
-        <select id="color-by" v-model="internalConfig.colorField" class="form-select">
-          <option value="">None</option>
-          <option
-            v-for="column in filteredColumns('categorical')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="control-group" v-if="['scatterplot'].includes(internalConfig.chartType)">
-        <label for="size">Size (optional)</label>
-        <select id="size" v-model="internalConfig.sizeField" class="form-select">
-          <option value="">None</option>
-          <option
-            v-for="column in filteredColumns('numeric')"
-            :key="column.name"
-            :value="column.name"
-          >
-            {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-          </option>
-        </select>
-      </div>
-      <div class="control-group" v-if="internalConfig.chartType === 'line' && hasTrellisOption">
-        <label for="trellisField">Split Chart By</label>
-        <select id="trellisField" v-model="internalConfig.trellisField" class="form-select">
-          <option value="">None</option>
-          <option
-            v-for="column in filteredColumns('categorical')"
+            v-for="column in filteredColumns(control.columnFilter)"
             :key="column.name"
             :value="column.name"
           >
@@ -165,6 +55,16 @@ import { ColumnType } from '../editors/results'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
+
+// Define the control interface
+interface ChartControl {
+  id: string;
+  label: string;
+  field: keyof ChartConfig;
+  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'all';
+  allowEmpty: boolean;
+  visibleFor: string[];  // Array of chart types where this control should be visible
+}
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -207,6 +107,89 @@ export default defineComponent({
         icon: 'mdi mdi-chart-box',
       },
     ],
+    // Define all possible controls in one place
+    controls: [
+      {
+        id: 'group-by',
+        label: 'Group By',
+        field: 'groupField',
+        columnFilter: 'categorical',
+        allowEmpty: false,
+        visibleFor: ['boxplot'],
+      },
+      {
+        id: 'category-axis',
+        label: 'Category Axis',
+        field: 'yField',
+        columnFilter: 'categorical',
+        allowEmpty: false,
+        visibleFor: ['barh'],
+      },
+      {
+        id: 'value-axis',
+        label: 'Value Axis',
+        field: 'xField',
+        columnFilter: 'numeric',
+        allowEmpty: false,
+        visibleFor: ['barh'],
+      },
+      {
+        id: 'x-axis',
+        label: 'X Axis',
+        field: 'xField',
+        columnFilter: 'all',
+        allowEmpty: false,
+        visibleFor: ['bar', 'line', 'point', 'area'],
+      },
+      {
+        id: 'y-axis-numeric',
+        label: 'Y Axis',
+        field: 'yField',
+        columnFilter: 'numeric',
+        allowEmpty: false,
+        visibleFor: ['bar', 'line', 'area'],
+      },
+      {
+        id: 'y-axis-all',
+        label: 'Y Axis',
+        field: 'yField',
+        columnFilter: 'all',
+        allowEmpty: false,
+        visibleFor: ['heatmap', 'point'],
+      },
+      {
+        id: 'color-field',
+        label: 'Value Field',
+        field: 'colorField',
+        columnFilter: 'numeric',
+        allowEmpty: false,
+        visibleFor: ['heatmap'],
+      },
+      {
+        id: 'color-by',
+        label: 'Color By (optional)',
+        field: 'colorField',
+        columnFilter: 'categorical',
+        allowEmpty: true,
+        visibleFor: ['bar', 'barh', 'line', 'point', 'area'],
+      },
+      {
+        id: 'size',
+        label: 'Size (optional)',
+        field: 'sizeField',
+        columnFilter: 'numeric',
+        allowEmpty: true,
+        visibleFor: ['point'],
+      },
+      {
+        id: 'trellis-field',
+        label: 'Split Chart By',
+        field: 'trellisField',
+        columnFilter: 'categorical',
+        allowEmpty: true,
+        visibleFor: ['line'],
+      },
+    ] as ChartControl[],
   }),
   props: {
     data: {
@@ -772,6 +755,18 @@ export default defineComponent({
       hasTrellisOption,
     }
   },
+  computed: {
+    // Computed property to get controls visible for the current chart type
+    visibleControls(): ChartControl[] {
+      return this.controls.filter(control => {
+        // Special case for trellis field - only show if hasTrellisOption is true
+        if (control.id === 'trellis-field' && !this.hasTrellisOption) {
+          return false;
+        }
+        return control.visibleFor.includes(this.internalConfig.chartType);
+      });
+    }
+  }
 })
 </script>
 

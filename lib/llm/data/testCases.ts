@@ -40,9 +40,10 @@ const testFields: ModelConceptInput[] = [
 ]
 
 const trilogyRules = [
-  'Trilogy does not use group clauses. Do not include them even if you aggregate.',
+  'Trilogy does not use group by clauses. Do not include them even if you aggregate. No answer should contain the GROUP BY sql keywords.',
+  'Trilogy does not use the from clause. All fields are resolved from a global namespace. No answer should contain the FROM sql keyword.',
   'Trilogy does not have the distinct keyword. Do not use it',
-  'Trilogy uses # for comments. For multiline comments, comment each line.',
+  'Trilogy uses # for comments. For multiline comments, comment each line. A comment must have a newline after it.',
   'If you use a where clause, place it before the select.',
   'Trilogy fields will look like struct paths - order.product.id. Use the full path.',
   'use date_add to manipulate dates, like date_add(ship_date, month, 3)',
@@ -62,14 +63,14 @@ export function createPrompt(query: string, concepttInputs: ModelConceptInput[] 
         `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
     )
     .join(', ')
-  return `You are a helpful assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. A single virtual table is available with fields - to be listed later, with a name, type, and description. Even better, the where clause can reference fields that you don't select on. Follow these rules ${rulesInput}. Using only these fields: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple quotes """ - to make it easy for the user to copy and paste.`
+  return `You are a helpful assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. A single virtual table is available with fields - to be listed later, with a name, type, and description. Even better, the where clause can reference fields that you don't select on. Follow these rules ${rulesInput}. Using only these fields: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes -ex """ - to make it easy for the user to copy and paste.`
 }
 
 const testCases: TestScenario[] = [
   {
     name: 'Basic Query',
     description: 'Tests if the LLM can create a simple trilogy query from user input.',
-    prompt: createPrompt('what were sales for the last 3 months?'),
+    prompt: createPrompt('what were sales for the last 3 months by order date?'),
     expectedResponse: {
       contains: ['extended_price'],
       mustIdentify: 'order.date',
@@ -83,7 +84,7 @@ const testCases: TestScenario[] = [
     expectedResponse: {
       contains: ['extended_price'],
       mustIdentify: 'supplier.nation.name',
-      notContains: ['FROM', 'GROUP'],
+      notContains: ['FROM', 'GROUP BY'],
     },
   },
   {
@@ -93,7 +94,7 @@ const testCases: TestScenario[] = [
     expectedResponse: {
       contains: ['extended_price', 'order.customer.name', '8', '::date'],
       mustIdentify: 'order.customer.name',
-      notContains: ['FROM', 'GROUP'],
+      notContains: ['FROM', 'GROUP BY'],
     },
   },
 
@@ -106,13 +107,13 @@ const testCases: TestScenario[] = [
     expectedResponse: {
       contains: ['extended_price', 'order.customer.name', '8', '::date'],
       mustIdentify: 'order.customer.name',
-      notContains: ['FROM', 'GROUP'],
+      notContains: ['FROM', 'GROUP BY'],
     },
   },
 
   {
     name: 'Test Count(*) Handling',
-    description: 'Test proper counting of identiifers',
+    description: 'Test proper counting of identifiers',
     prompt: createPrompt('How many customers are there by country?'),
     expectedResponse: {
       contains: ['order.customer.id'],

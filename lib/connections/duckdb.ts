@@ -69,24 +69,43 @@ export default class DuckDBConnection extends BaseConnection {
         name: field.name,
         type: this.mapDuckDBTypeToColumnType(field.type),
         description: '', // Add a description if necessary
+        scale: field.type.scale,
+        precision: field.type.precision,
       })
     })
 
     // Map data rows
     const data = result.toArray().map((row) => row.toJSON())
+    console.log(data)
     //if any field type is a integer, convert it from BigInt to Number
     let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     data.forEach((row) => {
       Object.keys(row).forEach((key) => {
-        if (headers.get(key)?.type === ColumnType.INTEGER) {
-          row[key] = Number(row[key])
-        } else if (headers.get(key)?.type === ColumnType.DATE) {
-          row[key] = DateTime.fromMillis(row[key], { zone: 'UTC' })
-        } else if (headers.get(key)?.type === ColumnType.DATETIME) {
-          row[key] = DateTime.fromMillis(row[key], { zone: tz })
+        switch (headers.get(key)?.type) {
+          case ColumnType.INTEGER:
+            row[key] = Number(row[key])
+            break
+          case ColumnType.FLOAT:
+            const scale = headers.get(key)?.scale || 0;
+            
+            // Convert integer to float by dividing by 10^scale
+            if (row[key] !== null && row[key] !== undefined) {
+                const scaleFactor = Math.pow(10, scale);
+                row[key] = Number(row[key]) / scaleFactor;
+            }
+            break
+          case ColumnType.DATE:
+            row[key] = DateTime.fromMillis(row[key], { zone: 'UTC' })
+            break
+          case ColumnType.DATETIME:
+            row[key] = DateTime.fromMillis(row[key], { zone: tz })
+            break
+          default:
+            break
         }
       })
     })
+    console.log(data)
     return new Results(headers, data)
   }
 
@@ -101,6 +120,8 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.FLOAT
       case 6:
         return ColumnType.BOOLEAN
+      case 7:
+        return ColumnType.FLOAT  
       case 8:
         return ColumnType.DATE
       case 10:
