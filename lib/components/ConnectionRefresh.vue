@@ -39,10 +39,8 @@ const buttonIcon = computed(() =>
 )
 
 const handleRefresh = async () => {
-  console.log('resetting')
   try {
     await connectionStore.resetConnection(props.connection.name)
-    console.log('reset')
     emit('refresh', props.connection.name)
   } catch (error) {
     console.error('Refresh failed:', error)

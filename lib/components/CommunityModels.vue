@@ -20,20 +20,14 @@
         </div>
       </div>
 
-      <div class="branch-selector flex gap-4 items-center">
+      <!-- <div class="branch-selector flex gap-4 items-center">
         <label class="text-faint filter-label">Public Repo Branch</label>
         <select v-model="selectedBranch" class="px-3 py-2 border rounded" @change="fetchFiles">
           <option v-for="branch in branches" :key="branch" :value="branch">
             {{ branch }}
           </option>
         </select>
-        <!-- <button 
-          @click="fetchFiles" 
-          class="px-3 py-2 border rounded bg-button hover:bg-button-hover"
-        >
-          Refresh
-        </button> -->
-      </div>
+      </div> -->
     </div>
 
     <div v-if="filteredFiles.length">

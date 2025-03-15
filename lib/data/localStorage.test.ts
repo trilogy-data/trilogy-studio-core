@@ -251,7 +251,6 @@ describe('EditorLocalStorage', () => {
     localStorage.saveLLMConnections(Object.values(connections))
     localStorage.deleteLLMConnection('conn1').then(() => {
       localStorage.loadLLMConnections().then((loadedConnections) => {
-        console.log(loadedConnections)
         expect(Object.keys(loadedConnections)).toHaveLength(1)
         // expect(loadedConnections['conn2'].type).toBe('Anthropic');
         expect(loadedConnections['conn2'].model).toBe('claude-2')

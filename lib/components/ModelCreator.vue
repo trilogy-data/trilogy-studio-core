@@ -199,10 +199,12 @@ export default defineComponent({
         if (!modelStore.models[modelDetails.value.name]) {
           modelStore.newModelConfig(modelDetails.value.name)
         }
-        if (modelDetails.value.connection.startsWith('new-')) {
+        let typeName = modelDetails.value.connection
+        if (typeName.startsWith('new-')) {
+          typeName = typeName.replace('new-', '')
           connectionStore.newConnection(
             modelDetails.value.name,
-            modelDetails.value.connection.replace('new-', ''),
+            typeName,
             {
               mdToken: modelDetails.value.options.mdToken,
               projectId: modelDetails.value.options.projectId,
@@ -211,7 +213,7 @@ export default defineComponent({
             },
           )
         }
-        connectionStore.connections[modelDetails.value.connection].setModel(modelDetails.value.name)
+        connectionStore.connections[modelDetails.value.name].setModel(modelDetails.value.name)
         if (modelDetails.value.importAddress) {
           const data = await fetchModelImports(
             await fetchModelImportBase(modelDetails.value.importAddress),

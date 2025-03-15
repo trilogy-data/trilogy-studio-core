@@ -76,7 +76,6 @@ export default class DuckDBConnection extends BaseConnection {
 
     // Map data rows
     const data = result.toArray().map((row) => row.toJSON())
-    console.log(data)
     //if any field type is a integer, convert it from BigInt to Number
     let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     data.forEach((row) => {
@@ -105,7 +104,6 @@ export default class DuckDBConnection extends BaseConnection {
         }
       })
     })
-    console.log(data)
     return new Results(headers, data)
   }
 
