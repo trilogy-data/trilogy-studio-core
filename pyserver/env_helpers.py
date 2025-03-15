@@ -166,9 +166,9 @@ def source_to_model_source(
     env = parse_env_from_full_model(sources)
     try:
         env.parse(source.contents)
-    except ParseError as e:
+    except Exception as e:
         raise ParseError(
-            f"Unable to process '{source.alias}', parsing error: {e}"
+            f"Unable to process file '{source.alias}', parsing error: {e}"
         ) from e
 
     for skey, sconcept in env.concepts.items():

@@ -51,7 +51,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Purpose',
-        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it.',
+        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
       ),
       new Paragraph(
         'Purpose',
@@ -65,7 +65,18 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Purpose',
-        `Now that you have the model imported, we want to associate it with a connection. The demo model must be run on a DuckDB connection, which runs on your browser with DuckDB-WASM. <br>- Click "add" below to create the connection, name it "demo-connection", and submit. <br>- Once submitted, click the plug icon to connect to it.<br>- Finally, click the connection name to toggle details, and click the model dropdown and select the "demo-model"`,
+        `Now that you have the model imported and associated with a connection, we just need to click the plug icon to connect to it.`,
+      ),
+      new Paragraph(
+        'Purpose',
+        `If you had set up the connection first, you could click the connection name to toggle details, and click the model dropdown and select the "demo-model".`,
+
+        'tip'
+      ),
+      new Paragraph(
+        'Purpose',
+        `You can also run normal SQL against a connection, using a 'sql' typed editor. This is a good way to debug or test queries that you are not sure how to write in Trilogy, or to manage databases.`,
+        'tip'
       ),
       new Paragraph(
         'ConnectionList',
@@ -83,7 +94,7 @@ export const documentation: DocumentationNode[] = [
         'tip'),
       new Paragraph(
         'Purpose',
-        'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a editor named "my-first-editor" associated with the demo connection.',
+        'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
       ),
       new Paragraph(
         'Purpose',
@@ -109,7 +120,8 @@ export const documentation: DocumentationNode[] = [
         'code'),
       new Paragraph(
         'Purpose',
-        `SELECT
+        `import lineitem as lineitem;
+SELECT
     sum(lineitem.extended_price)->sales,
     lineitem.supplier.nation.name,
 order by
@@ -185,7 +197,7 @@ order by
     new Article('LLM Connections', [
       new Paragraph(
         'Connections',
-        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.' ),
+        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.'),
       new Paragraph(
         'Managing Connections',
         "You can view current LLM connections below. Only one LLM connection can be the default at a time.",
