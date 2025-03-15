@@ -24,7 +24,6 @@ import {
 } from 'tabulator-tables'
 import * as monaco from 'monaco-editor'
 
-
 Tabulator.registerModule([
   ResizeColumnsModule,
   DownloadModule,
@@ -128,8 +127,15 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
-      :storageSources="contentSources" :userSettingsStore="userSettingsStore" :llmConnectionStore="llms">
+    <Manager
+      :connectionStore="connections"
+      :editorStore="store"
+      :trilogyResolver="resolver"
+      :modelStore="models"
+      :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
+      :llmConnectionStore="llms"
+    >
     </Manager>
   </div>
 </template>

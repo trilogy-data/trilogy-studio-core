@@ -85,12 +85,12 @@ export default class DuckDBConnection extends BaseConnection {
             row[key] = Number(row[key])
             break
           case ColumnType.FLOAT:
-            const scale = headers.get(key)?.scale || 0;
-            
+            const scale = headers.get(key)?.scale || 0
+
             // Convert integer to float by dividing by 10^scale
             if (row[key] !== null && row[key] !== undefined) {
-                const scaleFactor = Math.pow(10, scale);
-                row[key] = Number(row[key]) / scaleFactor;
+              const scaleFactor = Math.pow(10, scale)
+              row[key] = Number(row[key]) / scaleFactor
             }
             break
           case ColumnType.DATE:
@@ -119,7 +119,7 @@ export default class DuckDBConnection extends BaseConnection {
       case 6:
         return ColumnType.BOOLEAN
       case 7:
-        return ColumnType.FLOAT  
+        return ColumnType.FLOAT
       case 8:
         return ColumnType.DATE
       case 10:

@@ -1,24 +1,17 @@
 <template>
   <div class="results-view">
-    <loading-view
-      v-if="editorData.loading"
-      :cancel="editorData.cancelCallback"
-    />
+    <loading-view v-if="editorData.loading" :cancel="editorData.cancelCallback" />
     <error-message v-else-if="editorData.error">
       {{ editorData.error }}
       <template #action v-if="editorData.error === 'Connection is not active.'">
-        <loading-button
-          :action="handleReconnect"
-        >
+        <loading-button :action="handleReconnect">
           Reconnect
           {{ editorData.connection }}
         </loading-button>
       </template>
     </error-message>
     <results-container
-      v-else-if="
-        editorData.results.headers && editorData.results.headers.size > 0
-      "
+      v-else-if="editorData.results.headers && editorData.results.headers.size > 0"
       :results="editorData.results"
       :generatedSql="editorData.generated_sql || undefined"
       :containerHeight="containerHeight"
@@ -44,42 +37,41 @@ export default {
     ErrorMessage,
     LoadingButton,
     ResultsContainer,
-    HintComponent
+    HintComponent,
   },
   props: {
     editorData: {
       type: Object,
-      required: true
+      required: true,
     },
     containerHeight: {
       type: Number,
-      default: 0
-    }
+      default: 0,
+    },
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    
+
     if (!connectionStore) {
       throw new Error('Requires injection of connection store')
     }
-    
+
     return {
-      connectionStore
+      connectionStore,
     }
   },
   methods: {
     handleReconnect() {
       if (this.editorData) {
-        return this.connectionStore.resetConnection(this.editorData.connection)
-          .then(() => {
-            if (this.editorData) {
-              this.editorData.error = null
-            }
-          })
+        return this.connectionStore.resetConnection(this.editorData.connection).then(() => {
+          if (this.editorData) {
+            this.editorData.error = null
+          }
+        })
       }
       return Promise.resolve()
-    }
-  }
+    },
+  },
 }
 </script>
 

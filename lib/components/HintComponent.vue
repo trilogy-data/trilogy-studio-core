@@ -64,32 +64,40 @@
 function detectOperatingSystem(): string {
   // Browser environment
   if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
-    const userAgent = navigator.userAgent.toLowerCase();
-    
-    if (userAgent.indexOf('win') !== -1) return 'Windows';
-    if (userAgent.indexOf('mac') !== -1) return 'MacOS';
-    if (userAgent.indexOf('iphone') !== -1 || userAgent.indexOf('ipad') !== -1) return 'iOS';
-    if (userAgent.indexOf('android') !== -1) return 'Android';
-    if (userAgent.indexOf('linux') !== -1) return 'Linux';
-    
-    return 'Unknown';
+    const userAgent = navigator.userAgent.toLowerCase()
+
+    if (userAgent.indexOf('win') !== -1) return 'Windows'
+    if (userAgent.indexOf('mac') !== -1) return 'MacOS'
+    if (userAgent.indexOf('iphone') !== -1 || userAgent.indexOf('ipad') !== -1) return 'iOS'
+    if (userAgent.indexOf('android') !== -1) return 'Android'
+    if (userAgent.indexOf('linux') !== -1) return 'Linux'
+
+    return 'Unknown'
   }
-  
+
   // Node.js environment
   if (typeof process !== 'undefined' && process.platform) {
     switch (process.platform) {
-      case 'win32': return 'Windows';
-      case 'darwin': return 'MacOS';
-      case 'linux': return 'Linux';
-      case 'android': return 'Android';
-      case 'freebsd': return 'FreeBSD';
-      case 'openbsd': return 'OpenBSD';
-      case 'sunos': return 'SunOS';
-      default: return process.platform;
+      case 'win32':
+        return 'Windows'
+      case 'darwin':
+        return 'MacOS'
+      case 'linux':
+        return 'Linux'
+      case 'android':
+        return 'Android'
+      case 'freebsd':
+        return 'FreeBSD'
+      case 'openbsd':
+        return 'OpenBSD'
+      case 'sunos':
+        return 'SunOS'
+      default:
+        return process.platform
     }
   }
-  
-  return 'Unknown';
+
+  return 'Unknown'
 }
 export default {
   data() {
@@ -133,7 +141,7 @@ export default {
         //     keys: ['B']
         // }
       ],
-      sysType: os
+      sysType: os,
     }
   },
   // props: {

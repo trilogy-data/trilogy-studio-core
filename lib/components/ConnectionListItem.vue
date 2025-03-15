@@ -68,11 +68,8 @@
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
-      <connection-refresh
-        :connection="item.connection"
-        :is-connected="item.connection.connected"
-      />
-      <connection-status-icon  :connection="item.connection" />
+      <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
+      <connection-status-icon :connection="item.connection" />
       <tooltip content="Delete Connection" position="left">
         <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
           <i class="mdi mdi-trash-can"></i>

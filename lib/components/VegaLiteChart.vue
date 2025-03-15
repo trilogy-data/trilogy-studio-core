@@ -20,17 +20,9 @@
         </div>
       </div>
 
-      <div 
-        v-for="control in visibleControls" 
-        :key="control.id"
-        class="control-group"
-      >
+      <div v-for="control in visibleControls" :key="control.id" class="control-group">
         <label :for="control.id">{{ control.label }}</label>
-        <select 
-          :id="control.id" 
-          v-model="internalConfig[control.field]" 
-          class="form-select"
-        >
+        <select :id="control.id" v-model="internalConfig[control.field]" class="form-select">
           <option v-if="control.allowEmpty" value="">None</option>
           <option
             v-for="column in filteredColumns(control.columnFilter)"
@@ -58,12 +50,12 @@ import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 
 // Define the control interface
 interface ChartControl {
-  id: string;
-  label: string;
-  field: keyof ChartConfig;
-  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'all';
-  allowEmpty: boolean;
-  visibleFor: string[];  // Array of chart types where this control should be visible
+  id: string
+  label: string
+  field: keyof ChartConfig
+  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'all'
+  allowEmpty: boolean
+  visibleFor: string[] // Array of chart types where this control should be visible
 }
 
 export default defineComponent({
@@ -758,15 +750,15 @@ export default defineComponent({
   computed: {
     // Computed property to get controls visible for the current chart type
     visibleControls(): ChartControl[] {
-      return this.controls.filter(control => {
+      return this.controls.filter((control) => {
         // Special case for trellis field - only show if hasTrellisOption is true
         if (control.id === 'trellis-field' && !this.hasTrellisOption) {
-          return false;
+          return false
         }
-        return control.visibleFor.includes(this.internalConfig.chartType);
-      });
-    }
-  }
+        return control.visibleFor.includes(this.internalConfig.chartType)
+      })
+    },
+  },
 })
 </script>
 

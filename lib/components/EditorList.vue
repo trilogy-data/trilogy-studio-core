@@ -329,5 +329,4 @@ export default {
 .text-light {
   color: var(--text-faint);
 }
-
 </style>

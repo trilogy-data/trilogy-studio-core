@@ -202,16 +202,12 @@ export default defineComponent({
         let typeName = modelDetails.value.connection
         if (typeName.startsWith('new-')) {
           typeName = typeName.replace('new-', '')
-          connectionStore.newConnection(
-            modelDetails.value.name,
-            typeName,
-            {
-              mdToken: modelDetails.value.options.mdToken,
-              projectId: modelDetails.value.options.projectId,
-              username: modelDetails.value.options.username,
-              password: modelDetails.value.options.password,
-            },
-          )
+          connectionStore.newConnection(modelDetails.value.name, typeName, {
+            mdToken: modelDetails.value.options.mdToken,
+            projectId: modelDetails.value.options.projectId,
+            username: modelDetails.value.options.username,
+            password: modelDetails.value.options.password,
+          })
         }
         connectionStore.connections[modelDetails.value.name].setModel(modelDetails.value.name)
         if (modelDetails.value.importAddress) {

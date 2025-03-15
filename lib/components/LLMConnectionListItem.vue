@@ -27,7 +27,6 @@
     </div>
     <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
       <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
-
         <button type="submit" class="customize-button">Update API Key</button>
         <input
           type="password"

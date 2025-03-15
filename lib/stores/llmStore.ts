@@ -58,11 +58,26 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       }
 
       if (type === 'anthropic') {
-        this.connections[name] = new AnthropicProvider(name, options.apiKey, options.model, options.saveCredential)
+        this.connections[name] = new AnthropicProvider(
+          name,
+          options.apiKey,
+          options.model,
+          options.saveCredential,
+        )
       } else if (type === 'openai') {
-        this.connections[name] = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
+        this.connections[name] = new OpenAIProvider(
+          name,
+          options.apiKey,
+          options.model,
+          options.saveCredential,
+        )
       } else if (type === 'mistral') {
-        this.connections[name] = new MistralProvider(name, options.apiKey, options.model, options.saveCredential)
+        this.connections[name] = new MistralProvider(
+          name,
+          options.apiKey,
+          options.model,
+          options.saveCredential,
+        )
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }

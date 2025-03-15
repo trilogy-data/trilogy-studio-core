@@ -5,8 +5,10 @@
         <img :src="trilogyIcon" alt="Logo" class="logo-image" />
       </div>
       <h1>Welcome to Trilogy Studio</h1>
-      <p>We're glad you're here! </p>
-      <p>To get started: drop right into a demo editor, create a blank editor, or dive into the docs.</p>
+      <p>We're glad you're here!</p>
+      <p>
+        To get started: drop right into a demo editor, create a blank editor, or dive into the docs.
+      </p>
       <div class="buttons">
         <button @click="startDemo()" class="btn btn-secondary">
           <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>

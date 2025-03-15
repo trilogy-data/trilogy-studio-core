@@ -66,7 +66,7 @@ function typeToFormatter(col: ResultColumn) {
       return {
         formatter: 'money',
         formatterParams: {
-          precision: col.precision? col.precision : 2,
+          precision: col.precision ? col.precision : 2,
         },
       }
     case ColumnType.MONEY:

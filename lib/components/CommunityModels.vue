@@ -33,11 +33,14 @@
     <div v-if="filteredFiles.length">
       <div v-for="file in filteredFiles" :key="file.name">
         <h3 class="font-semibold">{{ file.name }}</h3>
-        <model-creator :formDefaults="{
-          importAddress: file.downloadUrl,
-          connection: `new-${file.engine}`,
-          name: file.name,
-        }" :absolute="false" />
+        <model-creator
+          :formDefaults="{
+            importAddress: file.downloadUrl,
+            connection: `new-${file.engine}`,
+            name: file.name,
+          }"
+          :absolute="false"
+        />
         <div>
           <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
         </div>
@@ -57,7 +60,9 @@
     </div>
     <p v-if="error" class="text-error">{{ error }}</p>
     <p v-else-if="loading" class="text-loading">Loading community models...</p>
-    <p v-else-if="!filteredFiles.length" class="text-faint mt-4">No models match your search criteria.</p>
+    <p v-else-if="!filteredFiles.length" class="text-faint mt-4">
+      No models match your search criteria.
+    </p>
   </div>
 </template>
 
@@ -100,7 +105,7 @@ const toggleComponents = (index: string) => {
 
 const availableEngines = computed(() => {
   const engines = new Set<string>()
-  files.value.forEach(file => {
+  files.value.forEach((file) => {
     if (file.engine) {
       engines.add(file.engine)
     }
@@ -109,7 +114,7 @@ const availableEngines = computed(() => {
 })
 
 const filteredFiles = computed(() => {
-  return files.value.filter(file => {
+  return files.value.filter((file) => {
     const nameMatch = file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const engineMatch = !selectedEngine.value || file.engine === selectedEngine.value
     return nameMatch && engineMatch
@@ -118,9 +123,7 @@ const filteredFiles = computed(() => {
 
 const fetchBranches = async () => {
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/branches`
-    )
+    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/branches`)
     if (response.status === 200) {
       const branchData = await response.json()
       branches.value = branchData.map((branch: { name: string }) => branch.name)

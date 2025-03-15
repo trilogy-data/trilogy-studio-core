@@ -7,7 +7,7 @@ export class OpenAIProvider extends LLMProvider {
   public models: string[]
   public type: string = 'openai'
 
-  constructor(name: string, apiKey: string, model: string, saveCredential: boolean=false) {
+  constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
     this.models = []
   }
