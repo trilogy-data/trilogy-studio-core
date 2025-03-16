@@ -121,10 +121,17 @@ export default {
         )
       }
     }
+    const saveAll = async () => {
+      await saveEditors()
+      await saveConnections()
+      await saveModels()
+      await saveLLMConnections()
+    }
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
     provide('saveLLMConnections', saveLLMConnections)
+    provide('saveAll', saveAll)
     const isMobile = computed(() => window.innerWidth <= 768)
     provide('isMobile', isMobile)
   },

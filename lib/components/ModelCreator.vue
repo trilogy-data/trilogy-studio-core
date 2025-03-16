@@ -8,17 +8,9 @@
           <label for="model-name">Name</label>
           <input type="text" v-model="modelDetails.name" id="model-name" required />
           <label for="model-import">Assign To Connection</label>
-          <select
-            v-model="modelDetails.connection"
-            id="model-connection"
-            placeholder="Models must have a connection."
-            required
-          >
-            <option
-              v-for="connection in connections"
-              :key="connection.name"
-              :value="connection.name"
-            >
+          <select v-model="modelDetails.connection" id="model-connection" placeholder="Models must have a connection."
+            required>
+            <option v-for="connection in connections" :key="connection.name" :value="connection.name">
               {{ connection.name }}
             </option>
             <option value="new-duckdb">New DuckDB</option>
@@ -27,32 +19,18 @@
           </select>
           <div v-if="modelDetails.connection === 'new-motherduck'">
             <label for="md-token">MotherDuck Token</label>
-            <input
-              type="text"
-              v-model="modelDetails.options.mdToken"
-              id="md-token"
-              placeholder="MotherDuck Token"
-              required
-            />
+            <input type="text" v-model="modelDetails.options.mdToken" id="md-token" placeholder="MotherDuck Token"
+              required />
           </div>
 
           <div v-if="modelDetails.connection === 'new-bigquery-oauth'">
             <label for="project-id">BigQuery Project ID</label>
-            <input
-              type="text"
-              v-model="modelDetails.options.projectId"
-              id="project-id"
-              placeholder="Billing Project ID"
-              required
-            />
+            <input type="text" v-model="modelDetails.options.projectId" id="project-id" placeholder="Billing Project ID"
+              required />
           </div>
           <label for="model-import">Import From Address</label>
-          <input
-            placeholder="Optional. Import github definition."
-            type="text"
-            v-model="modelDetails.importAddress"
-            id="model-import"
-          />
+          <input placeholder="Optional. Import github definition." type="text" v-model="modelDetails.importAddress"
+            id="model-import" />
         </div>
         <button type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
@@ -65,6 +43,7 @@
 .relative-parent {
   position: relative;
 }
+
 input,
 select {
   font-size: 12px;
@@ -175,7 +154,8 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    if (!connectionStore || !modelStore || !editorStore) {
+    const saveAll = inject<Function>('saveAll')
+    if (!connectionStore || !modelStore || !editorStore || !saveAll) {
       throw 'must inject modelStore to ModelCreator'
     }
 
@@ -185,11 +165,11 @@ export default defineComponent({
 
     // Function to create the editor by collecting details from the form
     const createModel = () => {
-      visible.value = !visible.value
-      ;(modelDetails.value.name = props.formDefaults.name || ''),
-        (modelDetails.value.importAddress = props.formDefaults.importAddress),
-        (modelDetails.value.connection = props.formDefaults.connection || ''),
-        (modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' }) // Reset options
+      visible.value = !visible.value;
+      modelDetails.value.name = props.formDefaults.name || ''
+      modelDetails.value.importAddress = props.formDefaults.importAddress
+      modelDetails.value.connection = props.formDefaults.connection || ''
+      modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
     }
 
     // Function to submit the editor details
@@ -199,9 +179,11 @@ export default defineComponent({
         if (!modelStore.models[modelDetails.value.name]) {
           modelStore.newModelConfig(modelDetails.value.name)
         }
-        let typeName = modelDetails.value.connection
-        if (typeName.startsWith('new-')) {
-          typeName = typeName.replace('new-', '')
+        let connectionName = modelDetails.value.connection
+
+        if (connectionName.startsWith('new-')) {
+          let typeName = connectionName.replace('new-', '')
+          connectionName = modelDetails.value.name
           connectionStore.newConnection(modelDetails.value.name, typeName, {
             mdToken: modelDetails.value.options.mdToken,
             projectId: modelDetails.value.options.projectId,
@@ -209,7 +191,8 @@ export default defineComponent({
             password: modelDetails.value.options.password,
           })
         }
-        connectionStore.connections[modelDetails.value.name].setModel(modelDetails.value.name)
+
+        connectionStore.connections[connectionName].setModel(modelDetails.value.name)
         if (modelDetails.value.importAddress) {
           const data = await fetchModelImports(
             await fetchModelImportBase(modelDetails.value.importAddress),
@@ -234,7 +217,9 @@ export default defineComponent({
             }
             return new ModelSource(response.name, response.alias || response.name, [], [])
           })
+
         }
+        await saveAll()
         visible.value = false
       }
     }
