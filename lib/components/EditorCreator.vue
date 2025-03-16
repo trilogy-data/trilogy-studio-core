@@ -111,8 +111,9 @@ export default defineComponent({
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    if (!connectionStore || !editorStore) {
-      throw 'must inject connectionStore to EditorCreator'
+    const saveEditors = inject<Function>('saveEditors')
+    if (!connectionStore || !editorStore || !saveEditors) {
+      throw 'must inject connectionStore, editorStore, save to EditorCreator'
     }
 
     let connections = connectionStore.connections
@@ -137,6 +138,7 @@ export default defineComponent({
           editorDetails.value.connection,
           '',
         )
+        saveEditors()
         emit('editor-selected', editorDetails.value.name)
       }
     }

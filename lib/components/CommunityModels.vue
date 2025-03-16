@@ -223,9 +223,8 @@ onMounted(async () => {
 }
 
 .filters {
-  background-color: var(--surface-color, #f5f5f5);
+  background-color: var(--sidebar-bg-color);
   padding: 12px;
-  border-radius: 4px;
 }
 
 .text-error {
@@ -237,10 +236,10 @@ onMounted(async () => {
 }
 
 .bg-button {
-  background-color: var(--button-bg, #e0e0e0);
+  background-color: var(--button-bg);
 }
 
 .bg-button-hover:hover {
-  background-color: var(--button-hover-bg, #d0d0d0);
+  background-color: var(--button-hover-bg);
 }
 </style>

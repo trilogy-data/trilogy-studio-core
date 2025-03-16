@@ -7,9 +7,8 @@
           {{ paragraph.content }}</highlight-component
         >
 
-        <pre
-          v-else-if="paragraph.type === 'code'"
-        ><code ref="codeBlock" class="language-sql">{{ paragraph.content }}</code></pre>
+        <code-block
+          v-else-if="paragraph.type === 'code'" language="sql" :content="paragraph.content"></code-block>
         <connection-list
           v-else-if="paragraph.type === 'connections'"
           :connections="connectionStore.connections"
@@ -20,31 +19,28 @@
         <editor-list v-else-if="paragraph.type === 'editors'" :connections="editorStore.editors" />
         <div v-else-if="paragraph.type === 'connection-validator'">
           <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']">
-            State:
             {{
               demoConnectionCorrect
-                ? '"demo-connection" found and connected with right model ✓'
-                : '"demo-connection" not found, wrong model, or not connected ✗'
+                ? 'Great work: "demo-connection" found and connected with right model ✓'
+                : 'Almost there! "demo-connection" not found, wrong model, or not connected ✗'
             }}
           </div>
         </div>
         <div v-else-if="paragraph.type === 'editor-validator'">
           <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']">
-            State:
             {{
               demoEditorCorrect
-                ? '"my-first-editor" found and connected with right model ✓'
-                : '"my-first-editor" not found under demo-connection'
+                ? 'Great work: "my-first-editor" found and connected with right model ✓'
+                : 'Almost there! "my-first-editor" not found under demo-connection'
             }}
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
           <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']">
-            State:
             {{
               demoModelCorrect
-                ? '"demo-model" found ✓'
-                : '"demo-model" not found under local models'
+                ? 'Great work: "demo-model" found ✓'
+                : 'Almost there! "demo-model" not found under local models'
             }}
           </div>
         </div>
@@ -59,7 +55,7 @@
           <div class="editor-bottom">
             <results-view
               :editorData="editorStore.editors['my-first-editor']"
-              :containerHeight="300"
+              :containerHeight="400"
             />
           </div>
         </div>
@@ -81,7 +77,7 @@
 </template>
 
 <script lang="ts">
-import { inject, ref, onMounted, onUpdated } from 'vue'
+import { inject } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
@@ -96,10 +92,11 @@ import setupDemo from '../data/tutorial/demoSetup'
 import Editor from './Editor.vue'
 import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
-import Prism from 'prismjs'
+
 import ResultsView from './ResultsView.vue'
 import CommunityModels from './CommunityModels.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
+import CodeBlock from './CodeBlock.vue'
 
 const defaultDocumentationKey = 'Studio'
 const defaultDocumentationTopic = 'Welcome'
@@ -122,24 +119,7 @@ export default {
     const saveEditors = inject<Function>('saveEditors')
     const saveConnections = inject<Function>('saveConnections')
     const saveModels = inject<Function>('saveModels')
-    const codeBlock = ref<HTMLElement | null>(null)
-    const updateRefs = () => {
-      if (codeBlock.value) {
-        if (Array.isArray(codeBlock.value)) {
-          codeBlock.value.forEach((block) => {
-            if (block) Prism.highlightElement(block)
-          })
-        } else if (codeBlock.value) {
-          Prism.highlightElement(codeBlock.value)
-        }
-      }
-    }
-    onMounted(() => {
-      updateRefs()
-    })
-    onUpdated(() => {
-      updateRefs()
-    })
+
     if (
       !editorStore ||
       !connectionStore ||
@@ -159,7 +139,6 @@ export default {
       saveEditors,
       saveConnections,
       saveModels,
-      codeBlock,
     }
   },
   components: {
@@ -172,6 +151,7 @@ export default {
     Editor,
     ResultsView,
     CommunityModels,
+    CodeBlock,
   },
   computed: {
     demoConfig() {
@@ -206,7 +186,6 @@ export default {
       return fromUrl || defaultDocumentationTopic
     },
     currentData() {
-      console.log(this.currentNode, this.currentTopic)
       return documentation
         .find((topic) => topic.title === this.currentNode)
         ?.articles.find((article) => article.title === this.currentTopic)
@@ -252,11 +231,11 @@ export default {
 }
 
 .editor-top {
-  height: 300px;
+  height: 400px;
 }
 
 .editor-bottom {
-  height: 300px;
+  height: 400px;
 }
 
 .test-result {
@@ -273,7 +252,8 @@ export default {
 }
 
 .test-result.failed {
-  background-color: rgba(244, 67, 54, 0.1);
-  color: #c62828;
+  
+  background-color: #FFD580;
+  color:hsl(210, 100%, 50%, 0.75); 
 }
 </style>

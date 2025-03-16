@@ -90,7 +90,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Purpose',
-        `Editors are your interactive SQL experience. Write Trilogy, then click run. This will run either the full editor or the highlighted chunk of code (though we will still include any imports). Try running the following queries.`,
+        `Editors are your interactive SQL experience. They let you write Trilogy, validate it, run it, and look at the results. Running (ctrl-enter) will either execute the full editor or the highlighted chunk of code (with any imports). Try running the following queries.`,
       ),
 
       new Paragraph('Purpose', 'SELECT unnest([1,2,3,4]) as constant;', 'code'),
