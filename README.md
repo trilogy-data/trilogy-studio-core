@@ -1,6 +1,6 @@
 # Trilogy Studio Core
 
-A publically available, minimal IDE for exploring Trilogy, an experiment in streamlined analytic SQL.
+A publically available, minimal IDE for exploring Trilogy, an experiment in streamlined analytic SQL. 
 
 Makes experimenting with Trilogy simple.
 - rich semantic layer
@@ -10,6 +10,8 @@ Makes experimenting with Trilogy simple.
 - scheduling [WIP]
 
 ![alt text](./readme.png)
+
+Open source, MIT licensed.
 
 ## This Repo
 
