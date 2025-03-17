@@ -44,39 +44,39 @@ jobs:
             pip install pytest
             pip install pytest-cov
             pytest --ignore=docs_src/ --cov=./
-        - name: Run Backend Python in background
-          working-directory: ./pyserver
-          run: |
-            # Start the Python server in the background
-            nohup python main.py > server.log 2>&1 &
+        # - name: Run Backend Python in background
+        #   working-directory: ./pyserver
+        #   run: |
+        #     # Start the Python server in the background
+        #     nohup python main.py > server.log 2>&1 &
             
-            # Capture the PID immediately
-            echo "SERVER_PID=$!" >> $GITHUB_ENV
-            echo "Started server with PID: $SERVER_PID"
+        #     # Capture the PID immediately
+        #     echo "SERVER_PID=$!" >> $GITHUB_ENV
+        #     echo "Started server with PID: $SERVER_PID"
         
-            # Wait for the server to start
-            sleep 10  
+        #     # Wait for the server to start
+        #     sleep 10  
         
-            # Ensure the server is running
-            if ps -p $(cat $GITHUB_ENV | grep SERVER_PID | cut -d '=' -f2) > /dev/null; then
-              echo "Server started successfully!"
-            else
-              echo "Failed to start server. Showing logs:"
-              cat server.log
-              exit 1
-            fi
-          shell: /usr/bin/bash -e {0}
+        #     # Ensure the server is running
+        #     if ps -p $(cat $GITHUB_ENV | grep SERVER_PID | cut -d '=' -f2) > /dev/null; then
+        #       echo "Server started successfully!"
+        #     else
+        #       echo "Failed to start server. Showing logs:"
+        #       cat server.log
+        #       exit 1
+        #     fi
+        #   shell: /usr/bin/bash -e {0}
         - name: Install Playwright Browsers
           run: npx playwright install --with-deps
         - name: Run Playwright tests
-          run: npx playwright test-playwright
-        - name: Stop Python server
-          if: always()
-          run: |
-            if [[ -n "$SERVER_PID" ]]; then
-              echo "Stopping server with PID $SERVER_PID"
-              kill $SERVER_PID || true
-            fi
+          run: npx playwright test
+        # - name: Stop Python server
+        #   if: always()
+        #   run: |
+        #     if [[ -n "$SERVER_PID" ]]; then
+        #       echo "Stopping server with PID $SERVER_PID"
+        #       kill $SERVER_PID || true
+        #     fi
         - uses: actions/upload-artifact@v4
           if: always()
           with:
