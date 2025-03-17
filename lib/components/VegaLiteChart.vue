@@ -2,7 +2,7 @@
   <div class="vega-lite-chart">
     <div v-if="showControls" class="chart-controls mb-4">
       <div class="control-group">
-        <label for="group-by">Chart Type</label>
+        <label class="chart-label" for="group-by">Chart Type</label>
         <div class="chart-type-icons">
           <button
             v-for="type in charts"
@@ -21,7 +21,7 @@
       </div>
 
       <div v-for="control in visibleControls" :key="control.id" class="control-group">
-        <label :for="control.id">{{ control.label }}</label>
+        <label class="chart-label" :for="control.id">{{ control.label }}</label>
         <select :id="control.id" v-model="internalConfig[control.field]" class="form-select">
           <option v-if="control.allowEmpty" value="">None</option>
           <option
@@ -768,7 +768,9 @@ export default defineComponent({
 }
 
 .chart-type-icons {
-  padding: 0.5rem;
+  /* padding-left: 0.5rem; */
+  padding-right: 0.5rem;
+  height: var(--chart-control-height);
 }
 .vega-lite-chart {
   width: 100%;
@@ -781,8 +783,7 @@ export default defineComponent({
   justify-content: center;
   vertical-align: middle;
   font-size: var(--font-size);
-  padding-bottom: 0.5rem;
-  padding-left: 0.5rem;
+  /* padding-left: 0.5rem; */
   padding-right: 0.5rem;
 }
 
@@ -794,14 +795,18 @@ export default defineComponent({
 }
 
 .form-select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 0.25rem;
+  margin-right:.5rem;
+  border: 1px solid var(--border-color);
+  height: var(--chart-control-height);
+  font-size: .8rem;
 }
 
 .vega-container {
   width: 100%;
   height: 100%;
+}
+
+.chart-label {
+  font-size: 0.8rem;
 }
 </style>
