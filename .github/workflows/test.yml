@@ -13,6 +13,9 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'write'
+    env:
+      VITE_RESOLVER_URL: http://127.0.0.1:5678
+      ALLOWED_ORIGINS: dev
     steps:
         # Setup gcloud CLI
         - name: Checkout
