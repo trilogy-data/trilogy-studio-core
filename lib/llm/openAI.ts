@@ -13,6 +13,7 @@ export class OpenAIProvider extends LLMProvider {
   }
 
   async reset(): Promise<void> {
+    this.error = null;
     try {
       let models = await fetch(this.baseModelUrl, {
         headers: {
