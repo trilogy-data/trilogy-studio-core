@@ -44,3 +44,38 @@ jobs:
             pip install pytest
             pip install pytest-cov
             pytest --ignore=docs_src/ --cov=./
+        - name: Run Backend Python in background
+          working-directory: ./pyserver
+          run: |
+            # Start the Python server in the background and save the PID
+            python main.py > server.log 2>&1 &
+            echo "SERVER_PID=$!" >> $GITHUB_ENV
+            
+            # Give the server a moment to start up
+            sleep 5
+            
+            # Check if server is running
+            if ps -p $SERVER_PID > /dev/null; then
+              echo "Server started successfully with PID $SERVER_PID"
+            else
+              echo "Failed to start server. Showing logs:"
+              cat server.log
+              exit 1
+            fi
+        - name: Install Playwright Browsers
+          run: npx playwright install --with-deps
+        - name: Run Playwright tests
+          run: npx playwright test-playwright
+        - name: Stop Python server
+          if: always()
+          run: |
+            if [[ -n "$SERVER_PID" ]]; then
+              echo "Stopping server with PID $SERVER_PID"
+              kill $SERVER_PID || true
+            fi
+        - uses: actions/upload-artifact@v3
+          if: always()
+          with:
+            name: playwright-report
+            path: playwright-report/
+            retention-days: 30

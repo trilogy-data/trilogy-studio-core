@@ -5,6 +5,7 @@
         class="tab-button"
         :class="{ active: activeTab === 'results' }"
         @click="setTab('results')"
+        data-testid="results-tab-button"
       >
         Results ({{ results.data.length }})
       </button>

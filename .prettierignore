@@ -3,3 +3,5 @@ dist
 
 # Ignore all HTML files:
 **/*.html
+
+test_results

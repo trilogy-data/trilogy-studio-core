@@ -14,6 +14,8 @@
     "build": "vue-tsc -b && prettier --write \"./**/*.{js,ts,vue}\" && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "test-playwright": "playwright test",
+    "test-playwright:ui": "playwright test --ui",
     "format": "prettier --write \"./**/*.{js,ts,vue}\""
   },
   "peerDependencies": {
@@ -25,6 +27,7 @@
     "@duckdb/duckdb-wasm": "^1.29.0",
     "@mdi/font": "^7.4.47",
     "@motherduck/wasm-client": "^0.6.6",
+    "@playwright/test": "^1.51.0",
     "@tailwindcss/vite": "^4.0.3",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.4.2",
