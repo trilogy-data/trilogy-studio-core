@@ -1,16 +1,21 @@
 # Trilogy Studio Core
 
-A publically available, minimal IDE for exploring Trilogy, an experiment in alternative SQL syntax.
+A publically available, minimal IDE for exploring Trilogy, an experiment in streamlined analytic SQL.
 
-It is intended to make experimenting with Trilogy easier and demonstrate some of the core value propositions:
+Makes experimenting with Trilogy simple.
 - rich semantic layer
 - streamlined reuse, sharing, and composition
-- visualization [WIP]
+- visualization 
+- llm integration [alpha]
 - scheduling [WIP]
-- AI integration [WIP]
+
+![alt text](./readme.png)
+
+## This Repo
 
 This repo contains a component library for the studio frontend and a minimal FastAPI backend service to support it.
 
 Try a hosted version [here](https://trilogydata.dev/trilogy-studio-core/).
 
 Read more about Trilogy [here](https://trilogydata.dev/).
+
