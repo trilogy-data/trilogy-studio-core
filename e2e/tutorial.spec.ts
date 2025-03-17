@@ -13,12 +13,11 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill('my-first-editor');
   await page.getByLabel('Connection').selectOption('demo-model-connection');
   await page.getByRole('button', { name: 'Submit' }).click();
-  await page.locator('#navigation div').filter({ hasText: 'import lineitem as lineitem;' }).getByRole('button').click();
-  await page.locator('#editor').getByRole('code').locator('div').filter({ hasText: 'SELECT 1 -> echo;' }).nth(4).click();
-  await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a');
   await page.getByTestId('editor').click();
+  await page.waitForTimeout(500);
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
   // 3. Delete the selected content
+  await page.waitForTimeout(500);
   await page.keyboard.press('Delete');
   // 4. Type or paste new content
   const newContent = `import lineitem as lineitem;
@@ -29,6 +28,10 @@ order by
     sales desc;`;
   await page.keyboard.type(newContent);
   await page.getByTestId('editor-run-button').click();
+  // Wait for text to change to "Cancel", indicating query execution started.
+  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")');
+  // Wait for text to change back to "Run", indicating query execution finished.
+  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")');
   await expect(page.getByTestId('model-validator')).toContainText(`Great work: "demo-model" found ✓`);
   await expect(page.getByTestId('editor-validator')).toContainText(`Great work: "my-first-editor" found and connected with right model ✓`);
   // TODO: get the trilogy server to be able to respond to github
