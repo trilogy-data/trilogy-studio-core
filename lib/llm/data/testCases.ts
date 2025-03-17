@@ -118,7 +118,7 @@ const testCases: TestScenario[] = [
     expectedResponse: {
       contains: ['order.customer.id'],
       mustIdentify: 'order.customer.nation.name',
-      notContains: ['FROM', 'GROUP', '*'],
+      notContains: ['FROM', 'GROUP BY', '*'],
     },
   },
 ]

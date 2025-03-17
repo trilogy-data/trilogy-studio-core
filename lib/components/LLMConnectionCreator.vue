@@ -14,8 +14,8 @@
           <select v-model="connectionDetails.type" id="llm-provider-type" required>
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
-            <option value="cohere">Cohere</option>
-            <option value="mistral">Mistral AI</option>
+            <!-- <option value="cohere">Cohere</option> -->
+            <!-- <option value="mistral">Mistral AI</option> -->
           </select>
         </div>
 
