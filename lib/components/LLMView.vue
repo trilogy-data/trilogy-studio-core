@@ -113,7 +113,7 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
-import AxiosResolver from '../stores/resolver'
+// import AxiosResolver from '../stores/resolver'
 
 interface TestResult {
   passed: boolean
