@@ -4,15 +4,10 @@
       <h2>{{ currentData.title }}</h2>
       <template v-for="paragraph in currentData.paragraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
-          {{ paragraph.content }}</highlight-component
-        >
+          {{ paragraph.content }}</highlight-component>
 
-        <code-block
-          v-else-if="paragraph.type === 'code'" language="sql" :content="paragraph.content"></code-block>
-        <connection-list
-          v-else-if="paragraph.type === 'connections'"
-          :connections="connectionStore.connections"
-        />
+        <code-block v-else-if="paragraph.type === 'code'" language="sql" :content="paragraph.content"></code-block>
+        <connection-list v-else-if="paragraph.type === 'connections'" :connections="connectionStore.connections" />
         <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
@@ -21,42 +16,35 @@
           <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']">
             {{
               demoConnectionCorrect
-                ? 'Great work: "demo-connection" found and connected with right model ✓'
-                : 'Almost there! "demo-connection" not found, wrong model, or not connected ✗'
+                ? `Great work: "${demoConnectionName}" found and connected with right model ✓`
+                : `Almost there! "${demoConnectionName}" not found, wrong model, or not connected ✗`
             }}
           </div>
         </div>
         <div v-else-if="paragraph.type === 'editor-validator'">
-          <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']">
+          <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']" data-testid="editor-validator">
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
-                : 'Almost there! "my-first-editor" not found under demo-connection'
+                : `Almost there! "my-first-editor" not found under ${demoConnectionName}`
             }}
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
-          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']">
+          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']" data-testid="model-validator">
             {{
               demoModelCorrect
-                ? 'Great work: "demo-model" found ✓'
-                : 'Almost there! "demo-model" not found under local models'
+                ? `Great work: "${demoModelName}" found ✓`
+                : `Almost there! "${demoModelName}" not found under local models`
             }}
           </div>
         </div>
         <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" class="editor">
           <div class="editor-top">
-            <editor
-              context="main-trilogy"
-              editorName="my-first-editor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor context="main-trilogy" editorName="my-first-editor" @save-editors="saveEditorsCall" />
           </div>
           <div class="editor-bottom">
-            <results-view
-              :editorData="editorStore.editors['my-first-editor']"
-              :containerHeight="400"
-            />
+            <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="400" />
           </div>
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" />
@@ -66,11 +54,7 @@
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Models'">
       <model-card :config="demoConfig" />
     </section>
-    <section
-      id="navigation"
-      class="tutorial-section"
-      v-if="currentTopic === 'Overview' && currentNode === 'Demo'"
-    >
+    <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Overview' && currentNode === 'Demo'">
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
   </div>
@@ -100,6 +84,9 @@ import CodeBlock from './CodeBlock.vue'
 
 const defaultDocumentationKey = 'Studio'
 const defaultDocumentationTopic = 'Welcome'
+
+const demoConnectionName = 'demo-model-connection'
+const demoModelName = 'demo-model'
 
 export default {
   name: 'TutorialComponent',
@@ -139,6 +126,8 @@ export default {
       saveEditors,
       saveConnections,
       saveModels,
+      demoConnectionName,
+      demoModelName,
     }
   },
   components: {
@@ -155,21 +144,21 @@ export default {
   },
   computed: {
     demoConfig() {
-      return this.modelStore.models['demo-model']
+      return this.modelStore.models[demoModelName]
     },
     demoModelCorrect() {
-      return this.modelStore.models['demo-model']?.name === 'demo-model'
+      return this.modelStore.models[demoModelName]?.name === demoModelName
     },
     demoConnectionCorrect() {
       return (
-        this.connectionStore.connections['demo-connection']?.connected &&
-        this.connectionStore.connections['demo-connection']?.model === 'demo-model'
+        this.connectionStore.connections[demoConnectionName]?.connected &&
+        this.connectionStore.connections[demoConnectionName]?.model === demoModelName
       )
     },
     demoEditorCorrect() {
       return (
         this.editorStore.editors['my-first-editor'] &&
-        this.editorStore.editors['my-first-editor']?.connection === 'demo-connection'
+        this.editorStore.editors['my-first-editor']?.connection === demoConnectionName
       )
     },
     currentNode() {
@@ -226,7 +215,7 @@ export default {
 }
 
 .editor {
-  height: 600px;
+  height: 800px;
   border: 1px solid var(--border-color);
 }
 
@@ -252,8 +241,8 @@ export default {
 }
 
 .test-result.failed {
-  
+
   background-color: #FFD580;
-  color:hsl(210, 100%, 50%, 0.75); 
+  color: hsl(210, 100%, 50%, 0.75);
 }
 </style>

@@ -4,7 +4,7 @@ import { Database, Table, Column } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
-const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles()
+
 
 // Select a bundle based on browser checks
 
@@ -13,17 +13,35 @@ interface DuckDBType {
   precision?: number
 }
 
-async function createDuckDB() {
-  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES)
-  // Instantiate the asynchronus version of DuckDB-wasm
+// use a singleton pattern to help avoid memoery issues
+const connectionCache: Record<string, duckdb.AsyncDuckDBConnection> = {};
+
+async function createDuckDB(connectionName: string = 'default'): Promise<duckdb.AsyncDuckDBConnection> {
+  // Return existing connection if it exists in the cache
+  if (connectionCache[connectionName]) {
+    return connectionCache[connectionName];
+  }
+
+  // Get the appropriate bundle for the current environment
+  const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+
+  // Create a new DuckDB instance
   const worker_url = URL.createObjectURL(
     new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
-  )
-  const worker = new Worker(worker_url)
-  const logger = new duckdb.ConsoleLogger()
-  const db = new duckdb.AsyncDuckDB(logger, worker)
-  await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
-  return await db.connect()
+  );
+  const worker = new Worker(worker_url);
+  const logger = new duckdb.ConsoleLogger();
+  const db = new duckdb.AsyncDuckDB(logger, worker);
+
+  // Initialize the database
+  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  const connection = await db.connect();
+
+  // Cache the connection
+  connectionCache[connectionName] = connection;
+
+  return connection;
 }
 // @ts-ignore
 export default class DuckDBConnection extends BaseConnection {
@@ -46,7 +64,7 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async connect() {
-    return createDuckDB().then((conn) => {
+    return createDuckDB(this.name).then((conn) => {
       this.connection = conn
       return true
     })

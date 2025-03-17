@@ -48,12 +48,13 @@
             @click="() => (editorData.loading ? cancelQuery() : runQuery())"
             class="action-item"
             :class="{ 'button-cancel': editorData.loading }"
+            data-testid="editor-run-button"
           >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
       </div>
-      <div ref="editor" id="editor" class="editor-fix-styles"></div>
+      <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
     </template>
   </div>
 </template>

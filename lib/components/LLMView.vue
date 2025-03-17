@@ -69,14 +69,23 @@
     <div class="scenarios-container">
       <div class="section-header">
         Test Scenarios
-        <span
-          class="pass-indicator text-small"
-          v-if="
-            Object.values(scenarioResults).length == scenarios.length &&
-            Object.values(scenarioResults).every((v) => v?.passed)
-          "
-          >✓ All passed, LLM integration should meet expectations!</span
-        >
+        <div class="header-controls">
+          <button 
+            @click="runAllScenarios" 
+            :disabled="isLoading || !isProviderSelected"
+            class="run-all-button"
+          >
+            {{ isRunningAll ? 'Running...' : 'Run All Tests' }}
+          </button>
+          <span
+            class="pass-indicator text-small"
+            v-if="
+              Object.values(scenarioResults).length == scenarios.length &&
+              Object.values(scenarioResults).every((v) => v?.passed)
+            "
+            >✓ All passed, LLM integration should meet expectations!</span
+          >
+        </div>
       </div>
 
       <div class="scenarios-list">
@@ -104,7 +113,7 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
-// This interface would normally be imported
+import AxiosResolver from '../stores/resolver'
 
 interface TestResult {
   passed: boolean
@@ -132,11 +141,14 @@ export default defineComponent({
   setup(_) {
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
+    // TODO: validate query syntax on resolver
+    // const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
 
     // Chat state
     const messages = ref<MessageWithTest[]>([])
     const userInput = ref('')
     const isLoading = ref(false)
+    const isRunningAll = ref(false)
     const error = ref('')
     const messagesContainer = ref<HTMLElement | null>(null)
     const scenarioResults = ref<(TestResult | null)[]>([])
@@ -283,6 +295,7 @@ export default defineComponent({
           selectedProvider.value,
           options,
         )
+        
 
         // Add AI response
         messages.value.push({
@@ -354,6 +367,47 @@ export default defineComponent({
       }
     }
 
+    // Run all scenarios in sequence
+    const runAllScenarios = async () => {
+      if (isLoading.value || !selectedProvider.value) return
+      
+      isRunningAll.value = true
+      
+      // Clear existing messages
+      messages.value = []
+      
+      // Add start message
+      messages.value.push({
+        role: 'user',
+        content: 'RUNNING ALL TESTS IN SEQUENCE',
+      })
+      
+      try {
+        // Run each scenario in sequence
+        for (let i = 0; i < scenarios.value.length; i++) {
+          await runScenario(i)
+          
+          // Small delay between tests to avoid overwhelming the LLM service
+          if (i < scenarios.value.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        }
+        
+        // Add summary message after all tests complete
+        const passedCount = Object.values(scenarioResults.value).filter(r => r?.passed).length
+        const failedCount = Object.values(scenarioResults.value).filter(r => r && !r.passed).length
+        
+        messages.value.push({
+          role: 'user',
+          content: `ALL TESTS COMPLETED: ${passedCount} passed, ${failedCount} failed`,
+        })
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+      } finally {
+        isRunningAll.value = false
+      }
+    }
+
     // Initialize providers list on mount if none are available
     onMounted(() => {
       if (availableProviders.value.length === 0) {
@@ -365,6 +419,7 @@ export default defineComponent({
       messages,
       userInput,
       isLoading,
+      isRunningAll,
       error,
       selectedProvider,
       availableProviders,
@@ -375,11 +430,11 @@ export default defineComponent({
       scenarios,
       runScenario,
       scenarioResults,
+      runAllScenarios,
     }
   },
 })
 </script>
-
 <style scoped>
 pre {
   white-space: pre-wrap;

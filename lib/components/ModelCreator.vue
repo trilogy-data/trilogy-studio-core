@@ -183,8 +183,8 @@ export default defineComponent({
 
         if (connectionName.startsWith('new-')) {
           let typeName = connectionName.replace('new-', '')
-          connectionName = modelDetails.value.name
-          connectionStore.newConnection(modelDetails.value.name, typeName, {
+          connectionName = `${modelDetails.value.name}-connection`
+          connectionStore.newConnection(connectionName, typeName, {
             mdToken: modelDetails.value.options.mdToken,
             projectId: modelDetails.value.options.projectId,
             username: modelDetails.value.options.username,
