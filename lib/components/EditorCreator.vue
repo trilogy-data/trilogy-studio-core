@@ -8,14 +8,25 @@
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>
-          <input data-testid="editor-creator-name" type="text" v-model="editorDetails.name" id="editor-name" required />
+          <input
+            data-testid="editor-creator-name"
+            type="text"
+            v-model="editorDetails.name"
+            id="editor-name"
+            required
+          />
         </div>
 
         <div>
           <tooltip position="bottom" content="Use SQL editors to run raw SQL."
             ><label for="editor-type">Type</label>
           </tooltip>
-          <select data-testid="editor-creator-type" v-model="editorDetails.type" id="editor-type" required>
+          <select
+            data-testid="editor-creator-type"
+            v-model="editorDetails.type"
+            id="editor-type"
+            required
+          >
             <option value="preql">Trilogy</option>
             <option value="sql">SQL</option>
           </select>
@@ -23,7 +34,12 @@
 
         <div>
           <label for="connection-name">Connection</label>
-          <select data-testid="editor-creator-connection-select" v-model="editorDetails.connection" id="connection-name" required>
+          <select
+            data-testid="editor-creator-connection-select"
+            v-model="editorDetails.connection"
+            id="connection-name"
+            required
+          >
             <option
               v-for="connection in connections"
               :key="connection.name"

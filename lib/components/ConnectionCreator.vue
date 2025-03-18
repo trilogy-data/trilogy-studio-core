@@ -6,7 +6,13 @@
       <form @submit.prevent="submitConnectionCreation">
         <div>
           <label for="connection-name">Name</label>
-          <input data-testid='connection-creator-name' type="text" v-model="connectionDetails.name" id="connection-name" required />
+          <input
+            data-testid="connection-creator-name"
+            type="text"
+            v-model="connectionDetails.name"
+            id="connection-name"
+            required
+          />
         </div>
 
         <div>

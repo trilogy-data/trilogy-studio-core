@@ -72,16 +72,21 @@ export default class SnowflakeRestConnection extends BaseConnection {
     database?: string
     schema?: string
   }): SnowflakeRestConnection {
-    let base = new SnowflakeRestConnection(fields.name, {
-      account: fields.account,
-      username: fields.username,
-      privateKey: fields.privateKey,
-      privateKeyPassphrase: fields.privateKeyPassphrase,
-      warehouse: fields.warehouse,
-      role: fields.role,
-      database: fields.database,
-      schema: fields.schema,
-    }, fields.model ? fields.model : undefined, fields.saveCredential)
+    let base = new SnowflakeRestConnection(
+      fields.name,
+      {
+        account: fields.account,
+        username: fields.username,
+        privateKey: fields.privateKey,
+        privateKeyPassphrase: fields.privateKeyPassphrase,
+        warehouse: fields.warehouse,
+        role: fields.role,
+        database: fields.database,
+        schema: fields.schema,
+      },
+      fields.model ? fields.model : undefined,
+      fields.saveCredential,
+    )
 
     if (fields.model) {
       base.model = fields.model
