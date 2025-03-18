@@ -82,6 +82,16 @@ export function buildConnectionTree(
           connection,
         })
       }
+      if (['snowflake', 'motherduck'].includes(connection.type)) {
+        list.push({
+          id: `${connection.name}-toggle-save-credential`,
+          name: 'Toggle Credential Saving',
+          indent: 1,
+          count: 0,
+          type: 'toggle-save-credential',
+          connection,
+        })
+      }
       list.push({
         id: `${connection.name}${KeySeparator}refresh`,
         name: 'Refresh Databases',

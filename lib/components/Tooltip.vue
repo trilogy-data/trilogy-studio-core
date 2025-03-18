@@ -1,5 +1,5 @@
 <template>
-  <div class="tooltip-wrapper" @mouseover="showTooltip" @mouseout="hideTooltip">
+  <div :class="{ inline:'tooltip-wrapper'}" @mouseover="showTooltip" @mouseout="hideTooltip">
     <slot></slot>
     <transition appear>
       <span v-if="visible" :class="['tooltip', positionClass]">{{ content }}</span>
@@ -17,6 +17,10 @@ export default {
     position: {
       type: String,
       default: 'right', // Position: top, bottom, left, right
+    },
+    inline: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

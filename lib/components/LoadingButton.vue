@@ -1,15 +1,13 @@
 <template>
-  <button
-    :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
-    v-bind="$attrs"
-    :disabled="isLoading"
-    @click.stop="handleClick"
-  >
+  <button :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]" v-bind="$attrs" :disabled="isLoading"
+    @click.stop="handleClick">
     <span :class="{ 'hidden-text': isLoading }">
       <slot></slot>
     </span>
     <span v-if="status === 'success'" class="status success overlay">✔</span>
-    <span v-else-if="status === 'error'" class="status error overlay">✖ ({{ errorMessage }})</span>
+    <tooltip v-else-if="status === 'error'" :content="errorMessage || ''" :inline="false" position="left"><span
+        class="status error overlay">✖</span>
+    </tooltip>
     <span v-else-if="isLoading" class="status loading overlay">
       <span class="spinner"></span>
     </span>
@@ -18,6 +16,7 @@
 
 <script lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import Tooltip from './Tooltip.vue'
 
 export default {
   props: {
@@ -34,7 +33,9 @@ export default {
       default: null, // Optional property
     },
   },
-
+  components: {
+    Tooltip,
+  },
   setup(props) {
     const isLoading = ref(false)
     const errorMessage = ref<string | null>(null)
@@ -60,6 +61,7 @@ export default {
       status.value = null // Reset status before running action
       const startTime = Date.now()
       let localStatus: 'success' | 'error' | null = null
+      let resetTimeout = 1500;
       try {
         await props.action()
         localStatus = 'success'
@@ -70,6 +72,7 @@ export default {
         } else {
           errorMessage.value = 'An unknown error occurred'
         }
+        resetTimeout = 10000;
       } finally {
         const elapsedTime = Date.now() - startTime
         const remainingTime = Math.max(500 - elapsedTime, 0)
@@ -80,7 +83,7 @@ export default {
           status.value = null
           isLoading.value = false
           errorMessage.value = null
-        }, 1500)
+        }, resetTimeout)
       }
     }
     onMounted(() => {

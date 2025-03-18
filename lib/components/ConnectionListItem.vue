@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="sidebar-item"
-    @click="handleItemClick"
-    :class="{ 'sidebar-item-selected': isSelected }"
-  >
+  <div class="sidebar-item" @click="handleItemClick" :class="{ 'sidebar-item-selected': isSelected }">
     <!-- Indentation -->
     <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
 
@@ -21,59 +17,41 @@
     <i v-else-if="item.type === 'loading'" class="mdi mdi-loading mdi-spin"></i>
     <i v-else-if="item.type === 'column'" class="mdi mdi-table-column"></i>
     <!-- Item Name -->
-    <div
-      class="refresh title-pad-left truncate-text sidebar-sub-item"
-      v-if="item.type === 'refresh-connection'"
-      @click="handleRefreshConnectionClick"
-    >
+    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-if="item.type === 'refresh-connection'"
+      @click="handleRefreshConnectionClick">
       {{ item.name }}
     </div>
-    <div
-      class="refresh title-pad-left truncate-text sidebar-sub-item"
-      v-else-if="item.type === 'refresh-database'"
-      @click="handleRefreshDatabaseClick"
-    >
+    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-else-if="item.type === 'refresh-database'"
+      @click="handleRefreshDatabaseClick">
       {{ item.name }}
     </div>
     <model-selector v-else-if="item.type === 'model'" :connection="item.connection" />
     <div v-else-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateBigqueryProject(item.connection, bigqueryProject)">
         <button type="submit" class="customize-button">Set Billing Project</button>
-        <input
-          type="text"
-          v-model="bigqueryProject"
-          placeholder="Billing Project"
-          class="connection-customize"
-        />
+        <input type="text" v-model="bigqueryProject" placeholder="Billing Project" class="connection-customize" />
       </form>
     </div>
     <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateMotherDuckToken(item.connection, mdToken)">
         <button type="submit" class="customize-button">Update Motherduck Token</button>
-        <input
-          type="password"
-          v-model="mdToken"
-          placeholder="mdToken"
-          class="connection-customize"
-        />
+        <input type="password" v-model="mdToken" placeholder="mdToken" class="connection-customize" />
       </form>
     </div>
     <div v-else-if="item.type === 'snowflake-private-key'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateSnowflakePrivateKey(item.connection, privateKey)">
         <button type="submit" class="customize-button">Update Snowflake Private Key</button>
-        <input
-          type="password"
-          v-model="privateKey"
-          placeholder="privateKey"
-          class="connection-customize"
-        />
+        <input type="password" v-model="privateKey" placeholder="privateKey" class="connection-customize" />
       </form>
     </div>
-    <span
-      v-else
-      class="title-pad-left truncate-text"
-      :class="{ 'error-indicator': item.type === 'error' }"
-    >
+    <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+      <label class="save-credential-toggle">
+        <input type="checkbox" :checked="item.connection.saveCredential"
+          @change="toggleSaveCredential(item.connection)" />
+        <span class="checkbox-label">Save Credentials</span>
+      </label>
+    </div>
+    <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
@@ -124,6 +102,7 @@ const emit = defineEmits<{
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
   (e: 'updateSnowflakePrivateKey', connection: SnowflakeConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
+  (e: 'toggleSaveCredential', connection: any): void
 }>()
 
 // Computed properties for rendering logic
@@ -170,6 +149,10 @@ const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string)
 
 const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {
   emit('updateBigqueryProject', connection, project)
+}
+
+const toggleSaveCredential = (connection: any) => {
+  emit('toggleSaveCredential', connection)
 }
 </script>
 
@@ -255,12 +238,10 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   /* Existing loading animation styles */
   display: block;
   width: 100%;
-  background: linear-gradient(
-    to left,
-    var(--sidebar-bg) 0%,
-    var(--query-window-bg) 50%,
-    var(--sidebar-bg) 100%
-  );
+  background: linear-gradient(to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%);
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }
