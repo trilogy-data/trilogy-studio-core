@@ -44,6 +44,7 @@ const handleRefresh = async () => {
     emit('refresh', props.connection.name)
   } catch (error) {
     console.error('Refresh failed:', error)
+    throw error
     // Optionally handle error state
   }
 }

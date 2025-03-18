@@ -62,6 +62,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
   static fromJSON(fields: {
     name: string
     model: string | null
+    saveCredential: boolean
     account: string
     username: string
     privateKey: string
@@ -71,16 +72,21 @@ export default class SnowflakeRestConnection extends BaseConnection {
     database?: string
     schema?: string
   }): SnowflakeRestConnection {
-    let base = new SnowflakeRestConnection(fields.name, {
-      account: fields.account,
-      username: fields.username,
-      privateKey: fields.privateKey,
-      privateKeyPassphrase: fields.privateKeyPassphrase,
-      warehouse: fields.warehouse,
-      role: fields.role,
-      database: fields.database,
-      schema: fields.schema,
-    })
+    let base = new SnowflakeRestConnection(
+      fields.name,
+      {
+        account: fields.account,
+        username: fields.username,
+        privateKey: fields.privateKey,
+        privateKeyPassphrase: fields.privateKeyPassphrase,
+        warehouse: fields.warehouse,
+        role: fields.role,
+        database: fields.database,
+        schema: fields.schema,
+      },
+      fields.model ? fields.model : undefined,
+      fields.saveCredential,
+    )
 
     if (fields.model) {
       base.model = fields.model
@@ -99,6 +105,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
       role: this.config.role,
       database: this.config.database,
       schema: this.config.schema,
+      saveCredential: this.saveCredential,
       privateKey: this.saveCredential ? this.config.privateKey : '',
       privateKeyPassphrase: this.saveCredential ? this.config.privateKeyPassphrase : '',
     }
@@ -111,7 +118,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
     saveCredential: boolean = false,
   ) {
     super(name, 'snowflake', false, model, saveCredential)
-    this.query_type = 'sql'
+    this.query_type = 'snowflake'
     this.config = config
     this.baseUrl = `https://${config.account}.snowflakecomputing.com/api`
   }

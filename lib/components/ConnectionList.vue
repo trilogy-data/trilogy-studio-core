@@ -21,6 +21,7 @@
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
       @update-snowflake-private-key="updateSnowflakePrivateKey"
+      @toggle-save-credential="toggleSaveCredential"
       :delete-connection="deleteConnection"
     />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
@@ -106,6 +107,11 @@ export default {
         connection.projectId = project
         connectionStore.resetConnection(connection.name)
       }
+    }
+
+    const toggleSaveCredential = (connection: any) => {
+      connection.saveCredential = !connection.saveCredential
+      connectionStore.resetConnection(connection.name)
     }
 
     const collapsed = ref<Record<string, boolean>>({})
@@ -245,6 +251,7 @@ export default {
       connectionModelVisible,
       updateMotherDuckToken,
       updateSnowflakePrivateKey,
+      toggleSaveCredential,
       motherduckIcon,
       updateBigqueryProject,
       refreshId,

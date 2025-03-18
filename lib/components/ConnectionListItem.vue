@@ -69,6 +69,16 @@
         />
       </form>
     </div>
+    <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+      <label class="save-credential-toggle">
+        <input
+          type="checkbox"
+          :checked="item.connection.saveCredential"
+          @change="toggleSaveCredential(item.connection)"
+        />
+        <span class="checkbox-label">Save Credentials</span>
+      </label>
+    </div>
     <span
       v-else
       class="title-pad-left truncate-text"
@@ -124,6 +134,7 @@ const emit = defineEmits<{
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
   (e: 'updateSnowflakePrivateKey', connection: SnowflakeConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
+  (e: 'toggleSaveCredential', connection: any): void
 }>()
 
 // Computed properties for rendering logic
@@ -170,6 +181,10 @@ const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string)
 
 const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {
   emit('updateBigqueryProject', connection, project)
+}
+
+const toggleSaveCredential = (connection: any) => {
+  emit('toggleSaveCredential', connection)
 }
 </script>
 

@@ -14,6 +14,7 @@
         class="sidebar-icon"
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen }"
+        :data-testid="`sidebar-icon-${item.screen}`"
       >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>

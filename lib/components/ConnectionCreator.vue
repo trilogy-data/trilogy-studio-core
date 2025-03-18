@@ -1,12 +1,18 @@
 <template>
   <div class="relative-parent">
-    <button @click="createConnection">Add</button>
+    <button @click="createConnection" data-testid="connection-creator-add">Add</button>
 
     <div v-if="visible" class="absolute-form">
       <form @submit.prevent="submitConnectionCreation">
         <div>
           <label for="connection-name">Name</label>
-          <input type="text" v-model="connectionDetails.name" id="connection-name" required />
+          <input
+            data-testid="connection-creator-name"
+            type="text"
+            v-model="connectionDetails.name"
+            id="connection-name"
+            required
+          />
         </div>
 
         <div>
@@ -72,7 +78,7 @@
             required
           />
         </div>
-        <button type="submit">Submit</button>
+        <button data-testid="connection-creator-submit" type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
       </form>
     </div>
