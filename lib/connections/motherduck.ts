@@ -7,10 +7,10 @@ export default class MotherDuckConnection extends BaseConnection {
   // @ts-ignore
   private connection: MDConnection
   public mdToken: string
-  private saveCredential: boolean
+  public saveCredential: boolean
 
-  constructor(name: string, mdToken: string, saveCredential: boolean = false, model?: string) {
-    super(name, 'motherduck', true, model)
+  constructor(name: string, mdToken: string, model?: string, saveCredential: boolean = false) {
+    super(name, 'motherduck', true, model, saveCredential)
     this.mdToken = mdToken
     this.query_type = 'duckdb'
     this.secureFields = ['mdToken']

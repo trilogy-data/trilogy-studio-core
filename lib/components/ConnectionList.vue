@@ -20,6 +20,7 @@
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
+      @update-snowflake-private-key="updateSnowflakePrivateKey"
       :delete-connection="deleteConnection"
     />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
@@ -47,10 +48,16 @@ import Tooltip from './Tooltip.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
-import type { BigQueryOauthConnection, Connection, MotherDuckConnection } from '../connections'
+import type {
+  BigQueryOauthConnection,
+  Connection,
+  MotherDuckConnection,
+  SnowflakeConnection,
+} from '../connections'
 import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
+import { buildConnectionTree } from '../connections'
 
 export default {
   name: 'ConnectionList',
@@ -82,6 +89,14 @@ export default {
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       if (connection.type === 'motherduck') {
         connection.mdToken = token
+        connectionStore.resetConnection(connection.name)
+      }
+    }
+
+    const updateSnowflakePrivateKey = (connection: SnowflakeConnection, token: string) => {
+      if (connection.type === 'snowflake') {
+        console.log(token)
+        connection.setPrivateKey(token)
         connectionStore.resetConnection(connection.name)
       }
     }
@@ -207,160 +222,12 @@ export default {
     })
 
     const contentList = computed(() => {
-      const list: Array<{
-        id: string
-        name: string
-        indent: number
-        count: number
-        type: string
-        connection: any | undefined
-      }> = []
-      const sorted = Object.values(connectionStore.connections).sort((a, b) => {
-        if (a.connected && !b.connected) {
-          return -1
-        } else if (!a.connected && b.connected) {
-          return 1
-        } else {
-          return a.name.localeCompare(b.name)
-        }
-      })
-      sorted.forEach((connection) => {
-        let databases = connection.databases ? connection.databases : []
-        list.push({
-          id: connection.name,
-          name: connection.name,
-          indent: 0,
-          count: databases.length,
-          type: 'connection',
-          connection,
-        })
-
-        if (collapsed.value[connection.name] === false) {
-          list.push({
-            id: `${connection.name}-model`,
-            name: 'Model',
-            indent: 1,
-            count: 0,
-            type: 'model',
-            connection,
-          })
-
-          if (connection.type === 'motherduck') {
-            list.push({
-              id: `${connection.name}-md-token`,
-              name: 'MotherDuck Token',
-              indent: 1,
-              count: 0,
-              type: 'motherduck-token',
-              connection,
-            })
-          }
-          if (connection.type === 'bigquery-oauth') {
-            list.push({
-              id: `${connection.name}-billing-project`,
-              name: 'Billing Project',
-              indent: 1,
-              count: 0,
-              type: 'bigquery-project',
-              connection,
-            })
-          }
-          list.push({
-            id: `${connection.name}${KeySeparator}refresh`,
-            name: 'Refresh Databases',
-            indent: 1,
-            count: 0,
-            type: 'refresh-connection',
-            connection,
-          })
-          if (isLoading.value[connection.name]) {
-            list.push({
-              id: `${connection.name}-loading`,
-              name: 'Loading...',
-              indent: 1,
-              count: 0,
-              type: 'loading',
-              connection,
-            })
-          }
-          if (isErrored.value[connection.name]) {
-            list.push({
-              id: `${connection.name}-error`,
-              name: isErrored.value[connection.name],
-              indent: 1,
-              count: 0,
-              type: 'error',
-              connection,
-            })
-          }
-          databases.forEach((db) => {
-            let dbId = `${connection.name}${KeySeparator}${db.name}`
-            list.push({
-              id: dbId,
-              name: db.name,
-              indent: 1,
-              count: db.tables.length,
-              type: 'database',
-              connection,
-            })
-
-            if (!collapsed.value[dbId]) {
-              list.push({
-                id: `${dbId}${KeySeparator}refresh`,
-                name: 'Refresh Tables',
-                indent: 1,
-                count: 0,
-                type: 'refresh-database',
-                connection,
-              })
-              if (isLoading.value[dbId]) {
-                list.push({
-                  id: `${connection.name}-loading`,
-                  name: 'Loading...',
-                  indent: 1,
-                  count: 0,
-                  type: 'loading',
-                  connection,
-                })
-              }
-              db.tables.forEach((table) => {
-                let tableId = `${dbId}${KeySeparator}${table.name}`
-                list.push({
-                  id: tableId,
-                  name: table.name,
-                  indent: 2,
-                  count: 0,
-                  type: 'table',
-                  connection,
-                })
-                if (isLoading.value[tableId]) {
-                  list.push({
-                    id: `${connection.name}-loading`,
-                    name: 'Loading...',
-                    indent: 1,
-                    count: 0,
-                    type: 'loading',
-                    connection,
-                  })
-                }
-                if (!collapsed.value[tableId]) {
-                  table.columns.forEach((column) => {
-                    list.push({
-                      id: `${tableId}${KeySeparator}${column.name}`,
-                      name: column.name,
-                      indent: 3,
-                      count: 0,
-                      type: 'column',
-                      connection,
-                    })
-                  })
-                }
-              })
-            }
-          })
-        }
-      })
-      return list
+      return buildConnectionTree(
+        Object.values(connectionStore.connections),
+        collapsed.value,
+        isLoading.value,
+        isErrored.value,
+      )
     })
 
     const rightSplit = (str: string) => {
@@ -377,6 +244,7 @@ export default {
       modelStore,
       connectionModelVisible,
       updateMotherDuckToken,
+      updateSnowflakePrivateKey,
       motherduckIcon,
       updateBigqueryProject,
       refreshId,

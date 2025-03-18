@@ -58,6 +58,17 @@
         />
       </form>
     </div>
+    <div v-else-if="item.type === 'snowflake-private-key'" class="md-token-container" @click.stop>
+      <form @submit.prevent="updateSnowflakePrivateKey(item.connection, privateKey)">
+        <button type="submit" class="customize-button">Update Snowflake Private Key</button>
+        <input
+          type="password"
+          v-model="privateKey"
+          placeholder="privateKey"
+          class="connection-customize"
+        />
+      </form>
+    </div>
     <span
       v-else
       class="title-pad-left truncate-text"
@@ -85,7 +96,7 @@ import ConnectionIcon from './ConnectionIcon.vue'
 import ModelSelector from './ModelSelector.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
-import { BigQueryOauthConnection, MotherDuckConnection } from '../connections'
+import { BigQueryOauthConnection, MotherDuckConnection, SnowflakeConnection } from '../connections'
 import { KeySeparator, rsplit } from '../data/constants'
 import Tooltip from './Tooltip.vue'
 // Define prop types
@@ -111,6 +122,7 @@ const emit = defineEmits<{
   (e: 'toggle', id: string, connection: string, type: string): void
   (e: 'refresh', id: string, connection: string, type: string): void
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
+  (e: 'updateSnowflakePrivateKey', connection: SnowflakeConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
 }>()
 
@@ -144,9 +156,16 @@ const bigqueryProject = ref<string>(
   props.item.connection.projectId ? props.item.connection.projectId : '',
 )
 const mdToken = ref<string>(props.item.connection.mdToken ? props.item.connection.mdToken : '')
-
+const privateKey = ref<string>(
+  props.item.connection?.config?.privateKey ? props.item.connection.config.privateKey : '',
+)
 const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
   emit('updateMotherDuckToken', connection, token)
+}
+
+const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string) => {
+  console.log(key)
+  emit('updateSnowflakePrivateKey', connection, key)
 }
 
 const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {

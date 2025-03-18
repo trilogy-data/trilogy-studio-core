@@ -4,10 +4,18 @@
       <h2>{{ currentData.title }}</h2>
       <template v-for="paragraph in currentData.paragraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
-          {{ paragraph.content }}</highlight-component>
+          {{ paragraph.content }}</highlight-component
+        >
 
-        <code-block v-else-if="paragraph.type === 'code'" language="sql" :content="paragraph.content"></code-block>
-        <connection-list v-else-if="paragraph.type === 'connections'" :connections="connectionStore.connections" />
+        <code-block
+          v-else-if="paragraph.type === 'code'"
+          language="sql"
+          :content="paragraph.content"
+        ></code-block>
+        <connection-list
+          v-else-if="paragraph.type === 'connections'"
+          :connections="connectionStore.connections"
+        />
         <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
@@ -22,7 +30,10 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'editor-validator'">
-          <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']" data-testid="editor-validator">
+          <div
+            :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']"
+            data-testid="editor-validator"
+          >
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
@@ -31,7 +42,10 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
-          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']" data-testid="model-validator">
+          <div
+            :class="['test-result', demoModelCorrect ? 'passed' : 'failed']"
+            data-testid="model-validator"
+          >
             {{
               demoModelCorrect
                 ? `Great work: "${demoModelName}" found ✓`
@@ -41,10 +55,17 @@
         </div>
         <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" class="editor">
           <div class="editor-top">
-            <editor context="main-trilogy" editorName="my-first-editor" @save-editors="saveEditorsCall" />
+            <editor
+              context="main-trilogy"
+              editorName="my-first-editor"
+              @save-editors="saveEditorsCall"
+            />
           </div>
           <div class="editor-bottom">
-            <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="400" />
+            <results-view
+              :editorData="editorStore.editors['my-first-editor']"
+              :containerHeight="400"
+            />
           </div>
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" />
@@ -54,7 +75,11 @@
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Models'">
       <model-card :config="demoConfig" />
     </section>
-    <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Overview' && currentNode === 'Demo'">
+    <section
+      id="navigation"
+      class="tutorial-section"
+      v-if="currentTopic === 'Overview' && currentNode === 'Demo'"
+    >
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
   </div>
@@ -241,8 +266,7 @@ export default {
 }
 
 .test-result.failed {
-
-  background-color: #FFD580;
+  background-color: #ffd580;
   color: hsl(210, 100%, 50%, 0.75);
 }
 </style>

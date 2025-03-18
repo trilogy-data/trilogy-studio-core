@@ -1,6 +1,11 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
-import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection } from '../connections'
+import {
+  BigQueryOauthConnection,
+  DuckDBConnection,
+  MotherDuckConnection,
+  SnowflakeConnection,
+} from '../connections'
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
@@ -108,6 +113,10 @@ export default class LocalStorage extends AbstractStorage {
           // @ts-ignore
           connections[connection.name] = reactive(await MotherDuckConnection.fromJSON(connection))
           break
+        case 'snowflake':
+          // @ts-ignore
+          connections[connection.name] = reactive(SnowflakeConnection.fromJSON(connection))
+          break
         // Uncomment if needed:
         // case "sqlserver":
         //   connections[connection.name] = reactive(SQLServerConnection.fromJSON(connection));
@@ -191,6 +200,7 @@ export default class LocalStorage extends AbstractStorage {
           // @ts-ignore
           connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
           break
+
         default:
           console.log(connection.type)
       }
