@@ -1,21 +1,21 @@
 <template>
   <div @click.stop class="relative-parent">
     <slot :onClick="createEditor">
-      <button @click.stop="createEditor">New</button>
+      <button @click.stop="createEditor" data-testid="editor-creator-add">New</button>
     </slot>
 
     <div v-if="visible" class="absolute-form" :class="{ 'offset-right': offsetRight }">
       <form @submit.prevent="submitEditorCreation">
         <div>
           <label for="editor-name">Name</label>
-          <input type="text" v-model="editorDetails.name" id="editor-name" required />
+          <input data-testid="editor-creator-name" type="text" v-model="editorDetails.name" id="editor-name" required />
         </div>
 
         <div>
           <tooltip position="bottom" content="Use SQL editors to run raw SQL."
             ><label for="editor-type">Type</label>
           </tooltip>
-          <select v-model="editorDetails.type" id="editor-type" required>
+          <select data-testid="editor-creator-type" v-model="editorDetails.type" id="editor-type" required>
             <option value="preql">Trilogy</option>
             <option value="sql">SQL</option>
           </select>
@@ -23,7 +23,7 @@
 
         <div>
           <label for="connection-name">Connection</label>
-          <select v-model="editorDetails.connection" id="connection-name" required>
+          <select data-testid="editor-creator-connection-select" v-model="editorDetails.connection" id="connection-name" required>
             <option
               v-for="connection in connections"
               :key="connection.name"
@@ -34,7 +34,7 @@
           </select>
         </div>
 
-        <button type="submit">Submit</button>
+        <button data-testid="editor-creator-submit" type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
       </form>
     </div>

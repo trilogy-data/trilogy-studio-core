@@ -24,6 +24,7 @@
     <div
       v-for="item in contentList"
       :key="item.key"
+      :data-testid="`editor-list-id-${item.key}`"
       class="sidebar-item"
       :class="{ 'sidebar-item-selected': activeEditor === item.label }"
       @click="clickAction(item.type, item.label, item.key)"

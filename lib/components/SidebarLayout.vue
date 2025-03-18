@@ -4,7 +4,7 @@
       <div ref="sidebar" class="sidebar">
         <slot name="sidebar"></slot>
       </div>
-      <div ref="content" class="nested-page-content pa-0" id="page-content">
+      <div ref="content" class="nested-page-content" id="page-content">
         <slot></slot>
       </div>
     </div>
