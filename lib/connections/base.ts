@@ -59,14 +59,22 @@ export default abstract class BaseConnection {
   running: boolean = false
   databases: Database[] | null = null
   secureFields: string[] = []
+  saveCredential: boolean = false
 
-  constructor(name: string, type: string, autoConnect: boolean = true, model?: string) {
+  constructor(
+    name: string,
+    type: string,
+    autoConnect: boolean = true,
+    model?: string,
+    saveCredential: boolean = false,
+  ) {
     this.name = name
     this.type = type
     this.model = model || null
     // hardcoded for dev
     this.storage = 'local'
     this.query_type = 'abstract'
+    this.saveCredential = saveCredential
     this.connected = false // Default to disconnected
     if (autoConnect) {
       this.connect()

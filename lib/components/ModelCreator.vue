@@ -8,9 +8,17 @@
           <label for="model-name">Name</label>
           <input type="text" v-model="modelDetails.name" id="model-name" required />
           <label for="model-import">Assign To Connection</label>
-          <select v-model="modelDetails.connection" id="model-connection" placeholder="Models must have a connection."
-            required>
-            <option v-for="connection in connections" :key="connection.name" :value="connection.name">
+          <select
+            v-model="modelDetails.connection"
+            id="model-connection"
+            placeholder="Models must have a connection."
+            required
+          >
+            <option
+              v-for="connection in connections"
+              :key="connection.name"
+              :value="connection.name"
+            >
               {{ connection.name }}
             </option>
             <option value="new-duckdb">New DuckDB</option>
@@ -19,18 +27,32 @@
           </select>
           <div v-if="modelDetails.connection === 'new-motherduck'">
             <label for="md-token">MotherDuck Token</label>
-            <input type="text" v-model="modelDetails.options.mdToken" id="md-token" placeholder="MotherDuck Token"
-              required />
+            <input
+              type="text"
+              v-model="modelDetails.options.mdToken"
+              id="md-token"
+              placeholder="MotherDuck Token"
+              required
+            />
           </div>
 
           <div v-if="modelDetails.connection === 'new-bigquery-oauth'">
             <label for="project-id">BigQuery Project ID</label>
-            <input type="text" v-model="modelDetails.options.projectId" id="project-id" placeholder="Billing Project ID"
-              required />
+            <input
+              type="text"
+              v-model="modelDetails.options.projectId"
+              id="project-id"
+              placeholder="Billing Project ID"
+              required
+            />
           </div>
           <label for="model-import">Import From Address</label>
-          <input placeholder="Optional. Import github definition." type="text" v-model="modelDetails.importAddress"
-            id="model-import" />
+          <input
+            placeholder="Optional. Import github definition."
+            type="text"
+            v-model="modelDetails.importAddress"
+            id="model-import"
+          />
         </div>
         <button type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
@@ -165,7 +187,7 @@ export default defineComponent({
 
     // Function to create the editor by collecting details from the form
     const createModel = () => {
-      visible.value = !visible.value;
+      visible.value = !visible.value
       modelDetails.value.name = props.formDefaults.name || ''
       modelDetails.value.importAddress = props.formDefaults.importAddress
       modelDetails.value.connection = props.formDefaults.connection || ''
@@ -217,7 +239,6 @@ export default defineComponent({
             }
             return new ModelSource(response.name, response.alias || response.name, [], [])
           })
-
         }
         await saveAll()
         visible.value = false

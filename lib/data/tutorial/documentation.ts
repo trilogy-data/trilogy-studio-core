@@ -1,4 +1,4 @@
-import { DocumentationNode, Article, Paragraph } from './docTypes.ts';
+import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
 
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [

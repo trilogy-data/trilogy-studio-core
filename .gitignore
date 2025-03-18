@@ -37,3 +37,6 @@ config_backup
 #playwright
 test-results
 playwright-report
+
+rsa_key.p8
+rsa_key*

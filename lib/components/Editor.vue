@@ -487,10 +487,12 @@ export default defineComponent({
                 : '',
             }))
           : []
-        try {
-          imports = (await this.validateQuery(false, sources)) || []
-        } catch (error) {
-          console.log('Validation failed.')
+        if (this.editorData.type !== 'sql') {
+          try {
+            imports = (await this.validateQuery(false, sources)) || []
+          } catch (error) {
+            console.log('Validation failed.')
+          }
         }
         // Prepare sources if model exists
 

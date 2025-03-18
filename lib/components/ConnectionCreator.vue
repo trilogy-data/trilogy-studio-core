@@ -16,6 +16,7 @@
             <!-- Need to figure out CORS to support this and bigquery-->
             <!-- <option value="motherduck">MotherDuck</option> -->
             <option value="bigquery">Bigquery Oauth</option>
+            <option value="snowflake">Snowflake</option>
           </select>
         </div>
         <!-- Dynamic Fields Based on Type -->
@@ -58,7 +59,19 @@
             required
           />
         </div>
-
+        <div v-if="connectionDetails.type === 'snowflake'">
+          <label for="account">Account</label>
+          <input type="text" v-model="connectionDetails.options.account" id="account" required />
+          <label for="username">Username</label>
+          <input type="text" v-model="connectionDetails.options.username" id="username" required />
+          <label for="password">Password</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.password"
+            id="username"
+            required
+          />
+        </div>
         <button type="submit">Submit</button>
         <button type="button" @click="visible = !visible">Cancel</button>
       </form>
@@ -113,7 +126,14 @@ export default defineComponent({
     const connectionDetails = ref({
       name: '',
       type: 'duckdb',
-      options: { mdToken: '', projectId: '', username: '', password: '', saveCredential: false },
+      options: {
+        mdToken: '',
+        account: '',
+        projectId: '',
+        username: '',
+        password: '',
+        saveCredential: false,
+      },
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -130,6 +150,7 @@ export default defineComponent({
       connectionDetails.value.type = 'duckdb'
       connectionDetails.value.options = {
         mdToken: '',
+        account: '',
         projectId: '',
         username: '',
         password: '',

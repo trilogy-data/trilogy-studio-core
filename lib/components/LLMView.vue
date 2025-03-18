@@ -70,8 +70,8 @@
       <div class="section-header">
         Test Scenarios
         <div class="header-controls">
-          <button 
-            @click="runAllScenarios" 
+          <button
+            @click="runAllScenarios"
             :disabled="isLoading || !isProviderSelected"
             class="run-all-button"
           >
@@ -295,7 +295,6 @@ export default defineComponent({
           selectedProvider.value,
           options,
         )
-        
 
         // Add AI response
         messages.value.push({
@@ -370,33 +369,35 @@ export default defineComponent({
     // Run all scenarios in sequence
     const runAllScenarios = async () => {
       if (isLoading.value || !selectedProvider.value) return
-      
+
       isRunningAll.value = true
-      
+
       // Clear existing messages
       messages.value = []
-      
+
       // Add start message
       messages.value.push({
         role: 'user',
         content: 'RUNNING ALL TESTS IN SEQUENCE',
       })
-      
+
       try {
         // Run each scenario in sequence
         for (let i = 0; i < scenarios.value.length; i++) {
           await runScenario(i)
-          
+
           // Small delay between tests to avoid overwhelming the LLM service
           if (i < scenarios.value.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500))
+            await new Promise((resolve) => setTimeout(resolve, 500))
           }
         }
-        
+
         // Add summary message after all tests complete
-        const passedCount = Object.values(scenarioResults.value).filter(r => r?.passed).length
-        const failedCount = Object.values(scenarioResults.value).filter(r => r && !r.passed).length
-        
+        const passedCount = Object.values(scenarioResults.value).filter((r) => r?.passed).length
+        const failedCount = Object.values(scenarioResults.value).filter(
+          (r) => r && !r.passed,
+        ).length
+
         messages.value.push({
           role: 'user',
           content: `ALL TESTS COMPLETED: ${passedCount} passed, ${failedCount} failed`,

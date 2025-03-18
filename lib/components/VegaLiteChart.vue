@@ -795,10 +795,10 @@ export default defineComponent({
 }
 
 .form-select {
-  margin-right:.5rem;
+  margin-right: 0.5rem;
   border: 1px solid var(--border-color);
   height: var(--chart-control-height);
-  font-size: .8rem;
+  font-size: 0.8rem;
 }
 
 .vega-container {

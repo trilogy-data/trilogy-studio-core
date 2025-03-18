@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import Connection from '../connections/base'
-import { DuckDBConnection, BigQueryOauthConnection, MotherDuckConnection } from '../connections'
+import {
+  DuckDBConnection,
+  BigQueryOauthConnection,
+  MotherDuckConnection,
+  SnowflakeConnection,
+} from '../connections'
 
 const useConnectionStore = defineStore('connections', {
   state: () => ({
@@ -54,6 +59,16 @@ const useConnectionStore = defineStore('connections', {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
+      } else if (type === 'snowflake') {
+        this.connections[name] = new SnowflakeConnection(name, {
+          account: options.account,
+          username: options.username,
+          privateKey: options.privateKey,
+          warehouse: options.warehouse,
+          role: options.role,
+          database: options.database,
+          schema: options.schema,
+        })
       } else if (type === 'motherduck') {
         this.connections[name] = new MotherDuckConnection(
           name,

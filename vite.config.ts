@@ -18,7 +18,7 @@ export default defineConfig({
     vue(),
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
-    nodePolyfills({ include: ['events', 'dns', 'stream'] }),
+    nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
     prism({
       languages: ['sql'],
       plugins: ['line-numbers'],

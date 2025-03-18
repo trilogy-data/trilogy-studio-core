@@ -10,14 +10,13 @@ export class AnthropicProvider extends LLMProvider {
   }
 
   async reset(): Promise<void> {
-    this.error = null;
+    this.error = null
     try {
       let models = await fetch(this.baseModelUrl, {
         headers: {
-          "x-api-key": `${this.apiKey}`,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
-
+          'x-api-key': `${this.apiKey}`,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         method: 'GET',
       }).then((response) => response.json())
@@ -40,9 +39,9 @@ export class AnthropicProvider extends LLMProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        "x-api-key": `${this.apiKey}`,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
+        'x-api-key': `${this.apiKey}`,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
         model: this.model,
