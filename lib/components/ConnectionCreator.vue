@@ -64,11 +64,11 @@
           <input type="text" v-model="connectionDetails.options.account" id="account" required />
           <label for="username">Username</label>
           <input type="text" v-model="connectionDetails.options.username" id="username" required />
-          <label for="password">Password</label>
+          <label for="privateKey">Private Key</label>
           <input
             type="password"
-            v-model="connectionDetails.options.password"
-            id="username"
+            v-model="connectionDetails.options.privateKey"
+            id="privateKey"
             required
           />
         </div>
@@ -132,6 +132,7 @@ export default defineComponent({
         projectId: '',
         username: '',
         password: '',
+        privateKey: '',
         saveCredential: false,
       },
     })
@@ -154,6 +155,7 @@ export default defineComponent({
         projectId: '',
         username: '',
         password: '',
+        privateKey: '',
         saveCredential: false,
       } // Reset options
     }
