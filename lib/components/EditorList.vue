@@ -2,7 +2,7 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible">
+        <button @click="creatorVisible = !creatorVisible" data-testid="editor-creator-add">
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveEditors" :keyCombination="['control', 's']">
