@@ -41,7 +41,8 @@
             />
             <results-container
               v-else-if="
-                (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) || activeEditorData.error
+                (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) ||
+                activeEditorData.error
               "
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
