@@ -84,6 +84,7 @@ export function buildEditorTree(
                             // Skip editors with hidden tags
                             if (
                                 hiddenTags.size > 0 &&
+                                //@ts-ignore
                                 editor.tags.some((tag) => hiddenTags.has(tag))
                             ) {
                                 return
