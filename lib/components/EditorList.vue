@@ -2,26 +2,45 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-
-        <button @click="creatorVisible = !creatorVisible">{{ creatorVisible ? 'Hide' : 'New' }}</button>
+        <button @click="creatorVisible = !creatorVisible">
+          {{ creatorVisible ? 'Hide' : 'New' }}
+        </button>
         <loading-button :action="saveEditors" :keyCombination="['control', 's']">
           Save
         </loading-button>
       </div>
       <editor-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
-      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
-        @click="toggleTagFilter(tag)">
+      <span
+        v-for="tag in EditorTag"
+        :key="tag"
+        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
+        class="tag"
+        @click="toggleTagFilter(tag)"
+      >
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
         }}{{ tag.slice(1) }} Editors
       </span>
     </template>
 
-    <div v-for="item in contentList" :key="item.key" :data-testid="`editor-list-id-${item.key}`"
-      :class="{ 'sidebar-item': item.type !== 'creator', 'sidebar-item-selected': activeEditor === item.label }"
-      @click="clickAction(item.type, item.label, item.key)">
-      <div v-if="!['creator'].includes(item.type)" v-for="_ in item.indent" class="sidebar-padding"></div>
-      <i v-if="!['editor', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
+    <div
+      v-for="item in contentList"
+      :key="item.key"
+      :data-testid="`editor-list-id-${item.key}`"
+      :class="{
+        'sidebar-item': item.type !== 'creator',
+        'sidebar-item-selected': activeEditor === item.label,
+      }"
+      @click="clickAction(item.type, item.label, item.key)"
+    >
+      <div
+        v-if="!['creator'].includes(item.type)"
+        v-for="_ in item.indent"
+        class="sidebar-padding"
+      ></div>
+      <i
+        v-if="!['editor', 'creator'].includes(item.type)"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+      >
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -35,8 +54,11 @@
       </template>
 
       <template v-if="item.type === 'creator'">
-        <editor-creator-inline :connection="item.label" :visible=connectionCreatorVisible[item.label]
-          @close="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]" />
+        <editor-creator-inline
+          :connection="item.label"
+          :visible="connectionCreatorVisible[item.label]"
+          @close="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]"
+        />
       </template>
       <span v-else class="truncate-text">
         {{ item.label }}
@@ -45,7 +67,8 @@
             connectionStore.connections[item.label]?.model
               ? connectionStore.connections[item.label]?.model
               : 'No Model Set'
-          }})</span>
+          }})</span
+        >
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -54,11 +77,15 @@
       </template>
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
-          <button @click.stop="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]">{{
-            connectionCreatorVisible[item.label] ? 'Hide' : 'New' }}</button>
+          <button
+            @click.stop="
+              connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]
+            "
+          >
+            {{ connectionCreatorVisible[item.label] ? 'Hide' : 'New' }}
+          </button>
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
-
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
@@ -156,8 +183,12 @@ export default {
     })
 
     const contentList = computed(() => {
-      return buildEditorTree(Object.values(editorStore.editors), collapsed.value, hiddenTags.value, connectionCreatorVisible.value)
-
+      return buildEditorTree(
+        Object.values(editorStore.editors),
+        collapsed.value,
+        hiddenTags.value,
+        connectionCreatorVisible.value,
+      )
     })
 
     return {
@@ -172,7 +203,7 @@ export default {
       trilogyIcon,
       connectionStateToStatus,
       creatorVisible,
-      connectionCreatorVisible
+      connectionCreatorVisible,
     }
   },
   data() {

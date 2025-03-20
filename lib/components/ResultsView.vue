@@ -1,9 +1,16 @@
 <template>
   <div class="results-view">
     <loading-view v-if="editorData.loading" :cancel="editorData.cancelCallback" />
-    <results-container v-else-if="(editorData.results.headers && editorData.results.headers.size > 0) || editorData.error"
-      :results="editorData.results" :generatedSql="editorData.generated_sql || undefined"
-      :containerHeight="containerHeight" :type="editorData.type" :error="editorData.error" />
+    <results-container
+      v-else-if="
+        (editorData.results.headers && editorData.results.headers.size > 0) || editorData.error
+      "
+      :results="editorData.results"
+      :generatedSql="editorData.generated_sql || undefined"
+      :containerHeight="containerHeight"
+      :type="editorData.type"
+      :error="editorData.error"
+    />
     <hint-component v-else />
   </div>
 </template>
@@ -47,9 +54,7 @@ export default {
       connectionStore,
     }
   },
-  methods: {
-
-  },
+  methods: {},
 }
 </script>
 

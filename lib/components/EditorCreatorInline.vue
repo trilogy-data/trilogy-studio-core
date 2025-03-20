@@ -1,23 +1,38 @@
 <template>
-  <div v-if="visible" class = 'creator-container'>
+  <div v-if="visible" class="creator-container">
     <form @submit.prevent="submitEditorCreation">
       <div class="form-row">
         <label for="editor-name">Name</label>
-        <input data-testid="editor-creator-name" type="text" v-model="editorDetails.name" id="editor-name" required />
+        <input
+          data-testid="editor-creator-name"
+          type="text"
+          v-model="editorDetails.name"
+          id="editor-name"
+          required
+        />
       </div>
       <div class="form-row">
         <tooltip position="bottom" content="Use SQL editors to run raw SQL.">
           <label for="editor-type">Type</label>
         </tooltip>
-        <select data-testid="editor-creator-type" v-model="editorDetails.type" id="editor-type" required>
+        <select
+          data-testid="editor-creator-type"
+          v-model="editorDetails.type"
+          id="editor-type"
+          required
+        >
           <option value="preql">Trilogy</option>
           <option value="sql">SQL</option>
         </select>
       </div>
       <div v-if="!connection" class="form-row">
         <label for="connection-name">Connection</label>
-        <select data-testid="editor-creator-connection-select" v-model="editorDetails.connection" id="connection-name"
-          required>
+        <select
+          data-testid="editor-creator-connection-select"
+          v-model="editorDetails.connection"
+          id="connection-name"
+          required
+        >
           <option v-for="connection in connections" :key="connection.name" :value="connection.name">
             {{ connection.name }}
           </option>
@@ -36,7 +51,6 @@
   border: 1px solid var(--border-color);
   padding: 5px;
   margin-top: 5px;
-
 }
 .form-row {
   display: flex;
@@ -57,7 +71,7 @@
   font-size: var(--button-font-size);
   border: 1px solid var(--border-color);
   border-radius: 0;
-  height: var(--sidebar-sub-item-height);  
+  height: var(--sidebar-sub-item-height);
 }
 
 .form-row input:focus,
