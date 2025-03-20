@@ -39,33 +39,15 @@
               v-if="activeEditorData.loading"
               :cancel="activeEditorData.cancelCallback"
             />
-            <error-message v-else-if="activeEditorData.error"
-              >{{ activeEditorData.error }}
-              <template #action v-if="activeEditorData.error === 'Connection is not active.'">
-                <loading-button
-                  :action="
-                    () => {
-                      activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection).then(() => {
-                            activeEditorData ? (activeEditorData.error = null) : null
-                          })
-                        : null
-                    }
-                  "
-                >
-                  Reconnect
-                  {{ activeEditorData.connection }}
-                </loading-button>
-              </template>
-            </error-message>
             <results-container
               v-else-if="
-                activeEditorData.results.headers && activeEditorData.results.headers.size > 0
+                (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) || activeEditorData.error
               "
               :results="activeEditorData.results"
               :generatedSql="activeEditorData.generated_sql || undefined"
               :containerHeight="containerHeight"
               :type="activeEditorData.type"
+              :error="activeEditorData.error || undefined"
             />
             <hint-component v-else />
           </template>

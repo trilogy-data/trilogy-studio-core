@@ -97,7 +97,7 @@
   padding: 0.25rem;
   justify-content: space-between;
   padding-right: 0.5rem;
-  min-height: 40px;
+  height: 40px;
 }
 
 .menu-actions {
@@ -177,7 +177,7 @@
 .editor-fix-styles {
   text-align: left;
   border: none;
-  height: 100%;
+  height: calc(100% - 40px);
   position: relative;
 }
 
@@ -267,6 +267,10 @@ export default defineComponent({
       type: String,
       required: true,
     },
+    containerHeight: {
+      type: Number,
+      required: false,
+    },
   },
   data() {
     return {
@@ -343,6 +347,16 @@ export default defineComponent({
         })
       },
     },
+    // containerHeight: {
+    //   handler() {
+    //     this.$nextTick(() => {
+    //       let editor = editorMap.get(this.context)
+    //       if (editor) {
+    //         editor.layout()
+    //       }
+    //     })
+    //   },
+    // },
   },
 
   methods: {

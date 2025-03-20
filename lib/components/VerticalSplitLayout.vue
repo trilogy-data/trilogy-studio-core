@@ -1,7 +1,7 @@
 <template>
   <div class="editor-wrapper pa-0 ba-0">
     <div class="editor-entry" ref="editor">
-      <slot name="editor"></slot>
+      <slot name="editor" :containerHeight="resultsHeight"></slot>
     </div>
     <div class="editor-results editor-color" ref="results">
       <slot name="results" :containerHeight="resultsHeight"></slot>
@@ -49,6 +49,7 @@ export default defineComponent({
   data() {
     return {
       resultsHeight: 0,
+      editorHeight: 0,
       split: null as Split.SplitInstance | null,
     }
   },
@@ -94,6 +95,10 @@ export default defineComponent({
       if (this.$refs.results) {
         // @ts-ignore
         this.resultsHeight = this.$refs.results.getBoundingClientRect().height
+      }
+      if (this.$refs.editor) {
+        // @ts-ignore
+        this.editorHeight = this.$refs.editor.getBoundingClientRect().height
       }
     },
   },

@@ -2,38 +2,26 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-        <editor-creator />
-        <div>
-          <loading-button :action="saveEditors" :keyCombination="['control', 's']">
-            Save
-          </loading-button>
-        </div>
+
+        <button @click="creatorVisible = !creatorVisible">{{ creatorVisible ? 'Hide' : 'New' }}</button>
+        <loading-button :action="saveEditors" :keyCombination="['control', 's']">
+          Save
+        </loading-button>
       </div>
-      <span
-        v-for="tag in EditorTag"
-        :key="tag"
-        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
-        class="tag"
-        @click="toggleTagFilter(tag)"
-      >
+      <editor-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
+      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
+        @click="toggleTagFilter(tag)">
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
         }}{{ tag.slice(1) }} Editors
       </span>
     </template>
 
-    <div
-      v-for="item in contentList"
-      :key="item.key"
-      :data-testid="`editor-list-id-${item.key}`"
-      class="sidebar-item"
-      :class="{ 'sidebar-item-selected': activeEditor === item.label }"
-      @click="clickAction(item.type, item.label, item.key)"
-    >
-      <div v-for="_ in item.indent" class="sidebar-padding"></div>
-      <i
-        v-if="item.type !== 'editor'"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-      >
+    <div v-for="item in contentList" :key="item.key" :data-testid="`editor-list-id-${item.key}`"
+      :class="{ 'sidebar-item': item.type !== 'creator', 'sidebar-item-selected': activeEditor === item.label }"
+      @click="clickAction(item.type, item.label, item.key)">
+      <div v-if="!['creator'].includes(item.type)" v-for="_ in item.indent" class="sidebar-padding"></div>
+      <i v-if="!['editor', 'creator'].includes(item.type)"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -45,15 +33,19 @@
           <!-- <i class="mdi mdi-alpha-t-box-outline"></i> -->
         </tooltip>
       </template>
-      <span class="truncate-text">
+
+      <template v-if="item.type === 'creator'">
+        <editor-creator-inline :connection="item.label" :visible=connectionCreatorVisible[item.label]
+          @close="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]" />
+      </template>
+      <span v-else class="truncate-text">
         {{ item.label }}
         <span class="text-light" v-if="item.type === 'connection'">
           ({{
             connectionStore.connections[item.label]?.model
               ? connectionStore.connections[item.label]?.model
               : 'No Model Set'
-          }})</span
-        >
+          }})</span>
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -62,9 +54,11 @@
       </template>
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
-          <editor-creator :connection="item.label" :offsetRight="true" />
+          <button @click.stop="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]">{{
+            connectionCreatorVisible[item.label] ? 'Hide' : 'New' }}</button>
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
+
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
@@ -90,7 +84,7 @@
 import { inject, ref, computed, onMounted } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import EditorCreator from './EditorCreator.vue'
+import EditorCreatorInline from './EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
@@ -99,6 +93,7 @@ import StatusIcon from './StatusIcon.vue'
 import type { Connection } from '../connections'
 import trilogyIcon from '../static/trilogy.png'
 import { getDefaultValueFromHash } from '../stores/urlStore'
+import { buildEditorTree } from '../editors'
 
 export default {
   name: 'EditorList',
@@ -112,7 +107,8 @@ export default {
 
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
-
+    const creatorVisible = ref(false)
+    const connectionCreatorVisible = ref<Record<string, boolean>>({})
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]
     }
@@ -160,53 +156,8 @@ export default {
     })
 
     const contentList = computed(() => {
-      const list: Array<{
-        key: string
-        label: string
-        type: string
-        indent: Array<number>
-        editor?: any
-      }> = []
-      // sort for rendering
-      const sorted = Object.values(editorStore.editors).sort(
-        (a, b) =>
-          a.storage.localeCompare(b.storage) ||
-          a.connection.localeCompare(b.connection) ||
-          a.name.localeCompare(b.name),
-      )
-      sorted.forEach((editor) => {
-        let storageKey = `s-${editor.storage}`
-        let connectionKey = `c-${editor.storage}-${editor.connection}`
-        let editorKey = `e-${editor.storage}-${editor.connection}-${editor.name}`
+      return buildEditorTree(Object.values(editorStore.editors), collapsed.value, hiddenTags.value, connectionCreatorVisible.value)
 
-        if (!list.some((item) => item.key === storageKey)) {
-          list.push({ key: storageKey, label: editor.storage, type: 'storage', indent: [] })
-        }
-        if (!list.some((item) => item.key === connectionKey)) {
-          if (!collapsed.value[storageKey]) {
-            list.push({
-              key: connectionKey,
-              label: editor.connection,
-              type: 'connection',
-              indent: [0],
-            })
-          }
-        }
-        if (!collapsed.value[storageKey] && !collapsed.value[connectionKey]) {
-          if (
-            !(hiddenTags.value.size > 0 && editor.tags.some((tag) => hiddenTags.value.has(tag)))
-          ) {
-            list.push({
-              key: editorKey,
-              label: editor.name,
-              type: 'editor',
-              indent: [0, 1],
-              editor,
-            })
-          }
-        }
-      })
-      return list
     })
 
     return {
@@ -220,6 +171,8 @@ export default {
       hiddenTags,
       trilogyIcon,
       connectionStateToStatus,
+      creatorVisible,
+      connectionCreatorVisible
     }
   },
   data() {
@@ -263,7 +216,7 @@ export default {
     },
   },
   components: {
-    EditorCreator,
+    EditorCreatorInline,
     SidebarList,
     Tooltip,
     LoadingButton,

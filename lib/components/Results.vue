@@ -1,44 +1,37 @@
 <template>
   <div class="results-container">
     <div class="tabs">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'results' }"
-        @click="setTab('results')"
-        data-testid="results-tab-button"
-      >
-        Results ({{ results.data.length }})
+      <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="setTab('results')"
+        data-testid="results-tab-button">
+        Results ({{ results.data.length }}) <span v-if="error">(Error)</span>
       </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'visualize' }"
-        @click="setTab('visualize')"
-      >
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'visualize' }"
+        @click="setTab('visualize')">
         Visualize
       </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'sql' }"
-        @click="setTab('sql')"
-      >
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'sql' }"
+        @click="setTab('sql')">
         Generated SQL
       </button>
     </div>
     <div class="tab-content">
+
       <div v-if="activeTab === 'visualize'" class="sql-view">
         <vega-lite-chart :data="results.data" :columns="results.headers" />
       </div>
       <div v-else-if="activeTab === 'sql'" class="sql-view">
         <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
       </div>
-      <data-table
-        v-else
-        :headers="results.headers"
-        :results="results.data"
-        :containerHeight="containerHeight"
-      />
+      <error-message v-else-if="error">
+        {{ error }}
+        <template #action v-if="error === 'Connection is not active.'">
+          <loading-button :action="handleReconnect">
+            Reconnect
+            {{ connection }}
+          </loading-button>
+        </template>
+      </error-message>
+      <data-table v-else :headers="results.headers" :results="results.data" :containerHeight="containerHeight" />
     </div>
   </div>
 </template>
@@ -47,14 +40,17 @@
 import DataTable from './DataTable.vue'
 import { Results } from '../editors/results'
 // import type {ChartConfig} from '../editors/results'
-import { ref, onMounted, onUpdated } from 'vue'
+import { ref, onMounted, onUpdated, inject } from 'vue'
 import Prism from 'prismjs'
 import VegaLiteChart from './VegaLiteChart.vue'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
+import type { ConnectionStoreType } from '../stores/connectionStore'
+import ErrorMessage from './ErrorMessage.vue'
+import LoadingButton from './LoadingButton.vue'
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton },
   props: {
     type: {
       type: String,
@@ -65,6 +61,14 @@ export default {
       required: true,
     },
     chartConfig: {
+      required: false,
+    },
+    error: {
+      type: String,
+      required: false,
+    },
+    connection: {
+      type: String,
       required: false,
     },
     containerHeight: Number,
@@ -80,8 +84,21 @@ export default {
       this.activeTab = tab
       pushHashToUrl('activeEditorTab', tab)
     },
+    handleReconnect() {
+      if (this.connection) {
+        return this.connectionStore.resetConnection(this.connection).then(() => {
+        })
+      }
+      return Promise.resolve()
+    },
   },
   setup() {
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+
+    if (!connectionStore) {
+      throw new Error('Requires injection of connection store')
+    }
+
     const codeBlock = ref<HTMLElement | null>(null)
     const updateRefs = () => {
       if (codeBlock.value) {
@@ -103,6 +120,7 @@ export default {
 
     return {
       codeBlock,
+      connectionStore,
     }
   },
 }
