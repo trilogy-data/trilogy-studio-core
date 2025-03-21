@@ -570,6 +570,7 @@ export default defineComponent({
             }
           }
         }
+        console.log(sqlResponse)
         this.editorStore.setEditorResults(this.editorName, sqlResponse)
       } catch (error) {
         if (error instanceof Error) {

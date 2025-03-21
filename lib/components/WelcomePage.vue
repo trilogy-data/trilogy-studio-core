@@ -31,7 +31,7 @@ import trilogyIcon from '../static/trilogy.png'
 import EditorCreator from './EditorCreator.vue'
 
 const demoLoading = ref(false)
-const emit = defineEmits(['demo-started', 'screen-selected'])
+const emit = defineEmits(['demo-started', 'screen-selected', 'documentation-key-selected'])
 const startDemo = () => {
   demoLoading.value = true
 
@@ -43,6 +43,7 @@ const startDemo = () => {
 
 const tutorial = () => {
   emit('screen-selected', 'tutorial')
+  emit('documentation-key-selected', 'article+Studio+Welcome')
 }
 </script>
 

@@ -6,8 +6,7 @@
         :class="{ active: activeTab === 'results' }"
         @click="setTab('results')"
         data-testid="results-tab-button"
-      >
-        Results ({{ results.data.length }}) <span v-if="error">(Error)</span>
+      >Results (<span data-testid="query-results-length">{{ results.data.length }}</span>)<span v-if="error">(Error)</span>
       </button>
       <button
         class="tab-button"

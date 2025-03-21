@@ -3,24 +3,15 @@
     <form @submit.prevent="submitEditorCreation">
       <div class="form-row">
         <label for="editor-name">Name</label>
-        <input
-          data-testid="editor-creator-name"
-          type="text"
-          v-model="editorDetails.name"
-          id="editor-name"
-          required
-        />
+        <input :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'" type="text"
+          v-model="editorDetails.name" id="editor-name" required />
       </div>
       <div class="form-row">
         <tooltip position="bottom" content="Use SQL editors to run raw SQL.">
           <label for="editor-type">Type</label>
         </tooltip>
-        <select
-          data-testid="editor-creator-type"
-          v-model="editorDetails.type"
-          id="editor-type"
-          required
-        >
+        <select :data-testid="testTag ? `editor-creator-type-${testTag}` : 'editor-creator-type'"
+          v-model="editorDetails.type" id="editor-type" required>
           <option value="preql">Trilogy</option>
           <option value="sql">SQL</option>
         </select>
@@ -28,18 +19,19 @@
       <div v-if="!connection" class="form-row">
         <label for="connection-name">Connection</label>
         <select
-          data-testid="editor-creator-connection-select"
-          v-model="editorDetails.connection"
-          id="connection-name"
-          required
-        >
+          :data-testid="testTag ? `editor-creator-connection-select-${testTag}` : 'editor-creator-connection-select'"
+          v-model="editorDetails.connection" id="connection-name" required>
           <option v-for="connection in connections" :key="connection.name" :value="connection.name">
             {{ connection.name }}
           </option>
         </select>
       </div>
+      <div v-if="error">
+        <inline-error-message>{{ error }}</inline-error-message>
+      </div>
       <div class="button-row">
-        <button data-testid="editor-creator-submit" type="submit">Submit</button>
+        <button :data-testid="testTag ? `editor-creator-submit-${testTag}` : 'editor-creator-submit'"
+          type="submit">Submit</button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -52,6 +44,7 @@
   padding: 5px;
   margin-top: 5px;
 }
+
 .form-row {
   display: flex;
   align-items: center;
@@ -101,11 +94,13 @@ import { defineComponent, ref, inject } from 'vue'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import Tooltip from './Tooltip.vue'
+import InlineErrorMessage from './InlineErrorMessage.vue'
 
 export default defineComponent({
   name: 'EditorCreator',
   components: {
     Tooltip,
+    InlineErrorMessage
   },
   props: {
     connection: {
@@ -117,9 +112,15 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    testTag: {
+      type: String,
+      required: false,
+      default: '',
+    },
   },
   setup(props, { emit }) {
     // Placeholder for editor details
+    const error = ref('')
     const editorDetails = ref({
       name: '',
       type: 'preql', // Default value
@@ -141,20 +142,29 @@ export default defineComponent({
       editorDetails.value.name = '' // Reset name field
       editorDetails.value.type = 'preql' // Reset type dropdown
       editorDetails.value.connection = props.connection // Reset connection selection
+      error.value = ''
     }
 
     // Function to submit the editor details
     const submitEditorCreation = () => {
       if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
-        emit('close', editorDetails.value.name)
-        editorStore.newEditor(
-          editorDetails.value.name,
-          editorDetails.value.type,
-          editorDetails.value.connection,
-          '',
-        )
-        saveEditors()
-        emit('editor-selected', editorDetails.value.name)
+        try {
+          editorStore.newEditor(
+            editorDetails.value.name,
+            editorDetails.value.type,
+            editorDetails.value.connection,
+            '',
+          )
+          saveEditors()
+          emit('close', editorDetails.value.name)
+          emit('editor-selected', editorDetails.value.name)
+        } catch (e) {
+          if (e instanceof Error) {
+            error.value = e.message
+          } else {
+            error.value = 'Unknown error'
+          }
+        }
       }
     }
 
@@ -168,6 +178,7 @@ export default defineComponent({
       createEditor,
       submitEditorCreation,
       close,
+      error,
     }
   },
 })

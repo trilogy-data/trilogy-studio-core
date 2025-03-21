@@ -8,11 +8,13 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: 'Import' }).click()
   await page.getByRole('button', { name: 'Submit' }).click()
   await page.getByRole('button', { name: '󱘖' }).click()
-  await page.locator('#navigation span').filter({ hasText: 'New' }).getByRole('button').click()
-  await page.getByRole('textbox', { name: 'Name', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Name', exact: true }).fill('my-first-editor')
-  await page.getByLabel('Connection').selectOption('demo-model-connection')
-  await page.getByRole('button', { name: 'Submit' }).click()
+  await page.getByTestId('editor-creator-add-tutorial').click()
+  await page.getByTestId('editor-creator-name-tutorial').click()
+  await page.getByTestId('editor-creator-name-tutorial').fill('my-first-editor')
+  await page
+    .getByTestId('editor-creator-connection-select-tutorial')
+    .selectOption('demo-model-connection')
+  await page.getByTestId('editor-creator-submit-tutorial').click()
   await expect(page.getByTestId('model-validator')).toContainText(
     `Great work: "demo-model" found ✓`,
   )
@@ -39,6 +41,5 @@ order by
   // Wait for text to change back to "Run", indicating query execution finished.
   await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
 
-  // TODO: get the trilogy server to be able to respond to github
   await expect(page.getByTestId('results-tab-button')).toContainText(`Results (25)`)
 })

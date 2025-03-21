@@ -1,5 +1,5 @@
 <template>
-  <div class="error-message">
+  <div class="error-message" ref="errorMessage">
     <span class="error-text"><span class="error-icon">⚠️</span><slot></slot></span>
     <div class="error-action">
       <slot name="action"></slot>
