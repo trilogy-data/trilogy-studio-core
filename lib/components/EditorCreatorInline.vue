@@ -59,11 +59,7 @@
 </template>
 
 <style scoped>
-.creator-container {
-  border: 1px solid var(--border-color);
-  padding: 5px;
-  margin-top: 5px;
-}
+
 
 .form-row {
   display: flex;
@@ -74,14 +70,14 @@
 .form-row label {
   flex: 0 0 80px;
   /* Fixed width for labels */
-  font-size: var(--button-font-size);
+  font-size: var(--small-font-size);
   margin-right: 10px;
 }
 
 .form-row input,
 .form-row select {
   flex: 1;
-  font-size: var(--button-font-size);
+  font-size: var(--small-font-size);
   border: 1px solid var(--border-color);
   border-radius: 0;
   height: var(--sidebar-sub-item-height);
@@ -104,9 +100,7 @@ option {
   font-weight: 300;
 }
 
-.relative-parent {
-  position: relative;
-}
+
 </style>
 
 <script lang="ts">

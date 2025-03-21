@@ -3,7 +3,7 @@
     <h3 v-if="!isMobile" class="font-sans mb-1">{{ title }}</h3>
     <slot name="actions"> </slot>
     <div>
-      <slot></slot>
+      <slot :isMobile="isMobile"></slot>
     </div>
   </div>
 </template>

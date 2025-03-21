@@ -1,5 +1,5 @@
 <template>
-  <IDE v-if="currentLayout === 'Desktop'" />
+  <IDE v-if="!isMobile" />
   <MobileIDE v-else />
 </template>
 
@@ -134,16 +134,14 @@ export default {
     provide('saveAll', saveAll)
     const isMobile = computed(() => window.innerWidth <= 768)
     provide('isMobile', isMobile)
+    return {
+      isMobile,
+    }
   },
   data() {
     return {
       windowWidth: window.innerWidth,
     }
-  },
-  computed: {
-    currentLayout(): string {
-      return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
-    },
   },
   mounted() {
     window.addEventListener('resize', this.handleResize)

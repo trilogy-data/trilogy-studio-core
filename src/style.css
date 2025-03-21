@@ -83,8 +83,10 @@
   --sidebar-list-item-height: 22px;
   --sidebar-list-item-font-size: 13px;
   --sidebar-sub-item-height: 18px;
-  --font-size: 14px;
   --sidebar-sub-item-font-size: 12px;
+
+  --font-size: 14px;
+  --small-font-size: 12px;
   --button-font-size: .70em;
 
   --chart-control-height:28px;
@@ -96,10 +98,14 @@
     --sidebar-icon-width: 100px;
     --sidebar-list-item-height: 40px;
     --sidebar-sub-item-height: 24px;
-    --font-size: 16px;
     --sidebar-list-item-font-size: 18px;
     --sidebar-sub-item-font-size: 14px;
+
+
+    --font-size: 16px;
+    --small-font-size: 14px;
     --button-font-size: 1.1em;
+
 
     --chart-control-height: 32px;
   }
@@ -242,6 +248,13 @@ button:focus-visible {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* CREATORS */
+.creator-container {
+  border: 1px solid var(--border-color);
+  padding: 5px;
+  margin-top: 5px;
 }
 
 /* DIALOGUE */
