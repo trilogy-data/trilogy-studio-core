@@ -116,7 +116,6 @@ export default class Editor implements EditorInterface {
       this.results = new Results(new Map(), [])
       this.changed = true
     }
-
   }
 
   setContent(contents: string) {

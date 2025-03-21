@@ -3,15 +3,24 @@
     <form @submit.prevent="submitEditorCreation">
       <div class="form-row">
         <label for="editor-name">Name</label>
-        <input :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'" type="text"
-          v-model="editorDetails.name" id="editor-name" required />
+        <input
+          :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'"
+          type="text"
+          v-model="editorDetails.name"
+          id="editor-name"
+          required
+        />
       </div>
       <div class="form-row">
         <tooltip position="bottom" content="Use SQL editors to run raw SQL.">
           <label for="editor-type">Type</label>
         </tooltip>
-        <select :data-testid="testTag ? `editor-creator-type-${testTag}` : 'editor-creator-type'"
-          v-model="editorDetails.type" id="editor-type" required>
+        <select
+          :data-testid="testTag ? `editor-creator-type-${testTag}` : 'editor-creator-type'"
+          v-model="editorDetails.type"
+          id="editor-type"
+          required
+        >
           <option value="preql">Trilogy</option>
           <option value="sql">SQL</option>
         </select>
@@ -19,8 +28,15 @@
       <div v-if="!connection" class="form-row">
         <label for="connection-name">Connection</label>
         <select
-          :data-testid="testTag ? `editor-creator-connection-select-${testTag}` : 'editor-creator-connection-select'"
-          v-model="editorDetails.connection" id="connection-name" required>
+          :data-testid="
+            testTag
+              ? `editor-creator-connection-select-${testTag}`
+              : 'editor-creator-connection-select'
+          "
+          v-model="editorDetails.connection"
+          id="connection-name"
+          required
+        >
           <option v-for="connection in connections" :key="connection.name" :value="connection.name">
             {{ connection.name }}
           </option>
@@ -30,8 +46,12 @@
         <inline-error-message>{{ error }}</inline-error-message>
       </div>
       <div class="button-row">
-        <button :data-testid="testTag ? `editor-creator-submit-${testTag}` : 'editor-creator-submit'"
-          type="submit">Submit</button>
+        <button
+          :data-testid="testTag ? `editor-creator-submit-${testTag}` : 'editor-creator-submit'"
+          type="submit"
+        >
+          Submit
+        </button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -100,7 +120,7 @@ export default defineComponent({
   name: 'EditorCreator',
   components: {
     Tooltip,
-    InlineErrorMessage
+    InlineErrorMessage,
   },
   props: {
     connection: {

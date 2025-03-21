@@ -77,7 +77,11 @@
         <LLMView />
       </template>
       <template v-else>
-        <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" @documentation-key-selected="setActiveDocumentationKey" />
+        <welcome-page
+          @screen-selected="setActiveScreen"
+          @demo-started="startDemo"
+          @documentation-key-selected="setActiveDocumentationKey"
+        />
       </template>
     </sidebar-layout>
   </div>
