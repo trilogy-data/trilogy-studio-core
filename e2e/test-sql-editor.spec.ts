@@ -17,5 +17,5 @@ test('test', async ({ page }) => {
   await page.getByTestId('editor-creator-submit').click()
   await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
   await page.getByTestId('editor-run-button').click()
-  await expect(page.getByTestId('results-tab-button')).toContainText(`Results (1)`)
+  await expect(page.getByTestId('query-results-length')).toContainText('1')
 })

@@ -112,7 +112,10 @@ export default class Editor implements EditorInterface {
 
   setError(error: string | null) {
     this.error = error
-    this.changed = true
+    if (error) {
+      this.results = new Results(new Map(), [])
+      this.changed = true
+    }
   }
 
   setContent(contents: string) {

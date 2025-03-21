@@ -19,7 +19,11 @@
         <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
-        <editor-list v-else-if="paragraph.type === 'editors'" :connections="editorStore.editors" />
+        <editor-list
+          v-else-if="paragraph.type === 'editors'"
+          :connections="editorStore.editors"
+          testTag="tutorial"
+        />
         <div v-else-if="paragraph.type === 'connection-validator'">
           <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']">
             {{

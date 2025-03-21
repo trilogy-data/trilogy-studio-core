@@ -20,7 +20,7 @@ const useEditorStore = defineStore('editors', {
         contents: contents || '',
       })
       if (name in this.editors) {
-        throw Error(`Editor with ${name} already exists.`)
+        throw Error(`An editor with name ${name} already exists.`)
       }
       this.editors[editor.name] = editor
     },

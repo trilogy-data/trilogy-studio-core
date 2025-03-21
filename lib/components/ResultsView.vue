@@ -1,21 +1,15 @@
 <template>
   <div class="results-view">
     <loading-view v-if="editorData.loading" :cancel="editorData.cancelCallback" />
-    <error-message v-else-if="editorData.error">
-      {{ editorData.error }}
-      <template #action v-if="editorData.error === 'Connection is not active.'">
-        <loading-button :action="handleReconnect">
-          Reconnect
-          {{ editorData.connection }}
-        </loading-button>
-      </template>
-    </error-message>
     <results-container
-      v-else-if="editorData.results.headers && editorData.results.headers.size > 0"
+      v-else-if="
+        (editorData.results.headers && editorData.results.headers.size > 0) || editorData.error
+      "
       :results="editorData.results"
       :generatedSql="editorData.generated_sql || undefined"
       :containerHeight="containerHeight"
       :type="editorData.type"
+      :error="editorData.error"
     />
     <hint-component v-else />
   </div>
@@ -60,18 +54,7 @@ export default {
       connectionStore,
     }
   },
-  methods: {
-    handleReconnect() {
-      if (this.editorData) {
-        return this.connectionStore.resetConnection(this.editorData.connection).then(() => {
-          if (this.editorData) {
-            this.editorData.error = null
-          }
-        })
-      }
-      return Promise.resolve()
-    },
-  },
+  methods: {},
 }
 </script>
 
