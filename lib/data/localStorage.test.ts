@@ -66,7 +66,7 @@ describe('EditorLocalStorage', () => {
     // localStorage.clear();
   })
 
-  it('should save and load an editor', () => {
+  it('should save and load an editor', async () => {
     const editor: Editor = new Editor({
       name: 'editor1',
       type: 'preql',
@@ -76,13 +76,13 @@ describe('EditorLocalStorage', () => {
     })
     expect(editor.name).toBe('editor1')
     localStorage.saveEditor(editor)
-    const loadedEditors = localStorage.loadEditors()
+    const loadedEditors = await localStorage.loadEditors()
 
     expect(loadedEditors).toHaveProperty('editor1')
     expect(loadedEditors['editor1'].contents).toBe('test content')
   })
 
-  it('should save and clear editors', () => {
+  it('should save and clear editors', async () => {
     const editors: Editor[] = [
       new Editor({
         name: 'editor1',
@@ -101,12 +101,12 @@ describe('EditorLocalStorage', () => {
     ]
 
     localStorage.saveEditors(editors)
-    let storedEditors = localStorage.loadEditors()
+    let storedEditors = await localStorage.loadEditors()
 
     expect(Object.keys(storedEditors)).toHaveLength(2)
 
     localStorage.clearEditors()
-    storedEditors = localStorage.loadEditors()
+    storedEditors = await localStorage.loadEditors()
 
     expect(Object.keys(storedEditors)).toHaveLength(0)
 
@@ -121,7 +121,7 @@ describe('EditorLocalStorage', () => {
       }),
     ])
     localStorage.saveEditors(editors)
-    storedEditors = localStorage.loadEditors()
+    storedEditors = await localStorage.loadEditors()
     expect(storedEditors['editor1'].contents).toBe('content3')
     expect(storedEditors['editor3'].contents).toBe('content4')
   })

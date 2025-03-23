@@ -61,10 +61,11 @@ export default {
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
     for (let source of props.storageSources) {
-      let editors = source.loadEditors()
-      for (let editor of Object.values(editors)) {
-        props.editorStore.addEditor(editor)
-      }
+      source.loadEditors().then((editors) => {
+        for (let editor of Object.values(editors)) {
+          props.editorStore.addEditor(editor)
+        }
+      })
       source.loadConnections().then((connections) => {
         for (let connection of Object.values(connections)) {
           props.connectionStore.addConnection(connection)
@@ -82,9 +83,9 @@ export default {
       })
     }
 
-    const saveEditors = () => {
+    const saveEditors = async () => {
       for (let source of props.storageSources) {
-        source.saveEditors(
+        await source.saveEditors(
           Object.values(props.editorStore.editors).filter(
             (editor) => editor.storage == source.type,
           ),
@@ -92,9 +93,9 @@ export default {
       }
       console.log('Editors saved')
     }
-    const saveConnections = () => {
+    const saveConnections = async () => {
       for (let source of props.storageSources) {
-        source.saveConnections(
+        await source.saveConnections(
           // @ts-ignore
           Object.values(props.connectionStore.connections).filter(
             (connection) => (connection.storage = source.type),
@@ -103,9 +104,9 @@ export default {
       }
       console.log('Connections saved')
     }
-    const saveModels = () => {
+    const saveModels = async () => {
       for (let source of props.storageSources) {
-        source.saveModelConfig(
+        await source.saveModelConfig(
           Object.values(props.modelStore.models).filter((model) => model.storage == source.type),
         )
       }

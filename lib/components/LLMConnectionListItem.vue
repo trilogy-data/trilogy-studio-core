@@ -239,7 +239,7 @@ export default defineComponent({
 
 .connection-customize {
   flex-grow: 1;
-  background-color: var(--input-bg);
+  background-color: var(--sidebar-bg);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   /* padding: 4px 8px; */

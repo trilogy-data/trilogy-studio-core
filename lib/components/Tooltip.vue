@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ inline: 'tooltip-wrapper' }" @mouseover="showTooltip" @mouseout="hideTooltip">
+  <div class="tooltip-wrapper" @mouseover="showTooltip" @mouseout="hideTooltip">
     <slot></slot>
     <transition appear>
       <span v-if="visible" :class="['tooltip', positionClass]">{{ content }}</span>

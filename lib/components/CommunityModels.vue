@@ -1,5 +1,6 @@
 <template>
   <div class="model-page">
+    <div class="model-content">
     <div class="model-title">Community Models</div>
 
     <div class="filters my-4">
@@ -31,21 +32,21 @@
     </div>
 
     <div v-if="filteredFiles.length">
-      <div v-for="file in filteredFiles" :key="file.name">
-        <h3 class="font-semibold">{{ file.name }}</h3>
-        <model-creator
-          :formDefaults="{
+      <div v-for="file in filteredFiles" :key="file.name" class ='model-item'>
+        <div class="font-semibold">{{ file.name }} <span class="text-faint">({{ file.engine }})</span></div>
+        <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]">
+          {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
+        </button>
+        <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
+          <model-creator :formDefaults="{
             importAddress: file.downloadUrl,
             connection: `new-${file.engine}`,
             name: file.name,
-          }"
-          :absolute="false"
-        />
-        <div>
-          <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
+          }" :absolute="false" :visible=creatorIsExpanded[file.name]
+            @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]" />
         </div>
         <div>
-          <span class="text-faint">Engine:</span> <span>{{ file.engine }}</span>
+          <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
         </div>
         <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
           {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{ file.components.length }})
@@ -63,6 +64,7 @@
     <p v-else-if="!filteredFiles.length" class="text-faint mt-4">
       No models match your search criteria.
     </p>
+  </div>
   </div>
 </template>
 
@@ -87,6 +89,7 @@ interface FileData {
 
 const files = ref<FileData[]>([])
 const isExpanded = ref<Record<string, boolean>>({})
+const creatorIsExpanded = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
 const searchQuery = ref('')
 const selectedEngine = ref('')
@@ -185,6 +188,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+
+.font-semibold {
+  font-weight: 500;
+  font-size: var(--big-font-size);
+}
+
 .filter-label {
   padding-right: 4px;
 }
@@ -192,9 +201,16 @@ onMounted(async () => {
 .model-page {
   width: 100%;
   height: 100%;
-  overflow-y: scroll;
   background-color: var(--editor-bg-color);
-  padding: 10px;
+}
+
+.model-content {
+  padding:10px;
+}
+.model-item {
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  margin-bottom: 15px;
 }
 
 .text-loading {
