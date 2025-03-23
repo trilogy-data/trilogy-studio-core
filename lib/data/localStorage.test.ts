@@ -75,7 +75,7 @@ describe('EditorLocalStorage', () => {
       contents: 'test content',
     })
     expect(editor.name).toBe('editor1')
-    localStorage.saveEditor(editor)
+    await localStorage.saveEditor(editor)
     const loadedEditors = await localStorage.loadEditors()
 
     expect(loadedEditors).toHaveProperty('editor1')
@@ -100,18 +100,18 @@ describe('EditorLocalStorage', () => {
       }),
     ]
 
-    localStorage.saveEditors(editors)
+    await localStorage.saveEditors(editors)
     let storedEditors = await localStorage.loadEditors()
 
     expect(Object.keys(storedEditors)).toHaveLength(2)
 
-    localStorage.clearEditors()
+    await localStorage.clearEditors()
     storedEditors = await localStorage.loadEditors()
 
     expect(Object.keys(storedEditors)).toHaveLength(0)
 
     editors[0].setContent('content3')
-    localStorage.saveEditors([
+    await localStorage.saveEditors([
       new Editor({
         name: 'editor3',
         type: 'preql',
@@ -120,7 +120,7 @@ describe('EditorLocalStorage', () => {
         contents: 'content4',
       }),
     ])
-    localStorage.saveEditors(editors)
+    await localStorage.saveEditors(editors)
     storedEditors = await localStorage.loadEditors()
     expect(storedEditors['editor1'].contents).toBe('content3')
     expect(storedEditors['editor3'].contents).toBe('content4')
@@ -142,7 +142,7 @@ describe('EditorLocalStorage', () => {
     expect(loadedEditors).not.toHaveProperty('editor1')
   })
 
-  it('should check if an editor exists', () => {
+  it('should check if an editor exists', async () => {
     const editor: Editor = new Editor({
       name: 'editor1',
       type: 'preql',
@@ -151,10 +151,10 @@ describe('EditorLocalStorage', () => {
       contents: 'test content',
     })
 
-    localStorage.saveEditor(editor)
+    await localStorage.saveEditor(editor)
 
-    expect(localStorage.hasEditor('editor1')).toBe(true)
-    expect(localStorage.hasEditor('editor2')).toBe(false)
+    expect(await localStorage.hasEditor('editor1')).toBe(true)
+    expect(await localStorage.hasEditor('editor2')).toBe(false)
   })
 
   it('should save and load connections', () => {
@@ -217,20 +217,20 @@ describe('EditorLocalStorage', () => {
     expect(loadedModelConfig['config2'].name).toBe('config2')
   })
 
-  it('should clear model configs', () => {
+  it('should clear model configs', async () => {
     const modelConfig = [
       new ModelConfig({ name: 'config1', storage: 'local', description: '', sources: [] }),
     ]
 
-    localStorage.saveModelConfig(modelConfig)
-    localStorage.clearModelConfig()
+    await localStorage.saveModelConfig(modelConfig)
+    await localStorage.clearModelConfig()
 
     localStorage.loadModelConfig().then((loadedModelConfig) => {
       expect(Object.keys(loadedModelConfig)).toHaveLength(0)
     })
   })
 
-  it('should save and load LLM connections', () => {
+  it('should save and load LLM connections', async () => {
     const connections = {
       conn1: new MockLLMProvider('conn1', 'mock-api-key', 'gpt-4'),
       conn2: new MockLLMProvider('conn2', 'mock-api-key', 'claude-2'),
