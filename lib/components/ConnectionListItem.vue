@@ -89,6 +89,7 @@
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
+      <editor-creator-icon :connection="item.connection.name" />
       <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
       <connection-status-icon :connection="item.connection" />
       <tooltip content="Delete Connection" position="left">
@@ -108,6 +109,7 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import { BigQueryOauthConnection, MotherDuckConnection, SnowflakeConnection } from '../connections'
 import { KeySeparator, rsplit } from '../data/constants'
+import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 // Define prop types
 interface ConnectionListItemProps {
@@ -196,24 +198,6 @@ const toggleSaveCredential = (connection: any) => {
   color: var(--text);
 }
 
-.customize-input {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  outline: none;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  padding: 2px 4px;
-  font-size: var(--button-font-size);
-  width: 180px;
-  margin-right: 4px;
-  border: 1px solid var(--border);
-  background-color: var(--button-bg);
-  color: var(--text);
-  height: var(--sidebar-list-item-height);
-}
 
 input,
 input:is([type='text'], [type='password'], [type='email'], [type='number']) {

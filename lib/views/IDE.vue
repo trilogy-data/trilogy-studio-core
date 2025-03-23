@@ -2,54 +2,28 @@
   <div class="main">
     <sidebar-layout>
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey"
-          @connection-key-selected="setActiveConnectionKey"
-          @llm-key-selected="setActiveLLMConnectionKey"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey"
-          :activeConnectionKey="activeConnectionKey"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey" @llm-key-selected="setActiveLLMConnectionKey"
+          :active="activeScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
+          :activeModelKey="activeModelKey" :activeConnectionKey="activeConnectionKey" />
       </template>
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
-            <editor
-              v-if="activeEditorData.type == 'preql'"
-              context="main-trilogy"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
-            <editor
-              v-else
-              context="main-sql"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
+            <editor v-else context="main-sql" :editorName="activeEditor" @save-editors="saveEditorsCall" />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <results-container
-              v-else-if="
-                (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) ||
-                activeEditorData.error
-              "
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :containerHeight="containerHeight"
-              :type="activeEditorData.type"
-              :error="activeEditorData.error || undefined"
-            />
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
+            <results-container v-else-if="
+              (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) ||
+              activeEditorData.error
+            " :results="activeEditorData.results" :generatedSql="activeEditorData.generated_sql || undefined"
+              :containerHeight="containerHeight" :type="activeEditorData.type"
+              :error="activeEditorData.error || undefined" />
             <hint-component v-else />
           </template>
         </vertical-split-layout>
@@ -77,11 +51,8 @@
         <LLMView />
       </template>
       <template v-else>
-        <welcome-page
-          @screen-selected="setActiveScreen"
-          @demo-started="startDemo"
-          @documentation-key-selected="setActiveDocumentationKey"
-        />
+        <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo"
+          @documentation-key-selected="setActiveDocumentationKey" />
       </template>
     </sidebar-layout>
   </div>
@@ -183,6 +154,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject } from 'vue'
+import useScreenNavigation from './useScreenNavigation'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -190,14 +162,10 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 export default {
   name: 'IDEComponent',
   data() {
-    let screen = getDefaultValueFromHash('screen')
-    let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
     let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
     let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
-      activeEditor: activeEditor ? activeEditor : '',
-      activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
@@ -247,12 +215,13 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
     let editor = getDefaultValueFromHash('editor')
     if (editor) {
       editorStore.activeEditorName = editor
     }
+    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor } = useScreenNavigation();
     return {
       connectionStore,
       editorStore,
@@ -261,18 +230,14 @@ export default {
       saveConnections,
       saveModels,
       modelStore,
+      activeScreen,
+      setActiveScreen,
+      activeEditor,
+      setActiveEditor,
     }
   },
   methods: {
-    setActiveEditor(editor: string) {
-      this.activeEditor = editor
-      this.editorStore.activeEditorName = editor
-      pushHashToUrl('editor', editor)
-    },
-    setActiveScreen(screen: string) {
-      pushHashToUrl('screen', screen)
-      this.activeScreen = screen
-    },
+
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey

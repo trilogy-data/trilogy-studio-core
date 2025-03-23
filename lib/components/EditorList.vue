@@ -62,8 +62,8 @@
       <template v-if="item.type === 'creator'">
         <editor-creator-inline
           :connection="item.label"
-          :visible="connectionCreatorVisible[item.label]"
-          @close="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]"
+          :visible="editorCreatorVisible[item.label]"
+          @close="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
         />
       </template>
       <span v-else class="truncate-text">
@@ -85,10 +85,10 @@
         <span class="tag-container">
           <button
             @click.stop="
-              connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]
+              editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]
             "
           >
-            {{ connectionCreatorVisible[item.label] ? 'Hide' : 'New' }}
+            {{ editorCreatorVisible[item.label] ? 'Hide' : 'New' }}
           </button>
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
@@ -148,7 +148,7 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
-    const connectionCreatorVisible = ref<Record<string, boolean>>({})
+    const editorCreatorVisible = ref<Record<string, boolean>>({})
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]
     }
@@ -169,7 +169,7 @@ export default {
         return 'disabled'
       }
     }
-    //one time set initial collapse vlaues
+
     onMounted(() => {
       Object.values(editorStore.editors).forEach((item) => {
         let storageKey = `s-${item.storage}`
@@ -194,13 +194,14 @@ export default {
         }
       })
     })
+    
 
     const contentList = computed(() => {
       return buildEditorTree(
         Object.values(editorStore.editors),
         collapsed.value,
         hiddenTags.value,
-        connectionCreatorVisible.value,
+        editorCreatorVisible.value,
       )
     })
 
@@ -217,7 +218,7 @@ export default {
       trilogyIcon,
       connectionStateToStatus,
       creatorVisible,
-      connectionCreatorVisible,
+      editorCreatorVisible,
     }
   },
   data() {

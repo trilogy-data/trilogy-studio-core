@@ -57,7 +57,11 @@ const handleRefresh = async () => {
 <style scoped>
 .refresh-button {
   height: var(--sidebar-list-item-height);
-  min-height: var(--sidebar-list-item-height);
+  width: var(--sidebar-list-item-height);
+  border-radius: 50%;
+  display: flex;  
+  align-items: center;  
+  justify-content: center; 
 }
 
 .refresh-icon {
