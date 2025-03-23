@@ -2,13 +2,17 @@
   <sidebar-list title="Models">
     <template #actions>
       <div class="button-container">
-        <model-creator />
-        <div>
-          <loading-button :action="saveModels" :key-combination="['control', 's']">
-            Save
-          </loading-button>
-        </div>
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
+        >
+          {{ creatorVisible ? 'Hide' : 'New' }}
+        </button>
+        <loading-button :action="saveModels" :key-combination="['control', 's']">
+          Save
+        </loading-button>
       </div>
+      <model-creator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
 
     <div
@@ -25,7 +29,10 @@
           class="sidebar-padding"
         ></div>
 
-        <span v-if="['model', 'source', 'datasource'].includes(item.type)">
+        <span
+          @click.stop="handleClick(item.id, true)"
+          v-if="['model', 'source', 'datasource'].includes(item.type)"
+        >
           <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
           <i v-else class="mdi mdi-menu-right"></i>
         </span>
@@ -72,13 +79,20 @@ import { getDefaultValueFromHash } from '../stores/urlStore'
 
 export default {
   name: 'ModelList',
-  props: { activeModelKey: String },
+  props: {
+    activeModelKey: String,
+    testTag: {
+      type: String,
+      default: '',
+    },
+  },
   setup() {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
     const editorStore = inject<EditorStoreType>('editorStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
 
+    const creatorVisible = ref(false)
     const current = getDefaultValueFromHash('modelKey') || ''
     const currentType = current.split(KeySeparator)[0]
     let currentModel = ''
@@ -233,6 +247,7 @@ export default {
     }
 
     return {
+      creatorVisible,
       flatList,
       toggleCollapse,
       collapsed,
@@ -242,8 +257,11 @@ export default {
     }
   },
   methods: {
-    handleClick(id: string) {
+    handleClick(id: string, expandOnly: boolean = false) {
       this.toggleCollapse(id)
+      if (expandOnly) {
+        return
+      }
       this.$emit('model-key-selected', id)
     },
   },
@@ -273,8 +291,8 @@ export default {
 }
 
 .trilogy-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .purpose-key {

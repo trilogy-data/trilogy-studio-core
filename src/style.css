@@ -35,6 +35,7 @@
   --result-window-font: #CCCCCC;
 
   --border: #898989;
+  --border-color: var(--border);
   --border-light: #4b4b4b;
   --button-bg: #4D4D4D;
   --button-mouseover: #3C3C3C;
@@ -83,9 +84,14 @@
   --sidebar-list-item-height: 22px;
   --sidebar-list-item-font-size: 13px;
   --sidebar-sub-item-height: 18px;
-  --font-size: 14px;
   --sidebar-sub-item-font-size: 12px;
+
+  --font-size: 14px;
+  --big-font-size: 18px;
+  --small-font-size: 12px;
   --button-font-size: .70em;
+
+  --icon-size: 12px;
 
   --chart-control-height:28px;
 }
@@ -96,10 +102,16 @@
     --sidebar-icon-width: 100px;
     --sidebar-list-item-height: 40px;
     --sidebar-sub-item-height: 24px;
-    --font-size: 16px;
     --sidebar-list-item-font-size: 18px;
     --sidebar-sub-item-font-size: 14px;
+
+
+    --font-size: 16px;
+    --big-font-size: 20px;
+    --small-font-size: 14px;
     --button-font-size: 1.1em;
+
+    --icon-size: 22px;
 
     --chart-control-height: 32px;
   }
@@ -242,6 +254,13 @@ button:focus-visible {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* CREATORS */
+.creator-container {
+  border: 1px solid var(--border-color);
+  padding: 5px;
+  margin-top: 5px;
 }
 
 /* DIALOGUE */

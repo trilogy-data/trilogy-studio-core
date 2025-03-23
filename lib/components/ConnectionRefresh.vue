@@ -1,5 +1,9 @@
 <template>
-  <loading-button class="refresh-button" :action="handleRefresh">
+  <loading-button
+    class="refresh-button"
+    :action="handleRefresh"
+    :data-testid="`refresh-connection-${connection.name}`"
+  >
     <i :class="buttonIcon" class="refresh-icon"></i>
   </loading-button>
 </template>

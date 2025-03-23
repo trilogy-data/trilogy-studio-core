@@ -1,9 +1,11 @@
 <template>
   <div class="sidebar-list">
     <h3 v-if="!isMobile" class="font-sans mb-1">{{ title }}</h3>
-    <slot name="actions"> </slot>
+    <div class="action-slot">
+      <slot name="actions"> </slot>
+    </div>
     <div>
-      <slot></slot>
+      <slot :isMobile="isMobile"></slot>
     </div>
   </div>
 </template>
@@ -15,6 +17,11 @@
   padding-right: 4px;
   /* height: 100%; */
 }
+
+.action-slot {
+  padding-bottom: 5px;
+}
+
 .mb-1 {
   font-weight: 400;
   font-size: 14px;

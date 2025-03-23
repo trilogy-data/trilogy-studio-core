@@ -2,13 +2,20 @@
   <sidebar-list title="LLM Connections">
     <template #actions>
       <div class="button-container">
-        <LLMConnectionCreator />
-        <div>
-          <loading-button :action="saveConnections" :key-combination="['control', 's']"
-            >Save</loading-button
-          >
-        </div>
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="
+            testTag ? `llm-connection-creator-add-${testTag}` : 'llm-connection-creator-add'
+          "
+        >
+          {{ creatorVisible ? 'Hide' : 'New' }}
+        </button>
+
+        <loading-button :action="saveConnections" :key-combination="['control', 's']"
+          >Save</loading-button
+        >
       </div>
+      <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
     <LLMConnectionListItem
       v-for="item in contentList"
@@ -45,6 +52,11 @@ export default {
       default: '',
       optional: true,
     },
+    testTag: {
+      type: String,
+      default: '',
+      optional: true,
+    },
   },
   setup(_, { emit }) {
     const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
@@ -54,7 +66,7 @@ export default {
     }
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
-
+    const creatorVisible = ref(false)
     const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       if (apiKey) {
         // Replace the old connection
@@ -243,6 +255,7 @@ export default {
       updateModel,
       refreshId,
       rightSplit,
+      creatorVisible,
     }
   },
   components: {

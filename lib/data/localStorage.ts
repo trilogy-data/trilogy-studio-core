@@ -28,14 +28,14 @@ export default class LocalStorage extends AbstractStorage {
     this.type = 'local'
   }
 
-  saveEditor(editor: EditorInterface): void {
-    const editors = this.loadEditors()
+  async saveEditor(editor: EditorInterface): Promise<void> {
+    const editors = await this.loadEditors()
     editors[editor.name] = editor
     this.saveEditors(Object.values(editors))
   }
 
-  saveEditors(editorsList: EditorInterface[]): void {
-    const editors = this.loadEditors()
+  async saveEditors(editorsList: EditorInterface[]): Promise<void> {
+    const editors = await this.loadEditors()
     // override editors we've changed
     editorsList.forEach((editor) => {
       if (editor.changed) {
@@ -49,7 +49,7 @@ export default class LocalStorage extends AbstractStorage {
     )
   }
 
-  loadEditors(): Record<string, EditorInterface> {
+  async loadEditors(): Promise<Record<string, EditorInterface>> {
     const storedData = localStorage.getItem(this.editorStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
     // map the raw array to a Record<string, EditorInterface> with the editorInterface wrapped in reactive
@@ -60,8 +60,8 @@ export default class LocalStorage extends AbstractStorage {
     }, {})
   }
 
-  deleteEditor(name: string): void {
-    const editors = this.loadEditors()
+  async deleteEditor(name: string): Promise<void> {
+    const editors = await this.loadEditors()
     if (editors[name]) {
       delete editors[name]
       localStorage.setItem(
@@ -71,19 +71,19 @@ export default class LocalStorage extends AbstractStorage {
     }
   }
 
-  clearEditors(): void {
+  async clearEditors(): Promise<void> {
     localStorage.removeItem(this.editorStorageKey)
   }
 
-  hasEditor(name: string): boolean {
-    const editors = this.loadEditors()
+  async hasEditor(name: string): Promise<boolean> {
+    const editors = await this.loadEditors()
     // any editor has the property name == name
     return Object.values(editors).some((editor) => editor.name === name)
   }
 
-  saveConnections(
+  async saveConnections(
     connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>,
-  ): void {
+  ): Promise<void> {
     localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
   }
 
@@ -173,7 +173,7 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.setItem(this.userSettingsStorageKey, JSON.stringify(settings))
   }
 
-  saveLLMConnections(connections: Array<LLMProvider>): void {
+  async saveLLMConnections(connections: Array<LLMProvider>): Promise<void> {
     localStorage.setItem(
       this.llmConnectionStorageKey,
       JSON.stringify(connections.map((connection) => connection.toJSON())),

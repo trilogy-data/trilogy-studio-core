@@ -1,5 +1,5 @@
 <template>
-  <IDE v-if="currentLayout === 'Desktop'" />
+  <IDE v-if="!isMobile" />
   <MobileIDE v-else />
 </template>
 
@@ -10,7 +10,7 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import QueryResolver from './resolver'
-import { provide, computed } from 'vue'
+import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 import { IDE, MobileIDE } from '../views'
@@ -60,11 +60,13 @@ export default {
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
+    const windowWidth = ref(window.innerWidth)
     for (let source of props.storageSources) {
-      let editors = source.loadEditors()
-      for (let editor of Object.values(editors)) {
-        props.editorStore.addEditor(editor)
-      }
+      source.loadEditors().then((editors) => {
+        for (let editor of Object.values(editors)) {
+          props.editorStore.addEditor(editor)
+        }
+      })
       source.loadConnections().then((connections) => {
         for (let connection of Object.values(connections)) {
           props.connectionStore.addConnection(connection)
@@ -82,9 +84,9 @@ export default {
       })
     }
 
-    const saveEditors = () => {
+    const saveEditors = async () => {
       for (let source of props.storageSources) {
-        source.saveEditors(
+        await source.saveEditors(
           Object.values(props.editorStore.editors).filter(
             (editor) => editor.storage == source.type,
           ),
@@ -92,9 +94,9 @@ export default {
       }
       console.log('Editors saved')
     }
-    const saveConnections = () => {
+    const saveConnections = async () => {
       for (let source of props.storageSources) {
-        source.saveConnections(
+        await source.saveConnections(
           // @ts-ignore
           Object.values(props.connectionStore.connections).filter(
             (connection) => (connection.storage = source.type),
@@ -103,9 +105,9 @@ export default {
       }
       console.log('Connections saved')
     }
-    const saveModels = () => {
+    const saveModels = async () => {
       for (let source of props.storageSources) {
-        source.saveModelConfig(
+        await source.saveModelConfig(
           Object.values(props.modelStore.models).filter((model) => model.storage == source.type),
         )
       }
@@ -132,29 +134,21 @@ export default {
     provide('saveModels', saveModels)
     provide('saveLLMConnections', saveLLMConnections)
     provide('saveAll', saveAll)
-    const isMobile = computed(() => window.innerWidth <= 768)
-    provide('isMobile', isMobile)
-  },
-  data() {
-    return {
-      windowWidth: window.innerWidth,
+    const isMobile = computed(() => windowWidth.value <= 768)
+    const handleResize = () => {
+      windowWidth.value = window.innerWidth
     }
-  },
-  computed: {
-    currentLayout(): string {
-      return this.windowWidth > 768 ? 'Desktop' : 'Mobile'
-    },
+    provide('isMobile', isMobile)
+    return {
+      isMobile,
+      handleResize,
+    }
   },
   mounted() {
     window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
-  },
-  methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth
-    },
   },
 }
 </script>

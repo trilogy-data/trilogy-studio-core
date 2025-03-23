@@ -2,6 +2,9 @@
   <div v-if="visible" class="creator-container">
     <form @submit.prevent="submitEditorCreation">
       <div class="form-row">
+        <tooltip position="right" content="Editors require unique names" :inline="true">
+          <i class="mdi mdi-information-outline"></i>
+        </tooltip>
         <label for="editor-name">Name</label>
         <input
           :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'"
@@ -12,9 +15,11 @@
         />
       </div>
       <div class="form-row">
-        <tooltip position="bottom" content="Use SQL editors to run raw SQL.">
-          <label for="editor-type">Type</label>
+        <tooltip position="right" content="Use SQL editors to run raw SQL." :inline="true">
+          <i class="mdi mdi-information-outline"></i>
         </tooltip>
+        <label for="editor-type">Type</label>
+
         <select
           :data-testid="testTag ? `editor-creator-type-${testTag}` : 'editor-creator-type'"
           v-model="editorDetails.type"
@@ -26,6 +31,13 @@
         </select>
       </div>
       <div v-if="!connection" class="form-row">
+        <tooltip
+          position="right"
+          content="Editors are associated with a connection to run queries."
+          :inline="true"
+        >
+          <i class="mdi mdi-information-outline"></i>
+        </tooltip>
         <label for="connection-name">Connection</label>
         <select
           :data-testid="
@@ -59,12 +71,6 @@
 </template>
 
 <style scoped>
-.creator-container {
-  border: 1px solid var(--border-color);
-  padding: 5px;
-  margin-top: 5px;
-}
-
 .form-row {
   display: flex;
   align-items: center;
@@ -74,14 +80,14 @@
 .form-row label {
   flex: 0 0 80px;
   /* Fixed width for labels */
-  font-size: var(--button-font-size);
+  font-size: var(--small-font-size);
   margin-right: 10px;
 }
 
-.form-row input,
+.form-row div .form-row input,
 .form-row select {
   flex: 1;
-  font-size: var(--button-font-size);
+  font-size: var(--small-font-size);
   border: 1px solid var(--border-color);
   border-radius: 0;
   height: var(--sidebar-sub-item-height);
@@ -102,10 +108,6 @@
 option {
   font-size: 12px;
   font-weight: 300;
-}
-
-.relative-parent {
-  position: relative;
 }
 </style>
 

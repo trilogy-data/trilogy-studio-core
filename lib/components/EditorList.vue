@@ -28,7 +28,6 @@
         }}{{ tag.slice(1) }} Editors
       </span>
     </template>
-
     <div
       v-for="item in contentList"
       :key="item.key"
@@ -40,7 +39,7 @@
       @click="clickAction(item.type, item.label, item.key)"
     >
       <div
-        v-if="!['creator'].includes(item.type)"
+        v-if="!['creator'].includes(item.type) && !isMobile"
         v-for="_ in item.indent"
         class="sidebar-padding"
       ></div>
@@ -141,6 +140,7 @@ export default {
   setup() {
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const isMobile = inject<boolean>('isMobile', false)
     if (!editorStore || !connectionStore) {
       throw new Error('Editor store is not provided!')
     }
@@ -205,6 +205,7 @@ export default {
     })
 
     return {
+      isMobile,
       connectionStore,
       editorStore,
       EditorTag,
@@ -287,8 +288,8 @@ export default {
 }
 
 .trilogy-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .active-editor {

@@ -39,12 +39,16 @@
       <button class="button" @click="remove(index)">Delete</button>
     </div>
 
+    <!-- <div>
+      {{config.description}}
+    </div> -->
+
     <div v-if="config.parseError" class="parse-error">
       <error-message>Error fetching parse results: {{ config.parseError }}</error-message>
     </div>
 
     <div v-else>
-      <h3 class="parse-results">Model Sources ({{ config.sources.length }})</h3>
+      <div class="parse-results">Model Sources ({{ config.sources.length }})</div>
       <div class="model-source" v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
         <div>
           <div class="source-title">{{ source.alias }} ({{ source.editor }})</div>
@@ -222,6 +226,8 @@
 
 .parse-results {
   margin-top: 16px;
+  font-weight: 500;
+  font-size: var(--big-font-size);
 }
 
 .toggle-concepts {
@@ -265,6 +271,23 @@ select:focus {
   border-color: #4b4b4b;
   /* Dark gray border on focus */
   outline: none;
+}
+
+.model-display {
+  /* display: grid; */
+  /* grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); */
+  gap: 24px;
+  padding: 20px;
+  margin: 0 auto;
+  background-color: var(--query-window-bg);
+  height: 100%;
+}
+
+/* device specific */
+@media screen and (max-width: 768px) {
+  .model-display {
+    padding: 0px;
+  }
 }
 </style>
 

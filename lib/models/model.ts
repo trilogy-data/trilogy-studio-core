@@ -321,21 +321,25 @@ export class ModelConfig {
   // parseResults: ModelParseResults | null = null
   parseError: string | null = null
   changed: boolean = true
+  description: string | null = null
 
   constructor({
     name,
     sources,
     storage,
+    description,
   }: {
     name: string
     sources: ModelSource[]
     storage: string
+    description: string | undefined
   }) {
     this.name = name
     this.sources = sources
     this.storage = storage
     // this.parseResults = parseResults
     this.changed = true
+    this.description = description || null
   }
 
   setParseResults(parseResults: ModelParseResults) {
@@ -385,6 +389,7 @@ export class ModelConfig {
       name: data.name,
       storage: data.storage,
       // map sources to fromJSON
+      description: data.description,
 
       sources: data.sources.map((source: any) => ModelSource.fromJSON(source)),
       // parseResults: data.parseResults ? ModelParseResults.fromJSON(data.parseResults) : null,
@@ -397,6 +402,7 @@ export class ModelConfig {
     return {
       name: this.name,
       storage: this.storage,
+      description: this.description,
       sources: this.sources.map((source) => source.toJSON()),
     }
   }

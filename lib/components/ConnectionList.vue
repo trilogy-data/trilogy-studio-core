@@ -2,13 +2,20 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <connection-creator />
-        <div>
-          <loading-button :action="saveConnections" :key-combination="['control', 's']"
-            >Save</loading-button
-          >
-        </div>
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
+        >
+          {{ creatorVisible ? 'Hide' : 'New' }}
+        </button>
+        <loading-button :action="saveConnections" :key-combination="['control', 's']"
+          >Save</loading-button
+        >
       </div>
+      <connection-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+      />
     </template>
     <connection-list-item
       v-for="item in contentList"
@@ -42,7 +49,7 @@
 <script lang="ts">
 import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
-import ConnectionCreator from './ConnectionCreator.vue'
+import ConnectionCreatorInline from './ConnectionCreatorInline.vue'
 import LoadingButton from './LoadingButton.vue'
 import StatusIcon from './StatusIcon.vue'
 import Tooltip from './Tooltip.vue'
@@ -68,6 +75,10 @@ export default {
       default: '',
       optional: true,
     },
+    testTag: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -86,6 +97,7 @@ export default {
     const connectionModelVisible = ref<Record<string, boolean>>({})
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
+    const creatorVisible = ref(false)
 
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       if (connection.type === 'motherduck') {
@@ -256,11 +268,12 @@ export default {
       updateBigqueryProject,
       refreshId,
       rightSplit,
+      creatorVisible,
     }
   },
   components: {
     SidebarList,
-    ConnectionCreator,
+    ConnectionCreatorInline,
     LoadingButton,
     StatusIcon,
     Tooltip,

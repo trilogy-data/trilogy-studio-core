@@ -6,20 +6,23 @@
       </div>
       <h1>Welcome to Trilogy Studio</h1>
       <p>We're glad you're here!</p>
-      <p>
-        To get started: drop right into a demo editor, create a blank editor, or dive into the docs.
-      </p>
-      <div class="buttons">
-        <button @click="startDemo()" class="btn btn-secondary">
-          <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>
-        </button>
-        <editor-creator>
-          <template v-slot="{ onClick }">
-            <button @click="onClick" class="btn btn-primary">New Editor</button>
-          </template>
-        </editor-creator>
+      <template v-if="!showCreator">
+        <p>
+          To get started: drop right into a demo editor, create a blank editor, or dive into the
+          docs.
+        </p>
+        <div class="buttons">
+          <button @click="startDemo()" class="btn btn-secondary">
+            <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>
+          </button>
+          <button @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
 
-        <button @click="tutorial()" class="btn btn-tertiary">Docs and Tutorial</button>
+          <button @click="tutorial()" class="btn btn-tertiary">Docs and Tutorial</button>
+        </div>
+      </template>
+      <div v-else>
+        <editor-creator-inline :visible="showCreator" @close="showCreator = !showCreator">
+        </editor-creator-inline>
       </div>
     </div>
   </div>
@@ -28,9 +31,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
-import EditorCreator from './EditorCreator.vue'
+import EditorCreatorInline from './EditorCreatorInline.vue'
 
 const demoLoading = ref(false)
+const showCreator = ref(false)
 const emit = defineEmits(['demo-started', 'screen-selected', 'documentation-key-selected'])
 const startDemo = () => {
   demoLoading.value = true

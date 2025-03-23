@@ -1,12 +1,12 @@
 <template>
-  <div class="relative-parent">
-    <button @click="createModel" v-if="isPopupControl">New</button>
-    <loading-button v-else :action="createModel">{{ text }}</loading-button>
-    <div v-if="visible" :class="{ 'absolute-form': absolute, 'fixed-form': !absolute }">
-      <form @submit.prevent="submitModelCreation">
-        <div>
+  <div v-if="visible" class="creator-container">
+    <form @submit.prevent="submitModelCreation">
+      <div>
+        <div class="form-row">
           <label for="model-name">Name</label>
           <input type="text" v-model="modelDetails.name" id="model-name" required />
+        </div>
+        <div class="form-row">
           <label for="model-import">Assign To Connection</label>
           <select
             v-model="modelDetails.connection"
@@ -25,27 +25,29 @@
             <option value="new-motherduck">New MotherDuck</option>
             <option value="new-bigquery-oauth">New Bigquery Oauth</option>
           </select>
-          <div v-if="modelDetails.connection === 'new-motherduck'">
-            <label for="md-token">MotherDuck Token</label>
-            <input
-              type="text"
-              v-model="modelDetails.options.mdToken"
-              id="md-token"
-              placeholder="MotherDuck Token"
-              required
-            />
-          </div>
+        </div>
+        <div v-if="modelDetails.connection === 'new-motherduck'" class="form-row">
+          <label for="md-token">MotherDuck Token</label>
+          <input
+            type="text"
+            v-model="modelDetails.options.mdToken"
+            id="md-token"
+            placeholder="MotherDuck Token"
+            required
+          />
+        </div>
 
-          <div v-if="modelDetails.connection === 'new-bigquery-oauth'">
-            <label for="project-id">BigQuery Project ID</label>
-            <input
-              type="text"
-              v-model="modelDetails.options.projectId"
-              id="project-id"
-              placeholder="Billing Project ID"
-              required
-            />
-          </div>
+        <div v-if="modelDetails.connection === 'new-bigquery-oauth'" class="form-row">
+          <label for="project-id">BigQuery Project ID</label>
+          <input
+            type="text"
+            v-model="modelDetails.options.projectId"
+            id="project-id"
+            placeholder="Billing Project ID"
+            required
+          />
+        </div>
+        <div class="form-row">
           <label for="model-import">Import From Address</label>
           <input
             placeholder="Optional. Import github definition."
@@ -54,44 +56,53 @@
             id="model-import"
           />
         </div>
-        <button type="submit">Submit</button>
-        <button type="button" @click="visible = !visible">Cancel</button>
-      </form>
-    </div>
+      </div>
+      <div class="button-row">
+        <button data-testid="connection-creator-submit" type="submit">Submit</button>
+        <button type="button" @click="close()">Cancel</button>
+      </div>
+    </form>
   </div>
 </template>
 
 <style scoped>
-.relative-parent {
-  position: relative;
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
-input,
-select {
-  font-size: 12px;
-  border: 1px solid #ccc;
-  /* Light gray border for inputs */
+.form-row label {
+  flex: 0 0 80px;
+  /* Fixed width for labels */
+  font-size: var(--small-font-size);
+  margin-right: 10px;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+  font-size: var(--small-font-size);
+  border: 1px solid var(--border-color);
   border-radius: 0;
-  /* Sharp corners */
-  width: 95%;
-  /* Full width of the container */
+  height: var(--sidebar-sub-item-height);
 }
 
-input:focus,
-select:focus {
-  border-color: #4b4b4b;
-  /* Dark gray border on focus */
+.form-row input:focus,
+.form-row select:focus {
+  border-color: var(--border-color);
   outline: none;
+}
+
+.button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 option {
   font-size: 12px;
   font-weight: 300;
-}
-
-label {
-  font-weight: 300;
-  /* Dark gray text */
 }
 </style>
 <script lang="ts">
@@ -153,13 +164,22 @@ export default defineComponent({
       required: false,
       default: () => ({}),
     },
-    absolute: {
+    visible: {
       type: Boolean,
+      required: true,
+    },
+    testTag: {
+      type: String,
       required: false,
-      default: true,
+      default: '',
     },
   },
-  setup(props) {
+  methods: {
+    close() {
+      this.$emit('close')
+    },
+  },
+  setup(props, { emit }) {
     // display text
     const text = props.formDefaults.importAddress ? 'Import' : 'New'
     const isPopupControl = props.formDefaults.importAddress ? false : true
@@ -182,12 +202,9 @@ export default defineComponent({
     }
 
     let connections = connectionStore.connections
-    //visible
-    let visible = ref(false)
 
     // Function to create the editor by collecting details from the form
     const createModel = () => {
-      visible.value = !visible.value
       modelDetails.value.name = props.formDefaults.name || ''
       modelDetails.value.importAddress = props.formDefaults.importAddress
       modelDetails.value.connection = props.formDefaults.connection || ''
@@ -241,12 +258,11 @@ export default defineComponent({
           })
         }
         await saveAll()
-        visible.value = false
+        emit('close')
       }
     }
 
     return {
-      visible,
       modelDetails,
       connections,
       createModel,
