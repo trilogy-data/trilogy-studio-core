@@ -1,5 +1,5 @@
 <template>
-  <status-icon :message="statusMessage" :status="statusClass" />
+  <status-icon :message="statusMessage" :status="statusClass" :testName="connection.name" />
 </template>
 
 <script setup lang="ts">
@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import StatusIcon from './StatusIcon.vue'
 interface StatusIconProps {
   connection: {
+    name: string
     connected: boolean
     error?: string
   }
@@ -27,28 +28,4 @@ const statusMessage = computed(() => {
 })
 </script>
 
-<style scoped>
-.status-icon-container {
-  display: flex;
-  align-items: center;
-  margin-left: 5px;
-}
-
-.status-icon {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-connected {
-  background-color: green;
-}
-
-.status-disconnected {
-  background-color: gray;
-}
-
-.status-error {
-  background-color: red;
-}
-</style>
+<style scoped></style>

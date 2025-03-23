@@ -1,6 +1,11 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
-import { BigQueryOauthConnection, DuckDBConnection, MotherDuckConnection, SnowflakeConnection } from '../connections'
+import {
+  BigQueryOauthConnection,
+  DuckDBConnection,
+  MotherDuckConnection,
+  SnowflakeConnection,
+} from '../connections'
 import { LLMProvider } from '../llm'
 export default abstract class AbstractStorage {
   public type: string
@@ -16,10 +21,15 @@ export default abstract class AbstractStorage {
   abstract clearEditors(): Promise<void>
 
   abstract saveConnections(
-    connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection>,
+    connections: Array<
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection
+    >,
   ): Promise<void>
   abstract loadConnections(): Promise<
-    Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection>
+    Record<
+      string,
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection
+    >
   >
   abstract deleteConnection(name: string): Promise<void>
 

@@ -114,6 +114,7 @@ export default async function setupDemo(
         ModelSource.fromJSON({ alias: e.name, editor: e.name, concepts: [], datasources: [] }),
       ),
     storage: 'local',
+    description: 'A demo model.',
   })
 
   modelStore.addModelConfig(mc)

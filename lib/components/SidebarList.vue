@@ -19,7 +19,7 @@
 }
 
 .action-slot {
-  padding-bottom:5px;
+  padding-bottom: 5px;
 }
 
 .mb-1 {

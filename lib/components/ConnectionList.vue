@@ -2,19 +2,35 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+        <loading-button :action="saveConnections" :key-combination="['control', 's']"
+          >Save</loading-button
+        >
       </div>
-      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
+      <connection-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+      />
     </template>
-    <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey" @toggle="toggleCollapse" @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey" @toggle-save-credential="toggleSaveCredential"
-      :delete-connection="deleteConnection" />
+    <connection-list-item
+      v-for="item in contentList"
+      :key="item.id"
+      :item="item"
+      :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === activeConnectionKey"
+      @toggle="toggleCollapse"
+      @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken"
+      @updateBigqueryProject="updateBigqueryProject"
+      @update-snowflake-private-key="updateSnowflakePrivateKey"
+      @toggle-save-credential="toggleSaveCredential"
+      :delete-connection="deleteConnection"
+    />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -319,10 +335,12 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

@@ -26,16 +26,6 @@
   height: 400px;
 }
 
-.model-display {
-  /* display: grid; */
-  /* grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); */
-  gap: 24px;
-  padding: 20px;
-  margin: 0 auto;
-  background-color: var(--query-window-bg);
-  height: 100%;
-}
-
 .editor-display {
   height: 100%;
 }

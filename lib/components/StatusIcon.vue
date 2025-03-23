@@ -4,7 +4,7 @@ import Tooltip from './Tooltip.vue'
 
 export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled'
 
-const props = defineProps<{ status: Status; message?: string }>()
+const props = defineProps<{ status: Status; message?: string; testName?: string }>()
 
 const statusClasses = computed(() => {
   return (
@@ -21,9 +21,14 @@ const statusClasses = computed(() => {
 
 <template>
   <tooltip class="indicator-container" v-if="message" :content="message" position="left">
-    <span class="indicator" :class="statusClasses"></span>
+    <span class="indicator" :class="statusClasses" :data-testid="`status-icon-${testName}`"></span>
   </tooltip>
-  <span v-else class="indicator" :class="statusClasses"></span>
+  <span
+    v-else
+    class="indicator"
+    :class="statusClasses"
+    :data-testid="`status-icon-${testName}`"
+  ></span>
 </template>
 
 <style scoped>

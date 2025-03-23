@@ -288,8 +288,8 @@ export default {
 }
 
 .trilogy-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .active-editor {

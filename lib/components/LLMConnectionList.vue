@@ -2,19 +2,33 @@
   <sidebar-list title="LLM Connections">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `llm-connection-creator-add-${testTag}` : 'llm-connection-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="
+            testTag ? `llm-connection-creator-add-${testTag}` : 'llm-connection-creator-add'
+          "
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
 
-        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+        <loading-button :action="saveConnections" :key-combination="['control', 's']"
+          >Save</loading-button
+        >
       </div>
       <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
-
     </template>
-    <LLMConnectionListItem v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === llmConnectionStore.activeConnection" @toggle="toggleCollapse" @refresh="refreshId"
-      @updateApiKey="updateApiKey" @updateModel="updateModel" @setActive="setActiveConnection" />
+    <LLMConnectionListItem
+      v-for="item in contentList"
+      :key="item.id"
+      :item="item"
+      :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === llmConnectionStore.activeConnection"
+      @toggle="toggleCollapse"
+      @refresh="refreshId"
+      @updateApiKey="updateApiKey"
+      @updateModel="updateModel"
+      @setActive="setActiveConnection"
+    />
   </sidebar-list>
 </template>
 
@@ -284,10 +298,12 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

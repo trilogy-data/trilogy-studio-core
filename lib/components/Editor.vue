@@ -20,21 +20,15 @@
               type="text"
             />
           </div>
-          <div class="toggle-group">
-            <button
-              class="toggle-button tag-inactive"
-              :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-              @click="toggleTag()"
-            >
-              {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
-            </button>
-            <!-- <button class="toggle-button" :class="{ 'toggle-active': editorData.tags.includes('scheduled') }"
-            @click="toggleTag('scheduled')">
-            Scheduled
-          </button> -->
-          </div>
         </div>
         <div class="menu-actions">
+          <button
+            class="toggle-button tag-inactive action-item"
+            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag()"
+          >
+            {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
+          </button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
           <loading-button
             v-if="!(editorData.type === 'sql')"
@@ -90,8 +84,6 @@
 .menu-bar {
   background-color: var(--sidebar-bg);
   display: flex;
-  flex-wrap: wrap;
-  /* Allow content to wrap to a new line */
   gap: 0.5rem;
   /* Add some spacing between wrapped elements */
   padding: 0.25rem;
@@ -102,10 +94,9 @@
 
 .menu-actions {
   display: flex;
-  flex-wrap: wrap;
   /* Allow buttons to move to a new line */
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.15rem;
   /* Spacing between buttons */
   align-items: center;
   flex-grow: 1;
@@ -119,7 +110,6 @@
   border-radius: 0px;
   border: 1px solid var(--border-color);
   cursor: pointer;
-  margin-left: 0.75rem;
   /* margin-right: 0.75rem; */
   transition:
     background-color 0.3s ease,
@@ -185,6 +175,52 @@
   background-color: var(--error-color);
   color: white;
   border: 1px solid var(--error-color);
+}
+
+/* device specific */
+@media screen and (max-width: 768px) {
+  .menu-bar {
+    height: 60px;
+    display: block;
+  }
+
+  .menu-left {
+    justify-content: center;
+  }
+
+  .editor-fix-styles {
+    height: calc(100% - 80px);
+  }
+
+  .menu-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0.1rem;
+    /* Spacing between buttons */
+    align-items: center;
+    width: 100%;
+  }
+
+  .action-item {
+    height: 25px;
+    flex-grow: 1;
+    /* max-width: 80px; */
+    width: auto;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 0px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin-left: 0rem;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  .menu-left {
+    width: 100%;
+  }
 }
 </style>
 <script lang="ts">
@@ -293,11 +329,13 @@ export default defineComponent({
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const isMobile = inject<boolean>('isMobile', false)
     if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
     return {
+      isMobile,
       connectionStore,
       modelStore,
       llmStore,

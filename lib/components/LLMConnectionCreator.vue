@@ -18,12 +18,21 @@
 
       <div class="form-row">
         <label for="llm-api-key">API Key</label>
-        <input type="password" v-model="connectionDetails.options.apiKey" id="llm-api-key" placeholder="API Key"
-          required />
+        <input
+          type="password"
+          v-model="connectionDetails.options.apiKey"
+          id="llm-api-key"
+          placeholder="API Key"
+          required
+        />
       </div>
       <div class="form-row">
         <label for="save-credential">Save Credential?</label>
-        <input type="checkbox" id="save-credential" v-model="connectionDetails.options.saveCredential" />
+        <input
+          type="checkbox"
+          id="save-credential"
+          v-model="connectionDetails.options.saveCredential"
+        />
       </div>
 
       <div class="button-row">
@@ -152,7 +161,6 @@ export default defineComponent({
 
     const submitConnectionCreation = () => {
       if (connectionDetails.value.name && connectionDetails.value.type) {
-
         // Add the new LLM connection to the store using the existing method
         connectionStore.newConnection(
           connectionDetails.value.name,

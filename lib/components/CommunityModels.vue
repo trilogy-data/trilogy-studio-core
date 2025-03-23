@@ -1,27 +1,27 @@
 <template>
   <div class="model-page">
     <div class="model-content">
-    <div class="model-title">Community Models</div>
+      <div class="model-title">Community Models</div>
 
-    <div class="filters my-4">
-      <div class="filter-row flex gap-4 mb-2">
-        <div class="search-box flex-grow">
-          <label class="text-faint filter-label">Name</label>
-          <input type="text" v-model="searchQuery" placeholder="Search by model name..." />
+      <div class="filters my-4">
+        <div class="filter-row flex gap-4 mb-2">
+          <div class="search-box flex-grow">
+            <label class="text-faint filter-label">Name</label>
+            <input type="text" v-model="searchQuery" placeholder="Search by model name..." />
+          </div>
+
+          <div class="engine-filter">
+            <label class="text-faint filter-label">Model Engine</label>
+            <select v-model="selectedEngine" class="px-3 py-2 border rounded">
+              <option value="">All Engines</option>
+              <option v-for="engine in availableEngines" :key="engine" :value="engine">
+                {{ engine }}
+              </option>
+            </select>
+          </div>
         </div>
 
-        <div class="engine-filter">
-          <label class="text-faint filter-label">Model Engine</label>
-          <select v-model="selectedEngine" class="px-3 py-2 border rounded">
-            <option value="">All Engines</option>
-            <option v-for="engine in availableEngines" :key="engine" :value="engine">
-              {{ engine }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- <div class="branch-selector flex gap-4 items-center">
+        <!-- <div class="branch-selector flex gap-4 items-center">
         <label class="text-faint filter-label">Public Repo Branch</label>
         <select v-model="selectedBranch" class="px-3 py-2 border rounded" @change="fetchFiles">
           <option v-for="branch in branches" :key="branch" :value="branch">
@@ -29,42 +29,52 @@
           </option>
         </select>
       </div> -->
-    </div>
-
-    <div v-if="filteredFiles.length">
-      <div v-for="file in filteredFiles" :key="file.name" class ='model-item'>
-        <div class="font-semibold">{{ file.name }} <span class="text-faint">({{ file.engine }})</span></div>
-        <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]">
-          {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
-        </button>
-        <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
-          <model-creator :formDefaults="{
-            importAddress: file.downloadUrl,
-            connection: `new-${file.engine}`,
-            name: file.name,
-          }" :absolute="false" :visible=creatorIsExpanded[file.name]
-            @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]" />
-        </div>
-        <div>
-          <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
-        </div>
-        <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
-          {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{ file.components.length }})
-        </div>
-        <ul class="mt-2 space-y-1" v-if="isExpanded[file.downloadUrl]">
-          <div v-for="component in file.components" :key="component.url">
-            <a :href="component.url" target="_blank">{{ component.name || 'Unnamed Component' }}</a>
-            <span v-if="component.purpose"> ({{ component.purpose }})</span>
-          </div>
-        </ul>
       </div>
+
+      <div v-if="filteredFiles.length">
+        <div v-for="file in filteredFiles" :key="file.name" class="model-item">
+          <div class="font-semibold">
+            {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
+          </div>
+          <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]">
+            {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
+          </button>
+          <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
+            <model-creator
+              :formDefaults="{
+                importAddress: file.downloadUrl,
+                connection: `new-${file.engine}`,
+                name: file.name,
+              }"
+              :absolute="false"
+              :visible="creatorIsExpanded[file.name]"
+              @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+            />
+          </div>
+          <div>
+            <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
+          </div>
+          <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
+            {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{
+              file.components.length
+            }})
+          </div>
+          <ul class="mt-2 space-y-1" v-if="isExpanded[file.downloadUrl]">
+            <div v-for="component in file.components" :key="component.url">
+              <a :href="component.url" target="_blank">{{
+                component.name || 'Unnamed Component'
+              }}</a>
+              <span v-if="component.purpose"> ({{ component.purpose }})</span>
+            </div>
+          </ul>
+        </div>
+      </div>
+      <p v-if="error" class="text-error">{{ error }}</p>
+      <p v-else-if="loading" class="text-loading">Loading community models...</p>
+      <p v-else-if="!filteredFiles.length" class="text-faint mt-4">
+        No models match your search criteria.
+      </p>
     </div>
-    <p v-if="error" class="text-error">{{ error }}</p>
-    <p v-else-if="loading" class="text-loading">Loading community models...</p>
-    <p v-else-if="!filteredFiles.length" class="text-faint mt-4">
-      No models match your search criteria.
-    </p>
-  </div>
   </div>
 </template>
 
@@ -188,7 +198,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-
 .font-semibold {
   font-weight: 500;
   font-size: var(--big-font-size);
@@ -205,7 +214,7 @@ onMounted(async () => {
 }
 
 .model-content {
-  padding:10px;
+  padding: 10px;
 }
 .model-item {
   border-left: 1px solid var(--border);

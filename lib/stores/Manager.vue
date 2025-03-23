@@ -10,7 +10,7 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import QueryResolver from './resolver'
-import { provide, computed } from 'vue'
+import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 import { IDE, MobileIDE } from '../views'
@@ -60,6 +60,7 @@ export default {
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
+    const windowWidth = ref(window.innerWidth)
     for (let source of props.storageSources) {
       source.loadEditors().then((editors) => {
         for (let editor of Object.values(editors)) {
@@ -133,15 +134,14 @@ export default {
     provide('saveModels', saveModels)
     provide('saveLLMConnections', saveLLMConnections)
     provide('saveAll', saveAll)
-    const isMobile = computed(() => window.innerWidth <= 768)
+    const isMobile = computed(() => windowWidth.value <= 768)
+    const handleResize = () => {
+      windowWidth.value = window.innerWidth
+    }
     provide('isMobile', isMobile)
     return {
       isMobile,
-    }
-  },
-  data() {
-    return {
-      windowWidth: window.innerWidth,
+      handleResize,
     }
   },
   mounted() {
@@ -149,11 +149,6 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
-  },
-  methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth
-    },
   },
 }
 </script>

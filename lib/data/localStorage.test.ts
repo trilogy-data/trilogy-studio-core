@@ -191,6 +191,7 @@ describe('EditorLocalStorage', () => {
     let c1 = new ModelConfig({
       name: 'config1',
       storage: 'local',
+      description: '',
       sources: [
         ModelSource.fromJSON({ editor: 'source1', alias: 'alias1', concepts: [], datasources: [] }),
       ],
@@ -198,6 +199,7 @@ describe('EditorLocalStorage', () => {
     let c2 = new ModelConfig({
       name: 'config2',
       storage: 'local',
+      description: '',
       sources: [
         ModelSource.fromJSON({ editor: 'source2', alias: 'alias2', concepts: [], datasources: [] }),
       ],
@@ -216,7 +218,7 @@ describe('EditorLocalStorage', () => {
   })
 
   it('should clear model configs', () => {
-    const modelConfig = [new ModelConfig({ name: 'config1', storage: 'local', sources: [] })]
+    const modelConfig = [new ModelConfig({ name: 'config1', storage: 'local', description: '', sources: [] })]
 
     localStorage.saveModelConfig(modelConfig)
     localStorage.clearModelConfig()

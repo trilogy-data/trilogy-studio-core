@@ -61,8 +61,8 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async deleteEditor(name: string): Promise<void> {
-    const editors = await  this.loadEditors()
-    if (editors[name]) { 
+    const editors = await this.loadEditors()
+    if (editors[name]) {
       delete editors[name]
       localStorage.setItem(
         this.editorStorageKey,
@@ -76,7 +76,7 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async hasEditor(name: string): Promise<boolean> {
-    const editors = await  this.loadEditors()
+    const editors = await this.loadEditors()
     // any editor has the property name == name
     return Object.values(editors).some((editor) => editor.name === name)
   }

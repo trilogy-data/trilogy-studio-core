@@ -32,6 +32,7 @@ const tooltipContent = computed(() => {
     duckdb: 'DuckDB',
     motherduck: 'MotherDuck',
     'bigquery-oauth': 'BigQuery',
+    snowflake: 'Snowflake',
     default: 'Database Connection',
   }
   return typeMap[props.connectionType || 'default']

@@ -305,4 +305,10 @@ export default defineComponent({
   margin-bottom: 10px;
   margin-top: auto;
 }
+
+@media screen and (max-width: 768px) {
+  .sidebar-icons {
+    overflow-y: scroll;
+  }
+}
 </style>

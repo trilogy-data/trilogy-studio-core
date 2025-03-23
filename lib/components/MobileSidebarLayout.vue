@@ -1,7 +1,11 @@
 <template>
   <div id="interface" class="interface">
     <div class="select-bar">
-      <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon"></i
+      <i
+        @click="$emit('menu-toggled')"
+        class="mdi mdi-menu hamburger-icon"
+        data-testid="mobile-menu-toggle"
+      ></i
       ><span class="header">{{ screenTitle }}</span>
     </div>
     <div class="interface-wrap">
