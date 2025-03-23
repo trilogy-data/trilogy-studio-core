@@ -218,7 +218,9 @@ describe('EditorLocalStorage', () => {
   })
 
   it('should clear model configs', () => {
-    const modelConfig = [new ModelConfig({ name: 'config1', storage: 'local', description: '', sources: [] })]
+    const modelConfig = [
+      new ModelConfig({ name: 'config1', storage: 'local', description: '', sources: [] }),
+    ]
 
     localStorage.saveModelConfig(modelConfig)
     localStorage.clearModelConfig()
