@@ -161,19 +161,20 @@ export default {
           }
         }
         if (type === 'table') {
-          console.log('getting columns')
+          console.log('getting columns for table')
           let dbid = id.split(KeySeparator)[1]
           let tableid = id.split(KeySeparator)[2]
-          let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
+          let nTable = await connectionStore.connections[connection].getColumns(dbid, tableid)
           let cTable = connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.name === tableid)
           if (cTable) {
-            cTable.columns = nTable.columns
+            cTable.columns = nTable
           }
         }
         delete isErrored.value[id]
       } catch (error) {
+        console.log(error)
         // check if it's an Error
         if (error instanceof Error) {
           isErrored.value[id] = error.message

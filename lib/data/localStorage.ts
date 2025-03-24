@@ -42,6 +42,9 @@ export default class LocalStorage extends AbstractStorage {
         editors[editor.name] = editor
         editor.changed = false
       }
+      if (editor.deleted) {
+        delete editors[editor.name]
+      }
     })
     localStorage.setItem(
       this.editorStorageKey,

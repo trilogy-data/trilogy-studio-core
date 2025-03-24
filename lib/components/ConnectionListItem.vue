@@ -89,6 +89,8 @@
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
+      <editor-creator-icon :connection="item.connection.name" type="sql" />
+      <editor-creator-icon :connection="item.connection.name" />
       <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
       <connection-status-icon :connection="item.connection" />
       <tooltip content="Delete Connection" position="left">
@@ -96,6 +98,15 @@
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
+    </div>
+    <div class="connection-actions" v-if="item.type === 'table'">
+      <editor-creator-icon
+        :connection="item.connection.name"
+        type="trilogy"
+        title="Create Datasource From Table"
+        :content="() => createTableDatasource(item.object)"
+        icon="mdi-database-plus-outline"
+      />
     </div>
   </div>
 </template>
@@ -108,7 +119,9 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import { BigQueryOauthConnection, MotherDuckConnection, SnowflakeConnection } from '../connections'
 import { KeySeparator, rsplit } from '../data/constants'
+import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
+import { Table } from '../connections'
 // Define prop types
 interface ConnectionListItemProps {
   item: {
@@ -117,7 +130,8 @@ interface ConnectionListItemProps {
     indent: number
     count?: number
     type: string
-    connection?: any
+    connection: any
+    object?: any
   }
   isCollapsed?: boolean
   isSelected?: boolean
@@ -142,9 +156,7 @@ const isExpandable = computed(() => ['connection', 'database', 'table'].includes
 
 // Click handler for item expansion/toggling
 const handleItemClick = () => {
-  console.log('click')
   if (isExpandable.value) {
-    console.log('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
 }
@@ -175,7 +187,6 @@ const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) 
 }
 
 const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string) => {
-  console.log(key)
   emit('updateSnowflakePrivateKey', connection, key)
 }
 
@@ -186,6 +197,30 @@ const updateBigqueryProject = (connection: BigQueryOauthConnection, project: str
 const toggleSaveCredential = (connection: any) => {
   emit('toggleSaveCredential', connection)
 }
+
+const createTableDatasource = (datasource: Table) => {
+  // Get all column definitions in format name:type
+  const primaryKeyFields = datasource.columns
+    .filter((column) => column.primary)
+    .map((column) => column.name)
+
+  const keyPrefix = primaryKeyFields.length > 0 ? `${primaryKeyFields.join('.')}` : 'PLACEHOLDER'
+  const propertyDeclarations = datasource.columns
+    .map((column) =>
+      column.primary
+        ? `key ${column.name} ${column.trilogyType};`
+        : `property <${keyPrefix}>.${column.name} ${column.trilogyType};`,
+    )
+    .join('\n')
+  const columnDefinitions = datasource.columns
+    .map((column) => `\t${column.name}:${column.name},`)
+    .join('\n')
+
+  const grainDeclaration =
+    primaryKeyFields.length > 0 ? `grain (${primaryKeyFields.join(', ')})` : ''
+  // Create the formatted string
+  return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${datasource.name};`
+}
 </script>
 
 <style scoped>
@@ -194,25 +229,6 @@ const toggleSaveCredential = (connection: any) => {
   padding: 5px;
   font-size: 12px;
   color: var(--text);
-}
-
-.customize-input {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  outline: none;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  padding: 2px 4px;
-  font-size: var(--button-font-size);
-  width: 180px;
-  margin-right: 4px;
-  border: 1px solid var(--border);
-  background-color: var(--button-bg);
-  color: var(--text);
-  height: var(--sidebar-list-item-height);
 }
 
 input,

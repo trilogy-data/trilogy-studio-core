@@ -183,6 +183,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject } from 'vue'
+import useScreenNavigation from './useScreenNavigation'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -190,14 +191,10 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 export default {
   name: 'IDEComponent',
   data() {
-    let screen = getDefaultValueFromHash('screen')
-    let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
     let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
     let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
-      activeEditor: activeEditor ? activeEditor : '',
-      activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
@@ -253,6 +250,7 @@ export default {
     if (editor) {
       editorStore.activeEditorName = editor
     }
+    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor } = useScreenNavigation()
     return {
       connectionStore,
       editorStore,
@@ -261,18 +259,13 @@ export default {
       saveConnections,
       saveModels,
       modelStore,
+      activeScreen,
+      setActiveScreen,
+      activeEditor,
+      setActiveEditor,
     }
   },
   methods: {
-    setActiveEditor(editor: string) {
-      this.activeEditor = editor
-      this.editorStore.activeEditorName = editor
-      pushHashToUrl('editor', editor)
-    },
-    setActiveScreen(screen: string) {
-      pushHashToUrl('screen', screen)
-      this.activeScreen = screen
-    },
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey

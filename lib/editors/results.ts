@@ -17,7 +17,7 @@ export enum ColumnType {
   STRING = 'string',
   NUMBER = 'number',
   BOOLEAN = 'boolean',
-  INTEGER = 'integer',
+  INTEGER = 'int',
   DATE = 'date',
   DATETIME = 'datetime',
   TIME = 'time',

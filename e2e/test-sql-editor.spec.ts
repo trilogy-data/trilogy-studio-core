@@ -34,4 +34,17 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
   await page.getByTestId('editor-run-button').click()
   await expect(page.getByTestId('query-results-length')).toContainText('1')
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+  await page.getByTestId('delete-editor-test-one').click()
+  await page.getByTestId('confirm-editor-deletion').click()
+  await page.reload();
+  // confirm we've deleted it
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+  const count = await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').count();
+  expect(count).toBe(0);
+
 })

@@ -200,6 +200,7 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    containerHeight: Number,
   },
 
   setup(props) {
@@ -445,7 +446,8 @@ export default defineComponent({
         $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
         data: { values: props.data },
         width: 'container',
-        height: 300,
+        // 28 is the chart control height
+        height: props.containerHeight ? props.containerHeight - 150 : 'container',
       }
 
       // Basic encoding object that we'll modify based on chart type
@@ -716,6 +718,7 @@ export default defineComponent({
     })
 
     // Watch for changes in data, columns or config
+    watch(() => props.containerHeight, renderChart)
     watch(() => props.data, renderChart, { deep: true })
     watch(
       () => props.columns,
@@ -774,6 +777,7 @@ export default defineComponent({
 }
 .vega-lite-chart {
   width: 100%;
+  height: 100%;
   margin: 0 auto;
 }
 

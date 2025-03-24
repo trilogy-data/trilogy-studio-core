@@ -53,7 +53,7 @@
           <span class="sql">SQL</span>
           <!-- <i class="mdi mdi-alpha-s-box-outline"></i> -->
         </tooltip>
-        <tooltip content="Trilogy Editor" v-else>
+        <tooltip content="Trilogy Editor" class="icon-display" v-else>
           <img :src="trilogyIcon" class="trilogy-icon" />
           <!-- <i class="mdi mdi-alpha-t-box-outline"></i> -->
         </tooltip>
@@ -62,8 +62,8 @@
       <template v-if="item.type === 'creator'">
         <editor-creator-inline
           :connection="item.label"
-          :visible="connectionCreatorVisible[item.label]"
-          @close="connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]"
+          :visible="editorCreatorVisible[item.label]"
+          @close="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
         />
       </template>
       <span v-else class="truncate-text">
@@ -84,18 +84,16 @@
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
           <button
-            @click.stop="
-              connectionCreatorVisible[item.label] = !connectionCreatorVisible[item.label]
-            "
+            @click.stop="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
           >
-            {{ connectionCreatorVisible[item.label] ? 'Hide' : 'New' }}
+            {{ editorCreatorVisible[item.label] ? 'Hide' : 'New' }}
           </button>
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span class="remove-btn" @click.stop="deleteEditor(item.editor)">
+        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -105,8 +103,8 @@
         <h3>Confirm Deletion</h3>
         <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
         <div class="dialog-actions">
-          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
-          <button class="confirm-btn" @click="confirmDelete">Delete</button>
+          <button class="cancel-btn" data-testid='cancel-editor-deletion' @click="cancelDelete">Cancel</button>
+          <button class="confirm-btn"  data-testid='confirm-editor-deletion' @click="confirmDelete">Delete</button>
         </div>
       </div>
     </div>
@@ -148,7 +146,7 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
-    const connectionCreatorVisible = ref<Record<string, boolean>>({})
+    const editorCreatorVisible = ref<Record<string, boolean>>({})
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]
     }
@@ -169,7 +167,7 @@ export default {
         return 'disabled'
       }
     }
-    //one time set initial collapse vlaues
+
     onMounted(() => {
       Object.values(editorStore.editors).forEach((item) => {
         let storageKey = `s-${item.storage}`
@@ -200,7 +198,7 @@ export default {
         Object.values(editorStore.editors),
         collapsed.value,
         hiddenTags.value,
-        connectionCreatorVisible.value,
+        editorCreatorVisible.value,
       )
     })
 
@@ -217,7 +215,7 @@ export default {
       trilogyIcon,
       connectionStateToStatus,
       creatorVisible,
-      connectionCreatorVisible,
+      editorCreatorVisible,
     }
   },
   data() {
@@ -238,9 +236,12 @@ export default {
     },
     confirmDelete() {
       if (this.editorToDelete) {
+        this.editorStore.editors[this.editorToDelete].deleted = true
+        // sync the deletion
+        this.saveEditors()
+        // and purge
         this.editorStore.removeEditor(this.editorToDelete)
       }
-
       this.showDeleteConfirmationState = false
       this.editorToDelete = null
     },
@@ -287,6 +288,14 @@ export default {
   font-weight: 500;
 }
 
+.icon-display {
+  display: flex;
+  justify-content: center;
+  /* Horizontal center */
+  align-items: center;
+  /* Vertical center */
+}
+
 .trilogy-icon {
   width: var(--icon-size);
   height: var(--icon-size);
@@ -305,7 +314,6 @@ export default {
 .tag-container {
   margin-left: auto;
   display: flex;
-  flex-wrap: wrap;
 }
 
 .tag {

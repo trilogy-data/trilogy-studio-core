@@ -417,11 +417,14 @@ export default class SnowflakeRestConnection extends BaseConnection {
   }
 
   async getTable(database: string, table: string): Promise<Table> {
+    // this is wrong: TODO: fix
     const sql = `DESCRIBE TABLE ${database}.${table}`
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
       results.headers.forEach((column) => {
-        columns.push(new Column(column.name, column.type, false, false, false, null, false))
+        columns.push(
+          new Column(column.name, column.type, column.type, false, false, false, null, false),
+        )
       })
       return new Table(table, columns)
     })
@@ -449,6 +452,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
           new Column(
             row.name || row['name'],
             row.type || row['type'],
+            this.mapSnowflakeTypeToColumnType(row.type || row['type']),
             (row.null || row['null']) === 'Y',
             (row.primary_key || row['primary_key']) === 'Y',
             (row.unique_key || row['unique_key']) === 'Y',

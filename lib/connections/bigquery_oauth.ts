@@ -176,6 +176,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
         return new Column(
           field.name,
           field.type,
+          this.mapBigQueryTypeToColumnType(field.type),
           field.mode !== 'REQUIRED', // nullable if not REQUIRED
           isPrimary,
           isUnique,

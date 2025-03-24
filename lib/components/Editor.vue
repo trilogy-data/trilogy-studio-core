@@ -23,9 +23,19 @@
         </div>
         <div class="menu-actions">
           <button
+            v-if="editorData.type === 'sql'"
+            class="toggle-button tag-inactive action-item"
+            :class="{ tag: editorData.tags.includes(EditorTag.STARTUP_SCRIPT) }"
+            @click="toggleTag(EditorTag.STARTUP_SCRIPT)"
+          >
+            {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
+            Script
+          </button>
+          <button
+            v-if="!(editorData.type === 'sql') && connectionHasModel"
             class="toggle-button tag-inactive action-item"
             :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag()"
+            @click="toggleTag(EditorTag.SOURCE)"
           >
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
           </button>
@@ -330,7 +340,15 @@ export default defineComponent({
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
-    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore) {
+    const setActiveEditor = inject<Function>('setActiveEditor')
+    if (
+      !editorStore ||
+      !connectionStore ||
+      !trilogyResolver ||
+      !modelStore ||
+      !userSettingsStore ||
+      !setActiveEditor
+    ) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
@@ -343,6 +361,7 @@ export default defineComponent({
       trilogyResolver,
       EditorTag,
       userSettingsStore,
+      setActiveEditor,
     }
   },
   async mounted() {
@@ -358,6 +377,9 @@ export default defineComponent({
     mountedMap.delete(this.context)
   },
   computed: {
+    connectionHasModel() {
+      return this.connectionStore.connections[this.editorData.connection].model !== null
+    },
     editorData() {
       return this.editorStore.editors[this.editorName]
     },
@@ -398,8 +420,8 @@ export default defineComponent({
   },
 
   methods: {
-    toggleTag() {
-      let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
+    toggleTag(tag: EditorTag) {
+      let isSource = this.editorData.tags.includes(tag)
 
       if (!isSource) {
         let model = this.connectionStore.connections[this.editorData.connection].model
@@ -411,9 +433,9 @@ export default defineComponent({
           this.$emit('save-models')
         }
       }
-      this.editorData.tags = this.editorData.tags.includes(EditorTag.SOURCE)
-        ? this.editorData.tags.filter((tag) => tag !== EditorTag.SOURCE)
-        : [...this.editorData.tags, EditorTag.SOURCE]
+      this.editorData.tags = this.editorData.tags.includes(tag)
+        ? this.editorData.tags.filter((tag) => tag !== tag)
+        : [...this.editorData.tags, tag]
     },
     startEditing() {
       this.isEditing = true
@@ -425,7 +447,8 @@ export default defineComponent({
     },
     finishEditing() {
       this.isEditing = false
-      this.editorData.name = this.editableName
+      this.editorStore.updateEditorName(this.editorName, this.editableName)
+      this.setActiveEditor(this.editableName)
     },
     cancelEditing() {
       this.isEditing = false

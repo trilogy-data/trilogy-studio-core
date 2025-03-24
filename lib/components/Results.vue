@@ -29,7 +29,11 @@
     </div>
     <div class="tab-content">
       <div v-if="activeTab === 'visualize'" class="sql-view">
-        <vega-lite-chart :data="results.data" :columns="results.headers" />
+        <vega-lite-chart
+          :data="results.data"
+          :columns="results.headers"
+          :containerHeight="containerHeight"
+        />
       </div>
       <div v-else-if="activeTab === 'sql'" class="sql-view">
         <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
