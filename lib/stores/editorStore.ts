@@ -35,7 +35,6 @@ const useEditorStore = defineStore('editors', {
         return base
       }
       return base.filter((editor) => tags.every((tag) => editor.tags.includes(tag)))
-
     },
     updateEditorName(name: string, newName: string) {
       this.editors[newName] = this.editors[name]

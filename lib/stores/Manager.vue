@@ -1,6 +1,8 @@
 <template>
-  <IDE v-if="!isMobile" />
-  <MobileIDE v-else />
+  <template v-if="loaded">
+    <IDE v-if="!isMobile" />
+    <MobileIDE v-else />
+  </template>
 </template>
 
 <script lang="ts">
@@ -61,28 +63,53 @@ export default {
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
     const windowWidth = ref(window.innerWidth)
+    const loaded = ref(false)
+    const loadingPromises = []
+
     for (let source of props.storageSources) {
-      source.loadEditors().then((editors) => {
-        for (let editor of Object.values(editors)) {
-          props.editorStore.addEditor(editor)
-        }
-      })
-      source.loadConnections().then((connections) => {
-        for (let connection of Object.values(connections)) {
-          props.connectionStore.addConnection(connection)
-        }
-      })
-      source.loadModelConfig().then((models) => {
-        for (let modelConfig of Object.values(models)) {
-          props.modelStore.addModelConfig(modelConfig)
-        }
-      })
-      source.loadLLMConnections().then((llmConnections) => {
-        for (let llmConnection of Object.values(llmConnections)) {
-          props.llmConnectionStore.addConnection(llmConnection)
-        }
-      })
+      // Add each promise to our array
+      loadingPromises.push(
+        source.loadEditors().then((editors) => {
+          for (let editor of Object.values(editors)) {
+            props.editorStore.addEditor(editor)
+          }
+        }),
+      )
+
+      loadingPromises.push(
+        source.loadConnections().then((connections) => {
+          for (let connection of Object.values(connections)) {
+            props.connectionStore.addConnection(connection)
+          }
+        }),
+      )
+
+      loadingPromises.push(
+        source.loadModelConfig().then((models) => {
+          for (let modelConfig of Object.values(models)) {
+            props.modelStore.addModelConfig(modelConfig)
+          }
+        }),
+      )
+
+      loadingPromises.push(
+        source.loadLLMConnections().then((llmConnections) => {
+          for (let llmConnection of Object.values(llmConnections)) {
+            props.llmConnectionStore.addConnection(llmConnection)
+          }
+        }),
+      )
     }
+
+    // Wait for all promises to resolve, then set loaded to true
+    Promise.all(loadingPromises)
+      .then(() => {
+        loaded.value = true
+      })
+      .catch((error) => {
+        console.error('Error loading editor data:', error)
+        // You might want to handle the error state appropriately
+      })
 
     const saveEditors = async () => {
       for (let source of props.storageSources) {
@@ -140,6 +167,7 @@ export default {
     }
     provide('isMobile', isMobile)
     return {
+      loaded,
       isMobile,
       handleResize,
     }

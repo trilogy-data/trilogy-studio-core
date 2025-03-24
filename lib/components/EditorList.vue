@@ -2,28 +2,51 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveEditors" :keyCombination="['control', 's']">
           Save
         </loading-button>
       </div>
-      <editor-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" :testTag="testTag" />
-      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': !hiddenTags.has(tag) }" class="tag"
-        @click="toggleTagFilter(tag)">
+      <editor-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+        :testTag="testTag"
+      />
+      <span
+        v-for="tag in EditorTag"
+        :key="tag"
+        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
+        class="tag"
+        @click="toggleTagFilter(tag)"
+      >
         {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
         }}{{ tag.slice(1) }} Editors
       </span>
     </template>
-    <div v-for="item in contentList" :key="item.key" :data-testid="`editor-list-id-${item.key}`" :class="{
-      'sidebar-item': item.type !== 'creator',
-      'sidebar-item-selected': activeEditor === item.label,
-    }" @click="clickAction(item.type, item.label, item.key)">
-      <div v-if="!['creator'].includes(item.type) && !isMobile" v-for="_ in item.indent" class="sidebar-padding"></div>
-      <i v-if="!['editor', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
+    <div
+      v-for="item in contentList"
+      :key="item.key"
+      :data-testid="`editor-list-id-${item.key}`"
+      :class="{
+        'sidebar-item': item.type !== 'creator',
+        'sidebar-item-selected': activeEditor === item.label,
+      }"
+      @click="clickAction(item.type, item.label, item.key)"
+    >
+      <div
+        v-if="!['creator'].includes(item.type) && !isMobile"
+        v-for="_ in item.indent"
+        class="sidebar-padding"
+      ></div>
+      <i
+        v-if="!['editor', 'creator'].includes(item.type)"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+      >
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -37,8 +60,11 @@
       </template>
 
       <template v-if="item.type === 'creator'">
-        <editor-creator-inline :connection="item.label" :visible="editorCreatorVisible[item.label]"
-          @close="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]" />
+        <editor-creator-inline
+          :connection="item.label"
+          :visible="editorCreatorVisible[item.label]"
+          @close="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
+        />
       </template>
       <span v-else class="truncate-text">
         {{ item.label }}
@@ -47,7 +73,8 @@
             connectionStore.connections[item.label]?.model
               ? connectionStore.connections[item.label]?.model
               : 'No Model Set'
-          }})</span>
+          }})</span
+        >
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -56,9 +83,9 @@
       </template>
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
-          <button @click.stop="
-            editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]
-            ">
+          <button
+            @click.stop="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
+          >
             {{ editorCreatorVisible[item.label] ? 'Hide' : 'New' }}
           </button>
         </span>
@@ -66,7 +93,7 @@
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span class="remove-btn" @click.stop="deleteEditor(item.editor)">
+        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -76,8 +103,8 @@
         <h3>Confirm Deletion</h3>
         <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
         <div class="dialog-actions">
-          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
-          <button class="confirm-btn" @click="confirmDelete">Delete</button>
+          <button class="cancel-btn" data-testid='cancel-editor-deletion' @click="cancelDelete">Cancel</button>
+          <button class="confirm-btn"  data-testid='confirm-editor-deletion' @click="confirmDelete">Delete</button>
         </div>
       </div>
     </div>
@@ -165,7 +192,6 @@ export default {
         }
       })
     })
-
 
     const contentList = computed(() => {
       return buildEditorTree(

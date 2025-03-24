@@ -1,10 +1,11 @@
 // BaseConnection.ts
 
-import { Results } from '../editors/results'
+import { Results, ColumnType } from '../editors/results'
 
 export class Column {
   name: string
   type: string
+  trilogyType: ColumnType
   nullable: boolean
   primary: boolean
   unique: boolean
@@ -14,6 +15,7 @@ export class Column {
   constructor(
     name: string,
     type: string,
+    trilogyType: ColumnType,
     nullable: boolean,
     primary: boolean,
     unique: boolean,
@@ -22,6 +24,7 @@ export class Column {
   ) {
     this.name = name
     this.type = type
+    this.trilogyType = trilogyType
     this.nullable = nullable
     this.primary = primary
     this.unique = unique

@@ -257,7 +257,8 @@ export default {
     if (!saveEditors) {
       saveEditors = () => {}
     }
-    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, mobileMenuOpen } = useScreenNavigation();
+    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, mobileMenuOpen } =
+      useScreenNavigation()
     return {
       connectionStore,
       editorStore,
@@ -270,7 +271,7 @@ export default {
       activeEditor,
       setActiveScreen,
       setActiveEditor,
-      mobileMenuOpen
+      mobileMenuOpen,
     }
   },
   methods: {

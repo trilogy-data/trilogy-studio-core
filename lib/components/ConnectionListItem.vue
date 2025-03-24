@@ -1,5 +1,9 @@
 <template>
-  <div class="sidebar-item" @click="handleItemClick" :class="{ 'sidebar-item-selected': isSelected }">
+  <div
+    class="sidebar-item"
+    @click="handleItemClick"
+    :class="{ 'sidebar-item-selected': isSelected }"
+  >
     <!-- Indentation -->
     <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
 
@@ -17,47 +21,75 @@
     <i v-else-if="item.type === 'loading'" class="mdi mdi-loading mdi-spin"></i>
     <i v-else-if="item.type === 'column'" class="mdi mdi-table-column"></i>
     <!-- Item Name -->
-    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-if="item.type === 'refresh-connection'"
-      @click="handleRefreshConnectionClick">
+    <div
+      class="refresh title-pad-left truncate-text sidebar-sub-item"
+      v-if="item.type === 'refresh-connection'"
+      @click="handleRefreshConnectionClick"
+    >
       {{ item.name }}
     </div>
-    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-else-if="item.type === 'refresh-database'"
-      @click="handleRefreshDatabaseClick">
+    <div
+      class="refresh title-pad-left truncate-text sidebar-sub-item"
+      v-else-if="item.type === 'refresh-database'"
+      @click="handleRefreshDatabaseClick"
+    >
       {{ item.name }}
     </div>
     <model-selector v-else-if="item.type === 'model'" :connection="item.connection" />
     <div v-else-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateBigqueryProject(item.connection, bigqueryProject)">
         <button type="submit" class="customize-button">Set Billing Project</button>
-        <input type="text" v-model="bigqueryProject" placeholder="Billing Project" class="connection-customize" />
+        <input
+          type="text"
+          v-model="bigqueryProject"
+          placeholder="Billing Project"
+          class="connection-customize"
+        />
       </form>
     </div>
     <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateMotherDuckToken(item.connection, mdToken)">
         <button type="submit" class="customize-button">Update Motherduck Token</button>
-        <input type="password" v-model="mdToken" placeholder="mdToken" class="connection-customize" />
+        <input
+          type="password"
+          v-model="mdToken"
+          placeholder="mdToken"
+          class="connection-customize"
+        />
       </form>
     </div>
     <div v-else-if="item.type === 'snowflake-private-key'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateSnowflakePrivateKey(item.connection, privateKey)">
         <button type="submit" class="customize-button">Update Snowflake Private Key</button>
-        <input type="password" v-model="privateKey" placeholder="privateKey" class="connection-customize" />
+        <input
+          type="password"
+          v-model="privateKey"
+          placeholder="privateKey"
+          class="connection-customize"
+        />
       </form>
     </div>
     <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
       <label class="save-credential-toggle">
-        <input type="checkbox" :checked="item.connection.saveCredential"
-          @change="toggleSaveCredential(item.connection)" />
+        <input
+          type="checkbox"
+          :checked="item.connection.saveCredential"
+          @change="toggleSaveCredential(item.connection)"
+        />
         <span class="checkbox-label">Save Credentials</span>
       </label>
     </div>
-    <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
+    <span
+      v-else
+      class="title-pad-left truncate-text"
+      :class="{ 'error-indicator': item.type === 'error' }"
+    >
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
-      <editor-creator-icon :connection="item.connection.name" type='sql' />
+      <editor-creator-icon :connection="item.connection.name" type="sql" />
       <editor-creator-icon :connection="item.connection.name" />
       <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
       <connection-status-icon :connection="item.connection" />
@@ -68,8 +100,13 @@
       </tooltip>
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <editor-creator-icon :connection="item.connection.name" type='trilogy'
-        :content="createTableDatasource(item.object)" />
+      <editor-creator-icon
+        :connection="item.connection.name"
+        type="trilogy"
+        title="Create Datasource From Table"
+        :content="() => createTableDatasource(item.object)"
+        icon="mdi-database-plus-outline"
+      />
     </div>
   </div>
 </template>
@@ -84,7 +121,7 @@ import { BigQueryOauthConnection, MotherDuckConnection, SnowflakeConnection } fr
 import { KeySeparator, rsplit } from '../data/constants'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
-import { Table, Connection } from '../connections'
+import { Table } from '../connections'
 // Define prop types
 interface ConnectionListItemProps {
   item: {
@@ -120,7 +157,6 @@ const isExpandable = computed(() => ['connection', 'database', 'table'].includes
 // Click handler for item expansion/toggling
 const handleItemClick = () => {
   if (isExpandable.value) {
-    console.log('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
 }
@@ -164,19 +200,26 @@ const toggleSaveCredential = (connection: any) => {
 
 const createTableDatasource = (datasource: Table) => {
   // Get all column definitions in format name:type
-  const columnDefinitions = datasource.columns
-    .map(column => `${column.name}:${column.type}`)
-    .join(', ');
-
-  // Get all primary key fields
   const primaryKeyFields = datasource.columns
-    .filter(column => column.primary)
-    .map(column => column.name)
-    .join(', ');
+    .filter((column) => column.primary)
+    .map((column) => column.name)
 
+  const keyPrefix = primaryKeyFields.length > 0 ? `${primaryKeyFields.join('.')}` : 'PLACEHOLDER'
+  const propertyDeclarations = datasource.columns
+    .map((column) =>
+      column.primary
+        ? `key ${column.name} ${column.trilogyType};`
+        : `property <${keyPrefix}>.${column.name} ${column.trilogyType};`,
+    )
+    .join('\n')
+  const columnDefinitions = datasource.columns
+    .map((column) => `\t${column.name}:${column.name},`)
+    .join('\n')
+
+  const grainDeclaration =
+    primaryKeyFields.length > 0 ? `grain (${primaryKeyFields.join(', ')})` : ''
   // Create the formatted string
-  return `datasource ${datasource.name} (${columnDefinitions}) grain (${primaryKeyFields}) address ${datasource.name};`;
-
+  return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${datasource.name};`
 }
 </script>
 
@@ -187,7 +230,6 @@ const createTableDatasource = (datasource: Table) => {
   font-size: 12px;
   color: var(--text);
 }
-
 
 input,
 input:is([type='text'], [type='password'], [type='email'], [type='number']) {
@@ -244,10 +286,12 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   /* Existing loading animation styles */
   display: block;
   width: 100%;
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

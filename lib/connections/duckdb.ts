@@ -149,6 +149,28 @@ export default class DuckDBConnection extends BaseConnection {
     }
   }
 
+  private mapDuckDBStringTypeToColumnType(duckDBType: string): ColumnType {
+    switch (duckDBType) {
+      case 'VARCHAR':
+        return ColumnType.STRING
+      case 'BIGINT':
+        return ColumnType.INTEGER
+      case 'DOUBLE':
+        return ColumnType.FLOAT
+      case 'BOOLEAN':
+        return ColumnType.BOOLEAN
+      case 'FLOAT':
+        return ColumnType.FLOAT
+      case 'DATE':
+        return ColumnType.DATE
+      case 'TIMESTAMP':
+        return ColumnType.DATETIME
+      default:
+        console.log('Unknown DuckDB type:', duckDBType)
+        return ColumnType.UNKNOWN // Use a fallback if necessary
+    }
+  }
+
   async getDatabases(): Promise<Database[]> {
     return await this.connection.query('SHOW DATABASES').then((result) => {
       return this.mapShowDatabasesResult(result.toArray().map((row) => row.toJSON()))
@@ -181,6 +203,8 @@ export default class DuckDBConnection extends BaseConnection {
       return new Column(
         name,
         type,
+        // the sql results will be with a string
+        this.mapDuckDBStringTypeToColumnType(type),
         nullable,
         key === 'PRI',
         key === 'UNI',

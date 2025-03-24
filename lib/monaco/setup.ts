@@ -41,7 +41,7 @@ export function configureTrilogy(languages) {
 
         // Match Keywords (SELECT, WHERE, ORDER, BY)
         [
-          /\b(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|BY|\sAS)(?=\s|$|,|;)/,
+          /\b(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|ADDRESS|QUERY|BY|\sAS)(?=\s|$|,|;)/,
           'keyword',
         ],
 
@@ -50,6 +50,9 @@ export function configureTrilogy(languages) {
 
         // Match types (e.g., ::type, such as ::date or ::int)
         [/::[a-zA-Z0-9_]+/, 'type'],
+
+        // Match assignment (e.g abc:def)
+        [/[a-zA-Z0-9_]+\s*:/, 'property'],
 
         // Match operators (like ->, <-, *, +, -, /, !)
         [/\<\-|\-\>|\*|\+|\-|\/|\!/, 'operator'],

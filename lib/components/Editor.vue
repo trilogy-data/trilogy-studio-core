@@ -9,26 +9,51 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing" class="name-input" type="text" />
+            <input
+              v-else
+              ref="nameInput"
+              v-model="editableName"
+              @blur="finishEditing"
+              @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing"
+              class="name-input"
+              type="text"
+            />
           </div>
         </div>
         <div class="menu-actions">
-          <button v-if="(editorData.type === 'sql')" class="toggle-button tag-inactive action-item"
+          <button
+            v-if="editorData.type === 'sql'"
+            class="toggle-button tag-inactive action-item"
             :class="{ tag: editorData.tags.includes(EditorTag.STARTUP_SCRIPT) }"
-            @click="toggleTag(EditorTag.STARTUP_SCRIPT)">
-            {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup Script
+            @click="toggleTag(EditorTag.STARTUP_SCRIPT)"
+          >
+            {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
+            Script
           </button>
-          <button v-if="!(editorData.type === 'sql')" class="toggle-button tag-inactive action-item"
-            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }" @click="toggleTag(EditorTag.SOURCE)">
+          <button
+            v-if="!(editorData.type === 'sql') && connectionHasModel"
+            class="toggle-button tag-inactive action-item"
+            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag(EditorTag.SOURCE)"
+          >
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
           </button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
-          <loading-button v-if="!(editorData.type === 'sql')" :useDefaultStyle="false" class="action-item"
-            :action="validateQuery">Parse</loading-button>
+          <loading-button
+            v-if="!(editorData.type === 'sql')"
+            :useDefaultStyle="false"
+            class="action-item"
+            :action="validateQuery"
+            >Parse</loading-button
+          >
 
-          <button @click="() => (editorData.loading ? cancelQuery() : runQuery())" class="action-item"
-            :class="{ 'button-cancel': editorData.loading }" data-testid="editor-run-button">
+          <button
+            @click="() => (editorData.loading ? cancelQuery() : runQuery())"
+            class="action-item"
+            :class="{ 'button-cancel': editorData.loading }"
+            data-testid="editor-run-button"
+          >
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
@@ -235,10 +260,10 @@ function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): 
   const selected = editor.getSelection()
   let text =
     selected &&
-      !(
-        selected.startColumn === selected.endColumn &&
-        selected.startLineNumber === selected.endLineNumber
-      )
+    !(
+      selected.startColumn === selected.endColumn &&
+      selected.startLineNumber === selected.endLineNumber
+    )
       ? (editor.getModel()?.getValueInRange(selected) as string)
       : editor.getValue()
   // hack for mobile? getValue not returning values
@@ -316,7 +341,14 @@ export default defineComponent({
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
     const setActiveEditor = inject<Function>('setActiveEditor')
-    if (!editorStore || !connectionStore || !trilogyResolver || !modelStore || !userSettingsStore || !setActiveEditor) {
+    if (
+      !editorStore ||
+      !connectionStore ||
+      !trilogyResolver ||
+      !modelStore ||
+      !userSettingsStore ||
+      !setActiveEditor
+    ) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
 
@@ -345,6 +377,9 @@ export default defineComponent({
     mountedMap.delete(this.context)
   },
   computed: {
+    connectionHasModel() {
+      return this.connectionStore.connections[this.editorData.connection].model !== null
+    },
     editorData() {
       return this.editorStore.editors[this.editorName]
     },
@@ -448,11 +483,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
+            }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
@@ -521,11 +556,11 @@ export default defineComponent({
         this.editorData.loading = true
         const sources: ContentInput[] = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
+            }))
           : []
         if (this.editorData.type !== 'sql') {
           try {
@@ -727,7 +762,7 @@ export default defineComponent({
                   this.editorData.setError(error)
                   throw error
                 })
-                .finally(() => { })
+                .finally(() => {})
             } catch (error) {
               if (error instanceof Error) {
                 this.editorData.setError(error.message)

@@ -15,6 +15,9 @@
           >
             {{ model }}
           </option>
+          <option key="~new-model" value="~new-model" class="model-select-item">
+            Create New Model
+          </option>
         </select>
         <div class="model-form-actions">
           <button type="submit">Submit</button>
@@ -29,7 +32,7 @@
 import { ref, computed, inject } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-
+import { ModelConfig } from '../models'
 interface ModelSelectorProps {
   connection: {
     name: string
@@ -56,9 +59,22 @@ const closeModelForm = () => {
   isModelFormVisible.value = false
 }
 
-const submitModel = () => {
+const submitModel = async () => {
   if (selectedModel.value && connectionStore) {
-    connectionStore.connections[props.connection.name].model = selectedModel.value
+    let modelName = selectedModel.value
+    if (modelName === '~new-model') {
+      // Create new model
+      modelName = props.connection.name
+      await modelStore?.addModelConfig(
+        new ModelConfig({
+          name: props.connection.name,
+          sources: [],
+          storage: 'local',
+          description: '',
+        }),
+      )
+    }
+    connectionStore.connections[props.connection.name].model = modelName
   }
   saveConnections()
   isModelFormVisible.value = false

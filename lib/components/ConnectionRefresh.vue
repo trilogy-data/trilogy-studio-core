@@ -60,9 +60,9 @@ const handleRefresh = async () => {
   height: var(--sidebar-list-item-height);
   width: var(--sidebar-list-item-height);
   border-radius: 50%;
-  display: flex;  
-  align-items: center;  
-  justify-content: center; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: transparent;
 }
 

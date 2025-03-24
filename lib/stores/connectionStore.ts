@@ -12,10 +12,12 @@ import useEditorStore from './editorStore'
 async function runStartup(connection: Connection) {
   console.log('running startup')
   let editors = useEditorStore()
-  return editors.getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT]).forEach(async (editor) => {
-    console.log(`running startup script ${editor.name}`)
-    await connection.query(editor.contents)
-  })
+  return editors
+    .getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT])
+    .forEach(async (editor) => {
+      console.log(`running startup script ${editor.name}`)
+      await connection.query(editor.contents)
+    })
 }
 
 const useConnectionStore = defineStore('connections', {
@@ -33,8 +35,7 @@ const useConnectionStore = defineStore('connections', {
       if (this.connections[name]) {
         return this.connections[name].connect().then(() => {
           runStartup(this.connections[name])
-        }
-        )
+        })
       } else {
         throw new Error(`Connection with name "${name}" not found.`)
       }
@@ -44,8 +45,7 @@ const useConnectionStore = defineStore('connections', {
       if (this.connections[name]) {
         return this.connections[name].reset().then(() => {
           runStartup(this.connections[name])
-        }
-        )
+        })
       } else {
         throw new Error(`Connection with name "${name}" not found.`)
       }
