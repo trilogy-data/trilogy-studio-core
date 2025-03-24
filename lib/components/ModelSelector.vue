@@ -33,7 +33,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 interface ModelSelectorProps {
   connection: {
     name: string
-    model?: string
+    model: string | null
   }
 }
 

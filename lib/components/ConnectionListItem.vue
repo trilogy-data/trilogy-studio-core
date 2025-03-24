@@ -93,7 +93,7 @@ interface ConnectionListItemProps {
     indent: number
     count?: number
     type: string
-    connection: Connection
+    connection: any
     object?: any
   }
   isCollapsed?: boolean
@@ -152,7 +152,6 @@ const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) 
 }
 
 const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string) => {
-  console.log(key)
   emit('updateSnowflakePrivateKey', connection, key)
 }
 

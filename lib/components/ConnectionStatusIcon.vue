@@ -9,7 +9,7 @@ interface StatusIconProps {
   connection: {
     name: string
     connected: boolean
-    error?: string
+    error: string | null
   }
 }
 
