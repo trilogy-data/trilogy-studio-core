@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import Editor from '../editors/editor'
 import { Results } from '../editors/results'
+import { EditorTag } from '../editors'
 
 const useEditorStore = defineStore('editors', {
   state: () => ({
@@ -26,6 +27,15 @@ const useEditorStore = defineStore('editors', {
     },
     addEditor(editor: Editor) {
       this.editors[editor.name] = editor
+    },
+    getConnectionEditors(connection: string, tags: EditorTag[] = []) {
+      // return Object.values(this.editors).filter((editor) => editor.connection === connection)
+      let base = Object.values(this.editors).filter((editor) => editor.connection === connection)
+      if (tags.length === 0) {
+        return base
+      }
+      return base.filter((editor) => tags.every((tag) => editor.tags.includes(tag)))
+
     },
     updateEditorName(name: string, newName: string) {
       this.editors[newName] = this.editors[name]

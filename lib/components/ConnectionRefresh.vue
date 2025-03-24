@@ -3,6 +3,7 @@
     class="refresh-button"
     :action="handleRefresh"
     :data-testid="`refresh-connection-${connection.name}`"
+    :useDefaultStyle="false"
   >
     <i :class="buttonIcon" class="refresh-icon"></i>
   </loading-button>
@@ -62,6 +63,7 @@ const handleRefresh = async () => {
   display: flex;  
   align-items: center;  
   justify-content: center; 
+  background-color: transparent;
 }
 
 .refresh-icon {

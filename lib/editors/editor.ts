@@ -4,6 +4,7 @@ import type { ResultsInterface, ChartConfig } from './results'
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
+  STARTUP_SCRIPT = 'startup_script',
   // SCHEDULED = 'scheduled',
 }
 
@@ -32,6 +33,7 @@ export interface EditorInterface {
   tags: EditorTag[]
   cancelCallback: (() => void) | null
   changed: boolean
+  deleted: boolean
   chartConfig?: ChartConfig
   // monaco: editor.IStandaloneCodeEditor | null;
 }
@@ -54,6 +56,7 @@ export default class Editor implements EditorInterface {
   tags: EditorTag[]
   cancelCallback: (() => void) | null
   changed: boolean
+  deleted: boolean
   chartConfig?: ChartConfig
   completionSymbols: any[]
   // monaco: editor.IStandaloneCodeEditor | null;
@@ -102,6 +105,7 @@ export default class Editor implements EditorInterface {
     this.cancelCallback = null
     // default to change for save
     this.changed = true
+    this.deleted = false
     this.completionSymbols = []
   }
 

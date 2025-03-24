@@ -2,35 +2,19 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
-        >
+        <button @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
+        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
       </div>
-      <connection-creator-inline
-        :visible="creatorVisible"
-        @close="creatorVisible = !creatorVisible"
-      />
+      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
-    <connection-list-item
-      v-for="item in contentList"
-      :key="item.id"
-      :item="item"
-      :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey"
-      @toggle="toggleCollapse"
-      @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken"
-      @updateBigqueryProject="updateBigqueryProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey"
-      @toggle-save-credential="toggleSaveCredential"
-      :delete-connection="deleteConnection"
-    />
+    <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === activeConnectionKey" @toggle="toggleCollapse" @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
+      @update-snowflake-private-key="updateSnowflakePrivateKey" @toggle-save-credential="toggleSaveCredential"
+      :delete-connection="deleteConnection" />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -161,19 +145,20 @@ export default {
           }
         }
         if (type === 'table') {
-          console.log('getting columns')
+          console.log('getting columns for table')
           let dbid = id.split(KeySeparator)[1]
           let tableid = id.split(KeySeparator)[2]
-          let nTable = await connectionStore.connections[connection].getTable(dbid, tableid)
+          let nTable = await connectionStore.connections[connection].getColumns(dbid, tableid)
           let cTable = connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.name === tableid)
           if (cTable) {
-            cTable.columns = nTable.columns
+            cTable.columns = nTable
           }
         }
         delete isErrored.value[id]
       } catch (error) {
+        console.log(error)
         // check if it's an Error
         if (error instanceof Error) {
           isErrored.value[id] = error.message
@@ -335,12 +320,10 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(
-    to left,
-    var(--sidebar-bg) 0%,
-    var(--query-window-bg) 50%,
-    var(--sidebar-bg) 100%
-  );
+  background: linear-gradient(to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%);
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

@@ -1,9 +1,10 @@
 <template>
     <button 
       class="quick-new-editor-button" 
+      :class = "type === 'trilogy'? 'trilogy-class' : 'sql-class'"
       @click.stop="createNewEditor"
       :data-testid="`quick-new-editor-${connection}`"
-      :title="`Create new Trilogy editor for ${connection}`"
+      :title="`New ${type} editor`"
     >
       <i class="mdi mdi-file-document-plus-outline"></i>
     </button>
@@ -30,6 +31,11 @@
   .quick-new-editor-button i {
     font-size: 16px;
   }
+  .trilogy-class {
+    /* orange */
+    color: #cc6900;
+  }
+
   .sql-overlay {
   position: absolute;
   font-size: 9px;
@@ -51,6 +57,14 @@
       connection: {
         type: String,
         required: true
+      },
+      type: {
+        type: String,
+        default: 'trilogy'
+      },
+      content: {
+        type: String,
+        default: ''
       }
     },
     setup(props, { emit }) {
@@ -72,9 +86,9 @@
           // Create a new editor with trilogy type
           editorStore.newEditor(
             editorName,
-            'preql',
+            props.type === 'trilogy' ? 'preql' : 'sql',
             props.connection,
-            ''
+            props.content
           )
           
           // Save editors to persist changes

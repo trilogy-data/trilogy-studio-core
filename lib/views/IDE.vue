@@ -11,6 +11,7 @@
 
       <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
         <vertical-split-layout>
+
           <template #editor v-if="activeEditor && activeEditorData">
             <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
               @save-editors="saveEditorsCall" />
@@ -221,7 +222,7 @@ export default {
     if (editor) {
       editorStore.activeEditorName = editor
     }
-    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor } = useScreenNavigation();
+    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, } = useScreenNavigation();
     return {
       connectionStore,
       editorStore,

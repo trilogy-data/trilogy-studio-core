@@ -21,6 +21,7 @@ export function buildConnectionTree(
     count: number
     type: string
     connection: any | undefined
+    object?: any
   }> = []
   const sorted = Object.values(connections).sort((a, b) => {
     if (a.connected && !b.connected) {
@@ -159,6 +160,7 @@ export function buildConnectionTree(
               count: 0,
               type: 'table',
               connection,
+              object: table,
             })
             if (isLoading[tableId]) {
               list.push({

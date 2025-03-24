@@ -172,12 +172,12 @@ export default class DuckDBConnection extends BaseConnection {
 
   mapDescribeResult(describeResult: any[]): Column[] {
     return describeResult.map((row) => {
-      const name = row[0]
-      const type = row[1]
-      const nullable = row[2] === 'YES'
-      const key = row[3]
-      const defaultValue = row[4]
-      const extra = row[5]
+      const name = row.column_name
+      const type = row.column_type
+      const nullable = row.null === 'YES'
+      const key = row.key
+      const defaultValue = row.default
+      const extra = row.extra
       return new Column(
         name,
         type,

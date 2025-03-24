@@ -1,8 +1,8 @@
 <template>
   <div class="main">
     <mobile-sidebar-layout
-      @menu-toggled="menuOpen = !menuOpen"
-      :menuOpen="menuOpen"
+      @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      :menuOpen="mobileMenuOpen"
       :activeScreen="activeScreen"
     >
       <template #sidebar>
@@ -197,23 +197,19 @@ import CommunityModels from '../components/CommunityModels.vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
+import useScreenNavigation from './useScreenNavigation'
 
 export default {
   name: 'MobileIDEComponent',
   data() {
-    let screen = getDefaultValueFromHash('screen')
-    let activeEditor = getDefaultValueFromHash('editor')
     let activeModelKey = getDefaultValueFromHash('modelKey')
     let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
     let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
-      activeEditor: activeEditor ? activeEditor : '',
-      activeScreen: screen ? screen : '',
       activeModelKey: activeModelKey ? activeModelKey : '',
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'editor',
-      menuOpen: false,
     }
   },
   components: {
@@ -261,6 +257,7 @@ export default {
     if (!saveEditors) {
       saveEditors = () => {}
     }
+    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, mobileMenuOpen } = useScreenNavigation();
     return {
       connectionStore,
       editorStore,
@@ -269,31 +266,24 @@ export default {
       saveConnections,
       saveModels,
       modelStore,
+      activeScreen,
+      activeEditor,
+      setActiveScreen,
+      setActiveEditor,
+      mobileMenuOpen
     }
   },
   methods: {
-    setActiveEditor(editor: string) {
-      this.activeEditor = editor
-      pushHashToUrl('editor', editor)
-      this.menuOpen = false
-    },
-    setActiveScreen(screen: string) {
-      pushHashToUrl('screen', screen)
-      this.activeScreen = screen
-      if (['community-models', 'welcome', 'profile', 'settings'].includes(screen)) {
-        this.menuOpen = false
-      }
-    },
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey
-      this.menuOpen = false
+      this.mobileMenuOpen = false
     },
     setActiveDocumentationKey(documentationKey: string) {
       pushHashToUrl('documentationKey', documentationKey)
       this.activeDocumentationKey = documentationKey
       if (documentationKey.startsWith('article')) {
-        this.menuOpen = false
+        this.mobileMenuOpen = false
       }
     },
     setActiveConnectionKey(connectionKey: string) {
