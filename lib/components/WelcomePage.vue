@@ -69,7 +69,6 @@ const tutorial = () => {
 .logo {
   display: flex;
   align-items: center;
-  justify-content: center;
   width: 100%;
   /* background-color: #444; */
   /* border-radius: 50%; */

@@ -147,6 +147,11 @@ export default class BigQueryOauthConnection extends BaseConnection {
     }
   }
 
+  async getTableSample(database: string, table: string, limit: number = 100) {
+    const sql = `SELECT * FROM \`${database}.${table}\` LIMIT ${limit}`
+    return this.query(sql)
+  }
+
   async getTable(database: string, table: string): Promise<Table> {
     try {
       const columns = await this.getColumns(database, table)

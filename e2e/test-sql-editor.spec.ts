@@ -39,12 +39,11 @@ test('test', async ({ page, isMobile }) => {
   }
   await page.getByTestId('delete-editor-test-one').click()
   await page.getByTestId('confirm-editor-deletion').click()
-  await page.reload();
+  await page.reload()
   // confirm we've deleted it
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  const count = await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').count();
-  expect(count).toBe(0);
-
+  const count = await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').count()
+  expect(count).toBe(0)
 })

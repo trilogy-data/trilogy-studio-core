@@ -59,14 +59,7 @@
         </tooltip>
       </template>
 
-      <template v-if="item.type === 'creator'">
-        <editor-creator-inline
-          :connection="item.label"
-          :visible="editorCreatorVisible[item.label]"
-          @close="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
-        />
-      </template>
-      <span v-else class="truncate-text">
+      <span class="truncate-text">
         {{ item.label }}
         <span class="text-light" v-if="item.type === 'connection'">
           ({{
@@ -83,17 +76,18 @@
       </template>
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
-          <button
-            @click.stop="editorCreatorVisible[item.label] = !editorCreatorVisible[item.label]"
-          >
-            {{ editorCreatorVisible[item.label] ? 'Hide' : 'New' }}
-          </button>
+          <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
+          <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
+        <span
+          class="remove-btn"
+          @click.stop="deleteEditor(item.editor)"
+          :data-testid="`delete-editor-${item.label}`"
+        >
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -103,8 +97,12 @@
         <h3>Confirm Deletion</h3>
         <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
         <div class="dialog-actions">
-          <button class="cancel-btn" data-testid='cancel-editor-deletion' @click="cancelDelete">Cancel</button>
-          <button class="confirm-btn"  data-testid='confirm-editor-deletion' @click="confirmDelete">Delete</button>
+          <button class="cancel-btn" data-testid="cancel-editor-deletion" @click="cancelDelete">
+            Cancel
+          </button>
+          <button class="confirm-btn" data-testid="confirm-editor-deletion" @click="confirmDelete">
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -125,6 +123,7 @@ import type { Connection } from '../connections'
 import trilogyIcon from '../static/trilogy.png'
 import { getDefaultValueFromHash } from '../stores/urlStore'
 import { buildEditorTree } from '../editors'
+import EditorCreatorIcon from './EditorCreatorIcon.vue'
 
 export default {
   name: 'EditorList',
@@ -146,7 +145,6 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
-    const editorCreatorVisible = ref<Record<string, boolean>>({})
     const toggleCollapse = (key: string) => {
       collapsed.value[key] = !collapsed.value[key]
     }
@@ -194,12 +192,7 @@ export default {
     })
 
     const contentList = computed(() => {
-      return buildEditorTree(
-        Object.values(editorStore.editors),
-        collapsed.value,
-        hiddenTags.value,
-        editorCreatorVisible.value,
-      )
+      return buildEditorTree(Object.values(editorStore.editors), collapsed.value, hiddenTags.value)
     })
 
     return {
@@ -215,7 +208,6 @@ export default {
       trilogyIcon,
       connectionStateToStatus,
       creatorVisible,
-      editorCreatorVisible,
     }
   },
   data() {
@@ -263,6 +255,7 @@ export default {
   },
   components: {
     EditorCreatorInline,
+    EditorCreatorIcon,
     SidebarList,
     Tooltip,
     LoadingButton,

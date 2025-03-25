@@ -4,7 +4,6 @@ export function buildEditorTree(
   editors: Editor[],
   collapsed: Record<string, boolean>,
   hiddenTags: Set<string>,
-  connectionCreatorVisible: Record<string, boolean>,
 ) {
   const list: Array<{
     key: string
@@ -68,14 +67,14 @@ export function buildEditorTree(
           // INSERT NEW DATA ELEMENT AFTER CONNECTION HERE
           // You can inject a new item into the list right after
           // each connection is added, for example:
-          if (connectionCreatorVisible[connection] === true) {
-            list.push({
-              key: `data-${connectionKey}`,
-              label: connection,
-              type: 'creator',
-              indent: [0],
-            })
-          }
+          // if (connectionCreatorVisible[connection] === true) {
+          //   list.push({
+          //     key: `data-${connectionKey}`,
+          //     label: connection,
+          //     type: 'creator',
+          //     indent: [0],
+          //   })
+          // }
           // ===================================================
 
           // If connection is not collapsed, add editors

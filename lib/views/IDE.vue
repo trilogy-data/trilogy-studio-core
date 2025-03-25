@@ -18,7 +18,7 @@
         />
       </template>
 
-      <template v-if="activeScreen && ['editors', 'connections'].includes(activeScreen)">
+      <template v-if="activeScreen && ['editors'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
             <editor
@@ -54,7 +54,12 @@
           </template>
         </vertical-split-layout>
       </template>
-
+      <template v-else-if="activeScreen === 'connections'">
+        <connection-view
+          :activeConnectionKey="activeConnectionKey"
+          @save-editors="saveEditorsCall"
+        />
+      </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
       </template>
@@ -177,6 +182,7 @@ import Dashboard from '../components/Dashboard.vue'
 import ResultsContainer from '../components/Results.vue'
 import CommunityModels from '../components/CommunityModels.vue'
 import LLMView from '../components/LLMView.vue'
+import ConnectionView from '../components/ConnectionView.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -220,6 +226,7 @@ export default {
     LoadingButton,
     CommunityModels,
     LLMView,
+    ConnectionView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver

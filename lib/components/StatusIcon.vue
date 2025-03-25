@@ -47,12 +47,12 @@ const statusClasses = computed(() => {
 }
 
 .indicator-container {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: inherit;
   vertical-align: middle;
-  text-align: center;
 }
-
 .connected {
   background-color: green;
   color: green;

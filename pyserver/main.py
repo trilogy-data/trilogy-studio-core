@@ -74,7 +74,7 @@ logger = getLogger(__name__)
 
 PORT = 5678
 
-STATEMENT_LIMIT = 100
+STATEMENT_LIMIT = 100_000
 
 
 app = FastAPI()
@@ -175,6 +175,8 @@ def generate_query(query: QueryInSchema):
                 )
                 for x in final.output_components
             ]
+            if not final.limit:
+                final.limit = STATEMENT_LIMIT
             generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
 

@@ -16,7 +16,6 @@
   align-items: center;
   justify-content: center;
   height: var(--sidebar-list-item-height);
-  width: var(--sidebar-list-item-height);
   border-radius: 50%;
   border: none;
   background: transparent;
