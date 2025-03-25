@@ -12,6 +12,7 @@
             v-model="modelDetails.connection"
             id="model-connection"
             placeholder="Models must have a connection."
+            data-testid="model-creator-connection"
             required
           >
             <option
@@ -58,7 +59,7 @@
         </div>
       </div>
       <div class="button-row">
-        <button data-testid="connection-creator-submit" type="submit">Submit</button>
+        <button data-testid="model-creation-submit" type="submit">Submit</button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -241,7 +242,7 @@ export default defineComponent({
               editorStore.newEditor(
                 response.name,
                 'trilogy',
-                modelDetails.value.name,
+                connectionName,
                 response.content,
               )
             } else {

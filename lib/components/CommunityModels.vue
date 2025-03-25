@@ -36,7 +36,7 @@
           <div class="font-semibold">
             {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
           </div>
-          <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]">
+          <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]" :data-testid="`import-${file.name}`">
             {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
           </button>
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
