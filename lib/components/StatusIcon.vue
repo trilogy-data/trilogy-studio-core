@@ -47,9 +47,9 @@ const statusClasses = computed(() => {
 }
 
 .indicator-container {
-  display: inline-flex; 
+  display: inline-flex;
   align-items: center;
-  justify-content: center; 
+  justify-content: center;
   line-height: inherit;
   vertical-align: middle;
 }

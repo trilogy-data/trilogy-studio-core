@@ -2,8 +2,13 @@
   <div id="interface" class="interface">
     <div class="mobile-select-bar">
       <div class="icon-container" tooltip="Menu">
-        <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon" data-testid="mobile-menu-toggle"></i>
-      </div><span class="header">{{ screenTitle }}</span>
+        <i
+          @click="$emit('menu-toggled')"
+          class="mdi mdi-menu hamburger-icon"
+          data-testid="mobile-menu-toggle"
+        ></i>
+      </div>
+      <span class="header">{{ screenTitle }}</span>
     </div>
     <div class="interface-wrap">
       <div v-if="menuOpen" ref="sidebar" class="sidebar">

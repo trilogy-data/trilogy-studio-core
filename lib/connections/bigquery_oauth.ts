@@ -152,7 +152,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
     return this.query(sql)
   }
 
-
   async getTable(database: string, table: string): Promise<Table> {
     try {
       const columns = await this.getColumns(database, table)

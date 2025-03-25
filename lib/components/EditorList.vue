@@ -77,13 +77,17 @@
       <template v-else-if="item.type === 'connection'">
         <span class="tag-container">
           <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
-          <editor-creator-icon :connection="item.label" title="New Trilogy Editor"  />
+          <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
         </span>
         <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
+        <span
+          class="remove-btn"
+          @click.stop="deleteEditor(item.editor)"
+          :data-testid="`delete-editor-${item.label}`"
+        >
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -93,8 +97,12 @@
         <h3>Confirm Deletion</h3>
         <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
         <div class="dialog-actions">
-          <button class="cancel-btn" data-testid='cancel-editor-deletion' @click="cancelDelete">Cancel</button>
-          <button class="confirm-btn"  data-testid='confirm-editor-deletion' @click="confirmDelete">Delete</button>
+          <button class="cancel-btn" data-testid="cancel-editor-deletion" @click="cancelDelete">
+            Cancel
+          </button>
+          <button class="confirm-btn" data-testid="confirm-editor-deletion" @click="confirmDelete">
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -184,11 +192,7 @@ export default {
     })
 
     const contentList = computed(() => {
-      return buildEditorTree(
-        Object.values(editorStore.editors),
-        collapsed.value,
-        hiddenTags.value,
-      )
+      return buildEditorTree(Object.values(editorStore.editors), collapsed.value, hiddenTags.value)
     })
 
     return {
@@ -204,7 +208,6 @@ export default {
       trilogyIcon,
       connectionStateToStatus,
       creatorVisible,
-
     }
   },
   data() {

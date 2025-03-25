@@ -55,7 +55,10 @@
         </vertical-split-layout>
       </template>
       <template v-else-if="activeScreen === 'connections'">
-        <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
+        <connection-view
+          :activeConnectionKey="activeConnectionKey"
+          @save-editors="saveEditorsCall"
+        />
       </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
