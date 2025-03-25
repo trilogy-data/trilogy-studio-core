@@ -198,6 +198,26 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.model-name {
+  font-weight: 600;
+  font-size: var(--big-font-size);
+  color: var(--heading-color);
+}
+
+.model-engine-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background-color: var(--accent-color-faint);
+  color: var(--accent-color);
+}
 .font-semibold {
   font-weight: 500;
   font-size: var(--big-font-size);
@@ -217,11 +237,16 @@ onMounted(async () => {
   padding: 10px;
 }
 .model-item {
-  border-left: 1px solid var(--border);
-  padding-left: 10px;
-  margin-bottom: 15px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  margin-bottom: 20px;
+  transition: box-shadow 0.2s ease;
+  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.03));
 }
 
+.model-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 .text-loading {
   color: var(--text-faint);
   font-size: 24px;
@@ -267,4 +292,6 @@ onMounted(async () => {
 .bg-button-hover:hover {
   background-color: var(--button-hover-bg);
 }
+
+
 </style>
