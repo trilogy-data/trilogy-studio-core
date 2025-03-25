@@ -1,4 +1,4 @@
-export { default as Connection, Table, Column } from './base'
+export { default as Connection, Table, Column, AssetType } from './base'
 export { default as MotherDuckConnection } from './motherduck'
 export { default as DuckDBConnection } from './duckdb'
 export { default as BigQueryOauthConnection } from './bigquery_oauth'

@@ -2,6 +2,11 @@
 
 import { Results, ColumnType } from '../editors/results'
 
+export enum AssetType {
+  TABLE = 'table',
+  VIEW = 'view',
+}
+
 export class Column {
   name: string
   type: string
@@ -35,10 +40,14 @@ export class Column {
 export class Table {
   name: string
   columns: Column[]
+  description: string | null = null
+  assetType: AssetType = AssetType.TABLE
 
-  constructor(name: string, columns: Column[]) {
+  constructor(name: string, columns: Column[], description: string | null = null, assetType: AssetType = AssetType.TABLE) {
     this.name = name
     this.columns = columns
+    this.description = description
+    this.assetType = assetType
   }
 }
 
@@ -96,12 +105,30 @@ export default abstract class BaseConnection {
     this.secureFields = []
   }
 
+
   abstract getDatabases(): Promise<Database[]>
   abstract getTables(database: string): Promise<Table[]>
   abstract getColumns(database: string, table: string): Promise<Column[]>
   abstract getTable(database: string, table: string): Promise<Table>
 
   abstract query_core(sql: string): Promise<Results>
+
+  async getTableSample(database: string, table: string, limit: number = 100) {
+    const sql = `SELECT * FROM ${table} LIMIT ${limit}`
+    return this.query(sql)
+  }
+
+  getLocalTable(database: string, table: string) {
+    if (!this.databases) {
+      return null
+    }
+    const db = this.databases.find((d) => d.name === database)
+    if (!db) {
+      return null
+    }
+    return db.tables.find((t) => t
+      .name === table)
+  }
 
   async query(sql: string) {
     if (!sql) {

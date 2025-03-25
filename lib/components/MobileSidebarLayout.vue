@@ -1,48 +1,46 @@
 <template>
   <div id="interface" class="interface">
-    <div class="select-bar">
-      <i
-        @click="$emit('menu-toggled')"
-        class="mdi mdi-menu hamburger-icon"
-        data-testid="mobile-menu-toggle"
-      ></i
-      ><span class="header">{{ screenTitle }}</span>
+    <div class="mobile-select-bar">
+      <div class="icon-container" tooltip="Menu">
+        <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon" data-testid="mobile-menu-toggle"></i>
+      </div><span class="header">{{ screenTitle }}</span>
     </div>
     <div class="interface-wrap">
       <div v-if="menuOpen" ref="sidebar" class="sidebar">
         <slot name="sidebar"></slot>
       </div>
-      <div v-else ref="content" class="nested-page-content pa-0" id="page-content">
+      <div v-else ref="content" class="nested-page-content" id="page-content">
         <slot></slot>
       </div>
     </div>
   </div>
 </template>
 <style scoped>
-.select-bar {
+.mobile-select-bar {
   height: 40px;
-  padding-bottom: 5px;
+  min-height: 40px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
   position: relative;
 }
 
-.hamburger-icon {
+.icon-container {
+  position: absolute;
+  left: 16px;
   height: 100%;
-  /* width: 30px; */
-  font-size: 30px;
-  /* padding: 5px; */
-  /* position: absolute; */
-  left: 10px;
-  /* Keep the menu button on the left */
+  display: flex;
+  align-items: center;
+}
+
+.hamburger-icon {
+  font-size: 24px;
+  display: flex;
 }
 
 .header {
   font-size: 20px;
-  height: 30px;
+  width: 100%;
   text-align: center;
 }
 
@@ -66,10 +64,9 @@
   background-color: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
-  flex-grow: 0;
-  flex-shrink: 1;
   /* flex-wrap: wrap; */
-  height: 100%;
+  flex: 1 1 auto;
+  height: calc(100% -40px);
   width: 100%;
   z-index: 51;
   overflow-y: visible;
@@ -77,7 +74,7 @@
 
 .nested-page-content {
   flex: 1 1 auto;
-  max-height: 100%;
+  height: calc(100% -40px);
   z-index: 1;
   overflow: scroll;
 }

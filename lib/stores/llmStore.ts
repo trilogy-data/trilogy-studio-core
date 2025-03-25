@@ -5,8 +5,16 @@ import { AnthropicProvider, OpenAIProvider, MistralProvider, createPrompt } from
 
 const extractLastTripleQuotedText = (input: string): string | null => {
   // Use the 's' flag (dotAll) to make the dot match newlines as well
-  const matches = input.match(/"""([\s\S]*?)"""/gs)
-  return matches ? matches[matches.length - 1].slice(3, -3) : null
+  // try with all 3 kinds of quotes (''', ```, """)
+  console.log(input)
+  for (const quote of ["'''", '```', '"""']) {
+    const matches = input.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'))
+    console.log(matches)
+    if (matches) {
+      return matches[matches.length - 1].slice(3, -3)
+    }
+  }
+  return null
 }
 
 const useLLMConnectionStore = defineStore('llmConnections', {

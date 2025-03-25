@@ -251,18 +251,6 @@ export default defineComponent({
           'index would improve',
           'needs an index',
         ],
-        'n+1 query problem': [
-          'multiple queries',
-          'separate queries',
-          'query for each',
-          'batch fetch',
-        ],
-        'function in where clause': [
-          'non-sargable',
-          "can't use index",
-          'prevents index',
-          'function on column',
-        ],
       }
 
       if (issue in synonymMap) {
@@ -412,7 +400,7 @@ export default defineComponent({
     // Initialize providers list on mount if none are available
     onMounted(() => {
       if (availableProviders.value.length === 0) {
-        error.value = 'No LLM providers available. Please configure providers in settings.'
+        error.value = 'No LLM connections found. Please add connections in the sidebar.'
       }
     })
 

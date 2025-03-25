@@ -1,21 +1,16 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-icons">
-      <div>
-        <tooltip content="Trilogy Studio (Alpha)" class="trilogy-icon"
-          ><img @click="selectItem('welcome')" :src="trilogyIcon" />
-        </tooltip>
+      <div class="trilogy-icon">
+
+        <img @click="selectItem('welcome')" :src="trilogyIcon" title="Trilogy Studio (Alpha)" />
+
       </div>
       <div v-if="isMobile">Home</div>
-      <div class="sidebar-divider"></div>
-      <div
-        v-for="(item, _) in sidebarItems"
-        :key="item.name"
-        class="sidebar-icon"
-        @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }"
-        :data-testid="`sidebar-icon-${item.screen}`"
-      >
+      <div class="sidebar-divider" v-if="!isMobile"></div>
+      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
+        :data-testid="`sidebar-icon-${item.screen}`">
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
@@ -24,14 +19,9 @@
           <div>{{ item.tooltip }}</div>
         </template>
       </div>
-      <div class="sidebar-divider"></div>
-      <div
-        v-for="(item, _) in sidebarFeatureItems"
-        :key="item.name"
-        class="sidebar-icon"
-        @click="selectItem(item.screen)"
-        :class="{ selected: active == item.screen }"
-      >
+      <div class="sidebar-divider" v-if="!isMobile"></div>
+      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
+        @click="selectItem(item.screen)" :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }">
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
@@ -40,49 +30,47 @@
           <div>{{ item.tooltip }}</div>
         </template>
       </div>
-      <div class="sidebar-bottom-icons">
-        <div class="sidebar-icon" @click="selectItem('settings')">
-          <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
+      <div class="sidebar-bottom-icons" :class="{ 'sidebar-bottom-icons-mobile': isMobile }">
+        <div class="sidebar-icon" :class="{ selected: active == 'settings', 'sidebar-icon-margin': !isMobile }"
+          @click="selectItem('settings')">
+          <template v-if="!isMobile">
+            <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
+          </template>
+          <template v-else>
+            <i class="mdi mdi-cog"></i>
+            <div>Settings</div>
+          </template>
         </div>
-        <div class="sidebar-icon" @click="selectItem('profile')">
-          <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
+        <div class="sidebar-icon" :class="{ selected: active == 'profile', 'sidebar-icon-margin': !isMobile }"
+          @click="selectItem('profile')">
+          <template v-if="!isMobile">
+            <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
+          </template>
+          <template v-else>
+            <i class="mdi mdi-account"></i>
+            <div>Profile</div>
+          </template>
         </div>
       </div>
     </div>
 
     <div class="sidebar-content">
-      <EditorList
-        :activeEditor="activeEditor"
-        v-show="active === 'editors'"
-        @editor-selected="editorSelected"
-        @save-editors="saveEditors"
-      />
-      <ConnectionList
-        v-show="active === 'connections'"
-        @connection-key-selected="connectionKeySelected"
-        :activeConnectionKey="activeConnectionKey"
-      />
-      <LLMConnectionList
-        v-show="active === 'llms'"
-        @llm-connection-key-selected="connectionKeySelected"
-        :activeLLMKey="activeLLMKey"
-      />
-      <ModelSidebar
-        v-show="active === 'models'"
-        @model-key-selected="modelKeySelected"
-        :activeModelKey="activeModelKey"
-      />
-      <TutorialSidebar
-        v-show="active === 'tutorial'"
-        @documentation-key-selected="documentationKeySelected"
-        :activeDocumentationKey="activeDocumentationKey"
-      />
+      <EditorList :activeEditor="activeEditor" v-show="active === 'editors'" @editor-selected="editorSelected"
+        @save-editors="saveEditors" />
+      <ConnectionList v-show="active === 'connections'" @connection-key-selected="connectionKeySelected"
+        :activeConnectionKey="activeConnectionKey" />
+      <LLMConnectionList v-show="active === 'llms'" @llm-connection-key-selected="connectionKeySelected"
+        :activeLLMKey="activeLLMKey" />
+      <ModelSidebar v-show="active === 'models'" @model-key-selected="modelKeySelected"
+        :activeModelKey="activeModelKey" />
+      <TutorialSidebar v-show="active === 'tutorial'" @documentation-key-selected="documentationKeySelected"
+        :activeDocumentationKey="activeDocumentationKey" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, inject } from 'vue'
+import { defineComponent, inject, computed } from 'vue'
 import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
@@ -142,7 +130,7 @@ export default defineComponent({
       },
       {
         name: 'community-models',
-        tooltip: 'Community Models',
+        tooltip: 'Community',
         icon: 'mdi mdi-library',
         screen: 'community-models',
       },
@@ -183,6 +171,7 @@ export default defineComponent({
     if (!isMobile) {
       throw new Error('isMobile is not provided')
     }
+    const notMobile = !isMobile
     return {
       // index of the sidebarItem where the screen == active
       // selectedIndex: sideBarItems.findIndex((item) => item.screen === active) || 0,
@@ -190,6 +179,7 @@ export default defineComponent({
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
       isMobile,
+      notMobile
     }
   },
   components: {
@@ -241,6 +231,7 @@ export default defineComponent({
   height: 30px;
   display: flex;
   text-align: center;
+  cursor: pointer;
   /* justify-content: flex-start; */
 }
 
@@ -264,10 +255,13 @@ export default defineComponent({
 }
 
 .sidebar-icon {
-  margin: 10px 0;
   width: 100%;
   cursor: pointer;
   text-align: center;
+}
+
+.sidebar-icon-margin {
+  margin: 10px 0;
 }
 
 .sidebar-icon span {
@@ -304,6 +298,14 @@ export default defineComponent({
   flex-direction: column;
   margin-bottom: 10px;
   margin-top: auto;
+  width:100%;
+}
+.sidebar-bottom-icons-mobile {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  margin-top: auto;
+  min-height: 150px;
 }
 
 @media screen and (max-width: 768px) {

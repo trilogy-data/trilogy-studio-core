@@ -129,10 +129,8 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
-      console.log('refresh', id, connection, type)
       if (!connectionStore.connections[connection]?.connected) {
-        isErrored.value[id] = `Not connected; cannot load tables.`
-        return
+        await connectionStore.resetConnection(connection)
       }
       try {
         isLoading.value[id] = true

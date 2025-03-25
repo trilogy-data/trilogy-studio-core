@@ -1,6 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm'
 import BaseConnection from './base'
-import { Database, Table, Column } from './base'
+import { Database, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
@@ -178,7 +178,7 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async getTables(database: string): Promise<Table[]> {
-    return await this.connection.query('SHOW ALL TABLES').then((result) => {
+    return await this.connection.query('SELECT * FROM information_schema.tables').then((result) => {
       return this.mapShowTablesResult(
         result.toArray().map((row) => row.toJSON()),
         database,
@@ -186,7 +186,10 @@ export default class DuckDBConnection extends BaseConnection {
     })
   }
 
+
+
   async getColumns(database: string, table: string): Promise<Column[]> {
+
     return await this.connection.query(`DESCRIBE ${database}.${table}`).then((result) => {
       return this.mapDescribeResult(result.toArray().map((row) => row.toJSON()))
     })
@@ -216,10 +219,12 @@ export default class DuckDBConnection extends BaseConnection {
 
   mapShowTablesResult(showTablesResult: any[], database: string): Table[] {
     let columns: Column[] = []
+
+    //desc.TABLE_COMMENT, desc.table_type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE)
     return showTablesResult
-      .filter((row) => row.database === database)
+      .filter((row) => row.table_catalog === database)
       .map((row) => {
-        return new Table(row.name, columns)
+        return new Table(row.table_name, columns, row.TABLE_COMMENT, row.table_type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE)
       })
   }
 
