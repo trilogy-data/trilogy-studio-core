@@ -239,12 +239,7 @@ export default defineComponent({
           )
           modelStore.models[modelDetails.value.name].sources = data.map((response) => {
             if (!editorStore.editors[response.name]) {
-              editorStore.newEditor(
-                response.name,
-                'trilogy',
-                connectionName,
-                response.content,
-              )
+              editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
             } else {
               editorStore.editors[response.name].contents = response.content
             }

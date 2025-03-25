@@ -3,7 +3,7 @@
     class="quick-new-editor-button"
     :class="type === 'trilogy' ? 'trilogy-class' : 'sql-class'"
     @click.stop="createNewEditor"
-    :data-testid="`quick-new-editor-${connection}`"
+    :data-testid="`quick-new-editor-${connection}-${type}`"
     :title="title"
   >
     <i class="mdi" :class="icon ? icon : 'mdi-file-document-plus-outline'"></i>

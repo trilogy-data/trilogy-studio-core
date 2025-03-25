@@ -89,8 +89,8 @@
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
-      <editor-creator-icon :connection="item.connection.name" type="sql" />
-      <editor-creator-icon :connection="item.connection.name" />
+      <editor-creator-icon :connection="item.connection.name" type="sql" title="New SQL Editor" />
+      <editor-creator-icon :connection="item.connection.name" title="New Trilogy Editor" />
       <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
       <connection-status-icon :connection="item.connection" />
       <tooltip content="Delete Connection" position="left">

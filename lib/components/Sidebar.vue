@@ -6,9 +6,14 @@
       </div>
       <div v-if="isMobile">Home</div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
-      <div v-for="(item, _) in sidebarItems" :key="item.name" class="sidebar-icon" @click="selectItem(item.screen)"
+      <div
+        v-for="(item, _) in sidebarItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
-        :data-testid="`sidebar-icon-${item.screen}`">
+        :data-testid="`sidebar-icon-${item.screen}`"
+      >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
@@ -18,9 +23,14 @@
         </template>
       </div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
-      <div v-for="(item, _) in sidebarFeatureItems" :key="item.name" class="sidebar-icon"
-        @click="selectItem(item.screen)" :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
-        :data-testid="`sidebar-icon-${item.screen}`">
+      <div
+        v-for="(item, _) in sidebarFeatureItems"
+        :key="item.name"
+        class="sidebar-icon"
+        @click="selectItem(item.screen)"
+        :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
+        :data-testid="`sidebar-icon-${item.screen}`"
+      >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
         </template>
@@ -30,8 +40,11 @@
         </template>
       </div>
       <div class="sidebar-bottom-icons" :class="{ 'sidebar-bottom-icons-mobile': isMobile }">
-        <div class="sidebar-icon" :class="{ selected: active == 'settings', 'sidebar-icon-margin': !isMobile }"
-          @click="selectItem('settings')">
+        <div
+          class="sidebar-icon"
+          :class="{ selected: active == 'settings', 'sidebar-icon-margin': !isMobile }"
+          @click="selectItem('settings')"
+        >
           <template v-if="!isMobile">
             <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
           </template>
@@ -40,8 +53,11 @@
             <div>Settings</div>
           </template>
         </div>
-        <div class="sidebar-icon" :class="{ selected: active == 'profile', 'sidebar-icon-margin': !isMobile }"
-          @click="selectItem('profile')">
+        <div
+          class="sidebar-icon"
+          :class="{ selected: active == 'profile', 'sidebar-icon-margin': !isMobile }"
+          @click="selectItem('profile')"
+        >
           <template v-if="!isMobile">
             <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
           </template>
@@ -54,16 +70,32 @@
     </div>
 
     <div class="sidebar-content">
-      <EditorList :activeEditor="activeEditor" v-show="active === 'editors'" @editor-selected="editorSelected"
-        @save-editors="saveEditors" />
-      <ConnectionList v-show="active === 'connections'" @connection-key-selected="connectionKeySelected"
-        :activeConnectionKey="activeConnectionKey" />
-      <LLMConnectionList v-show="active === 'llms'" @llm-connection-key-selected="connectionKeySelected"
-        :activeLLMKey="activeLLMKey" />
-      <ModelSidebar v-show="active === 'models'" @model-key-selected="modelKeySelected"
-        :activeModelKey="activeModelKey" />
-      <TutorialSidebar v-show="active === 'tutorial'" @documentation-key-selected="documentationKeySelected"
-        :activeDocumentationKey="activeDocumentationKey" />
+      <EditorList
+        :activeEditor="activeEditor"
+        v-show="active === 'editors'"
+        @editor-selected="editorSelected"
+        @save-editors="saveEditors"
+      />
+      <ConnectionList
+        v-show="active === 'connections'"
+        @connection-key-selected="connectionKeySelected"
+        :activeConnectionKey="activeConnectionKey"
+      />
+      <LLMConnectionList
+        v-show="active === 'llms'"
+        @llm-connection-key-selected="connectionKeySelected"
+        :activeLLMKey="activeLLMKey"
+      />
+      <ModelSidebar
+        v-show="active === 'models'"
+        @model-key-selected="modelKeySelected"
+        :activeModelKey="activeModelKey"
+      />
+      <TutorialSidebar
+        v-show="active === 'tutorial'"
+        @documentation-key-selected="documentationKeySelected"
+        :activeDocumentationKey="activeDocumentationKey"
+      />
     </div>
   </div>
 </template>

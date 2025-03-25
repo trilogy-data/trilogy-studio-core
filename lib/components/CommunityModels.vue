@@ -7,7 +7,12 @@
         <div class="filter-row flex gap-4 mb-2">
           <div class="search-box flex-grow">
             <label class="text-faint filter-label">Name</label>
-            <input type="text" v-model="searchQuery" placeholder="Search by model name..." />
+            <input
+              type="text"
+              data-testid="community-model-search"
+              v-model="searchQuery"
+              placeholder="Search by model name..."
+            />
           </div>
 
           <div class="engine-filter">
@@ -36,7 +41,10 @@
           <div class="font-semibold">
             {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
           </div>
-          <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]" :data-testid="`import-${file.name}`">
+          <button
+            @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+            :data-testid="`import-${file.name}`"
+          >
             {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
           </button>
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
@@ -292,6 +300,4 @@ onMounted(async () => {
 .bg-button-hover:hover {
   background-color: var(--button-hover-bg);
 }
-
-
 </style>
