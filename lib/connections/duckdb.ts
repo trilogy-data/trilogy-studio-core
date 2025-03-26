@@ -113,10 +113,10 @@ export default class DuckDBConnection extends BaseConnection {
             }
             break
           case ColumnType.DATE:
-            row[key] = DateTime.fromMillis(row[key], { zone: 'UTC' })
+            row[key] = row[key]? DateTime.fromMillis(row[key], { zone: 'UTC' }) : row[key]
             break
           case ColumnType.DATETIME:
-            row[key] = DateTime.fromMillis(row[key], { zone: tz })
+            row[key] = row[key] ? DateTime.fromMillis(row[key], { zone: tz }) : row[key]
             break
           default:
             break

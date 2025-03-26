@@ -4,10 +4,7 @@
     <div class="table-header">
       <div class="table-title">
         <h2>{{ table.name }}</h2>
-        <span
-          class="table-type-badge"
-          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
-        >
+        <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
       </div>
@@ -15,11 +12,7 @@
     </div>
 
     <div class="tabs">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'structure' }"
-        @click="activeTab = 'structure'"
-      >
+      <button class="tab-button" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'">
         Structure
       </button>
       <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="loadSampleData">
@@ -30,12 +23,7 @@
     <div v-if="activeTab === 'structure'" class="table-structure">
       <div class="structure-header">
         <div class="search-container">
-          <input
-            type="text"
-            v-model="searchTerm"
-            placeholder="Search columns..."
-            class="search-input"
-          />
+          <input type="text" v-model="searchTerm" placeholder="Search columns..." class="search-input" />
         </div>
         <div class="column-count">
           {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
@@ -82,7 +70,7 @@
           <span class="refresh-icon">⟳</span> Refresh
         </button>
         <div class="row-count" v-if="sampleData.length">
-          Showing {{ sampleData.length }} row{{ selectedSampleData.length !== 1 ? 's' : '' }}
+          Showing {{ sampleData.length }} row{{ selectedSampleData?.data?.length !== 1 ? 's' : '' }}
         </div>
       </div>
 
@@ -95,34 +83,12 @@
         <span>⚠️ {{ error }}</span>
       </div>
 
-      <div v-else-if="selectedSampleData.length === 0" class="empty-state">
+      <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
         <p>No data available</p>
       </div>
 
-      <div v-else class="data-table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th v-for="column in table.columns" :key="column.name">
-                {{ column.name }}
-                <span v-if="column.primary" class="key-icon small" title="Primary Key">🔑</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, rowIndex) in selectedSampleData" :key="rowIndex">
-              <td v-for="column in table.columns" :key="column.name">
-                <div
-                  class="cell-content"
-                  :class="getCellClass(row[column.name], column.trilogyType)"
-                >
-                  {{ formatCellValue(row[column.name], column.trilogyType) }}
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <DataTable v-else :results="selectedSampleData.data" :headers="selectedSampleData.headers" />
+
     </div>
   </div>
 </template>
@@ -130,11 +96,16 @@
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue'
 import { Table, AssetType } from '../connections'
+import { Results } from '../editors/results'
 import { inject } from 'vue'
+import DataTable from './DataTable.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 
 export default defineComponent({
   name: 'TableViewer',
+  components: {
+    DataTable,
+  },
   props: {
     table: {
       type: Object as () => Table,
@@ -152,7 +123,7 @@ export default defineComponent({
   setup(props) {
     const activeTab = ref('structure')
     const searchTerm = ref('')
-    const sampleData = ref<Record<string, Readonly<Record<string, any>[]>>>({})
+    const sampleData = ref<Record<string, Results>>({})
     const isLoading = ref(false)
     const error = ref<string | null>(null)
 
@@ -171,7 +142,7 @@ export default defineComponent({
 
     const loadSampleData = async () => {
       activeTab.value = 'data'
-      if (sampleData.value[props.table.name]?.length > 0) return
+      if (sampleData.value[props.table.name]?.data?.length > 0) return
 
       isLoading.value = true
       error.value = null
@@ -189,7 +160,7 @@ export default defineComponent({
           50,
         )
 
-        sampleData.value[props.table.name] = result.data || []
+        sampleData.value[props.table.name] = result || new Results(new Map(), [])
       } catch (err) {
         console.error('Error loading sample data:', err)
         error.value = err instanceof Error ? err.message : 'Failed to load sample data'
@@ -199,7 +170,7 @@ export default defineComponent({
     }
 
     const selectedSampleData = computed(() =>
-      sampleData.value[props.table.name] ? sampleData.value[props.table.name] : [],
+      sampleData.value[props.table.name] ? sampleData.value[props.table.name] : new Results(new Map(), []),
     )
 
     const getCellClass = (value: any, type: string) => {
