@@ -146,6 +146,9 @@ export default {
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
     const toggleCollapse = (key: string) => {
+      if (collapsed.value[key] === undefined) {
+        collapsed.value[key] = false
+      }
       collapsed.value[key] = !collapsed.value[key]
     }
 

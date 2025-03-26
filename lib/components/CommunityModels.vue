@@ -7,7 +7,12 @@
         <div class="filter-row flex gap-4 mb-2">
           <div class="search-box flex-grow">
             <label class="text-faint filter-label">Name</label>
-            <input type="text" v-model="searchQuery" placeholder="Search by model name..." />
+            <input
+              type="text"
+              data-testid="community-model-search"
+              v-model="searchQuery"
+              placeholder="Search by model name..."
+            />
           </div>
 
           <div class="engine-filter">
@@ -36,7 +41,10 @@
           <div class="font-semibold">
             {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
           </div>
-          <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]">
+          <button
+            @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+            :data-testid="`import-${file.name}`"
+          >
             {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
           </button>
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
@@ -198,6 +206,26 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.model-name {
+  font-weight: 600;
+  font-size: var(--big-font-size);
+  color: var(--heading-color);
+}
+
+.model-engine-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background-color: var(--accent-color-faint);
+  color: var(--accent-color);
+}
 .font-semibold {
   font-weight: 500;
   font-size: var(--big-font-size);
@@ -217,11 +245,16 @@ onMounted(async () => {
   padding: 10px;
 }
 .model-item {
-  border-left: 1px solid var(--border);
-  padding-left: 10px;
-  margin-bottom: 15px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  margin-bottom: 20px;
+  transition: box-shadow 0.2s ease;
+  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.03));
 }
 
+.model-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 .text-loading {
   color: var(--text-faint);
   font-size: 24px;

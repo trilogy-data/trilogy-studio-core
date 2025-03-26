@@ -12,6 +12,7 @@
             v-model="modelDetails.connection"
             id="model-connection"
             placeholder="Models must have a connection."
+            data-testid="model-creator-connection"
             required
           >
             <option
@@ -58,7 +59,7 @@
         </div>
       </div>
       <div class="button-row">
-        <button data-testid="connection-creator-submit" type="submit">Submit</button>
+        <button data-testid="model-creation-submit" type="submit">Submit</button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -238,12 +239,7 @@ export default defineComponent({
           )
           modelStore.models[modelDetails.value.name].sources = data.map((response) => {
             if (!editorStore.editors[response.name]) {
-              editorStore.newEditor(
-                response.name,
-                'trilogy',
-                modelDetails.value.name,
-                response.content,
-              )
+              editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
             } else {
               editorStore.editors[response.name].contents = response.content
             }

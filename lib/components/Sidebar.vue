@@ -29,6 +29,7 @@
         class="sidebar-icon"
         @click="selectItem(item.screen)"
         :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
+        :data-testid="`sidebar-icon-${item.screen}`"
       >
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
@@ -330,6 +331,7 @@ export default defineComponent({
   margin-top: auto;
   width: 100%;
 }
+
 .sidebar-bottom-icons-mobile {
   display: flex;
   flex-direction: column;

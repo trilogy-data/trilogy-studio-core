@@ -205,6 +205,7 @@ export default defineComponent({
 
   setup(props) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const isMobile = inject<boolean>('isMobile', false)
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
@@ -447,7 +448,7 @@ export default defineComponent({
         data: { values: props.data },
         width: 'container',
         // 28 is the chart control height
-        height: props.containerHeight ? props.containerHeight - 150 : 'container',
+        height: isMobile? props.containerHeight : props.containerHeight ? props.containerHeight - 150 : 'container',
       }
 
       // Basic encoding object that we'll modify based on chart type

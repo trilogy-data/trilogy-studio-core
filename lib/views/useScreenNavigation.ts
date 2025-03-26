@@ -1,6 +1,6 @@
 import { ref, provide } from 'vue'
 import { pushHashToUrl, getDefaultValueFromHash } from '../stores/urlStore'
-
+import useEditorStore from '../stores/editorStore'
 export default function useScreenNavigation() {
   const activeScreen = ref(getDefaultValueFromHash('screen', '') || '')
   const activeEditor = ref(getDefaultValueFromHash('editor', '') || '')
@@ -16,6 +16,8 @@ export default function useScreenNavigation() {
   const setActiveEditor = (editor: string) => {
     pushHashToUrl('editor', editor)
     activeEditor.value = editor
+    let editorStore = useEditorStore()
+    editorStore.activeEditorName = editor
     mobileMenuOpen.value = false
   }
 
