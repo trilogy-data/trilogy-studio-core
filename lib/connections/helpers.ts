@@ -162,28 +162,28 @@ export function buildConnectionTree(
               connection,
               object: table,
             })
-            if (isLoading[tableId]) {
-              list.push({
-                id: `${connection.name}-loading`,
-                name: 'Loading...',
-                indent: 1,
-                count: 0,
-                type: 'loading',
-                connection,
-              })
-            }
-            if (!collapsed[tableId]) {
-              table.columns.forEach((column) => {
-                list.push({
-                  id: `${tableId}${KeySeparator}${column.name}`,
-                  name: column.name,
-                  indent: 3,
-                  count: 0,
-                  type: 'column',
-                  connection,
-                })
-              })
-            }
+            // if (isLoading[tableId]) {
+            //   list.push({
+            //     id: `${connection.name}-loading`,
+            //     name: 'Loading...',
+            //     indent: 1,
+            //     count: 0,
+            //     type: 'loading',
+            //     connection,
+            //   })
+            // }
+            // if (!collapsed[tableId]) {
+            //   table.columns.forEach((column) => {
+            //     list.push({
+            //       id: `${tableId}${KeySeparator}${column.name}`,
+            //       name: column.name,
+            //       indent: 3,
+            //       count: 0,
+            //       type: 'column',
+            //       connection,
+            //     })
+            //   })
+            // }
           })
         }
       })

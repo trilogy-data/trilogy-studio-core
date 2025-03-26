@@ -59,9 +59,71 @@ import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
+const arrayTableFormatter = function(cell, formatterParams) {
+  // Get the array value from the cell
+  const arrayData = cell.getValue();
+  
+  console.log('format data')
+  console.log(arrayData)
+  // Check if it's actually an array
+  if (!Array.isArray(arrayData) || arrayData.length === 0) {
+    return "No data";
+  }
+  
+  // Create a container div for the nested table
+  const container = document.createElement("div");
+  container.style.width = "100%";
+  
+  // Create and initialize the nested table
+  const nestedTable = document.createElement("div");
+  container.appendChild(nestedTable);
+  
+  // Determine columns from the first item in the array
+  const firstItem = arrayData[0];
+  const columns = [];
+  
+  if (typeof firstItem === 'object' && firstItem !== null) {
+    // For array of objects, generate columns from object keys
+    Object.keys(firstItem).forEach(key => {
+      columns.push({
+        title: key,
+        field: key,
+        width: 100
+      });
+    });
+  } else {
+    // For simple array of primitives, use a single value column
+    columns.push({
+      title: "l",
+      field: "value"
+    });
+  }
+  
+  // Format the data properly for the nested table
+  const tableData = Array.isArray(firstItem) || (typeof firstItem === 'object' && firstItem !== null) 
+    ? arrayData 
+    : arrayData.map(item => ({ value: item }));
+  
+  // Create the nested Tabulator instance
+  new Tabulator(nestedTable, {
+    data: tableData,
+    columns: columns,
+    layout: "fitDataTable",
+    height: "auto",
+    width: "100%"
+  });
+  
+  return container;
+};
+
+
 function typeToFormatter(col: ResultColumn) {
   let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
   switch (col.type) {
+    case ColumnType.ARRAY:
+      return {
+        formatter: arrayTableFormatter,
+      }
     case ColumnType.FLOAT:
       return {
         formatter: 'money',
@@ -245,6 +307,7 @@ export default {
           minWidth: '100%',
           rowHeight: 30,
           data: this.tableData, //assign data to table
+          // dataTree:true,
           columns: this.tableColumns,
           // height: this.actualTableHeight,
           nestedFieldSeparator: false,

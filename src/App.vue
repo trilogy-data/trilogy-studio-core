@@ -21,6 +21,7 @@ import {
   EditModule,
   ExportModule,
   PageModule,
+  DataTreeModule,
 } from 'tabulator-tables'
 import * as monaco from 'monaco-editor'
 

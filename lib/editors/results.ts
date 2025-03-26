@@ -24,6 +24,11 @@ export enum ColumnType {
   TIMESTAMP = 'timestamp',
   FLOAT = 'float',
   UNKNOWN = 'unknown',
+  
+  // COMPLEX
+  STRUCT = 'struct',
+  ARRAY = 'array',
+  MAP = 'map',
 
   // CUSTOM TYPES
   MONEY = 'money',
@@ -41,6 +46,7 @@ export interface ResultColumn {
   description?: string
   scale?: number
   precision?: number
+  children?: Map<string, ResultColumn>
   // purpose: string
 }
 

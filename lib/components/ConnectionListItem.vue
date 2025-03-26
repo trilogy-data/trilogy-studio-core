@@ -152,11 +152,13 @@ const emit = defineEmits<{
 }>()
 
 // Computed properties for rendering logic
-const isExpandable = computed(() => ['connection', 'database', 'table'].includes(props.item.type))
+const isExpandable = computed(() => ['connection', 'database'].includes(props.item.type))
+
+const isFetchable = computed(() => ['connection', 'database', 'table'].includes(props.item.type))
 
 // Click handler for item expansion/toggling
 const handleItemClick = () => {
-  if (isExpandable.value) {
+  if (isFetchable.value) {
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
 }

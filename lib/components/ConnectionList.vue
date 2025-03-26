@@ -2,35 +2,19 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
-        >
+        <button @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
+        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
       </div>
-      <connection-creator-inline
-        :visible="creatorVisible"
-        @close="creatorVisible = !creatorVisible"
-      />
+      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
-    <connection-list-item
-      v-for="item in contentList"
-      :key="item.id"
-      :item="item"
-      :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey"
-      @toggle="toggleCollapse"
-      @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken"
-      @updateBigqueryProject="updateBigqueryProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey"
-      @toggle-save-credential="toggleSaveCredential"
-      :delete-connection="deleteConnection"
-    />
+    <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === activeConnectionKey" @toggle="toggleCollapse" @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
+      @update-snowflake-private-key="updateSnowflakePrivateKey" @toggle-save-credential="toggleSaveCredential"
+      :delete-connection="deleteConnection" />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -129,11 +113,12 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
-      if (!connectionStore.connections[connection]?.connected) {
-        await connectionStore.resetConnection(connection)
-      }
+
       try {
         isLoading.value[id] = true
+        if (!connectionStore.connections[connection]?.connected) {
+          await connectionStore.resetConnection(connection)
+        }
         if (type === 'connection') {
           console.log('getting databases')
           let databases = await connectionStore.connections[connection].getDatabases()
@@ -192,7 +177,8 @@ export default {
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
       ) {
-        // check if 0 or undefined for (connectionStore.connections[connection].databases?.length)
+        // open now see the refresh
+        collapsed.value[id] = false
         if (
           connectionStore.connections[connection].databases?.length === 0 ||
           connectionStore.connections[connection].databases?.length === undefined
@@ -200,14 +186,17 @@ export default {
           await refreshId(id, connection, type)
         }
       }
-      if (type === 'database' && collapsed.value[id] !== false) {
+      else if (type === 'database' && collapsed.value[id] !== false) {
+        // open now see the refresh
+        collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
         let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
         if (db && db.tables?.length === 0) {
           await refreshId(id, connection, type)
         }
       }
-      if (type === 'table' && collapsed.value[id] !== false) {
+      // keep this to refresh, but we won't actually add them to the display
+      else if (type === 'table' && collapsed.value[id] !== false) {
         let dbid = id.split(KeySeparator)[1]
         let tableid = id.split(KeySeparator)[2]
         let nTable = await connectionStore.connections[connection].databases
@@ -217,11 +206,13 @@ export default {
           await refreshId(id, connection, type)
         }
       }
-      if (collapsed.value[id] === undefined) {
+      // expand first, so we can see the loading view
+      else if (collapsed.value[id] === undefined) {
         collapsed.value[id] = false
       } else {
         collapsed.value[id] = !collapsed.value[id]
       }
+
     }
 
     // hydrate the initial collapse list
@@ -334,12 +325,10 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(
-    to left,
-    var(--sidebar-bg) 0%,
-    var(--query-window-bg) 50%,
-    var(--sidebar-bg) 100%
-  );
+  background: linear-gradient(to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%);
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }
