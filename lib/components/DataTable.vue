@@ -58,30 +58,31 @@ import { ColumnType } from '../editors/results'
 import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
+import { C } from 'vitest/dist/chunks/reporters.6vxQttCV.js'
 
-const arrayTableFormatter = function(cell, formatterParams) {
+const arrayTableFormatter = function (cell, formatterParams) {
   // Get the array value from the cell
   const arrayData = cell.getValue();
-  
+
   console.log('format data')
   console.log(arrayData)
   // Check if it's actually an array
   if (!Array.isArray(arrayData) || arrayData.length === 0) {
     return "No data";
   }
-  
+
   // Create a container div for the nested table
   const container = document.createElement("div");
   container.style.width = "100%";
-  
+
   // Create and initialize the nested table
   const nestedTable = document.createElement("div");
   container.appendChild(nestedTable);
-  
+
   // Determine columns from the first item in the array
   const firstItem = arrayData[0];
   const columns = [];
-  
+
   if (typeof firstItem === 'object' && firstItem !== null) {
     // For array of objects, generate columns from object keys
     Object.keys(firstItem).forEach(key => {
@@ -98,12 +99,12 @@ const arrayTableFormatter = function(cell, formatterParams) {
       field: "value"
     });
   }
-  
+
   // Format the data properly for the nested table
-  const tableData = Array.isArray(firstItem) || (typeof firstItem === 'object' && firstItem !== null) 
-    ? arrayData 
+  const tableData = Array.isArray(firstItem) || (typeof firstItem === 'object' && firstItem !== null)
+    ? arrayData
     : arrayData.map(item => ({ value: item }));
-  
+
   // Create the nested Tabulator instance
   new Tabulator(nestedTable, {
     data: tableData,
@@ -112,17 +113,73 @@ const arrayTableFormatter = function(cell, formatterParams) {
     height: "auto",
     width: "100%"
   });
-  
+
   return container;
 };
+function renderBasicTable(data, columns: Map<string, ResultColumn>) {
+  if (!data) {
+    return
+  }
 
+  let tableHtml = '<table class="tabulator-sub-table">';
+  let lookup = columns.keys().next().value
+  // Add body rows
+  tableHtml += '<tbody >';
+  data.forEach(row => {
+    console.log(row)
+    console.log(lookup)
+    console.log(columns)
+    tableHtml += '<tr class="tabulator-sub-row">';
+    tableHtml += `<td class="tabulator-sub-cell">${row[lookup]}</td>`;
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody>';
+
+  // Close table
+  tableHtml += '</table>';
+
+  return tableHtml;
+}
+
+function renderStructTable(data, columns: Map<string, ResultColumn>) {
+  if (!data) {
+    return
+  }
+  let tableHtml = '<table class="tabulator-sub-table">';
+
+  // Add body rows
+  tableHtml += '<tbody >';
+
+  columns.forEach((col, label) => {
+    let val = data[col.name];
+    if (col.type === ColumnType.ARRAY) {
+      val = renderBasicTable(val, col.children);
+    }
+
+    tableHtml += '<tr class="tabulator-sub-row">';
+    tableHtml += `<td class="tabulator-sub-cell tabulator-sub-cell-header">${col.name}</td>`;
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`;
+    tableHtml += '</tr>';
+  });
+
+  tableHtml += '</tbody>';
+
+  // Close table
+  tableHtml += '</table>';
+
+  return tableHtml;
+}
 
 function typeToFormatter(col: ResultColumn) {
   let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
   switch (col.type) {
     case ColumnType.ARRAY:
       return {
-        formatter: arrayTableFormatter,
+        formatter: (cell, formatterParams) => renderBasicTable(cell.getValue(), col.children),
+      }
+    case ColumnType.STRUCT:
+      return {
+        formatter: (cell, formatterParams) => renderStructTable(cell.getValue(), col.children),
       }
     case ColumnType.FLOAT:
       return {
@@ -305,7 +362,7 @@ export default {
           maxHeight: '100%',
           minHeight: '100%',
           minWidth: '100%',
-          rowHeight: 30,
+          // rowHeight: 30,
           data: this.tableData, //assign data to table
           // dataTree:true,
           columns: this.tableColumns,

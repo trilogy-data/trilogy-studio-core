@@ -156,6 +156,28 @@
   transform: translateZ(0);
 }
 
+.tabulator-sub-cell {
+  border: 1px solid var(--header-separator-color);
+  padding: 2px;
+  margin:0;
+}
+
+.tabulator-sub-cell-header {
+  font-weight: bold;
+}
+
+.tabulator-sub-row {
+  padding: 0;
+  margin: 0;
+}
+
+
+.tabulator-sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  padding: 0;
+  margin: 0;
+}
 
 
 .tabulator[tabulator-layout="fitDataFill"] .tabulator-tableholder .tabulator-table {

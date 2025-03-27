@@ -181,7 +181,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
         return new Column(
           field.name,
           field.type,
-          this.mapBigQueryTypeToColumnType(field.type),
+          this.mapBigQueryTypeToColumnType(field.type, field.mode),
           field.mode !== 'REQUIRED', // nullable if not REQUIRED
           isPrimary,
           isUnique,
@@ -195,6 +195,69 @@ export default class BigQueryOauthConnection extends BaseConnection {
     }
   }
 
+  fieldToResultColumn(field: any, modeOverride: string | null = null): ResultColumn {
+    let type = this.mapBigQueryTypeToColumnType(field.type, modeOverride || field.mode)
+    let mode = modeOverride || field.mode
+    if (type === ColumnType.ARRAY) {
+      let rval = {
+        name: field.name,
+        type: ColumnType.ARRAY,
+        children: new Map([['v', this.fieldToResultColumn(field, 'NOT_REPEATED')] as [string, ResultColumn]]),
+      }
+      return rval
+    }
+    return {
+      name: mode == 'NOT_REPEATED' ? 'v' : field.name,
+      type: this.mapBigQueryTypeToColumnType(field.type, mode),
+      children: field.fields ? new Map(field.fields.map((f: any) => [f.name, this.fieldToResultColumn(f)] as [string, ResultColumn])) : undefined
+    }
+  }
+  processRow(row: any, headers: Map<string, ResultColumn>): any {
+    let processedRow = {}
+    const keys = Object.keys(row)
+    const headerKeys = Array.from(headers.keys())
+    keys.forEach((key, index) => {
+      let column = headers.get(headerKeys[index])
+      let label = headerKeys[index]
+      let value = row[key].v
+      if (column) {
+        switch (column.type) {
+          case ColumnType.INTEGER:
+            processedRow[label] = value ? Number(value) : null
+            break
+          case ColumnType.FLOAT:
+            const scale = column.scale || 0
+            // Convert integer to float by dividing by 10^scale
+            if (value !== null && value !== undefined) {
+              const scaleFactor = Math.pow(10, scale)
+              processedRow[label] = Number(value) / scaleFactor
+            }
+            break
+          case ColumnType.DATE:
+            processedRow[label] = value ? DateTime.fromMillis(value, { zone: 'UTC' }) : null
+            break
+          case ColumnType.DATETIME:
+            processedRow[label] = value ? DateTime.fromMillis(value, { zone: 'UTC' }) : null
+            break
+          case ColumnType.ARRAY:
+            const newv = value.map((item: any) => {
+              // l i sthe constant returned by duckdb for the array
+              return this.processRow({ 'v': item }, column.children!)
+            })
+            processedRow[label] = newv
+            break
+          case ColumnType.STRUCT:
+            processedRow[label] = value ? this.processRow(value, column.children!) : null
+            break
+          default:
+            processedRow[label] = value
+            break
+        }
+      }
+      console.log('processedRow', processedRow)
+    })
+    return processedRow
+  }
   async query_core(sql: string): Promise<Results> {
     try {
       const result = await this.fetchEndpoint(
@@ -210,11 +273,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
       const headers = new Map(
         result.schema.fields.map((field: any) => [
           field.name,
-          {
-            name: field.name,
-            type: this.mapBigQueryTypeToColumnType(field.type),
-            description: '',
-          },
+          this.fieldToResultColumn(field),
         ]),
       ) as Map<string, ResultColumn>
 
@@ -222,38 +281,23 @@ export default class BigQueryOauthConnection extends BaseConnection {
         return new Results(headers, [])
       }
 
-      // @ts-ignore
-      const rows = result.rows.map((row) => {
-        const rowData: Record<string, string | number | null> = {}
-        // @ts-ignore
-        row.f.forEach((fieldValue, index) => {
-          const columnName = result.schema.fields[index].name
-          const value = fieldValue.v
-
-          // Parse the value according to the column type
-          const columnType = this.mapBigQueryTypeToColumnType(result.schema.fields[index].type)
-          rowData[columnName] =
-            value === null
-              ? null
-              : columnType === ColumnType.INTEGER
-                ? parseInt(value, 10)
-                : columnType === ColumnType.FLOAT
-                  ? parseFloat(value)
-                  : columnType == ColumnType.TIMESTAMP
-                    ? parseTimestamp(value)
-                    : value // Default to string for other types
-        })
-        return rowData
+      const rows = result.rows.map((row: any) => {
+        return this.processRow(row.f, headers)
       })
-      // Return results
+      console.log('rows', rows)
       return new Results(headers, rows)
     } catch (error) {
       throw error
     }
   }
 
-  private mapBigQueryTypeToColumnType(type: string): ColumnType {
+  private mapBigQueryTypeToColumnType(type: string, mode: string): ColumnType {
+    if (mode === 'REPEATED') {
+      return ColumnType.ARRAY
+    }
     switch (type.toLowerCase()) {
+      case 'record':
+        return ColumnType.STRUCT
       case 'string':
       case 'bytes':
         return ColumnType.STRING

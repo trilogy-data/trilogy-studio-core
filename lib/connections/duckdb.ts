@@ -95,9 +95,6 @@ export default class DuckDBConnection extends BaseConnection {
     let processedRow = {}
     Object.keys(row).forEach((key) => {
       const column = headers.get(key)
-      console.log('processing row')
-      console.log(row)
-      console.log(column)
       if (column) {
         switch (column.type) {
           case ColumnType.INTEGER:
@@ -118,9 +115,6 @@ export default class DuckDBConnection extends BaseConnection {
             processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
             break
           case ColumnType.ARRAY:
-            console.log('array')
-            console.log(row[key].data)
-            console.log(column.children)
             const arrayData = Array.from(row[key].toArray());
             const newv = arrayData.map((item: any) => {
               // l i sthe constant returned by duckdb for the array
@@ -129,7 +123,7 @@ export default class DuckDBConnection extends BaseConnection {
             processedRow[key] = newv
             break
           case ColumnType.STRUCT:
-            processedRow[key] = JSON.stringify(row[key])
+            processedRow[key] = row[key] ? this.processRow(row[key], column.children!) : null
             break
             // row[key] = row[key] ? this.processRow(row[key], column.children!) : null
             // break
@@ -139,8 +133,6 @@ export default class DuckDBConnection extends BaseConnection {
         }
       }
     })
-    console.log('returning')
-    console.log(processedRow)
     return processedRow
   }
 
