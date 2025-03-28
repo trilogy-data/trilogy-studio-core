@@ -44,7 +44,7 @@ import type {
   BigQueryOauthConnection,
   Connection,
   MotherDuckConnection,
-  SnowflakeConnection,
+  SnowflakeJwtConnection,
 } from '../connections'
 import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../data/constants'
@@ -90,11 +90,11 @@ export default {
       }
     }
 
-    const updateSnowflakePrivateKey = (connection: SnowflakeConnection, token: string) => {
+    const updateSnowflakePrivateKey = async (connection: SnowflakeJwtConnection, token: string) => {
       if (connection.type === 'snowflake') {
-        console.log(token)
         connection.setPrivateKey(token)
-        connectionStore.resetConnection(connection.name)
+        await saveConnections()
+        await connectionStore.resetConnection(connection.name)
       }
     }
 

@@ -4,7 +4,8 @@ import {
   BigQueryOauthConnection,
   DuckDBConnection,
   MotherDuckConnection,
-  SnowflakeConnection,
+  SnowflakeBasicAuthConnection,
+  SnowflakeJwtConnection
 } from '../connections'
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
@@ -118,7 +119,11 @@ export default class LocalStorage extends AbstractStorage {
           break
         case 'snowflake':
           // @ts-ignore
-          connections[connection.name] = reactive(SnowflakeConnection.fromJSON(connection))
+          connections[connection.name] = reactive(SnowflakeJwtConnection.fromJSON(connection))
+          break
+        case 'snowflake-basic':
+          // @ts-ignore
+          connections[connection.name] = reactive(SnowflakeBasicAuthConnection.fromJSON(connection))
           break
         // Uncomment if needed:
         // case "sqlserver":

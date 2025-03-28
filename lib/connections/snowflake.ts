@@ -12,365 +12,170 @@ interface SnowflakeType {
   scale?: number
 }
 
-// Interface for Snowflake API authentication
-interface SnowflakeAuth {
-  accessToken?: string
+// Base auth interface
+interface SnowflakeAuthBase {
   expiresAt?: number
 }
 
-// Updated interface for connection config to use private key instead of password
-interface SnowflakeConfig {
+// Interface for Snowflake V2 JWT API authentication
+interface SnowflakeJwtAuth extends SnowflakeAuthBase {
+  accessToken?: string
+}
+
+// Interface for Snowflake V1 API authentication
+interface SnowflakeBasicAuth extends SnowflakeAuthBase {
+  sessionToken?: string
+  masterToken?: string
+}
+
+// Base config interface
+interface SnowflakeConfigBase {
   account: string
   username: string
-  privateKey: string
-  privateKeyPassphrase?: string
   warehouse: string
   role?: string
   database?: string
   schema?: string
 }
 
+// Interface for JWT connection config
+export interface SnowflakeJwtConfig extends SnowflakeConfigBase {
+  privateKey: string
+  privateKeyPassphrase?: string
+}
+
+// Interface for Basic Auth connection config
+export interface SnowflakeBasicConfig extends SnowflakeConfigBase {
+  password: string
+}
+
 // Interface for statement status response
 interface StatementStatus {
-  statementHandle: string
   status: 'running' | 'success' | 'failed' | 'aborting' | 'aborted'
   message?: string
   resultSetMetaData?: any
   data?: any[]
 }
 
-// Singleton cache for Snowflake auth tokens
-const authCache: Record<string, SnowflakeAuth> = {}
-
-// Helper methods for debugging
-// function spkiToPem(spkiBuffer: ArrayBuffer): string {
-//     const base64 = arrayBufferToBase64(spkiBuffer);
-//     const formattedBase64 = base64.match(/.{1,64}/g)?.join("\n"); // Format with newlines every 64 chars
-//     return `-----BEGIN PUBLIC KEY-----\n${formattedBase64}\n-----END PUBLIC KEY-----`;
-// }
-// const publicKeyPem = spkiToPem(spkiKey);
-
-export default class SnowflakeRestConnection extends BaseConnection {
-  private config: SnowflakeConfig
-  private baseUrl: string
-  private auth: SnowflakeAuth = {}
-  private pollingInterval: number = 500 // ms
-
-  setPrivateKey(privateKey: string): void {
-    this.config.privateKey = privateKey
-  }
-  static fromJSON(fields: {
-    name: string
-    model: string | null
-    saveCredential: boolean
-    account: string
-    username: string
-    privateKey: string
-    privateKeyPassphrase?: string
-    warehouse: string
-    role?: string
-    database?: string
-    schema?: string
-  }): SnowflakeRestConnection {
-    let base = new SnowflakeRestConnection(
-      fields.name,
-      {
-        account: fields.account,
-        username: fields.username,
-        privateKey: fields.privateKey,
-        privateKeyPassphrase: fields.privateKeyPassphrase,
-        warehouse: fields.warehouse,
-        role: fields.role,
-        database: fields.database,
-        schema: fields.schema,
-      },
-      fields.model ? fields.model : undefined,
-      fields.saveCredential,
-    )
-
-    if (fields.model) {
-      base.model = fields.model
-    }
-    return base
-  }
-
-  toJSON(): object {
-    return {
-      name: this.name,
-      type: this.type,
-      model: this.model,
-      account: this.config.account,
-      username: this.config.username,
-      warehouse: this.config.warehouse,
-      role: this.config.role,
-      database: this.config.database,
-      schema: this.config.schema,
-      saveCredential: this.saveCredential,
-      privateKey: this.saveCredential ? this.config.privateKey : '',
-      privateKeyPassphrase: this.saveCredential ? this.config.privateKeyPassphrase : '',
-    }
-  }
+// Base Snowflake connection class
+abstract class SnowflakeConnectionBase extends BaseConnection {
+  protected baseUrl: string
+  protected pollingInterval: number = 500 // ms
 
   constructor(
     name: string,
-    config: SnowflakeConfig,
+    type: string,
+    account: string,
     model?: string,
     saveCredential: boolean = false,
   ) {
-    super(name, 'snowflake', false, model, saveCredential)
+    super(name, type, false, model, saveCredential)
     this.query_type = 'snowflake'
-    this.config = config
-    this.baseUrl = `https://${config.account}.snowflakecomputing.com/api`
+    this.baseUrl = `https://${account}.snowflakecomputing.com`
   }
 
-  /**
-   * Generate JWT token for Snowflake authentication using browser-compatible methods
-   */
-  private async generateJwtToken(): Promise<string> {
-    try {
-      // Load the PEM private key
-      const privateKeyPem = this.config.privateKey
+  // Abstract methods to be implemented by subclasses
+  abstract connect(): Promise<boolean>
+  protected abstract getAuthHeaders(): Record<string, string>
 
-      // Convert PEM private key to a JWK format key
-      const privateKey = await importPKCS8(privateKeyPem, 'RS256', { extractable: true })
-
-      // Prepare the qualified username (account.username)
-      const jwk = await crypto.subtle.exportKey('jwk', privateKey)
-      // remove private data from JWK
-      delete jwk.d
-      delete jwk.dp
-      delete jwk.dq
-      delete jwk.q
-      delete jwk.qi
-      jwk.key_ops = ['encrypt', 'wrapKey', 'verify']
-
-      // import public key
-      const publicKey = await crypto.subtle.importKey(
-        'jwk',
-        jwk,
-        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-        true,
-        ['verify'],
-      )
-
-      let spkiKey = await crypto.subtle.exportKey('spki', publicKey)
-
-      // Convert the exported public key to PEM format
-
-      const hashBuffer = await crypto.subtle.digest('SHA-256', spkiKey)
-
-      // Convert the hash to base64
-      //@ts-ignore
-      function arrayBufferToBase64(buffer) {
-        const binary = String.fromCharCode(...new Uint8Array(buffer))
-        return btoa(binary)
-      }
-
-      // Create the fingerprint
-      const publicKeyFingerprint = 'SHA256:' + arrayBufferToBase64(hashBuffer)
-
-      // TODO: REPLACE THE HARDCODED SHA256. prefix with the above code
-      const qualifiedUsernamePublicPrefix = `${this.config.account}.${this.config.username}.${publicKeyFingerprint}`
-      const qualifiedUsername = `${this.config.account}.${this.config.username}`
-
-      // Generate JWT payload
-      const payload = {
-        iss: qualifiedUsernamePublicPrefix,
-        sub: qualifiedUsername,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600, // Token valid for 1 hour
-      }
-
-      console.log('payload', payload)
-
-      // Sign the JWT
-      const jwt = await new SignJWT(payload)
-        .setProtectedHeader({ alg: 'RS256' })
-        .setExpirationTime('1h')
-        .sign(privateKey)
-
-      return jwt
-    } catch (error) {
-      throw error
+  processValue(val: any, column: ResultColumn) {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (!val) {
+      return val
     }
-  }
-
-  async connect(): Promise<boolean> {
-    try {
-      // If we already have a valid token, skip authentication
-      const cacheKey = `${this.config.account}:${this.config.username}`
-      if (
-        authCache[cacheKey] &&
-        authCache[cacheKey].expiresAt &&
-        authCache[cacheKey].expiresAt > Date.now()
-      ) {
-        this.auth = authCache[cacheKey]
-        return true
-      }
-
-      // Generate JWT token and set up auth
-      const token = await this.generateJwtToken()
-      this.auth = {
-        accessToken: token,
-        expiresAt: Date.now() + 60 * 60 * 1000 - 60000, // Token valid for 1 hour minus 1 minute buffer
-      }
-
-      // Verify the token works by running a simple test query
-      try {
-        await this.query_core('SELECT 1', true)
-
-        // If we get here, authentication succeeded
-        // Cache the token
-        authCache[cacheKey] = this.auth
-        return true
-      } catch (error) {
-        // If test query fails, clear auth and throw error
-        this.auth = {}
-        throw new Error(`Authentication failed: ${error}`)
-      }
-    } catch (error) {
-      throw error
+    else if (column.type === ColumnType.DATE) {
+      return DateTime.fromMillis(val* 1000, { zone: tz })
     }
-  }
-
-  private getAuthHeaders(): Record<string, string> {
-    return {
-      Authorization: `Bearer ${this.auth.accessToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT',
+    else if (column.type === ColumnType.DATETIME) {
+      return DateTime.fromMillis(val* 1000, { zone: tz })
     }
+    else if (column.type === ColumnType.ARRAY) {
+      return JSON.parse(val).map((v: any) => { return {'v': v} } )
+    }
+    else if (column.type === ColumnType.INTEGER) {
+      return Number(val)
+    }
+    else if (column.type === ColumnType.FLOAT) {
+      return Number(val)
+    }
+    else if (column.type === ColumnType.BOOLEAN) {
+      return val == 'true'
+    }
+    else if (column.type === ColumnType.STRING) {
+      return val
+    }
+    else if (column.type === ColumnType.STRUCT) {
+      return JSON.parse(val)
+    }
+    return val
   }
-
   async query_core(sql: string, isRetry: boolean = false): Promise<Results> {
     // Ensure we have a valid token before proceeding
-    if (
-      !isRetry &&
-      (!this.auth.accessToken || !this.auth.expiresAt || this.auth.expiresAt <= Date.now())
-    ) {
+    if (!isRetry) {
       await this.connect()
     }
 
-    // Submit the SQL statement
-    const submitResponse = await fetch(`${this.baseUrl}/v2/statements/`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({
-        statement: sql,
-        timeout: 60, // seconds
-        database: this.config.database,
-        schema: this.config.schema,
-        warehouse: this.config.warehouse,
-        role: this.config.role,
-      }),
-    })
+    try {
+      // Submit the query and get results - implementation depends on auth type
+      const resultData = await this.executeQuery(sql)
 
-    if (!submitResponse.ok) {
-      const errorData = await submitResponse.json()
+      // Extract metadata and data
+      const resultMetadata = this.extractMetadata(resultData)
+      const rows = this.extractRows(resultData)
 
-      // If we get an authentication error, try to reconnect once
-      if ((submitResponse.status === 401 || submitResponse.status === 403) && !isRetry) {
-        this.auth = {} // Clear existing auth
-        await this.connect() // Reconnect
-
-        // Retry the query
-        return this.query_core(sql, true)
-      }
-
-      throw new Error(`Query execution failed: ${errorData.message || submitResponse.statusText}`)
-    }
-
-    const submitData = await submitResponse.json()
-    const statementHandle = submitData.statementHandle
-
-    // Poll for query status until it completes
-    let statementStatus: StatementStatus
-    do {
-      await new Promise((resolve) => setTimeout(resolve, this.pollingInterval))
-
-      const statusResponse = await fetch(`${this.baseUrl}/v2/statements/${statementHandle}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      })
-
-      if (!statusResponse.ok) {
-        const errorData = await statusResponse.json()
-        throw new Error(
-          `Query status check failed: ${errorData.message || statusResponse.statusText}`,
-        )
-      }
-
-      statementStatus = await statusResponse.json()
-    } while (statementStatus.status === 'running')
-
-    if (statementStatus.status === 'failed') {
-      throw new Error(`Query execution failed: ${statementStatus.message || 'Unknown error'}`)
-    }
-
-    // Extract query results
-    const resultMetadata = statementStatus.resultSetMetaData?.rowType || []
-    const resultData = statementStatus.data || []
-
-    // Map column metadata to headers
-    const headers = new Map<string, ResultColumn>()
-    resultMetadata.forEach((column: any, _: number) => {
-      headers.set(column.name, {
-        name: column.name,
-        type: this.mapSnowflakeTypeToColumnType({
+      // Map column metadata to headers
+      const headers = new Map<string, ResultColumn>()
+      resultMetadata.forEach((column: any) => {
+        let type = this.mapSnowflakeTypeToColumnType({
           type: column.type,
           precision: column.precision,
           scale: column.scale,
-        }),
-        description: '',
-        precision: column.precision,
-        scale: column.scale,
+        })
+        headers.set(column.name, {
+          name: column.name,
+          type: type,
+          description: '',
+          precision: column.precision,
+          scale: column.scale,
+          children: type == ColumnType.ARRAY? new Map([['v', {name:'v', type: ColumnType.STRING}]]) : undefined,
+        })
       })
-    })
-
-    // Map rows to objects with column names as keys
-    const data = resultData.map((row: any[]) => {
-      const rowObj: any = {}
-      resultMetadata.forEach((column: any, index: number) => {
-        rowObj[column.name] = row[index]
+      console.log('headers', headers)
+      // Map rows to objects with column names as keys
+      let headerLookup = Array.from(headers.values())
+      const data = rows.map((row: any[]) => {
+        const rowObj: any = {}
+        console.log(row)
+        console.log(headerLookup)
+        headerLookup.forEach((column: any, index: number) => {
+          console.log(index)
+          console.log(column, row[index])
+          rowObj[column.name] = this.processValue(row[index], column)
+          console.log('parsed', rowObj[column.name])
+        })
+        return rowObj
       })
-      return rowObj
-    })
 
-    // Convert special types
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    data.forEach((row: any) => {
-      Object.keys(row).forEach((key) => {
-        switch (headers.get(key)?.type) {
-          case ColumnType.INTEGER:
-            if (row[key] !== null && row[key] !== undefined) {
-              row[key] = Number(row[key])
-            }
-            break
-          case ColumnType.FLOAT:
-            if (row[key] !== null && row[key] !== undefined) {
-              row[key] = Number(row[key])
-            }
-            break
-          case ColumnType.DATE:
-            if (row[key] !== null && row[key] !== undefined) {
-              row[key] = DateTime.fromISO(row[key], { zone: 'UTC' })
-            }
-            break
-          case ColumnType.DATETIME:
-            if (row[key] !== null && row[key] !== undefined) {
-              row[key] = DateTime.fromISO(row[key], { zone: tz })
-            }
-            break
-          default:
-            break
-        }
-      })
-    })
 
-    return new Results(headers, data)
+      return new Results(headers, data)
+    } catch (error) {
+      if (error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('403')) &&
+        !isRetry) {
+        // If auth expired, reconnect and retry
+        await this.connect()
+        return this.query_core(sql, true)
+      }
+      throw error
+    }
   }
 
-  private mapSnowflakeTypeToColumnType(snowflakeType: SnowflakeType): ColumnType {
+  // Helper methods for subclasses to implement/override as needed
+  protected abstract executeQuery(sql: string): Promise<any>
+  protected abstract extractMetadata(resultData: any): any[]
+  protected abstract extractRows(resultData: any): any[][]
+
+  protected mapSnowflakeTypeToColumnType(snowflakeType: SnowflakeType): ColumnType {
     // Map Snowflake types to our ColumnType enum
     const typeName = snowflakeType.type.toUpperCase()
 
@@ -388,6 +193,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
       return ColumnType.INTEGER
     } else if (
       typeName.includes('FLOAT') ||
+      typeName === 'FIXED' ||
       typeName.includes('DOUBLE') ||
       typeName === 'REAL' ||
       (typeName === 'NUMBER' && (snowflakeType.scale || 0) > 0)
@@ -399,13 +205,11 @@ export default class SnowflakeRestConnection extends BaseConnection {
       return ColumnType.DATE
     } else if (typeName.includes('TIMESTAMP') || typeName.includes('DATETIME')) {
       return ColumnType.DATETIME
-    
     } else if (typeName == 'ARRAY') {
       return ColumnType.ARRAY
     } else if (typeName == 'OBJECT') {
       return ColumnType.STRUCT
-    }
-    else {
+    } else {
       console.log('Unknown Snowflake type:', typeName)
       return ColumnType.UNKNOWN
     }
@@ -423,7 +227,6 @@ export default class SnowflakeRestConnection extends BaseConnection {
   }
 
   async getTable(database: string, table: string): Promise<Table> {
-    // this is wrong: TODO: fix
     const sql = `DESCRIBE TABLE ${database}.${table}`
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
@@ -448,7 +251,7 @@ export default class SnowflakeRestConnection extends BaseConnection {
   }
 
   async getColumns(database: string, table: string): Promise<Column[]> {
-    const schema = this.config.schema || 'PUBLIC'
+    const schema = this.getSchema() || 'PUBLIC'
     const sql = `DESCRIBE TABLE ${database}.${schema}.${table}`
 
     return this.query_core(sql).then((results) => {
@@ -471,8 +274,537 @@ export default class SnowflakeRestConnection extends BaseConnection {
     })
   }
 
+  protected abstract getSchema(): string | undefined
+
   async close(): Promise<void> {
-    // Just clear the auth data since we're using JWT
+    // To be implemented by subclasses
+  }
+}
+
+// JWT-based Connection (v2 API)
+export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
+  private config: SnowflakeJwtConfig
+  private auth: SnowflakeJwtAuth = {}
+
+  // Singleton cache for JWT auth tokens
+  private static authCache: Record<string, SnowflakeJwtAuth> = {}
+
+  constructor(
+    name: string,
+    config: SnowflakeJwtConfig,
+    model?: string,
+    saveCredential: boolean = false,
+  ) {
+    super(name, 'snowflake', config.account, model, saveCredential)
+    this.config = config
+  }
+
+  static fromJSON(fields: {
+    name: string
+    model: string | null
+    saveCredential: boolean
+    account: string
+    username: string
+    privateKey: string
+    privateKeyPassphrase?: string
+    warehouse: string
+    role?: string
+    database?: string
+    schema?: string
+  }): SnowflakeJwtConnection {
+    let conn = new SnowflakeJwtConnection(
+      fields.name,
+      {
+        account: fields.account,
+        username: fields.username,
+        privateKey: fields.privateKey,
+        privateKeyPassphrase: fields.privateKeyPassphrase,
+        warehouse: fields.warehouse,
+        role: fields.role,
+        database: fields.database,
+        schema: fields.schema,
+      },
+      fields.model ? fields.model : undefined,
+      fields.saveCredential,
+    )
+
+    if (fields.model) {
+      conn.model = fields.model
+    }
+    return conn
+  }
+
+  toJSON(): object {
+    return {
+      name: this.name,
+      type: this.type,
+      model: this.model,
+      account: this.config.account,
+      username: this.config.username,
+      warehouse: this.config.warehouse,
+      role: this.config.role,
+      database: this.config.database,
+      schema: this.config.schema,
+      saveCredential: this.saveCredential,
+      privateKey: this.saveCredential ? this.config.privateKey : '',
+      privateKeyPassphrase: this.saveCredential ? this.config.privateKeyPassphrase : '',
+    }
+  }
+
+  setPrivateKey(privateKey: string): void {
+    this.config.privateKey = privateKey
+  }
+
+  /**
+   * Generate JWT token for Snowflake authentication
+   */
+  private async generateJwtToken(): Promise<string> {
+    try {
+      // Import the PEM private key
+      const privateKeyPem = this.config.privateKey
+      const privateKey = await importPKCS8(privateKeyPem, 'RS256', { extractable: true })
+
+      // Extract public key for fingerprint
+      const jwk = await crypto.subtle.exportKey('jwk', privateKey)
+      delete jwk.d
+      delete jwk.dp
+      delete jwk.dq
+      delete jwk.q
+      delete jwk.qi
+      jwk.key_ops = ['encrypt', 'wrapKey', 'verify']
+
+      // Import public key
+      const publicKey = await crypto.subtle.importKey(
+        'jwk',
+        jwk,
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        true,
+        ['verify'],
+      )
+
+      // Export public key and create fingerprint
+      let spkiKey = await crypto.subtle.exportKey('spki', publicKey)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', spkiKey)
+
+      // Convert the hash to base64
+      function arrayBufferToBase64(buffer: ArrayBuffer) {
+        const binary = String.fromCharCode(...new Uint8Array(buffer))
+        return btoa(binary)
+      }
+
+      // Create the fingerprint and qualified username
+      const publicKeyFingerprint = 'SHA256:' + arrayBufferToBase64(hashBuffer)
+      const qualifiedUsernamePublicPrefix = `${this.config.account}.${this.config.username}.${publicKeyFingerprint}`
+      const qualifiedUsername = `${this.config.account}.${this.config.username}`
+
+      // Generate JWT payload
+      const payload = {
+        iss: qualifiedUsernamePublicPrefix,
+        sub: qualifiedUsername,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600, // Token valid for 1 hour
+      }
+
+      // Sign the JWT
+      const jwt = await new SignJWT(payload)
+        .setProtectedHeader({ alg: 'RS256' })
+        .setExpirationTime('1h')
+        .sign(privateKey)
+
+      return jwt
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async connect(): Promise<boolean> {
+    try {
+      // Check cache for valid token
+      const cacheKey = `${this.config.account}:${this.config.username}`
+      if (
+        SnowflakeJwtConnection.authCache[cacheKey] &&
+        SnowflakeJwtConnection.authCache[cacheKey].expiresAt &&
+        SnowflakeJwtConnection.authCache[cacheKey].expiresAt > Date.now()
+      ) {
+        this.auth = SnowflakeJwtConnection.authCache[cacheKey]
+        return true
+      }
+
+      // Generate JWT token
+      const token = await this.generateJwtToken()
+      this.auth = {
+        accessToken: token,
+        expiresAt: Date.now() + 60 * 60 * 1000 - 60000, // 1 hour minus 1 minute buffer
+      }
+
+      // Verify token with test query
+      try {
+        await this.query_core('SELECT 1', true)
+        // Cache the token if successful
+        SnowflakeJwtConnection.authCache[cacheKey] = this.auth
+        return true
+      } catch (error) {
+        this.auth = {}
+        throw new Error(`Authentication failed: ${error}`)
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  protected getAuthHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.auth.accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT',
+    }
+  }
+
+  protected async executeQuery(sql: string): Promise<any> {
+    // Submit the SQL statement (v2 API)
+    const submitResponse = await fetch(`${this.baseUrl}/api/v2/statements/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
+        statement: sql,
+        timeout: 60,
+        database: this.config.database,
+        schema: this.config.schema,
+        warehouse: this.config.warehouse,
+        role: this.config.role,
+      }),
+    })
+
+    if (!submitResponse.ok) {
+      const errorData = await submitResponse.json()
+      throw new Error(`Query execution failed: ${errorData.message || submitResponse.statusText}`)
+    }
+
+    const submitData = await submitResponse.json()
+    const statementHandle = submitData.statementHandle
+
+    // Poll for query completion
+    let statementStatus: StatementStatus
+    do {
+      await new Promise((resolve) => setTimeout(resolve, this.pollingInterval))
+
+      const statusResponse = await fetch(`${this.baseUrl}/api/v2/statements/${statementHandle}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      if (!statusResponse.ok) {
+        const errorData = await statusResponse.json()
+        throw new Error(`Query status check failed: ${errorData.message || statusResponse.statusText}`)
+      }
+
+      statementStatus = await statusResponse.json()
+    } while (statementStatus.status === 'running')
+
+    if (statementStatus.status === 'failed') {
+      throw new Error(`Query execution failed: ${statementStatus.message || 'Unknown error'}`)
+    }
+
+    return statementStatus
+  }
+
+  protected extractMetadata(resultData: any): any[] {
+    return resultData.resultSetMetaData?.rowType || []
+  }
+
+  protected extractRows(resultData: any): any[][] {
+    return resultData.data || []
+  }
+
+  protected getSchema(): string | undefined {
+    return this.config.schema
+  }
+
+  async close(): Promise<void> {
+    // Clear auth data
+    this.auth = {}
+  }
+}
+
+// Basic Auth Connection (v1 API)
+export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
+  private config: SnowflakeBasicConfig
+  private auth: SnowflakeBasicAuth = {}
+
+  // Singleton cache for basic auth tokens
+  private static authCache: Record<string, SnowflakeBasicAuth> = {}
+
+  constructor(
+    name: string,
+    config: SnowflakeBasicConfig,
+    model?: string,
+    saveCredential: boolean = false,
+  ) {
+    super(name, 'snowflake-basic', config.account, model, saveCredential)
+    this.config = config
+  }
+
+  static fromJSON(fields: {
+    name: string
+    model: string | null
+    saveCredential: boolean
+    account: string
+    username: string
+    password: string
+    warehouse: string
+    role?: string
+    database?: string
+    schema?: string
+  }): SnowflakeBasicAuthConnection {
+    let conn = new SnowflakeBasicAuthConnection(
+      fields.name,
+      {
+        account: fields.account,
+        username: fields.username,
+        password: fields.password,
+        warehouse: fields.warehouse,
+        role: fields.role,
+        database: fields.database,
+        schema: fields.schema,
+      },
+      fields.model ? fields.model : undefined,
+      fields.saveCredential,
+    )
+
+    if (fields.model) {
+      conn.model = fields.model
+    }
+    return conn
+  }
+
+  toJSON(): object {
+    return {
+      name: this.name,
+      type: this.type,
+      model: this.model,
+      account: this.config.account,
+      username: this.config.username,
+      warehouse: this.config.warehouse,
+      role: this.config.role,
+      database: this.config.database,
+      schema: this.config.schema,
+      saveCredential: this.saveCredential,
+      password: this.saveCredential ? this.config.password : '',
+    }
+  }
+
+  setPassword(password: string): void {
+    this.config.password = password
+  }
+
+  /**
+   * Authenticate with Snowflake using username and password
+   */
+  private async authenticate(): Promise<SnowflakeBasicAuth> {
+    try {
+      // Create basic auth credentials
+      const credentials = `${this.config.username}:${this.config.password}`
+      const encodedCredentials = btoa(credentials)
+
+      // Set up headers
+      const headers = {
+        'Authorization': `Basic ${encodedCredentials}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'TrilogyStudio',
+        'X-Requested-With': null
+      }
+
+      // Create login request payload
+      const data = {
+        data: {
+          ACCOUNT_NAME: this.config.account,
+          LOGIN_NAME: this.config.username,
+          PASSWORD: this.config.password
+        }
+      }
+
+      // Make the authentication request
+      const response = await fetch(`${this.baseUrl}/session/v1/login-request`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Authentication failed: ${response.status} - ${errorText}`)
+      }
+
+      // Extract session token and master token from response
+      const responseData = await response.json()
+      const sessionToken = responseData.data?.token
+      const masterToken = responseData.data?.masterToken
+
+      if (!sessionToken || !masterToken) {
+        throw new Error("Failed to get valid tokens from authentication response")
+      }
+
+      return {
+        sessionToken,
+        masterToken,
+        expiresAt: Date.now() + 3600 * 1000 - 60000, // 1 hour minus 1 minute buffer
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async connect(): Promise<boolean> {
+    try {
+      // Check cache for valid token
+      const cacheKey = `${this.config.account}:${this.config.username}`
+      if (
+        SnowflakeBasicAuthConnection.authCache[cacheKey] &&
+        SnowflakeBasicAuthConnection.authCache[cacheKey].expiresAt &&
+        SnowflakeBasicAuthConnection.authCache[cacheKey].expiresAt > Date.now() &&
+        SnowflakeBasicAuthConnection.authCache[cacheKey].sessionToken
+      ) {
+        this.auth = SnowflakeBasicAuthConnection.authCache[cacheKey]
+        return true
+      }
+
+      // Authenticate and get tokens
+      this.auth = await this.authenticate()
+
+      // Verify token with test query
+      try {
+        await this.query_core('SELECT 1', true)
+        // Cache the token if successful
+        SnowflakeBasicAuthConnection.authCache[cacheKey] = this.auth
+        return true
+      } catch (error) {
+        this.auth = {}
+        throw new Error(`Authentication verification failed: ${error}`)
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  protected getAuthHeaders(): Record<string, string> {
+    return {
+      'Authorization': `Snowflake Token="${this.auth.sessionToken}"`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'TypescriptRestExample/1.0',
+    }
+  }
+
+  protected async executeQuery(sql: string): Promise<any> {
+    // Generate a UUID for the request
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+      })
+    }
+
+    // Create query request payload (v1 API)
+    const payload = {
+      sqlText: sql,
+      asyncExec: true,
+      sequenceId: 1,
+      querySubmissionTime: Math.floor(Date.now() / 1000),
+      bindings: {}
+    }
+
+    // Execute the query
+    const queryUrl = `${this.baseUrl}/queries/v1/query-request?requestId=${generateUUID()}`
+
+    const response = await fetch(queryUrl, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.text()
+      throw new Error(`Query execution failed: ${errorData || response.statusText}`)
+    }
+
+    const responseData = await response.json()
+
+    if (!responseData.data?.queryId || !responseData.data?.getResultUrl) {
+      throw new Error("Invalid query response: missing queryId or result URL")
+    }
+
+    // Poll for query completion
+    await this.pollForResults(responseData.data.queryId)
+
+    // Get results when query is completed
+    return this.getResults(responseData.data.getResultUrl)
+  }
+
+  private async pollForResults(queryId: string): Promise<void> {
+    const maxAttempts = 10
+    let attempt = 0
+
+    while (attempt < maxAttempts) {
+      const response = await fetch(
+        `${this.baseUrl}/monitoring/queries/${queryId}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders()
+        }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Error polling for results: ${response.status} - ${errorText}`)
+      }
+
+      const status = await response.json()
+
+      // Check if query is complete
+      if (status.status === 'success') {
+        return
+      } else if (status.status === 'failed') {
+        throw new Error(`Query execution failed: ${status.message || 'Unknown error'}`)
+      }
+
+      // Still processing, wait and retry
+      attempt++
+      await new Promise(resolve => setTimeout(resolve, this.pollingInterval))
+    }
+
+    throw new Error("Max polling attempts reached, query results not available")
+  }
+
+  private async getResults(resultUrl: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}${resultUrl}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Error getting results: ${response.status} - ${errorText}`)
+    }
+
+    return await response.json()
+  }
+
+  protected extractMetadata(resultData: any): any[] {
+    return resultData.data?.rowtype || []
+  }
+
+  protected extractRows(resultData: any): any[][] {
+    return resultData.data?.rowset || []
+  }
+
+  protected getSchema(): string | undefined {
+    return this.config.schema
+  }
+
+  async close(): Promise<void> {
+    // Clear auth data
     this.auth = {}
   }
 }
