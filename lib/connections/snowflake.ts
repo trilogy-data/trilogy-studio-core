@@ -399,7 +399,13 @@ export default class SnowflakeRestConnection extends BaseConnection {
       return ColumnType.DATE
     } else if (typeName.includes('TIMESTAMP') || typeName.includes('DATETIME')) {
       return ColumnType.DATETIME
-    } else {
+    
+    } else if (typeName == 'ARRAY') {
+      return ColumnType.ARRAY
+    } else if (typeName == 'OBJECT') {
+      return ColumnType.STRUCT
+    }
+    else {
       console.log('Unknown Snowflake type:', typeName)
       return ColumnType.UNKNOWN
     }

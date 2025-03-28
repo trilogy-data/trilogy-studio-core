@@ -52,85 +52,44 @@
 <script lang="ts">
 import { Tabulator } from 'tabulator-tables'
 import { DateTime } from 'luxon'
-import type { ColumnDefinition } from 'tabulator-tables'
+import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
-import { C } from 'vitest/dist/chunks/reporters.6vxQttCV.js'
 
-const arrayTableFormatter = function (cell, formatterParams) {
-  // Get the array value from the cell
-  const arrayData = cell.getValue();
-
-  console.log('format data')
-  console.log(arrayData)
-  // Check if it's actually an array
-  if (!Array.isArray(arrayData) || arrayData.length === 0) {
-    return "No data";
-  }
-
-  // Create a container div for the nested table
-  const container = document.createElement("div");
-  container.style.width = "100%";
-
-  // Create and initialize the nested table
-  const nestedTable = document.createElement("div");
-  container.appendChild(nestedTable);
-
-  // Determine columns from the first item in the array
-  const firstItem = arrayData[0];
-  const columns = [];
-
-  if (typeof firstItem === 'object' && firstItem !== null) {
-    // For array of objects, generate columns from object keys
-    Object.keys(firstItem).forEach(key => {
-      columns.push({
-        title: key,
-        field: key,
-        width: 100
-      });
-    });
-  } else {
-    // For simple array of primitives, use a single value column
-    columns.push({
-      title: "l",
-      field: "value"
-    });
-  }
-
-  // Format the data properly for the nested table
-  const tableData = Array.isArray(firstItem) || (typeof firstItem === 'object' && firstItem !== null)
-    ? arrayData
-    : arrayData.map(item => ({ value: item }));
-
-  // Create the nested Tabulator instance
-  new Tabulator(nestedTable, {
-    data: tableData,
-    columns: columns,
-    layout: "fitDataTable",
-    height: "auto",
-    width: "100%"
-  });
-
-  return container;
-};
-function renderBasicTable(data, columns: Map<string, ResultColumn>) {
+function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   if (!data) {
     return
   }
 
   let tableHtml = '<table class="tabulator-sub-table">';
-  let lookup = columns.keys().next().value
+  let lookup: string | undefined = columns.keys().next().value
+
+  if (!lookup) {
+    // If no columns, return empty table
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>';
+  }
+  let fieldInfo = columns.get(lookup)
+  if (!fieldInfo) {
+    // If no field info found, return empty table
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>';
+  }
   // Add body rows
   tableHtml += '<tbody >';
   data.forEach(row => {
-    console.log(row)
-    console.log(lookup)
-    console.log(columns)
+    let val = row[lookup];
+    // Check if the value is an array or object and handle accordingly
+    if (fieldInfo.type == ColumnType.STRUCT && fieldInfo.children) {
+      val = renderStructTable(val, fieldInfo.children) 
+    }
+    else if (fieldInfo.type === ColumnType.ARRAY) {
+      // If it's an array, call renderBasicTable recursively
+      val = renderBasicTable(val, columns); // Pass the array data and columns to renderBasicTable
+    }
     tableHtml += '<tr class="tabulator-sub-row">';
-    tableHtml += `<td class="tabulator-sub-cell">${row[lookup]}</td>`;
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`;
     tableHtml += '</tr>';
   });
   tableHtml += '</tbody>';
@@ -141,7 +100,7 @@ function renderBasicTable(data, columns: Map<string, ResultColumn>) {
   return tableHtml;
 }
 
-function renderStructTable(data, columns: Map<string, ResultColumn>) {
+function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   if (!data) {
     return
   }
@@ -149,11 +108,14 @@ function renderStructTable(data, columns: Map<string, ResultColumn>) {
 
   // Add body rows
   tableHtml += '<tbody >';
-
   columns.forEach((col, label) => {
     let val = data[col.name];
-    if (col.type === ColumnType.ARRAY) {
+    if (col.type === ColumnType.ARRAY && col.children) {
       val = renderBasicTable(val, col.children);
+    }
+    if (col.type === ColumnType.STRUCT && col.children) {
+      // If it's a struct, call the renderStructTable recursively
+      val = renderStructTable(val, col.children);
     }
 
     tableHtml += '<tr class="tabulator-sub-row">';
@@ -175,11 +137,11 @@ function typeToFormatter(col: ResultColumn) {
   switch (col.type) {
     case ColumnType.ARRAY:
       return {
-        formatter: (cell, formatterParams) => renderBasicTable(cell.getValue(), col.children),
+        formatter: (cell: CellComponent, formatterParams) => renderBasicTable(cell.getValue(), col.children),
       }
     case ColumnType.STRUCT:
       return {
-        formatter: (cell, formatterParams) => renderStructTable(cell.getValue(), col.children),
+        formatter: (cell: CellComponent, formatterParams) => renderStructTable(cell.getValue(), col.children),
       }
     case ColumnType.FLOAT:
       return {

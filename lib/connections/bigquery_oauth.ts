@@ -10,6 +10,15 @@ function parseTimestamp(value: string): DateTime {
   return DateTime.fromMillis(parseFloat(value) * 1000)
 }
 
+function arrayToObject(array) {
+  console.log(typeof array, array)
+  return array.reduce((obj, item, index) => {
+    obj[index] = item;
+    return obj;
+  }, {});
+}
+
+
 const reauthException = 'Request had invalid authentication credentials.'
 // @ts-ignore
 export default class BigQueryOauthConnection extends BaseConnection {
@@ -212,6 +221,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
       children: field.fields ? new Map(field.fields.map((f: any) => [f.name, this.fieldToResultColumn(f)] as [string, ResultColumn])) : undefined
     }
   }
+
   processRow(row: any, headers: Map<string, ResultColumn>): any {
     let processedRow = {}
     const keys = Object.keys(row)
@@ -234,10 +244,10 @@ export default class BigQueryOauthConnection extends BaseConnection {
             }
             break
           case ColumnType.DATE:
-            processedRow[label] = value ? DateTime.fromMillis(value, { zone: 'UTC' }) : null
+            processedRow[label] = value ? parseTimestamp(value) : null
             break
           case ColumnType.DATETIME:
-            processedRow[label] = value ? DateTime.fromMillis(value, { zone: 'UTC' }) : null
+            processedRow[label] = value ? parseTimestamp(value) : null
             break
           case ColumnType.ARRAY:
             const newv = value.map((item: any) => {
@@ -247,7 +257,8 @@ export default class BigQueryOauthConnection extends BaseConnection {
             processedRow[label] = newv
             break
           case ColumnType.STRUCT:
-            processedRow[label] = value ? this.processRow(value, column.children!) : null
+            console.log('processing struct', label, arrayToObject(value.f), column.children)
+            processedRow[label] = value ? this.processRow(arrayToObject(value.f), column.children!) : null
             break
           default:
             processedRow[label] = value
