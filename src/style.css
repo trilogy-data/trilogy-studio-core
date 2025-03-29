@@ -21,6 +21,8 @@
   --error-color: #ff0000;
   color: var(--text-color);
 
+  --bgcolor: #1E1E1E;
+
   --sidebar-selector-bg: #3C3C3C;
   --sidebar-selector-font: #FFFFFF;
   --sidebar-selector-selected-bg: #4D4D4D;
@@ -51,6 +53,8 @@
   --delete-color: #ff0000;
 
   --error-color: #ff7c7c;
+
+  --bg-color: #FFFFFF;  
 
   --sidebar-selector-bg: #E8E8E8;
   --sidebar-selector-font: #333333;

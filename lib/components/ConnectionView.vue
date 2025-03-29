@@ -2,8 +2,11 @@
   <div class="view-container">
     <ConnectionHistory v-if="selectedType === 'connection'" :connectionName="selectedConnection" />
     <div v-else-if="selectedType === 'table' && selectedTableDetails" class="model-display">
-      <ConnectionTable :table="selectedTableDetails" :database="selectedDatabase"
-        :connectionName="selectedConnection" />
+      <ConnectionTable
+        :table="selectedTableDetails"
+        :database="selectedDatabase"
+        :connectionName="selectedConnection"
+      />
     </div>
   </div>
 </template>

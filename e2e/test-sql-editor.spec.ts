@@ -46,4 +46,41 @@ test('test', async ({ page, isMobile }) => {
   }
   const count = await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').count()
   expect(count).toBe(0)
+
+  // now let's look at the connection history
+  await page.getByTestId('sidebar-icon-connections').click()
+  await page.getByTestId('connection-duckdb-test').click()
+
+  await page.waitForSelector('.query-history')
+
+  // Ensure we're not seeing the loading or empty states
+  const loadingElement = page.locator('.query-history-loading')
+  const emptyElement = page.locator('.query-history-empty')
+  const errorElement = page.locator('.query-history-error')
+
+  await expect(loadingElement).not.toBeVisible()
+  await expect(emptyElement).not.toBeVisible()
+  await expect(errorElement).not.toBeVisible()
+
+  // Check that the history list is visible
+  const historyList = page.locator('.query-history-list')
+  await expect(historyList).toBeVisible()
+
+  // Verify that at least one history item is displayed
+  const historyItems = page.locator('.query-history-item')
+  const historyCount = await historyItems.count()
+  expect(historyCount).toBeGreaterThan(0)
+
+  // Optionally, check for specific content in the first history item
+  const firstItemPreview = page.locator('.query-history-item-preview').first()
+  await expect(firstItemPreview).toBeVisible()
+  await expect(firstItemPreview).not.toHaveText('')
+
+  // You can also test the expand functionality
+  const firstItemHeader = page.locator('.query-history-item-header').first()
+  await firstItemHeader.click()
+
+  // After clicking, the details should be visible
+  const firstItemDetails = page.locator('.query-history-item-details').first()
+  await expect(firstItemDetails).toBeVisible()
 })
