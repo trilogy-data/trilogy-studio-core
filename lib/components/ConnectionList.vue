@@ -2,19 +2,35 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveConnections" :key-combination="['control', 's']">Save</loading-button>
+        <loading-button :action="saveConnections" :key-combination="['control', 's']"
+          >Save</loading-button
+        >
       </div>
-      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
+      <connection-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+      />
     </template>
-    <connection-list-item v-for="item in contentList" :key="item.id" :item="item" :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey" @toggle="toggleCollapse" @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey" @toggle-save-credential="toggleSaveCredential"
-      :delete-connection="deleteConnection" />
+    <connection-list-item
+      v-for="item in contentList"
+      :key="item.id"
+      :item="item"
+      :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === activeConnectionKey"
+      @toggle="toggleCollapse"
+      @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken"
+      @updateBigqueryProject="updateBigqueryProject"
+      @update-snowflake-private-key="updateSnowflakePrivateKey"
+      @toggle-save-credential="toggleSaveCredential"
+      :delete-connection="deleteConnection"
+    />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -155,12 +171,11 @@ export default {
             tableid = id.split(KeySeparator)[3]
             schema = id.split(KeySeparator)[2]
             dbid = id.split(KeySeparator)[1]
-          }
-          else if (separatorCount === 3) {
+          } else if (separatorCount === 3) {
             // no schema, just a table
             dbid = id.split(KeySeparator)[1]
           }
-          
+
           let cTable = connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.name === tableid)
@@ -172,7 +187,11 @@ export default {
           }
 
           if (cTable) {
-            let nTable = await connectionStore.connections[connection].getColumns(dbid, tableid, cTable.schema)
+            let nTable = await connectionStore.connections[connection].getColumns(
+              dbid,
+              tableid,
+              cTable.schema,
+            )
             cTable.columns = nTable
           }
         }
@@ -193,7 +212,6 @@ export default {
       console.log(id)
       console.log(type)
       if (['connection', 'database', 'table'].includes(type)) {
-
         emit('connection-key-selected', id)
       }
 
@@ -225,8 +243,8 @@ export default {
         let tableid = id.split(KeySeparator)[2]
         let schema = null
         if (separatorCount === 4) {
-          schema = id.split(KeySeparator)[2] 
-          tableid = id.split(KeySeparator)[3] 
+          schema = id.split(KeySeparator)[2]
+          tableid = id.split(KeySeparator)[3]
         }
         if (schema) {
           // if we have a schema, we need to find the table by schema
@@ -268,12 +286,10 @@ export default {
             collapsed.value[schemaKey] = true
             let tableKey = `${dbKey}${KeySeparator}${table.schema}${KeySeparator}${table.name}`
             collapsed.value[tableKey] = true
-          }
-          else {
+          } else {
             let tableKey = `${dbKey}${KeySeparator}${table.name}`
             collapsed.value[tableKey] = true
           }
-
         })
       })
     })
@@ -374,10 +390,12 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

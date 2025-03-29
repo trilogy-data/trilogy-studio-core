@@ -150,7 +150,7 @@ function typeToFormatter(col: ResultColumn) {
       return {
         formatter: 'money',
         formatterParams: {
-          precision: col.scale && col.scale >=0 ? col.scale : false,
+          precision: col.scale && col.scale >= 0 ? col.scale : false,
         },
       }
     case ColumnType.MONEY:

@@ -332,13 +332,22 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     return this.query_core(sql).then((results) => {
       const tables: Table[] = []
       results.data.forEach((row: any) => {
-        tables.push(new Table(row.name || row['name'], [], row.comment, AssetType.TABLE, row.schema_name, database))
+        tables.push(
+          new Table(
+            row.name || row['name'],
+            [],
+            row.comment,
+            AssetType.TABLE,
+            row.schema_name,
+            database,
+          ),
+        )
       })
       return tables
     })
   }
 
-  async getColumns(database: string, table: string, schema:string| null): Promise<Column[]> {
+  async getColumns(database: string, table: string, schema: string | null): Promise<Column[]> {
     schema = schema || 'PUBLIC'
     const sql = `DESCRIBE TABLE ${database}.${schema}.${table}`
 
@@ -351,7 +360,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
           new Column(
             row.name || row['name'],
             row.kind || row['kind'],
-            type? this.mapSnowflakeTypeToColumnType({'type': type}) : ColumnType.UNKNOWN,
+            type ? this.mapSnowflakeTypeToColumnType({ type: type }) : ColumnType.UNKNOWN,
             (row.null || row['null']) === 'Y',
             (row.primary_key || row['primary_key']) === 'Y',
             (row.unique_key || row['unique_key']) === 'Y',

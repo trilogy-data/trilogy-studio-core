@@ -124,7 +124,12 @@ export default abstract class BaseConnection {
 
   abstract query_core(sql: string): Promise<Results>
 
-  async getTableSample(database: string, table: string, limit: number = 100, schema: string | null = null): Promise<Results> {
+  async getTableSample(
+    database: string,
+    table: string,
+    limit: number = 100,
+    schema: string | null = null,
+  ): Promise<Results> {
     let sql = `SELECT * FROM ${database}.${table} LIMIT ${limit}`
     if (schema) {
       sql = `SELECT * FROM ${database}.${schema}.${table} LIMIT ${limit}`

@@ -1,8 +1,11 @@
 <template>
   <div class="view-container">
     <div v-if="selectedType === 'table' && selectedTableDetails" class="model-display">
-      <ConnectionTable :table="selectedTableDetails" :database="selectedDatabase"
-        :connectionName="selectedConnection" />
+      <ConnectionTable
+        :table="selectedTableDetails"
+        :database="selectedDatabase"
+        :connectionName="selectedConnection"
+      />
     </div>
   </div>
 </template>
@@ -58,8 +61,7 @@ export default defineComponent({
         return 'database'
       } else if (this.separatorCount === 3) {
         return 'table'
-      }
-      else if (this.separatorCount === 4) {
+      } else if (this.separatorCount === 4) {
         return 'table'
       }
     },
@@ -75,7 +77,6 @@ export default defineComponent({
         return this.activeConnectionKey.split(KeySeparator)[3]
       }
       return this.activeConnectionKey.split(KeySeparator)[2] // For cases where it's a database
-
     },
     selectedConnection() {
       return this.activeConnectionKey.split(KeySeparator)[0]

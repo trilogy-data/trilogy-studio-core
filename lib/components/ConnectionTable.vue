@@ -3,9 +3,14 @@
   <div class="table-viewer">
     <div class="table-header">
       <div class="table-title">
-        <h2><span class="text-faint" v-if="table.database">{{ table.database }}.</span><span class="text-faint"
-            v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}</h2>
-        <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
+        <h2>
+          <span class="text-faint" v-if="table.database">{{ table.database }}.</span
+          ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+        </h2>
+        <span
+          class="table-type-badge"
+          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
+        >
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
       </div>
@@ -13,7 +18,11 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-button" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'">
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'structure' }"
+        @click="activeTab = 'structure'"
+      >
         Structure
       </button>
       <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="loadSampleData">
@@ -24,7 +33,12 @@
     <div v-if="activeTab === 'structure'" class="table-structure">
       <div class="structure-header">
         <div class="search-container">
-          <input type="text" v-model="searchTerm" placeholder="Search columns..." class="search-input" />
+          <input
+            type="text"
+            v-model="searchTerm"
+            placeholder="Search columns..."
+            class="search-input"
+          />
         </div>
         <div class="column-count">
           {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
@@ -88,8 +102,12 @@
         <p>No data available</p>
       </div>
       <div v-else class="result-container-wrapper">
-        <div class='result-container'>
-          <DataTable :results="selectedSampleData.data" :headers="selectedSampleData.headers" :containerHeight="500" />
+        <div class="result-container">
+          <DataTable
+            :results="selectedSampleData.data"
+            :headers="selectedSampleData.headers"
+            :containerHeight="500"
+          />
         </div>
       </div>
     </div>
@@ -161,7 +179,7 @@ export default defineComponent({
           props.database,
           props.table.name,
           50,
-          props.table.schema
+          props.table.schema,
         )
 
         sampleData.value[props.table.name] = result || new Results(new Map(), [])

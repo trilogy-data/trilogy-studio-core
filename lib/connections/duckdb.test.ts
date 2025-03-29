@@ -38,7 +38,7 @@ function createMockQueryResult(schema, data) {
     },
     //@ts-ignore
     toArray: () =>
-      data.map((row) => ({
+      data.map((row: Record<string, any>) => ({
         toJSON: () => row,
       })),
   }

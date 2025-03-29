@@ -402,6 +402,7 @@ describe('SnowflakeConnectionBase', () => {
       vi.spyOn(connection, 'executeQuery').mockResolvedValue(mockResponse)
       //@ts-ignore
       vi.spyOn(connection, 'extractMetadata').mockReturnValue(
+        //@ts-ignore
         mockResponse.resultSetMetaData.rowType,
       )
       //@ts-ignore
