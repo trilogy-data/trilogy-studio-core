@@ -1,78 +1,52 @@
 <template>
   <div class="main">
-    <mobile-sidebar-layout
-      @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
-      :menuOpen="mobileMenuOpen"
-      :activeScreen="activeScreen"
-    >
+    <mobile-sidebar-layout @menu-toggled="mobileMenuOpen = !mobileMenuOpen" :menuOpen="mobileMenuOpen"
+      :activeScreen="activeScreen">
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey"
-          @connection-key-selected="setActiveConnectionKey"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey"
-          :activeConnectionKey="activeConnectionKey"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+              @toggle-mobile-menu="toggleMobileMenu"
+          @connection-key-selected="setActiveConnectionKey" :active="activeScreen" :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey" :activeConnectionKey="activeConnectionKey" />
       </template>
-      <template
-        v-if="
-          activeScreen && activeScreen !== '' && ['editors', 'connections'].includes(activeScreen)
-        "
-      >
+      <template v-if="
+        activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)
+      ">
         <tabbed-layout>
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
-            <editor
-              v-if="activeEditorData.type == 'preql'"
-              context="main-trilogy"
-              :editorName="activeEditor"
-              @query-started="slotProps.onQueryStarted"
-              @save-editors="saveEditorsCall"
-            />
-            <editor
-              @query-started="slotProps.onQueryStarted"
-              v-else
-              context="main-sql"
-              :editorName="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorName="activeEditor"
+              @query-started="slotProps.onQueryStarted" @save-editors="saveEditorsCall" />
+            <editor @query-started="slotProps.onQueryStarted" v-else context="main-sql" :editorName="activeEditor"
+              @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <error-message v-else-if="activeEditorData.error"
-              >{{ activeEditorData.error }}
+            <loading-view v-if="activeEditorData.loading" :cancel="activeEditorData.cancelCallback" />
+            <error-message v-else-if="activeEditorData.error">{{ activeEditorData.error }}
               <template #action v-if="activeEditorData.error === 'Connection is not active.'">
-                <loading-button
-                  :action="
-                    () =>
-                      activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection)
-                        : null
-                  "
-                >
+                <loading-button :action="() =>
+                  activeEditorData
+                    ? connectionStore.resetConnection(activeEditorData.connection)
+                    : null
+                  ">
                   Reconnect
                   {{ activeEditorData.connection }}
                 </loading-button>
               </template>
             </error-message>
-            <results-container
-              v-else-if="Object.keys(activeEditorData.results).length > 0"
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :type="activeEditorData.type"
-            />
+            <results-container v-else-if="Object.keys(activeEditorData.results).length > 0"
+              :results="activeEditorData.results" :generatedSql="activeEditorData.generated_sql || undefined"
+              :type="activeEditorData.type" />
             <hint-component v-else />
           </template>
         </tabbed-layout>
       </template>
-
+      <template v-else-if="activeScreen === 'connections'">
+        <connection-view
+          :activeConnectionKey="activeConnectionKey"
+          @save-editors="saveEditorsCall"
+      
+        />
+      </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
       </template>
@@ -175,6 +149,8 @@ import MobileSidebarLayout from '../components/MobileSidebarLayout.vue'
 import Sidebar from '../components/Sidebar.vue'
 import Editor from '../components/Editor.vue'
 import DataTable from '../components/DataTable.vue'
+import CommunityModels from '../components/CommunityModels.vue'
+import ConnectionView from '../components/ConnectionView.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
@@ -193,7 +169,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject } from 'vue'
-import CommunityModels from '../components/CommunityModels.vue'
+
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -232,6 +208,7 @@ export default {
     TabbedLayout,
     MobileSidebarLayout,
     CommunityModels,
+    ConnectionView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver
@@ -255,7 +232,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
     const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, mobileMenuOpen } =
       useScreenNavigation()
@@ -275,6 +252,9 @@ export default {
     }
   },
   methods: {
+    toggleMobileMenu() {
+      this.mobileMenuOpen = !this.mobileMenuOpen
+    },
     setActiveModelKey(modelKey: string) {
       pushHashToUrl('modelKey', modelKey)
       this.activeModelKey = modelKey

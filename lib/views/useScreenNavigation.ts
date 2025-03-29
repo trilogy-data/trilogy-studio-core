@@ -8,7 +8,7 @@ export default function useScreenNavigation() {
   const setActiveScreen = (screen: string) => {
     pushHashToUrl('screen', screen)
     activeScreen.value = screen
-    if (['community-models', 'welcome', 'profile', 'settings', 'editors', 'connections'].includes(screen)) {
+    if (['community-models', 'welcome', 'profile', 'settings'].includes(screen)) {
       mobileMenuOpen.value = false
     }
   }

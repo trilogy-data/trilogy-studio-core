@@ -4,6 +4,7 @@
     :action="handleRefresh"
     :data-testid="`refresh-connection-${connection.name}`"
     :useDefaultStyle="false"
+    @click.stop
   >
     <i :class="buttonIcon" class="refresh-icon"></i>
   </loading-button>

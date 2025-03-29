@@ -51,6 +51,10 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('sidebar-icon-connections').click()
   await page.getByTestId('connection-duckdb-test').click()
 
+  if (isMobile) {
+    await page.getByTestId('toggle-history-duckdb-test').click()
+  }
+
   await page.waitForSelector('.query-history')
 
   // Ensure we're not seeing the loading or empty states

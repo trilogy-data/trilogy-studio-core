@@ -167,7 +167,6 @@ onMounted(() => {
   font-size: 14px;
   color: var(--text-color);
   background-color: var(--bg-color);
-  border-radius: 6px;
   border: 1px solid var(--border);
   overflow: hidden;
   height: 100%;

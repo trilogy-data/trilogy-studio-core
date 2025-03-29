@@ -1,108 +1,63 @@
 <template>
-  <div
-    class="sidebar-item"
-    @click="handleItemClick"
-    :class="{ 'sidebar-item-selected': isSelected }"
-  >
-    <!-- Indentation -->
-    <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
+  <div class="sidebar-item" @click="handleItemClick" :class="{ 'sidebar-item-selected': isSelected }">
 
-    <!-- Expandable Item Icons -->
+    <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
     <template v-if="isExpandable">
       <i v-if="isCollapsed === false" class="mdi mdi-menu-down"></i>
       <i v-else class="mdi mdi-menu-right"></i>
     </template>
-
-    <!-- Connection Type Icons -->
-    <connection-icon
-      v-if="item.type === 'connection'"
-      :connection-type="item.connection?.type"
-      :data-testid="`connection-${item.connection.name}`"
-    />
-    <i
-      v-else-if="item.type === 'database'"
-      class="mdi mdi-database"
-      :data-testid="`database-${item.connection.name}-${item.name}`"
-    ></i>
+    <connection-icon v-if="item.type === 'connection'" :connection-type="item.connection?.type"
+      :data-testid="`connection-${item.connection.name}`" />
+    <i v-else-if="item.type === 'database'" class="mdi mdi-database"
+      :data-testid="`database-${item.connection.name}-${item.name}`"></i>
     <i v-else-if="item.type === 'table'" class="mdi mdi-table"></i>
     <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
     <i v-else-if="item.type === 'loading'" class="mdi mdi-loading mdi-spin"></i>
     <i v-else-if="item.type === 'column'" class="mdi mdi-table-column"></i>
-    <!-- Item Name -->
-    <div
-      class="refresh title-pad-left truncate-text sidebar-sub-item"
-      v-if="item.type === 'refresh-connection'"
-      @click="handleRefreshConnectionClick"
-    >
+    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-if="item.type === 'refresh-connection'"
+      @click="handleRefreshConnectionClick">
       {{ item.name }}
     </div>
-    <div
-      class="refresh title-pad-left truncate-text sidebar-sub-item"
-      v-else-if="item.type === 'refresh-database'"
-      @click="handleRefreshDatabaseClick"
-    >
+    <div class="refresh title-pad-left truncate-text sidebar-sub-item" v-else-if="item.type === 'refresh-database'"
+      @click="handleRefreshDatabaseClick">
       {{ item.name }}
     </div>
-    <DuckDBImporter
-      v-else-if="item.type === 'duckdb-upload'"
-      :db="item.connection.db"
-      :connection="item.connection"
-    />
+    <DuckDBImporter v-else-if="item.type === 'duckdb-upload'" :db="item.connection.db" :connection="item.connection" />
     <model-selector v-else-if="item.type === 'model'" :connection="item.connection" />
     <div v-else-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
+
       <form @submit.prevent="updateBigqueryProject(item.connection, bigqueryProject)">
-        <button type="submit" class="customize-button">Set Billing Project</button>
-        <input
-          type="text"
-          v-model="bigqueryProject"
-          placeholder="Billing Project"
-          class="connection-customize"
-        />
+        <button type="submit" class="customize-button">Update</button>
+        <input type="text" v-model="bigqueryProject" placeholder="Billing Project" class="connection-customize" />
       </form>
     </div>
     <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateMotherDuckToken(item.connection, mdToken)">
-        <button type="submit" class="customize-button">Update Motherduck Token</button>
-        <input
-          type="password"
-          v-model="mdToken"
-          placeholder="mdToken"
-          class="connection-customize"
-        />
+        <button type="submit" class="customize-button">Update Token</button>
+        <input type="password" v-model="mdToken" placeholder="mdToken" class="connection-customize" />
       </form>
     </div>
     <div v-else-if="item.type === 'snowflake-private-key'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateSnowflakePrivateKey(item.connection, privateKey)">
-        <button type="submit" class="customize-button">Update Snowflake Private Key</button>
-        <input
-          type="password"
-          v-model="privateKey"
-          placeholder="privateKey"
-          class="connection-customize"
-        />
+        <button type="submit" class="customize-button">Update Private Key</button>
+        <input type="password" v-model="privateKey" placeholder="privateKey" class="connection-customize" />
       </form>
     </div>
     <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
       <label class="save-credential-toggle">
-        <input
-          type="checkbox"
-          :checked="item.connection.saveCredential"
-          @change="toggleSaveCredential(item.connection)"
-        />
+        <input type="checkbox" :checked="item.connection.saveCredential"
+          @change="toggleSaveCredential(item.connection)" />
         <span class="checkbox-label">Save Credentials</span>
       </label>
     </div>
 
-    <span
-      v-else
-      class="title-pad-left truncate-text"
-      :class="{ 'error-indicator': item.type === 'error' }"
-    >
+    <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
+      <i :data-testid="`toggle-history-${item.connection.name}`" class="mdi mdi-history" v-if="isMobile" title="Query History" @click.stop="toggleMobileMenu"></i>
       <editor-creator-icon :connection="item.connection.name" type="sql" title="New SQL Editor" />
       <editor-creator-icon :connection="item.connection.name" title="New Trilogy Editor" />
       <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
@@ -114,13 +69,8 @@
       </tooltip>
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <editor-creator-icon
-        :connection="item.connection.name"
-        type="trilogy"
-        title="Create Datasource From Table"
-        :content="() => createTableDatasource(item.object)"
-        icon="mdi-database-plus-outline"
-      />
+      <editor-creator-icon :connection="item.connection.name" type="trilogy" title="Create Datasource From Table"
+        :content="() => createTableDatasource(item.object)" icon="mdi-database-plus-outline" />
     </div>
   </div>
 </template>
@@ -154,6 +104,7 @@ interface ConnectionListItemProps {
   }
   isCollapsed?: boolean
   isSelected?: boolean
+  isMobile?: boolean
   deleteConnection: (connection: any) => void
 }
 
@@ -168,6 +119,7 @@ const emit = defineEmits<{
   (e: 'updateSnowflakePrivateKey', connection: SnowflakeJwtConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
   (e: 'toggleSaveCredential', connection: any): void
+  (e: 'toggleMobileMenu'): void
 }>()
 
 // Computed properties for rendering logic
@@ -182,6 +134,10 @@ const handleItemClick = () => {
   if (isFetchable.value) {
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
+}
+
+const toggleMobileMenu = () => {
+  emit('toggleMobileMenu')
 }
 
 const handleRefreshConnectionClick = () => {
@@ -269,12 +225,18 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 
 .customize-button {
   padding: 2px 8px;
+  margin-right: 8px;
   font-size: var(--button-font-size);
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
 }
+
+.connection-customize {
+  width: 150px;
+}
+
 
 .customize-button:hover {
   background-color: var(--button-mouseover);
@@ -309,12 +271,10 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   /* Existing loading animation styles */
   display: block;
   width: 100%;
-  background: linear-gradient(
-    to left,
-    var(--sidebar-bg) 0%,
-    var(--query-window-bg) 50%,
-    var(--sidebar-bg) 100%
-  );
+  background: linear-gradient(to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%);
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }
