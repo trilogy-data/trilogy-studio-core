@@ -124,6 +124,17 @@ export default abstract class BaseConnection {
 
   abstract query_core(sql: string): Promise<Results>
 
+  async refreshDatabase(database: string): Promise<Database | null> {
+    let db = this.databases?.find((db) => db.name === database)
+
+    let tables = await this.getTables(database)
+    if (db) {
+      db.tables = tables
+      return db
+    }
+    return null
+  }
+
   async getTableSample(
     database: string,
     table: string,

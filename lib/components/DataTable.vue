@@ -319,7 +319,7 @@ export default {
         // @ts-ignore
         new Tabulator(this.$refs.tabulator, {
           // data: this.tableData, //link data to table
-          pagination: false, //enable pagination
+          pagination: this.tableData.length > 1000, //enable pagination
           // paginationMode: 'remote', //enable remote pagination
           // reactiveData: true,
           renderHorizontal: 'virtual',

@@ -1,135 +1,129 @@
 <template>
   <section :id="config.name" class="model-section">
-    <div class="model-title" @click="startEditing">
-      <span v-if="!isEditing" class="editable-text">
-        {{ config.name }}
-        <span class="edit-indicator">✎</span>
-      </span>
-      <input
-        v-else
-        ref="nameInput"
-        v-model="editableName"
-        @blur="finishEditing"
-        @keyup.enter="finishEditing"
-        @keyup.esc="cancelEditing"
-        class="name-input"
-        type="text"
-      />
+    <div class="model-header">
+      <div class="model-title" @click="startEditing">
+        <span v-if="!isEditing" class="editable-text">
+          {{ config.name }}
+          <span class="edit-icon">✎</span>
+        </span>
+        <input
+          v-else
+          ref="nameInput"
+          v-model="editableName"
+          @blur="finishEditing"
+          @keyup.enter="finishEditing"
+          @keyup.esc="cancelEditing"
+          class="name-input"
+          type="text"
+        />
+      </div>
+      <div class="controls">
+        <loading-button class="btn" :action="() => fetchParseResults(index)">
+          Parse
+        </loading-button>
+        <button class="btn" @click="toggleNewSource(index)">Add Source</button>
+        <button class="btn" @click="clearSources(index)">Clear</button>
+        <button class="btn delete-btn" @click="remove(index)">Delete</button>
+      </div>
     </div>
-    <div class="button-container">
-      <loading-button class="button" :action="() => fetchParseResults(index)">
-        Parse
-      </loading-button>
-      <button class="button" @click="toggleNewSource(index)">Add New Source</button>
-      <button class="button" @click="clearSources(index)">Clear Sources</button>
-      <div v-if="newSourceVisible[index]" class="absolute-form">
-        <form @submit.prevent="submitSourceAddition(index)">
+    <div v-if="config.description">{{ config.description }}</div>
+    <div v-if="newSourceVisible[index]" class="source-form">
+      <form @submit.prevent="submitSourceAddition(index)">
+        <div class="form-row">
           <label for="editor-alias">Alias</label>
           <input type="text" v-model="sourceDetails.alias" id="editor-alias" required />
+        </div>
+        <div class="form-row">
           <label for="editor-name">Editor</label>
           <select v-model="sourceDetails.name" id="editor-name" required>
             <option v-for="editor in editorList" :key="editor" :value="editor">
               {{ editor }}
             </option>
           </select>
-          <button type="submit">Submit</button>
-          <button type="button" @click="toggleNewSource(index)">Cancel</button>
-        </form>
-      </div>
-      <button class="button" @click="remove(index)">Delete</button>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn">Submit</button>
+          <button type="button" class="btn" @click="toggleNewSource(index)">Cancel</button>
+        </div>
+      </form>
     </div>
-
-    <!-- <div>
-      {{config.description}}
-    </div> -->
 
     <div v-if="config.parseError" class="parse-error">
       <error-message>Error fetching parse results: {{ config.parseError }}</error-message>
     </div>
 
     <div v-else>
-      <div class="parse-results">Model Sources ({{ config.sources.length }})</div>
+      <div class="section-title">Model Sources ({{ config.sources.length }})</div>
       <div class="model-source" v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
-        <div>
+        <div class="source-header">
           <div class="source-title">{{ source.alias }} ({{ source.editor }})</div>
-          <div class="action-bar">
-            <button class="button delete-button" @click.stop="removeSource(index, sourceIndex)">
-              Remove
-            </button>
-          </div>
+          <button class="btn remove-btn" @click.stop="removeSource(index, sourceIndex)">
+            Remove
+          </button>
         </div>
-        <div class="toggle-concepts" @click="toggleConcepts(source.alias)">
-          {{ isExpanded[source.alias] ? 'Hide' : 'Show' }} Concepts ({{ source.concepts.length }})
+
+        <div class="collapsible" @click="toggleConcepts(source.alias)">
+          {{ isExpanded[source.alias] ? '▾' : '▸' }} Concepts ({{ source.concepts.length }})
         </div>
-        <div v-if="isExpanded[source.alias]">
+        <div v-if="isExpanded[source.alias]" class="collapsible-content">
           <ConceptTable :concepts="source.concepts" />
         </div>
-        <div class="datasources">
-          <div class="toggle-concepts" @click="toggleDatasources(source.alias)">
-            {{ isDatasourceExpanded[source.alias] ? 'Hide' : 'Show' }} Datasources ({{
-              source.datasources.length
-            }})
-          </div>
-          <div v-if="isDatasourceExpanded[source.alias]">
-            <DatasourceTable :datasources="source.datasources" />
-          </div>
+
+        <div class="collapsible" @click="toggleDatasources(source.alias)">
+          {{ isDatasourceExpanded[source.alias] ? '▾' : '▸' }} Datasources ({{
+            source.datasources.length
+          }})
+        </div>
+        <div v-if="isDatasourceExpanded[source.alias]" class="collapsible-content">
+          <DatasourceTable :datasources="source.datasources" />
         </div>
       </div>
     </div>
   </section>
 </template>
+
 <style scoped>
-.button-container {
-  position: relative;
+.model-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
 }
 
-.action-bar {
-  padding-bottom: 10px;
-}
-
-.editable-text {
+.model-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-}
-
-.edit-indicator {
-  opacity: 0;
-  font-size: 0.875rem;
-  transition: opacity 0.2s ease;
+  margin-bottom: 16px;
 }
 
 .model-title {
   font-weight: 500;
-  cursor: pointer;
-  padding: 0.375rem;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
   font-size: 24px;
-}
-
-.model-title:hover .edit-indicator {
-  opacity: 1;
+  cursor: pointer;
+  padding: 4px;
 }
 
 .editable-text {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
-.edit-indicator {
+.edit-icon {
   opacity: 0;
-  font-size: 0.875rem;
+  font-size: 14px;
   transition: opacity 0.2s ease;
+}
+
+.model-title:hover .edit-icon {
+  opacity: 0.7;
 }
 
 .name-input {
   background: var(--bg-color);
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
   font-size: inherit;
   font-weight: 500;
   width: auto;
@@ -139,154 +133,126 @@
 .name-input:focus {
   outline: none;
   border-color: #339af0;
-  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
 }
 
-.model-section {
-  margin-bottom: 20px;
-  padding: 10px;
-}
-
-.model-source {
-  border-left: 1px solid var(--border);
-  padding: 10px;
-}
-
-.source-title {
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 4px;
+.controls {
   display: flex;
-  align-items: center;
-  font-size: 18px;
-  padding-bottom: 10px;
+  gap: 8px;
 }
 
-.delete-button {
-  width: 100px;
-  margin-left: 20px;
-  font-size: 10px;
-  height: 20px;
-}
-
-.editor-source {
+.btn {
+  padding: 4px 12px;
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  color: var(--text-color);
   cursor: pointer;
-  border-left: 1px solid var(--border);
-  padding: 4px;
-  margin-bottom: 10px;
-  flex: 1;
-}
-
-.editor-source:hover {
-  background-color: var(--bg-light);
-}
-
-.editor-source-alias {
-  font-size: 0.875rem;
-  color: var(--text-faint);
-}
-
-.editor-inline {
-  height: 400px;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: 0px;
-}
-
-.source-list {
-  list-style: none;
-  margin-bottom: 16px;
-}
-
-.button {
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 14px;
   transition: background-color 0.2s;
 }
 
-.fetch-button {
-  background-color: #007bff;
+.btn:hover {
+  background-color: var(--bg-light);
 }
 
-.fetch-button:hover {
-  background-color: #0056b3;
+.delete-btn,
+.remove-btn {
+  color: #dc3545;
 }
 
-.add-button {
-  background-color: #28a745;
-}
-
-.add-button:hover {
-  background-color: #1e7e34;
-}
-
-.parse-results {
-  margin-top: 16px;
+.section-title {
+  margin: 16px 0 12px;
   font-weight: 500;
   font-size: var(--big-font-size);
 }
 
-.toggle-concepts {
-  cursor: pointer;
-  /* text-decoration: underline; */
-  font-size: 1.1rem;
-  background-color: var(--sidebar-bg);
-  padding: 4px;
-  margin-bottom: 5px;
+.source-form {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-light);
 }
 
-.toggle-concepts:hover {
-  color: #0056b3;
+.form-row {
+  margin-bottom: 8px;
 }
 
-.concepts-list ul,
-.datasources ul {
-  list-style: disc;
-  padding-left: 20px;
-  color: var(--text-faint);
+.form-row label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
 }
 
-.no-results {
-  margin-top: 16px;
-  color: var(--text-faint);
+.form-row input,
+.form-row select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 14px;
 }
 
-input,
-select {
-  font-size: 12px;
-  border: 1px solid #ccc;
-  /* Light gray border for inputs */
-  border-radius: 0;
-  /* Sharp corners */
-  width: 95%;
-  /* Full width of the container */
-}
-
-input:focus,
-select:focus {
-  border-color: #4b4b4b;
-  /* Dark gray border on focus */
+.form-row input:focus,
+.form-row select:focus {
+  border-color: #339af0;
   outline: none;
 }
 
-.model-display {
-  /* display: grid; */
-  /* grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); */
-  gap: 24px;
-  padding: 20px;
-  margin: 0 auto;
-  background-color: var(--query-window-bg);
-  height: 100%;
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-/* device specific */
+.model-source {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.source-title {
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.collapsible {
+  cursor: pointer;
+  padding: 8px;
+  background-color: var(--sidebar-bg);
+  margin-bottom: 8px;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.collapsible:hover {
+  background-color: var(--bg-light);
+}
+
+.collapsible-content {
+  margin-bottom: 16px;
+}
+
+.parse-error {
+  color: #dc3545;
+  margin: 12px 0;
+}
+
 @media screen and (max-width: 768px) {
-  .model-display {
-    padding: 0px;
+  .model-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .controls {
+    flex-wrap: wrap;
   }
 }
 </style>
@@ -304,6 +270,7 @@ import ErrorMessage from './ErrorMessage.vue'
 import ConceptTable from './ConceptTable.vue'
 import DatasourceTable from './DatasourceTable.vue'
 import Editor from './Editor.vue'
+
 export default defineComponent({
   name: 'ModelConfigViewer',
   props: {
@@ -322,15 +289,19 @@ export default defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+
     if (!modelStore || !editorStore || !trilogyResolver || !connectionStore) {
       throw new Error('Missing model store or editor store!')
     }
+
     const isExpanded = ref<Record<string, boolean>>({})
     const isDatasourceExpanded = ref<Record<string, boolean>>({})
     const isEditing = ref<boolean>(false)
     const editableName = ref<string>('')
+    const newSourceVisible = ref<Record<string, boolean>>({})
+    const nameInput = ref<HTMLDivElement | null>(null)
 
-    const isEditorExpanded = ref<Record<string, boolean>>({})
+    const index = computed(() => props.config.name)
 
     const toggleConcepts = (index: string) => {
       isExpanded.value[index] = !isExpanded.value[index]
@@ -340,10 +311,10 @@ export default defineComponent({
       isDatasourceExpanded.value[index] = !isDatasourceExpanded.value[index]
     }
 
-    const newSourceVisible = ref<Record<string, boolean>>({})
     const toggleNewSource = (index: string) => {
       newSourceVisible.value[index] = !newSourceVisible.value[index]
     }
+
     const fetchParseResults = (model: string) => {
       return trilogyResolver
         .resolveModel(
@@ -362,11 +333,9 @@ export default defineComponent({
         })
     }
 
-    // Function to submit the editor details
     const submitSourceAddition = (model: string) => {
       if (sourceDetails.value.name) {
         let target = modelStore.models[model]
-        // check if it's already in the sources (sources are {name: string, alias: string}[])
         if (target.sources.some((source) => source.editor === sourceDetails.value.name)) {
           console.error('Source already exists in model')
         } else {
@@ -382,9 +351,7 @@ export default defineComponent({
         }
       }
     }
-    let index = computed(() => props.config.name)
 
-    const nameInput = ref<HTMLDivElement | null>(null)
     const startEditing = () => {
       isEditing.value = true
       editableName.value = props.config.name
@@ -417,7 +384,6 @@ export default defineComponent({
       sourceDetails,
       trilogyResolver,
       fetchParseResults,
-      isEditorExpanded,
       index,
       toggleNewSource,
       isEditing,
@@ -460,9 +426,6 @@ export default defineComponent({
     },
     remove(model: string) {
       this.modelStore.removeModelConfig(model)
-    },
-    onEditorClick(source: { alias: string; editor: string }) {
-      this.isEditorExpanded[source.editor] = !this.isEditorExpanded[source.editor]
     },
   },
 })

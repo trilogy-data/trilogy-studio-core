@@ -14,8 +14,16 @@
     </template>
 
     <!-- Connection Type Icons -->
-    <connection-icon v-if="item.type === 'connection'" :connection-type="item.connection?.type" />
-    <i v-else-if="item.type === 'database'" class="mdi mdi-database"></i>
+    <connection-icon
+      v-if="item.type === 'connection'"
+      :connection-type="item.connection?.type"
+      :data-testid="`connection-${item.connection.name}`"
+    />
+    <i
+      v-else-if="item.type === 'database'"
+      class="mdi mdi-database"
+      :data-testid="`database-${item.connection.name}-${item.name}`"
+    ></i>
     <i v-else-if="item.type === 'table'" class="mdi mdi-table"></i>
     <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
     <i v-else-if="item.type === 'loading'" class="mdi mdi-loading mdi-spin"></i>
@@ -35,6 +43,11 @@
     >
       {{ item.name }}
     </div>
+    <DuckDBImporter
+      v-else-if="item.type === 'duckdb-upload'"
+      :db="item.connection.db"
+      :connection="item.connection"
+    />
     <model-selector v-else-if="item.type === 'model'" :connection="item.connection" />
     <div v-else-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateBigqueryProject(item.connection, bigqueryProject)">
@@ -79,6 +92,7 @@
         <span class="checkbox-label">Save Credentials</span>
       </label>
     </div>
+
     <span
       v-else
       class="title-pad-left truncate-text"
@@ -126,6 +140,7 @@ import { KeySeparator, rsplit } from '../data/constants'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 import { Table } from '../connections'
+import DuckDBImporter from './DuckDBImporter.vue'
 // Define prop types
 interface ConnectionListItemProps {
   item: {

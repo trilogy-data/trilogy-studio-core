@@ -72,7 +72,7 @@ export default defineComponent({
                 // @ts-ignore
                 formatter: 'array',
                 formatterParams: {
-                  delimiter: ', ', //join values using the "|" delimiter
+                  delimiter: ', ',
                 },
               },
               { title: 'Description', field: 'description', sorter: 'string', resizable: true },

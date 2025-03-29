@@ -276,6 +276,7 @@ export class ModelSource {
             concept.purpose,
             concept.description,
             concept.lineage,
+            concept.keys || [],
           ),
       ),
       (source.datasources || []).map(
@@ -294,6 +295,7 @@ export class ModelSource {
                   concept.purpose,
                   concept.description,
                   concept.lineage,
+                  concept.keys || [],
                 ),
             ),
             (datasource.grain || []).map(
@@ -306,6 +308,7 @@ export class ModelSource {
                   concept.purpose,
                   concept.description,
                   concept.lineage,
+                  concept.keys || [],
                 ),
             ),
           ),

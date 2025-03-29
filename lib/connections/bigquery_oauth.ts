@@ -250,7 +250,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
             }
             break
           case ColumnType.DATE:
-            processedRow[label] = value ? parseTimestamp(value) : null
+            processedRow[label] = value ? DateTime.fromISO(value) : null
             break
           case ColumnType.DATETIME:
             processedRow[label] = value ? parseTimestamp(value) : null

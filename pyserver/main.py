@@ -74,7 +74,7 @@ logger = getLogger(__name__)
 
 PORT = 5678
 
-STATEMENT_LIMIT = 100_000
+STATEMENT_LIMIT = 100_00
 
 
 app = FastAPI()

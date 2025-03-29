@@ -146,17 +146,12 @@ export default {
         if (type === 'database') {
           console.log('getting tables')
           let dbid = id.split(KeySeparator)[1]
-          let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
-
-          let tables = await connectionStore.connections[connection].getTables(dbid)
-
-          if (db) {
-            db.tables = tables
-          }
-          for (let table of tables) {
-            collapsed.value[`${connection}${KeySeparator}${dbid}${KeySeparator}${table.name}`] =
-              true
-          }
+          connectionStore.connections[connection].refreshDatabase(dbid)
+          // we don't expand tables in the sidebar anymore
+          // for (let table of tables) {
+          //   collapsed.value[`${connection}${KeySeparator}${dbid}${KeySeparator}${table.name}`] =
+          //     true
+          // }
         }
         if (type === 'schema') {
           // pass, always get at database level
@@ -209,8 +204,6 @@ export default {
     }
     const toggleCollapse = async (id: string, connection: string, type: string) => {
       // if we are expanding a connection, get the databases
-      console.log(id)
-      console.log(type)
       if (['connection', 'database', 'table'].includes(type)) {
         emit('connection-key-selected', id)
       }

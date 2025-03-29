@@ -20,15 +20,15 @@ class MockSnowflakeConnection extends SnowflakeConnectionBase {
 
   // @ts-ignore
   protected async executeQuery(sql: string): Promise<any> {
-    return {};
+    return {}
   }
   // @ts-ignore
   protected extractMetadata(resultData: any): any[] {
-    return [];
+    return []
   }
   // @ts-ignore
   protected extractRows(resultData: any): any[][] {
-    return [];
+    return []
   }
 
   protected getSchema(): string | undefined {
