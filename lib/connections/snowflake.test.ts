@@ -18,17 +18,18 @@ class MockSnowflakeConnection extends SnowflakeConnectionBase {
     return {}
   }
 
-  // protected async executeQuery(sql: string): Promise<any> {
-  //   return {};
-  // }
-
-  // protected extractMetadata(resultData: any): any[] {
-  //   return [];
-  // }
-
-  // protected extractRows(resultData: any): any[][] {
-  //   return [];
-  // }
+  // @ts-ignore
+  protected async executeQuery(sql: string): Promise<any> {
+    return {};
+  }
+  // @ts-ignore
+  protected extractMetadata(resultData: any): any[] {
+    return [];
+  }
+  // @ts-ignore
+  protected extractRows(resultData: any): any[][] {
+    return [];
+  }
 
   protected getSchema(): string | undefined {
     return 'TEST_SCHEMA'
