@@ -25,6 +25,11 @@ export enum ColumnType {
   FLOAT = 'float',
   UNKNOWN = 'unknown',
 
+  // COMPLEX
+  STRUCT = 'struct',
+  ARRAY = 'array',
+  MAP = 'map',
+
   // CUSTOM TYPES
   MONEY = 'money',
   PERCENT = 'percent',
@@ -41,6 +46,7 @@ export interface ResultColumn {
   description?: string
   scale?: number
   precision?: number
+  children?: Map<string, ResultColumn>
   // purpose: string
 }
 

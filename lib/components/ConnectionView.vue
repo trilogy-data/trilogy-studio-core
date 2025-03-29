@@ -55,20 +55,28 @@ export default defineComponent({
   },
   computed: {
     selectedType() {
-      let separatorCount = this.activeConnectionKey.split(KeySeparator).length
-      if (separatorCount === 1) {
+      if (this.separatorCount === 1) {
         return 'connection'
-      } else if (separatorCount === 2) {
+      } else if (this.separatorCount === 2) {
         return 'database'
-      } else if (separatorCount === 3) {
+      } else if (this.separatorCount === 3) {
+        return 'table'
+      } else if (this.separatorCount === 4) {
         return 'table'
       }
+    },
+    separatorCount() {
+      // This is used to determine the level of the selected path
+      return this.activeConnectionKey.split(KeySeparator).length
     },
     selectedPath() {
       return this.activeConnectionKey.split(KeySeparator).slice(1)
     },
     selectedTable() {
-      return this.activeConnectionKey.split(KeySeparator)[2]
+      if (this.separatorCount === 4) {
+        return this.activeConnectionKey.split(KeySeparator)[3]
+      }
+      return this.activeConnectionKey.split(KeySeparator)[2] // For cases where it's a database
     },
     selectedConnection() {
       return this.activeConnectionKey.split(KeySeparator)[0]

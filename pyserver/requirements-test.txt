@@ -2,3 +2,4 @@ pytest
 mypy
 ruff
 types-click-default-group
+types-requests

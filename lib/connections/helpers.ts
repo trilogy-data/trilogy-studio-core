@@ -1,5 +1,6 @@
 import { Connection } from '.'
 import { KeySeparator } from '../data/constants'
+import { Table } from './base'
 
 export function buildConnectionTree(
   connections: Connection[],
@@ -151,37 +152,64 @@ export function buildConnectionTree(
               connection,
             })
           }
+
+          // Group tables by schema
+          const schemaMap = new Map()
+
+          // First, organize tables by schema
           db.tables.forEach((table) => {
-            let tableId = `${dbId}${KeySeparator}${table.name}`
-            list.push({
-              id: tableId,
-              name: table.name,
-              indent: 2,
-              count: 0,
-              type: 'table',
-              connection,
-              object: table,
-            })
-            if (isLoading[tableId]) {
+            if (table.schema) {
+              if (!schemaMap.has(table.schema)) {
+                schemaMap.set(table.schema, [])
+              }
+              schemaMap.get(table.schema).push(table)
+            }
+          })
+
+          // Process tables with schemas
+          if (schemaMap.size > 0) {
+            // Add all schemas
+            for (const [schema, tables] of schemaMap.entries()) {
+              const schemaId = `${dbId}${KeySeparator}${schema}`
               list.push({
-                id: `${connection.name}-loading`,
-                name: 'Loading...',
-                indent: 1,
-                count: 0,
-                type: 'loading',
+                id: schemaId,
+                name: schema,
+                indent: 2,
+                count: tables.length,
+                type: 'schema',
                 connection,
               })
-            }
-            if (!collapsed[tableId]) {
-              table.columns.forEach((column) => {
-                list.push({
-                  id: `${tableId}${KeySeparator}${column.name}`,
-                  name: column.name,
-                  indent: 3,
-                  count: 0,
-                  type: 'column',
-                  connection,
+
+              // If this schema is not collapsed, add all its tables
+              if (!collapsed[schemaId]) {
+                tables.forEach((table: Table) => {
+                  const tableId = `${dbId}${KeySeparator}${schema}${KeySeparator}${table.name}`
+                  list.push({
+                    id: tableId,
+                    name: table.name,
+                    indent: 3,
+                    count: 0,
+                    type: 'table',
+                    connection,
+                    object: table,
+                  })
                 })
+              }
+            }
+          }
+
+          // Process tables without schema
+          db.tables.forEach((table) => {
+            if (!table.schema) {
+              const tableId = `${dbId}${KeySeparator}${table.name}`
+              list.push({
+                id: tableId,
+                name: table.name,
+                indent: 2,
+                count: 0,
+                type: 'table',
+                connection,
+                object: table,
               })
             }
           })

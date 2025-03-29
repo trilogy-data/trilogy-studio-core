@@ -139,8 +139,8 @@
   border-radius: 4px;
   display: flex;
   align-items: center;
-  white-space: nowrap;      
-  overflow: hidden;    
+  white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
@@ -634,13 +634,13 @@ export default defineComponent({
             }
           }
         }
-        console.log(sqlResponse)
         this.editorStore.setEditorResults(this.editorName, sqlResponse)
       } catch (error) {
         if (error instanceof Error) {
           // Handle abortion vs other errors differently
           const errorMessage = controller.signal.aborted ? 'Query cancelled by user' : error.message
           this.editorData.setError(errorMessage)
+          console.error(error)
         }
       } finally {
         this.editorData.loading = false

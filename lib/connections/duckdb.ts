@@ -76,13 +76,8 @@ export default class DuckDBConnection extends BaseConnection {
     this.query_type = 'duckdb'
   }
 
-  // Example of a custom method for MotherDuck
-  async query_core(sql: string): Promise<Results> {
-    const result = await this.connection.query(sql)
-    // Map headers (columns) from the result schema
-    const schema = result.schema.fields // Assuming `fields` is the column metadata
+  processSchema(schema: any): Map<string, ResultColumn> {
     const headers = new Map<string, ResultColumn>()
-
     schema.forEach((field: any) => {
       headers.set(field.name, {
         name: field.name,
@@ -90,40 +85,69 @@ export default class DuckDBConnection extends BaseConnection {
         description: '', // Add a description if necessary
         scale: field.type.scale,
         precision: field.type.precision,
+        children: field.type.children ? this.processSchema(field.type.children) : undefined,
       })
     })
+    return headers
+  }
 
-    // Map data rows
-    const data = result.toArray().map((row) => row.toJSON())
-    //if any field type is a integer, convert it from BigInt to Number
-    let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    data.forEach((row) => {
-      Object.keys(row).forEach((key) => {
-        switch (headers.get(key)?.type) {
+  processRow(row: any, headers: Map<string, ResultColumn>): any {
+    let processedRow: Record<string, any> = {}
+    Object.keys(row).forEach((key) => {
+      const column = headers.get(key)
+      if (column) {
+        switch (column.type) {
           case ColumnType.INTEGER:
-            row[key] = Number(row[key])
+            processedRow[key] = row[key] ? Number(row[key]) : null
             break
           case ColumnType.FLOAT:
-            const scale = headers.get(key)?.scale || 0
-
+            const scale = column.scale || 0
             // Convert integer to float by dividing by 10^scale
             if (row[key] !== null && row[key] !== undefined) {
               const scaleFactor = Math.pow(10, scale)
-              row[key] = Number(row[key]) / scaleFactor
+
+              processedRow[key] = Number(row[key]) / scaleFactor
             }
             break
           case ColumnType.DATE:
-            row[key] = DateTime.fromMillis(row[key], { zone: 'UTC' })
+            processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
             break
           case ColumnType.DATETIME:
-            row[key] = DateTime.fromMillis(row[key], { zone: tz })
+            processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
             break
+          case ColumnType.ARRAY:
+            const arrayData = Array.from(row[key].toArray())
+            const newv = arrayData.map((item: any) => {
+              // l i sthe constant returned by duckdb for the array
+              return this.processRow({ l: item }, column.children!)
+            })
+            processedRow[key] = newv
+            break
+          case ColumnType.STRUCT:
+            processedRow[key] = row[key] ? this.processRow(row[key], column.children!) : null
+            break
+          // row[key] = row[key] ? this.processRow(row[key], column.children!) : null
+          // break
           default:
+            processedRow[key] = row[key]
             break
         }
-      })
+      }
     })
-    return new Results(headers, data)
+    return processedRow
+  }
+
+  async query_core(sql: string): Promise<Results> {
+    const result = await this.connection.query(sql)
+    const schema = result.schema.fields
+    const headers = this.processSchema(schema)
+    // Map data rows
+    const data = result.toArray().map((row) => row.toJSON())
+    const finalData: any[] = []
+    data.forEach((row) => {
+      finalData.push(this.processRow(row, headers))
+    })
+    return new Results(headers, finalData)
   }
 
   // Helper to map DuckDB column types to your ColumnType enum
@@ -143,6 +167,10 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.DATE
       case 10:
         return ColumnType.DATETIME
+      case 13:
+        return ColumnType.STRUCT
+      case 12:
+        return ColumnType.ARRAY
       default:
         console.log('Unknown DuckDB type:', duckDBType)
         return ColumnType.UNKNOWN // Use a fallback if necessary

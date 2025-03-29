@@ -4,7 +4,7 @@ import {
   BigQueryOauthConnection,
   DuckDBConnection,
   MotherDuckConnection,
-  SnowflakeConnection,
+  SnowflakeJwtConnection,
 } from '../connections'
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
@@ -161,7 +161,7 @@ export default class GitHubStorage extends AbstractStorage {
 
   async saveConnections(
     connections: Array<
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
     >,
   ): Promise<void> {
     await this.saveFile(this.connectionStorageFile, connections)
@@ -170,14 +170,14 @@ export default class GitHubStorage extends AbstractStorage {
   async loadConnections(): Promise<
     Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
     >
   > {
     const response = await this.fetchFile(this.connectionStorageFile)
     const raw = response?.content || []
     const connections: Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeConnection
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
     > = {}
 
     // Process each connection sequentially

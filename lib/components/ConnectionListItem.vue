@@ -117,7 +117,11 @@ import ConnectionIcon from './ConnectionIcon.vue'
 import ModelSelector from './ModelSelector.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
-import { BigQueryOauthConnection, MotherDuckConnection, SnowflakeConnection } from '../connections'
+import {
+  BigQueryOauthConnection,
+  MotherDuckConnection,
+  SnowflakeJwtConnection,
+} from '../connections'
 import { KeySeparator, rsplit } from '../data/constants'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
@@ -146,17 +150,21 @@ const emit = defineEmits<{
   (e: 'toggle', id: string, connection: string, type: string): void
   (e: 'refresh', id: string, connection: string, type: string): void
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
-  (e: 'updateSnowflakePrivateKey', connection: SnowflakeConnection, token: string): void
+  (e: 'updateSnowflakePrivateKey', connection: SnowflakeJwtConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
   (e: 'toggleSaveCredential', connection: any): void
 }>()
 
 // Computed properties for rendering logic
-const isExpandable = computed(() => ['connection', 'database', 'table'].includes(props.item.type))
+const isExpandable = computed(() => ['connection', 'database', 'schema'].includes(props.item.type))
+
+const isFetchable = computed(() =>
+  ['connection', 'database', 'table', 'schema'].includes(props.item.type),
+)
 
 // Click handler for item expansion/toggling
 const handleItemClick = () => {
-  if (isExpandable.value) {
+  if (isFetchable.value) {
     emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
   }
 }
@@ -186,7 +194,7 @@ const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) 
   emit('updateMotherDuckToken', connection, token)
 }
 
-const updateSnowflakePrivateKey = (connection: SnowflakeConnection, key: string) => {
+const updateSnowflakePrivateKey = (connection: SnowflakeJwtConnection, key: string) => {
   emit('updateSnowflakePrivateKey', connection, key)
 }
 

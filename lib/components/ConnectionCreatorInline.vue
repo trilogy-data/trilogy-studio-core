@@ -20,6 +20,8 @@
           <!-- <option value="motherduck">MotherDuck</option> -->
           <option value="bigquery">Bigquery Oauth</option>
           <option value="snowflake">Snowflake</option>
+          <!-- CORS blocks this in a browser -->
+          <!-- <option value="snowflake-basic">Snowflake Username/PW</option> -->
         </select>
       </div>
       <!-- Dynamic Fields Based on Type -->
@@ -62,6 +64,19 @@
           required
         />
       </div>
+      <!-- <div v-if="connectionDetails.type === 'snowflake-basic'" class="form-row">
+        <label for="account">Account</label>
+        <input type="text" v-model="connectionDetails.options.account" id="account" required />
+        <label for="username">Username</label>
+        <input type="text" v-model="connectionDetails.options.username" id="username" required />
+        <label for="password">Password</label>
+        <input
+          type="password"
+          v-model="connectionDetails.options.password"
+          id="username"
+          required
+        />
+      </div> -->
       <div v-if="connectionDetails.type === 'snowflake'" class="form-row">
         <label for="account">Account</label>
         <input type="text" v-model="connectionDetails.options.account" id="account" required />
@@ -162,7 +177,8 @@ export default defineComponent({
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    if (!connectionStore) {
+    const saveConnections = inject<CallableFunction>('saveConnections')
+    if (!connectionStore || !saveConnections) {
       throw new Error('must inject connectionStore to ConnectionCreator')
     }
 
@@ -181,13 +197,15 @@ export default defineComponent({
       } // Reset options
     }
 
-    const submitConnectionCreation = () => {
+    const submitConnectionCreation = async () => {
       if (connectionDetails.value.name && connectionDetails.value.type) {
-        connectionStore.newConnection(
+        await connectionStore.newConnection(
           connectionDetails.value.name,
           connectionDetails.value.type,
           connectionDetails.value.options,
         )
+        await saveConnections()
+
         emit('close')
       }
     }

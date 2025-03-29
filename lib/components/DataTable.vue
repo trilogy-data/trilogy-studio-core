@@ -52,21 +52,105 @@
 <script lang="ts">
 import { Tabulator } from 'tabulator-tables'
 import { DateTime } from 'luxon'
-import type { ColumnDefinition } from 'tabulator-tables'
+import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { PropType } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
+function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
+  if (!data) {
+    return
+  }
+
+  let tableHtml = '<table class="tabulator-sub-table">'
+  let lookup: string | undefined = columns.keys().next().value
+
+  if (!lookup) {
+    // If no columns, return empty table
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
+  }
+  let fieldInfo = columns.get(lookup)
+  if (!fieldInfo) {
+    // If no field info found, return empty table
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
+  }
+  // Add body rows
+  tableHtml += '<tbody >'
+  data.forEach((row) => {
+    let val = row[lookup]
+    // Check if the value is an array or object and handle accordingly
+    if (fieldInfo.type == ColumnType.STRUCT && fieldInfo.children) {
+      val = renderStructTable(val, fieldInfo.children)
+    } else if (fieldInfo.type === ColumnType.ARRAY) {
+      // If it's an array, call renderBasicTable recursively
+      val = renderBasicTable(val, columns) // Pass the array data and columns to renderBasicTable
+    }
+    tableHtml += '<tr class="tabulator-sub-row">'
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
+    tableHtml += '</tr>'
+  })
+  tableHtml += '</tbody>'
+
+  // Close table
+  tableHtml += '</table>'
+
+  return tableHtml
+}
+
+function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
+  if (!data) {
+    return
+  }
+  let tableHtml = '<table class="tabulator-sub-table">'
+
+  // Add body rows
+  tableHtml += '<tbody >'
+  columns.forEach((col, _) => {
+    let val = data[col.name]
+    if (col.type === ColumnType.ARRAY && col.children) {
+      val = renderBasicTable(val, col.children)
+    }
+    if (col.type === ColumnType.STRUCT && col.children) {
+      // If it's a struct, call the renderStructTable recursively
+      val = renderStructTable(val, col.children)
+    }
+
+    tableHtml += '<tr class="tabulator-sub-row">'
+    tableHtml += `<td class="tabulator-sub-cell tabulator-sub-cell-header">${col.name}</td>`
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
+    tableHtml += '</tr>'
+  })
+
+  tableHtml += '</tbody>'
+
+  // Close table
+  tableHtml += '</table>'
+
+  return tableHtml
+}
+
 function typeToFormatter(col: ResultColumn) {
   let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
   switch (col.type) {
+    case ColumnType.ARRAY:
+      return {
+        formatter: (cell: CellComponent) =>
+          renderBasicTable(cell.getValue(), col.children || new Map()),
+      }
+    case ColumnType.STRUCT:
+      return {
+        formatter: (cell: CellComponent) =>
+          renderStructTable(cell.getValue(), col.children || new Map()),
+      }
     case ColumnType.FLOAT:
+      console.log(col)
+      console.log(col.precision)
       return {
         formatter: 'money',
         formatterParams: {
-          precision: col.precision ? col.precision - (col.scale || 0) : 2,
+          precision: col.scale && col.scale >= 0 ? col.scale : false,
         },
       }
     case ColumnType.MONEY:
@@ -243,8 +327,9 @@ export default {
           maxHeight: '100%',
           minHeight: '100%',
           minWidth: '100%',
-          rowHeight: 30,
+          // rowHeight: 30,
           data: this.tableData, //assign data to table
+          // dataTree:true,
           columns: this.tableColumns,
           // height: this.actualTableHeight,
           nestedFieldSeparator: false,

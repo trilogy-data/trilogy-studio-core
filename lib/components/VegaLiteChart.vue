@@ -448,7 +448,11 @@ export default defineComponent({
         data: { values: props.data },
         width: 'container',
         // 28 is the chart control height
-        height: isMobile? props.containerHeight : props.containerHeight ? props.containerHeight - 150 : 'container',
+        height: isMobile
+          ? props.containerHeight
+          : props.containerHeight
+            ? props.containerHeight - 150
+            : 'container',
       }
 
       // Basic encoding object that we'll modify based on chart type
