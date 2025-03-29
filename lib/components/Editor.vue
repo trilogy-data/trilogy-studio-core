@@ -139,8 +139,8 @@
   border-radius: 4px;
   display: flex;
   align-items: center;
-  white-space: nowrap;      
-  overflow: hidden;    
+  white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 

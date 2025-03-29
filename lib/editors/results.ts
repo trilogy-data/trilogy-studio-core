@@ -24,7 +24,7 @@ export enum ColumnType {
   TIMESTAMP = 'timestamp',
   FLOAT = 'float',
   UNKNOWN = 'unknown',
-  
+
   // COMPLEX
   STRUCT = 'struct',
   ARRAY = 'array',

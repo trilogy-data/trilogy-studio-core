@@ -113,7 +113,6 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
-
       try {
         isLoading.value[id] = true
         if (!connectionStore.connections[connection]?.connected) {
@@ -143,15 +142,37 @@ export default {
               true
           }
         }
+        if (type === 'schema') {
+          // pass, always get at database level
+        }
         if (type === 'table') {
-          console.log('getting columns for table')
+          let separatorCount = id.split(KeySeparator).length
           let dbid = id.split(KeySeparator)[1]
           let tableid = id.split(KeySeparator)[2]
-          let nTable = await connectionStore.connections[connection].getColumns(dbid, tableid)
+          let schema = null
+          if (separatorCount === 4) {
+            // if we have a schema, we need to find the table by schema
+            tableid = id.split(KeySeparator)[3]
+            schema = id.split(KeySeparator)[2]
+            dbid = id.split(KeySeparator)[1]
+          }
+          else if (separatorCount === 3) {
+            // no schema, just a table
+            dbid = id.split(KeySeparator)[1]
+          }
+          
           let cTable = connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.name === tableid)
+          if (schema) {
+            // if we have a schema, find the table by schema
+            cTable = connectionStore.connections[connection].databases
+              ?.find((db) => db.name === dbid)
+              ?.tables?.find((table) => table.schema === schema && table.name === tableid)
+          }
+
           if (cTable) {
+            let nTable = await connectionStore.connections[connection].getColumns(dbid, tableid, cTable.schema)
             cTable.columns = nTable
           }
         }
@@ -169,7 +190,10 @@ export default {
     }
     const toggleCollapse = async (id: string, connection: string, type: string) => {
       // if we are expanding a connection, get the databases
+      console.log(id)
+      console.log(type)
       if (['connection', 'database', 'table'].includes(type)) {
+
         emit('connection-key-selected', id)
       }
 
@@ -185,8 +209,7 @@ export default {
         ) {
           await refreshId(id, connection, type)
         }
-      }
-      else if (type === 'database' && collapsed.value[id] !== false) {
+      } else if (type === 'database' && collapsed.value[id] !== false) {
         // open now see the refresh
         collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
@@ -197,8 +220,25 @@ export default {
       }
       // keep this to refresh, but we won't actually add them to the display
       else if (type === 'table' && collapsed.value[id] !== false) {
+        let separatorCount = id.split(KeySeparator).length
         let dbid = id.split(KeySeparator)[1]
         let tableid = id.split(KeySeparator)[2]
+        let schema = null
+        if (separatorCount === 4) {
+          schema = id.split(KeySeparator)[2] 
+          tableid = id.split(KeySeparator)[3] 
+        }
+        if (schema) {
+          // if we have a schema, we need to find the table by schema
+          console.log(`refreshing for schema: ${schema}`)
+          let nTable = await connectionStore.connections[connection].databases
+            ?.find((db) => db.name === dbid)
+            ?.tables?.find((table) => table.schema === schema && table.name === tableid)
+          if (nTable && nTable.columns.length === 0) {
+            await refreshId(id, connection, type)
+            return
+          }
+        }
         let nTable = await connectionStore.connections[connection].databases
           ?.find((db) => db.name === dbid)
           ?.tables?.find((table) => table.name === tableid)
@@ -212,7 +252,6 @@ export default {
       } else {
         collapsed.value[id] = !collapsed.value[id]
       }
-
     }
 
     // hydrate the initial collapse list
@@ -223,8 +262,18 @@ export default {
         let dbKey = `${connectionKey}${KeySeparator}${db.name}`
         collapsed.value[dbKey] = true
         db.tables.forEach((table) => {
-          let tableKey = `${dbKey}${KeySeparator}${table.name}`
-          collapsed.value[tableKey] = true
+          // if a database uses schemas inside databases, we have one more layer
+          if (table.schema) {
+            let schemaKey = `${dbKey}${KeySeparator}${table.schema}`
+            collapsed.value[schemaKey] = true
+            let tableKey = `${dbKey}${KeySeparator}${table.schema}${KeySeparator}${table.name}`
+            collapsed.value[tableKey] = true
+          }
+          else {
+            let tableKey = `${dbKey}${KeySeparator}${table.name}`
+            collapsed.value[tableKey] = true
+          }
+
         })
       })
     })

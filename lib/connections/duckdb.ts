@@ -92,7 +92,7 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   processRow(row: any, headers: Map<string, ResultColumn>): any {
-    let processedRow = {}
+    let processedRow: Record<string, any> = {}
     Object.keys(row).forEach((key) => {
       const column = headers.get(key)
       if (column) {
@@ -105,6 +105,7 @@ export default class DuckDBConnection extends BaseConnection {
             // Convert integer to float by dividing by 10^scale
             if (row[key] !== null && row[key] !== undefined) {
               const scaleFactor = Math.pow(10, scale)
+
               processedRow[key] = Number(row[key]) / scaleFactor
             }
             break
@@ -115,18 +116,18 @@ export default class DuckDBConnection extends BaseConnection {
             processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
             break
           case ColumnType.ARRAY:
-            const arrayData = Array.from(row[key].toArray());
+            const arrayData = Array.from(row[key].toArray())
             const newv = arrayData.map((item: any) => {
               // l i sthe constant returned by duckdb for the array
-              return this.processRow({'l': item}, column.children!)
-            }) 
+              return this.processRow({ l: item }, column.children!)
+            })
             processedRow[key] = newv
             break
           case ColumnType.STRUCT:
             processedRow[key] = row[key] ? this.processRow(row[key], column.children!) : null
             break
-            // row[key] = row[key] ? this.processRow(row[key], column.children!) : null
-            // break
+          // row[key] = row[key] ? this.processRow(row[key], column.children!) : null
+          // break
           default:
             processedRow[key] = row[key]
             break

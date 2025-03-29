@@ -5,7 +5,7 @@ import {
   DuckDBConnection,
   MotherDuckConnection,
   SnowflakeBasicAuthConnection,
-  SnowflakeJwtConnection
+  SnowflakeJwtConnection,
 } from '../connections'
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'

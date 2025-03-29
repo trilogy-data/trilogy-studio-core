@@ -64,72 +64,71 @@ function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
     return
   }
 
-  let tableHtml = '<table class="tabulator-sub-table">';
+  let tableHtml = '<table class="tabulator-sub-table">'
   let lookup: string | undefined = columns.keys().next().value
 
   if (!lookup) {
     // If no columns, return empty table
-    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>';
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
   let fieldInfo = columns.get(lookup)
   if (!fieldInfo) {
     // If no field info found, return empty table
-    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>';
+    return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
   // Add body rows
-  tableHtml += '<tbody >';
-  data.forEach(row => {
-    let val = row[lookup];
+  tableHtml += '<tbody >'
+  data.forEach((row) => {
+    let val = row[lookup]
     // Check if the value is an array or object and handle accordingly
     if (fieldInfo.type == ColumnType.STRUCT && fieldInfo.children) {
-      val = renderStructTable(val, fieldInfo.children) 
-    }
-    else if (fieldInfo.type === ColumnType.ARRAY) {
+      val = renderStructTable(val, fieldInfo.children)
+    } else if (fieldInfo.type === ColumnType.ARRAY) {
       // If it's an array, call renderBasicTable recursively
-      val = renderBasicTable(val, columns); // Pass the array data and columns to renderBasicTable
+      val = renderBasicTable(val, columns) // Pass the array data and columns to renderBasicTable
     }
-    tableHtml += '<tr class="tabulator-sub-row">';
-    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`;
-    tableHtml += '</tr>';
-  });
-  tableHtml += '</tbody>';
+    tableHtml += '<tr class="tabulator-sub-row">'
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
+    tableHtml += '</tr>'
+  })
+  tableHtml += '</tbody>'
 
   // Close table
-  tableHtml += '</table>';
+  tableHtml += '</table>'
 
-  return tableHtml;
+  return tableHtml
 }
 
 function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   if (!data) {
     return
   }
-  let tableHtml = '<table class="tabulator-sub-table">';
+  let tableHtml = '<table class="tabulator-sub-table">'
 
   // Add body rows
-  tableHtml += '<tbody >';
-  columns.forEach((col, label) => {
-    let val = data[col.name];
+  tableHtml += '<tbody >'
+  columns.forEach((col, _) => {
+    let val = data[col.name]
     if (col.type === ColumnType.ARRAY && col.children) {
-      val = renderBasicTable(val, col.children);
+      val = renderBasicTable(val, col.children)
     }
     if (col.type === ColumnType.STRUCT && col.children) {
       // If it's a struct, call the renderStructTable recursively
-      val = renderStructTable(val, col.children);
+      val = renderStructTable(val, col.children)
     }
 
-    tableHtml += '<tr class="tabulator-sub-row">';
-    tableHtml += `<td class="tabulator-sub-cell tabulator-sub-cell-header">${col.name}</td>`;
-    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`;
-    tableHtml += '</tr>';
-  });
+    tableHtml += '<tr class="tabulator-sub-row">'
+    tableHtml += `<td class="tabulator-sub-cell tabulator-sub-cell-header">${col.name}</td>`
+    tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
+    tableHtml += '</tr>'
+  })
 
-  tableHtml += '</tbody>';
+  tableHtml += '</tbody>'
 
   // Close table
-  tableHtml += '</table>';
+  tableHtml += '</table>'
 
-  return tableHtml;
+  return tableHtml
 }
 
 function typeToFormatter(col: ResultColumn) {
@@ -137,17 +136,21 @@ function typeToFormatter(col: ResultColumn) {
   switch (col.type) {
     case ColumnType.ARRAY:
       return {
-        formatter: (cell: CellComponent, formatterParams) => renderBasicTable(cell.getValue(), col.children),
+        formatter: (cell: CellComponent) =>
+          renderBasicTable(cell.getValue(), col.children || new Map()),
       }
     case ColumnType.STRUCT:
       return {
-        formatter: (cell: CellComponent, formatterParams) => renderStructTable(cell.getValue(), col.children),
+        formatter: (cell: CellComponent) =>
+          renderStructTable(cell.getValue(), col.children || new Map()),
       }
     case ColumnType.FLOAT:
+      console.log(col)
+      console.log(col.precision)
       return {
         formatter: 'money',
         formatterParams: {
-          precision: col.precision ? col.precision - (col.scale || 0) : 2,
+          precision: col.scale && col.scale >=0 ? col.scale : false,
         },
       }
     case ColumnType.MONEY:

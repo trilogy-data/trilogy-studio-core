@@ -10,14 +10,12 @@ function parseTimestamp(value: string): DateTime {
   return DateTime.fromMillis(parseFloat(value) * 1000)
 }
 
-function arrayToObject(array) {
-  console.log(typeof array, array)
+function arrayToObject(array: any[]): Record<string, any> {
   return array.reduce((obj, item, index) => {
-    obj[index] = item;
-    return obj;
-  }, {});
+    obj[index] = item
+    return obj
+  }, {})
 }
-
 
 const reauthException = 'Request had invalid authentication credentials.'
 // @ts-ignore
@@ -211,19 +209,27 @@ export default class BigQueryOauthConnection extends BaseConnection {
       let rval = {
         name: field.name,
         type: ColumnType.ARRAY,
-        children: new Map([['v', this.fieldToResultColumn(field, 'NOT_REPEATED')] as [string, ResultColumn]]),
+        children: new Map([
+          ['v', this.fieldToResultColumn(field, 'NOT_REPEATED')] as [string, ResultColumn],
+        ]),
       }
       return rval
     }
     return {
       name: mode == 'NOT_REPEATED' ? 'v' : field.name,
       type: this.mapBigQueryTypeToColumnType(field.type, mode),
-      children: field.fields ? new Map(field.fields.map((f: any) => [f.name, this.fieldToResultColumn(f)] as [string, ResultColumn])) : undefined
+      children: field.fields
+        ? new Map(
+            field.fields.map(
+              (f: any) => [f.name, this.fieldToResultColumn(f)] as [string, ResultColumn],
+            ),
+          )
+        : undefined,
     }
   }
 
   processRow(row: any, headers: Map<string, ResultColumn>): any {
-    let processedRow = {}
+    let processedRow: Record<string, any> = {}
     const keys = Object.keys(row)
     const headerKeys = Array.from(headers.keys())
     keys.forEach((key, index) => {
@@ -252,13 +258,14 @@ export default class BigQueryOauthConnection extends BaseConnection {
           case ColumnType.ARRAY:
             const newv = value.map((item: any) => {
               // l i sthe constant returned by duckdb for the array
-              return this.processRow({ 'v': item }, column.children!)
+              return this.processRow({ v: item }, column.children!)
             })
             processedRow[label] = newv
             break
           case ColumnType.STRUCT:
-            console.log('processing struct', label, arrayToObject(value.f), column.children)
-            processedRow[label] = value ? this.processRow(arrayToObject(value.f), column.children!) : null
+            processedRow[label] = value
+              ? this.processRow(arrayToObject(value.f), column.children!)
+              : null
             break
           default:
             processedRow[label] = value
@@ -282,10 +289,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
       // Map schema to headers
       const headers = new Map(
-        result.schema.fields.map((field: any) => [
-          field.name,
-          this.fieldToResultColumn(field),
-        ]),
+        result.schema.fields.map((field: any) => [field.name, this.fieldToResultColumn(field)]),
       ) as Map<string, ResultColumn>
 
       if (!result.rows) {

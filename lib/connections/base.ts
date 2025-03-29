@@ -42,17 +42,24 @@ export class Table {
   columns: Column[]
   description: string | null = null
   assetType: AssetType = AssetType.TABLE
+  schema: string | null = null
+  database: string | null = null
 
   constructor(
     name: string,
     columns: Column[],
     description: string | null = null,
     assetType: AssetType = AssetType.TABLE,
+    // Optional parameters for schema and database
+    schema: string | null = null, // e.g., 'public' for PostgreSQL
+    database: string | null = null, // e.g., 'my_database' for SQL databases
   ) {
     this.name = name
     this.columns = columns
     this.description = description
     this.assetType = assetType
+    this.schema = schema
+    this.database = database
   }
 }
 
@@ -112,13 +119,17 @@ export default abstract class BaseConnection {
 
   abstract getDatabases(): Promise<Database[]>
   abstract getTables(database: string): Promise<Table[]>
-  abstract getColumns(database: string, table: string): Promise<Column[]>
-  abstract getTable(database: string, table: string): Promise<Table>
+  abstract getColumns(database: string, table: string, schema: string | null): Promise<Column[]>
+  abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
   abstract query_core(sql: string): Promise<Results>
 
-  async getTableSample(database: string, table: string, limit: number = 100) {
-    const sql = `SELECT * FROM ${database}.${table} LIMIT ${limit}`
+  async getTableSample(database: string, table: string, limit: number = 100, schema: string | null = null): Promise<Results> {
+    let sql = `SELECT * FROM ${database}.${table} LIMIT ${limit}`
+    if (schema) {
+      sql = `SELECT * FROM ${database}.${schema}.${table} LIMIT ${limit}`
+    }
+
     return this.query(sql)
   }
 

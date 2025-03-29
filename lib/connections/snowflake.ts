@@ -1,5 +1,5 @@
 import BaseConnection from './base'
-import { Database, Table, Column } from './base'
+import { Database, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
@@ -58,7 +58,7 @@ interface StatementStatus {
 }
 
 // Base Snowflake connection class
-abstract class SnowflakeConnectionBase extends BaseConnection {
+export abstract class SnowflakeConnectionBase extends BaseConnection {
   protected baseUrl: string
   protected pollingInterval: number = 500 // ms
 
@@ -78,34 +78,114 @@ abstract class SnowflakeConnectionBase extends BaseConnection {
   abstract connect(): Promise<boolean>
   protected abstract getAuthHeaders(): Record<string, string>
 
+  objectToType(obj: any) {
+    // Determine the type of the object for mapping to ColumnType
+    if (obj === null) {
+      return ColumnType.STRING // Default to string for null values
+    } else if (typeof obj === 'string') {
+      return ColumnType.STRING
+    } else if (typeof obj === 'number') {
+      return Number.isInteger(obj) ? ColumnType.INTEGER : ColumnType.FLOAT
+    } else if (typeof obj === 'boolean') {
+      return ColumnType.BOOLEAN
+    } else if (obj instanceof Date) {
+      return ColumnType.DATETIME
+    } else if (Array.isArray(obj)) {
+      return ColumnType.ARRAY
+    } else if (typeof obj === 'object') {
+      return ColumnType.STRUCT
+    }
+    return ColumnType.UNKNOWN
+  }
+  columnsFromObject(val: any): Map<string, ResultColumn> {
+    // Create a map of columns from an object
+    const headers = new Map<string, ResultColumn>()
+    if (typeof val !== 'object' || val === null) {
+      return headers
+    }
+    // Iterate over the keys in the object
+    Object.keys(val).forEach((key) => {
+      let value = val[key]
+      let type: ColumnType = ColumnType.UNKNOWN
+      let children = undefined
+
+      if (value === null) {
+        type = ColumnType.STRING // Default to string for null values
+      } else if (typeof value === 'string') {
+        type = ColumnType.STRING
+      } else if (typeof value === 'number') {
+        type = Number.isInteger(value) ? ColumnType.INTEGER : ColumnType.FLOAT
+      } else if (typeof value === 'boolean') {
+        type = ColumnType.BOOLEAN
+      } else if (value instanceof Date) {
+        type = ColumnType.DATETIME
+      } else if (Array.isArray(value)) {
+        // Handle arrays
+        type = ColumnType.ARRAY
+        const child_type = value.length > 0 ? this.objectToType(value[0].v) : ColumnType.STRING
+        let child_type_children = undefined
+        if (child_type === ColumnType.STRUCT) {
+          // If the array contains objects, process the first object to determine the structure
+          // Use the first element to determine the type of the children
+          child_type_children = this.columnsFromObject(value[0].v)
+        }
+        children = new Map([['v', { name: 'v', type: child_type, children: child_type_children }]]) // Assuming array of objects or primitives, use the first element to determine type
+      } else if (typeof value === 'object') {
+        type = ColumnType.STRUCT
+        children = this.columnsFromObject(value) // Process the object to get its structure
+      }
+
+      headers.set(key, {
+        name: key,
+        type: type,
+        description: '',
+        children: children,
+      })
+    })
+    return headers
+  }
+
+  processRawJSON(val: any): any {
+    // turn any array values into an array of objects with a single key 'v' to match the expected format for arrays
+
+    if (Array.isArray(val)) {
+      return val.map((item) => {
+        // Process each item in the array
+        return { v: this.processRawJSON(item) } // Wrap each item in an object with key 'v'
+      })
+    } else if (typeof val === 'object' && val !== null) {
+      const processedObj: any = {}
+      Object.keys(val).forEach((key) => {
+        processedObj[key] = this.processRawJSON(val[key])
+      })
+      return processedObj
+    }
+    return val // Return the value as-is if it's not an array or object
+  }
+
   processValue(val: any, column: ResultColumn) {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     if (!val) {
       return val
-    }
-    else if (column.type === ColumnType.DATE) {
-      return DateTime.fromMillis(val* 1000, { zone: tz })
-    }
-    else if (column.type === ColumnType.DATETIME) {
-      return DateTime.fromMillis(val* 1000, { zone: tz })
-    }
-    else if (column.type === ColumnType.ARRAY) {
-      return JSON.parse(val).map((v: any) => { return {'v': v} } )
-    }
-    else if (column.type === ColumnType.INTEGER) {
+    } else if (column.type === ColumnType.DATE) {
+      return DateTime.fromMillis(val * 1000, { zone: tz })
+    } else if (column.type === ColumnType.DATETIME) {
+      return DateTime.fromMillis(val * 1000, { zone: tz })
+    } else if (column.type === ColumnType.ARRAY) {
+      let base = JSON.parse(val.replace(/undefined/g, 'null'))
+      return this.processRawJSON(base)
+    } else if (column.type === ColumnType.INTEGER) {
       return Number(val)
-    }
-    else if (column.type === ColumnType.FLOAT) {
+    } else if (column.type === ColumnType.FLOAT) {
       return Number(val)
-    }
-    else if (column.type === ColumnType.BOOLEAN) {
+    } else if (column.type === ColumnType.BOOLEAN) {
       return val == 'true'
-    }
-    else if (column.type === ColumnType.STRING) {
+    } else if (column.type === ColumnType.STRING) {
       return val
-    }
-    else if (column.type === ColumnType.STRUCT) {
-      return JSON.parse(val)
+    } else if (column.type === ColumnType.STRUCT) {
+      let base = JSON.parse(val.replace(/undefined/g, 'null'))
+
+      return this.processRawJSON(base)
     }
     return val
   }
@@ -131,37 +211,45 @@ abstract class SnowflakeConnectionBase extends BaseConnection {
           precision: column.precision,
           scale: column.scale,
         })
+        let children = undefined
+        if (type === ColumnType.ARRAY) {
+          children = new Map([['v', { name: 'v', type: ColumnType.STRING }]])
+        }
         headers.set(column.name, {
           name: column.name,
-          type: type,
+          type,
           description: '',
           precision: column.precision,
           scale: column.scale,
-          children: type == ColumnType.ARRAY? new Map([['v', {name:'v', type: ColumnType.STRING}]]) : undefined,
+          children: children,
         })
       })
-      console.log('headers', headers)
       // Map rows to objects with column names as keys
       let headerLookup = Array.from(headers.values())
       const data = rows.map((row: any[]) => {
         const rowObj: any = {}
-        console.log(row)
-        console.log(headerLookup)
+
         headerLookup.forEach((column: any, index: number) => {
-          console.log(index)
-          console.log(column, row[index])
           rowObj[column.name] = this.processValue(row[index], column)
-          console.log('parsed', rowObj[column.name])
+
+          if (column.type === ColumnType.STRUCT) {
+            let lookup = headers.get(column.name)
+            if (lookup) {
+              lookup.children = this.columnsFromObject(rowObj[column.name])
+            }
+            console.log(headers.get(column.name))
+          }
         })
         return rowObj
       })
 
-
       return new Results(headers, data)
     } catch (error) {
-      if (error instanceof Error &&
+      if (
+        error instanceof Error &&
         (error.message.includes('401') || error.message.includes('403')) &&
-        !isRetry) {
+        !isRetry
+      ) {
         // If auth expired, reconnect and retry
         await this.connect()
         return this.query_core(sql, true)
@@ -235,7 +323,7 @@ abstract class SnowflakeConnectionBase extends BaseConnection {
           new Column(column.name, column.type, column.type, false, false, false, null, false),
         )
       })
-      return new Table(table, columns)
+      return new Table(table, columns, null, AssetType.TABLE, null, database)
     })
   }
 
@@ -244,24 +332,26 @@ abstract class SnowflakeConnectionBase extends BaseConnection {
     return this.query_core(sql).then((results) => {
       const tables: Table[] = []
       results.data.forEach((row: any) => {
-        tables.push(new Table(row.name || row['name'], []))
+        tables.push(new Table(row.name || row['name'], [], row.comment, AssetType.TABLE, row.schema_name, database))
       })
       return tables
     })
   }
 
-  async getColumns(database: string, table: string): Promise<Column[]> {
-    const schema = this.getSchema() || 'PUBLIC'
+  async getColumns(database: string, table: string, schema:string| null): Promise<Column[]> {
+    schema = schema || 'PUBLIC'
     const sql = `DESCRIBE TABLE ${database}.${schema}.${table}`
 
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
       results.data.forEach((row: any) => {
+        console.log(row)
+        let type = row.kind || row['kind']
         columns.push(
           new Column(
             row.name || row['name'],
-            row.type || row['type'],
-            this.mapSnowflakeTypeToColumnType(row.type || row['type']),
+            row.kind || row['kind'],
+            type? this.mapSnowflakeTypeToColumnType({'type': type}) : ColumnType.UNKNOWN,
             (row.null || row['null']) === 'Y',
             (row.primary_key || row['primary_key']) === 'Y',
             (row.unique_key || row['unique_key']) === 'Y',
@@ -496,7 +586,9 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
       if (!statusResponse.ok) {
         const errorData = await statusResponse.json()
-        throw new Error(`Query status check failed: ${errorData.message || statusResponse.statusText}`)
+        throw new Error(
+          `Query status check failed: ${errorData.message || statusResponse.statusText}`,
+        )
       }
 
       statementStatus = await statusResponse.json()
@@ -609,11 +701,11 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
 
       // Set up headers
       const headers = {
-        'Authorization': `Basic ${encodedCredentials}`,
+        Authorization: `Basic ${encodedCredentials}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'User-Agent': 'TrilogyStudio',
-        'X-Requested-With': null
+        'X-Requested-With': null,
       }
 
       // Create login request payload
@@ -621,15 +713,16 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
         data: {
           ACCOUNT_NAME: this.config.account,
           LOGIN_NAME: this.config.username,
-          PASSWORD: this.config.password
-        }
+          PASSWORD: this.config.password,
+        },
       }
 
       // Make the authentication request
       const response = await fetch(`${this.baseUrl}/session/v1/login-request`, {
         method: 'POST',
+        // @ts-ignore
         headers: headers,
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       })
 
       if (!response.ok) {
@@ -643,7 +736,7 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
       const masterToken = responseData.data?.masterToken
 
       if (!sessionToken || !masterToken) {
-        throw new Error("Failed to get valid tokens from authentication response")
+        throw new Error('Failed to get valid tokens from authentication response')
       }
 
       return {
@@ -690,9 +783,9 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
 
   protected getAuthHeaders(): Record<string, string> {
     return {
-      'Authorization': `Snowflake Token="${this.auth.sessionToken}"`,
+      Authorization: `Snowflake Token="${this.auth.sessionToken}"`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'User-Agent': 'TypescriptRestExample/1.0',
     }
   }
@@ -701,7 +794,8 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
     // Generate a UUID for the request
     const generateUUID = () => {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8)
+        const r = (Math.random() * 16) | 0,
+          v = c === 'x' ? r : (r & 0x3) | 0x8
         return v.toString(16)
       })
     }
@@ -712,7 +806,7 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
       asyncExec: true,
       sequenceId: 1,
       querySubmissionTime: Math.floor(Date.now() / 1000),
-      bindings: {}
+      bindings: {},
     }
 
     // Execute the query
@@ -721,7 +815,7 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
     const response = await fetch(queryUrl, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {
@@ -732,7 +826,7 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
     const responseData = await response.json()
 
     if (!responseData.data?.queryId || !responseData.data?.getResultUrl) {
-      throw new Error("Invalid query response: missing queryId or result URL")
+      throw new Error('Invalid query response: missing queryId or result URL')
     }
 
     // Poll for query completion
@@ -747,13 +841,10 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
     let attempt = 0
 
     while (attempt < maxAttempts) {
-      const response = await fetch(
-        `${this.baseUrl}/monitoring/queries/${queryId}`,
-        {
-          method: 'GET',
-          headers: this.getAuthHeaders()
-        }
-      )
+      const response = await fetch(`${this.baseUrl}/monitoring/queries/${queryId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -771,16 +862,16 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
 
       // Still processing, wait and retry
       attempt++
-      await new Promise(resolve => setTimeout(resolve, this.pollingInterval))
+      await new Promise((resolve) => setTimeout(resolve, this.pollingInterval))
     }
 
-    throw new Error("Max polling attempts reached, query results not available")
+    throw new Error('Max polling attempts reached, query results not available')
   }
 
   private async getResults(resultUrl: string): Promise<any> {
     const response = await fetch(`${this.baseUrl}${resultUrl}`, {
       method: 'GET',
-      headers: this.getAuthHeaders()
+      headers: this.getAuthHeaders(),
     })
 
     if (!response.ok) {

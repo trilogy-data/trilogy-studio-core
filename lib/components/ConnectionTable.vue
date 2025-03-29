@@ -3,7 +3,8 @@
   <div class="table-viewer">
     <div class="table-header">
       <div class="table-title">
-        <h2>{{ table.name }}</h2>
+        <h2><span class="text-faint" v-if="table.database">{{ table.database }}.</span><span class="text-faint"
+            v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}</h2>
         <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
@@ -86,9 +87,11 @@
       <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
         <p>No data available</p>
       </div>
-
-      <DataTable v-else :results="selectedSampleData.data" :headers="selectedSampleData.headers" />
-
+      <div v-else class="result-container-wrapper">
+        <div class='result-container'>
+          <DataTable :results="selectedSampleData.data" :headers="selectedSampleData.headers" :containerHeight="500" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -158,6 +161,7 @@ export default defineComponent({
           props.database,
           props.table.name,
           50,
+          props.table.schema
         )
 
         sampleData.value[props.table.name] = result || new Results(new Map(), [])
@@ -170,7 +174,9 @@ export default defineComponent({
     }
 
     const selectedSampleData = computed(() =>
-      sampleData.value[props.table.name] ? sampleData.value[props.table.name] : new Results(new Map(), []),
+      sampleData.value[props.table.name]
+        ? sampleData.value[props.table.name]
+        : new Results(new Map(), []),
     )
 
     const getCellClass = (value: any, type: string) => {
@@ -226,6 +232,19 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.result-container-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.result-container {
+  width: 60vw;
+  height: 30vw;
+  border: 1px solid var(--border);
+}
+
 .table-viewer {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
