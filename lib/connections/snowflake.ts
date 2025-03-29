@@ -237,7 +237,6 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
             if (lookup) {
               lookup.children = this.columnsFromObject(rowObj[column.name])
             }
-            console.log(headers.get(column.name))
           }
         })
         return rowObj
@@ -354,7 +353,6 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
       results.data.forEach((row: any) => {
-        console.log(row)
         let type = row.kind || row['kind']
         columns.push(
           new Column(

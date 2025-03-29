@@ -89,7 +89,6 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connectionName: string, type: string) => {
-      console.log('refresh', id, connectionName, type)
       if (!llmConnectionStore.connections[connectionName]) {
         isErrored.value[id] = `Connection not found`
         return

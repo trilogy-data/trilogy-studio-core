@@ -145,8 +145,6 @@ function typeToFormatter(col: ResultColumn) {
           renderStructTable(cell.getValue(), col.children || new Map()),
       }
     case ColumnType.FLOAT:
-      console.log(col)
-      console.log(col.precision)
       return {
         formatter: 'money',
         formatterParams: {

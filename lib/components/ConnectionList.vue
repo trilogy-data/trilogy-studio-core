@@ -241,7 +241,6 @@ export default {
         }
         if (schema) {
           // if we have a schema, we need to find the table by schema
-          console.log(`refreshing for schema: ${schema}`)
           let nTable = await connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.schema === schema && table.name === tableid)
