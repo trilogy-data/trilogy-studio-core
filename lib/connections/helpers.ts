@@ -45,6 +45,16 @@ export function buildConnectionTree(
     })
 
     if (collapsed[connection.name] === false) {
+      if (['duckdb'].includes(connection.type)) {
+        list.push({
+          id: `${connection.name}-upload`,
+          name: 'Upload',
+          indent: 1,
+          count: 0,
+          type: 'duckdb-upload',
+          connection,
+        })
+      }
       list.push({
         id: `${connection.name}-model`,
         name: 'Model',
@@ -94,6 +104,7 @@ export function buildConnectionTree(
           connection,
         })
       }
+
       list.push({
         id: `${connection.name}${KeySeparator}refresh`,
         name: 'Refresh Databases',

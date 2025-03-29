@@ -13,11 +13,14 @@ interface DuckDBType {
 }
 
 // use a singleton pattern to help avoid memoery issues
-const connectionCache: Record<string, duckdb.AsyncDuckDBConnection> = {}
+const connectionCache: Record<
+  string,
+  { db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }
+> = {}
 
 async function createDuckDB(
   connectionName: string = 'default',
-): Promise<duckdb.AsyncDuckDBConnection> {
+): Promise<{ db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }> {
   // Return existing connection if it exists in the cache
   if (connectionCache[connectionName]) {
     return connectionCache[connectionName]
@@ -40,14 +43,16 @@ async function createDuckDB(
   const connection = await db.connect()
 
   // Cache the connection
-  connectionCache[connectionName] = connection
+  connectionCache[connectionName] = { db, connection }
 
-  return connection
+  return { db, connection }
 }
 // @ts-ignore
 export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
   private connection: duckdb.AsyncDuckDBConnection
+  // @ts-ignore
+  public db: duckdb.AsyncDuckDB
   static fromJSON(fields: { name: string; model: string | null }): DuckDBConnection {
     let base = new DuckDBConnection(fields.name)
     if (fields.model) {
@@ -66,7 +71,8 @@ export default class DuckDBConnection extends BaseConnection {
 
   async connect() {
     return createDuckDB(this.name).then((conn) => {
-      this.connection = conn
+      this.connection = conn.connection
+      this.db = conn.db
       return true
     })
   }

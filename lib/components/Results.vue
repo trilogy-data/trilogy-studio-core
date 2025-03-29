@@ -36,7 +36,8 @@
         />
       </div>
       <div v-else-if="activeTab === 'sql'" class="sql-view">
-        <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre>
+        <code-block :language="'sql'" :content="generatedSql || ''" />
+        <!-- <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre> -->
       </div>
       <error-message v-else-if="error">
         {{ error }}
@@ -68,10 +69,11 @@ import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import ErrorMessage from './ErrorMessage.vue'
 import LoadingButton from './LoadingButton.vue'
+import CodeBlock from './CodeBlock.vue'
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock },
   props: {
     type: {
       type: String,

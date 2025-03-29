@@ -137,6 +137,12 @@ order by
       ),
       new Paragraph('ConnectionList', '', 'connections'),
     ]),
+    new Article('DuckDB', [
+      new Paragraph(
+        'DuckDB',
+        'DuckDB is always available as an in-browser database using the DuckDB WASM integration. No authentication is required. DuckDB also natively supports csv uploads through a widget available on the connection view. Most community duckdb models will reference publically available CSV or parquet files.',
+      ),
+    ]),
     new Article('Bigquery', [
       new Paragraph(
         'Connections',
