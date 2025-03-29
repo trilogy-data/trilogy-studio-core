@@ -23,12 +23,14 @@
       :item="item"
       :is-collapsed="collapsed[item.id]"
       :isSelected="item.id === activeConnectionKey"
+      :isMobile="isMobile"
       @toggle="toggleCollapse"
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
       @update-snowflake-private-key="updateSnowflakePrivateKey"
       @toggle-save-credential="toggleSaveCredential"
+      @toggle-mobile-menu="toggleMobileMenu"
       :delete-connection="deleteConnection"
     />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
@@ -91,6 +93,7 @@ export default {
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const isMobile = inject<boolean>('isMobile', false)
     if (!connectionStore || !saveConnections || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
@@ -124,6 +127,10 @@ export default {
     const toggleSaveCredential = (connection: any) => {
       connection.saveCredential = !connection.saveCredential
       connectionStore.resetConnection(connection.name)
+    }
+
+    const toggleMobileMenu = () => {
+      emit('toggle-mobile-menu')
     }
 
     const collapsed = ref<Record<string, boolean>>({})
@@ -241,7 +248,6 @@ export default {
         }
         if (schema) {
           // if we have a schema, we need to find the table by schema
-          console.log(`refreshing for schema: ${schema}`)
           let nTable = await connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
             ?.tables?.find((table) => table.schema === schema && table.name === tableid)
@@ -305,6 +311,7 @@ export default {
       editorStore,
       contentList,
       toggleCollapse,
+      toggleMobileMenu,
       collapsed,
       saveConnections,
       modelStore,
@@ -317,6 +324,7 @@ export default {
       refreshId,
       rightSplit,
       creatorVisible,
+      isMobile,
     }
   },
   components: {

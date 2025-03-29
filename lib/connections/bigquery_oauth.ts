@@ -272,7 +272,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
             break
         }
       }
-      console.log('processedRow', processedRow)
     })
     return processedRow
   }
@@ -299,7 +298,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
       const rows = result.rows.map((row: any) => {
         return this.processRow(row.f, headers)
       })
-      console.log('rows', rows)
       return new Results(headers, rows)
     } catch (error) {
       throw error

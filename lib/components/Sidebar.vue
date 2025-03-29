@@ -79,6 +79,7 @@
       <ConnectionList
         v-show="active === 'connections'"
         @connection-key-selected="connectionKeySelected"
+        @toggle-mobile-menu="toggleMobileMenu"
         :activeConnectionKey="activeConnectionKey"
       />
       <LLMConnectionList
@@ -237,6 +238,9 @@ export default defineComponent({
     },
     connectionKeySelected(key: string) {
       this.$emit('connection-key-selected', key)
+    },
+    toggleMobileMenu() {
+      this.$emit('toggle-mobile-menu')
     },
     llmKeySelected(key: string) {
       this.$emit('llm-key-selected', key)

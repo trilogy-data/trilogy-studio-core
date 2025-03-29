@@ -255,6 +255,7 @@ import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
+import useQueryHistory from '../stores/connectionHistoryStore'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
@@ -344,6 +345,7 @@ export default defineComponent({
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
     const setActiveEditor = inject<Function>('setActiveEditor')
+
     if (
       !editorStore ||
       !connectionStore ||
@@ -512,7 +514,13 @@ export default defineComponent({
     async runQuery(isRetry: boolean = false): Promise<any> {
       this.$emit('query-started')
       this.editorData.setError(null)
+      const history = useQueryHistory(this.editorData.connection)
       const editor = editorMap.get(this.context)
+      let startTime = new Date().getTime()
+      let text = ''
+      let errorRecord = null
+      let resultSize = 0
+      let columnSize = 0
       if (this.loading || !editor) {
         return
       }
@@ -575,7 +583,7 @@ export default defineComponent({
         // Prepare sources if model exists
 
         // Get selected text or full content
-        let text = getEditorText(editor, this.editorData.contents)
+        text = getEditorText(editor, this.editorData.contents)
         if (!text) {
           this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
           return
@@ -634,17 +642,30 @@ export default defineComponent({
             }
           }
         }
+        resultSize = sqlResponse.data.length
+        resultSize = sqlResponse.headers.size
         this.editorStore.setEditorResults(this.editorName, sqlResponse)
       } catch (error) {
         if (error instanceof Error) {
           // Handle abortion vs other errors differently
-          const errorMessage = controller.signal.aborted ? 'Query cancelled by user' : error.message
-          this.editorData.setError(errorMessage)
+          errorRecord = controller.signal.aborted ? 'Query cancelled by user' : error.message
+          this.editorData.setError(errorRecord)
           console.error(error)
         }
       } finally {
         this.editorData.loading = false
         this.editorData.cancelCallback = null
+        history.recordQuery({
+          query: text,
+          executionTime: new Date().getTime() - startTime,
+          status: errorRecord ? 'error' : 'success',
+          resultSize: resultSize,
+          errorMessage: errorRecord,
+          resultColumns: columnSize,
+          // errorMessage?: string | null;
+          // resultSize?: number;
+          // resultColumns?: number;
+        })
       }
     },
     getEditor() {
@@ -752,7 +773,6 @@ export default defineComponent({
               await Promise.all([this.llmStore.generateQueryCompletion(text, concepts)])
                 .then((results) => {
                   let query = results[0]
-                  console.log(query)
                   if (query) {
                     let op = { range: range, text: `${text}\n${query}`, forceMoveMarkers: true }
                     editorItem.executeEdits('gen-ai-prompt-shortcut', [op])

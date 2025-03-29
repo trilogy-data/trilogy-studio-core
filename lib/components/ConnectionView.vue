@@ -1,6 +1,7 @@
 <template>
   <div class="view-container">
-    <div v-if="selectedType === 'table' && selectedTableDetails" class="model-display">
+    <ConnectionHistory v-if="selectedType === 'connection'" :connectionName="selectedConnection" />
+    <div v-else-if="selectedType === 'table' && selectedTableDetails" class="model-display">
       <ConnectionTable
         :table="selectedTableDetails"
         :database="selectedDatabase"
@@ -25,6 +26,7 @@ import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import ConnectionTable from './ConnectionTable.vue'
 import { KeySeparator } from '../data/constants'
+import ConnectionHistory from './ConnectionHistory.vue'
 export default defineComponent({
   name: 'ConnectionView',
   props: {
@@ -52,6 +54,7 @@ export default defineComponent({
   },
   components: {
     ConnectionTable,
+    ConnectionHistory,
   },
   computed: {
     selectedType() {

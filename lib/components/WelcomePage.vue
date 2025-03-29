@@ -8,8 +8,7 @@
       <p>We're glad you're here!</p>
       <template v-if="!showCreator">
         <p>
-          To get started: drop right into a demo editor, create a blank editor, or dive into the
-          docs.
+          To get started: drop right into a demo, create a blank editor, or take a guided tour in the docs.
         </p>
         <div class="buttons">
           <button @click="startDemo()" class="btn btn-secondary">
