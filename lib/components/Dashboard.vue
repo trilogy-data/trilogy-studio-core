@@ -1,20 +1,50 @@
 <script lang="ts" setup>
 import { ref, reactive, markRaw, h, computed } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
-import {DashboardChart} from './DashboardChart.vue'
+import DashboardChart from './DashboardChart.vue'
+import DashboardMarkdown from './DashboardMarkdown.vue'
+
+// Define types
+interface LayoutItem {
+  x: number
+  y: number
+  w: number
+  h: number
+  i: string
+  static: boolean
+}
+
+interface Connection {
+  id: number
+  name: string
+}
+
+interface GridItemData {
+  type: string
+  content: string
+}
+
+// Mode Toggle (edit/view)
+const editMode = ref(true);
+const toggleEditMode = () => {
+  editMode.value = !editMode.value;
+  // Update all items to be non-draggable and non-resizable in view mode
+  draggable.value = editMode.value;
+  resizable.value = editMode.value;
+};
 
 // Draggable and resizable states
 const draggable = ref(true);
 const resizable = ref(true);
 
 // Start with an empty layout
-const layout = ref([]);
+const layout = ref<LayoutItem[]>([]);
 
 // Track the next item ID to ensure unique IDs
 const nextId = ref(0);
 
 // Track currently edited item
-const editingItem = ref(null);
+const editingItem = ref<LayoutItem | null>(null);
 const showQueryEditor = ref(false);
 const showMarkdownEditor = ref(false);
 
@@ -22,31 +52,33 @@ const showMarkdownEditor = ref(false);
 const CELL_TYPES = {
   CHART: 'chart',
   MARKDOWN: 'markdown'
-};
+} as const;
+
+type CellType = typeof CELL_TYPES[keyof typeof CELL_TYPES];
 
 // Mock connections for dropdown
-const connections = ref([
+const connections = ref<Connection[]>([
   { id: 1, name: 'PostgreSQL Connection' },
   { id: 2, name: 'MySQL Connection' },
   { id: 3, name: 'MongoDB Connection' },
   { id: 4, name: 'REST API Connection' }
 ]);
 
-const selectedConnection = ref(connections.value[0]);
+const selectedConnection = ref<Connection>(connections.value[0]);
 
 // Store for grid item content
-const gridItems = reactive(new Map());
+const gridItems = reactive(new Map<string, GridItemData>());
 
 // Modal state for adding a new item
 const showAddItemModal = ref(false);
-const newItemType = ref(CELL_TYPES.CHART);
+const newItemType = ref<CellType>(CELL_TYPES.CHART);
 
 // Add a new grid item with type
-function openAddItemModal() {
+function openAddItemModal(): void {
   showAddItemModal.value = true;
 }
 
-function addItem(type = CELL_TYPES.CHART) {
+function addItem(type: CellType = CELL_TYPES.CHART): void {
   const itemId = nextId.value.toString();
   
   // Create grid item
@@ -72,26 +104,26 @@ function addItem(type = CELL_TYPES.CHART) {
 }
 
 // Clear all grid items
-function clearItems() {
+function clearItems(): void {
   layout.value = [];
   gridItems.clear();
   nextId.value = 0;
 }
 
 // Edit functions
-function openEditor(item) {
+function openEditor(item: LayoutItem): void {
   editingItem.value = item;
   const itemData = gridItems.get(item.i);
   
-  if (itemData.type === CELL_TYPES.CHART) {
+  if (itemData?.type === CELL_TYPES.CHART) {
     showQueryEditor.value = true;
-  } else if (itemData.type === CELL_TYPES.MARKDOWN) {
+  } else if (itemData?.type === CELL_TYPES.MARKDOWN) {
     showMarkdownEditor.value = true;
   }
 }
 
 // Save content and close editor
-function saveContent(content) {
+function saveContent(content: string): void {
   if (editingItem.value) {
     const itemId = editingItem.value.i;
     const itemData = gridItems.get(itemId);
@@ -107,61 +139,40 @@ function saveContent(content) {
 }
 
 // Close all editors
-function closeEditors() {
+function closeEditors(): void {
   showQueryEditor.value = false;
   showMarkdownEditor.value = false;
   editingItem.value = null;
 }
 
 // Get item data
-function getItemData(itemId:string) {
+function getItemData(itemId: string): GridItemData {
   return gridItems.get(itemId) || { type: CELL_TYPES.CHART, content: '' };
 }
-function setItemData(itemId, data) {
+
+function setItemData(itemId: string, data: GridItemData): void {
   gridItems.set(itemId, data);
 }
 
-
 // Handle connection change
-function onConnectionChange(event) {
-  const connectionId = parseInt(event.target.value);
+function onConnectionChange(event: Event): void {
+  const target = event.target as HTMLSelectElement;
+  const connectionId = parseInt(target.value);
   selectedConnection.value = connections.value.find(conn => conn.id === connectionId) || connections.value[0];
 }
 
 // Close the add item modal
-function closeAddModal() {
+function closeAddModal(): void {
   showAddItemModal.value = false;
 }
 
-// Basic markdown renderer
-function renderMarkdown(text) {
-  if (!text) return '';
-  
-  // Process headers
-  let html = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-  
-  // Process lists
-  html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
-  html = html.replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>');
-  
-  // Process bold and italic
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-  
-  // Process links
-  html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2">$1</a>');
-  
-  // Process paragraphs
-  html = html.replace(/^\s*$/gm, '</p><p>');
-  html = '<p>' + html + '</p>';
-  html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>');
-  
-  return html;
+// Generic Content Editor Component (using render function)
+interface ContentEditorProps {
+  content: string;
+  title: string;
+  placeholder: string;
 }
 
-// Generic Content Editor Component (using render function)
 const ContentEditor = {
   props: {
     content: {
@@ -177,14 +188,14 @@ const ContentEditor = {
       default: 'Enter content here...'
     }
   },
-  setup(props, { emit }) {
+  setup(props: ContentEditorProps, { emit }: any) {
     const contentText = ref(props.content);
     
-    function saveContent() {
+    function saveContent(): void {
       emit('save', contentText.value);
     }
     
-    function cancel() {
+    function cancel(): void {
       emit('cancel');
     }
     
@@ -197,7 +208,7 @@ const ContentEditor = {
         h('textarea', {
           value: this.contentText,
           placeholder: this.placeholder,
-          onInput: (e) => this.contentText = e.target.value
+          onInput: (e: Event) => this.contentText = (e.target as HTMLTextAreaElement).value
         }),
         h('div', { class: 'editor-actions' }, [
           h('button', { onClick: this.saveContent }, 'Save'),
@@ -207,32 +218,6 @@ const ContentEditor = {
     ]);
   }
 };
-
-
-
-// Markdown Component (using render function)
-const MarkdownComponent = markRaw({
-  props: {
-    itemId: {
-      type: String,
-      required: true
-    }
-  },
-  setup(props) {
-    const markdown = computed(() => {
-      return getItemData(props.itemId).content;
-    });
-    return { markdown };
-  },
-  render() {
-    return h('div', { class: 'markdown-content' }, [
-      h('div', { 
-        class: 'rendered-markdown',
-        innerHTML: renderMarkdown(this.markdown)
-      })
-    ]);
-  }
-});
 </script>
 
 <template>
@@ -247,8 +232,11 @@ const MarkdownComponent = markRaw({
         </select>
       </div>
       <div class="grid-actions">
-        <button @click="openAddItemModal" class="add-button">Add Item</button>
-        <button @click="clearItems" class="clear-button">Clear All</button>
+        <button @click="openAddItemModal" class="add-button" v-if="editMode">Add Item</button>
+        <button @click="clearItems" class="clear-button" v-if="editMode">Clear All</button>
+        <button @click="toggleEditMode" class="toggle-mode-button">
+          {{ editMode ? 'View Mode' : 'Edit Mode' }}
+        </button>
       </div>
     </div>
     
@@ -273,7 +261,7 @@ const MarkdownComponent = markRaw({
           :i="item.i"
         >
           <div class="grid-item-content">
-            <div class="grid-item-header">
+            <div class="grid-item-header" v-if="editMode">
               <span class="item-title">
                 {{ getItemData(item.i).type === CELL_TYPES.CHART ? 'Chart' : 'Markdown' }} {{ item.i }}
               </span>
@@ -282,8 +270,11 @@ const MarkdownComponent = markRaw({
             
             <!-- Render the appropriate component based on cell type -->
             <component 
-              :is="getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : MarkdownComponent"
+              :is="getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
               :itemId="item.i" 
+              :setItemData="setItemData"
+              :getItemData="getItemData"
+              :editMode="editMode"
             />
           </div>
         </grid-item>
@@ -342,14 +333,17 @@ const MarkdownComponent = markRaw({
   flex-direction: column;
   height: 100%;
   width: 100%;
+  font-size: var(--font-size);
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
 
 .dashboard-controls {
   display: flex;
   justify-content: space-between;
   padding: 15px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .connection-selector {
@@ -360,14 +354,16 @@ const MarkdownComponent = markRaw({
 .connection-selector label {
   margin-right: 10px;
   font-weight: bold;
+  color: var(--text-color);
 }
 
 .connection-selector select {
   padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background-color: white;
+  border: 1px solid var(--border);
+  background-color: var(--sidebar-selector-bg);
+  color: var(--sidebar-selector-font);
   min-width: 200px;
+  font-size: var(--font-size);
 }
 
 .grid-actions {
@@ -377,37 +373,44 @@ const MarkdownComponent = markRaw({
 
 .grid-actions button {
   padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--border-light);
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
+  background-color: var(--button-bg);
+  color: var(--text-color);
+  font-size: var(--button-font-size);
 }
 
 .add-button {
-  background-color: #4caf50;
-  color: white;
+  background-color: var(--special-text) !important;
+  color: white !important;
 }
 
 .clear-button {
-  background-color: #f44336;
-  color: white;
+  background-color: var(--delete-color) !important;
+  color: white !important;
+}
+
+.toggle-mode-button {
+  background-color: var(--button-bg) !important;
+  color: var(--text-color) !important;
 }
 
 .grid-container {
   flex: 1;
   overflow: auto;
   padding: 15px;
+  background-color: var(--bg-color);
 }
 
 .vue-grid-layout {
-  background: #f0f0f0;
+  background: var(--bg-color);
   height: 100%;
 }
 
 .vue-grid-item:not(.vue-grid-placeholder) {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: var(--result-window-bg);
+  border: 1px solid var(--border);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -416,7 +419,7 @@ const MarkdownComponent = markRaw({
 }
 
 .vue-grid-item .static {
-  background: #f8f8f8;
+  background: var(--sidebar-selector-bg);
 }
 
 .grid-item-content {
@@ -424,6 +427,7 @@ const MarkdownComponent = markRaw({
   width: 100%;
   display: flex;
   flex-direction: column;
+  color: var(--result-window-font);
 }
 
 .grid-item-header {
@@ -431,27 +435,24 @@ const MarkdownComponent = markRaw({
   justify-content: space-between;
   align-items: center;
   padding: 8px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
+  background-color: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border);
+  height: var(--chart-control-height);
 }
 
 .item-title {
   font-weight: bold;
+  color: var(--text-color);
 }
 
 .edit-button {
   padding: 4px 8px;
-  background-color: #2196f3;
+  background-color: var(--special-text);
   color: white;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--small-font-size);
 }
-
-
 
 .vue-draggable-handle {
   position: absolute;
@@ -486,28 +487,32 @@ const MarkdownComponent = markRaw({
 .content-editor, .add-item-modal {
   width: 80%;
   max-width: 800px;
-  background-color: white;
-  border-radius: 8px;
+  background-color: var(--query-window-bg);
+  color: var(--query-window-font);
   padding: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
 }
 
 .content-editor h3, .add-item-modal h3 {
   margin-top: 0;
   margin-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   padding-bottom: 10px;
+  color: var(--text-color);
 }
 
 .content-editor textarea {
   width: 100%;
   height: 200px;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border);
   font-family: monospace;
   resize: vertical;
   margin-bottom: 15px;
+  background-color: var(--query-window-bg);
+  color: var(--query-window-font);
+  font-size: var(--font-size);
 }
 
 .editor-actions {
@@ -519,18 +524,18 @@ const MarkdownComponent = markRaw({
 .editor-actions button {
   padding: 8px 16px;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
+  font-size: var(--button-font-size);
 }
 
 .add-button, .editor-actions button:first-child {
-  background-color: #4caf50;
+  background-color: var(--special-text);
   color: white;
 }
 
 .clear-button, .cancel-button, .editor-actions button:last-child {
-  background-color: #f44336;
+  background-color: var(--delete-color);
   color: white;
 }
 
@@ -550,57 +555,10 @@ const MarkdownComponent = markRaw({
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  color: var(--text-color);
 }
 
-/* Markdown Component Styles */
-.markdown-content {
-  height: 100%;
-  padding: 15px;
-  overflow: auto;
-}
-
-.rendered-markdown {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-}
-
-.rendered-markdown h1 {
-  font-size: 1.8em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.2em;
-}
-
-.rendered-markdown h2 {
-  font-size: 1.5em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-.rendered-markdown h3 {
-  font-size: 1.2em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-.rendered-markdown p {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-.rendered-markdown ul {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-  padding-left: 2em;
-}
-
-.rendered-markdown a {
-  color: #2196f3;
-  text-decoration: none;
-}
-
-.rendered-markdown a:hover {
-  text-decoration: underline;
+.item-type-selector input[type="radio"] {
+  accent-color: var(--special-text);
 }
 </style>
