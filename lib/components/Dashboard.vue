@@ -1,40 +1,40 @@
 <script lang="ts" setup>
-import { ref, reactive, markRaw, h, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed,  onMounted, nextTick,  onBeforeUnmount } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
-
-// Define types
-interface LayoutItem {
-  x: number
-  y: number
-  w: number
-  h: number
-  i: string
-  static: boolean
-}
-
-interface Connection {
-  id: number
+import { useDashboardStore } from '../stores/dashboardStore'
+import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES } from '../dashboards/base'
+import { useConnectionStore } from '../stores'
+// import useModelStore from '../stores/modelStore'
+import ChartEditor from './DashboardChartEditor.vue'
+import MarkdownEditor from './DashboardMarkdownEditor.vue'
+// Props definition
+const props = defineProps<{
   name: string
-}
+  connectionId?: string
+}>()
 
-interface GridItemData {
-  type: string
-  content: string
-  name: string
-  width?: number   // Added width field
-  height?: number  // Added height field
-}
+// Initialize the dashboard store
+const dashboardStore = useDashboardStore()
+const connectionStore = useConnectionStore()
+// const modelStore = useModelStore()
+
+// the modelStore has a list of sources.
+
+// Add filter state and debouncing
+const filter = ref('')
+const filterInput = ref('')
+const debounceTimeout = ref<number | null>(null)
 
 // Mode Toggle (edit/view)
-const editMode = ref(true)
+const editMode = ref(false)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
   draggable.value = editMode.value
   resizable.value = editMode.value
-  
+
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
@@ -45,41 +45,73 @@ const toggleEditMode = () => {
 const draggable = ref(true)
 const resizable = ref(true)
 
-// Start with an empty layout
-const layout = ref<LayoutItem[]>([])
-
-// Track the next item ID to ensure unique IDs
-const nextId = ref(0)
-
 // Track currently edited item
 const editingItem = ref<LayoutItem | null>(null)
 const showQueryEditor = ref(false)
 const showMarkdownEditor = ref(false)
 
-// Cell types
-const CELL_TYPES = {
-  CHART: 'chart',
-  MARKDOWN: 'markdown',
-} as const
+// Cell types are imported from the dashboard model
 
-type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
 
-// Mock connections for dropdown
-const connections = ref<Connection[]>([
-  { id: 1, name: 'PostgreSQL Connection' },
-  { id: 2, name: 'MySQL Connection' },
-  { id: 3, name: 'MongoDB Connection' },
-  { id: 4, name: 'REST API Connection' },
-])
+// Get the active dashboard
+const dashboard = computed(() => {
+  // Try to find the dashboard by name
+  const dashboard = Object.values(dashboardStore.dashboards).find(
+    d => d.name === props.name
+  )
 
-const selectedConnection = ref<Connection>(connections.value[0])
+  // If dashboard doesn't exist, try to create it with the provided connection
+  if (!dashboard && props.connectionId) {
+    try {
+      return dashboardStore.newDashboard(props.name, props.connectionId)
+    } catch (error) {
+      console.error('Failed to create dashboard:', error)
+      return null
+    }
+  }
 
-// Store for grid item content
-const gridItems = reactive(new Map<string, GridItemData>())
+  return dashboard
+})
 
-// Modal state for adding a new item
-const showAddItemModal = ref(false)
-const newItemType = ref<CellType>(CELL_TYPES.CHART)
+// Get the dashboard layout from the store
+const layout = computed(() => {
+  if (!dashboard.value) return []
+  return dashboard.value.layout
+})
+
+// Get the selected connection from the dashboard
+const selectedConnection = computed(() => {
+  if (!dashboard.value) return ''
+
+  return dashboard.value.connection
+})
+
+// Debounced filter handling
+function onFilterInput(event: Event): void {
+  const target = event.target as HTMLInputElement
+  filterInput.value = target.value
+  
+  // Clear any existing timeout
+  if (debounceTimeout.value !== null) {
+    clearTimeout(debounceTimeout.value)
+  }
+  
+  // Set a new timeout for 300ms
+  debounceTimeout.value = window.setTimeout(() => {
+    applyFilter(filterInput.value)
+  }, 300)
+}
+
+// Apply the filter after debounce
+function applyFilter(filterValue: string): void {
+  // Update the local filter ref
+  filter.value = filterValue
+
+  // Update the dashboard filter in the store
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.updateDashboardFilter(dashboard.value.id, filterValue)
+  }
+}
 
 // Item title editing states
 const editingItemTitle = ref<string | null>(null)
@@ -87,16 +119,20 @@ const editableItemName = ref('')
 
 // Track layout changes
 const onLayoutUpdated = (newLayout: LayoutItem[]) => {
-  layout.value = newLayout
-  
-  // Trigger resize on layout changes
-  nextTick(() => {
-    triggerResize()
-  })
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.updateDashboardLayout(dashboard.value.id, newLayout)
+
+    // Trigger resize on layout changes
+    nextTick(() => {
+      triggerResize()
+    })
+  }
 }
 
 // Function to trigger resize on all grid items
 function triggerResize(): void {
+  if (!dashboard.value) return
+
   layout.value.forEach(item => {
     updateItemDimensions(item.i)
   })
@@ -104,23 +140,28 @@ function triggerResize(): void {
 
 // Function to update dimensions for a specific grid item
 function updateItemDimensions(itemId: string): void {
+  if (!dashboard.value) return
+
   const container = document.querySelector(`.vue-grid-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
-    const itemData = gridItems.get(itemId)
-    
-    if (itemData) {
-      // Account for the header height when calculating content height
-      const headerHeight = 36 // Approximate height of the header
-      
-      gridItems.set(itemId, {
-        ...itemData,
-        width: Math.floor(rect.width),
-        height: Math.floor(rect.height - headerHeight)
-      })
+
+    // Account for the header height when calculating content height
+    const headerHeight = 36 // Approximate height of the header
+
+    const width = Math.floor(rect.width)
+    const height = Math.floor(rect.height - headerHeight)
+
+    // Use the store to update item dimensions
+    if (dashboard.value.id) {
+      dashboardStore.updateItemDimensions(dashboard.value.id, itemId, width, height)
     }
   }
 }
+
+// Modal state for adding a new item
+const showAddItemModal = ref(false)
+const newItemType = ref<CellType>(CELL_TYPES.CHART)
 
 // Add a new grid item with type
 function openAddItemModal(): void {
@@ -128,35 +169,13 @@ function openAddItemModal(): void {
 }
 
 function addItem(type: CellType = CELL_TYPES.CHART): void {
-  const itemId = nextId.value.toString()
+  if (!dashboard.value || !dashboard.value.id) return
 
-  // Create grid item
-  layout.value.push({
-    x: 0,
-    y: 0,
-    w: 4,
-    h: type === CELL_TYPES.MARKDOWN ? 3 : 10, // Markdown cells are smaller by default
-    i: itemId,
-    static: false,
-  })
+  // Use store to add item to dashboard
+  const itemId = dashboardStore.addItemToDashboard(dashboard.value.id, type)
 
-  // Initialize with default content based on type
-  const defaultName = type === CELL_TYPES.CHART ? `Chart ${itemId}` : `Note ${itemId}`
-
-  gridItems.set(itemId, {
-    type: type,
-    content:
-      type === CELL_TYPES.CHART
-        ? "SELECT unnest([1,2,3,4]) as value, 'example' as dim  "
-        : '# Markdown Cell\nEnter your markdown content here.',
-    name: defaultName, // Default name for the item
-    width: 0,
-    height: 0
-  })
-
-  nextId.value++
   showAddItemModal.value = false
-  
+
   // Update dimensions after add
   nextTick(() => {
     updateItemDimensions(itemId)
@@ -165,36 +184,38 @@ function addItem(type: CellType = CELL_TYPES.CHART): void {
 
 // Clear all grid items
 function clearItems(): void {
-  layout.value = []
-  gridItems.clear()
-  nextId.value = 0
+  if (!dashboard.value || !dashboard.value.id) return
+
+  dashboardStore.clearDashboardItems(dashboard.value.id)
 }
 
 // Edit functions
 function openEditor(item: LayoutItem): void {
   editingItem.value = item
-  const itemData = gridItems.get(item.i)
 
-  if (itemData?.type === CELL_TYPES.CHART) {
-    showQueryEditor.value = true
-  } else if (itemData?.type === CELL_TYPES.MARKDOWN) {
-    showMarkdownEditor.value = true
+  if (!dashboard.value || !dashboard.value.id) return
+
+  const dashboardItems = dashboard.value.gridItems
+  const itemData = dashboardItems[item.i]
+
+  if (itemData) {
+    if (itemData.type === CELL_TYPES.CHART) {
+      showQueryEditor.value = true
+    } else if (itemData.type === CELL_TYPES.MARKDOWN) {
+      showMarkdownEditor.value = true
+    }
   }
 }
 
 // Save content and close editor
 function saveContent(content: string): void {
-  if (editingItem.value) {
-    const itemId = editingItem.value.i
-    const itemData = gridItems.get(itemId)
+  if (!dashboard.value || !dashboard.value.id || !editingItem.value) return
 
-    if (itemData) {
-      gridItems.set(itemId, {
-        ...itemData,
-        content: content,
-      })
-    }
-  }
+  const itemId = editingItem.value.i
+
+  // Use store to update item content
+  dashboardStore.updateItemContent(dashboard.value.id, itemId, content)
+
   closeEditors()
 }
 
@@ -205,34 +226,69 @@ function closeEditors(): void {
   editingItem.value = null
 }
 
-// Get item data
+// Get item data from the dashboard
 function getItemData(itemId: string): GridItemData {
-  return gridItems.get(itemId) || { 
-    type: CELL_TYPES.CHART, 
-    content: '', 
-    name: `Item ${itemId}`,
-    width: 0,
-    height: 0
+  if (!dashboard.value) {
+    return {
+      type: CELL_TYPES.CHART,
+      content: '',
+      name: `Item ${itemId}`,
+      width: 0,
+      height: 0
+    }
+  }
+
+  const item = dashboard.value.gridItems[itemId]
+
+  if (!item) {
+    return {
+      type: CELL_TYPES.CHART,
+      content: '',
+      name: `Item ${itemId}`,
+      width: 0,
+      height: 0
+    }
+  }
+
+  return {
+    type: item.type,
+    content: item.content,
+    name: item.name,
+    width: item.width || 0,
+    height: item.height || 0
   }
 }
 
-function setItemData(itemId: string, data: GridItemData): void {
-  // Preserve width and height if they exist
-  const currentData = gridItems.get(itemId)
-  if (currentData) {
-    data.width = data.width || currentData.width
-    data.height = data.height || currentData.height
+// Use a wrapper function to set data via the store
+function setItemData(itemId: string, data: any): void {
+  if (!dashboard.value || !dashboard.value.id) return
+
+  // Update specific properties through store actions
+  if (data.name) {
+    dashboardStore.updateItemName(dashboard.value.id, itemId, data.name)
   }
-  
-  gridItems.set(itemId, data)
+
+  if (data.chartConfig) {
+    dashboardStore.updateItemChartConfig(dashboard.value.id, itemId, data.chartConfig)
+  }
+
+  if (data.content) {
+    dashboardStore.updateItemContent(dashboard.value.id, itemId, data.content)
+  }
+
+  if (data.width && data.height) {
+    dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
+  }
 }
 
 // Handle connection change
 function onConnectionChange(event: Event): void {
   const target = event.target as HTMLSelectElement
-  const connectionId = parseInt(target.value)
-  selectedConnection.value =
-    connections.value.find((conn) => conn.id === connectionId) || connections.value[0]
+  const connectionId = target.value
+
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.updateDashboardConnection(dashboard.value.id, connectionId)
+  }
 }
 
 // Close the add item modal
@@ -259,16 +315,16 @@ function startTitleEditing(itemId: string): void {
 
 // Save edited title
 function saveTitleEdit(itemId: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+
   if (editingItemTitle.value === itemId) {
     const itemData = getItemData(itemId)
 
     // Don't allow empty names
     const newName = editableItemName.value.trim() || itemData.name
 
-    gridItems.set(itemId, {
-      ...itemData,
-      name: newName,
-    })
+    // Update item name via store
+    dashboardStore.updateItemName(dashboard.value.id, itemId, newName)
 
     editingItemTitle.value = null
   }
@@ -279,13 +335,23 @@ function cancelTitleEdit(): void {
   editingItemTitle.value = null
 }
 
-// Initialize dimension tracking on mount
+// Ensure dashboard is set as active when component mounts
 onMounted(() => {
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.setActiveDashboard(dashboard.value.id)
+
+    // Initialize the filter from the dashboard if it exists
+    if (dashboard.value.filter) {
+      filter.value = dashboard.value.filter
+      filterInput.value = dashboard.value.filter
+    }
+  }
+
   // Set up resize observer to track window resizing
   const resizeObserver = new ResizeObserver(() => {
     triggerResize()
   })
-  
+
   // Observe the grid container
   const gridContainer = document.querySelector('.grid-container')
   if (gridContainer) {
@@ -293,78 +359,35 @@ onMounted(() => {
   }
 })
 
-// Watch layout changes to update dimensions
-watch(layout, () => {
-  nextTick(() => {
-    triggerResize()
-  })
-}, { deep: true })
-
-// Generic Content Editor Component (using render function)
-interface ContentEditorProps {
-  content: string
-  title: string
-  placeholder: string
-}
-
-const ContentEditor = {
-  props: {
-    content: {
-      type: String,
-      default: '',
-    },
-    title: {
-      type: String,
-      required: true,
-    },
-    placeholder: {
-      type: String,
-      default: 'Enter content here...',
-    },
-  },
-  setup(props: ContentEditorProps, { emit }: any) {
-    const contentText = ref(props.content)
-
-    function saveContent(): void {
-      emit('save', contentText.value)
-    }
-
-    function cancel(): void {
-      emit('cancel')
-    }
-
-    return { contentText, saveContent, cancel }
-  },
-  render() {
-    return h('div', { class: 'editor-overlay' }, [
-      h('div', { class: 'content-editor' }, [
-        h('h3', {}, this.title),
-        h('textarea', {
-          value: this.contentText,
-          placeholder: this.placeholder,
-          onInput: (e: Event) => (this.contentText = (e.target as HTMLTextAreaElement).value),
-        }),
-        h('div', { class: 'editor-actions' }, [
-          h('button', { onClick: this.saveContent }, 'Save'),
-          h('button', { onClick: this.cancel }, 'Cancel'),
-        ]),
-      ]),
-    ])
-  },
-}
+// Clean up timeout on component unmount or before destruction
+onBeforeUnmount(() => {
+  if (debounceTimeout.value !== null) {
+    clearTimeout(debounceTimeout.value)
+  }
+})
 </script>
 
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container" v-if="dashboard">
     <div class="dashboard-controls">
-      <div class="connection-selector">
-        <label for="connection">Connection:</label>
-        <select id="connection" @change="onConnectionChange">
-          <option v-for="conn in connections" :key="conn.id" :value="conn.id">
-            {{ conn.name }}
-          </option>
-        </select>
+      <div class="dashboard-left-controls">
+        <div class="connection-selector">
+          <label for="connection">Connection:</label>
+          <select id="connection" @change="onConnectionChange" :value="selectedConnection">
+            <option v-for="conn in connectionStore.connections" :key="conn.name" :value="conn.name">
+              {{ conn.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Modified filter input with debouncing -->
+        <div class="filter-container">
+          <label for="filter">Filter:</label>
+          <input id="filter" type="text" v-model="filterInput" @input="onFilterInput"
+            placeholder="Enter filter criteria..." />
+        </div>
       </div>
+
       <div class="grid-actions">
         <button @click="openAddItemModal" class="add-button" v-if="editMode">Add Item</button>
         <button @click="clearItems" class="clear-button" v-if="editMode">Clear All</button>
@@ -375,65 +398,39 @@ const ContentEditor = {
     </div>
 
     <div class="grid-container">
-      <GridLayout
-        :col-num="12"
-        :row-height="30"
-        :is-draggable="draggable"
-        :is-resizable="resizable"
-        :layout="layout"
-        :vertical-compact="true"
-        :use-css-transforms="true"
-        :drag-handle-class="'grid-item-drag-handle'"
-        @layout-updated="onLayoutUpdated"
-      >
-        <grid-item
-          v-for="item in layout"
-          :key="item.i"
-          :static="item.static"
-          :x="item.x"
-          :y="item.y"
-          :w="item.w"
-          :h="item.h"
-          :i="item.i"
-          :data-i="item.i"
-        >
+      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+        :vertical-compact="true" :use-css-transforms="true" 
+        @layout-updated="onLayoutUpdated">
+        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle"
+          >
           <div class="grid-item-content">
-            <div class="grid-item-header grid-item-drag-handle" v-if="editMode">
+            <div class="grid-item-header " v-if="editMode">
               <!-- Drag handle icon -->
-              <div class="drag-handle-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <div class="drag-handle-icon grid-item-drag-handle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="3" y1="12" x2="21" y2="12"></line>
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
               </div>
-              
+
               <!-- Editable item title -->
               <div class="item-title-container">
                 <!-- Display title (clickable) -->
-                <div
-                  v-if="editingItemTitle !== item.i"
-                  class="item-title editable-title"
-                  @click="startTitleEditing(item.i)"
-                >
+                <div v-if="editingItemTitle !== item.i" class="item-title editable-title"
+                  @click="startTitleEditing(item.i)">
                   {{ getItemData(item.i).name }}
                   <span class="edit-indicator">✎</span>
                 </div>
 
                 <!-- Edit title input -->
-                <input
-                  v-else
-                  :id="`title-input-${item.i}`"
-                  v-model="editableItemName"
-                  @blur="saveTitleEdit(item.i)"
-                  @keyup.enter="saveTitleEdit(item.i)"
-                  @keyup.esc="cancelTitleEdit"
-                  class="title-input"
-                  type="text"
-                  :placeholder="
-                    getItemData(item.i).type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'
-                  "
-                />
+                <input v-else :id="`title-input-${item.i}`" v-model="editableItemName" @blur="saveTitleEdit(item.i)"
+                  @keyup.enter="saveTitleEdit(item.i)" @keyup.esc="cancelTitleEdit" class="title-input" type="text"
+                  :placeholder="getItemData(item.i).type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'
+                    " />
               </div>
               <button @click="openEditor(item)" class="edit-button">Edit</button>
             </div>
@@ -443,16 +440,10 @@ const ContentEditor = {
               <div class="item-title">{{ getItemData(item.i).name }}</div>
             </div>
 
-            <!-- Render the appropriate component based on cell type -->
-            <component
-              :is="
-                getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown
-              "
-              :itemId="item.i"
-              :setItemData="setItemData"
-              :getItemData="getItemData"
-              :editMode="editMode"
-            />
+            <!-- Render the appropriate component based on cell type, passing the filter as a prop -->
+            <component :is="getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
+              :itemId="item.i" :setItemData="setItemData" :getItemData="getItemData" :editMode="editMode"
+              :filter="filter" />
           </div>
         </grid-item>
       </GridLayout>
@@ -483,24 +474,16 @@ const ContentEditor = {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ContentEditor
-        :content="getItemData(editingItem.i).content"
-        :title="'Edit Query'"
-        :placeholder="'Enter your SQL query here...'"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <ChartEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <ContentEditor
-        :content="getItemData(editingItem.i).content"
-        :title="'Edit Markdown'"
-        :placeholder="'Enter markdown content here...'"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
+  </div>
+  <div v-else class="dashboard-not-found">
+    <h2>Dashboard Not Found</h2>
+    <p>The dashboard "{{ name }}" could not be found or created.</p>
   </div>
 </template>
 
@@ -523,6 +506,14 @@ const ContentEditor = {
   border-bottom: 1px solid var(--border);
 }
 
+/* New styles for the left controls container */
+.dashboard-left-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex: 1;
+}
+
 .connection-selector {
   display: flex;
   align-items: center;
@@ -541,6 +532,35 @@ const ContentEditor = {
   color: var(--sidebar-selector-font);
   min-width: 200px;
   font-size: var(--font-size);
+}
+
+/* Updated filter container styles */
+.filter-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 500px;
+}
+
+.filter-container label {
+  margin-right: 10px;
+  font-weight: bold;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.filter-container input {
+  padding: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--sidebar-selector-bg);
+  color: var(--sidebar-selector-font);
+  width: 100%;
+  font-size: var(--font-size);
+}
+
+.filter-container input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .grid-actions {
@@ -625,7 +645,8 @@ const ContentEditor = {
 
 .item-title-container {
   flex: 1;
-  min-width: 0; /* Allows flex child to shrink below min-content width */
+  min-width: 0;
+  /* Allows flex child to shrink below min-content width */
 }
 
 .item-title {
@@ -682,7 +703,8 @@ const ContentEditor = {
 }
 
 .grid-item-drag-handle {
-  cursor: move !important; /* Show move cursor */
+  cursor: move !important;
+  /* Show move cursor */
 }
 
 .drag-handle-icon {
@@ -711,38 +733,6 @@ const ContentEditor = {
   z-index: 1000;
 }
 
-.content-editor,
-.add-item-modal {
-  width: 80%;
-  max-width: 800px;
-  background-color: var(--query-window-bg);
-  color: var(--query-window-font);
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border);
-}
-
-.content-editor h3,
-.add-item-modal h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 10px;
-  color: var(--text-color);
-}
-
-.content-editor textarea {
-  width: 100%;
-  height: 200px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  font-family: monospace;
-  resize: vertical;
-  margin-bottom: 15px;
-  background-color: var(--query-window-bg);
-  color: var(--query-window-font);
-  font-size: var(--font-size);
-}
 
 .editor-actions {
   display: flex;
@@ -792,5 +782,23 @@ const ContentEditor = {
 
 .item-type-selector input[type='radio'] {
   accent-color: var(--special-text);
+}
+
+/* Dashboard not found state */
+.dashboard-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  padding: 2rem;
+  text-align: center;
+}
+
+.dashboard-not-found h2 {
+  margin-bottom: 1rem;
 }
 </style>

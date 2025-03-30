@@ -6,7 +6,6 @@
           @editor-selected="setActiveEditor"
           @screen-selected="setActiveScreen"
           @save-editors="saveEditorsCall"
-          @save-dashboards="saveDashboards"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @connection-key-selected="setActiveConnectionKey"
@@ -76,7 +75,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard />
+        <dashboard :name="activeDashboard"/>
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />

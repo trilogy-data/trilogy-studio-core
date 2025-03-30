@@ -1,4 +1,6 @@
 // Define types for dashboard layouts
+import type { ChartConfig } from "../editors/results";
+
 export interface LayoutItem {
     x: number;
     y: number;
@@ -14,6 +16,7 @@ export interface GridItemData {
     name: string;
     width?: number;
     height?: number;
+    chartConfig? : ChartConfig;
 }
 
 export interface Dashboard {
@@ -26,6 +29,7 @@ export interface Dashboard {
     nextId: number;
     createdAt: Date;
     updatedAt: Date;
+    filter: string | null;
 }
 
 // Cell types enum
@@ -47,6 +51,7 @@ export class DashboardModel implements Dashboard {
     nextId: number = 0;
     createdAt: Date;
     updatedAt: Date;
+    filter: string | null = null;
 
     constructor({
         id,
@@ -58,6 +63,7 @@ export class DashboardModel implements Dashboard {
         nextId = 0,
         createdAt,
         updatedAt,
+        filter = null,
     }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
         this.id = id;
         this.name = name;
@@ -68,6 +74,8 @@ export class DashboardModel implements Dashboard {
         this.nextId = nextId;
         this.createdAt = createdAt || new Date();
         this.updatedAt = updatedAt || new Date();
+        this.filter = filter;
+
     }
 
     // Add a new item to the dashboard
@@ -127,6 +135,16 @@ export class DashboardModel implements Dashboard {
         }
     }
 
+    updateItemChartConfig(itemId: string, config: ChartConfig): void {
+        if (this.gridItems[itemId]) {
+            this.gridItems[itemId] = {
+                ...this.gridItems[itemId],
+                chartConfig: config,
+            };
+            this.updatedAt = new Date();
+        }
+    }
+
     // Update layout
     updateLayout(newLayout: LayoutItem[]): void {
         this.layout = newLayout;
@@ -177,6 +195,7 @@ export class DashboardModel implements Dashboard {
             nextId: this.nextId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            filter: this.filter,
         };
     }
 

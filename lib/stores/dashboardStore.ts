@@ -78,6 +78,15 @@ export const useDashboardStore = defineStore('dashboards', {
             }
         },
 
+        updateDashboardFilter(id: string, filter: string) {
+            if (this.dashboards[id]) {
+                this.dashboards[id].filter = filter;
+            } else {
+                throw new Error(`Dashboard with ID "${id}" not found.`);
+            }
+        },
+
+
         // Remove dashboard
         removeDashboard(id: string) {
             if (this.dashboards[id]) {
@@ -116,6 +125,25 @@ export const useDashboardStore = defineStore('dashboards', {
                 throw new Error(`Dashboard with ID "${dashboardId}" not found.`);
             }
         },
+        
+        updateItemChartConfig(dashboardId: string, itemId: string, config: any) {   
+            if (this.dashboards[dashboardId]) {
+                this.dashboards[dashboardId].updateItemChartConfig(itemId, config);
+            } else {
+                throw new Error(`Dashboard with ID "${dashboardId}" not found.`);
+            }
+        },
+        // Update dashboard connection
+
+        updateDashboardConnection(dashboardId: string, connection: string) {
+            if (this.dashboards[dashboardId]) {
+                this.dashboards[dashboardId].connection = connection;
+            }
+            else {
+                throw new Error(`Dashboard with ID "${dashboardId}" not found.`);
+            }
+        },
+
 
         // Update dashboard layout
         updateDashboardLayout(dashboardId: string, newLayout: LayoutItem[]) {
