@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, markRaw, h, computed } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
+import {DashboardChart} from './DashboardChart.vue'
 
 // Draggable and resizable states
 const draggable = ref(true);
@@ -113,9 +114,13 @@ function closeEditors() {
 }
 
 // Get item data
-function getItemData(itemId) {
+function getItemData(itemId:string) {
   return gridItems.get(itemId) || { type: CELL_TYPES.CHART, content: '' };
 }
+function setItemData(itemId, data) {
+  gridItems.set(itemId, data);
+}
+
 
 // Handle connection change
 function onConnectionChange(event) {
@@ -203,27 +208,7 @@ const ContentEditor = {
   }
 };
 
-// Chart Component (using render function)
-const ChartComponent = {
-  props: {
-    itemId: {
-      type: String,
-      required: true
-    }
-  },
-  setup(props) {
-    const query = computed(() => {
-      return getItemData(props.itemId).content
-    });
-    return { query };
-  },
-  render() {
-    return h('div', { class: 'chart-placeholder' }, [
-      h('p', {}, 'Chart Component'),
-      h('p', { class: 'chart-query' }, this.query)
-    ]);
-  }
-};
+
 
 // Markdown Component (using render function)
 const MarkdownComponent = markRaw({
@@ -297,7 +282,7 @@ const MarkdownComponent = markRaw({
             
             <!-- Render the appropriate component based on cell type -->
             <component 
-              :is="getItemData(item.i).type === CELL_TYPES.CHART ? ChartComponent : MarkdownComponent"
+              :is="getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : MarkdownComponent"
               :itemId="item.i" 
             />
           </div>
@@ -466,29 +451,7 @@ const MarkdownComponent = markRaw({
   font-size: 12px;
 }
 
-.chart-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 15px;
-  color: #666;
-}
 
-.chart-query {
-  font-family: monospace;
-  font-size: 12px;
-  margin-top: 10px;
-  padding: 8px;
-  background-color: #f8f8f8;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .vue-draggable-handle {
   position: absolute;
