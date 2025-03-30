@@ -234,8 +234,10 @@ const MarkdownComponent = markRaw({
     }
   },
   setup(props) {
-    const itemData = getItemData(props.itemId);
-    return { markdown: itemData.content };
+    const markdown = computed(() => {
+      return getItemData(props.itemId).content;
+    });
+    return { markdown };
   },
   render() {
     return h('div', { class: 'markdown-content' }, [
