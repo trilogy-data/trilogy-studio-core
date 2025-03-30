@@ -12,12 +12,15 @@
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
+          @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
+          :activeModelKey="activeModelKey"
+          :activeDashboardKey="activeDashboard"
         />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
@@ -261,8 +264,7 @@ export default {
     if (!saveEditors) {
       saveEditors = () => {}
     }
-    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor, mobileMenuOpen } =
-      useScreenNavigation()
+    const { activeScreen, activeEditor, activeDashboard, setActiveScreen, setActiveEditor, setActiveDashboard, mobileMenuOpen } = useScreenNavigation()
     return {
       connectionStore,
       editorStore,
@@ -273,8 +275,10 @@ export default {
       modelStore,
       activeScreen,
       activeEditor,
+      activeDashboard,
       setActiveScreen,
       setActiveEditor,
+      setActiveDashboard,
       mobileMenuOpen,
     }
   },

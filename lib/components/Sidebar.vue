@@ -97,6 +97,13 @@
         @documentation-key-selected="documentationKeySelected"
         :activeDocumentationKey="activeDocumentationKey"
       />
+      <DashboardList
+        v-show="active === 'dashboard'"
+        @dashboard-key-selected="dashboardKeySelected"
+        @save-editors="saveDashboards"
+        :activeDashboardKey="activeDashboardKey"
+        @toggle-mobile-menu="toggleMobileMenu"
+        />
     </div>
   </div>
 </template>
@@ -108,6 +115,7 @@ import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
+import DashboardList from './DashboardList.vue'
 import trilogyIcon from '../static/trilogy.png'
 import Tooltip from './Tooltip.vue'
 import { getDefaultValueFromHash } from '../stores/urlStore'
@@ -143,6 +151,11 @@ export default defineComponent({
     activeLLMKey: {
       type: String,
       default: getDefaultValueFromHash('llm'),
+      optional: true,
+    },
+    activeDashboardKey: {
+      type: String,
+      default: getDefaultValueFromHash('dashboard'),
       optional: true,
     },
   },
@@ -221,6 +234,7 @@ export default defineComponent({
     TutorialSidebar,
     ModelSidebar,
     LLMConnectionList,
+    DashboardList,
   },
 
   methods: {
@@ -239,6 +253,9 @@ export default defineComponent({
     connectionKeySelected(key: string) {
       this.$emit('connection-key-selected', key)
     },
+    dashboardKeySelected(key: string) {
+      this.$emit('dashboard-key-selected', key)
+    },
     toggleMobileMenu() {
       this.$emit('toggle-mobile-menu')
     },
@@ -247,6 +264,9 @@ export default defineComponent({
     },
     saveEditors() {
       this.$emit('save-editors')
+    },
+    saveDashboards() {
+      this.$emit('save-dashboards')
     },
     openSettings() {
       console.log('Settings clicked')

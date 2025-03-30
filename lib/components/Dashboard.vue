@@ -383,6 +383,7 @@ const ContentEditor = {
         :layout="layout"
         :vertical-compact="true"
         :use-css-transforms="true"
+        :drag-handle-class="'grid-item-drag-handle'"
         @layout-updated="onLayoutUpdated"
       >
         <grid-item
@@ -397,7 +398,16 @@ const ContentEditor = {
           :data-i="item.i"
         >
           <div class="grid-item-content">
-            <div class="grid-item-header" v-if="editMode">
+            <div class="grid-item-header grid-item-drag-handle" v-if="editMode">
+              <!-- Drag handle icon -->
+              <div class="drag-handle-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </div>
+              
               <!-- Editable item title -->
               <div class="item-title-container">
                 <!-- Display title (clickable) -->
@@ -608,6 +618,11 @@ const ContentEditor = {
   height: var(--chart-control-height);
 }
 
+/* Make sure non-drag-handle content doesn't trigger dragging */
+.grid-item-content *:not(.grid-item-drag-handle) {
+  touch-action: auto !important;
+}
+
 .item-title-container {
   flex: 1;
   min-width: 0; /* Allows flex child to shrink below min-content width */
@@ -666,20 +681,20 @@ const ContentEditor = {
   margin-left: 8px;
 }
 
-.vue-draggable-handle {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  top: 0;
-  left: 0;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='5' fill='#999999'/></svg>")
-    no-repeat;
-  background-position: bottom right;
-  padding: 0 8px 8px 0;
-  background-repeat: no-repeat;
-  background-origin: content-box;
-  box-sizing: border-box;
-  cursor: pointer;
+.grid-item-drag-handle {
+  cursor: move !important; /* Show move cursor */
+}
+
+.drag-handle-icon {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+.grid-item-header:hover .drag-handle-icon {
+  opacity: 0.8;
 }
 
 /* Query Editor Overlay */

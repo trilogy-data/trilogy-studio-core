@@ -11,7 +11,7 @@ import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
 
 async function runStartup(connection: Connection) {
-  console.log('running startup')
+
   let editors = useEditorStore()
   return editors
     .getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT])
