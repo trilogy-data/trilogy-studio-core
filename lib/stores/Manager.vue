@@ -11,6 +11,8 @@ import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
+import QueryExecutionService from './queryExecutionService'
+
 import QueryResolver from './resolver'
 import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
@@ -62,6 +64,10 @@ export default {
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
+    provide(
+      'queryExecutionService',
+      new QueryExecutionService(props.trilogyResolver, props.connectionStore, props.modelStore, props.editorStore),
+    )
     const windowWidth = ref(window.innerWidth)
     const loaded = ref(false)
     const loadingPromises = []

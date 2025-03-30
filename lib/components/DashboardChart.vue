@@ -1,63 +1,181 @@
 <template>
-    <div class="chart-placeholder">
-        <p>Chart Component</p>
-        <p class="chart-query">{{ query }}</p>
-    </div>
+  <div class="chart-placeholder">
+    <VegaLiteChart v-if="results" :columns="results.headers" :data="results.data" :showControls="editMode" :containerHeight="chartHeight"/>
+    <div v-else-if="loading" class="chart-placeholder">Loading...</div>
+    <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
+  </div>
 </template>
 
 <script lang="ts">
-import { h, computed, defineComponent } from 'vue';
+import { defineComponent, inject, computed, onMounted, watch, ref } from 'vue'
+import type { ConnectionStoreType } from '../stores/connectionStore'
+import type { ResultsInterface } from '../editors/results'
+import QueryExecutionService from '../stores/queryExecutionService'
+import ErrorMessage from './ErrorMessage.vue'
+import VegaLiteChart from './VegaLiteChart.vue'
 
 export default defineComponent({
-    name: 'DashboardChart',
-    props: {
-        itemId: {
-            type: String,
-            required: true
-        },
-        getItemData: {
-            type: Function,
-            required: true,
-            default: () => ({ type: 'CHART', content: '' })
-        },
-        setItemData: {
-            type: Function,
-            required: true,
-            default: () => ({ type: 'CHART', content: '' })
-        }
+  name: 'DashboardChart',
+  components: {
+    VegaLiteChart,
+    ErrorMessage,
+  },
+  props: {
+    itemId: {
+      type: String,
+      required: true,
     },
-    setup(props) {
-        const query = computed(() => {
-            return props.getItemData(props.itemId).content;
-        });
+    getItemData: {
+      type: Function,
+      required: true,
+      default: () => ({ type: 'CHART', content: '' }),
+    },
+    editMode: {
+      type: Boolean,
+      required: true,
+    },
+    setItemData: {
+      type: Function,
+      required: true,
+      default: () => ({ type: 'CHART', content: '' }),
+    },
+  },
+  setup(props) {
+    const results = ref<ResultsInterface | null>(null)
+    const loading = ref(false)
+    const error = ref<string | null>(null)
 
-        return { query };
-    },
-});
+    const query = computed(() => {
+      return props.getItemData(props.itemId).content
+    })
+
+    const chartHeight = computed(() => {
+      return (props.getItemData(props.itemId).height || 300) - (props.editMode ? 150 : 100)
+    })
+
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    if (!connectionStore || !queryExecutionService) {
+      throw new Error('Connection store not found!')
+    }
+
+    const executeQuery = async (isRetry: boolean = false): Promise<any> => {
+      if (!query.value) return
+
+      loading.value = true
+      error.value = null
+
+      try {
+        // Analytics tracking (optional, include if needed)
+        try {
+          // @ts-ignore
+          window.goatcounter.count({
+            path: 'dashboard-chart-execution',
+            title: 'CHART',
+            event: true,
+          })
+        } catch (err) {
+          console.log(err)
+        }
+
+        // Prepare query input
+        const conn = connectionStore.connections['airport-test']
+
+        // Create query input object using the chart's query content
+        const queryInput = {
+          text: query.value,
+          queryType: conn.query_type,
+          editorType: 'trilogy',
+          imports: [{name:'flight', alias:'flight'}]
+        }
+
+        // Get the query execution service from the provider
+
+        if (!queryExecutionService) {
+          throw new Error('Query execution service not found!')
+        }
+
+        // Execute query
+        const { resultPromise, cancellation } = await queryExecutionService.executeQuery(
+          'airport-test', // Using the specified connection
+          queryInput,
+          // Progress callback for connection issues
+          () => { },
+          (message) => {
+            loading.value = false
+            error.value = message
+          }
+        )
+
+        // Handle result
+        const result = await resultPromise
+
+        // Special handling for connection retry
+        if (!result.success && result.error === 'CONNECTION_RETRY_NEEDED' && !isRetry) {
+          return executeQuery(true)
+        }
+
+        // Update component state based on result
+        if (result.success && result.results) {
+          results.value = result.results
+        } else if (result.error) {
+          error.value = result.error
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          error.value = err.message
+        } else {
+          error.value = 'Unknown error occurred'
+        }
+        console.error('Error running query:', err)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // Run query on mount
+    onMounted(() => {
+      executeQuery()
+    })
+
+    // Re-run when query changes
+    watch(query, () => {
+      executeQuery()
+    })
+
+    return {
+      results,
+      loading,
+      error,
+      query,
+      chartHeight
+    }
+  },
+})
 </script>
 
 <style scoped>
 .chart-placeholder {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 15px;
-    color: #666;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+  color: #666;
 }
 
 .chart-query {
-    font-family: monospace;
-    font-size: 12px;
-    margin-top: 10px;
-    padding: 8px;
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 10px;
+  padding: 8px;
+  background-color: var(--bg-color);
+  border: 1px var(--border);
+  border-radius: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

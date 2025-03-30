@@ -247,7 +247,8 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { LLMConnectionStoreType } from '../stores/llmStore.ts'
-import { Results, ColumnType } from '../editors/results'
+import { Results } from '../editors/results'
+import type { QueryInput } from '../stores/queryExecutionService'
 
 import AxiosResolver from '../stores/resolver'
 import type { Import } from '../stores/resolver'
@@ -255,7 +256,7 @@ import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
-import useQueryHistory from '../stores/connectionHistoryStore'
+import QueryExecutionService from '../stores/queryExecutionService'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
@@ -345,6 +346,7 @@ export default defineComponent({
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
     const setActiveEditor = inject<Function>('setActiveEditor')
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
     if (
       !editorStore ||
@@ -352,7 +354,8 @@ export default defineComponent({
       !trilogyResolver ||
       !modelStore ||
       !userSettingsStore ||
-      !setActiveEditor
+      !setActiveEditor ||
+      !queryExecutionService
     ) {
       throw new Error('Editor store and connection store and trilogy resolver are not provided!')
     }
@@ -367,6 +370,7 @@ export default defineComponent({
       EditorTag,
       userSettingsStore,
       setActiveEditor,
+      queryExecutionService,
     }
   },
   async mounted() {
@@ -514,18 +518,14 @@ export default defineComponent({
     async runQuery(isRetry: boolean = false): Promise<any> {
       this.$emit('query-started')
       this.editorData.setError(null)
-      const history = useQueryHistory(this.editorData.connection)
+
       const editor = editorMap.get(this.context)
-      let startTime = new Date().getTime()
-      let text = ''
-      let errorRecord = null
-      let resultSize = 0
-      let columnSize = 0
       if (this.loading || !editor) {
         return
       }
 
       try {
+        // Analytics tracking (unchanged)
         // @ts-ignore
         window.goatcounter.count({
           path: 'studio-query-execution',
@@ -536,138 +536,94 @@ export default defineComponent({
         console.log(error)
       }
 
+      // Set component to loading state
+      this.editorData.loading = true
+
+      // Prepare query input
       const conn = this.connectionStore.connections[this.editorData.connection]
-      if (!conn) {
-        this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
+
+
+      // Get selected text or full content
+      const text = getEditorText(editor, this.editorData.contents)
+      if (!text) {
+        this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
+        this.editorData.loading = false
         return
       }
-
-      if (!conn.connected) {
-        if (!isRetry) {
-          this.editorData.setError(
-            `Connection is not active... Attempting to automatically reconnect.`,
-          )
-          await this.connectionStore.resetConnection(this.editorData.connection)
-          return this.runQuery(true)
-        } else {
-          this.editorData.setError(`Connection is not active.`)
-          return
-        }
-      }
-
-      // Create an AbortController for cancellation
-      const controller = new AbortController()
-      this.editorData.cancelCallback = () => {
-        controller.abort()
-        this.editorData.loading = false
-        this.editorData.cancelCallback = null
-      }
+      // this is duplicative; we'll do it again inside the query
+      // but right now we need it because the editor ValidateQuery is different
+      // TODO: remove
+      const sources: ContentInput[] =
+    conn && conn.model
+      ? this.modelStore.models[conn.model].sources.map((source) => ({
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
+      : []
+      // Prepare imports
       let imports: Import[] = []
-      try {
-        this.editorData.loading = true
-        const sources: ContentInput[] = conn.model
-          ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
-        if (this.editorData.type !== 'sql') {
-          try {
-            imports = (await this.validateQuery(false, sources)) || []
-          } catch (error) {
-            console.log('Validation failed.')
-          }
+      if (this.editorData.type !== 'sql') {
+        try {
+          imports = (await this.validateQuery(false, sources)) || []
+        } catch (error) {
+          console.log('Validation failed.')
         }
-        // Prepare sources if model exists
+      }
 
-        // Get selected text or full content
-        text = getEditorText(editor, this.editorData.contents)
-        if (!text) {
-          this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
-          return
-        }
-        // First promise: Resolve query
-        const resolveResponse = await Promise.race([
-          this.trilogyResolver.resolve_query(
-            text,
-            conn.query_type,
-            this.editorData.type,
-            sources,
-            imports,
-          ),
-          new Promise((_, reject) => {
-            controller.signal.addEventListener('abort', () =>
-              reject(new Error('Query cancelled by user')),
-            )
-          }),
-        ])
-        // @ts-ignore
-        if (!resolveResponse.data.generated_sql) {
-          this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
-          return
-        }
-        // @ts-ignore
-        this.editorData.generated_sql = resolveResponse.data.generated_sql
-        // @ts-ignore
-        const headers = resolveResponse.data.columns
+      // Create query input object
+      const queryInput: QueryInput = {
+        text,
+        queryType: conn ? conn.query_type : '',
+        editorType: this.editorData.type,
+        imports,
+      }
 
-        // Second promise: Execute query
-        // @ts-ignore
-        const sqlResponse: Results = await Promise.race([
-          // @ts-ignore
-          conn.query(resolveResponse.data.generated_sql),
-          new Promise((_, reject) => {
-            controller.signal.addEventListener('abort', () =>
-              reject(new Error('Query cancelled by user')),
-            )
-          }),
-        ])
-        // @ts-ignore
-        if (this.editorData.type === 'trilogy') {
-          // loop through resolveResponse.columns
-          // for each column, find the corresponding column in sqlResponse
-          // and enrich based on trilogy type information
-          for (let i = 0; i < headers.length; i++) {
-            let header = headers[i]
-            let column = sqlResponse.headers.get(header.name)
-            // this is hardcoded; TODO generalize
-            if (column && (header.datatype?.traits || []).includes('money')) {
-              column.type = ColumnType.MONEY
-              sqlResponse.headers.set(header.name, column)
-            } else if (column && (header.datatype?.traits || []).includes('percent')) {
-              column.type = ColumnType.PERCENT
-              sqlResponse.headers.set(header.name, column)
-            }
-          }
+      // Execute query
+      const { resultPromise, cancellation } = await this.queryExecutionService.executeQuery(
+        this.editorData.connection,
+        queryInput,
+        // Progress callback for connection issues
+        () => {},
+        (message) => {
+          this.editorData.loading = false
+          this.editorData.setError(message)
+        },
+      )
+
+      // Handle cancellation callback
+      this.editorData.cancelCallback = () => {
+        if (cancellation.isActive()) {
+          cancellation.cancel()
         }
-        resultSize = sqlResponse.data.length
-        resultSize = sqlResponse.headers.size
-        this.editorStore.setEditorResults(this.editorName, sqlResponse)
-      } catch (error) {
-        if (error instanceof Error) {
-          // Handle abortion vs other errors differently
-          errorRecord = controller.signal.aborted ? 'Query cancelled by user' : error.message
-          this.editorData.setError(errorRecord)
-          console.error(error)
-        }
-      } finally {
         this.editorData.loading = false
         this.editorData.cancelCallback = null
-        history.recordQuery({
-          query: text,
-          executionTime: new Date().getTime() - startTime,
-          status: errorRecord ? 'error' : 'success',
-          resultSize: resultSize,
-          errorMessage: errorRecord,
-          resultColumns: columnSize,
-          // errorMessage?: string | null;
-          // resultSize?: number;
-          // resultColumns?: number;
-        })
       }
+      const result = await resultPromise
+      // Special handling for connection retry
+      if (!result.success && result.error === 'CONNECTION_RETRY_NEEDED' && !isRetry) {
+        return this.runQuery(true)
+      }
+
+      // Update component state based on result
+      if (result.success) {
+        if (result.generatedSql) {
+          this.editorData.generated_sql = result.generatedSql
+        }
+
+        if (result.results) {
+          this.editorStore.setEditorResults(this.editorName, result.results)
+        }
+      } else if (result.error) {
+        this.editorData.setError(result.error)
+      }
+
+      // Reset loading state
+      this.editorData.loading = false
+      this.editorData.cancelCallback = null
     },
+
     getEditor() {
       editorMap.get(this.editorName)
     },

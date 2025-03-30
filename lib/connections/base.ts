@@ -1,6 +1,8 @@
 // BaseConnection.ts
 
 import { Results, ColumnType } from '../editors/results'
+import type { AxiosTrilogyResolver } from '../stores'
+import useQueryHistory from '../stores/connectionHistoryStore'
 
 export enum AssetType {
   TABLE = 'table',
