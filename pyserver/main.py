@@ -142,6 +142,17 @@ def format_query(query: QueryInSchema):
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
     try:
+        # check filters, but return main validation
+        if query.extra_filters:
+            for filter_string in query.extra_filters:
+                try:
+                    get_diagnostics(f"WHERE {filter_string} SELECT 1 as ftest;", query.sources)
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Filter validation error for {filter_string}: "
+                        + str(e),
+                    )
         return get_diagnostics(query.query, query.sources)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
@@ -166,6 +177,7 @@ def generate_query(query: QueryInSchema):
         if not isinstance(final, (SelectStatement, MultiSelectStatement)):
             columns = []
             generated = None
+
         else:
             columns = [
                 QueryOutColumn(
@@ -177,6 +189,17 @@ def generate_query(query: QueryInSchema):
             ]
             if not final.limit:
                 final.limit = STATEMENT_LIMIT
+            if query.extra_filters:
+                for filter_string in query.extra_filters:
+                    _, parsed = parse_text(f"WHERE {filter_string} SELECT 1 as ftest;", env)
+                    filterQuery: SelectStatement = parsed[-1]
+                    if not final.where_clause:
+                        final.where_clause = filterQuery.where_clause
+                    else:
+                        final.where_clause.conditional = (
+                            final.where_clause.conditional
+                            + filterQuery.where_clause.conditional
+                        )
             generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
 

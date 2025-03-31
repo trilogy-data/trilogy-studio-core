@@ -84,12 +84,14 @@ class QueryInSchema(BaseModel):
     query: str
     dialect: Dialects
     full_model: ModelInSchema
+    extra_filters: Optional[list[str]] = None
     # chart_type: ChartType | None = None
 
 
 class ValidateQueryInSchema(BaseModel):
     query: str
     sources: List[ModelSourceInSchema]
+    extra_filters: Optional[list[str]] = None
 
 
 class QueryOutColumn(BaseModel):

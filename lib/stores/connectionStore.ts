@@ -10,6 +10,11 @@ import {
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
 
+// Track in-progress operations
+const pendingOperations = new Map()
+
+const connectionTimeout = 30000 // 30 seconds - assume all connections take less time.
+
 async function runStartup(connection: Connection) {
   let editors = useEditorStore()
   return editors
@@ -24,40 +29,83 @@ const useConnectionStore = defineStore('connections', {
   state: () => ({
     connections: {} as Record<string, Connection>,
   }),
-
   actions: {
     addConnection(connection: Connection) {
       this.connections[connection.name] = connection
       return connection
     },
-
     async connectConnection(name: string) {
-      if (this.connections[name]) {
-        return this.connections[name].connect().then(() => {
-          runStartup(this.connections[name])
-        })
-      } else {
+      if (!this.connections[name]) {
         throw new Error(`Connection with name "${name}" not found.`)
       }
-    },
 
-    resetConnection(name: string) {
-      if (this.connections[name]) {
-        return this.connections[name].reset().then(() => {
-          runStartup(this.connections[name])
-        })
-      } else {
+      // Check if there's already a pending operation for this connection
+      const operationKey = `connect:${name}`
+      if (pendingOperations.has(operationKey)) {
+        // Return the existing promise to deduplicate calls
+        return pendingOperations.get(operationKey)
+      }
+
+      // Create a new operation with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timed out after 30 seconds')), connectionTimeout)
+      })
+
+      // The actual connection operation
+      const connectionPromise = this.connections[name].connect().then(() => {
+        return runStartup(this.connections[name])
+      }).finally(() => {
+        // Clean up when operation completes or fails
+        pendingOperations.delete(operationKey)
+      })
+
+      // Use Promise.race to implement timeout
+      const operationPromise = Promise.race([connectionPromise, timeoutPromise])
+      
+      // Store the operation promise
+      pendingOperations.set(operationKey, operationPromise)
+      
+      return operationPromise
+    },
+    async resetConnection(name: string) {
+      if (!this.connections[name]) {
         throw new Error(`Connection with name "${name}" not found.`)
       }
-    },
 
+      // Check if there's already a pending operation for this connection
+      const operationKey = `reset:${name}`
+      if (pendingOperations.has(operationKey)) {
+        // Return the existing promise to deduplicate calls
+        return pendingOperations.get(operationKey)
+      }
+
+      // Create a new operation with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Reset operation timed out after 30 seconds')), connectionTimeout)
+      })
+
+      // The actual reset operation
+      const resetPromise = this.connections[name].reset().then(() => {
+        return runStartup(this.connections[name])
+      }).finally(() => {
+        // Clean up when operation completes or fails
+        pendingOperations.delete(operationKey)
+      })
+
+      // Use Promise.race to implement timeout
+      const operationPromise = Promise.race([resetPromise, timeoutPromise])
+      
+      // Store the operation promise
+      pendingOperations.set(operationKey, operationPromise)
+      
+      return operationPromise
+    },
     removeConnection(name: string) {
       if (this.connections[name]) {
         // this.connections[name].close()
         delete this.connections[name]
       }
     },
-
     connectionStateToStatus(connection: Connection | null) {
       if (!connection) {
         return 'disabled'
@@ -73,7 +121,6 @@ const useConnectionStore = defineStore('connections', {
         return 'disabled'
       }
     },
-
     newConnection(name: string, type: string, options: Record<string, any>) {
       if (this.connections[name]) {
         throw new Error(`Connection with name "${name}" already exists.`)
@@ -122,5 +169,4 @@ const useConnectionStore = defineStore('connections', {
 })
 
 export type ConnectionStoreType = ReturnType<typeof useConnectionStore>
-
 export default useConnectionStore

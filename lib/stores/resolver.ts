@@ -77,6 +77,7 @@ export default class AxiosResolver {
     type: string,
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
+    extraFilters: string[] | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -88,6 +89,7 @@ export default class AxiosResolver {
         dialect: dialect,
         full_model: { name: '', sources: sources || [] },
         imports: imports || [],
+        extra_filters: extraFilters || [],
       })
       .catch((error: Error) => {
         console.log(error)

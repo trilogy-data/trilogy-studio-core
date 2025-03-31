@@ -10,6 +10,7 @@ export interface QueryInput {
   queryType: string
   editorType: string
   imports: Import[]
+  extraFilters?: string[]
 }
 
 export interface QueryUpdate {
@@ -150,6 +151,7 @@ export default class QueryExecutionService {
           queryInput.editorType,
           sources,
           queryInput.imports,
+          queryInput.extraFilters
         ),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>

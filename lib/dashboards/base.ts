@@ -18,6 +18,7 @@ export interface GridItemData {
   height?: number
   chartConfig?: ChartConfig
   imports?: Import[]
+  filters?: string[]
 }
 
 export interface Dashboard {
@@ -126,6 +127,21 @@ export class DashboardModel implements Dashboard {
         content,
       }
       this.updatedAt = new Date()
+    }
+  }
+
+  updateItemCrossFilters(itemId: string, filter: string, operation: 'add' | 'remove'): void {
+    // add/remove the filter to all items in the dashboard who do NOTmatch the itemId
+    for (const id in this.gridItems) {
+      if (id !== itemId) {
+        const gridItem = this.gridItems[id]
+        if (operation === 'add') {
+          gridItem.filters = gridItem.filters || []
+          gridItem.filters.push(filter)
+        } else {
+          gridItem.filters = gridItem.filters?.filter((f) => f !== filter) || []
+        }
+      }
     }
   }
 

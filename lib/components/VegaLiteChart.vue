@@ -93,7 +93,7 @@
               <option v-if="control.allowEmpty" value="">None</option>
               <option
                 v-for="column in filteredColumnsInternal(control.columnFilter)"
-                :key="column.name"
+                :key="column.name" 
                 :value="column.name"
               >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
@@ -292,7 +292,10 @@ export default defineComponent({
     // Watch for internal config changes
     watch(
       internalConfig,
-      (newConfig) => {
+      (newConfig, oldConfig) => {
+        if (!newConfig) {
+          return
+        }
         // First, render the chart with the new configuration if we're showing the chart
         if (!showingControls.value) {
           renderChart()
@@ -301,7 +304,18 @@ export default defineComponent({
         // Then, if a callback was provided in props, call it with the new configuration
         if (props.onChartConfigChange && typeof props.onChartConfigChange === 'function') {
           console.log('setting new config')
-          props.onChartConfigChange(newConfig)
+          if (
+            newConfig.chartType !== oldConfig.chartType ||
+            newConfig.xField !== oldConfig.xField ||
+            newConfig.yField !== oldConfig.yField ||
+            newConfig.colorField !== oldConfig.colorField ||
+            newConfig.sizeField !== oldConfig.sizeField ||
+            newConfig.groupField !== oldConfig.groupField ||
+            newConfig.trellisField !== oldConfig.trellisField
+          ) {
+            console.log('new config', newConfig, oldConfig)
+            props.onChartConfigChange(newConfig)
+          }
         }
       },
       { deep: true },

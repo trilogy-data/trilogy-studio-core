@@ -48,11 +48,6 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
-    filter: {
-      type: String,
-      required: false,
-      default: () => '',
-    },
   },
   setup(props) {
     const results = ref<Results | null>(null)
@@ -73,6 +68,10 @@ export default defineComponent({
 
     const chartImports = computed(() => {
       return props.getItemData(props.itemId).imports || []
+    })
+
+    const filters = computed(() => {
+      return props.getItemData(props.itemId).filters || []
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -109,10 +108,11 @@ export default defineComponent({
 
         // Create query input object using the chart's query content
         const queryInput = {
-          text: props.filter ? props.filter + '\n' + query.value : query.value,
+          text: query.value,
           queryType: conn.query_type,
           editorType: 'trilogy',
           imports: chartImports.value,
+          extraFilters: filters.value,
         }
 
         // Get the query execution service from the provider
@@ -161,7 +161,7 @@ export default defineComponent({
     }
 
     executeQuery()
-    watch([query, () => props.filter, chartImports], () => {
+    watch([query, filters, chartImports], () => {
       executeQuery()
     })
     return {
