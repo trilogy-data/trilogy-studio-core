@@ -10,7 +10,8 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: '󱘖' }).click()
 
   // Make sure the connection is active
-  await page.getByTestId('refresh-connection-demo-model-connection').click()
+  // on non-mobile, the sidebar will also have this, so filter tot he visible one
+  await page.getByTestId('refresh-connection-demo-model-connection').filter({ visible: true }).click()
   await page.waitForFunction(() => {
     const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
     if (!element) return false
