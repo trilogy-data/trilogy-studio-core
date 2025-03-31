@@ -515,7 +515,7 @@ export default defineComponent({
       }
       this.editorData.loading = false
     },
-    async runQuery(isRetry: boolean = false): Promise<any> {
+    async runQuery(): Promise<any> {
       this.$emit('query-started')
       this.editorData.setError(null)
 
