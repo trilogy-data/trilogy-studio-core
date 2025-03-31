@@ -12,6 +12,12 @@ export interface QueryInput {
   imports: Import[]
 }
 
+export interface QueryUpdate {
+  text: string
+  error?: boolean
+  running?: boolean
+}
+
 export interface QueryResult {
   success: boolean
   generatedSql?: string
@@ -49,7 +55,7 @@ export default class QueryExecutionService {
     connectionId: string,
     queryInput: QueryInput,
     onStarted?: () => void,
-    onProgress?: (message: string) => void,
+    onProgress?: (message: QueryUpdate) => void,
   ): Promise<{
     resultPromise: Promise<QueryResult>
     cancellation: QueryCancellation
@@ -84,7 +90,7 @@ export default class QueryExecutionService {
     startTime: number,
     controller: AbortController,
     onStarted?: () => void,
-    onProgress?: (message: string) => void,
+    onProgress?: (message: QueryUpdate) => void,
   ): Promise<QueryResult> {
     let resultSize = 0
     let columnCount = 0
@@ -108,16 +114,13 @@ export default class QueryExecutionService {
     if (!conn.connected) {
       try {
         if (onProgress)
-          onProgress('Connection is not active... Attempting to automatically reconnect.')
+          onProgress({
+            text: 'Connection is not active... Attempting to automatically reconnect.',
+            error: true,
+          })
         await this.connectionStore.resetConnection(connectionId)
+        if (onProgress) onProgress({ text: 'Reconnect Successful', running: true })
         // Return special status to indicate retry needed
-        return {
-          success: false,
-          error: 'CONNECTION_RETRY_NEEDED',
-          executionTime: 0,
-          resultSize: 0,
-          columnCount: 0,
-        }
       } catch (connectionError) {
         return {
           success: false,

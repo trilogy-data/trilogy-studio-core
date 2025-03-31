@@ -128,7 +128,9 @@ export default defineComponent({
           // Progress callback for connection issues
           () => {},
           (message) => {
-            error.value = message
+            if (message.error) {
+              error.value = message.text
+            }
           },
         )
 

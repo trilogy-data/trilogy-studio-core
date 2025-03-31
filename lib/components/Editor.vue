@@ -586,8 +586,14 @@ export default defineComponent({
         // Progress callback for connection issues
         () => {},
         (message) => {
-          this.editorData.loading = false
-          this.editorData.setError(message)
+          if (message.error) {
+            this.editorData.loading = false
+            this.editorData.setError(message.text)
+          }
+          if (message.running) {
+            this.editorData.error = null
+            this.editorData.loading = true
+          }
         },
       )
 
