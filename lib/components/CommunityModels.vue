@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed , defineProps} from 'vue'
+import { ref, onMounted, computed, defineProps } from 'vue'
 import ModelCreator from './ModelCreator.vue'
 const props = defineProps({
   initialSearch: {
