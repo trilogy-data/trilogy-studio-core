@@ -87,9 +87,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed , defineProps} from 'vue'
 import ModelCreator from './ModelCreator.vue'
-
+const props = defineProps({
+  initialSearch: {
+    type: String,
+    default: '',
+  },
+})
 interface Component {
   url: string
   name?: string
@@ -109,7 +114,7 @@ const files = ref<FileData[]>([])
 const isExpanded = ref<Record<string, boolean>>({})
 const creatorIsExpanded = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
-const searchQuery = ref('')
+const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref('')
 const loading = ref(false)
 

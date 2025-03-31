@@ -72,7 +72,7 @@
             />
           </div>
         </div>
-        <community-models v-else-if="paragraph.type === 'community-models'" />
+        <community-models v-else-if="paragraph.type === 'community-models'" initialSearch='demo' />
         <p v-else v-html="paragraph.content"></p>
       </template>
     </section>

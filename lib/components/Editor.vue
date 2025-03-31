@@ -519,6 +519,8 @@ export default defineComponent({
       this.$emit('query-started')
       this.editorData.setError(null)
 
+      let queryDone = false
+
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
@@ -586,11 +588,12 @@ export default defineComponent({
         // Progress callback for connection issues
         () => {},
         (message) => {
-          if (message.error) {
+
+          if (!queryDone && message.error) {
             this.editorData.loading = false
             this.editorData.setError(message.text)
           }
-          if (message.running) {
+          if (!queryDone && message.running) {
             this.editorData.error = null
             this.editorData.loading = true
           }
@@ -606,11 +609,7 @@ export default defineComponent({
         this.editorData.cancelCallback = null
       }
       const result = await resultPromise
-      // Special handling for connection retry
-      if (!result.success && result.error === 'CONNECTION_RETRY_NEEDED' && !isRetry) {
-        return this.runQuery(true)
-      }
-
+      queryDone = true
       // Update component state based on result
       if (result.success) {
         if (result.generatedSql) {
