@@ -9,6 +9,7 @@ import {
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
+import { DashboardModel } from '../dashboards'
 
 interface GitHubConfig {
   token: string
@@ -294,5 +295,27 @@ export default class GitHubStorage extends AbstractStorage {
 
   async clearLLMConnections(): Promise<void> {
     await this.saveFile(this.llmConnectionStorageFile, [])
+  }
+
+  async saveDashboards(dashboards: DashboardModel[]): Promise<void> {
+    await this.saveFile('dashboards.json', dashboards)
+  }
+  async loadDashboards(): Promise<Record<string, DashboardModel>> {
+    const response = await this.fetchFile('dashboards.json')
+    let raw = response?.content || []
+    return raw.map((dashboard: DashboardModel) =>
+      reactive(DashboardModel.fromSerialized(dashboard)),
+    )
+  }
+  async deleteDashboard(name: string): Promise<void> {
+    const dashboards = await this.loadDashboards()
+    if (dashboards[name]) {
+      delete dashboards[name]
+      await this.saveDashboards(Object.values(dashboards))
+    }
+  }
+
+  async clearDashboards(): Promise<void> {
+    await this.saveFile('dashboards.json', [])
   }
 }

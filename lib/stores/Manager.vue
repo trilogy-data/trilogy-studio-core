@@ -11,6 +11,9 @@ import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
+import type { DashboardStoreType } from './dashboardStore'
+import QueryExecutionService from './queryExecutionService'
+
 import QueryResolver from './resolver'
 import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
@@ -43,6 +46,10 @@ export default {
       type: Object as PropType<LLMConnectionStoreType>,
       required: true,
     },
+    dashboardStore: {
+      type: Object as PropType<DashboardStoreType>,
+      required: true,
+    },
     trilogyResolver: {
       type: QueryResolver,
       required: true,
@@ -62,6 +69,16 @@ export default {
     provide('storageSources', props.storageSources)
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
+    provide('dashboardStore', props.dashboardStore)
+    provide(
+      'queryExecutionService',
+      new QueryExecutionService(
+        props.trilogyResolver,
+        props.connectionStore,
+        props.modelStore,
+        props.editorStore,
+      ),
+    )
     const windowWidth = ref(window.innerWidth)
     const loaded = ref(false)
     const loadingPromises = []
@@ -96,6 +113,13 @@ export default {
         source.loadLLMConnections().then((llmConnections) => {
           for (let llmConnection of Object.values(llmConnections)) {
             props.llmConnectionStore.addConnection(llmConnection)
+          }
+        }),
+      )
+      loadingPromises.push(
+        source.loadDashboards().then((dashboards) => {
+          for (let dashboard of Object.values(dashboards)) {
+            props.dashboardStore.addDashboard(dashboard)
           }
         }),
       )
@@ -150,16 +174,30 @@ export default {
         )
       }
     }
+    const saveDashboards = async () => {
+      console.log('saving dashboards')
+      for (let source of props.storageSources) {
+        await source.saveDashboards(
+          Object.values(props.dashboardStore.dashboards).filter(
+            (dashboard) => dashboard.storage == source.type,
+          ),
+        )
+      }
+    }
     const saveAll = async () => {
-      await saveEditors()
-      await saveConnections()
-      await saveModels()
-      await saveLLMConnections()
+      await Promise.all([
+        saveEditors(),
+        saveConnections(),
+        saveModels(),
+        saveLLMConnections(),
+        saveDashboards(),
+      ])
     }
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
     provide('saveLLMConnections', saveLLMConnections)
+    provide('saveDashboards', saveDashboards)
     provide('saveAll', saveAll)
     const isMobile = computed(() => windowWidth.value <= 768)
     const handleResize = () => {

@@ -1,5 +1,6 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
+import { DashboardModel } from '../dashboards'
 import {
   BigQueryOauthConnection,
   DuckDBConnection,
@@ -49,4 +50,9 @@ export default abstract class AbstractStorage {
   abstract saveLLMConnections(connections: Array<LLMProvider>): Promise<void>
   abstract loadLLMConnections(): Promise<Record<string, LLMProvider>>
   abstract deleteLLMConnection(name: string): Promise<void>
+
+  abstract saveDashboards(dashboards: DashboardModel[]): Promise<void>
+  abstract loadDashboards(): Promise<Record<string, DashboardModel>>
+  abstract deleteDashboard(name: string): Promise<void>
+  abstract clearDashboards(): Promise<void>
 }

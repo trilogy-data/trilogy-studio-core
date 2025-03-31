@@ -8,6 +8,24 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: 'Import' }).click()
   await page.getByRole('button', { name: 'Submit' }).click()
   await page.getByRole('button', { name: '󱘖' }).click()
+
+  // Make sure the connection is active
+  // on non-mobile, the sidebar will also have this, so filter tot he visible one
+  await page.getByTestId('refresh-connection-demo-model-connection').filter({ visible: true }).click()
+  await page.waitForFunction(() => {
+    const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
+    if (!element) return false
+
+    const style = window.getComputedStyle(element)
+    const backgroundColor = style.backgroundColor
+    console.log(backgroundColor)
+
+    // Check if the background color is green (in RGB format)
+    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
+  })
+
+
+  //
   await page.getByTestId('editor-creator-add-tutorial').click()
   await page.getByTestId('editor-creator-name-tutorial').click()
   await page.getByTestId('editor-creator-name-tutorial').fill('my-first-editor')
@@ -17,6 +35,9 @@ test('test', async ({ page }) => {
   await page.getByTestId('editor-creator-submit-tutorial').click()
   await expect(page.getByTestId('model-validator')).toContainText(
     `Great work: "demo-model" found ✓`,
+  )
+  await expect(page.getByTestId('demo-connection-validator')).toContainText(
+    `Great work: "demo-model-connection" found and connected with right model ✓`,
   )
   await expect(page.getByTestId('editor-validator')).toContainText(
     `Great work: "my-first-editor" found and connected with right model ✓`,

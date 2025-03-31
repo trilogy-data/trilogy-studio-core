@@ -25,7 +25,7 @@
           testTag="tutorial"
         />
         <div v-else-if="paragraph.type === 'connection-validator'">
-          <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']">
+          <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"   data-testid="demo-connection-validator">
             {{
               demoConnectionCorrect
                 ? `Great work: "${demoConnectionName}" found and connected with right model ✓`
@@ -72,7 +72,7 @@
             />
           </div>
         </div>
-        <community-models v-else-if="paragraph.type === 'community-models'" />
+        <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
       </template>
     </section>

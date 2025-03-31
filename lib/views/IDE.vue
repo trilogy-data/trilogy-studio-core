@@ -10,11 +10,13 @@
           @documentation-key-selected="setActiveDocumentationKey"
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
+          @dashboard-key-selected="setActiveDashboard"
           :active="activeScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeModelKey="activeModelKey"
           :activeConnectionKey="activeConnectionKey"
+          :activeDashboardKey="activeDashboard"
         />
       </template>
 
@@ -73,7 +75,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard />
+        <dashboard :name="activeDashboard" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
@@ -238,6 +240,7 @@ export default {
     let saveEditors = inject<Function>('saveEditors')
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
+
     if (
       !editorStore ||
       !connectionStore ||
@@ -257,7 +260,14 @@ export default {
     if (editor) {
       editorStore.activeEditorName = editor
     }
-    const { activeScreen, activeEditor, setActiveScreen, setActiveEditor } = useScreenNavigation()
+    const {
+      activeScreen,
+      activeEditor,
+      activeDashboard,
+      setActiveScreen,
+      setActiveEditor,
+      setActiveDashboard,
+    } = useScreenNavigation()
     return {
       connectionStore,
       editorStore,
@@ -270,6 +280,8 @@ export default {
       setActiveScreen,
       activeEditor,
       setActiveEditor,
+      activeDashboard,
+      setActiveDashboard,
     }
   },
   methods: {

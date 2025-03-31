@@ -1,7 +1,7 @@
 <template>
   <div class="loading-container">
     <img :src="trilogyIcon" class="trilogy-icon" />
-    <div class="loading-text">Executing ({{ elapsedTime }})</div>
+    <div class="loading-text">{{ text }} ({{ elapsedTime }})</div>
     <div class="cancel-container">
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </div>
@@ -22,6 +22,11 @@ export default defineComponent({
     cancel: {
       type: Function,
       required: false,
+    },
+    text: {
+      type: String,
+      required: false,
+      default: 'Executing',
     },
   },
   setup(props: Props) {

@@ -10,6 +10,7 @@ import {
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
+import { DashboardModel } from '../dashboards/base'
 
 export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
@@ -17,6 +18,7 @@ export default class LocalStorage extends AbstractStorage {
   private llmConnectionStorageKey: string
   private modelStorageKey: string
   private userSettingsStorageKey: string
+  private dashboardStorageKey: string
   public type: string
 
   constructor(prefix: string = '') {
@@ -26,6 +28,7 @@ export default class LocalStorage extends AbstractStorage {
     this.llmConnectionStorageKey = prefix + 'llmConnections'
     this.modelStorageKey = prefix + 'modelConfig'
     this.userSettingsStorageKey = prefix + 'userSettings'
+    this.dashboardStorageKey = prefix + 'dashboards'
     this.type = 'local'
   }
 
@@ -227,5 +230,95 @@ export default class LocalStorage extends AbstractStorage {
 
   async clearLLMConnections(): Promise<void> {
     localStorage.removeItem(this.llmConnectionStorageKey)
+  }
+
+  // Dashboard methods implementation
+  async saveDashboard(dashboard: DashboardModel): Promise<void> {
+    const dashboards = await this.loadDashboards()
+    dashboards[dashboard.id] = dashboard
+    await this.saveDashboards(Object.values(dashboards))
+  }
+
+  async saveDashboards(dashboardsList: DashboardModel[]): Promise<void> {
+    const dashboards = await this.loadDashboards()
+
+    // Update or add dashboards that have changed
+    dashboardsList.forEach((dashboard) => {
+      // Assuming Dashboard has a 'changed' property like editors
+      // If not, we can just always update
+      if ((dashboard as any).changed) {
+        dashboards[dashboard.id] = dashboard
+        ;(dashboard as any).changed = false
+      } else {
+        // If no changed flag, always update
+        dashboards[dashboard.id] = dashboard
+      }
+
+      // Check for deleted flag if implemented
+      if ((dashboard as any).deleted) {
+        delete dashboards[dashboard.id]
+      }
+    })
+
+    localStorage.setItem(
+      this.dashboardStorageKey,
+      JSON.stringify(
+        Object.values(dashboards).map((dashboard) => {
+          // Ensure we're saving a serializable version
+          if (typeof (dashboard as any).serialize === 'function') {
+            return (dashboard as any).serialize()
+          }
+          return dashboard
+        }),
+      ),
+    )
+  }
+
+  async loadDashboards(): Promise<Record<string, DashboardModel>> {
+    const storedData = localStorage.getItem(this.dashboardStorageKey)
+    let raw = storedData ? JSON.parse(storedData) : []
+
+    return raw.reduce((acc: Record<string, DashboardModel>, dashboard: any) => {
+      // Instantiate as DashboardModel if possible
+      if (DashboardModel && typeof DashboardModel.fromSerialized === 'function') {
+        acc[dashboard.id] = reactive(DashboardModel.fromSerialized(dashboard))
+      } else {
+        // Fallback to basic reactive object
+        acc[dashboard.id] = reactive(dashboard)
+      }
+
+      // Ensure storage property is set to 'local'
+      acc[dashboard.id].storage = 'local'
+
+      return acc
+    }, {})
+  }
+
+  async deleteDashboard(id: string): Promise<void> {
+    const dashboards = await this.loadDashboards()
+    if (dashboards[id]) {
+      delete dashboards[id]
+      localStorage.setItem(
+        this.dashboardStorageKey,
+        JSON.stringify(
+          Object.values(dashboards).map((dashboard) => {
+            // Ensure we're saving a serializable version
+            if (typeof (dashboard as any).serialize === 'function') {
+              return (dashboard as any).serialize()
+            }
+            return dashboard
+          }),
+        ),
+      )
+    }
+  }
+
+  async clearDashboards(): Promise<void> {
+    localStorage.removeItem(this.dashboardStorageKey)
+  }
+
+  async hasDashboard(id: string): Promise<boolean> {
+    const dashboards = await this.loadDashboards()
+    return id in dashboards
   }
 }
