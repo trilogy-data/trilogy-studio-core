@@ -72,7 +72,12 @@ export default {
     provide('dashboardStore', props.dashboardStore)
     provide(
       'queryExecutionService',
-      new QueryExecutionService(props.trilogyResolver, props.connectionStore, props.modelStore, props.editorStore),
+      new QueryExecutionService(
+        props.trilogyResolver,
+        props.connectionStore,
+        props.modelStore,
+        props.editorStore,
+      ),
     )
     const windowWidth = ref(window.innerWidth)
     const loaded = ref(false)
@@ -180,14 +185,14 @@ export default {
       }
     }
     const saveAll = async () => {
-    await Promise.all([
-      saveEditors(),
-      saveConnections(),
-      saveModels(),
-      saveLLMConnections(),
-      saveDashboards()
-    ])
-  }
+      await Promise.all([
+        saveEditors(),
+        saveConnections(),
+        saveModels(),
+        saveLLMConnections(),
+        saveDashboards(),
+      ])
+    }
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)

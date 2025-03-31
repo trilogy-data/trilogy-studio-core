@@ -75,7 +75,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard :name="activeDashboard"/>
+        <dashboard :name="activeDashboard" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
@@ -260,7 +260,14 @@ export default {
     if (editor) {
       editorStore.activeEditorName = editor
     }
-    const { activeScreen, activeEditor, activeDashboard, setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
+    const {
+      activeScreen,
+      activeEditor,
+      activeDashboard,
+      setActiveScreen,
+      setActiveEditor,
+      setActiveDashboard,
+    } = useScreenNavigation()
     return {
       connectionStore,
       editorStore,

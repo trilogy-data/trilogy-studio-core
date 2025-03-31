@@ -1,14 +1,16 @@
 <script lang="ts" setup>
-import { ref, computed,  onMounted, nextTick,  onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
+import DashboardHeader from './DashboardHeader.vue'
 import { useDashboardStore } from '../stores/dashboardStore'
 import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES } from '../dashboards/base'
-import { useConnectionStore } from '../stores'
 // import useModelStore from '../stores/modelStore'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import type { Layout } from 'vue3-grid-layout-next/dist/helpers/utils'
+import { type Import } from '../stores/resolver'
 // Props definition
 const props = defineProps<{
   name: string
@@ -17,7 +19,6 @@ const props = defineProps<{
 
 // Initialize the dashboard store
 const dashboardStore = useDashboardStore()
-const connectionStore = useConnectionStore()
 // const modelStore = useModelStore()
 
 // the modelStore has a list of sources.
@@ -52,13 +53,10 @@ const showMarkdownEditor = ref(false)
 
 // Cell types are imported from the dashboard model
 
-
 // Get the active dashboard
 const dashboard = computed(() => {
   // Try to find the dashboard by name
-  const dashboard = Object.values(dashboardStore.dashboards).find(
-    d => d.name === props.name
-  )
+  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.name === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
   if (!dashboard && props.connectionId) {
@@ -86,30 +84,16 @@ const selectedConnection = computed(() => {
   return dashboard.value.connection
 })
 
-// Debounced filter handling
-function onFilterInput(event: Event): void {
-  const target = event.target as HTMLInputElement
-  filterInput.value = target.value
-  
-  // Clear any existing timeout
-  if (debounceTimeout.value !== null) {
-    clearTimeout(debounceTimeout.value)
+function handleFilterChange(newFilter: string) {
+  if (dashboard.value && dashboard.value.id) {
+    filter.value = newFilter
+    dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
   }
-  
-  // Set a new timeout for 300ms
-  debounceTimeout.value = window.setTimeout(() => {
-    applyFilter(filterInput.value)
-  }, 300)
 }
 
-// Apply the filter after debounce
-function applyFilter(filterValue: string): void {
-  // Update the local filter ref
-  filter.value = filterValue
-
-  // Update the dashboard filter in the store
+function handleImportChange(newImports: Import[]) {
   if (dashboard.value && dashboard.value.id) {
-    dashboardStore.updateDashboardFilter(dashboard.value.id, filterValue)
+    dashboardStore.updateDashboardImports(dashboard.value.id, newImports)
   }
 }
 
@@ -118,9 +102,9 @@ const editingItemTitle = ref<string | null>(null)
 const editableItemName = ref('')
 
 // Track layout changes
-const onLayoutUpdated = (newLayout: LayoutItem[]) => {
+const onLayoutUpdated = (newLayout: Layout) => {
   if (dashboard.value && dashboard.value.id) {
-    dashboardStore.updateDashboardLayout(dashboard.value.id, newLayout)
+    dashboardStore.updateDashboardLayout(dashboard.value.id, newLayout as LayoutItem[])
 
     // Trigger resize on layout changes
     nextTick(() => {
@@ -133,7 +117,7 @@ const onLayoutUpdated = (newLayout: LayoutItem[]) => {
 function triggerResize(): void {
   if (!dashboard.value) return
 
-  layout.value.forEach(item => {
+  layout.value.forEach((item) => {
     updateItemDimensions(item.i)
   })
 }
@@ -234,7 +218,8 @@ function getItemData(itemId: string): GridItemData {
       content: '',
       name: `Item ${itemId}`,
       width: 0,
-      height: 0
+      height: 0,
+      imports: [],
     }
   }
 
@@ -246,7 +231,8 @@ function getItemData(itemId: string): GridItemData {
       content: '',
       name: `Item ${itemId}`,
       width: 0,
-      height: 0
+      height: 0,
+      imports: dashboard.value.imports,
     }
   }
 
@@ -255,7 +241,9 @@ function getItemData(itemId: string): GridItemData {
     content: item.content,
     name: item.name,
     width: item.width || 0,
-    height: item.height || 0
+    height: item.height || 0,
+    imports: dashboard.value.imports,
+    chartConfig: item.chartConfig,
   }
 }
 
@@ -369,48 +357,57 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <div class="dashboard-controls">
-      <div class="dashboard-left-controls">
-        <div class="connection-selector">
-          <label for="connection">Connection:</label>
-          <select id="connection" @change="onConnectionChange" :value="selectedConnection">
-            <option v-for="conn in connectionStore.connections" :key="conn.name" :value="conn.name">
-              {{ conn.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Modified filter input with debouncing -->
-        <div class="filter-container">
-          <label for="filter">Filter:</label>
-          <input id="filter" type="text" v-model="filterInput" @input="onFilterInput"
-            placeholder="Enter filter criteria..." />
-        </div>
-      </div>
-
-      <div class="grid-actions">
-        <button @click="openAddItemModal" class="add-button" v-if="editMode">Add Item</button>
-        <button @click="clearItems" class="clear-button" v-if="editMode">Clear All</button>
-        <button @click="toggleEditMode" class="toggle-mode-button">
-          {{ editMode ? 'View Mode' : 'Edit Mode' }}
-        </button>
-      </div>
-    </div>
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
+      :selected-connection="selectedConnection"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode"
+    />
 
     <div class="grid-container">
-      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
-        :vertical-compact="true" :use-css-transforms="true" 
-        @layout-updated="onLayoutUpdated">
-        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
-          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+      <GridLayout
+        :col-num="12"
+        :row-height="30"
+        :is-draggable="draggable"
+        :is-resizable="resizable"
+        :layout="layout"
+        :vertical-compact="true"
+        :use-css-transforms="true"
+        @layout-updated="onLayoutUpdated"
+      >
+        <grid-item
+          v-for="item in layout"
+          :key="item.i"
+          :static="item.static"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :i="item.i"
+          :data-i="item.i"
+          drag-ignore-from=".no-drag"
           drag-handle-class=".grid-item-drag-handle"
-          >
+        >
           <div class="grid-item-content">
-            <div class="grid-item-header " v-if="editMode">
+            <div class="grid-item-header" v-if="editMode">
               <!-- Drag handle icon -->
               <div class="drag-handle-icon grid-item-drag-handle">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <line x1="3" y1="12" x2="21" y2="12"></line>
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -420,19 +417,31 @@ onBeforeUnmount(() => {
               <!-- Editable item title -->
               <div class="item-title-container">
                 <!-- Display title (clickable) -->
-                <div v-if="editingItemTitle !== item.i" class="item-title editable-title"
-                  @click="startTitleEditing(item.i)">
+                <div
+                  v-if="editingItemTitle !== item.i"
+                  class="item-title editable-title"
+                  @click="startTitleEditing(item.i)"
+                >
                   {{ getItemData(item.i).name }}
                   <span class="edit-indicator">✎</span>
                 </div>
 
                 <!-- Edit title input -->
-                <input v-else :id="`title-input-${item.i}`" v-model="editableItemName" @blur="saveTitleEdit(item.i)"
-                  @keyup.enter="saveTitleEdit(item.i)" @keyup.esc="cancelTitleEdit" class="title-input" type="text"
-                  :placeholder="getItemData(item.i).type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'
-                    " />
+                <input
+                  v-else
+                  :id="`title-input-${item.i}`"
+                  v-model="editableItemName"
+                  @blur="saveTitleEdit(item.i)"
+                  @keyup.enter="saveTitleEdit(item.i)"
+                  @keyup.esc="cancelTitleEdit"
+                  class="title-input"
+                  type="text"
+                  :placeholder="
+                    getItemData(item.i).type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'
+                  "
+                />
               </div>
-              <button @click="openEditor(item)" class="edit-button">Edit</button>
+              <button @click="openEditor(item)" class="edit-button">Edit Content</button>
             </div>
 
             <!-- Non-edit mode title display -->
@@ -441,9 +450,16 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Render the appropriate component based on cell type, passing the filter as a prop -->
-            <component :is="getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
-              :itemId="item.i" :setItemData="setItemData" :getItemData="getItemData" :editMode="editMode"
-              :filter="filter" />
+            <component
+              :is="
+                getItemData(item.i).type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown
+              "
+              :itemId="item.i"
+              :setItemData="setItemData"
+              :getItemData="getItemData"
+              :editMode="editMode"
+              :filter="filter"
+            />
           </div>
         </grid-item>
       </GridLayout>
@@ -474,11 +490,19 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
+      <ChartEditor
+        :content="getItemData(editingItem.i).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
+      <MarkdownEditor
+        :content="getItemData(editingItem.i).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">
@@ -632,7 +656,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
+  padding: 4px;
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border);
   height: var(--chart-control-height);
@@ -732,7 +756,6 @@ onBeforeUnmount(() => {
   align-items: center;
   z-index: 1000;
 }
-
 
 .editor-actions {
   display: flex;

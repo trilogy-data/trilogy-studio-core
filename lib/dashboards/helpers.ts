@@ -1,4 +1,4 @@
-import { type Row, type ResultColumn } from "../editors/results"
+import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 
@@ -105,7 +105,13 @@ const generateTooltipFields = (
   return fields
 }
 
-export const generateVegaSpec = (data: readonly Row[] | null, config: ChartConfig, isMobile: boolean, containerHeight: number | undefined, columns: Map<string, ResultColumn>) => {
+export const generateVegaSpec = (
+  data: readonly Row[] | null,
+  config: ChartConfig,
+  isMobile: boolean,
+  containerHeight: number | undefined,
+  columns: Map<string, ResultColumn>,
+) => {
   if (!data || data.length === 0) return null
 
   let spec: any = {
@@ -113,11 +119,7 @@ export const generateVegaSpec = (data: readonly Row[] | null, config: ChartConfi
     data: { values: data },
     width: 'container',
     // 28 is the chart control height
-    height: isMobile
-      ? containerHeight
-      : containerHeight
-        ? containerHeight - 150
-        : 'container',
+    height: isMobile ? containerHeight : containerHeight ? containerHeight - 150 : 'container',
   }
 
   // Basic encoding object that we'll modify based on chart type
@@ -365,7 +367,10 @@ export const generateVegaSpec = (data: readonly Row[] | null, config: ChartConfi
 }
 
 // Filter columns by type for UI controls
-export const filteredColumns = (filter: 'numeric' | 'categorical' | 'temporal' | 'all', columns: Map<string, ResultColumn>) => {
+export const filteredColumns = (
+  filter: 'numeric' | 'categorical' | 'temporal' | 'all',
+  columns: Map<string, ResultColumn>,
+) => {
   const result: ResultColumn[] = []
   columns.forEach((column, _) => {
     if (filter === 'all') {
@@ -382,7 +387,10 @@ export const filteredColumns = (filter: 'numeric' | 'categorical' | 'temporal' |
   return result
 }
 // Determine default configuration based on column types
-export const determineDefaultConfig = (data: readonly Row[], columns: Map<string, ResultColumn>): Partial<ChartConfig> => {
+export const determineDefaultConfig = (
+  data: readonly Row[],
+  columns: Map<string, ResultColumn>,
+): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {}
 
   const numericColumns = filteredColumns('numeric', columns)

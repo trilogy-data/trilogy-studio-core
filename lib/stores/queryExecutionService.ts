@@ -33,7 +33,12 @@ export default class QueryExecutionService {
   private modelStore: ModelConfigStoreType
   private editorStore: EditorStoreType
 
-  constructor(trilogyResolver: any, connectionStore: ConnectionStoreType, modelStore:ModelConfigStoreType, editorStore:EditorStoreType) {
+  constructor(
+    trilogyResolver: any,
+    connectionStore: ConnectionStoreType,
+    modelStore: ModelConfigStoreType,
+    editorStore: EditorStoreType,
+  ) {
     this.trilogyResolver = trilogyResolver
     this.connectionStore = connectionStore
     this.modelStore = modelStore
@@ -124,14 +129,14 @@ export default class QueryExecutionService {
       }
     }
     const sources: ContentInput[] =
-    conn && conn.model
-      ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
-      : []
+      conn && conn.model
+        ? this.modelStore.models[conn.model].sources.map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+        : []
 
     try {
       // First step: Resolve query
@@ -165,6 +170,7 @@ export default class QueryExecutionService {
       const headers = resolveResponse.data.columns
 
       // Second step: Execute query
+      //@ts-ignore
       const sqlResponse: Results = await Promise.race([
         conn.query(generatedSql),
         new Promise((_, reject) => {

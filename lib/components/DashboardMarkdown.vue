@@ -5,7 +5,7 @@
 </template>
 
 <script lang="ts">
-import { h, computed, defineComponent, markRaw } from 'vue'
+import { computed, defineComponent } from 'vue'
 
 // Basic markdown renderer
 function renderMarkdown(text: string): string {
@@ -74,43 +74,43 @@ export default defineComponent({
 /* Markdown Component Styles */
 .markdown-content {
   height: 100%;
-  padding: 15px;
+  padding: 5px;
   overflow: auto;
 }
 
 .rendered-markdown {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  line-height: 1;
 }
 
 .rendered-markdown h1 {
   font-size: 1.8em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
   border-bottom: 1px solid #eee;
   padding-bottom: 0.2em;
 }
 
 .rendered-markdown h2 {
   font-size: 1.5em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 .rendered-markdown h3 {
   font-size: 1.2em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 .rendered-markdown p {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.2em;
+  margin-bottom: 0.25em;
 }
 
 .rendered-markdown ul {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.2em;
   padding-left: 2em;
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref,  defineEmits } from 'vue'
+import { ref, defineEmits } from 'vue'
 
 const props = defineProps<{
   content: string
@@ -25,19 +25,16 @@ function insertMarkdown(prefix: string, suffix: string = ''): void {
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = markdownText.value.substring(start, end)
-  
+
   const before = markdownText.value.substring(0, start)
   const after = markdownText.value.substring(end)
-  
+
   markdownText.value = before + prefix + selectedText + suffix + after
-  
+
   // Restore focus and selection
   setTimeout(() => {
     textarea.focus()
-    textarea.setSelectionRange(
-      start + prefix.length, 
-      start + prefix.length + selectedText.length
-    )
+    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length)
   }, 0)
 }
 
@@ -160,7 +157,8 @@ function addLink(): void {
   gap: 10px;
 }
 
-.save-button, .cancel-button {
+.save-button,
+.cancel-button {
   padding: 8px 16px;
   border: none;
   cursor: pointer;

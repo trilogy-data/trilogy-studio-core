@@ -97,7 +97,8 @@ function cancel(): void {
   gap: 10px;
 }
 
-.save-button, .cancel-button {
+.save-button,
+.cancel-button {
   padding: 8px 16px;
   border: none;
   cursor: pointer;

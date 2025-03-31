@@ -1,8 +1,14 @@
 <template>
-  <div class="chart-placeholder no-drag" >
-    {{ chartConfig }}
-    <VegaLiteChart v-if="results" :columns="results.headers" :data="results.data" :showControls="editMode"
-      :config="chartConfig" :containerHeight="chartHeight" :onChartConfigChange="onChartConfigChange" />
+  <div class="chart-placeholder no-drag">
+    <VegaLiteChart
+      v-if="results"
+      :columns="results.headers"
+      :data="results.data"
+      :showControls="editMode"
+      :initialConfig="chartConfig"
+      :containerHeight="chartHeight"
+      :onChartConfigChange="onChartConfigChange"
+    />
     <LoadingView v-else-if="loading" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
   </div>
@@ -11,7 +17,7 @@
 <script lang="ts">
 import { defineComponent, inject, computed, watch, ref } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import type { ResultsInterface } from '../editors/results'
+import type { Results, ChartConfig } from '../editors/results'
 import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
@@ -46,10 +52,10 @@ export default defineComponent({
       type: String,
       required: false,
       default: () => '',
-    }
+    },
   },
   setup(props) {
-    const results = ref<ResultsInterface | null>(null)
+    const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
 
@@ -58,19 +64,22 @@ export default defineComponent({
     })
 
     const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId).height || 300) - (100)
+      return (props.getItemData(props.itemId).height || 300) - 100
     })
 
     const chartConfig = computed(() => {
       return props.getItemData(props.itemId).chartConfig || null
     })
 
+    const chartImports = computed(() => {
+      return props.getItemData(props.itemId).imports || []
+    })
+
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
-    const onChartConfigChange = (chartConfig) => {
-      console.log('setting chart config')
-      props.setItemData(props.itemId, { 'chartConfig': chartConfig })
+    const onChartConfigChange = (chartConfig: ChartConfig) => {
+      props.setItemData(props.itemId, { chartConfig: chartConfig })
     }
     if (!connectionStore || !queryExecutionService) {
       throw new Error('Connection store not found!')
@@ -103,7 +112,7 @@ export default defineComponent({
           text: props.filter ? props.filter + '\n' + query.value : query.value,
           queryType: conn.query_type,
           editorType: 'trilogy',
-          imports: [{ name: 'flight', alias: 'flight' }]
+          imports: chartImports.value,
         }
 
         // Get the query execution service from the provider
@@ -113,14 +122,14 @@ export default defineComponent({
         }
 
         // Execute query
-        const { resultPromise, cancellation } = await queryExecutionService.executeQuery(
+        const { resultPromise } = await queryExecutionService.executeQuery(
           'airport-test', // Using the specified connection
           queryInput,
           // Progress callback for connection issues
-          () => { },
+          () => {},
           (message) => {
             error.value = message
-          }
+          },
         )
 
         // Handle result
@@ -150,9 +159,9 @@ export default defineComponent({
     }
 
     executeQuery()
-    watch([query, () => props.filter], () => {
-      executeQuery();
-    });
+    watch([query, () => props.filter, chartImports], () => {
+      executeQuery()
+    })
     return {
       results,
       loading,

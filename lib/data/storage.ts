@@ -1,6 +1,6 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
-import {DashboardModel} from '../dashboards'
+import { DashboardModel } from '../dashboards'
 import {
   BigQueryOauthConnection,
   DuckDBConnection,

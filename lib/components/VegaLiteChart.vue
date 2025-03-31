@@ -2,17 +2,24 @@
   <div class="vega-lite-chart no-drag">
     <!-- Toggle button always visible -->
     <div class="controls-toggle" v-if="showControls">
-      <button @click="toggleControls" class="toggle-controls-btn" :class="{ 'active': showingControls }">
-        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
+      <button
+        @click="toggleControls"
+        class="toggle-controls-btn"
+        :class="{ active: showingControls }"
+      >
+        <i
+          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
+          class="icon"
+        ></i>
         <span>{{ showingControls ? 'View Chart' : 'Edit Chart' }}</span>
       </button>
     </div>
-    
+
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
       <div v-if="!showingControls" ref="vegaContainer" class="vega-container"></div>
-      
+
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="control-section">
@@ -34,13 +41,24 @@
         </div>
 
         <!-- Group axes controls -->
-        <div class="control-section" v-if="visibleControls.some(c => c.id.includes('axis') || c.id === 'group-by')">
+        <div
+          class="control-section"
+          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by')"
+        >
           <label class="control-section-label">Axes</label>
-          <div v-for="control in visibleControls.filter(c => c.id.includes('axis') || c.id === 'group-by')" 
-              :key="control.id" 
-              class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter(
+              (c) => c.id.includes('axis') || c.id === 'group-by',
+            )"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" v-model="internalConfig[control.field]" class="form-select no-drag">
+            <select
+              :id="control.id"
+              v-model="internalConfig[control.field]"
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
               <option
                 v-for="column in filteredColumnsInternal(control.columnFilter)"
@@ -54,13 +72,24 @@
         </div>
 
         <!-- Group appearance controls -->
-        <div class="control-section" v-if="visibleControls.some(c => c.id.includes('color') || c.id === 'size')">
+        <div
+          class="control-section"
+          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size')"
+        >
           <label class="control-section-label">Appearance</label>
-          <div v-for="control in visibleControls.filter(c => c.id.includes('color') || c.id === 'size')" 
-              :key="control.id" 
-              class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter(
+              (c) => c.id.includes('color') || c.id === 'size',
+            )"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" v-model="internalConfig[control.field]" class="form-select no-drag">
+            <select
+              :id="control.id"
+              v-model="internalConfig[control.field]"
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
               <option
                 v-for="column in filteredColumnsInternal(control.columnFilter)"
@@ -74,13 +103,19 @@
         </div>
 
         <!-- Group advanced controls -->
-        <div class="control-section" v-if="visibleControls.some(c => c.id === 'trellis-field')">
+        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
           <label class="control-section-label">Advanced</label>
-          <div v-for="control in visibleControls.filter(c => c.id === 'trellis-field')" 
-              :key="control.id" 
-              class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" v-model="internalConfig[control.field]" class="form-select no-drag">
+            <select
+              :id="control.id"
+              v-model="internalConfig[control.field]"
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
               <option
                 v-for="column in filteredColumnsInternal(control.columnFilter)"
@@ -104,8 +139,8 @@ import vegaEmbed from 'vega-embed'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
-import {Controls, Charts, type ChartControl } from '../dashboards/constants'
-import {generateVegaSpec, determineDefaultConfig, filteredColumns } from '../dashboards/helpers'
+import { Controls, Charts, type ChartControl } from '../dashboards/constants'
+import { generateVegaSpec, determineDefaultConfig, filteredColumns } from '../dashboards/helpers'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -119,7 +154,7 @@ export default defineComponent({
       type: Object as PropType<Map<string, ResultColumn>>,
       required: true,
     },
-    config: {
+    initialConfig: {
       type: Object as PropType<ChartConfig>,
       default: null,
     },
@@ -140,14 +175,14 @@ export default defineComponent({
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
-    
+
     // Create a computed property for the current theme
     const currentTheme = computed(() => settingsStore.settings.theme)
     const vegaContainer = ref<HTMLElement | null>(null)
-    
+
     // Controls panel state
     const showingControls = ref(false)
-    
+
     // Toggle controls visible/hidden
     const toggleControls = () => {
       showingControls.value = !showingControls.value
@@ -178,20 +213,20 @@ export default defineComponent({
 
     // Determine reasonable defaults based on column types
     const initializeConfig = () => {
-      if (props.config) {
+      if (props.initialConfig) {
         // Use external config if provided
-        internalConfig.value = { ...internalConfig.value, ...props.config }
+        internalConfig.value = { ...internalConfig.value, ...props.initialConfig }
       } else {
         // Auto select chart type and fields based on data types
         const configDefaults = determineDefaultConfig(props.data, props.columns)
         internalConfig.value = { ...internalConfig.value, ...configDefaults }
       }
-      
+
       // If config is initialized with values, show chart by default
       showingControls.value = false
     }
 
-    const filteredColumnsInternal = (type:'numeric' | 'categorical' | 'temporal' | 'all') => {
+    const filteredColumnsInternal = (type: 'numeric' | 'categorical' | 'temporal' | 'all') => {
       return filteredColumns(type, props.columns)
     }
 
@@ -218,7 +253,6 @@ export default defineComponent({
           actions: false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
-
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -242,29 +276,36 @@ export default defineComponent({
       },
       { deep: true },
     )
+    // watch(
+    //   () => props.config,
+    //   () => {
+    //     if (props.config) {
+    //       internalConfig.value = { ...internalConfig.value, ...props.config }
+    //       if (!showingControls.value) {
+    //         renderChart()
+    //       }
+    //     }
+    //   },
+    //   { deep: true },
+    // )
+
+    // Watch for internal config changes
     watch(
-      () => props.config,
-      () => {
-        if (props.config) {
-          internalConfig.value = { ...internalConfig.value, ...props.config }
+      internalConfig,
+      (newConfig) => {
+        // First, render the chart with the new configuration if we're showing the chart
+        if (!showingControls.value) {
           renderChart()
+        }
+
+        // Then, if a callback was provided in props, call it with the new configuration
+        if (props.onChartConfigChange && typeof props.onChartConfigChange === 'function') {
+          console.log('setting new config')
+          props.onChartConfigChange(newConfig)
         }
       },
       { deep: true },
     )
-
-    // Watch for internal config changes
-    watch(internalConfig, (newConfig) => {
-      // First, render the chart with the new configuration if we're showing the chart
-      if (!showingControls.value) {
-        renderChart();
-      }
-      
-      // Then, if a callback was provided in props, call it with the new configuration
-      if (props.onChartConfigChange && typeof props.onChartConfigChange === 'function') {
-        props.onChartConfigChange(newConfig);
-      }
-    }, { deep: true })
 
     return {
       vegaContainer,
@@ -346,7 +387,7 @@ export default defineComponent({
 .chart-controls-panel {
   width: 100%;
   height: 100%;
-  padding:4px;
+  padding: 4px;
   background-color: var(--bg-color);
 }
 

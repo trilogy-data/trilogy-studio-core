@@ -103,7 +103,7 @@
         @save-editors="saveDashboards"
         :activeDashboardKey="activeDashboardKey"
         @toggle-mobile-menu="toggleMobileMenu"
-        />
+      />
     </div>
   </div>
 </template>

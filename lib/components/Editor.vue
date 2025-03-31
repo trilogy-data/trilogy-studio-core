@@ -542,7 +542,6 @@ export default defineComponent({
       // Prepare query input
       const conn = this.connectionStore.connections[this.editorData.connection]
 
-
       // Get selected text or full content
       const text = getEditorText(editor, this.editorData.contents)
       if (!text) {
@@ -554,14 +553,14 @@ export default defineComponent({
       // but right now we need it because the editor ValidateQuery is different
       // TODO: remove
       const sources: ContentInput[] =
-    conn && conn.model
-      ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
-      : []
+        conn && conn.model
+          ? this.modelStore.models[conn.model].sources.map((source) => ({
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
+            }))
+          : []
       // Prepare imports
       let imports: Import[] = []
       if (this.editorData.type !== 'sql') {
