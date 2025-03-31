@@ -105,12 +105,24 @@ const generateTooltipFields = (
   return fields
 }
 
+// Interface for selection configuration
+export interface SelectionConfig {
+  enabled: boolean;
+  selectionType: 'single' | 'multi' | 'interval';
+  fields?: string[];
+  encodings?: ('x' | 'y' | 'color')[];  
+  on?: string;  // Default will be 'click'
+  nearest?: boolean;
+  resolve?: 'global' | 'union' | 'intersect';
+}
+
 export const generateVegaSpec = (
   data: readonly Row[] | null,
   config: ChartConfig,
   isMobile: boolean,
   containerHeight: number | undefined,
   columns: Map<string, ResultColumn>,
+  selectionConfig?: SelectionConfig
 ) => {
   if (!data || data.length === 0) return null
 
@@ -154,6 +166,66 @@ export const generateVegaSpec = (
     columns,
     config.colorField,
   )
+
+  // Handle selection configuration if provided
+  if (selectionConfig?.enabled) {
+    // Create a selection object based on the provided configuration
+    const selectionName = "chartSelection";
+    const selection: any = {
+      type: selectionConfig.selectionType || 'single',
+      on: selectionConfig.on || 'click',
+    };
+
+    // Add fields or encodings to the selection
+    if (selectionConfig.fields && selectionConfig.fields.length > 0) {
+      selection.fields = selectionConfig.fields;
+    } else if (selectionConfig.encodings && selectionConfig.encodings.length > 0) {
+      selection.encodings = selectionConfig.encodings;
+    } else {
+      // Default selection fields based on chart type
+      switch (config.chartType) {
+        case 'bar':
+        case 'barh':
+          selection.encodings = ['x'];
+          break;
+        case 'line':
+          if (config.colorField) {
+            selection.fields = [config.colorField];
+          } else {
+            selection.encodings = ['x'];
+          }
+          break;
+        case 'point':
+          selection.nearest = true;
+          selection.encodings = ['x', 'y'];
+          break;
+        case 'area':
+          selection.encodings = ['x'];
+          break;
+        case 'heatmap':
+          selection.encodings = ['x', 'y'];
+          break;
+        case 'boxplot':
+          selection.encodings = ['x'];
+          break;
+      }
+    }
+
+    // Add nearest option if specified
+    if (selectionConfig.nearest !== undefined) {
+      selection.nearest = selectionConfig.nearest;
+    }
+
+    // Add resolve if specified (for multi selections)
+    if (selectionConfig.resolve) {
+      selection.resolve = selectionConfig.resolve;
+    }
+
+    // Add selection to the spec
+    spec.selection = {
+      [selectionName]: selection
+    };
+  }
 
   // Build encodings for specific chart types
   switch (config.chartType) {
@@ -459,4 +531,48 @@ export const determineDefaultConfig = (
   }
 
   return defaults
+}
+
+// Helper to create a default selection config based on chart type
+export const getDefaultSelectionConfig = (
+  chartType: string,
+  config: ChartConfig,
+): SelectionConfig => {
+  const defaultConfig: SelectionConfig = {
+    enabled: true,
+    selectionType: 'single',
+    on: 'click',
+  };
+
+  switch (chartType) {
+    case 'bar':
+    case 'barh':
+      defaultConfig.encodings = ['x'];
+      break;
+    case 'line':
+      if (config.colorField) {
+        defaultConfig.fields = [config.colorField];
+      } else {
+        defaultConfig.encodings = ['x'];
+      }
+      break;
+    case 'point':
+      defaultConfig.nearest = true;
+      defaultConfig.encodings = ['x', 'y'];
+      break;
+    case 'area':
+      defaultConfig.encodings = ['x'];
+      break;
+    case 'heatmap':
+      defaultConfig.encodings = ['x', 'y'];
+      break;
+    case 'boxplot':
+      defaultConfig.encodings = ['x'];
+      break;
+    default:
+      defaultConfig.encodings = ['x'];
+      break;
+  }
+
+  return defaultConfig;
 }

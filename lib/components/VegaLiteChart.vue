@@ -140,8 +140,8 @@ import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import { Controls, Charts, type ChartControl } from '../dashboards/constants'
-import { generateVegaSpec, determineDefaultConfig, filteredColumns } from '../dashboards/helpers'
-
+import { generateVegaSpec, determineDefaultConfig, filteredColumns, getDefaultSelectionConfig } from '../dashboards/helpers'
+import { addChartSelectionListener } from '../dashboards/eventHelpers'
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -172,6 +172,21 @@ export default defineComponent({
   setup(props) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
+    
+    // event hookups
+    let removeEventListener: (() => void) | null = null;
+    const selectedItems = ref<any[]>([]);
+    const handleSelectionChange = (selected: any[]) => {
+      selectedItems.value = selected;
+      
+      // Call the provided callback if available
+      // if (props.onSelectionChange && typeof props.onSelectionChange === 'function') {
+      //   props.onSelectionChange(selected);
+      // }
+      
+      // Default behavior: log the selection to console
+      console.log('Selection changed:', selected);
+    };
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
@@ -231,13 +246,16 @@ export default defineComponent({
     }
 
     // Generate Vega-Lite spec based on current configuration
+    
     const generateVegaSpecInternal = () => {
+      const selectionConfig = getDefaultSelectionConfig(internalConfig.value.chartType, internalConfig.value);
       return generateVegaSpec(
         props.data,
         internalConfig.value,
         isMobile,
         props.containerHeight,
         props.columns,
+        selectionConfig
       )
     }
 
@@ -253,8 +271,14 @@ export default defineComponent({
           actions: false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
+        }).then ((result) => {
+          removeEventListener = addChartSelectionListener(
+          result.view,
+          handleSelectionChange,
+        );
         })
-      } catch (error) {
+      } 
+      catch (error) {
         console.error('Error rendering Vega chart:', error)
       }
     }
