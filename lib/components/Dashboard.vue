@@ -7,6 +7,7 @@ import { useDashboardStore } from '../stores/dashboardStore'
 import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES } from '../dashboards/base'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import type { Layout } from 'vue3-grid-layout-next/dist/helpers/utils'
 import { type Import } from '../stores/resolver'
 
@@ -25,7 +26,7 @@ const filterInput = ref('')
 const debounceTimeout = ref<number | null>(null)
 
 // Mode Toggle (edit/view)
-const editMode = ref(false)
+const editMode = ref(true)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
@@ -236,7 +237,9 @@ function getItemData(itemId: string): GridItemData {
     height: item.height || 0,
     imports: dashboard.value.imports,
     chartConfig: item.chartConfig,
-    filters: dashboard.value.filter? [dashboard.value.filter].concat(item.filters || []) : item.filters || [],
+    filters: dashboard.value.filter ? [dashboard.value.filter].concat(item.filters || []) : item.filters || [],
+    connectionName: dashboard.value.connection,
+    onRefresh: handleRefresh, // Add refresh callback to be used by chart components
   }
 }
 
@@ -294,6 +297,32 @@ function closeAddModal(): void {
   showAddItemModal.value = false
 }
 
+// Handle refresh event from the dashboard header
+function handleRefresh(itemId?: string): void {
+  if (!dashboard.value) return
+
+  // If an itemId is provided, refresh only that item
+  if (itemId) {
+    // Create a refresh event for the specific chart
+    const refreshEvent = new CustomEvent('chart-refresh', { detail: { itemId } })
+    window.dispatchEvent(refreshEvent)
+
+    // Also update dimensions for the specific item
+    updateItemDimensions(itemId)
+    return
+  }
+
+  // Otherwise refresh all items
+  // Dispatch a global refresh event that all charts can listen to
+  const refreshEvent = new CustomEvent('dashboard-refresh')
+  window.dispatchEvent(refreshEvent)
+
+  console.log('Refreshing all dashboard items')
+
+  // Trigger resize on all items to ensure charts update
+  triggerResize()
+}
+
 // Ensure dashboard is set as active when component mounts
 onMounted(() => {
   if (dashboard.value && dashboard.value.id) {
@@ -328,51 +357,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :selected-connection="selectedConnection"
-      @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange"
-      @import-change="handleImportChange"
-      @add-item="openAddItemModal"
-      @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
+      @connection-change="onConnectionChange" @filter-change="handleFilterChange" @import-change="handleImportChange"
+      @add-item="openAddItemModal" @clear-items="clearItems" @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh" />
 
     <div class="grid-container">
-      <GridLayout
-        :col-num="12"
-        :row-height="30"
-        :is-draggable="draggable"
-        :is-resizable="resizable"
-        :layout="layout"
-        :vertical-compact="true"
-        :use-css-transforms="true"
-        @layout-updated="onLayoutUpdated"
-      >
-        <grid-item
-          v-for="item in layout"
-          :key="item.i"
-          :static="item.static"
-          :x="item.x"
-          :y="item.y"
-          :w="item.w"
-          :h="item.h"
-          :i="item.i"
-          :data-i="item.i"
-          drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle"
-        >
-          <DashboardGridItem
-            :item="item"
-            :edit-mode="editMode"
-            :filter="filter"
-            :get-item-data="getItemData"
-            :set-item-data="setItemData"
-            @edit-content="openEditor"
-            @update-dimensions="updateItemDimensions"
-          />
+      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
+        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle">
+          <DashboardGridItem :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
+            :set-item-data="setItemData" @edit-content="openEditor" @update-dimensions="updateItemDimensions" />
         </grid-item>
       </GridLayout>
     </div>
@@ -402,28 +399,32 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <ChartEditor :connectionName="getItemData(editingItem.i).connectionName || ''"
+        :imports="getItemData(editingItem.i).imports" :content="getItemData(editingItem.i).content" @save="saveContent"
+        @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">
-    <h2>Dashboard Not Found</h2>
-    <p>The dashboard "{{ name }}" could not be found or created.</p>
+    <template v-if="name">
+      <h2>Dashboard Not Found</h2>
+      <p>The dashboard "{{ name }}" could not be found.</p>
+    </template>
+    <template v-else>
+      <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
+      <dashboard-creator-inline class="inline-creator" :visible="true"></dashboard-creator-inline>
+    </template>
   </div>
 </template>
 
 <style>
+.inline-creator {
+  max-width: 400px;
+}
+
 .dashboard-container {
   display: flex;
   flex-direction: column;

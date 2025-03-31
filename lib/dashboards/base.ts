@@ -17,8 +17,10 @@ export interface GridItemData {
   width?: number
   height?: number
   chartConfig?: ChartConfig
+  connectionName?: string
   imports?: Import[]
   filters?: string[]
+  onRefresh?: () => void
 }
 
 export interface Dashboard {

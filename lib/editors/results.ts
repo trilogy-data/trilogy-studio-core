@@ -47,6 +47,7 @@ export interface ResultColumn {
   scale?: number
   precision?: number
   children?: Map<string, ResultColumn>
+  traits?: string[]
   // purpose: string
 }
 

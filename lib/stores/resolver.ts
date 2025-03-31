@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { ModelConfig } from '../models'
 
-interface QueryResponse {
+export interface QueryResponse {
   data: {
     generated_sql: string
+    columns: any[]
   }
 }
 
@@ -22,7 +23,7 @@ interface CompletionItem {
   type: string
   insertText: string
 }
-interface ValidateResponse {
+export interface ValidateResponse {
   data: {
     items: ValidateItem[]
     completion_items: CompletionItem[]
@@ -81,7 +82,7 @@ export default class AxiosResolver {
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
-      return { data: { generated_sql: query } }
+      return { data: { generated_sql: query , columns: [] } }
     }
     return axios
       .post(`${this.address}/generate_query`, {

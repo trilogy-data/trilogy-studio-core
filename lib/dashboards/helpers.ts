@@ -2,6 +2,10 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 
+const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
+
+const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
+
 // Helper functions to identify column types
 export const isNumericColumn = (column: ResultColumn): boolean => {
   return [
@@ -14,19 +18,34 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
 }
 
 export const isTemporalColumn = (column: ResultColumn): boolean => {
-  return [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIME, ColumnType.TIMESTAMP].includes(
+  let base = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIME, ColumnType.TIMESTAMP].includes(
     column.type,
   )
+  if (base) {
+    return true
+  }
+  if (column.traits && temporalTraits.some((trait) => column.traits?.includes(trait))) {
+    return true
+  }
+  return false
 }
 
 export const isCategoricalColumn = (column: ResultColumn): boolean => {
-  return [
+  let base = [
     ColumnType.STRING,
     ColumnType.BOOLEAN,
     ColumnType.URL,
     ColumnType.EMAIL,
     ColumnType.PHONE,
   ].includes(column.type)
+  if (base) {
+    return true
+  }
+  if (column.traits && categoricalTraits.some((trait) => column.traits?.includes(trait))) {
+    return true
+  }
+  return false
+
 }
 
 const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>): string => {
@@ -110,7 +129,7 @@ export interface SelectionConfig {
   enabled: boolean;
   selectionType: 'single' | 'multi' | 'interval';
   fields?: string[];
-  encodings?: ('x' | 'y' | 'color')[];  
+  encodings?: ('x' | 'y' | 'color')[];
   on?: string;  // Default will be 'click'
   nearest?: boolean;
   resolve?: 'global' | 'union' | 'intersect';
@@ -462,6 +481,7 @@ export const filteredColumns = (
 export const determineDefaultConfig = (
   data: readonly Row[],
   columns: Map<string, ResultColumn>,
+  chartType?: string,
 ): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {}
 
@@ -475,16 +495,13 @@ export const determineDefaultConfig = (
   }
 
   // Select appropriate chart type based on available column types
-  if (temporalColumns.length > 0 && numericColumns.length > 0) {
+  if (chartType) {
+    defaults.chartType = chartType
+  }
+  else if (temporalColumns.length > 0 && numericColumns.length > 0) {
     // Time series data - use line chart
     defaults.chartType = 'line'
-    defaults.xField = temporalColumns[0].name
-    defaults.yField = numericColumns[0].name
 
-    // If we have a categorical column, use it for color
-    if (categoricalColumns.length > 0) {
-      defaults.colorField = categoricalColumns[0].name
-    }
   } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
     // Categorical vs numeric - check category count for bar orientation
     const firstCatField = categoricalColumns[0].name
@@ -499,22 +516,29 @@ export const determineDefaultConfig = (
     if (uniqueCategories.size > 7) {
       // Many categories - use horizontal bar
       defaults.chartType = 'barh'
-      defaults.yField = firstCatField
-      defaults.xField = numericColumns[0].name
+
     } else {
       // Few categories - use vertical bar
       defaults.chartType = 'bar'
-      defaults.xField = firstCatField
-      defaults.yField = numericColumns[0].name
     }
 
-    // If we have a second categorical column, use it for color
-    if (categoricalColumns.length > 1) {
-      defaults.colorField = categoricalColumns[1].name
-    }
   } else if (numericColumns.length >= 2) {
     // Multiple numeric columns - use scatter plot
     defaults.chartType = 'point'
+
+  } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
+    // Two categorical dimensions and a numeric - use heatmap
+    defaults.chartType = 'heatmap'
+
+  }
+
+
+  // now set defaults for each chart type
+  if (defaults.chartType === 'barh') {
+    defaults.yField = categoricalColumns[0].name
+    defaults.xField = numericColumns[0].name
+  }
+  else if (defaults.chartType === 'point') {
     defaults.xField = numericColumns[0].name
     defaults.yField = numericColumns[1].name
 
@@ -522,12 +546,31 @@ export const determineDefaultConfig = (
     if (categoricalColumns.length > 0) {
       defaults.colorField = categoricalColumns[0].name
     }
-  } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
-    // Two categorical dimensions and a numeric - use heatmap
-    defaults.chartType = 'heatmap'
+  }
+
+  else if (defaults.chartType === 'heatmap') {
     defaults.xField = categoricalColumns[0].name
     defaults.yField = categoricalColumns[1].name
     defaults.colorField = numericColumns[0].name
+  }
+
+  else if (defaults.chartType === 'bar') {
+    defaults.xField = categoricalColumns[0].name
+    defaults.yField = numericColumns[0].name
+  }
+  else if (defaults.chartType === 'line') {
+    defaults.xField = temporalColumns[0].name
+    defaults.yField = numericColumns[0].name
+
+    // If we have a categorical column, use it for color
+    if (categoricalColumns.length > 0) {
+      defaults.colorField = categoricalColumns[0].name
+    }
+  }
+
+  // If we have a second categorical column, use it for color
+  if (categoricalColumns.length > 1) {
+    defaults.colorField = categoricalColumns[1].name
   }
 
   return defaults
@@ -575,4 +618,67 @@ export const getDefaultSelectionConfig = (
   }
 
   return defaultConfig;
+}
+
+/**
+ * Determines which chart types are applicable based on available column types
+ * @param data - The dataset rows
+ * @param columns - Map of column names to column metadata
+ * @returns An array of eligible chart types from the predefined list
+ */
+export const determineEligibleChartTypes = (
+  data: readonly Row[],
+  columns: Map<string, ResultColumn>,
+): string[] => {
+  const numericColumns = filteredColumns('numeric', columns)
+  const categoricalColumns = filteredColumns('categorical', columns)
+  const temporalColumns = filteredColumns('temporal', columns)
+  
+  const eligibleCharts: string[] = []
+  
+  // If no numeric columns, very limited chart options
+  if (numericColumns.length === 0) {
+    return eligibleCharts
+  }
+  
+  // Time series data - line chart
+  if (temporalColumns.length > 0 && numericColumns.length > 0) {
+    eligibleCharts.push('line')
+    // Area chart is also good for time series
+    eligibleCharts.push('area')
+  }
+  
+  // Categorical vs numeric - bar charts
+  if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+    const firstCatField = categoricalColumns[0].name
+    const uniqueCategories = new Set()
+    
+    for (let i = 0; i < Math.min(data.length, 50); i++) {
+      if (data[i] && data[i][firstCatField] !== undefined) {
+        uniqueCategories.add(data[i][firstCatField])
+      }
+    }
+    eligibleCharts.push('bar')
+    eligibleCharts.push('barh')
+  }
+  
+  // Multiple numeric columns - scatter plot
+  if (numericColumns.length >= 2) {
+    eligibleCharts.push('point')
+  }
+  
+  // Two categorical dimensions and numeric - heatmap
+  if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
+    eligibleCharts.push('heatmap')
+  }
+  
+  // Boxplot for numeric data with potential grouping
+  if (numericColumns.length > 0) {
+    eligibleCharts.push('boxplot')
+  }
+  
+  // Ensure all chart types are from the predefined list
+  return eligibleCharts.filter(chart => 
+    ['bar', 'barh', 'line', 'point', 'area', 'heatmap', 'boxplot'].includes(chart)
+  )
 }

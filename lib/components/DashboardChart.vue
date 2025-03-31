@@ -1,5 +1,6 @@
 <template>
   <div class="chart-placeholder no-drag">
+    {{ chartConfig }}
     <VegaLiteChart
       v-if="results"
       :columns="results.headers"
@@ -11,11 +12,21 @@
     />
     <LoadingView v-else-if="loading" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <div v-if="!loading" class="chart-actions">
+      <button 
+        v-if="onRefresh" 
+        @click="handleLocalRefresh"
+        class="chart-refresh-button" 
+        title="Refresh this chart"
+      >
+        <span class="refresh-icon">⟳</span>
+      </button>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, computed, watch, ref } from 'vue'
+import { defineComponent, inject, computed, watch, ref, onMounted, onUnmounted } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { Results, ChartConfig } from '../editors/results'
 import QueryExecutionService from '../stores/queryExecutionService'
@@ -74,6 +85,16 @@ export default defineComponent({
       return props.getItemData(props.itemId).filters || []
     })
 
+    const connectionName = computed(() => {
+      return props.getItemData(props.itemId).connectionName || []
+    })
+
+    // Get refresh callback from item data if available
+    const onRefresh = computed(() => {
+      const itemData = props.getItemData(props.itemId)
+      return itemData.onRefresh || null
+    })
+
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
@@ -104,7 +125,7 @@ export default defineComponent({
         }
 
         // Prepare query input
-        const conn = connectionStore.connections['airport-test']
+        const conn = connectionStore.connections[connectionName.value]
 
         // Create query input object using the chart's query content
         const queryInput = {
@@ -123,7 +144,7 @@ export default defineComponent({
 
         // Execute query
         const { resultPromise } = await queryExecutionService.executeQuery(
-          'airport-test', // Using the specified connection
+          connectionName.value,
           queryInput,
           // Progress callback for connection issues
           () => {},
@@ -136,11 +157,6 @@ export default defineComponent({
 
         // Handle result
         const result = await resultPromise
-
-        // Special handling for connection retry
-        if (!result.success && result.error === 'CONNECTION_RETRY_NEEDED' && !isRetry) {
-          return executeQuery(true)
-        }
 
         // Update component state based on result
         if (result.success && result.results) {
@@ -160,10 +176,49 @@ export default defineComponent({
       }
     }
 
+    // Handle individual chart refresh button click
+    const handleLocalRefresh = () => {
+      if (onRefresh.value) {
+        onRefresh.value(props.itemId)
+      }
+      executeQuery()
+    }
+
+    // Global dashboard refresh handler
+    const handleDashboardRefresh = () => {
+      console.log(`Chart ${props.itemId} received dashboard refresh event`)
+      executeQuery()
+    }
+
+    // Targeted chart refresh handler
+    const handleChartRefresh = (event: CustomEvent) => {
+      // Only refresh this chart if it's the target or no specific target
+      if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
+        console.log(`Chart ${props.itemId} received targeted refresh event`)
+        executeQuery()
+      }
+    }
+
+    // Set up event listeners when the component is mounted
+    onMounted(() => {
+      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
+      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+    })
+
+    // Remove event listeners when the component is unmounted
+    onUnmounted(() => {
+      window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
+      window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
+    })
+
+    // Initial query execution
     executeQuery()
+
+    // Watch for changes that should trigger a refresh
     watch([query, filters, chartImports], () => {
       executeQuery()
     })
+
     return {
       results,
       loading,
@@ -172,6 +227,8 @@ export default defineComponent({
       chartHeight,
       chartConfig,
       onChartConfigChange,
+      onRefresh,
+      handleLocalRefresh
     }
   },
 })
@@ -186,6 +243,7 @@ export default defineComponent({
   align-items: center;
   padding: 5px;
   color: #666;
+  position: relative;
 }
 
 .chart-query {
@@ -200,5 +258,37 @@ export default defineComponent({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chart-actions {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+.chart-refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--button-bg, #f5f5f5);
+  border: 1px solid var(--border-light, #ddd);
+  color: var(--text-color, #333);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.chart-refresh-button:hover {
+  opacity: 1;
+  background-color: var(--button-hover-bg, #e0e0e0);
+}
+
+.refresh-icon {
+  font-size: 16px;
+  font-weight: bold;
 }
 </style>

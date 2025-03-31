@@ -24,7 +24,7 @@
       :data-testid="`dashboard-list-id-${item.key}`"
       :class="{
         'sidebar-item': item.type !== 'creator',
-        'sidebar-item-selected': activeDashboard === item.id,
+        'sidebar-item-selected': activeDashboardKey === item.id,
       }"
       @click="clickAction(item.type, item.id, item.key)"
     >
@@ -130,6 +130,7 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
       type: 'storage',
       label: storage === 'local' ? 'Browser Storage' : 'Remote Storage',
       key: storageKey,
+      id: storageKey,
       indent: 0,
     })
 
@@ -152,6 +153,7 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
         const connectionKey = `c-${storage}-${connection}`
         tree.push({
           type: 'connection',
+          id: connectionKey,
           label: connection,
           key: connectionKey,
           indent: 1,
@@ -180,7 +182,7 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
 export default {
   name: 'DashboardList',
   props: {
-    activeDashboard: String,
+    activeDashboardKey: String,
     testTag: {
       type: String,
       default: '',
