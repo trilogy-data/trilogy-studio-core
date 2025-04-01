@@ -21,7 +21,7 @@ from trilogy.authoring import (
     RawSQLStatement,
     DEFAULT_NAMESPACE,
 )
-
+from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
 from click_default_group import DefaultGroup
@@ -153,7 +153,14 @@ def validate_query(query: ValidateQueryInSchema):
                         detail=f"Filter validation error for {filter_string}: "
                         + str(e),
                     )
-        return get_diagnostics(query.query, query.sources)
+        base = ''
+        for imp in query.imports:
+            if imp.alias:
+                imp_string = f"import {imp.name} as {imp.alias};\n"
+            else:
+                imp_string = f"import {imp.name};\n"
+            base += imp_string
+        return get_diagnostics(base+query.query, query.sources)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
@@ -184,6 +191,8 @@ def generate_query(query: QueryInSchema):
                     name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
                     datatype=env.concepts[x.address].datatype,
                     purpose=env.concepts[x.address].purpose,
+                    traits=env.concepts[x.address].datatype.traits if isinstance(env.concepts[x.address].datatype, TraitDataType) else [],
+                    description=env.concepts[x.address].metadata.description
                 )
                 for x in final.output_components
             ]

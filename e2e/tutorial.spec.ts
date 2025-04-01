@@ -11,7 +11,10 @@ test('test', async ({ page }) => {
 
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this, so filter tot he visible one
-  await page.getByTestId('refresh-connection-demo-model-connection').filter({ visible: true }).click()
+  await page
+    .getByTestId('refresh-connection-demo-model-connection')
+    .filter({ visible: true })
+    .click()
   await page.waitForFunction(() => {
     const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
     if (!element) return false
@@ -23,7 +26,6 @@ test('test', async ({ page }) => {
     // Check if the background color is green (in RGB format)
     return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
   })
-
 
   //
   await page.getByTestId('editor-creator-add-tutorial').click()

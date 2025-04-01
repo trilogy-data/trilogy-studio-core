@@ -122,8 +122,13 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
     },
-    
-    updateItemCrossFilters(dashboardId: string, itemId: string, filter:string, operation:'add'|'remove') {
+
+    updateItemCrossFilters(
+      dashboardId: string,
+      itemId: string,
+      filter: string,
+      operation: 'add' | 'remove',
+    ) {
       // add/remove the filter to all items in the dashboard who do not match the itemId
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemCrossFilters(itemId, filter, operation)

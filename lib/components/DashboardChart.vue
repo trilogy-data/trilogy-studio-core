@@ -1,6 +1,5 @@
 <template>
   <div class="chart-placeholder no-drag">
-    {{ chartConfig }}
     <VegaLiteChart
       v-if="results"
       :columns="results.headers"
@@ -13,10 +12,10 @@
     <LoadingView v-else-if="loading" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
     <div v-if="!loading" class="chart-actions">
-      <button 
-        v-if="onRefresh" 
+      <button
+        v-if="onRefresh"
         @click="handleLocalRefresh"
-        class="chart-refresh-button" 
+        class="chart-refresh-button"
         title="Refresh this chart"
       >
         <span class="refresh-icon">⟳</span>
@@ -105,7 +104,7 @@ export default defineComponent({
       throw new Error('Connection store not found!')
     }
 
-    const executeQuery = async (isRetry: boolean = false): Promise<any> => {
+    const executeQuery = async (): Promise<any> => {
       if (!query.value) return
 
       loading.value = true
@@ -228,7 +227,7 @@ export default defineComponent({
       chartConfig,
       onChartConfigChange,
       onRefresh,
-      handleLocalRefresh
+      handleLocalRefresh,
     }
   },
 })
@@ -279,7 +278,9 @@ export default defineComponent({
   color: var(--text-color, #333);
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
 }
 
 .chart-refresh-button:hover {

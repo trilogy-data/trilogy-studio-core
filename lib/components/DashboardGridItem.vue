@@ -6,15 +6,15 @@ import { type GridItemData, type LayoutItem, CELL_TYPES } from '../dashboards/ba
 
 // Props definition
 const props = defineProps<{
-  item: LayoutItem,
-  editMode: boolean,
-  getItemData: (itemId: string) => GridItemData,
+  item: LayoutItem
+  editMode: boolean
+  getItemData: (itemId: string) => GridItemData
   setItemData: (itemId: string, data: any) => void
 }>()
 
 // Emits
 const emit = defineEmits<{
-  'edit-content': [item: LayoutItem],
+  'edit-content': [item: LayoutItem]
   'update-dimensions': [itemId: string]
 }>()
 
@@ -93,11 +93,7 @@ const itemData = computed(() => props.getItemData(props.item.i))
       <!-- Editable item title -->
       <div class="item-title-container">
         <!-- Display title (clickable) -->
-        <div
-          v-if="!editingItemTitle"
-          class="item-title editable-title"
-          @click="startTitleEditing"
-        >
+        <div v-if="!editingItemTitle" class="item-title editable-title" @click="startTitleEditing">
           {{ itemData.name }}
           <span class="edit-indicator">✎</span>
         </div>
@@ -112,9 +108,7 @@ const itemData = computed(() => props.getItemData(props.item.i))
           @keyup.esc="cancelTitleEdit"
           class="title-input"
           type="text"
-          :placeholder="
-            itemData.type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'
-          "
+          :placeholder="itemData.type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'"
         />
       </div>
       <button @click="openEditor" class="edit-button">Edit Content</button>

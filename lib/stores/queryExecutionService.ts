@@ -6,7 +6,7 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { AxiosTrilogyResolver } from '.'
-import {type ValidateResponse, type QueryResponse} from './resolver'
+import { type ValidateResponse, type QueryResponse } from './resolver'
 export interface QueryInput {
   text: string
   queryType: string
@@ -58,47 +58,48 @@ export default class QueryExecutionService {
     connectionId: string,
     queryInput: QueryInput,
     log: boolean = true,
-    sources: ContentInput[] | null = null
+    sources: ContentInput[] | null = null,
   ): Promise<ValidateResponse | null> {
     // Skip validation for SQL queries
     if (queryInput.queryType === 'sql') {
-      return null;
+      return null
     }
 
     try {
       if (log) {
         // Log validation attempt if logging is enabled
-        console.log(`Validating ${queryInput.queryType} query`);
+        console.log(`Validating ${queryInput.queryType} query`)
       }
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
 
     // Check connection
-    const conn = this.connectionStore.connections[connectionId];
+    const conn = this.connectionStore.connections[connectionId]
     if (!conn) {
-      return null;
+      return null
     }
 
     // Get sources if not provided
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
-        : [];
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+        : []
     }
 
     // Call the trilogyResolver to validate the query
-    const validation:ValidateResponse = await this.trilogyResolver.validate_query(
+    const validation: ValidateResponse = await this.trilogyResolver.validate_query(
       queryInput.text,
-      sources
-    );
+      sources,
+      queryInput.imports,
+    )
     // Return the imports from the validation result
-    return validation;
+    return validation
   }
   async executeQuery(
     connectionId: string,
@@ -183,13 +184,13 @@ export default class QueryExecutionService {
     const sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
-    
+
     let resolveResponse: QueryResponse | null = null
     try {
       // First step: Resolve query
@@ -202,7 +203,7 @@ export default class QueryExecutionService {
           queryInput.editorType,
           sources,
           queryInput.imports,
-          queryInput.extraFilters
+          queryInput.extraFilters,
         ),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
@@ -237,7 +238,7 @@ export default class QueryExecutionService {
       ])
 
       // Handle Trilogy specific column enrichment
-      if (queryInput.editorType === 'trilogy') {
+      if (queryInput.editorType === 'trilogy' || queryInput.editorType === 'preql') {
         this.enrichTrilogyColumns(headers, sqlResponse)
       }
 
@@ -288,11 +289,13 @@ export default class QueryExecutionService {
       let header = headers[i]
       let column = sqlResponse.headers.get(header.name)
       if (column) {
-        column.traits = header.datatype?.traits || []
+        column.traits = header.traits || []
+        sqlResponse.headers.set(header.name, column)
       }
-      
+
       if (column && (header.datatype?.traits || []).includes('money')) {
         column.type = ColumnType.MONEY
+
         sqlResponse.headers.set(header.name, column)
       } else if (column && (header.datatype?.traits || []).includes('percent')) {
         column.type = ColumnType.PERCENT

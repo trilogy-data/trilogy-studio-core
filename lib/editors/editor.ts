@@ -28,7 +28,6 @@ export interface EditorInterface {
   executed: boolean
   duration: number | null
   generated_sql: string | null
-  visible: boolean
   storage: string
   tags: EditorTag[]
   cancelCallback: (() => void) | null
@@ -51,7 +50,6 @@ export default class Editor implements EditorInterface {
   executed: boolean
   duration: number | null
   generated_sql: string | null
-  visible: boolean
   storage: string
   tags: EditorTag[]
   cancelCallback: (() => void) | null
@@ -99,7 +97,6 @@ export default class Editor implements EditorInterface {
     // this.monaco = null;
     this.status_code = 200
     this.generated_sql = null
-    this.visible = true
     this.storage = storage
     this.tags = tags ? tags : []
     this.cancelCallback = null
@@ -146,13 +143,12 @@ export default class Editor implements EditorInterface {
       connection: this.connection,
       results: preserveResults ? this.results.toJSON() : null,
       contents: this.contents,
-      loading: this.loading,
+      loading: false,
       error: this.error,
       status_code: this.status_code,
       executed: this.executed,
       duration: this.duration,
       generated_sql: this.generated_sql,
-      visible: this.visible,
       storage: this.storage,
       tags: this.tags,
       chartConfig: this.chartConfig,
@@ -179,7 +175,7 @@ export default class Editor implements EditorInterface {
     editor.executed = parsed.executed || false
     editor.duration = parsed.duration || null
     editor.generated_sql = parsed.generated_sql || null
-    editor.visible = parsed.visible !== undefined ? parsed.visible : true
+
     editor.changed = false
     // rehydrate tags to EditorTag
     editor.tags = parsed.tags

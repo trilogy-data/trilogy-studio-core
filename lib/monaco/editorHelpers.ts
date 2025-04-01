@@ -1,11 +1,10 @@
-import * as monaco from 'monaco-editor';
-import { KeyMod, KeyCode } from 'monaco-editor';
+import * as monaco from 'monaco-editor'
+import { KeyMod, KeyCode } from 'monaco-editor'
 
 /**
  * Configure Monaco editor themes
- * @param {string} theme - 'light' or 'dark'
  */
-export function configureEditorTheme(theme = 'dark') {
+export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
   // Define the Trilogy theme
   monaco.editor.defineTheme('trilogyStudio', {
     base: theme === 'light' ? 'vs' : 'vs-dark',
@@ -21,70 +20,78 @@ export function configureEditorTheme(theme = 'dark') {
       { token: 'delimiter', foreground: '#D4D4D4' },
       { token: 'function', foreground: '#C586C0', fontStyle: 'bold' },
       { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' },
-      { token: 'property', foreground: '#BFBFBF' }
+      { token: 'property', foreground: '#BFBFBF' },
     ],
-    colors: {}
-  });
+    colors: {},
+  })
 
   // Set the active theme
-  monaco.editor.setTheme('trilogyStudio');
+  monaco.editor.setTheme('trilogyStudio')
+}
+
+interface EditorCallbacks {
+  onValidate?: () => void
+  onRun?: () => void
+  onSave?: () => void
+  onContentChange?: (content: string) => void
 }
 
 /**
  * Create a Monaco editor instance
- * @param {HTMLElement} domElement - DOM element to attach the editor to
- * @param {Object} editorOptions - Editor options
- * @returns {monaco.editor.IStandaloneCodeEditor} Monaco editor instance
  */
-export function createMonacoEditor(domElement, editorOptions = {}) {
-  const defaultOptions = {
+export function createMonacoEditor(
+  domElement: HTMLElement,
+  editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {},
+): monaco.editor.IStandaloneCodeEditor {
+  const defaultOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     automaticLayout: true,
     autoClosingBrackets: 'always',
     autoClosingOvertype: 'always',
     autoClosingQuotes: 'always',
     acceptSuggestionOnEnter: 'off',
     tabCompletion: 'on',
-    theme: 'trilogyStudio'
-  };
+    theme: 'trilogyStudio',
+  }
 
   // Merge default options with provided options
-  const options = { ...defaultOptions, ...editorOptions };
-  
+  const options = { ...defaultOptions, ...editorOptions }
+
   // Create the editor instance
-  return monaco.editor.create(domElement, options);
+  return monaco.editor.create(domElement, options)
 }
 
 /**
  * Get text from the editor, either selected text or all text
- * @param {monaco.editor.IStandaloneCodeEditor} editor - Monaco editor instance
- * @param {string} fallback - Fallback text if editor doesn't return any
- * @returns {string} Selected text or all editor text
  */
-export function getEditorText(editor, fallback = '') {
-  if (!editor) return fallback;
-  
-  const selected = editor.getSelection();
-  let text = selected && 
-    !(selected.startColumn === selected.endColumn && 
-      selected.startLineNumber === selected.endLineNumber)
-    ? (editor.getModel()?.getValueInRange(selected) || '')
-    : editor.getValue();
-    
+export function getEditorText(
+  editor: monaco.editor.IStandaloneCodeEditor | undefined,
+  fallback: string = '',
+): string {
+  if (!editor) return fallback
+
+  const selected = editor.getSelection()
+  let text =
+    selected &&
+    !(
+      selected.startColumn === selected.endColumn &&
+      selected.startLineNumber === selected.endLineNumber
+    )
+      ? editor.getModel()?.getValueInRange(selected) || ''
+      : editor.getValue()
+
   // Fallback if getValue returns nothing
   if (!text) {
-    text = fallback;
+    text = fallback
   }
-  
-  return text;
+
+  return text
 }
 
 /**
  * Get the current selection range in the editor
- * @param {monaco.editor.IStandaloneCodeEditor} editor - Monaco editor instance
- * @returns {monaco.IRange} Selection range
  */
-export function getEditorRange(editor) {
-  const selection = editor.getSelection();
+export function getEditorRange(editor: monaco.editor.IStandaloneCodeEditor): monaco.IRange {
+  const selection = editor.getSelection()
 
   // Check if there's a valid selection (not just a cursor position)
   if (
@@ -100,7 +107,7 @@ export function getEditorRange(editor) {
       startColumn: selection.startColumn,
       endLineNumber: selection.endLineNumber,
       endColumn: selection.endColumn,
-    };
+    }
   } else {
     // No selection, return a range representing the start of the editor
     return {
@@ -108,88 +115,87 @@ export function getEditorRange(editor) {
       startColumn: 1,
       endLineNumber: 1,
       endColumn: 1,
-    };
+    }
   }
 }
 
 /**
  * Setup common keyboard shortcuts for the editor
- * @param {monaco.editor.IStandaloneCodeEditor} editor - Monaco editor instance
- * @param {Object} callbacks - Callback functions for different actions
- * @param {Function} callbacks.onValidate - Callback for validation (Ctrl+Shift+V)
- * @param {Function} callbacks.onRun - Callback for running query (Ctrl+Enter)
- * @param {Function} callbacks.onSave - Callback for saving (Ctrl+S)
- * @param {Function} callbacks.onContentChange - Callback when content changes
  */
-export function setupEditorKeybindings(editor, callbacks = {}) {
-  const { onValidate, onRun, onSave } = callbacks;
-  
+export function setupEditorKeybindings(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  callbacks: EditorCallbacks = {},
+): void {
+  const { onValidate, onRun, onSave } = callbacks
+
   // Add keyboard shortcuts
   if (onValidate) {
-    editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, onValidate);
+    editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, onValidate)
   }
-  
+
   if (onRun) {
-    editor.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, onRun);
+    editor.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, onRun)
   }
-  
+
   if (onSave) {
-    editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, onSave);
+    editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, onSave)
   }
-  
+
   // Add default undo command
   editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () => {
-    editor.trigger('ide', 'undo', {});
-  });
-  
+    editor.trigger('ide', 'undo', {})
+  })
+
   // Setup content change handler with debouncing for auto-suggestions
   if (callbacks.onContentChange) {
-    let debounceTimer = null;
-    
+    let debounceTimer: NodeJS.Timeout | null = null
+
     editor.onDidChangeModelContent(() => {
-      callbacks.onContentChange(editor.getValue());
-      
+      callbacks.onContentChange?.(editor.getValue())
+
       // Clear previous timer
       if (debounceTimer) {
-        clearTimeout(debounceTimer);
+        clearTimeout(debounceTimer)
       }
-      
+
       // Set new timer for suggestions
       debounceTimer = setTimeout(() => {
         if (editor.hasTextFocus() && !editor.getSelection()?.isEmpty()) {
-          editor.trigger('completion', 'editor.action.triggerSuggest', { auto: true });
+          editor.trigger('completion', 'editor.action.triggerSuggest', { auto: true })
         }
-      }, 200);
-    });
+      }, 200)
+    })
   }
 }
 
 /**
  * Set validation markers on editor
- * @param {monaco.editor.IStandaloneCodeEditor} editor - Monaco editor instance
- * @param {Array} markers - Markers to set
  */
-export function setEditorMarkers(editor, markers = []) {
-  const model = editor.getModel();
+export function setEditorMarkers(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  markers: monaco.editor.IMarkerData[] = [],
+): void {
+  const model = editor.getModel()
   if (model) {
-    monaco.editor.setModelMarkers(model, 'owner', markers);
+    monaco.editor.setModelMarkers(model, 'owner', markers)
   }
 }
 
 /**
  * Update editor contents preserving cursor position
- * @param {monaco.editor.IStandaloneCodeEditor} editor - Monaco editor instance
- * @param {string} content - New content
  */
-export function updateEditorContent(editor, content) {
+export function updateEditorContent(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  content: string,
+): void {
   // Remember cursor position
-  const position = editor.getPosition();
-  
+  const position = editor.getPosition()
+
   // Update content
-  editor.setValue(content);
-  
+  editor.setValue(content)
+
   // Restore cursor position if possible
   if (position) {
-    editor.setPosition(position);
+    editor.setPosition(position)
   }
 }

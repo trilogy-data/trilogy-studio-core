@@ -48,23 +48,29 @@ const useConnectionStore = defineStore('connections', {
 
       // Create a new operation with timeout
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection timed out after 30 seconds')), connectionTimeout)
+        setTimeout(
+          () => reject(new Error('Connection timed out after 30 seconds')),
+          connectionTimeout,
+        )
       })
 
       // The actual connection operation
-      const connectionPromise = this.connections[name].connect().then(() => {
-        return runStartup(this.connections[name])
-      }).finally(() => {
-        // Clean up when operation completes or fails
-        pendingOperations.delete(operationKey)
-      })
+      const connectionPromise = this.connections[name]
+        .connect()
+        .then(() => {
+          return runStartup(this.connections[name])
+        })
+        .finally(() => {
+          // Clean up when operation completes or fails
+          pendingOperations.delete(operationKey)
+        })
 
       // Use Promise.race to implement timeout
       const operationPromise = Promise.race([connectionPromise, timeoutPromise])
-      
+
       // Store the operation promise
       pendingOperations.set(operationKey, operationPromise)
-      
+
       return operationPromise
     },
     async resetConnection(name: string) {
@@ -81,23 +87,29 @@ const useConnectionStore = defineStore('connections', {
 
       // Create a new operation with timeout
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Reset operation timed out after 30 seconds')), connectionTimeout)
+        setTimeout(
+          () => reject(new Error('Reset operation timed out after 30 seconds')),
+          connectionTimeout,
+        )
       })
 
       // The actual reset operation
-      const resetPromise = this.connections[name].reset().then(() => {
-        return runStartup(this.connections[name])
-      }).finally(() => {
-        // Clean up when operation completes or fails
-        pendingOperations.delete(operationKey)
-      })
+      const resetPromise = this.connections[name]
+        .reset()
+        .then(() => {
+          return runStartup(this.connections[name])
+        })
+        .finally(() => {
+          // Clean up when operation completes or fails
+          pendingOperations.delete(operationKey)
+        })
 
       // Use Promise.race to implement timeout
       const operationPromise = Promise.race([resetPromise, timeoutPromise])
-      
+
       // Store the operation promise
       pendingOperations.set(operationKey, operationPromise)
-      
+
       return operationPromise
     },
     removeConnection(name: string) {

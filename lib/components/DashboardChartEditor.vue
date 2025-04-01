@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, defineEmits } from 'vue'
-import SimpleEditor from './SimpleEditor.vue';
-
-
+import SimpleEditor from './SimpleEditor.vue'
+import HighlightComponent from './HighlightComponent.vue'
+import { type Import } from '../stores/resolver'
 interface EditorRef {
   getContent: () => string
 }
@@ -10,6 +10,7 @@ interface EditorRef {
 const props = defineProps<{
   content: string
   connectionName: string
+  imports: Import[]
 }>()
 
 const emit = defineEmits(['save', 'cancel'])
@@ -23,7 +24,6 @@ function saveQuery(): void {
     const editorContent = editor.value.getContent()
     emit('save', editorContent)
   }
-
 }
 
 function cancel(): void {
@@ -36,18 +36,22 @@ function cancel(): void {
   <div class="editor-overlay">
     <div class="content-editor">
       <div class="editor-description">
-        Enter a raw Trilogy script to be used for this chart. The last select will be the output. You should not set a
-        where clause (the dashboard will manage that), but can set any other part of the query.
+        <HighlightComponent type="tip"
+          >Enter a raw Trilogy script to be used for this chart. The last select will be the output.
+          You should not set a where clause (the dashboard will manage that), but can set any other
+          part of the query.</HighlightComponent
+        >
       </div>
       <div class="editor-body">
-        <SimpleEditor 
-          class="editor-body" 
-          :initContent="queryText" 
+        <SimpleEditor
+          class="editor-body"
+          :initContent="queryText"
           :connectionName="connectionName"
-          :imports = "imports"
+          :imports="imports"
           ref="editor"
         ></SimpleEditor>
       </div>
+
       <div class="editor-actions">
         <button @click="saveQuery" class="save-button">Save Query</button>
         <button @click="cancel" class="cancel-button">Cancel</button>
@@ -57,8 +61,9 @@ function cancel(): void {
 </template>
 <style scoped>
 .editor-body {
-  max-height:400px;
+  max-height: 400px;
 }
+
 .editor-overlay {
   position: fixed;
   top: 0;
@@ -71,6 +76,7 @@ function cancel(): void {
   align-items: center;
   z-index: 1000;
 }
+
 .content-editor {
   width: 80%;
   max-width: 800px;
@@ -80,6 +86,7 @@ function cancel(): void {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
 }
+
 .content-editor h3 {
   margin-top: 0;
   margin-bottom: 15px;
@@ -87,11 +94,13 @@ function cancel(): void {
   padding-bottom: 10px;
   color: var(--text-color);
 }
+
 .editor-description {
   margin-bottom: 15px;
   color: var(--text-color-muted);
   font-size: 0.9em;
 }
+
 .sql-editor {
   width: 100%;
   height: 300px;
@@ -104,12 +113,14 @@ function cancel(): void {
   color: var(--query-window-font);
   font-size: var(--font-size);
 }
+
 .editor-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   padding-top: 10px;
 }
+
 .save-button,
 .cancel-button {
   padding: 8px 16px;
@@ -118,10 +129,12 @@ function cancel(): void {
   font-weight: 500;
   font-size: var(--button-font-size);
 }
+
 .save-button {
   background-color: var(--special-text);
   color: white;
 }
+
 .cancel-button {
   background-color: var(--delete-color);
   color: white;

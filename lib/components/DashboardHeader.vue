@@ -34,9 +34,8 @@ const { filterInput, onFilterInput } = useFilterDebounce(
   (value: string) => emit('filter-change', value),
 )
 
-
-const modelName = connectionStore.connections[props.selectedConnection].model;
-let availableImports= [];
+const modelName = connectionStore.connections[props.selectedConnection].model
+let availableImports: Import[] = []
 
 if (modelName) {
   availableImports = modelStore.models[modelName].sources.map((source) => ({
@@ -69,7 +68,11 @@ function handleRefresh() {
           @change="$emit('connection-change', $event)"
           :value="selectedConnection"
         >
-          <option v-for="conn in Object.values(connectionStore.connections).filter((conn) => conn.model)" :key="conn.name" :value="conn.name">
+          <option
+            v-for="conn in Object.values(connectionStore.connections).filter((conn) => conn.model)"
+            :key="conn.name"
+            :value="conn.name"
+          >
             {{ conn.name }}
           </option>
         </select>
@@ -91,7 +94,7 @@ function handleRefresh() {
           placeholder="Enter filter criteria..."
         />
       </div>
-      
+
       <button @click="handleRefresh" class="refresh-button" title="Refresh data">
         <span class="refresh-icon">⟳</span>
         Refresh

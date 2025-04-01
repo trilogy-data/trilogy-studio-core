@@ -60,11 +60,13 @@ export default class AxiosResolver {
   async validate_query(
     query: string,
     sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
   ): Promise<ValidateResponse> {
     return axios
       .post(`${this.address}/validate_query`, {
         query: query,
         sources: sources || [],
+        imports: imports || [],
       })
       .catch((error: Error) => {
         console.log(error)
@@ -82,7 +84,7 @@ export default class AxiosResolver {
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
-      return { data: { generated_sql: query , columns: [] } }
+      return { data: { generated_sql: query, columns: [] } }
     }
     return axios
       .post(`${this.address}/generate_query`, {
