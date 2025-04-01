@@ -136,7 +136,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed, inject } from 'vue'
+import { defineComponent, ref, watch, onMounted, computed, inject, onUnmounted } from 'vue'
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
@@ -314,6 +314,14 @@ export default defineComponent({
     onMounted(() => {
       initializeConfig()
       renderChart()
+    })
+
+    onUnmounted(() => {
+      // Clean up event listener if it exists
+      if (removeEventListener) {
+        removeEventListener()
+        removeEventListener = null
+      }
     })
 
     // Watch for changes in data, columns or config

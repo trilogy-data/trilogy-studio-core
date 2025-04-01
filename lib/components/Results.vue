@@ -7,8 +7,9 @@
         @click="setTab('results')"
         data-testid="results-tab-button"
       >
-        Results (<span data-testid="query-results-length">{{ results.data.length }}</span
-        >)<span v-if="error">(Error)</span>
+        Results (<span v-if="error">Error</span
+        ><span v-else data-testid="query-results-length">{{ results.data.length }}</span
+        >)
       </button>
       <button
         class="tab-button"

@@ -28,9 +28,10 @@ def user_repr(error: Union[UnexpectedToken]):
         return str(error)
 
 
-def truncate_to_last_semicolon(text):
+def truncate_to_last_semicolon(text:str):
     last_semicolon_index = text.rfind(";")
-
+    if last_semicolon_index+1 == len(text):
+        return truncate_to_last_semicolon(text[: last_semicolon_index-1])
     if last_semicolon_index != -1:
         return text[: last_semicolon_index + 1]
     else:
@@ -43,7 +44,7 @@ def get_diagnostics(
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
     imports: list[Import] = []
-
+    
     def on_error(e: UnexpectedToken) -> Any:
         diagnostics.append(
             ValidateItem(
@@ -57,13 +58,18 @@ def get_diagnostics(
         )
         return True
 
-    try:
-        tree = PARSER.parse(doctext, on_error=on_error)  # type: ignore
-    except Exception:
+    parse_fragment = doctext
+    tree = None
+    loops = 0
+    while parse_fragment.count(';')>0:
+        loops += 1
         try:
-            tree = PARSER.parse(truncate_to_last_semicolon(doctext), on_error=on_error)  # type: ignore
+
+            tree = PARSER.parse(parse_fragment, on_error=on_error)  # type: ignore
+            break
         except Exception:
-            logging.exception("parse error")
+            parse_fragment = truncate_to_last_semicolon(parse_fragment)
+            logger.info(parse_fragment)
             diagnostics.append(
                 ValidateItem(
                     startLineNumber=0,
@@ -74,7 +80,10 @@ def get_diagnostics(
                     message="Parse error",
                 )
             )
-            return ValidateResponse(items=diagnostics, completion_items=completions)
+        if loops>20:
+            break
+    if not tree:
+        return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
         env = parse_env_from_full_model(sources)
         seen = set()

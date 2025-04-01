@@ -1,10 +1,3 @@
-/**
- * Adds a listener for selection events on a Vega chart
- *
- * @param view - The Vega View object from vegaEmbed
- * @param callback - Function to be called when selection changes
- * @returns Function to remove the event listener
- */
 export const addChartSelectionListener = (
   view: any,
   callback: (selectionValue: any) => void,
@@ -29,19 +22,3 @@ export const addChartSelectionListener = (
     view.removeEventListener(`${selectionName}_store`, handleSelectionChange)
   }
 }
-
-/**
- * Usage example:
- *
- * vegaEmbed('#chart', spec).then(result => {
- *   const removeListener = addChartSelectionListener(
- *     result.view,
- *     (selectionValue) => {
- *       console.log('Selection changed:', selectionValue);
- *     }
- *   );
- *
- *   // To clean up later:
- *   // removeListener();
- * });
- */

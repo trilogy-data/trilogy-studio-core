@@ -572,6 +572,7 @@ export default defineComponent({
           console.log('Validation failed.')
         }
       }
+      console.log(imports)
 
       // Create query input object
       const queryInput: QueryInput = {
