@@ -28,10 +28,10 @@ def user_repr(error: Union[UnexpectedToken]):
         return str(error)
 
 
-def truncate_to_last_semicolon(text:str):
+def truncate_to_last_semicolon(text: str):
     last_semicolon_index = text.rfind(";")
-    if last_semicolon_index+1 == len(text):
-        return truncate_to_last_semicolon(text[: last_semicolon_index-1])
+    if last_semicolon_index + 1 == len(text):
+        return truncate_to_last_semicolon(text[: last_semicolon_index - 1])
     if last_semicolon_index != -1:
         return text[: last_semicolon_index + 1]
     else:
@@ -44,7 +44,7 @@ def get_diagnostics(
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
     imports: list[Import] = []
-    
+
     def on_error(e: UnexpectedToken) -> Any:
         diagnostics.append(
             ValidateItem(
@@ -61,7 +61,7 @@ def get_diagnostics(
     parse_fragment = doctext
     tree = None
     loops = 0
-    while parse_fragment.count(';')>0:
+    while parse_fragment.count(";") > 0:
         loops += 1
         try:
 
@@ -80,7 +80,7 @@ def get_diagnostics(
                     message="Parse error",
                 )
             )
-        if loops>20:
+        if loops > 20:
             break
     if not tree:
         return ValidateResponse(items=diagnostics, completion_items=completions)
