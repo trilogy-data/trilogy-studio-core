@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { ModelConfig } from '../models'
 
-interface QueryResponse {
+export interface QueryResponse {
   data: {
     generated_sql: string
+    columns: any[]
   }
 }
 
@@ -22,7 +23,7 @@ interface CompletionItem {
   type: string
   insertText: string
 }
-interface ValidateResponse {
+export interface ValidateResponse {
   data: {
     items: ValidateItem[]
     completion_items: CompletionItem[]
@@ -59,11 +60,13 @@ export default class AxiosResolver {
   async validate_query(
     query: string,
     sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
   ): Promise<ValidateResponse> {
     return axios
       .post(`${this.address}/validate_query`, {
         query: query,
         sources: sources || [],
+        imports: imports || [],
       })
       .catch((error: Error) => {
         console.log(error)
@@ -77,10 +80,11 @@ export default class AxiosResolver {
     type: string,
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
+    extraFilters: string[] | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
-      return { data: { generated_sql: query } }
+      return { data: { generated_sql: query, columns: [] } }
     }
     return axios
       .post(`${this.address}/generate_query`, {
@@ -88,6 +92,7 @@ export default class AxiosResolver {
         dialect: dialect,
         full_model: { name: '', sources: sources || [] },
         imports: imports || [],
+        extra_filters: extraFilters || [],
       })
       .catch((error: Error) => {
         console.log(error)

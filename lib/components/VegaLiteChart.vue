@@ -28,7 +28,7 @@
             <button
               v-for="type in charts"
               :key="type.value"
-              @click="internalConfig.chartType = type.value"
+              @click="updateConfig('chartType', type.value)"
               class="chart-icon"
               :class="{ selected: internalConfig.chartType === type.value }"
               :title="type.label"
@@ -56,7 +56,8 @@
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
             <select
               :id="control.id"
-              v-model="internalConfig[control.field]"
+              :value="internalConfig[control.field]"
+              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
               class="form-select no-drag"
             >
               <option v-if="control.allowEmpty" value="">None</option>
@@ -87,7 +88,8 @@
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
             <select
               :id="control.id"
-              v-model="internalConfig[control.field]"
+              :value="internalConfig[control.field]"
+              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
               class="form-select no-drag"
             >
               <option v-if="control.allowEmpty" value="">None</option>
@@ -113,7 +115,8 @@
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
             <select
               :id="control.id"
-              v-model="internalConfig[control.field]"
+              :value="internalConfig[control.field]"
+              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
               class="form-select no-drag"
             >
               <option v-if="control.allowEmpty" value="">None</option>
@@ -140,8 +143,14 @@ import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import { Controls, Charts, type ChartControl } from '../dashboards/constants'
-import { generateVegaSpec, determineDefaultConfig, filteredColumns } from '../dashboards/helpers'
-
+import {
+  generateVegaSpec,
+  determineDefaultConfig,
+  filteredColumns,
+  getDefaultSelectionConfig,
+  determineEligibleChartTypes,
+} from '../dashboards/helpers'
+import { addChartSelectionListener } from '../dashboards/eventHelpers'
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -172,6 +181,22 @@ export default defineComponent({
   setup(props) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
+
+    // event hookups
+    //@ts-ignore
+    let removeEventListener: (() => void) | null = null
+    const selectedItems = ref<any[]>([])
+    const handleSelectionChange = (selected: any[]) => {
+      selectedItems.value = selected
+
+      // Call the provided callback if available
+      // if (props.onSelectionChange && typeof props.onSelectionChange === 'function') {
+      //   props.onSelectionChange(selected);
+      // }
+
+      // Default behavior: log the selection to console
+      console.log('Selection changed:', selected)
+    }
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
@@ -221,9 +246,6 @@ export default defineComponent({
         const configDefaults = determineDefaultConfig(props.data, props.columns)
         internalConfig.value = { ...internalConfig.value, ...configDefaults }
       }
-
-      // If config is initialized with values, show chart by default
-      showingControls.value = false
     }
 
     const filteredColumnsInternal = (type: 'numeric' | 'categorical' | 'temporal' | 'all') => {
@@ -231,13 +253,19 @@ export default defineComponent({
     }
 
     // Generate Vega-Lite spec based on current configuration
+
     const generateVegaSpecInternal = () => {
+      const selectionConfig = getDefaultSelectionConfig(
+        internalConfig.value.chartType,
+        internalConfig.value,
+      )
       return generateVegaSpec(
         props.data,
         internalConfig.value,
         isMobile,
         props.containerHeight,
         props.columns,
+        selectionConfig,
       )
     }
 
@@ -253,9 +281,32 @@ export default defineComponent({
           actions: false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
+        }).then((result) => {
+          removeEventListener = addChartSelectionListener(result.view, handleSelectionChange)
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
+      }
+    }
+
+    const updateConfig = (field: keyof ChartConfig, value: string) => {
+      internalConfig.value[field] = value
+      if (field === 'chartType') {
+        // Reset other fields when changing chart type
+        const configDefaults = determineDefaultConfig(props.data, props.columns, value)
+
+        internalConfig.value.xField = configDefaults.xField
+        internalConfig.value.yField = configDefaults.yField
+        internalConfig.value.yAggregation = configDefaults.yAggregation
+        internalConfig.value.colorField = configDefaults.colorField
+        internalConfig.value.sizeField = configDefaults.sizeField
+        internalConfig.value.groupField = configDefaults.groupField
+        internalConfig.value.trellisField = configDefaults.trellisField
+      }
+
+      // Notify parent component if the callback is provided
+      if (props.onChartConfigChange) {
+        props.onChartConfigChange({ ...internalConfig.value })
       }
     }
 
@@ -289,24 +340,6 @@ export default defineComponent({
     //   { deep: true },
     // )
 
-    // Watch for internal config changes
-    watch(
-      internalConfig,
-      (newConfig) => {
-        // First, render the chart with the new configuration if we're showing the chart
-        if (!showingControls.value) {
-          renderChart()
-        }
-
-        // Then, if a callback was provided in props, call it with the new configuration
-        if (props.onChartConfigChange && typeof props.onChartConfigChange === 'function') {
-          console.log('setting new config')
-          props.onChartConfigChange(newConfig)
-        }
-      },
-      { deep: true },
-    )
-
     return {
       vegaContainer,
       internalConfig,
@@ -314,8 +347,11 @@ export default defineComponent({
       filteredColumnsInternal,
       hasTrellisOption,
       showingControls,
+      updateConfig,
       toggleControls,
-      charts: Charts,
+      charts: Charts.filter((x) =>
+        determineEligibleChartTypes(props.data, props.columns).includes(x.value),
+      ),
     }
   },
   computed: {
@@ -421,7 +457,8 @@ export default defineComponent({
   font-size: var(--small-font-size);
   margin-bottom: 0;
   white-space: nowrap;
-  min-width: 80px; /* Give labels a consistent width */
+  min-width: 80px;
+  /* Give labels a consistent width */
   flex-shrink: 0;
 }
 
@@ -436,6 +473,7 @@ export default defineComponent({
   height: var(--chart-control-height);
   flex-grow: 1;
 }
+
 .chart-type-icons {
   display: flex;
   flex-wrap: wrap;

@@ -2,13 +2,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useConnectionStore } from '../stores'
+import { useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import { type Import } from '../stores/resolver'
 const props = defineProps({
   dashboard: Object,
   editMode: Boolean,
-  selectedConnection: String,
+  selectedConnection: {
+    type: String,
+    required: true,
+  },
 })
 
 const emit = defineEmits([
@@ -18,9 +22,11 @@ const emit = defineEmits([
   'add-item',
   'clear-items',
   'toggle-edit-mode',
+  'refresh', // Added refresh emit
 ])
 
 const connectionStore = useConnectionStore()
+const modelStore = useModelConfigStore()
 
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
@@ -28,12 +34,15 @@ const { filterInput, onFilterInput } = useFilterDebounce(
   (value: string) => emit('filter-change', value),
 )
 
-// Available import options
-const availableImports = [
-  { name: 'flight', alias: 'flight' },
-  { name: 'airport', alias: 'airport' },
-  { name: 'carrier', alias: 'carrier' },
-]
+const modelName = connectionStore.connections[props.selectedConnection].model
+let availableImports: Import[] = []
+
+if (modelName) {
+  availableImports = modelStore.models[modelName].sources.map((source) => ({
+    name: source.alias,
+    alias: source.alias,
+  }))
+}
 
 // Get active imports from dashboard
 const activeImports = computed(() => props.dashboard?.imports || [])
@@ -41,6 +50,11 @@ const activeImports = computed(() => props.dashboard?.imports || [])
 // Handle imports change
 function handleImportsChange(newImports: Import[]) {
   emit('import-change', newImports)
+}
+
+// Handle refresh click
+function handleRefresh() {
+  emit('refresh')
 }
 </script>
 
@@ -54,7 +68,11 @@ function handleImportsChange(newImports: Import[]) {
           @change="$emit('connection-change', $event)"
           :value="selectedConnection"
         >
-          <option v-for="conn in connectionStore.connections" :key="conn.name" :value="conn.name">
+          <option
+            v-for="conn in Object.values(connectionStore.connections).filter((conn) => conn.model)"
+            :key="conn.name"
+            :value="conn.name"
+          >
             {{ conn.name }}
           </option>
         </select>
@@ -67,7 +85,7 @@ function handleImportsChange(newImports: Import[]) {
       />
 
       <div class="filter-container">
-        <label for="filter">Filter</label>
+        <label for="filter">Where</label>
         <input
           id="filter"
           type="text"
@@ -76,6 +94,11 @@ function handleImportsChange(newImports: Import[]) {
           placeholder="Enter filter criteria..."
         />
       </div>
+
+      <button @click="handleRefresh" class="refresh-button" title="Refresh data">
+        <span class="refresh-icon">⟳</span>
+        Refresh
+      </button>
     </div>
 
     <div class="grid-actions">
@@ -145,6 +168,28 @@ function handleImportsChange(newImports: Import[]) {
   color: var(--sidebar-selector-font);
   width: 100%;
   font-size: var(--font-size);
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--border-light);
+  background-color: var(--special-text);
+  color: var(--text-color);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--button-font-size);
+}
+
+.refresh-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.refresh-button:hover {
+  background-color: var(--button-hover-bg, #e0e0e0);
 }
 
 .grid-actions {

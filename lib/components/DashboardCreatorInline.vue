@@ -63,7 +63,7 @@ export default {
       default: '',
     },
   },
-  setup({ emit }: any) {
+  setup(_, { emit }) {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
@@ -75,7 +75,7 @@ export default {
     const selectedConnection = ref('')
 
     const connections = computed(() => {
-      return Object.values(connectionStore.connections)
+      return Object.values(connectionStore.connections).filter((conn) => conn.model)
     })
 
     // Set default connection when connections are available
@@ -152,7 +152,7 @@ export default {
 
 .form-group input,
 .form-group select {
-  width: 100%;
+  width: 95%;
   padding: 6px;
   background-color: var(--bg-color);
   border: 1px solid var(--border);

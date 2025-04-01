@@ -43,10 +43,11 @@ export type Row = Readonly<Record<string, any>> // Represents a row, with column
 export interface ResultColumn {
   name: string
   type: ColumnType
-  description?: string
   scale?: number
   precision?: number
   children?: Map<string, ResultColumn>
+  traits?: string[]
+  description?: string
   // purpose: string
 }
 

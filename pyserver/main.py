@@ -16,12 +16,13 @@ from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
 from trilogy.authoring import (
+    Concept,
     SelectStatement,
     MultiSelectStatement,
     RawSQLStatement,
     DEFAULT_NAMESPACE,
 )
-
+from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
 from click_default_group import DefaultGroup
@@ -125,6 +126,12 @@ def safe_format_query(input: str) -> str:
     return input
 
 
+def get_traits(concept: Concept) -> list[str]:
+    if isinstance(concept.datatype, TraitDataType):
+        return concept.datatype.traits
+    return []
+
+
 @router.post("/format_query")
 def format_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
@@ -142,7 +149,27 @@ def format_query(query: QueryInSchema):
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
     try:
-        return get_diagnostics(query.query, query.sources)
+        # check filters, but return main validation
+        if query.extra_filters:
+            for filter_string in query.extra_filters:
+                try:
+                    get_diagnostics(
+                        f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
+                    )
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Filter validation error for {filter_string}: "
+                        + str(e),
+                    )
+        base = ""
+        for imp in query.imports:
+            if imp.alias:
+                imp_string = f"import {imp.name} as {imp.alias};\n"
+            else:
+                imp_string = f"import {imp.name};\n"
+            base += imp_string
+        return get_diagnostics(base + query.query, query.sources)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
@@ -166,17 +193,35 @@ def generate_query(query: QueryInSchema):
         if not isinstance(final, (SelectStatement, MultiSelectStatement)):
             columns = []
             generated = None
+
         else:
             columns = [
                 QueryOutColumn(
                     name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
                     datatype=env.concepts[x.address].datatype,
                     purpose=env.concepts[x.address].purpose,
+                    traits=get_traits(env.concepts[x.address]),
+                    description=env.concepts[x.address].metadata.description,
                 )
                 for x in final.output_components
             ]
             if not final.limit:
                 final.limit = STATEMENT_LIMIT
+            if query.extra_filters:
+                for filter_string in query.extra_filters:
+                    _, fparsed = parse_text(
+                        f"WHERE {filter_string} SELECT 1 as ftest;", env
+                    )
+                    filterQuery: SelectStatement = fparsed[-1]  # type: ignore
+                    if not filterQuery.where_clause:
+                        continue
+                    if not final.where_clause:
+                        final.where_clause = filterQuery.where_clause
+                    else:
+                        final.where_clause.conditional = (
+                            final.where_clause.conditional
+                            + filterQuery.where_clause.conditional
+                        )
             generated = dialect.generate_queries(environment=env, statements=[final])
     except Exception as e:
 

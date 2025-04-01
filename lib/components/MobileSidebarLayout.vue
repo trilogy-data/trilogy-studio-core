@@ -71,7 +71,7 @@
   flex-direction: column;
   /* flex-wrap: wrap; */
   flex: 1 1 auto;
-  height: calc(100% -40px);
+  height: calc(100% - 40px);
   width: 100%;
   z-index: 51;
   overflow-y: visible;
@@ -79,7 +79,7 @@
 
 .nested-page-content {
   flex: 1 1 auto;
-  height: calc(100% -40px);
+  height: calc(100% - 40px);
   z-index: 1;
   overflow: scroll;
 }
