@@ -209,6 +209,14 @@ export default {
             type: 'model',
             connection,
           })
+          list.push({
+            id: `${name}-toggle-save-credential`,
+            name: 'Toggle Save Credential',
+            indent: 1,
+            count: 0,
+            type: 'toggle-save-credential',
+            connection,
+          })
 
           // Loading indicator
           if (isLoading.value[name]) {
@@ -271,8 +279,8 @@ export default {
     },
 
     setActiveConnection(connectionName: string) {
-      console.log('set active llm connection')
       this.llmConnectionStore.activeConnection = connectionName
+      this.llmConnectionStore.connections[connectionName].isDefault = true
     },
   },
   computed: {

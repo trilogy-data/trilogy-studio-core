@@ -45,6 +45,16 @@
         </select>
       </form>
     </div>
+    <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+      <label class="save-credential-toggle">
+        <input
+          type="checkbox"
+          :checked="item.connection.saveCredential"
+          @change="toggleSaveCredential(item.connection)"
+        />
+        <span class="checkbox-label">Save Credentials</span>
+      </label>
+    </div>
     <span
       v-else
       class="title-pad-left truncate-text"
@@ -54,26 +64,26 @@
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
     </span>
     <!-- Connection-specific Actions -->
-    <div class="connection-actions">
+    <div class="connection-actions" v-if="item.type === 'connection'">
       <!-- Set Active Button for Connection -->
+      <i v-if="item.connection.isDefault" class="mdi mdi-star loading-button is-active"></i>
       <LoadingButton
+        v-else
         class="loading-button"
         @click.stop
         :action="() => setAsActive(item.id)"
-        title="Set as active connection"
-        v-if="item.type === 'connection'"
+        title="Set as default"
       >
-        <i class="mdi mdi-check-circle-outline"></i
-      ></LoadingButton>
+        <i class="mdi mdi-star-outline"></i>
+      </LoadingButton>
       <!-- Refresh Button for Connection -->
       <connection-refresh
-        v-if="item.type === 'connection'"
         :connection="item.connection"
         type="llm"
         :is-connected="isConnected(item.connection)"
       />
       <!-- Status Indicator -->
-      <connection-status-icon v-if="item.type === 'connection'" :connection="item.connection" />
+      <connection-status-icon :connection="item.connection" />
     </div>
   </div>
 </template>
@@ -116,7 +126,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['toggle', 'setActive', 'refresh', 'updateApiKey', 'updateModel'],
+  emits: ['toggle', 'setActive', 'refresh', 'updateApiKey', 'updateModel', 'toggleSaveCredential'],
   setup(props, { emit }) {
     const apiKeyInput = ref('')
     const modelInput = ref('')
@@ -137,6 +147,10 @@ export default defineComponent({
     const handleRefreshConnectionClick = (event: Event) => {
       event.stopPropagation()
       emit('refresh', props.item.id, props.item.connection?.name || '', 'connection')
+    }
+
+    const toggleSaveCredential = (connection: any) => {
+      emit('toggleSaveCredential', connection)
     }
 
     // Get provider type for icon
@@ -183,6 +197,7 @@ export default defineComponent({
       setAsActive,
       updateApiKey,
       updateModel,
+      toggleSaveCredential,
     }
   },
 })
@@ -192,6 +207,12 @@ export default defineComponent({
 .loading-button {
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
+  background-color: transparent;
+  padding: 0px;
+}
+
+.is-active {
+  color: var(--primary-color);
 }
 
 .sidebar-padding {

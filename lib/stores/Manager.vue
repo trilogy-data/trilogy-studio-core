@@ -113,6 +113,9 @@ export default {
         source.loadLLMConnections().then((llmConnections) => {
           for (let llmConnection of Object.values(llmConnections)) {
             props.llmConnectionStore.addConnection(llmConnection)
+            if (llmConnection.isDefault) {
+              props.llmConnectionStore.activeConnection = llmConnection.name
+            }
           }
         }),
       )

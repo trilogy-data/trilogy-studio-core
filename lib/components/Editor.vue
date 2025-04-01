@@ -569,10 +569,9 @@ export default defineComponent({
         try {
           imports = (await this.validateQuery(false, sources)) || []
         } catch (error) {
-          console.log('Validation failed.')
+          console.log('Validation failed. May not have proper imports.')
         }
       }
-
       // Create query input object
       const queryInput: QueryInput = {
         text,
