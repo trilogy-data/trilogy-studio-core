@@ -16,6 +16,7 @@ from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
 from trilogy.authoring import (
+    Concept,
     SelectStatement,
     MultiSelectStatement,
     RawSQLStatement,
@@ -125,6 +126,12 @@ def safe_format_query(input: str) -> str:
     return input
 
 
+def get_traits(concept: Concept) -> list[str]:
+    if isinstance(concept.datatype, TraitDataType):
+        return concept.datatype.traits
+    return []
+
+
 @router.post("/format_query")
 def format_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
@@ -146,21 +153,23 @@ def validate_query(query: ValidateQueryInSchema):
         if query.extra_filters:
             for filter_string in query.extra_filters:
                 try:
-                    get_diagnostics(f"WHERE {filter_string} SELECT 1 as ftest;", query.sources)
+                    get_diagnostics(
+                        f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
+                    )
                 except Exception as e:
                     raise HTTPException(
                         status_code=422,
                         detail=f"Filter validation error for {filter_string}: "
                         + str(e),
                     )
-        base = ''
+        base = ""
         for imp in query.imports:
             if imp.alias:
                 imp_string = f"import {imp.name} as {imp.alias};\n"
             else:
                 imp_string = f"import {imp.name};\n"
             base += imp_string
-        return get_diagnostics(base+query.query, query.sources)
+        return get_diagnostics(base + query.query, query.sources)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
@@ -191,8 +200,8 @@ def generate_query(query: QueryInSchema):
                     name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
                     datatype=env.concepts[x.address].datatype,
                     purpose=env.concepts[x.address].purpose,
-                    traits=env.concepts[x.address].datatype.traits if isinstance(env.concepts[x.address].datatype, TraitDataType) else [],
-                    description=env.concepts[x.address].metadata.description
+                    traits=get_traits(env.concepts[x.address]),
+                    description=env.concepts[x.address].metadata.description,
                 )
                 for x in final.output_components
             ]
@@ -200,8 +209,12 @@ def generate_query(query: QueryInSchema):
                 final.limit = STATEMENT_LIMIT
             if query.extra_filters:
                 for filter_string in query.extra_filters:
-                    _, parsed = parse_text(f"WHERE {filter_string} SELECT 1 as ftest;", env)
-                    filterQuery: SelectStatement = parsed[-1]
+                    _, fparsed = parse_text(
+                        f"WHERE {filter_string} SELECT 1 as ftest;", env
+                    )
+                    filterQuery: SelectStatement = fparsed[-1]  # type: ignore
+                    if not filterQuery.where_clause:
+                        continue
                     if not final.where_clause:
                         final.where_clause = filterQuery.where_clause
                     else:

@@ -261,6 +261,7 @@ export default defineComponent({
         try {
           // @ts-ignore
           window.goatcounter &&
+            // @ts-ignore
             window.goatcounter.count({
               path: 'studio-query-execution',
               title: this.editor.type,
