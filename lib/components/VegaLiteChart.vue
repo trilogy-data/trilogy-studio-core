@@ -2,8 +2,15 @@
   <div class="vega-lite-chart no-drag">
     <!-- Toggle button always visible -->
     <div class="controls-toggle" v-if="showControls">
-      <button @click="toggleControls" class="toggle-controls-btn" :class="{ active: showingControls }">
-        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
+      <button
+        @click="toggleControls"
+        class="toggle-controls-btn"
+        :class="{ active: showingControls }"
+      >
+        <i
+          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
+          class="icon"
+        ></i>
         <span>{{ showingControls ? 'View Chart' : 'Edit Chart' }}</span>
       </button>
     </div>
@@ -17,8 +24,14 @@
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="control-section">
           <div class="chart-type-icons">
-            <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
-              class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label">
+            <button
+              v-for="type in charts"
+              :key="type.value"
+              @click="updateConfig('chartType', type.value)"
+              class="chart-icon"
+              :class="{ selected: internalConfig.chartType === type.value }"
+              :title="type.label"
+            >
               <div class="icon-container">
                 <i :class="type.icon" class="icon"></i>
               </div>
@@ -27,18 +40,31 @@
         </div>
 
         <!-- Group axes controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by')">
+        <div
+          class="control-section"
+          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by')"
+        >
           <label class="control-section-label">Axes</label>
-          <div v-for="control in visibleControls.filter(
-            (c) => c.id.includes('axis') || c.id === 'group-by',
-          )" :key="control.id" class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter(
+              (c) => c.id.includes('axis') || c.id === 'group-by',
+            )"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -46,18 +72,31 @@
         </div>
 
         <!-- Group appearance controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size')">
+        <div
+          class="control-section"
+          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size')"
+        >
           <label class="control-section-label">Appearance</label>
-          <div v-for="control in visibleControls.filter(
-            (c) => c.id.includes('color') || c.id === 'size',
-          )" :key="control.id" class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter(
+              (c) => c.id.includes('color') || c.id === 'size',
+            )"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -67,15 +106,24 @@
         <!-- Group advanced controls -->
         <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
           <label class="control-section-label">Advanced</label>
-          <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
-            class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -116,8 +164,8 @@ export default defineComponent({
       required: true,
     },
     initialConfig: {
-      type: Object as PropType<ChartConfig>,
-      default: null,
+      type: Object as PropType<ChartConfig | undefined>,
+      default: undefined,
     },
     showControls: {
       type: Boolean,
@@ -126,7 +174,7 @@ export default defineComponent({
     containerHeight: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => { },
+      default: () => {},
     },
   },
 
@@ -214,35 +262,28 @@ export default defineComponent({
         selectionConfig,
       )
     }
+    // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       if (item && item.datum) {
-        console.log('Clicked point data:', item.datum)
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
         if (!xFieldRaw || !yFieldRaw) {
-          console.log('No x or y field defined')
           return
         }
         //map the fields to the actual column names  from the props.columns - the fields will be names with . replaced with _
         let xField = props.columns.get(xFieldRaw)?.address
         let yField = props.columns.get(yFieldRaw)?.address
-        console.log('xField:', xField)
-        console.log(props.columns)
         if (!xField || !yField) {
-          console.log('No x or y field found in columns')
           return
         }
         // eligible are categorical and temporal fields
-        let eligible = filteredColumnsInternal('categorical').map((x) => x.name)  
+        let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
         eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
-        console.log('Eligible fields:', eligible)
         if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-          emit('dimension-click', {[xField]:item.datum[xFieldRaw]})
-          console.log('Clicked on xField:', {[xField]:item.datum[xFieldRaw]})
+          emit('dimension-click', { [xField]: item.datum[xFieldRaw] })
         }
         if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-          emit('dimension-click', {[yField]:item.datum[yFieldRaw]})
-          console.log('Clicked on yField:', {[yField]:item.datum[yFieldRaw]})
+          emit('dimension-click', { [yField]: item.datum[yFieldRaw] })
         }
         emit('point-click', item.datum)
       } else {
@@ -269,7 +310,9 @@ export default defineComponent({
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
           result.view.addEventListener('click', handlePointClick)
-          removeEventListener = ()=> { result.view.removeEventListener('click', handlePointClick)}
+          removeEventListener = () => {
+            result.view.removeEventListener('click', handlePointClick)
+          }
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -296,8 +339,6 @@ export default defineComponent({
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }
-
-
 
     onUnmounted(() => {
       // Clean up event listener if it exists

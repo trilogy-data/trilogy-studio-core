@@ -1,12 +1,24 @@
 <template>
   <div class="chart-placeholder no-drag">
-    <VegaLiteChart v-if="results" :columns="results.headers" :data="results.data" :showControls="editMode"
-      :initialConfig="chartConfig" :containerHeight="chartHeight" :onChartConfigChange="onChartConfigChange"
-      @dimension-click="handleDimensionClick" />
+    <VegaLiteChart
+      v-if="results"
+      :columns="results.headers"
+      :data="results.data"
+      :showControls="editMode"
+      :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight"
+      :onChartConfigChange="onChartConfigChange"
+      @dimension-click="handleDimensionClick"
+    />
     <LoadingView v-else-if="loading" :startTime="startTime" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
     <div v-if="!loading" class="chart-actions">
-      <button v-if="onRefresh" @click="handleLocalRefresh" class="chart-refresh-button" title="Refresh this chart">
+      <button
+        v-if="onRefresh"
+        @click="handleLocalRefresh"
+        class="chart-refresh-button"
+        title="Refresh this chart"
+      >
         <span class="refresh-icon">⟳</span>
       </button>
     </div>
@@ -14,14 +26,23 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, computed, watch, ref, onMounted, onUnmounted } from 'vue'
+import {
+  defineComponent,
+  inject,
+  computed,
+  watch,
+  ref,
+  onMounted,
+  onUnmounted,
+  type PropType,
+} from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { Results, ChartConfig } from '../editors/results'
 import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
-
+import { type GridItemData } from '../dashboards/base'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -35,7 +56,7 @@ export default defineComponent({
       required: true,
     },
     getItemData: {
-      type: Function,
+      type: Function as PropType<(itemId: string) => GridItemData>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -89,7 +110,6 @@ export default defineComponent({
       return itemData.onRefresh || null
     })
 
-
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
@@ -120,7 +140,12 @@ export default defineComponent({
         }
 
         // Prepare query input
-        const conn = connectionStore.connections[connectionName.value]
+        let connName = connectionName.value || ''
+        if (!connName) {
+          return
+        }
+        //@ts-ignore
+        const conn = connectionStore.connections[connName]
 
         // Create query input object using the chart's query content
         const queryInput = {
@@ -139,10 +164,11 @@ export default defineComponent({
 
         // Execute query
         const { resultPromise } = await queryExecutionService.executeQuery(
-          connectionName.value,
+          //@ts-ignore
+          connName,
           queryInput,
           // Progress callback for connection issues
-          () => { },
+          () => {},
           (message) => {
             if (message.error) {
               error.value = message.text
@@ -200,7 +226,6 @@ export default defineComponent({
       emit('dimension-click', { source: props.itemId, value: dimension })
     }
 
-
     // Remove event listeners when the component is unmounted
     onUnmounted(() => {
       window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
@@ -221,14 +246,12 @@ export default defineComponent({
     })
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content
-      const contentChanged =
-        JSON.stringify(newVal) !== JSON.stringify(oldVal);
+      const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
 
       if (contentChanged) {
         executeQuery()
       }
     })
-
 
     return {
       results,

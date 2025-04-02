@@ -15,7 +15,6 @@ export interface LayoutItem {
   static: boolean
 }
 
-
 export interface Filter {
   source: string
   value: string
@@ -30,7 +29,7 @@ export interface GridItemData {
   connectionName?: string
   imports?: Import[]
   filters?: Filter[]
-  onRefresh?: () => void
+  onRefresh?: (itemId: string) => void
 }
 
 export interface Dashboard {

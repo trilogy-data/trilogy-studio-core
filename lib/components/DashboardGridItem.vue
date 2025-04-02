@@ -2,7 +2,12 @@
 import { ref, computed } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
-import { type GridItemData, type LayoutItem, CELL_TYPES, type DimensionClick, type Filter } from '../dashboards/base'
+import {
+  type GridItemData,
+  type LayoutItem,
+  CELL_TYPES,
+  type DimensionClick,
+} from '../dashboards/base'
 
 // Props definition
 const props = defineProps<{
@@ -15,8 +20,8 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   'edit-content': [item: LayoutItem]
-  'update-dimensions': [itemId: string],
-  'dimension-click': [DimensionClick],
+  'update-dimensions': [itemId: string]
+  'dimension-click': [DimensionClick]
   'remove-filter': [itemId: string, filterSource: string]
 }>()
 
@@ -72,7 +77,7 @@ function dimensionClick(v: DimensionClick): void {
 }
 
 // Remove a filter by index
-function removeFilter(filterSource:string): void {
+function removeFilter(filterSource: string): void {
   emit('remove-filter', props.item.i, filterSource)
 }
 
@@ -135,15 +140,27 @@ const hasFilters = computed(() => {
     <div class="view-mode-header" v-if="!editMode">
       <div class="item-title">{{ itemData.name }}</div>
     </div>
-    
+
     <!-- Filters display (for both edit and view modes) -->
-    <div class="filters-container" v-if="hasFilters && itemData.type === CELL_TYPES.CHART ">
-      <div class="filter-tag" v-for="(filter, index) in itemData.filters" :key="`${filter.source}-${filter.value}-${index}`">
+    <div class="filters-container" v-if="hasFilters && itemData.type === CELL_TYPES.CHART">
+      <div
+        class="filter-tag"
+        v-for="(filter, index) in itemData.filters"
+        :key="`${filter.source}-${filter.value}-${index}`"
+      >
         <span class="filter-content">
-          <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:</span>
+          <span class="filter-source"
+            >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
+          >
           <span class="filter-value">{{ filter.value }}</span>
         </span>
-        <button class="filter-remove-btn" @click="removeFilter(filter.source)" title="Remove filter">×</button>
+        <button
+          class="filter-remove-btn"
+          @click="removeFilter(filter.source)"
+          title="Remove filter"
+        >
+          ×
+        </button>
       </div>
     </div>
 

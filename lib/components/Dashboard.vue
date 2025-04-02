@@ -4,7 +4,13 @@ import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import { useDashboardStore } from '../stores/dashboardStore'
-import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES, type DimensionClick } from '../dashboards/base'
+import {
+  type LayoutItem,
+  type GridItemData,
+  type CellType,
+  CELL_TYPES,
+  type DimensionClick,
+} from '../dashboards/base'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
@@ -252,18 +258,18 @@ function getItemData(itemId: string): GridItemData {
       filters: [],
     }
   }
-  const itemFilters = item.filters || [];
-  let finalFilters = itemFilters;
+  const itemFilters = item.filters || []
+  let finalFilters = itemFilters
 
   if (dashboard.value.filter) {
     // Check if we already have this global filter
-    const hasGlobalFilter = itemFilters.some(f =>
-      f.source === 'global' && f.value === dashboard.value?.filter
-    );
+    const hasGlobalFilter = itemFilters.some(
+      (f) => f.source === 'global' && f.value === dashboard.value?.filter,
+    )
 
     // Only create a new array if needed
     if (!hasGlobalFilter) {
-      finalFilters = [{ value: dashboard.value.filter, source: 'global' }, ...itemFilters];
+      finalFilters = [{ value: dashboard.value.filter, source: 'global' }, ...itemFilters]
     }
   }
   return {
@@ -353,37 +359,41 @@ function handleRefresh(itemId?: string): void {
 function objectToSqlExpression(obj: Record<string, any>): string {
   // Handle empty object case
   if (Object.keys(obj).length === 0) {
-    return '';
+    return ''
   }
 
   // Convert each key-value pair to a SQL condition
   const conditions = Object.entries(obj).map(([key, value]) => {
     // Handle different value types
     if (value === null) {
-      return `${key} IS NULL`;
+      return `${key} IS NULL`
     } else if (typeof value === 'string') {
       // Escape single quotes in strings
-      const escapedValue = value.replace(/'/g, "''");
-      return `${key}='${escapedValue}'`;
+      const escapedValue = value.replace(/'/g, "''")
+      return `${key}='${escapedValue}'`
     } else if (typeof value === 'number' || typeof value === 'boolean') {
-      return `${key}=${value}`;
+      return `${key}=${value}`
     } else {
       // For complex objects, arrays, etc. - convert to JSON string
-      const escapedValue = JSON.stringify(value).replace(/'/g, "''");
-      return `${key}='${escapedValue}'`;
+      const escapedValue = JSON.stringify(value).replace(/'/g, "''")
+      return `${key}='${escapedValue}'`
     }
-  });
+  })
 
   // Join conditions with 'AND'
-  return conditions.join(' AND ');
+  return conditions.join(' AND ')
 }
 
-function setCrossFilter(info: object): void {
-  console.log('Setting cross filter:', info.source, info.value)
+function setCrossFilter(info: DimensionClick): void {
   if (!dashboard.value || !dashboard.value.id) return
 
   // Use store to update item cross filters
-  dashboardStore.updateItemCrossFilters(dashboard.value.id, info.source, objectToSqlExpression(info.value), 'add')
+  dashboardStore.updateItemCrossFilters(
+    dashboard.value.id,
+    info.source,
+    objectToSqlExpression(info.value),
+    'add',
+  )
 }
 
 function removeFilter(itemId: string, filterSource: string): void {
@@ -403,21 +413,54 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
-      @connection-change="onConnectionChange" @filter-change="handleFilterChange" @import-change="handleImportChange"
-      @add-item="openAddItemModal" @clear-items="clearItems" @toggle-edit-mode="toggleEditMode"
-      @refresh="handleRefresh" />
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
+      :selected-connection="selectedConnection"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh"
+    />
 
     <div class="grid-container">
-      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
-        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
-        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
-          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle">
-          <DashboardGridItem :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
-            @dimension-click="setCrossFilter" :set-item-data="setItemData" @edit-content="openEditor"
+      <GridLayout
+        :col-num="12"
+        :row-height="30"
+        :is-draggable="draggable"
+        :is-resizable="resizable"
+        :layout="layout"
+        :vertical-compact="true"
+        :use-css-transforms="true"
+        @layout-updated="onLayoutUpdated"
+      >
+        <grid-item
+          v-for="item in layout"
+          :key="item.i"
+          :static="item.static"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :i="item.i"
+          :data-i="item.i"
+          drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle"
+        >
+          <DashboardGridItem
+            :item="item"
+            :edit-mode="editMode"
+            :filter="filter"
+            :get-item-data="getItemData"
+            @dimension-click="setCrossFilter"
+            :set-item-data="setItemData"
+            @edit-content="openEditor"
             @remove-filter="removeFilter"
-            @update-dimensions="updateItemDimensions" />
+            @update-dimensions="updateItemDimensions"
+          />
         </grid-item>
       </GridLayout>
     </div>
@@ -447,13 +490,21 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :connectionName="getItemData(editingItem.i).connectionName || ''"
-        :imports="getItemData(editingItem.i).imports || []" :content="getItemData(editingItem.i).content"
-        @save="saveContent" @cancel="closeEditors" />
+      <ChartEditor
+        :connectionName="getItemData(editingItem.i).connectionName || ''"
+        :imports="getItemData(editingItem.i).imports || []"
+        :content="getItemData(editingItem.i).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
+      <MarkdownEditor
+        :content="getItemData(editingItem.i).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">

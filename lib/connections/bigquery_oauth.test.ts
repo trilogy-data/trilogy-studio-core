@@ -32,7 +32,7 @@ describe('BigQueryOauthConnection', () => {
     vi.mocked(fetch).mockReset()
     // Reset all mocks
     vi.clearAllMocks()
-    
+
     // Initialize mockActiveJobs at the top level for all tests
     mockActiveJobs = new Map<string, string>()
     // Replace connection's activeJobs with our mock
@@ -234,22 +234,22 @@ describe('BigQueryOauthConnection', () => {
 
   describe('query_core', () => {
     // Define a mock for the activeJobs Map
-    let mockActiveJobs: Map<string, string>;
-    
+    let mockActiveJobs: Map<string, string>
+
     beforeEach(() => {
       // Setup a real Map for activeJobs that we can spy on
-      mockActiveJobs = new Map<string, string>();
+      mockActiveJobs = new Map<string, string>()
       // Replace the activeJobs with our mock
-      (connection as any).activeJobs = mockActiveJobs;
-      
+      ;(connection as any).activeJobs = mockActiveJobs
+
       // Create spies on the Map methods after assigning to connection
-      vi.spyOn(mockActiveJobs, 'set');
-      vi.spyOn(mockActiveJobs, 'delete');
-      vi.spyOn(mockActiveJobs, 'get');
-      vi.spyOn(mockActiveJobs, 'has');
-      
+      vi.spyOn(mockActiveJobs, 'set')
+      vi.spyOn(mockActiveJobs, 'delete')
+      vi.spyOn(mockActiveJobs, 'get')
+      vi.spyOn(mockActiveJobs, 'has')
+
       // Mock the sleep method directly as a function
-      (connection as any).sleep = vi.fn().mockResolvedValue(undefined);
+      ;(connection as any).sleep = vi.fn().mockResolvedValue(undefined)
     })
 
     it('handles immediate query completion correctly', async () => {
@@ -269,10 +269,7 @@ describe('BigQueryOauthConnection', () => {
         },
         rows: [
           {
-            f: [
-              { v: '1' },
-              { v: 'Test Item' },
-            ],
+            f: [{ v: '1' }, { v: 'Test Item' }],
           },
         ],
       }
@@ -330,15 +327,13 @@ describe('BigQueryOauthConnection', () => {
         },
         rows: [
           {
-            f: [
-              { v: '1' },
-              { v: 'Test Item' },
-            ],
+            f: [{ v: '1' }, { v: 'Test Item' }],
           },
         ],
       }
 
       // Setup the fetchEndpoint mock to return different responses
+      //@ts-ignore
       vi.spyOn(connection, 'fetchEndpoint').mockImplementation((endpoint, args, method) => {
         if (endpoint === 'queries') {
           return Promise.resolve(initialResponse)
@@ -407,23 +402,23 @@ describe('BigQueryOauthConnection', () => {
 
     it('removes job from activeJobs when query completes', async () => {
       // Reset the mockActiveJobs to a clean state
-      mockActiveJobs.clear();
-      
+      mockActiveJobs.clear()
+
       // Create direct spies
-      const setSpy = vi.fn();
-      const deleteSpy = vi.fn();
-      
+      const setSpy = vi.fn()
+      const deleteSpy = vi.fn()
+
       // Override the methods with spies
       mockActiveJobs.set = setSpy.mockImplementation((key, value) => {
-        const originalSet = Map.prototype.set;
-        return originalSet.call(mockActiveJobs, key, value);
-      });
-      
+        const originalSet = Map.prototype.set
+        return originalSet.call(mockActiveJobs, key, value)
+      })
+
       mockActiveJobs.delete = deleteSpy.mockImplementation((key) => {
-        const originalDelete = Map.prototype.delete;
-        return originalDelete.call(mockActiveJobs, key);
-      });
-      
+        const originalDelete = Map.prototype.delete
+        return originalDelete.call(mockActiveJobs, key)
+      })
+
       // Mock response with jobComplete: true
       const mockResponse = {
         jobComplete: true,
@@ -433,22 +428,20 @@ describe('BigQueryOauthConnection', () => {
           location: 'US',
         },
         schema: {
-          fields: [
-            { name: 'id', type: 'INTEGER', mode: 'REQUIRED' },
-          ],
+          fields: [{ name: 'id', type: 'INTEGER', mode: 'REQUIRED' }],
         },
         rows: [{ f: [{ v: '1' }] }],
-      };
+      }
 
       // Mock the fetchEndpoint method
-      vi.spyOn(connection, 'fetchEndpoint').mockResolvedValue(mockResponse);
+      vi.spyOn(connection, 'fetchEndpoint').mockResolvedValue(mockResponse)
 
-      const sql = 'SELECT 1';
-      await connection.query_core(sql, 'test-query-id');
+      const sql = 'SELECT 1'
+      await connection.query_core(sql, 'test-query-id')
 
       // Verify job ID was stored and then removed
-      expect(setSpy).toHaveBeenCalledWith('test-query-id', 'test-job-123');
-      expect(deleteSpy).toHaveBeenCalledWith('test-query-id');
+      expect(setSpy).toHaveBeenCalledWith('test-query-id', 'test-job-123')
+      expect(deleteSpy).toHaveBeenCalledWith('test-query-id')
     })
   })
 
@@ -463,32 +456,27 @@ describe('BigQueryOauthConnection', () => {
       const result = await connection.cancelQuery('test-query-id')
 
       // Verify fetchEndpoint was called with the correct parameters
-      expect(connection.fetchEndpoint).toHaveBeenCalledWith(
-        'jobs/test-job-123/cancel',
-        {},
-        'POST'
-      )
+      expect(connection.fetchEndpoint).toHaveBeenCalledWith('jobs/test-job-123/cancel', {}, 'POST')
 
       // Verify the result is true (successful cancellation)
       expect(result).toBe(true)
-
     })
 
-  it('returns false when no active job is found', async () => {
+    it('returns false when no active job is found', async () => {
       // Ensure fetchEndpoint is spied on first
-      const fetchSpy = vi.spyOn(connection, 'fetchEndpoint');
-      fetchSpy.mockReset();
-      
+      const fetchSpy = vi.spyOn(connection, 'fetchEndpoint')
+      fetchSpy.mockReset()
+
       // Use the actual has method instead of mocking get
-      mockActiveJobs.clear(); // Ensure the map is empty
-      
-      const result = await connection.cancelQuery('non-existent-query-id');
+      mockActiveJobs.clear() // Ensure the map is empty
+
+      const result = await connection.cancelQuery('non-existent-query-id')
 
       // Verify fetchEndpoint was not called
-      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled()
 
       // Verify the result is false (cancellation failed)
-      expect(result).toBe(false);
+      expect(result).toBe(false)
     })
 
     it('handles cancellation errors properly', async () => {
@@ -502,7 +490,6 @@ describe('BigQueryOauthConnection', () => {
 
       // Verify the result is false (cancellation failed)
       expect(result).toBe(false)
-
     })
   })
 
@@ -512,58 +499,59 @@ describe('BigQueryOauthConnection', () => {
       const pollResponses = [
         { jobComplete: false, statistics: { query: { totalBytesProcessed: '1024000' } } },
         { jobComplete: false, statistics: { query: { totalBytesProcessed: '2048000' } } },
-        { jobComplete: true, schema: { fields: [] }, rows: [] }
-      ];
-      
+        { jobComplete: true, schema: { fields: [] }, rows: [] },
+      ]
+
       // Setup fetchEndpoint mock
-      let pollCount = 0;
-      const fetchSpy = vi.spyOn(connection, 'fetchEndpoint');
+      let pollCount = 0
+      const fetchSpy = vi.spyOn(connection, 'fetchEndpoint')
       fetchSpy.mockImplementation(() => {
-        return Promise.resolve(pollResponses[pollCount++]);
-      });
+        return Promise.resolve(pollResponses[pollCount++])
+      })
 
       // Create a direct mock for sleep since spying doesn't work
-      const sleepMock = vi.fn().mockResolvedValue(undefined);
-      (connection as any).sleep = sleepMock;
-      
+      const sleepMock = vi.fn().mockResolvedValue(undefined)
+      ;(connection as any).sleep = sleepMock
+
       // Mock Date.now for consistent timing
-      const originalDateNow = Date.now;
-      let dateNowCallCount = 0;
+      const originalDateNow = Date.now
+      let dateNowCallCount = 0
       Date.now = vi.fn(() => {
         // Return increasing timestamps to simulate time passing
-        return 1000000 + (dateNowCallCount++ * 1000);
-      });
-      
+        return 1000000 + dateNowCallCount++ * 1000
+      })
+
       try {
         // Call the private method directly
-        const result = await (connection as any).pollJobCompletion('test-job-123');
+        const result = await (connection as any).pollJobCompletion('test-job-123')
 
         // Verify fetchEndpoint was called the correct number of times
-        expect(fetchSpy).toHaveBeenCalledTimes(3);
-        
+        expect(fetchSpy).toHaveBeenCalledTimes(3)
+
         // Verify the result is the completed job response
-        expect(result).toEqual(pollResponses[2]);
-        
+        expect(result).toEqual(pollResponses[2])
+
         // Verify sleep was called between polls
-        expect(sleepMock).toHaveBeenCalledTimes(2);
+        expect(sleepMock).toHaveBeenCalledTimes(2)
       } finally {
         // Restore original Date.now
-        Date.now = originalDateNow;
+        Date.now = originalDateNow
       }
     })
 
     it('throws an error when job fails', async () => {
       // Mock response with errors
-      const errorResponse = { 
-        jobComplete: true, 
-        errors: [{ message: 'Query syntax error' }] 
+      const errorResponse = {
+        jobComplete: true,
+        errors: [{ message: 'Query syntax error' }],
       }
-      
+
       vi.spyOn(connection, 'fetchEndpoint').mockResolvedValue(errorResponse)
 
       // Call the private method and expect it to throw
-      await expect((connection as any).pollJobCompletion('test-job-123'))
-        .rejects.toThrow('Query failed: Query syntax error')
+      await expect((connection as any).pollJobCompletion('test-job-123')).rejects.toThrow(
+        'Query failed: Query syntax error',
+      )
     })
   })
 })

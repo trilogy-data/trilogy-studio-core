@@ -42,10 +42,7 @@
             />
           </template>
           <template #results v-if="activeEditorData">
-
-            <ResultsView
-              :editorData="activeEditorData"
-            ></ResultsView>
+            <ResultsView :editorData="activeEditorData"></ResultsView>
           </template>
         </tabbed-layout>
       </template>
