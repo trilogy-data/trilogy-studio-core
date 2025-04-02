@@ -1,6 +1,11 @@
 // Define types for dashboard layouts
 import type { ChartConfig } from '../editors/results'
 import type { Import } from '../stores/resolver'
+export interface DimensionClick {
+  source: string
+  value: object
+}
+
 export interface LayoutItem {
   x: number
   y: number
@@ -10,6 +15,11 @@ export interface LayoutItem {
   static: boolean
 }
 
+
+export interface Filter {
+  source: string
+  value: string
+}
 export interface GridItemData {
   type: string
   content: string
@@ -19,7 +29,7 @@ export interface GridItemData {
   chartConfig?: ChartConfig
   connectionName?: string
   imports?: Import[]
-  filters?: string[]
+  filters?: Filter[]
   onRefresh?: () => void
 }
 
@@ -132,16 +142,25 @@ export class DashboardModel implements Dashboard {
     }
   }
 
+  removeItemCrossFilter(itemId: string, source: string) {
+    // remove the filter from all items in the dashboard who DOmatch the itemId
+    for (const id in this.gridItems) {
+      if (id === itemId) {
+        const gridItem = this.gridItems[id]
+        gridItem.filters = gridItem.filters || []
+        gridItem.filters = gridItem.filters.filter((f) => f.source !== source)
+      }
+    }
+  }
   updateItemCrossFilters(itemId: string, filter: string, operation: 'add' | 'remove'): void {
     // add/remove the filter to all items in the dashboard who do NOTmatch the itemId
     for (const id in this.gridItems) {
       if (id !== itemId) {
         const gridItem = this.gridItems[id]
+        gridItem.filters = gridItem.filters || []
+        gridItem.filters = gridItem.filters.filter((f) => f.source !== itemId)
         if (operation === 'add') {
-          gridItem.filters = gridItem.filters || []
-          gridItem.filters.push(filter)
-        } else {
-          gridItem.filters = gridItem.filters?.filter((f) => f !== filter) || []
+          gridItem.filters.push({ source: itemId, value: filter })
         }
       }
     }

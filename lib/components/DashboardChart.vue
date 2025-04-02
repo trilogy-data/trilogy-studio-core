@@ -1,23 +1,12 @@
 <template>
   <div class="chart-placeholder no-drag">
-    <VegaLiteChart
-      v-if="results"
-      :columns="results.headers"
-      :data="results.data"
-      :showControls="editMode"
-      :initialConfig="chartConfig"
-      :containerHeight="chartHeight"
-      :onChartConfigChange="onChartConfigChange"
-    />
+    <VegaLiteChart v-if="results" :columns="results.headers" :data="results.data" :showControls="editMode"
+      :initialConfig="chartConfig" :containerHeight="chartHeight" :onChartConfigChange="onChartConfigChange"
+      @dimension-click="handleDimensionClick" />
     <LoadingView v-else-if="loading" :startTime="startTime" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
     <div v-if="!loading" class="chart-actions">
-      <button
-        v-if="onRefresh"
-        @click="handleLocalRefresh"
-        class="chart-refresh-button"
-        title="Refresh this chart"
-      >
+      <button v-if="onRefresh" @click="handleLocalRefresh" class="chart-refresh-button" title="Refresh this chart">
         <span class="refresh-icon">⟳</span>
       </button>
     </div>
@@ -60,12 +49,16 @@ export default defineComponent({
       default: () => ({ type: 'CHART', content: '' }),
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
-
+    // Set up event listeners when the component is mounted
+    onMounted(() => {
+      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
+      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+    })
     const query = computed(() => {
       return props.getItemData(props.itemId).content
     })
@@ -83,7 +76,7 @@ export default defineComponent({
     })
 
     const filters = computed(() => {
-      return props.getItemData(props.itemId).filters || []
+      return (props.getItemData(props.itemId).filters || []).map((filter) => filter.value)
     })
 
     const connectionName = computed(() => {
@@ -95,11 +88,7 @@ export default defineComponent({
       const itemData = props.getItemData(props.itemId)
       return itemData.onRefresh || null
     })
-    // Set up event listeners when the component is mounted
-    onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
+
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
@@ -153,7 +142,7 @@ export default defineComponent({
           connectionName.value,
           queryInput,
           // Progress callback for connection issues
-          () => {},
+          () => { },
           (message) => {
             if (message.error) {
               error.value = message.text
@@ -185,6 +174,7 @@ export default defineComponent({
 
     // Handle individual chart refresh button click
     const handleLocalRefresh = () => {
+      console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
       }
@@ -199,11 +189,15 @@ export default defineComponent({
 
     // Targeted chart refresh handler
     const handleChartRefresh = (event: CustomEvent) => {
+      console.log('chartRefreshEvent')
       // Only refresh this chart if it's the target or no specific target
       if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
         console.log(`Chart ${props.itemId} received targeted refresh event`)
         executeQuery()
       }
+    }
+    const handleDimensionClick = (dimension: string) => {
+      emit('dimension-click', { source: props.itemId, value: dimension })
     }
 
 
@@ -214,12 +208,27 @@ export default defineComponent({
     })
 
     // Initial query execution
+    console.log('Initial query execution')
     executeQuery()
 
     // Watch for changes that should trigger a refresh
-    watch([query, filters, chartImports], () => {
+    // watch([query, filters, chartImports], () => {
+    //   executeQuery()
+    // })
+
+    watch([query, chartImports], () => {
       executeQuery()
     })
+    watch([filters], (newVal, oldVal) => {
+      // Check if arrays have the same content
+      const contentChanged =
+        JSON.stringify(newVal) !== JSON.stringify(oldVal);
+
+      if (contentChanged) {
+        executeQuery()
+      }
+    })
+
 
     return {
       results,
@@ -232,6 +241,7 @@ export default defineComponent({
       onRefresh,
       handleLocalRefresh,
       startTime,
+      handleDimensionClick,
     }
   },
 })

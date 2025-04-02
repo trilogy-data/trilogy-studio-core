@@ -326,19 +326,21 @@ export default class QueryExecutionService {
   private enrichTrilogyColumns(headers: any[], sqlResponse: Results): void {
     for (let i = 0; i < headers.length; i++) {
       let header = headers[i]
-      let column = sqlResponse.headers.get(header.name)
+      // sql responses should transform . into _
+      let column = sqlResponse.headers.get(header.name.replaceAll('.', '_'))
       if (column) {
         column.traits = header.traits || []
-        sqlResponse.headers.set(header.name, column)
+        column.address = header.name
+        sqlResponse.headers.set(column.name, column)
       }
 
       if (column && (header.datatype?.traits || []).includes('money')) {
         column.type = ColumnType.MONEY
 
-        sqlResponse.headers.set(header.name, column)
+        sqlResponse.headers.set(column.name, column)
       } else if (column && (header.datatype?.traits || []).includes('percent')) {
         column.type = ColumnType.PERCENT
-        sqlResponse.headers.set(header.name, column)
+        sqlResponse.headers.set(column.name, column)
       }
     }
   }

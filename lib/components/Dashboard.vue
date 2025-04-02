@@ -4,7 +4,7 @@ import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import { useDashboardStore } from '../stores/dashboardStore'
-import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES } from '../dashboards/base'
+import { type LayoutItem, type GridItemData, type CellType, CELL_TYPES, type DimensionClick } from '../dashboards/base'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
@@ -252,7 +252,20 @@ function getItemData(itemId: string): GridItemData {
       filters: [],
     }
   }
+  const itemFilters = item.filters || [];
+  let finalFilters = itemFilters;
 
+  if (dashboard.value.filter) {
+    // Check if we already have this global filter
+    const hasGlobalFilter = itemFilters.some(f =>
+      f.source === 'global' && f.value === dashboard.value?.filter
+    );
+
+    // Only create a new array if needed
+    if (!hasGlobalFilter) {
+      finalFilters = [{ value: dashboard.value.filter, source: 'global' }, ...itemFilters];
+    }
+  }
   return {
     type: item.type,
     content: item.content,
@@ -261,9 +274,7 @@ function getItemData(itemId: string): GridItemData {
     height: item.height || 0,
     imports: dashboard.value.imports,
     chartConfig: item.chartConfig,
-    filters: dashboard.value.filter
-      ? [dashboard.value.filter].concat(item.filters || [])
-      : item.filters || [],
+    filters: finalFilters,
     connectionName: dashboard.value.connection,
     onRefresh: handleRefresh, // Add refresh callback to be used by chart components
   }
@@ -339,7 +350,48 @@ function handleRefresh(itemId?: string): void {
   triggerResize()
 }
 
+function objectToSqlExpression(obj: Record<string, any>): string {
+  // Handle empty object case
+  if (Object.keys(obj).length === 0) {
+    return '';
+  }
 
+  // Convert each key-value pair to a SQL condition
+  const conditions = Object.entries(obj).map(([key, value]) => {
+    // Handle different value types
+    if (value === null) {
+      return `${key} IS NULL`;
+    } else if (typeof value === 'string') {
+      // Escape single quotes in strings
+      const escapedValue = value.replace(/'/g, "''");
+      return `${key}='${escapedValue}'`;
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      return `${key}=${value}`;
+    } else {
+      // For complex objects, arrays, etc. - convert to JSON string
+      const escapedValue = JSON.stringify(value).replace(/'/g, "''");
+      return `${key}='${escapedValue}'`;
+    }
+  });
+
+  // Join conditions with 'AND'
+  return conditions.join(' AND ');
+}
+
+function setCrossFilter(info: object): void {
+  console.log('Setting cross filter:', info.source, info.value)
+  if (!dashboard.value || !dashboard.value.id) return
+
+  // Use store to update item cross filters
+  dashboardStore.updateItemCrossFilters(dashboard.value.id, info.source, objectToSqlExpression(info.value), 'add')
+}
+
+function removeFilter(itemId: string, filterSource: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+
+  // Use store to remove item cross filters
+  dashboardStore.removeItemCrossFilter(dashboard.value.id, itemId, filterSource)
+}
 
 // Clean up timeout on component unmount or before destruction
 onBeforeUnmount(() => {
@@ -363,7 +415,9 @@ onBeforeUnmount(() => {
           :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
           drag-handle-class=".grid-item-drag-handle">
           <DashboardGridItem :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
-            :set-item-data="setItemData" @edit-content="openEditor" @update-dimensions="updateItemDimensions" />
+            @dimension-click="setCrossFilter" :set-item-data="setItemData" @edit-content="openEditor"
+            @remove-filter="removeFilter"
+            @update-dimensions="updateItemDimensions" />
         </grid-item>
       </GridLayout>
     </div>
