@@ -95,6 +95,11 @@ export default defineComponent({
       const itemData = props.getItemData(props.itemId)
       return itemData.onRefresh || null
     })
+    // Set up event listeners when the component is mounted
+    onMounted(() => {
+      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
+      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+    })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
@@ -201,11 +206,6 @@ export default defineComponent({
       }
     }
 
-    // Set up event listeners when the component is mounted
-    onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
 
     // Remove event listeners when the component is unmounted
     onUnmounted(() => {

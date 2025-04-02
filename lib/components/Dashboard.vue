@@ -25,6 +25,30 @@ const filter = ref('')
 const filterInput = ref('')
 const debounceTimeout = ref<number | null>(null)
 
+// Ensure dashboard is set as active when component mounts
+onMounted(() => {
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.setActiveDashboard(dashboard.value.id)
+
+    // Initialize the filter from the dashboard if it exists
+    if (dashboard.value.filter) {
+      filter.value = dashboard.value.filter
+      filterInput.value = dashboard.value.filter
+    }
+  }
+
+  // Set up resize observer to track window resizing
+  const resizeObserver = new ResizeObserver(() => {
+    triggerResize()
+  })
+
+  // Observe the grid container
+  const gridContainer = document.querySelector('.grid-container')
+  if (gridContainer) {
+    resizeObserver.observe(gridContainer)
+  }
+})
+
 // Mode Toggle (edit/view)
 const editMode = ref(true)
 const toggleEditMode = () => {
@@ -315,29 +339,7 @@ function handleRefresh(itemId?: string): void {
   triggerResize()
 }
 
-// Ensure dashboard is set as active when component mounts
-onMounted(() => {
-  if (dashboard.value && dashboard.value.id) {
-    dashboardStore.setActiveDashboard(dashboard.value.id)
 
-    // Initialize the filter from the dashboard if it exists
-    if (dashboard.value.filter) {
-      filter.value = dashboard.value.filter
-      filterInput.value = dashboard.value.filter
-    }
-  }
-
-  // Set up resize observer to track window resizing
-  const resizeObserver = new ResizeObserver(() => {
-    triggerResize()
-  })
-
-  // Observe the grid container
-  const gridContainer = document.querySelector('.grid-container')
-  if (gridContainer) {
-    resizeObserver.observe(gridContainer)
-  }
-})
 
 // Clean up timeout on component unmount or before destruction
 onBeforeUnmount(() => {
@@ -349,52 +351,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :selected-connection="selectedConnection"
-      @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange"
-      @import-change="handleImportChange"
-      @add-item="openAddItemModal"
-      @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode"
-      @refresh="handleRefresh"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
+      @connection-change="onConnectionChange" @filter-change="handleFilterChange" @import-change="handleImportChange"
+      @add-item="openAddItemModal" @clear-items="clearItems" @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh" />
 
     <div class="grid-container">
-      <GridLayout
-        :col-num="12"
-        :row-height="30"
-        :is-draggable="draggable"
-        :is-resizable="resizable"
-        :layout="layout"
-        :vertical-compact="true"
-        :use-css-transforms="true"
-        @layout-updated="onLayoutUpdated"
-      >
-        <grid-item
-          v-for="item in layout"
-          :key="item.i"
-          :static="item.static"
-          :x="item.x"
-          :y="item.y"
-          :w="item.w"
-          :h="item.h"
-          :i="item.i"
-          :data-i="item.i"
-          drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle"
-        >
-          <DashboardGridItem
-            :item="item"
-            :edit-mode="editMode"
-            :filter="filter"
-            :get-item-data="getItemData"
-            :set-item-data="setItemData"
-            @edit-content="openEditor"
-            @update-dimensions="updateItemDimensions"
-          />
+      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
+        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle">
+          <DashboardGridItem :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
+            :set-item-data="setItemData" @edit-content="openEditor" @update-dimensions="updateItemDimensions" />
         </grid-item>
       </GridLayout>
     </div>
@@ -424,21 +393,13 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i).connectionName || ''"
-        :imports="getItemData(editingItem.i).imports || []"
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <ChartEditor :connectionName="getItemData(editingItem.i).connectionName || ''"
+        :imports="getItemData(editingItem.i).imports || []" :content="getItemData(editingItem.i).content"
+        @save="saveContent" @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i).content" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">

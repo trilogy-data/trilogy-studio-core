@@ -4,10 +4,11 @@ export const addChartSelectionListener = (
 ): (() => void) => {
   // The selection name should match what was defined in the spec
   const selectionName = 'chartSelection'
-
+  console.log('Adding selection listener for:', selectionName)
   // The event handler function
   const handleSelectionChange = (name: string, value: any) => {
     // The selection store signal name will be selectionName + '_store'
+    console.log('Selection changed:', name, value)
     if (name === `${selectionName}_store`) {
       // Simply pass the raw selection value to the callback
       callback(value)
