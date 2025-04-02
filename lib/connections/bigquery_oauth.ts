@@ -23,6 +23,14 @@ export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
   public projectId: string
+  // Configuration for exponential backoff polling
+  private initialPollingIntervalMs: number = 1000
+  private maxPollingIntervalMs: number = 60000 // Cap at 1 minute per poll
+  private maxTotalWaitTimeMs: number = 3600000 // Maximum 1 hour total wait time
+  private backoffFactor: number = 1.5 // Multiplier for exponential growth
+  
+  // Store active query jobs for potential cancellation
+  private activeJobs: Map<string, string> = new Map(); // Maps identifier to jobId
 
   constructor(name: string, projectId: string, model?: string) {
     super(name, 'bigquery-oauth', false), model
@@ -156,7 +164,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
   async getTableSample(database: string, table: string, limit: number = 100) {
     const sql = `SELECT * FROM \`${database}.${table}\` LIMIT ${limit}`
-    return this.query(sql)
+    return this.query(sql,`sample_${database}_${table}`)
   }
 
   async getTable(database: string, table: string): Promise<Table> {
@@ -275,32 +283,159 @@ export default class BigQueryOauthConnection extends BaseConnection {
     })
     return processedRow
   }
-  async query_core(sql: string): Promise<Results> {
+  
+  // Method to wait for job completion using exponential backoff
+  private async pollJobCompletion(jobId: string, location: string = 'US'): Promise<any> {
+    let currentPollingIntervalMs = this.initialPollingIntervalMs;
+    let totalWaitTimeMs = 0;
+    let lastTimePolled = Date.now();
+    let pollCount = 0;
+    
+    while (totalWaitTimeMs < this.maxTotalWaitTimeMs) {
+      // Calculate actual time waited since last poll
+      const actualTimeWaited = Date.now() - lastTimePolled;
+      totalWaitTimeMs += actualTimeWaited;
+      
+      // Check job status
+      console.log(`Polling job ${jobId} - poll #${++pollCount}, waited ${currentPollingIntervalMs}ms`);
+      
+      // FIXED: Use the correct endpoint for getting query results
+      // Adding query parameters for timeoutMs to optimize waiting time
+      let endpoint = `queries/${jobId}?timeoutMs=10000`;
+      if (location && location !== 'US') {
+        endpoint += `&location=${location}`;
+      }
+      
+      const jobDetails = await this.fetchEndpoint(endpoint, null, 'GET');
+      
+      // Record time after polling
+      lastTimePolled = Date.now();
+      
+      if (jobDetails.jobComplete) {
+        if (jobDetails.errors && jobDetails.errors.length > 0) {
+          throw new Error(`Query failed: ${jobDetails.errors[0].message}`);
+        }
+        
+        console.log(`Job ${jobId} completed successfully after ${pollCount} polls (${totalWaitTimeMs / 1000} seconds total)`);
+        // Return the results directly
+        return jobDetails;
+      }
+      
+      // Get job progress if available
+      if (jobDetails.statistics && jobDetails.statistics.query && jobDetails.statistics.query.totalBytesProcessed) {
+        const bytesProcessed = parseInt(jobDetails.statistics.query.totalBytesProcessed);
+        const formattedBytes = bytesProcessed >= 1024 * 1024 * 1024 
+          ? `${(bytesProcessed / (1024 * 1024 * 1024)).toFixed(2)} GB`
+          : bytesProcessed >= 1024 * 1024
+            ? `${(bytesProcessed / (1024 * 1024)).toFixed(2)} MB` 
+            : `${(bytesProcessed / 1024).toFixed(2)} KB`;
+            
+        console.log(`Job ${jobId} in progress - ${formattedBytes} processed so far`);
+      }
+      
+      // Calculate next polling interval with exponential backoff
+      currentPollingIntervalMs = Math.min(
+        currentPollingIntervalMs * this.backoffFactor, 
+        this.maxPollingIntervalMs
+      );
+      
+      // Wait for the next polling interval
+      await this.sleep(currentPollingIntervalMs);
+    }
+    
+    throw new Error(`Query timed out after ${totalWaitTimeMs / 1000} seconds (${pollCount} polling attempts)`);
+  }
+  
+  // Helper method to implement sleep/delay
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  async query_core(sql: string, identifier: string |null = null): Promise<Results> {
+    const queryId = identifier || `query_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     try {
-      const result = await this.fetchEndpoint(
+      // Initial query submission
+      const initialResult = await this.fetchEndpoint(
         'queries',
         {
           query: sql,
           useLegacySql: false,
         },
         'POST',
-      )
-
-      // Map schema to headers
-      const headers = new Map(
-        result.schema.fields.map((field: any) => [field.name, this.fieldToResultColumn(field)]),
-      ) as Map<string, ResultColumn>
-
-      if (!result.rows) {
-        return new Results(headers, [])
+      );
+      
+      // Store the job ID with the query identifier for potential cancellation
+      if (initialResult.jobReference && initialResult.jobReference.jobId) {
+        this.activeJobs.set(queryId, initialResult.jobReference.jobId);
+        console.log(`Registered query ${queryId} with job ID ${initialResult.jobReference.jobId}`);
       }
+      
+      // Check if the query completed immediately
+      if (initialResult.jobComplete) {
+        // Process results as before if job completed immediately
+        const headers = new Map(
+          initialResult.schema.fields.map((field: any) => [field.name, this.fieldToResultColumn(field)]),
+        ) as Map<string, ResultColumn>;
 
-      const rows = result.rows.map((row: any) => {
-        return this.processRow(row.f, headers)
-      })
-      return new Results(headers, rows)
+        if (!initialResult.rows) {
+          return new Results(headers, []);
+        }
+
+        const rows = initialResult.rows.map((row: any) => {
+          return this.processRow(row.f, headers);
+        });
+        
+        return new Results(headers, rows);
+      } else {
+        // Query is running - need to poll for completion
+        console.log(`Query running as job ${initialResult.jobReference.jobId}`);
+        
+        // Poll until job completes
+        const completedResult = await this.pollJobCompletion(
+          initialResult.jobReference.jobId,
+          initialResult.jobReference.location
+        );
+        
+        // Process results after polling
+        const headers = new Map(
+          completedResult.schema.fields.map((field: any) => [field.name, this.fieldToResultColumn(field)]),
+        ) as Map<string, ResultColumn>;
+
+        if (!completedResult.rows) {
+          return new Results(headers, []);
+        }
+
+        const rows = completedResult.rows.map((row: any) => {
+          return this.processRow(row.f, headers);
+        });
+        
+        return new Results(headers, rows);
+      }
     } catch (error) {
-      throw error
+      console.error('Error executing query:', error);
+      throw error;
+    } finally {
+      // Remove the job from active jobs
+      this.activeJobs.delete(queryId);
+    }
+  }
+
+  // Add a new method for cancelling a running query
+  async cancelQuery(identifier: string): Promise<boolean> {
+    const jobId = this.activeJobs.get(identifier);
+    if (!jobId) {
+      console.log(`No active job found for query identifier ${identifier}`);
+      return false;
+    }
+    
+    try {
+      await this.fetchEndpoint(`jobs/${jobId}/cancel`, {}, 'POST');
+      console.log(`Successfully requested cancellation for job ${jobId}`);
+      this.activeJobs.delete(identifier);
+      return true;
+    } catch (error) {
+      console.error(`Error cancelling job ${jobId}:`, error);
+      return false;
     }
   }
 

@@ -1,6 +1,6 @@
 <template>
   <div class="results-view">
-    <loading-view v-if="editorData.loading" :cancel="editorData.cancelCallback" />
+    <loading-view v-if="editorData.loading" :startTime="editorData.startTime" :cancel="editorData.cancelCallback" />
     <results-container
       v-else-if="
         (editorData.results.headers && editorData.results.headers.size > 0) || editorData.error
@@ -9,7 +9,7 @@
       :generatedSql="editorData.generated_sql || undefined"
       :containerHeight="containerHeight"
       :type="editorData.type"
-      :error="editorData.error"
+      :error="editorData.error || undefined"
     />
     <hint-component v-else />
   </div>

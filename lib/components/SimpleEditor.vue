@@ -273,6 +273,7 @@ export default defineComponent({
 
         // Set component to loading state
         this.editor.loading = true
+        this.editor.startTime = Date.now()
 
         // Prepare query input
         const conn = connectionStore.connections[this.editor.connection]
@@ -342,7 +343,6 @@ export default defineComponent({
             this.editor.results = result.results
             this.editor.duration = result.executionTime
           }
-          this.editor.executed = true
         } else if (result.error) {
           this.editor.setError(result.error)
         }

@@ -37,22 +37,7 @@
             />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <results-container
-              v-else-if="
-                (activeEditorData.results.headers && activeEditorData.results.headers.size > 0) ||
-                activeEditorData.error
-              "
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :containerHeight="containerHeight"
-              :type="activeEditorData.type"
-              :error="activeEditorData.error || undefined"
-            />
-            <hint-component v-else />
+            <ResultsView :editorData="activeEditorData" :containerHeight="containerHeight"></ResultsView>
           </template>
         </vertical-split-layout>
       </template>
@@ -172,20 +157,17 @@ import Editor from '../components/Editor.vue'
 import DataTable from '../components/DataTable.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
-import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
 import TutorialPage from '../components/TutorialPage.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
-import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
 import Dashboard from '../components/Dashboard.vue'
-import ResultsContainer from '../components/Results.vue'
 import CommunityModels from '../components/CommunityModels.vue'
 import LLMView from '../components/LLMView.vue'
 import ConnectionView from '../components/ConnectionView.vue'
-
+import ResultsView from '../components/ResultsView.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import AxiosResolver from '../stores/resolver.ts'
@@ -220,15 +202,13 @@ export default {
     ModelView,
     UserSettings,
     UserProfile,
-    LoadingView,
-    HintComponent,
     WelcomePage,
     Dashboard,
-    ResultsContainer,
     LoadingButton,
     CommunityModels,
     LLMView,
     ConnectionView,
+    ResultsView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver

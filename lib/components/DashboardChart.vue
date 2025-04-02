@@ -9,7 +9,7 @@
       :containerHeight="chartHeight"
       :onChartConfigChange="onChartConfigChange"
     />
-    <LoadingView v-else-if="loading" text="Loading"></LoadingView>
+    <LoadingView v-else-if="loading" :startTime="startTime" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
     <div v-if="!loading" class="chart-actions">
       <button
@@ -32,6 +32,7 @@ import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
+
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -63,6 +64,7 @@ export default defineComponent({
     const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
+    const startTime = ref<number | null>(null)
 
     const query = computed(() => {
       return props.getItemData(props.itemId).content
@@ -105,8 +107,9 @@ export default defineComponent({
     }
 
     const executeQuery = async (): Promise<any> => {
-      if (!query.value) return
 
+      if (!query.value) return
+      startTime.value = Date.now()
       loading.value = true
       error.value = null
 
@@ -172,6 +175,7 @@ export default defineComponent({
         console.error('Error running query:', err)
       } finally {
         loading.value = false
+        startTime.value = null
       }
     }
 
@@ -228,6 +232,7 @@ export default defineComponent({
       onChartConfigChange,
       onRefresh,
       handleLocalRefresh,
+      startTime,
     }
   },
 })
