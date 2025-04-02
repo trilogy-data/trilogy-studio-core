@@ -107,7 +107,6 @@ export default defineComponent({
     }
 
     const executeQuery = async (): Promise<any> => {
-
       if (!query.value) return
       startTime.value = Date.now()
       loading.value = true

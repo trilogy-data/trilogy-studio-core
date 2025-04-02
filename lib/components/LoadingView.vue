@@ -9,12 +9,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
+import { defineComponent, ref, onMounted, onBeforeUnmount, type PropType } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 
-
 interface Props {
-  cancel?: (() => void) | null,
+  cancel?: (() => void) | null
   text: string
   startTime: number
 }
@@ -32,7 +31,7 @@ export default defineComponent({
       default: 'Executing',
     },
     startTime: {
-      type: Number,
+      type: Number as PropType<number | null>,
       required: false,
       default: Date.now(),
     },

@@ -275,7 +275,7 @@ export default class QueryExecutionService {
         errorMessage: null,
       })
       if (onSuccess) {
-        onSuccess( {
+        onSuccess({
           success: true,
           generatedSql,
           results: sqlResponse,

@@ -37,7 +37,10 @@
             />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
-            <ResultsView :editorData="activeEditorData" :containerHeight="containerHeight"></ResultsView>
+            <ResultsView
+              :editorData="activeEditorData"
+              :containerHeight="containerHeight"
+            ></ResultsView>
           </template>
         </vertical-split-layout>
       </template>

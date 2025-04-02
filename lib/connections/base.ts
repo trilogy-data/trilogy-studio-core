@@ -122,7 +122,7 @@ export default abstract class BaseConnection {
   abstract getColumns(database: string, table: string, schema: string | null): Promise<Column[]>
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
-  abstract query_core(sql: string, identifier:string | null): Promise<Results>
+  abstract query_core(sql: string, identifier: string | null): Promise<Results>
 
   async refreshDatabase(database: string): Promise<Database | null> {
     let db = this.databases?.find((db) => db.name === database)
@@ -160,7 +160,7 @@ export default abstract class BaseConnection {
     return db.tables.find((t) => t.name === table)
   }
 
-  async query(sql: string, identifier:string | null = null) {
+  async query(sql: string, identifier: string | null = null) {
     if (!sql) {
       throw new Error('Query is empty.')
     }
