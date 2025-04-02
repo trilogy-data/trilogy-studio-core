@@ -257,6 +257,7 @@ import ErrorMessage from './ErrorMessage.vue'
 import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
+import type { QueryResult, QueryUpdate } from '../stores/queryExecutionService'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
@@ -519,8 +520,6 @@ export default defineComponent({
       this.$emit('query-started')
       this.editorData.setError(null)
 
-      let queryDone = false
-
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
         return
@@ -539,11 +538,11 @@ export default defineComponent({
       }
 
       // Set component to loading state
+      this.editorData.startTime = Date.now()
       this.editorData.loading = true
 
       // Prepare query input
       const conn = this.connectionStore.connections[this.editorData.connection]
-
       // Get selected text or full content
       const text = getEditorText(editor, this.editorData.contents)
       if (!text) {
@@ -551,9 +550,8 @@ export default defineComponent({
         this.editorData.loading = false
         return
       }
-      // this is duplicative; we'll do it again inside the query
-      // but right now we need it because the editor ValidateQuery is different
-      // TODO: remove
+
+      // Prepare sources for validation
       const sources: ContentInput[] =
         conn && conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
@@ -563,6 +561,7 @@ export default defineComponent({
                 : '',
             }))
           : []
+
       // Prepare imports
       let imports: Import[] = []
       if (this.editorData.type !== 'sql') {
@@ -572,6 +571,7 @@ export default defineComponent({
           console.log('Validation failed. May not have proper imports.')
         }
       }
+
       // Create query input object
       const queryInput: QueryInput = {
         text,
@@ -579,23 +579,58 @@ export default defineComponent({
         editorType: this.editorData.type,
         imports,
       }
+      // Define callbacks with mounting status checks
+      const onProgress = (message: QueryUpdate) => {
+        let editor = this.editorStore.editors[this.editorName]
+        if (message.error) {
+          editor.loading = false
+          editor.setError(message.text)
+        }
+        if (message.running) {
+          editor.error = null
+          editor.loading = true
+        }
+      }
+
+      const onSuccess = (result: QueryResult) => {
+        console.log(`calling success callback`)
+        let editor = this.editorStore.editors[this.editorName]
+        if (result.success) {
+          if (result.generatedSql) {
+            editor.generated_sql = result.generatedSql
+          }
+          if (result.results) {
+            this.editorStore.setEditorResults(this.editorName, result.results)
+          }
+        } else if (result.error) {
+          editor.setError(result.error)
+        }
+        // Reset loading state
+        editor.loading = false
+        editor.cancelCallback = null
+        editor.duration = result.executionTime
+      }
+
+      const onError = (error: any) => {
+        console.error('Query execution error:', error)
+        let editor = this.editorStore.editors[this.editorName]
+        editor.setError(error.message || 'An error occurred during query execution')
+        editor.loading = false
+        editor.cancelCallback = null
+      }
 
       // Execute query
       const { resultPromise, cancellation } = await this.queryExecutionService.executeQuery(
         this.editorData.connection,
         queryInput,
-        // Progress callback for connection issues
+        // Starter callback (empty for now)
         () => {},
-        (message) => {
-          if (!queryDone && message.error) {
-            this.editorData.loading = false
-            this.editorData.setError(message.text)
-          }
-          if (!queryDone && message.running) {
-            this.editorData.error = null
-            this.editorData.loading = true
-          }
-        },
+        // Progress callback
+        onProgress,
+        // Failure callback
+        onError,
+        // Success callback
+        onSuccess,
       )
 
       // Handle cancellation callback
@@ -606,24 +641,8 @@ export default defineComponent({
         this.editorData.loading = false
         this.editorData.cancelCallback = null
       }
-      const result = await resultPromise
-      queryDone = true
-      // Update component state based on result
-      if (result.success) {
-        if (result.generatedSql) {
-          this.editorData.generated_sql = result.generatedSql
-        }
 
-        if (result.results) {
-          this.editorStore.setEditorResults(this.editorName, result.results)
-        }
-      } else if (result.error) {
-        this.editorData.setError(result.error)
-      }
-
-      // Reset loading state
-      this.editorData.loading = false
-      this.editorData.cancelCallback = null
+      await resultPromise
     },
 
     getEditor() {

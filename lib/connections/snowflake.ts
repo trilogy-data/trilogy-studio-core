@@ -189,7 +189,11 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     }
     return val
   }
-  async query_core(sql: string, isRetry: boolean = false): Promise<Results> {
+  async query_core(
+    sql: string,
+    identifier: string | null = null,
+    isRetry: boolean = false,
+  ): Promise<Results> {
     // Ensure we have a valid token before proceeding
     if (!isRetry) {
       await this.connect()
@@ -251,7 +255,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
       ) {
         // If auth expired, reconnect and retry
         await this.connect()
-        return this.query_core(sql, true)
+        return this.query_core(sql, identifier, true)
       }
       throw error
     }
@@ -448,6 +452,11 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
     }
   }
 
+  // @ts-ignore
+  cancelQuery(identifier: string): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+
   setPrivateKey(privateKey: string): void {
     this.config.privateKey = privateKey
   }
@@ -536,7 +545,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
       // Verify token with test query
       try {
-        await this.query_core('SELECT 1', true)
+        await this.query_core('SELECT 1', null, true)
         // Cache the token if successful
         SnowflakeJwtConnection.authCache[cacheKey] = this.auth
         return true
@@ -756,6 +765,11 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
     }
   }
 
+  // @ts-ignore
+  cancelQuery(identifier: string): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+
   async connect(): Promise<boolean> {
     try {
       // Check cache for valid token
@@ -775,7 +789,7 @@ export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
 
       // Verify token with test query
       try {
-        await this.query_core('SELECT 1', true)
+        await this.query_core('SELECT 1', null, true)
         // Cache the token if successful
         SnowflakeBasicAuthConnection.authCache[cacheKey] = this.auth
         return true

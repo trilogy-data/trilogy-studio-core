@@ -9,11 +9,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
+import { defineComponent, ref, onMounted, onBeforeUnmount, type PropType } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 
 interface Props {
   cancel?: (() => void) | null
+  text: string
+  startTime: number
 }
 
 export default defineComponent({
@@ -28,14 +30,18 @@ export default defineComponent({
       required: false,
       default: 'Executing',
     },
+    startTime: {
+      type: Number as PropType<number | null>,
+      required: false,
+      default: Date.now(),
+    },
   },
   setup(props: Props) {
-    const startTime = ref(Date.now())
     const elapsedTime = ref('0.0 sec')
     let interval: ReturnType<typeof setInterval> | null = null
 
     const updateElapsedTime = () => {
-      const ms = Date.now() - startTime.value
+      const ms = Date.now() - props.startTime
       const seconds = (ms / 1000).toFixed(1) // Show tenths of a second
 
       if (ms < 1000) {
@@ -57,7 +63,6 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      startTime.value = Date.now()
       interval = setInterval(updateElapsedTime, 100) // Update every 100ms
     })
 

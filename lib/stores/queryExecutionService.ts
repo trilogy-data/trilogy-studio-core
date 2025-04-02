@@ -106,6 +106,8 @@ export default class QueryExecutionService {
     queryInput: QueryInput,
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
+    onFailure?: (message: QueryUpdate) => void,
+    onSuccess?: (message: QueryResult) => void,
   ): Promise<{
     resultPromise: Promise<QueryResult>
     cancellation: QueryCancellation
@@ -130,6 +132,8 @@ export default class QueryExecutionService {
         controller,
         onStarted,
         onProgress,
+        onFailure,
+        onSuccess,
       ),
     }
   }
@@ -141,6 +145,8 @@ export default class QueryExecutionService {
     controller: AbortController,
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
+    onFailure?: (message: QueryUpdate) => void,
+    onSuccess?: (message: QueryResult) => void,
   ): Promise<QueryResult> {
     let resultSize = 0
     let columnCount = 0
@@ -172,6 +178,13 @@ export default class QueryExecutionService {
         if (onProgress) onProgress({ text: 'Reconnect Successful', running: true })
         // Return special status to indicate retry needed
       } catch (connectionError) {
+        if (onFailure) {
+          onFailure({
+            text: 'Connection failed to reconnect.',
+            error: true,
+            running: false,
+          })
+        }
         return {
           success: false,
           error: 'Connection is not active.',
@@ -214,6 +227,15 @@ export default class QueryExecutionService {
 
       // Check if SQL was generated
       if (!resolveResponse) {
+        if (onSuccess) {
+          onSuccess({
+            success: true,
+            results: new Results(new Map(), []),
+            executionTime: new Date().getTime() - startTime,
+            resultSize: 0,
+            columnCount: 0,
+          })
+        }
         return {
           success: true,
           results: new Results(new Map(), []),
@@ -252,6 +274,16 @@ export default class QueryExecutionService {
         resultColumns: columnCount,
         errorMessage: null,
       })
+      if (onSuccess) {
+        onSuccess({
+          success: true,
+          generatedSql,
+          results: sqlResponse,
+          executionTime: new Date().getTime() - startTime,
+          resultSize,
+          columnCount,
+        })
+      }
       return {
         success: true,
         generatedSql,
@@ -274,6 +306,13 @@ export default class QueryExecutionService {
         resultColumns: columnCount,
         errorMessage: errorMessage,
       })
+      if (onFailure) {
+        onFailure({
+          text: errorMessage,
+          error: true,
+          running: false,
+        })
+      }
       return {
         success: false,
         error: errorMessage,

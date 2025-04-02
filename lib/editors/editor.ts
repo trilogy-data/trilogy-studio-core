@@ -25,11 +25,11 @@ export interface EditorInterface {
   loading: boolean
   error: string | null
   status_code: number
-  executed: boolean
   duration: number | null
   generated_sql: string | null
   storage: string
   tags: EditorTag[]
+  startTime: number | null
   cancelCallback: (() => void) | null
   changed: boolean
   deleted: boolean
@@ -47,11 +47,11 @@ export default class Editor implements EditorInterface {
   loading: boolean
   error: string | null
   status_code: number
-  executed: boolean
   duration: number | null
   generated_sql: string | null
   storage: string
   tags: EditorTag[]
+  startTime: number | null
   cancelCallback: (() => void) | null
   changed: boolean
   deleted: boolean
@@ -92,13 +92,13 @@ export default class Editor implements EditorInterface {
     this.contents = contents ? contents : this.defaultContents(type)
     this.loading = false
     this.error = null
-    this.executed = false
     this.duration = null
     // this.monaco = null;
     this.status_code = 200
     this.generated_sql = null
     this.storage = storage
     this.tags = tags ? tags : []
+    this.startTime = null
     this.cancelCallback = null
     // default to change for save
     this.changed = true
@@ -146,7 +146,6 @@ export default class Editor implements EditorInterface {
       loading: false,
       error: this.error,
       status_code: this.status_code,
-      executed: this.executed,
       duration: this.duration,
       generated_sql: this.generated_sql,
       storage: this.storage,
@@ -172,7 +171,7 @@ export default class Editor implements EditorInterface {
     editor.loading = parsed.loading || false
     editor.error = parsed.error || null
     editor.status_code = parsed.status_code || 200
-    editor.executed = parsed.executed || false
+
     editor.duration = parsed.duration || null
     editor.generated_sql = parsed.generated_sql || null
 
