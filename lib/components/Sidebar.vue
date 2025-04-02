@@ -15,7 +15,10 @@
         :data-testid="`sidebar-icon-${item.screen}`"
       >
         <template v-if="!isMobile">
-          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+          <tooltip :content="item.tooltip">
+            <a @click.prevent="selectItem(item.screen)" :href="getUrl(item.screen)" target="_blank">
+              <i :class="item.icon"></i> </a
+          ></tooltip>
         </template>
         <template v-else>
           <i :class="item.icon"></i>
@@ -32,7 +35,10 @@
         :data-testid="`sidebar-icon-${item.screen}`"
       >
         <template v-if="!isMobile">
-          <tooltip :content="item.tooltip"><i :class="item.icon"></i></tooltip>
+          <tooltip :content="item.tooltip">
+            <a @click.prevent="selectItem(item.screen)" :href="getUrl(item.screen)" target="_blank">
+              <i :class="item.icon"></i> </a
+          ></tooltip>
         </template>
         <template v-else>
           <i :class="item.icon"></i>
@@ -276,6 +282,12 @@ export default defineComponent({
       console.log('Profile clicked')
       // Implement profile navigation
     },
+    getUrl(screen: string): string {
+      // Create a URL with the appropriate parameters for this screen
+      const params = new URLSearchParams(window.location.search)
+      params.set('screen', screen)
+      return `?${params.toString()}`
+    },
   },
 })
 </script>
@@ -322,6 +334,12 @@ export default defineComponent({
 .sidebar-icon span {
   font-size: 12px;
   display: block;
+}
+
+.sidebar-icon a {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .sidebar-icon i {

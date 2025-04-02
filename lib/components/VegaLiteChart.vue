@@ -18,12 +18,11 @@
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
-      <div v-if="!showingControls" ref="vegaContainer" class="vega-container"></div>
+      <div v-show="!showingControls" ref="vegaContainer" class="vega-container"></div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="control-section">
-          <label class="control-section-label">Chart Type</label>
           <div class="chart-type-icons">
             <button
               v-for="type in charts"
@@ -150,7 +149,8 @@ import {
   getDefaultSelectionConfig,
   determineEligibleChartTypes,
 } from '../dashboards/helpers'
-import { addChartSelectionListener } from '../dashboards/eventHelpers'
+
+import type { ScenegraphEvent } from 'vega'
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -164,8 +164,8 @@ export default defineComponent({
       required: true,
     },
     initialConfig: {
-      type: Object as PropType<ChartConfig>,
-      default: null,
+      type: Object as PropType<ChartConfig | undefined>,
+      default: undefined,
     },
     showControls: {
       type: Boolean,
@@ -178,25 +178,14 @@ export default defineComponent({
     },
   },
 
-  setup(props) {
+  setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
+    const lastSpec = ref<string | null>(null)
 
     // event hookups
     //@ts-ignore
     let removeEventListener: (() => void) | null = null
-    const selectedItems = ref<any[]>([])
-    const handleSelectionChange = (selected: any[]) => {
-      selectedItems.value = selected
-
-      // Call the provided callback if available
-      // if (props.onSelectionChange && typeof props.onSelectionChange === 'function') {
-      //   props.onSelectionChange(selected);
-      // }
-
-      // Default behavior: log the selection to console
-      console.log('Selection changed:', selected)
-    }
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
@@ -207,7 +196,12 @@ export default defineComponent({
 
     // Controls panel state
     const showingControls = ref(false)
-
+    // Initialize on mount
+    onMounted(() => {
+      lastSpec.value = null
+      initializeConfig()
+      renderChart()
+    })
     // Toggle controls visible/hidden
     const toggleControls = () => {
       showingControls.value = !showingControls.value
@@ -268,21 +262,57 @@ export default defineComponent({
         selectionConfig,
       )
     }
-
+    // @ts-ignore
+    const handlePointClick = (event: ScenegraphEvent, item: any) => {
+      if (item && item.datum) {
+        let xFieldRaw = internalConfig.value.xField
+        let yFieldRaw = internalConfig.value.yField
+        if (!xFieldRaw || !yFieldRaw) {
+          return
+        }
+        //map the fields to the actual column names  from the props.columns - the fields will be names with . replaced with _
+        let xField = props.columns.get(xFieldRaw)?.address
+        let yField = props.columns.get(yFieldRaw)?.address
+        if (!xField || !yField) {
+          return
+        }
+        // eligible are categorical and temporal fields
+        let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
+        eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+        if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
+          emit('dimension-click', { [xField]: item.datum[xFieldRaw] })
+        }
+        if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
+          emit('dimension-click', { [yField]: item.datum[yFieldRaw] })
+        }
+        emit('point-click', item.datum)
+      } else {
+        console.log('Clicked on background (no data point)')
+        emit('background-click')
+      }
+    }
     // Render the chart
     const renderChart = async () => {
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
       if (!spec) return
-
+      const currentSpecString = JSON.stringify(spec)
+      if (lastSpec.value === currentSpecString) {
+        console.log('Skipping render - spec unchanged')
+        return
+      }
+      lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
           actions: false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
-          removeEventListener = addChartSelectionListener(result.view, handleSelectionChange)
+          result.view.addEventListener('click', handlePointClick)
+          removeEventListener = () => {
+            result.view.removeEventListener('click', handlePointClick)
+          }
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -309,12 +339,6 @@ export default defineComponent({
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }
-
-    // Initialize on mount
-    onMounted(() => {
-      initializeConfig()
-      renderChart()
-    })
 
     onUnmounted(() => {
       // Clean up event listener if it exists

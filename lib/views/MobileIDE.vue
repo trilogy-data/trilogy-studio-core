@@ -42,33 +42,7 @@
             />
           </template>
           <template #results v-if="activeEditorData">
-            <loading-view
-              v-if="activeEditorData.loading"
-              :cancel="activeEditorData.cancelCallback"
-            />
-            <error-message v-else-if="activeEditorData.error"
-              >{{ activeEditorData.error }}
-              <template #action v-if="activeEditorData.error === 'Connection is not active.'">
-                <loading-button
-                  :action="
-                    () =>
-                      activeEditorData
-                        ? connectionStore.resetConnection(activeEditorData.connection)
-                        : null
-                  "
-                >
-                  Reconnect
-                  {{ activeEditorData.connection }}
-                </loading-button>
-              </template>
-            </error-message>
-            <results-container
-              v-else-if="Object.keys(activeEditorData.results).length > 0"
-              :results="activeEditorData.results"
-              :generatedSql="activeEditorData.generated_sql || undefined"
-              :type="activeEditorData.type"
-            />
-            <hint-component v-else />
+            <ResultsView :editorData="activeEditorData"></ResultsView>
           </template>
         </tabbed-layout>
       </template>
@@ -186,6 +160,7 @@ import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
+import ResultsView from '../components/ResultsView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
@@ -239,6 +214,7 @@ export default {
     MobileSidebarLayout,
     CommunityModels,
     ConnectionView,
+    ResultsView,
   },
   setup() {
     type ResolverType = typeof AxiosResolver

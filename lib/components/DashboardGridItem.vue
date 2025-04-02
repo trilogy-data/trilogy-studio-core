@@ -2,7 +2,12 @@
 import { ref, computed } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
-import { type GridItemData, type LayoutItem, CELL_TYPES } from '../dashboards/base'
+import {
+  type GridItemData,
+  type LayoutItem,
+  CELL_TYPES,
+  type DimensionClick,
+} from '../dashboards/base'
 
 // Props definition
 const props = defineProps<{
@@ -16,6 +21,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'edit-content': [item: LayoutItem]
   'update-dimensions': [itemId: string]
+  'dimension-click': [DimensionClick]
+  'remove-filter': [itemId: string, filterSource: string]
 }>()
 
 // Item title editing states
@@ -64,8 +71,23 @@ function openEditor(): void {
   emit('edit-content', props.item)
 }
 
+function dimensionClick(v: DimensionClick): void {
+  console.log('Dimension clicked:', v)
+  emit('dimension-click', v)
+}
+
+// Remove a filter by index
+function removeFilter(filterSource: string): void {
+  emit('remove-filter', props.item.i, filterSource)
+}
+
 // Get item data
 const itemData = computed(() => props.getItemData(props.item.i))
+
+// Compute if item has filters
+const hasFilters = computed(() => {
+  return itemData.value.filters && itemData.value.filters.length > 0
+})
 </script>
 
 <template>
@@ -119,6 +141,29 @@ const itemData = computed(() => props.getItemData(props.item.i))
       <div class="item-title">{{ itemData.name }}</div>
     </div>
 
+    <!-- Filters display (for both edit and view modes) -->
+    <div class="filters-container" v-if="hasFilters && itemData.type === CELL_TYPES.CHART">
+      <div
+        class="filter-tag"
+        v-for="(filter, index) in itemData.filters"
+        :key="`${filter.source}-${filter.value}-${index}`"
+      >
+        <span class="filter-content">
+          <span class="filter-source"
+            >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
+          >
+          <span class="filter-value">{{ filter.value }}</span>
+        </span>
+        <button
+          class="filter-remove-btn"
+          @click="removeFilter(filter.source)"
+          title="Remove filter"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+
     <!-- Render the appropriate component based on cell type -->
     <component
       :is="itemData.type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
@@ -126,6 +171,7 @@ const itemData = computed(() => props.getItemData(props.item.i))
       :setItemData="setItemData"
       :getItemData="getItemData"
       :editMode="editMode"
+      @dimension-click="dimensionClick"
     />
   </div>
 </template>
@@ -229,5 +275,69 @@ const itemData = computed(() => props.getItemData(props.item.i))
 
 .grid-item-header:hover .drag-handle-icon {
   opacity: 0.8;
+}
+
+/* Filter styles */
+.filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--sidebar-bg);
+  min-height: 24px;
+}
+
+.filter-tag {
+  display: flex;
+  align-items: center;
+  background-color: var(--sidebar-selector-bg);
+  border: 1px solid var(--border);
+  padding: 1px 6px 1px 6px;
+  font-size: calc(var(--small-font-size) - 1px);
+}
+
+.filter-content {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.filter-source {
+  font-weight: 600;
+  color: var(--special-text);
+}
+
+.filter-value {
+  color: var(--text-color);
+}
+
+.filter-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 3px;
+  border: none;
+  background: none;
+  color: var(--text-color);
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+}
+
+.filter-remove-btn:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* No filters message - optional */
+.no-filters {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: var(--small-font-size);
 }
 </style>

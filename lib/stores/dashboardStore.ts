@@ -137,6 +137,14 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    removeItemCrossFilter(dashboardId: string, itemId: string, source: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].removeItemCrossFilter(itemId, source)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
     // Update item name
     updateItemName(dashboardId: string, itemId: string, name: string) {
       if (this.dashboards[dashboardId]) {

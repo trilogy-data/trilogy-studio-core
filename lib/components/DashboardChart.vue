@@ -5,9 +5,10 @@
       :columns="results.headers"
       :data="results.data"
       :showControls="editMode"
-      :initialConfig="chartConfig"
+      :initialConfig="chartConfig || undefined"
       :containerHeight="chartHeight"
       :onChartConfigChange="onChartConfigChange"
+      @dimension-click="handleDimensionClick"
     />
     <LoadingView v-else-if="loading" :startTime="startTime" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
@@ -25,14 +26,23 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, computed, watch, ref, onMounted, onUnmounted } from 'vue'
+import {
+  defineComponent,
+  inject,
+  computed,
+  watch,
+  ref,
+  onMounted,
+  onUnmounted,
+  type PropType,
+} from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { Results, ChartConfig } from '../editors/results'
 import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
-
+import { type GridItemData } from '../dashboards/base'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -46,7 +56,7 @@ export default defineComponent({
       required: true,
     },
     getItemData: {
-      type: Function,
+      type: Function as PropType<(itemId: string) => GridItemData>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -60,12 +70,16 @@ export default defineComponent({
       default: () => ({ type: 'CHART', content: '' }),
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
-
+    // Set up event listeners when the component is mounted
+    onMounted(() => {
+      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
+      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+    })
     const query = computed(() => {
       return props.getItemData(props.itemId).content
     })
@@ -83,7 +97,7 @@ export default defineComponent({
     })
 
     const filters = computed(() => {
-      return props.getItemData(props.itemId).filters || []
+      return (props.getItemData(props.itemId).filters || []).map((filter) => filter.value)
     })
 
     const connectionName = computed(() => {
@@ -126,7 +140,12 @@ export default defineComponent({
         }
 
         // Prepare query input
-        const conn = connectionStore.connections[connectionName.value]
+        let connName = connectionName.value || ''
+        if (!connName) {
+          return
+        }
+        //@ts-ignore
+        const conn = connectionStore.connections[connName]
 
         // Create query input object using the chart's query content
         const queryInput = {
@@ -145,7 +164,8 @@ export default defineComponent({
 
         // Execute query
         const { resultPromise } = await queryExecutionService.executeQuery(
-          connectionName.value,
+          //@ts-ignore
+          connName,
           queryInput,
           // Progress callback for connection issues
           () => {},
@@ -180,6 +200,7 @@ export default defineComponent({
 
     // Handle individual chart refresh button click
     const handleLocalRefresh = () => {
+      console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
       }
@@ -194,18 +215,16 @@ export default defineComponent({
 
     // Targeted chart refresh handler
     const handleChartRefresh = (event: CustomEvent) => {
+      console.log('chartRefreshEvent')
       // Only refresh this chart if it's the target or no specific target
       if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
         console.log(`Chart ${props.itemId} received targeted refresh event`)
         executeQuery()
       }
     }
-
-    // Set up event listeners when the component is mounted
-    onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
+    const handleDimensionClick = (dimension: string) => {
+      emit('dimension-click', { source: props.itemId, value: dimension })
+    }
 
     // Remove event listeners when the component is unmounted
     onUnmounted(() => {
@@ -214,11 +233,24 @@ export default defineComponent({
     })
 
     // Initial query execution
+    console.log('Initial query execution')
     executeQuery()
 
     // Watch for changes that should trigger a refresh
-    watch([query, filters, chartImports], () => {
+    // watch([query, filters, chartImports], () => {
+    //   executeQuery()
+    // })
+
+    watch([query, chartImports], () => {
       executeQuery()
+    })
+    watch([filters], (newVal, oldVal) => {
+      // Check if arrays have the same content
+      const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
+
+      if (contentChanged) {
+        executeQuery()
+      }
     })
 
     return {
@@ -232,6 +264,7 @@ export default defineComponent({
       onRefresh,
       handleLocalRefresh,
       startTime,
+      handleDimensionClick,
     }
   },
 })
