@@ -126,12 +126,13 @@ export const useDashboardStore = defineStore('dashboards', {
     updateItemCrossFilters(
       dashboardId: string,
       itemId: string,
-      filter: string,
+      conceptMap: Record<string, string>,
+      chartMap: Record<string, string>,
       operation: 'add' | 'remove',
     ) {
       // add/remove the filter to all items in the dashboard who do not match the itemId
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].updateItemCrossFilters(itemId, filter, operation)
+        this.dashboards[dashboardId].updateItemCrossFilters(itemId, conceptMap, chartMap, operation)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
@@ -140,6 +141,15 @@ export const useDashboardStore = defineStore('dashboards', {
     removeItemCrossFilter(dashboardId: string, itemId: string, source: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].removeItemCrossFilter(itemId, source)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    
+    removeItemCrossFilterSource(dashboardId: string, itemId: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].removeItemCrossFilterSource(itemId)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

@@ -1,5 +1,5 @@
 <template>
-  <div class="chart-placeholder no-drag">
+  <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <VegaLiteChart
       v-if="results"
       :columns="results.headers"
@@ -8,10 +8,15 @@
       :initialConfig="chartConfig || undefined"
       :containerHeight="chartHeight"
       :onChartConfigChange="onChartConfigChange"
+      :chartSelection
       @dimension-click="handleDimensionClick"
+      @background-click="handleBackgroundClick"
     />
-    <LoadingView v-else-if="loading" :startTime="startTime" text="Loading"></LoadingView>
     <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <!-- Loading overlay positioned absolutely over the entire component -->
+    <div v-if="loading" class="loading-overlay">
+      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+    </div>
     <div v-if="!loading" class="chart-actions">
       <button
         v-if="onRefresh"
@@ -42,7 +47,7 @@ import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
-import { type GridItemData } from '../dashboards/base'
+import { type GridItemData, type DimensionClick } from '../dashboards/base'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -98,6 +103,10 @@ export default defineComponent({
 
     const filters = computed(() => {
       return (props.getItemData(props.itemId).filters || []).map((filter) => filter.value)
+    })
+
+    const chartSelection = computed(() => {
+      return (props.getItemData(props.itemId).chartFilters || []).map((filter) => filter.value)
     })
 
     const connectionName = computed(() => {
@@ -222,8 +231,12 @@ export default defineComponent({
         executeQuery()
       }
     }
-    const handleDimensionClick = (dimension: string) => {
-      emit('dimension-click', { source: props.itemId, value: dimension })
+    const handleDimensionClick = (dimension: DimensionClick) => {
+      emit('dimension-click', { source: props.itemId, filters: dimension.filters, chart: dimension.chart })
+    }
+
+    const handleBackgroundClick = () => {
+      emit('background-click')
     }
 
     // Remove event listeners when the component is unmounted
@@ -263,8 +276,10 @@ export default defineComponent({
       onChartConfigChange,
       onRefresh,
       handleLocalRefresh,
+      chartSelection,
       startTime,
       handleDimensionClick,
+      handleBackgroundClick
     }
   },
 })
@@ -273,13 +288,30 @@ export default defineComponent({
 <style scoped>
 .chart-placeholder {
   flex: 1;
+  height:100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 5px;
+  /* padding: 5px; */
   color: #666;
   position: relative;
+  overflow-y:scroll;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  vertical-align: middle;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+  z-index: 10;
 }
 
 .chart-query {

@@ -95,10 +95,7 @@ function handleRefresh() {
         />
       </div>
 
-      <button @click="handleRefresh" class="refresh-button" title="Refresh data">
-        <span class="refresh-icon">⟳</span>
-        Refresh
-      </button>
+
     </div>
 
     <div class="grid-actions">
@@ -106,6 +103,10 @@ function handleRefresh() {
       <button @click="$emit('clear-items')" class="clear-button" v-if="editMode">Clear All</button>
       <button @click="$emit('toggle-edit-mode')" class="toggle-mode-button">
         {{ editMode ? 'View Mode' : 'Edit Mode' }}
+      </button>
+      <button @click="handleRefresh" class="refresh-button" title="Refresh data">
+        <span class="refresh-icon">⟳</span>
+        Refresh
       </button>
     </div>
   </div>
@@ -181,6 +182,7 @@ function handleRefresh() {
   cursor: pointer;
   font-weight: 500;
   font-size: var(--button-font-size);
+  color: white !important;
 }
 
 .refresh-icon {
@@ -202,7 +204,6 @@ function handleRefresh() {
   border: 1px solid var(--border-light);
   cursor: pointer;
   font-weight: 500;
-  background-color: var(--button-bg);
   color: var(--text-color);
   font-size: var(--button-font-size);
 }

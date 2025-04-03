@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
-
+import { reactive, toRaw } from 'vue';
 const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
@@ -145,14 +145,40 @@ export const generateVegaSpec = (
   isMobile: boolean,
   containerHeight: number | undefined,
   columns: Map<string, ResultColumn>,
-  selectionConfig?: SelectionConfig,
+  chartSelection: Object[] | null
 ) => {
+  let intChart = chartSelection? chartSelection.map((x)=>toRaw(x)) : []
   let spec: any = {
-    $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     data: { values: data },
     width: 'container',
     // 28 is the chart control height
     height: isMobile ? containerHeight : containerHeight ? containerHeight - 150 : 'container',
+    params: [
+      {
+        name: "highlight",
+        select: {
+          type: "point", on: "pointerover",
+          clear: "mouseout",
+        }
+      },
+      {
+        name: "select", select: "point",
+        value: intChart
+
+      }
+    ],
+    "mark": {
+      "type": "bar",
+      "fill": "#4C78A8",
+      "stroke": "black",
+      "cursor": "pointer"
+    },
+    "config": {
+      "scale": {
+        "bandPaddingInner": 0.2
+      }
+    },
   }
 
   // Basic encoding object that we'll modify based on chart type
@@ -188,65 +214,7 @@ export const generateVegaSpec = (
     config.colorField,
   )
 
-  // Handle selection configuration if provided
-  if (selectionConfig?.enabled) {
-    // Create a selection object based on the provided configuration
-    const selectionName = 'chartSelection'
-    const selection: any = {
-      type: selectionConfig.selectionType || 'single',
-      on: selectionConfig.on || 'click',
-    }
 
-    // Add fields or encodings to the selection
-    if (selectionConfig.fields && selectionConfig.fields.length > 0) {
-      selection.fields = selectionConfig.fields
-    } else if (selectionConfig.encodings && selectionConfig.encodings.length > 0) {
-      selection.encodings = selectionConfig.encodings
-    } else {
-      // Default selection fields based on chart type
-      switch (config.chartType) {
-        case 'bar':
-        case 'barh':
-          selection.encodings = ['x']
-          break
-        case 'line':
-          if (config.colorField) {
-            selection.fields = [config.colorField]
-          } else {
-            selection.encodings = ['x']
-          }
-          break
-        case 'point':
-          selection.nearest = true
-          selection.encodings = ['x', 'y']
-          break
-        case 'area':
-          selection.encodings = ['x']
-          break
-        case 'heatmap':
-          selection.encodings = ['x', 'y']
-          break
-        case 'boxplot':
-          selection.encodings = ['x']
-          break
-      }
-    }
-
-    // Add nearest option if specified
-    if (selectionConfig.nearest !== undefined) {
-      selection.nearest = selectionConfig.nearest
-    }
-
-    // Add resolve if specified (for multi selections)
-    if (selectionConfig.resolve) {
-      selection.resolve = selectionConfig.resolve
-    }
-
-    // Add selection to the spec
-    spec.selection = {
-      [selectionName]: selection,
-    }
-  }
 
   // Build encodings for specific chart types
   switch (config.chartType) {
@@ -266,6 +234,25 @@ export const generateVegaSpec = (
             type: getVegaFieldType(config.yField || '', columns),
             title: columns.get(config.yField || '')?.description || config.yField,
             ...getFormatHint(config.yField || '', columns),
+          },
+          fillOpacity: {
+            condition: { "param": "select", "value": 1 },
+            value: 0.3
+          },
+          strokeWidth: {
+            condition: [
+              {
+                param: "select",
+                empty: false,
+                value: 2
+              },
+              {
+                param: "highlight",
+                empty: false,
+                value: 1
+              }
+            ],
+            "value": 0
           },
           tooltip: tooltipFields,
           ...encoding,
@@ -296,6 +283,10 @@ export const generateVegaSpec = (
             type: getVegaFieldType(config.xField || '', columns),
             title: columns.get(config.xField || '')?.description || config.xField,
             ...getFormatHint(config.xField || '', columns),
+          },
+          "fillOpacity": {
+            "condition": { "param": "select", "value": 1 },
+            "value": 0.3
           },
           tooltip: tooltipFields,
           ...encoding,

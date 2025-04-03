@@ -1,10 +1,13 @@
 // Define types for dashboard layouts
 import type { ChartConfig } from '../editors/results'
 import type { Import } from '../stores/resolver'
+import { objectToSqlExpression } from './conditions'
 export interface DimensionClick {
   source: string
-  value: object
+  filters: Record<string, string>,
+  chart: Record<string, string>,
 }
+
 
 export interface LayoutItem {
   x: number
@@ -19,6 +22,11 @@ export interface Filter {
   source: string
   value: string
 }
+
+export interface FilterInput {
+  source: string
+  value: Record<string, string>
+}
 export interface GridItemData {
   type: string
   content: string
@@ -28,6 +36,8 @@ export interface GridItemData {
   chartConfig?: ChartConfig
   connectionName?: string
   imports?: Import[]
+  conceptFilters?: FilterInput[]
+  chartFilters?: FilterInput[]
   filters?: Filter[]
   onRefresh?: (itemId: string) => void
 }
@@ -53,6 +63,7 @@ export const CELL_TYPES = {
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
+
 
 // Dashboard class implementation
 export class DashboardModel implements Dashboard {
@@ -141,6 +152,19 @@ export class DashboardModel implements Dashboard {
     }
   }
 
+  updateItemFilters(itemID: string) {
+    const gridItem = this.gridItems[itemID]
+    if (gridItem) {
+      gridItem.filters = gridItem.filters || []
+      gridItem.filters = gridItem.filters.filter((f) => f.source !== 'cross')
+      if (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) {
+        gridItem.filters.push({ source: 'cross', value: objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value)) })
+      }
+
+    }
+
+  }
+
   removeItemCrossFilter(itemId: string, source: string) {
     // remove the filter from all items in the dashboard who DOmatch the itemId
     for (const id in this.gridItems) {
@@ -151,16 +175,48 @@ export class DashboardModel implements Dashboard {
       }
     }
   }
-  updateItemCrossFilters(itemId: string, filter: string, operation: 'add' | 'remove'): void {
-    // add/remove the filter to all items in the dashboard who do NOTmatch the itemId
+
+  removeItemCrossFilterSource(itemId: string) {
+    // remove the filter from all items in the dashboard who DOmatch the itemId
     for (const id in this.gridItems) {
-      if (id !== itemId) {
+      if (id === itemId) {
         const gridItem = this.gridItems[id]
         gridItem.filters = gridItem.filters || []
-        gridItem.filters = gridItem.filters.filter((f) => f.source !== itemId)
+        gridItem.chartFilters = []
+      }
+      if (id !== itemId) {
+        const gridItem = this.gridItems[id]
+        gridItem.conceptFilters = gridItem.conceptFilters || []
+        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
+        this.updateItemFilters(id)
+      }
+    }
+  }
+  updateItemCrossFilters(itemId: string, conceptMap: Record<string, string>, chartMap: Record<string, string>, operation: 'add' | 'remove'): void {
+    // add/remove the filter to all items in the dashboard who do NOTmatch the itemId
+    for (const id in this.gridItems) {
+      if (id === itemId) {
+        const gridItem = this.gridItems[id]
+        gridItem.chartFilters = gridItem.chartFilters || []
+        gridItem.chartFilters = gridItem.chartFilters.filter((f) => f.source !== itemId)
         if (operation === 'add') {
-          gridItem.filters.push({ source: itemId, value: filter })
+          gridItem.chartFilters.push({ source: itemId, value: chartMap })
         }
+      }
+
+      if (id !== itemId) {
+        const gridItem = this.gridItems[id]
+        gridItem.conceptFilters = gridItem.conceptFilters || []
+        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
+        if (operation === 'add') {
+          gridItem.conceptFilters.push({ source: itemId, value: conceptMap })
+        }
+
+        console.log('setting filters')
+        console.log(gridItem.conceptFilters)
+        this.updateItemFilters(id)
+        console.log('new grid item')
+        console.log(gridItem)
       }
     }
   }
