@@ -124,7 +124,7 @@ describe('objectToSqlExpression', () => {
     it('should handle objects with undefined values', () => {
       // TypeScript may complain about undefined, but testing for robustness
       // @ts-ignore
-      expect(objectToSqlExpression({ id: undefined })).toBe("id='undefined'")
+      expect(objectToSqlExpression({ id: undefined })).toBe("id IS NULL")
     })
 
     it('should handle deeply nested objects', () => {

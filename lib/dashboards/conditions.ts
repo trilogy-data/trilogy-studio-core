@@ -69,7 +69,11 @@ function formatCondition(key: string, value: unknown): string {
     return `${key}='${escapedValue}'`
   } else if (typeof value === 'number' || typeof value === 'boolean') {
     return `${key}=${value}`
-  } else {
+  }
+  else if (value === undefined) {
+    return `${key} IS NULL`
+  }
+ else {
     // For complex objects, arrays, etc. - convert to JSON string
     const escapedValue = JSON.stringify(value).replace(/'/g, "''")
     return `${key}='${escapedValue}'`
