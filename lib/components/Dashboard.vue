@@ -352,8 +352,6 @@ function handleRefresh(itemId?: string): void {
 
 function setCrossFilter(info: DimensionClick): void {
   if (!dashboard.value || !dashboard.value.id) return
-  console.log('setting cross filter at dashboard level')
-  console.log(info)
   // Use store to update item cross filters
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
