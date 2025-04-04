@@ -146,7 +146,6 @@ import {
   generateVegaSpec,
   determineDefaultConfig,
   filteredColumns,
-  getDefaultSelectionConfig,
   determineEligibleChartTypes,
 } from '../dashboards/helpers'
 
@@ -174,6 +173,10 @@ export default defineComponent({
     containerHeight: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
+      default: () => {},
+    },
+    chartSelection: {
+      type: Array as PropType<Object[]>,
       default: () => {},
     },
   },
@@ -249,21 +252,18 @@ export default defineComponent({
     // Generate Vega-Lite spec based on current configuration
 
     const generateVegaSpecInternal = () => {
-      const selectionConfig = getDefaultSelectionConfig(
-        internalConfig.value.chartType,
-        internalConfig.value,
-      )
       return generateVegaSpec(
         props.data,
         internalConfig.value,
         isMobile,
         props.containerHeight,
         props.columns,
-        selectionConfig,
+        props.chartSelection,
       )
     }
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
+      let append = event.shiftKey
       if (item && item.datum) {
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
@@ -280,14 +280,22 @@ export default defineComponent({
         let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
         eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
         if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-          emit('dimension-click', { [xField]: item.datum[xFieldRaw] })
+          emit('dimension-click', {
+            filters: { [xField]: item.datum[xFieldRaw] },
+            chart: { [xFieldRaw]: item.datum[xFieldRaw] },
+            append,
+          })
         }
-        if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-          emit('dimension-click', { [yField]: item.datum[yFieldRaw] })
+        // todo: figure out if we want to support both?
+        else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
+          emit('dimension-click', {
+            filters: { [yField]: item.datum[yFieldRaw] },
+            chart: { [yFieldRaw]: item.datum[yFieldRaw] },
+            append,
+          })
         }
         emit('point-click', item.datum)
       } else {
-        console.log('Clicked on background (no data point)')
         emit('background-click')
       }
     }
@@ -305,7 +313,7 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          actions: false,
+          actions: true,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {

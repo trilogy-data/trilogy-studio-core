@@ -22,6 +22,7 @@ const emit = defineEmits<{
   'edit-content': [item: LayoutItem]
   'update-dimensions': [itemId: string]
   'dimension-click': [DimensionClick]
+  'background-click': [itemId: string]
   'remove-filter': [itemId: string, filterSource: string]
 }>()
 
@@ -72,8 +73,12 @@ function openEditor(): void {
 }
 
 function dimensionClick(v: DimensionClick): void {
-  console.log('Dimension clicked:', v)
   emit('dimension-click', v)
+}
+
+function backgroundClick(): void {
+  console.log('emitting bg grid')
+  emit('background-click', props.item.i)
 }
 
 // Remove a filter by index
@@ -91,7 +96,13 @@ const hasFilters = computed(() => {
 </script>
 
 <template>
-  <div class="grid-item-content">
+  <div
+    class="grid-item-content"
+    :class="{
+      'grid-item-chart-style': itemData.type === CELL_TYPES.CHART,
+      'grid-item-edit-style': editMode,
+    }"
+  >
     <div class="grid-item-header" v-if="editMode">
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
@@ -137,9 +148,9 @@ const hasFilters = computed(() => {
     </div>
 
     <!-- Non-edit mode title display -->
-    <div class="view-mode-header" v-if="!editMode">
+    <!--<div class="view-mode-header" v-if="!editMode">
       <div class="item-title">{{ itemData.name }}</div>
-    </div>
+    </div> -->
 
     <!-- Filters display (for both edit and view modes) -->
     <div class="filters-container" v-if="hasFilters && itemData.type === CELL_TYPES.CHART">
@@ -158,6 +169,7 @@ const hasFilters = computed(() => {
           class="filter-remove-btn"
           @click="removeFilter(filter.source)"
           title="Remove filter"
+          v-if="filter.source !== 'global'"
         >
           ×
         </button>
@@ -172,6 +184,7 @@ const hasFilters = computed(() => {
       :getItemData="getItemData"
       :editMode="editMode"
       @dimension-click="dimensionClick"
+      @background-click="backgroundClick"
     />
   </div>
 </template>
@@ -185,12 +198,21 @@ const hasFilters = computed(() => {
   color: var(--result-window-font);
 }
 
+.grid-item-edit-style {
+  border: 1px solid var(--border);
+}
+
+.grid-item-chart-style {
+  border: 1px solid var(--border);
+}
+
 .grid-item-header,
 .view-mode-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px;
+  padding-left: 4px;
+  /* padding: 4px; */
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border);
   height: var(--chart-control-height);
@@ -282,9 +304,9 @@ const hasFilters = computed(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 3px 6px;
+  /* padding: 3px 6px; */
   border-bottom: 1px solid var(--border);
-  background-color: var(--sidebar-bg);
+  /*background-color: var(--sidebar-bg);*/
   min-height: 24px;
 }
 
@@ -292,7 +314,7 @@ const hasFilters = computed(() => {
   display: flex;
   align-items: center;
   background-color: var(--sidebar-selector-bg);
-  border: 1px solid var(--border);
+  /* border: 1px solid var(--border); */
   padding: 1px 6px 1px 6px;
   font-size: calc(var(--small-font-size) - 1px);
 }

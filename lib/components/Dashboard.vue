@@ -14,7 +14,6 @@ import {
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
-import type { Layout } from 'vue3-grid-layout-next/dist/helpers/utils'
 import { type Import } from '../stores/resolver'
 
 // Props definition
@@ -123,7 +122,7 @@ function handleImportChange(newImports: Import[]) {
 }
 
 // Track layout changes
-const onLayoutUpdated = (newLayout: Layout) => {
+const onLayoutUpdated = (newLayout: any) => {
   if (dashboard.value && dashboard.value.id) {
     dashboardStore.updateDashboardLayout(dashboard.value.id, newLayout as LayoutItem[])
 
@@ -282,6 +281,8 @@ function getItemData(itemId: string): GridItemData {
     chartConfig: item.chartConfig,
     filters: finalFilters,
     connectionName: dashboard.value.connection,
+    chartFilters: item.chartFilters || [],
+    conceptFilters: item.conceptFilters || [],
     onRefresh: handleRefresh, // Add refresh callback to be used by chart components
   }
 }
@@ -305,13 +306,6 @@ function setItemData(itemId: string, data: any): void {
 
   if (data.width && data.height) {
     dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
-  }
-
-  if (data.filterSelected) {
-    dashboardStore.updateItemCrossFilters(dashboard.value.id, itemId, data.filterSelected, 'add')
-  }
-  if (data.filterRemoved) {
-    dashboardStore.updateItemCrossFilters(dashboard.value.id, itemId, data.filterRemoved, 'remove')
   }
 }
 
@@ -356,51 +350,29 @@ function handleRefresh(itemId?: string): void {
   triggerResize()
 }
 
-function objectToSqlExpression(obj: Record<string, any>): string {
-  // Handle empty object case
-  if (Object.keys(obj).length === 0) {
-    return ''
-  }
-
-  // Convert each key-value pair to a SQL condition
-  const conditions = Object.entries(obj).map(([key, value]) => {
-    // Handle different value types
-    if (value === null) {
-      return `${key} IS NULL`
-    } else if (typeof value === 'string') {
-      // Escape single quotes in strings
-      const escapedValue = value.replace(/'/g, "''")
-      return `${key}='${escapedValue}'`
-    } else if (typeof value === 'number' || typeof value === 'boolean') {
-      return `${key}=${value}`
-    } else {
-      // For complex objects, arrays, etc. - convert to JSON string
-      const escapedValue = JSON.stringify(value).replace(/'/g, "''")
-      return `${key}='${escapedValue}'`
-    }
-  })
-
-  // Join conditions with 'AND'
-  return conditions.join(' AND ')
-}
-
 function setCrossFilter(info: DimensionClick): void {
   if (!dashboard.value || !dashboard.value.id) return
-
   // Use store to update item cross filters
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
     info.source,
-    objectToSqlExpression(info.value),
-    'add',
+    info.filters,
+    info.chart,
+    info.append ? 'append' : 'add',
   )
 }
 
 function removeFilter(itemId: string, filterSource: string): void {
   if (!dashboard.value || !dashboard.value.id) return
-
   // Use store to remove item cross filters
   dashboardStore.removeItemCrossFilter(dashboard.value.id, itemId, filterSource)
+}
+
+function unSelect(itemId: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+  // Use store to remove item cross filters
+  console.log('unselecting item')
+  dashboardStore.removeItemCrossFilterSource(dashboard.value.id, itemId)
 }
 
 // Clean up timeout on component unmount or before destruction
@@ -459,6 +431,7 @@ onBeforeUnmount(() => {
             :set-item-data="setItemData"
             @edit-content="openEditor"
             @remove-filter="removeFilter"
+            @background-click="unSelect"
             @update-dimensions="updateItemDimensions"
           />
         </grid-item>
@@ -586,8 +559,8 @@ onBeforeUnmount(() => {
 
 .vue-grid-item:not(.vue-grid-placeholder) {
   background: var(--result-window-bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  /* border: 1px solid var(--border); */
+  /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); */
 }
 
 .vue-grid-item .resizing {
