@@ -175,10 +175,12 @@ export default defineComponent({
 
         // Handle result
         const result = await resultPromise
+        
 
         // Update component state based on result
         if (result.success && result.results) {
           results.value = result.results
+          error.value = null
         } else if (result.error) {
           error.value = result.error
         }
