@@ -4,10 +4,10 @@ import type { Import } from '../stores/resolver'
 import { objectToSqlExpression } from './conditions'
 export interface DimensionClick {
   source: string
-  filters: Record<string, string>,
-  chart: Record<string, string>,
+  filters: Record<string, string>
+  chart: Record<string, string>
+  append: boolean
 }
-
 
 export interface LayoutItem {
   x: number
@@ -63,7 +63,6 @@ export const CELL_TYPES = {
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
-
 
 // Dashboard class implementation
 export class DashboardModel implements Dashboard {
@@ -158,11 +157,12 @@ export class DashboardModel implements Dashboard {
       gridItem.filters = gridItem.filters || []
       gridItem.filters = gridItem.filters.filter((f) => f.source !== 'cross')
       if (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) {
-        gridItem.filters.push({ source: 'cross', value: objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value)) })
+        gridItem.filters.push({
+          source: 'cross',
+          value: objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value)),
+        })
       }
-
     }
-
   }
 
   removeItemCrossFilter(itemId: string, source: string) {
@@ -170,6 +170,8 @@ export class DashboardModel implements Dashboard {
     for (const id in this.gridItems) {
       if (id === itemId) {
         const gridItem = this.gridItems[id]
+        gridItem.conceptFilters = gridItem.conceptFilters || []
+        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== source)
         gridItem.filters = gridItem.filters || []
         gridItem.filters = gridItem.filters.filter((f) => f.source !== source)
       }
@@ -192,31 +194,53 @@ export class DashboardModel implements Dashboard {
       }
     }
   }
-  updateItemCrossFilters(itemId: string, conceptMap: Record<string, string>, chartMap: Record<string, string>, operation: 'add' | 'remove'): void {
-    // add/remove the filter to all items in the dashboard who do NOTmatch the itemId
+  updateItemCrossFilters(
+    itemId: string,
+    conceptMap: Record<string, string>,
+    chartMap: Record<string, string>,
+    operation: 'add' | 'append' | 'remove',
+  ): void {
+    // add/remove the filter to all items in the dashboard who do NOT match the itemId
     for (const id in this.gridItems) {
       if (id === itemId) {
         const gridItem = this.gridItems[id]
         gridItem.chartFilters = gridItem.chartFilters || []
-        gridItem.chartFilters = gridItem.chartFilters.filter((f) => f.source !== itemId)
-        if (operation === 'add') {
+        if (operation !== 'append') {
+          gridItem.chartFilters = gridItem.chartFilters.filter((f) => f.source !== itemId)
+        }
+        if (['add', 'append'].includes(operation)) {
           gridItem.chartFilters.push({ source: itemId, value: chartMap })
         }
       }
-
       if (id !== itemId) {
         const gridItem = this.gridItems[id]
         gridItem.conceptFilters = gridItem.conceptFilters || []
-        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
-        if (operation === 'add') {
+        let shouldAppend = true
+        if (operation !== 'append') {
+          gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
+        } else if (operation === 'append') {
+          // The issue is here - we need to properly compare objects
+          // Check if there's an exact match with both source and value
+          const hasExactMatch = gridItem.conceptFilters.some(
+            (f) => f.source === itemId && JSON.stringify(f.value) === JSON.stringify(conceptMap),
+          )
+          if (hasExactMatch) {
+            shouldAppend = false
+            // If there's an exact match, remove it
+            gridItem.conceptFilters = gridItem.conceptFilters.filter(
+              (f) =>
+                !(f.source === itemId && JSON.stringify(f.value) === JSON.stringify(conceptMap)),
+            )
+          } else {
+          }
+        }
+
+        // Only push if we're adding or (appending and no exact match exists)
+        if (operation === 'add' || (operation === 'append' && shouldAppend)) {
           gridItem.conceptFilters.push({ source: itemId, value: conceptMap })
         }
 
-        console.log('setting filters')
-        console.log(gridItem.conceptFilters)
         this.updateItemFilters(id)
-        console.log('new grid item')
-        console.log(gridItem)
       }
     }
   }

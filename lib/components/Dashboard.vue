@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
-import { GridLayout, GridItem} from 'vue3-grid-layout-next'
+import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import { useDashboardStore } from '../stores/dashboardStore'
 import {
-  type Layout,
   type LayoutItem,
   type GridItemData,
   type CellType,
@@ -308,13 +307,6 @@ function setItemData(itemId: string, data: any): void {
   if (data.width && data.height) {
     dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
   }
-
-  if (data.filterSelected) {
-    dashboardStore.updateItemCrossFilters(dashboard.value.id, itemId, data.filterSelected, 'add')
-  }
-  if (data.filterRemoved) {
-    dashboardStore.updateItemCrossFilters(dashboard.value.id, itemId, data.filterRemoved, 'remove')
-  }
 }
 
 // Handle connection change
@@ -368,7 +360,7 @@ function setCrossFilter(info: DimensionClick): void {
     info.source,
     info.filters,
     info.chart,
-    'add',
+    info.append ? 'append' : 'add',
   )
 }
 

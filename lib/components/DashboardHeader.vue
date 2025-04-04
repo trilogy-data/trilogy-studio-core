@@ -1,6 +1,6 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 import { useConnectionStore } from '../stores'
 import { useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
@@ -34,15 +34,21 @@ const { filterInput, onFilterInput } = useFilterDebounce(
   (value: string) => emit('filter-change', value),
 )
 
-const modelName = connectionStore.connections[props.selectedConnection].model
-let availableImports: Import[] = []
 
-if (modelName) {
-  availableImports = modelStore.models[modelName].sources.map((source) => ({
-    name: source.alias,
-    alias: source.alias,
+
+const availableImports: Ref<Import[]> = computed(() => {
+  const modelName = connectionStore.connections[props.selectedConnection].model
+  if (!modelName) {
+    return []
+  }
+  const imports = modelStore.models[modelName].sources || []
+  return imports.map((importItem) => ({
+    name: importItem.alias,
+    alias: importItem.alias,
   }))
-}
+})
+
+
 
 // Get active imports from dashboard
 const activeImports = computed(() => props.dashboard?.imports || [])
@@ -63,39 +69,22 @@ function handleRefresh() {
     <div class="dashboard-left-controls">
       <div class="connection-selector">
         <label for="connection">Connection</label>
-        <select
-          id="connection"
-          @change="$emit('connection-change', $event)"
-          :value="selectedConnection"
-        >
-          <option
-            v-for="conn in Object.values(connectionStore.connections).filter((conn) => conn.model)"
-            :key="conn.name"
-            :value="conn.name"
-          >
+        <select id="connection" @change="$emit('connection-change', $event)" :value="selectedConnection">
+          <option v-for="conn in Object.values(connectionStore.connections).filter((conn) => conn.model)"
+            :key="conn.name" :value="conn.name">
             {{ conn.name }}
           </option>
         </select>
       </div>
 
-      <DashboardImportSelector
-        :available-imports="availableImports"
-        :active-imports="activeImports"
-        @update:imports="handleImportsChange"
-      />
+      <DashboardImportSelector :available-imports="availableImports" :active-imports="activeImports"
+        @update:imports="handleImportsChange" />
 
       <div class="filter-container">
         <label for="filter">Where</label>
-        <input
-          id="filter"
-          type="text"
-          v-model="filterInput"
-          @input="onFilterInput"
-          placeholder="Enter filter criteria..."
-        />
+        <input id="filter" type="text" v-model="filterInput" @input="onFilterInput"
+          placeholder="Enter filter criteria..." />
       </div>
-
-
     </div>
 
     <div class="grid-actions">

@@ -128,7 +128,7 @@ export const useDashboardStore = defineStore('dashboards', {
       itemId: string,
       conceptMap: Record<string, string>,
       chartMap: Record<string, string>,
-      operation: 'add' | 'remove',
+      operation: 'add' | 'append' | 'remove',
     ) {
       // add/remove the filter to all items in the dashboard who do not match the itemId
       if (this.dashboards[dashboardId]) {
@@ -146,7 +146,6 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    
     removeItemCrossFilterSource(dashboardId: string, itemId: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].removeItemCrossFilterSource(itemId)

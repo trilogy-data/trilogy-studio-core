@@ -2,7 +2,12 @@
   <div class="sidebar-container">
     <div class="sidebar-icons">
       <div class="trilogy-icon">
-        <img @click="selectItem('welcome')" :src="trilogyIcon" title="Trilogy Studio (Alpha)" />
+        <img
+          class="trilogy-icon"
+          @click="selectItem('welcome')"
+          :src="trilogyIcon"
+          title="Trilogy Studio (Alpha)"
+        />
       </div>
       <div v-if="isMobile">Home</div>
       <div class="sidebar-divider" v-if="!isMobile"></div>

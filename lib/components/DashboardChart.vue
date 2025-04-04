@@ -232,7 +232,12 @@ export default defineComponent({
       }
     }
     const handleDimensionClick = (dimension: DimensionClick) => {
-      emit('dimension-click', { source: props.itemId, filters: dimension.filters, chart: dimension.chart })
+      emit('dimension-click', {
+        source: props.itemId,
+        filters: dimension.filters,
+        chart: dimension.chart,
+        append: dimension.append,
+      })
     }
 
     const handleBackgroundClick = () => {
@@ -279,7 +284,7 @@ export default defineComponent({
       chartSelection,
       startTime,
       handleDimensionClick,
-      handleBackgroundClick
+      handleBackgroundClick,
     }
   },
 })
@@ -288,7 +293,7 @@ export default defineComponent({
 <style scoped>
 .chart-placeholder {
   flex: 1;
-  height:100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -296,7 +301,7 @@ export default defineComponent({
   /* padding: 5px; */
   color: #666;
   position: relative;
-  overflow-y:scroll;
+  overflow-y: scroll;
 }
 
 .loading-overlay {

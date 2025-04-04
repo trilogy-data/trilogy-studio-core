@@ -22,7 +22,7 @@ const emit = defineEmits<{
   'edit-content': [item: LayoutItem]
   'update-dimensions': [itemId: string]
   'dimension-click': [DimensionClick]
-  'background-click': [itemId:string]
+  'background-click': [itemId: string]
   'remove-filter': [itemId: string, filterSource: string]
 }>()
 
@@ -96,7 +96,13 @@ const hasFilters = computed(() => {
 </script>
 
 <template>
-  <div class="grid-item-content" :class="{'grid-item-chart-style': itemData.type === CELL_TYPES.CHART, 'grid-item-edit-style': editMode}">
+  <div
+    class="grid-item-content"
+    :class="{
+      'grid-item-chart-style': itemData.type === CELL_TYPES.CHART,
+      'grid-item-edit-style': editMode,
+    }"
+  >
     <div class="grid-item-header" v-if="editMode">
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
@@ -163,6 +169,7 @@ const hasFilters = computed(() => {
           class="filter-remove-btn"
           @click="removeFilter(filter.source)"
           title="Remove filter"
+          v-if="filter.source !== 'global'"
         >
           ×
         </button>

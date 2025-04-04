@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
-import { reactive, toRaw } from 'vue';
+import { toRaw } from 'vue'
 const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
@@ -145,39 +145,40 @@ export const generateVegaSpec = (
   isMobile: boolean,
   containerHeight: number | undefined,
   columns: Map<string, ResultColumn>,
-  chartSelection: Object[] | null
+  chartSelection: Object[] | null,
 ) => {
-  let intChart = chartSelection? chartSelection.map((x)=>toRaw(x)) : []
+  let intChart = chartSelection ? chartSelection.map((x) => toRaw(x)) : []
   let spec: any = {
-    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+    $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
     width: 'container',
     // 28 is the chart control height
     height: isMobile ? containerHeight : containerHeight ? containerHeight - 150 : 'container',
     params: [
       {
-        name: "highlight",
+        name: 'highlight',
         select: {
-          type: "point", on: "pointerover",
-          clear: "mouseout",
-        }
+          type: 'point',
+          on: 'pointerover',
+          clear: 'mouseout',
+        },
       },
       {
-        name: "select", select: "point",
-        value: intChart
-
-      }
+        name: 'select',
+        select: 'point',
+        value: intChart,
+      },
     ],
-    "mark": {
-      "type": "bar",
-      "fill": "#4C78A8",
-      "stroke": "black",
-      "cursor": "pointer"
+    mark: {
+      type: 'bar',
+      fill: '#4C78A8',
+      stroke: 'black',
+      cursor: 'pointer',
     },
-    "config": {
-      "scale": {
-        "bandPaddingInner": 0.2
-      }
+    config: {
+      scale: {
+        bandPaddingInner: 0.2,
+      },
     },
   }
 
@@ -214,8 +215,6 @@ export const generateVegaSpec = (
     config.colorField,
   )
 
-
-
   // Build encodings for specific chart types
   switch (config.chartType) {
     case 'bar':
@@ -236,23 +235,23 @@ export const generateVegaSpec = (
             ...getFormatHint(config.yField || '', columns),
           },
           fillOpacity: {
-            condition: { "param": "select", "value": 1 },
-            value: 0.3
+            condition: { param: 'select', value: 1 },
+            value: 0.3,
           },
           strokeWidth: {
             condition: [
               {
-                param: "select",
+                param: 'select',
                 empty: false,
-                value: 2
+                value: 2,
               },
               {
-                param: "highlight",
+                param: 'highlight',
                 empty: false,
-                value: 1
-              }
+                value: 1,
+              },
             ],
-            "value": 0
+            value: 0,
           },
           tooltip: tooltipFields,
           ...encoding,
@@ -284,9 +283,9 @@ export const generateVegaSpec = (
             title: columns.get(config.xField || '')?.description || config.xField,
             ...getFormatHint(config.xField || '', columns),
           },
-          "fillOpacity": {
-            "condition": { "param": "select", "value": 1 },
-            "value": 0.3
+          fillOpacity: {
+            condition: { param: 'select', value: 1 },
+            value: 0.3,
           },
           tooltip: tooltipFields,
           ...encoding,

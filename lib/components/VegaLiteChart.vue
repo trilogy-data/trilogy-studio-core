@@ -178,7 +178,7 @@ export default defineComponent({
     chartSelection: {
       type: Array as PropType<Object[]>,
       default: () => {},
-    }
+    },
   },
 
   setup(props, { emit }) {
@@ -258,13 +258,12 @@ export default defineComponent({
         isMobile,
         props.containerHeight,
         props.columns,
-        props.chartSelection
+        props.chartSelection,
       )
     }
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
-      console.log(event)
-      console.log(item)
+      let append = event.shiftKey
       if (item && item.datum) {
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
@@ -281,10 +280,19 @@ export default defineComponent({
         let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
         eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
         if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-          emit('dimension-click', { filters: {[xField]: item.datum[xFieldRaw]}, chart: {[xFieldRaw] : item.datum[xFieldRaw]} })
+          emit('dimension-click', {
+            filters: { [xField]: item.datum[xFieldRaw] },
+            chart: { [xFieldRaw]: item.datum[xFieldRaw] },
+            append,
+          })
         }
-        if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-          emit('dimension-click', { filters: {[yField]: item.datum[yFieldRaw]}, chart: {[yFieldRaw] : item.datum[yFieldRaw]} })
+        // todo: figure out if we want to support both?
+        else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
+          emit('dimension-click', {
+            filters: { [yField]: item.datum[yFieldRaw] },
+            chart: { [yFieldRaw]: item.datum[yFieldRaw] },
+            append,
+          })
         }
         emit('point-click', item.datum)
       } else {
@@ -296,7 +304,6 @@ export default defineComponent({
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
-      console.log(spec)
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
       if (lastSpec.value === currentSpecString) {
