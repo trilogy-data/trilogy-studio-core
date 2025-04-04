@@ -1,29 +1,17 @@
 <template>
   <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
-    <VegaLiteChart
-      v-if="results"
-      :columns="results.headers"
-      :data="results.data"
-      :showControls="editMode"
-      :initialConfig="chartConfig || undefined"
-      :containerHeight="chartHeight"
-      :onChartConfigChange="onChartConfigChange"
-      :chartSelection
-      @dimension-click="handleDimensionClick"
-      @background-click="handleBackgroundClick"
-    />
-    <ErrorMessage v-else-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage v-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <VegaLiteChart v-else-if="results" :columns="results.headers" :data="results.data" :showControls="editMode"
+      :initialConfig="chartConfig || undefined" :containerHeight="chartHeight"
+      :onChartConfigChange="onChartConfigChange" :chartSelection @dimension-click="handleDimensionClick"
+      @background-click="handleBackgroundClick" />
+
     <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
     <div v-if="!loading" class="chart-actions">
-      <button
-        v-if="onRefresh"
-        @click="handleLocalRefresh"
-        class="chart-refresh-button"
-        title="Refresh this chart"
-      >
+      <button v-if="onRefresh" @click="handleLocalRefresh" class="chart-refresh-button" title="Refresh this chart">
         <span class="refresh-icon">⟳</span>
       </button>
     </div>
@@ -177,7 +165,7 @@ export default defineComponent({
           connName,
           queryInput,
           // Progress callback for connection issues
-          () => {},
+          () => { },
           (message) => {
             if (message.error) {
               error.value = message.text
