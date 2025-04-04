@@ -66,14 +66,12 @@ function formatCondition(key: string, value: unknown): string {
   } else if (typeof value === 'string') {
     // Escape single quotes in strings
     const escapedValue = value.replace(/'/g, "''")
-    return `${key}='${escapedValue}'`
+    return `${key}='''${escapedValue}'''`
   } else if (typeof value === 'number' || typeof value === 'boolean') {
     return `${key}=${value}`
-  }
-  else if (value === undefined) {
+  } else if (value === undefined) {
     return `${key} IS NULL`
-  }
- else {
+  } else {
     // For complex objects, arrays, etc. - convert to JSON string
     const escapedValue = JSON.stringify(value).replace(/'/g, "''")
     return `${key}='${escapedValue}'`

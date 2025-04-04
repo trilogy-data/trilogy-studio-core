@@ -84,6 +84,11 @@ export default abstract class BaseConnection {
   databases: Database[] | null = null
   secureFields: string[] = []
   saveCredential: boolean = false
+  // Configuration for exponential backoff polling
+  initialPollingIntervalMs: number = 1000
+  maxPollingIntervalMs: number = 60000 // Cap at 1 minute per poll
+  maxTotalWaitTimeMs: number = 3600000 // Maximum 1 hour total wait time
+  backoffFactor: number = 1.5 // Multiplier for exponential growth
 
   constructor(
     name: string,
@@ -122,7 +127,11 @@ export default abstract class BaseConnection {
   abstract getColumns(database: string, table: string, schema: string | null): Promise<Column[]>
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
-  abstract query_core(sql: string, identifier: string | null): Promise<Results>
+  abstract query_core(
+    sql: string,
+    parameters: Record<string, any> | null,
+    identifier: string | null,
+  ): Promise<Results>
 
   async refreshDatabase(database: string): Promise<Database | null> {
     let db = this.databases?.find((db) => db.name === database)
@@ -160,7 +169,11 @@ export default abstract class BaseConnection {
     return db.tables.find((t) => t.name === table)
   }
 
-  async query(sql: string, identifier: string | null = null) {
+  async query(
+    sql: string,
+    parameters: Record<string, any> | null = null,
+    identifier: string | null = null,
+  ) {
     if (!sql) {
       throw new Error('Query is empty.')
     }
@@ -171,7 +184,7 @@ export default abstract class BaseConnection {
 
     this.running = true
     try {
-      const results = await this.query_core(sql, identifier)
+      const results = await this.query_core(sql, parameters, identifier)
       this.running = false
       return results
     } catch (error) {

@@ -39,6 +39,7 @@ export interface GridItemData {
   conceptFilters?: FilterInput[]
   chartFilters?: FilterInput[]
   filters?: Filter[]
+  parameters?: Record<string, unknown>
   onRefresh?: (itemId: string) => void
 }
 
@@ -157,10 +158,12 @@ export class DashboardModel implements Dashboard {
       gridItem.filters = gridItem.filters || []
       gridItem.filters = gridItem.filters.filter((f) => f.source !== 'cross')
       if (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) {
+        let build = objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value))
         gridItem.filters.push({
           source: 'cross',
-          value: objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value)),
+          value: build,
         })
+        // gridItem.parameters = build.parameters
       }
     }
   }

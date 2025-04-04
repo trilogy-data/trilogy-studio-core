@@ -174,60 +174,81 @@ def validate_query(query: ValidateQueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
-@router.post("/generate_query")
-def generate_query(query: QueryInSchema):
+def generate_query_core(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
-    try:
-        for imp in query.imports:
-            if imp.alias:
-                imp_string = f"import {imp.name} as {imp.alias};"
-            else:
-                imp_string = f"import {imp.name};"
-            parse_text(imp_string, env)
-        _, parsed = parse_text(safe_format_query(query.query), env)
-        final = parsed[-1]
-        if isinstance(final, RawSQLStatement):
-            output = QueryOut(generated_sql=final.text, columns=[])
-            return output
-        if not isinstance(final, (SelectStatement, MultiSelectStatement)):
-            columns = []
-            generated = None
-
+    for imp in query.imports:
+        if imp.alias:
+            imp_string = f"import {imp.name} as {imp.alias};"
         else:
-            columns = [
-                QueryOutColumn(
-                    name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
-                    datatype=env.concepts[x.address].datatype,
-                    purpose=env.concepts[x.address].purpose,
-                    traits=get_traits(env.concepts[x.address]),
-                    description=env.concepts[x.address].metadata.description,
+            imp_string = f"import {imp.name};"
+        parse_text(imp_string, env)
+    _, parsed = parse_text(safe_format_query(query.query), env)
+    final = parsed[-1]
+    variables = query.parameters or {}
+    variable_prefix = ""
+    for key, variable in variables.items():
+        print(variable)
+        if isinstance(variable, str):
+            if "'''" in variable:
+                raise ValueError("cannot safely parse strings with triple quotes")
+            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
+        else:
+            variable_prefix += f"\n const {key[1:]} <- {variable};"
+    if isinstance(final, RawSQLStatement):
+        output = QueryOut(generated_sql=final.text, columns=[])
+        return output
+    if not isinstance(final, (SelectStatement, MultiSelectStatement)):
+        columns = []
+        generated = None
+
+    else:
+        columns = [
+            QueryOutColumn(
+                name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
+                datatype=env.concepts[x.address].datatype,
+                purpose=env.concepts[x.address].purpose,
+                traits=get_traits(env.concepts[x.address]),
+                description=env.concepts[x.address].metadata.description,
+            )
+            for x in final.output_components
+        ]
+        if not final.limit:
+            final.limit = STATEMENT_LIMIT
+        if query.extra_filters:
+            for filter_string in query.extra_filters:
+                base = "" + variable_prefix
+                for v in variables:
+                    # remove the prefix
+                    filter_string = filter_string.replace(v[0], v[0][1:])
+                print(f"{base}\nWHERE {filter_string} SELECT 1 as ftest;")
+                _, fparsed = parse_text(
+                    f"{base}\nWHERE {filter_string} SELECT 1 as ftest;", env
                 )
-                for x in final.output_components
-            ]
-            if not final.limit:
-                final.limit = STATEMENT_LIMIT
-            if query.extra_filters:
-                for filter_string in query.extra_filters:
-                    _, fparsed = parse_text(
-                        f"WHERE {filter_string} SELECT 1 as ftest;", env
+                filterQuery: SelectStatement = fparsed[-1]  # type: ignore
+                if not filterQuery.where_clause:
+                    continue
+                if not final.where_clause:
+                    final.where_clause = filterQuery.where_clause
+                else:
+                    final.where_clause.conditional = (
+                        final.where_clause.conditional
+                        + filterQuery.where_clause.conditional
                     )
-                    filterQuery: SelectStatement = fparsed[-1]  # type: ignore
-                    if not filterQuery.where_clause:
-                        continue
-                    if not final.where_clause:
-                        final.where_clause = filterQuery.where_clause
-                    else:
-                        final.where_clause.conditional = (
-                            final.where_clause.conditional
-                            + filterQuery.where_clause.conditional
-                        )
-            generated = dialect.generate_queries(environment=env, statements=[final])
+        generated = dialect.generate_queries(environment=env, statements=[final])
+    return generated, columns
+
+
+@router.post("/generate_query")
+def generate_query(query: QueryInSchema):
+    try:
+        generated, columns = generate_query_core(query)
     except Exception as e:
 
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     if not generated:
         return QueryOut(generated_sql=None, columns=columns)
+    dialect = get_dialect_generator(query.dialect)
     output = QueryOut(
         generated_sql=dialect.compile_statement(generated[-1]), columns=columns
     )

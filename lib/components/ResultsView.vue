@@ -1,5 +1,6 @@
 <template>
   <div class="results-view">
+    {{ editorData.name }} {{ editorData.loading }}
     <loading-view
       v-if="editorData.loading"
       :startTime="editorData.startTime"

@@ -5,7 +5,6 @@ import {
   BigQueryOauthConnection,
   DuckDBConnection,
   MotherDuckConnection,
-  SnowflakeBasicAuthConnection,
   SnowflakeJwtConnection,
 } from '../connections'
 import { LLMProvider } from '../llm'
@@ -24,21 +23,13 @@ export default abstract class AbstractStorage {
 
   abstract saveConnections(
     connections: Array<
-      | BigQueryOauthConnection
-      | DuckDBConnection
-      | MotherDuckConnection
-      | SnowflakeJwtConnection
-      | SnowflakeBasicAuthConnection
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
     >,
   ): Promise<void>
   abstract loadConnections(): Promise<
     Record<
       string,
-      | BigQueryOauthConnection
-      | DuckDBConnection
-      | MotherDuckConnection
-      | SnowflakeJwtConnection
-      | SnowflakeBasicAuthConnection
+      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
     >
   >
   abstract deleteConnection(name: string): Promise<void>

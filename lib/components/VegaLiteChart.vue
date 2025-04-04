@@ -171,6 +171,7 @@ export default defineComponent({
       default: true,
     },
     containerHeight: Number,
+    containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
       default: () => {},
@@ -183,7 +184,6 @@ export default defineComponent({
 
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
-    const isMobile = inject<boolean>('isMobile', false)
     const lastSpec = ref<string | null>(null)
 
     // event hookups
@@ -252,14 +252,7 @@ export default defineComponent({
     // Generate Vega-Lite spec based on current configuration
 
     const generateVegaSpecInternal = () => {
-      return generateVegaSpec(
-        props.data,
-        internalConfig.value,
-        isMobile,
-        props.containerHeight,
-        props.columns,
-        props.chartSelection,
-      )
+      return generateVegaSpec(props.data, internalConfig.value, props.columns, props.chartSelection)
     }
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
@@ -300,13 +293,13 @@ export default defineComponent({
       }
     }
     // Render the chart
-    const renderChart = async () => {
+    const renderChart = async (force: boolean = false) => {
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
-      if (lastSpec.value === currentSpecString) {
+      if (lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
       }
@@ -357,8 +350,15 @@ export default defineComponent({
     })
 
     // Watch for changes in data, columns or config
-    watch(() => props.containerHeight, renderChart)
-    watch(() => props.data, renderChart, { deep: true })
+    watch(
+      () => [props.containerHeight, props.containerWidth],
+      () => renderChart(true),
+    )
+    watch(
+      () => props.data,
+      () => renderChart(true),
+      { deep: true },
+    )
     watch(
       () => props.columns,
       () => {

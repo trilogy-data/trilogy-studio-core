@@ -100,6 +100,7 @@ export default defineComponent({
 .loading-container {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
   padding-top: 40px;
   padding: 2rem;

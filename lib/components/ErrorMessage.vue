@@ -1,6 +1,8 @@
 <template>
   <div class="error-message" ref="errorMessage">
-    <span class="error-text"><span class="error-icon">⚠️</span><slot></slot></span>
+    <span class="error-text" data-testid="error-text"
+      ><span class="error-icon">⚠️</span><slot></slot
+    ></span>
     <div class="error-action">
       <slot name="action"></slot>
     </div>

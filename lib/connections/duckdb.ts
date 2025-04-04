@@ -143,8 +143,42 @@ export default class DuckDBConnection extends BaseConnection {
     return processedRow
   }
 
-  async query_core(sql: string): Promise<Results> {
-    const result = await this.connection.query(sql)
+  async query_core(sql: string, parameters: Record<string, any> | null = null): Promise<Results> {
+    let result
+    if (parameters) {
+      let params = []
+      // duckdb uses ? for parameter placehodlers
+      // for each name, value pair in the parameters object, in the right order,
+      // replace one instance of the variable name with ? and inject a value into our params list
+      // for example select :test, :test2 where :test = 1 would need to interleave [test.value, test2.value, test.value]
+
+      // Create a regex to find all parameter placeholders in the format :paramName
+      const paramRegex = /(:[\w]+)/g
+      let modifiedSql = sql
+
+      // Find all parameter placeholders in the SQL query
+      const matches = Array.from(sql.matchAll(paramRegex))
+
+      // For each match, replace the parameter with ? and add its value to the params array
+      for (const match of matches) {
+        const paramName = match[1] // Extract the parameter name without the colon
+        if (paramName in parameters) {
+          // Replace only the first occurrence of the parameter with ?
+          modifiedSql = modifiedSql.replace(`:${paramName}`, '?')
+          // Add the parameter value to the params array
+          params.push(parameters[paramName])
+        }
+      }
+
+      let prepared = await this.connection.prepare(modifiedSql)
+      console.log(Object.values(parameters))
+      console.log(modifiedSql)
+      result = await prepared.query(...params)
+      await prepared.close()
+    } else {
+      result = await this.connection.query(sql)
+    }
+
     const schema = result.schema.fields
     const headers = this.processSchema(schema)
     // Map data rows

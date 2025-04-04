@@ -278,7 +278,7 @@ describe('BigQueryOauthConnection', () => {
       vi.spyOn(connection, 'fetchEndpoint').mockResolvedValue(mockResponse)
 
       const sql = 'SELECT * FROM `test_dataset.test_table` LIMIT 1'
-      const result = await connection.query_core(sql, 'test-query-id')
+      const result = await connection.query_core(sql, {}, 'test-query-id')
 
       // Verify fetchEndpoint was called correctly
       expect(connection.fetchEndpoint).toHaveBeenCalledWith(
@@ -347,7 +347,7 @@ describe('BigQueryOauthConnection', () => {
       const pollSpy = vi.spyOn(connection as any, 'pollJobCompletion')
 
       const sql = 'SELECT * FROM `test_dataset.test_table` LIMIT 1'
-      const result = await connection.query_core(sql, 'test-query-id')
+      const result = await connection.query_core(sql, {}, 'test-query-id')
 
       // Verify pollJobCompletion was called with the correct job ID
       expect(pollSpy).toHaveBeenCalledWith('test-job-456', 'US')
@@ -437,7 +437,7 @@ describe('BigQueryOauthConnection', () => {
       vi.spyOn(connection, 'fetchEndpoint').mockResolvedValue(mockResponse)
 
       const sql = 'SELECT 1'
-      await connection.query_core(sql, 'test-query-id')
+      await connection.query_core(sql, {}, 'test-query-id')
 
       // Verify job ID was stored and then removed
       expect(setSpy).toHaveBeenCalledWith('test-query-id', 'test-job-123')

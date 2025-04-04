@@ -23,11 +23,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
   public projectId: string
-  // Configuration for exponential backoff polling
-  private initialPollingIntervalMs: number = 1000
-  private maxPollingIntervalMs: number = 60000 // Cap at 1 minute per poll
-  private maxTotalWaitTimeMs: number = 3600000 // Maximum 1 hour total wait time
-  private backoffFactor: number = 1.5 // Multiplier for exponential growth
 
   // Store active query jobs for potential cancellation
   private activeJobs: Map<string, string> = new Map() // Maps identifier to jobId
@@ -164,7 +159,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
   async getTableSample(database: string, table: string, limit: number = 100) {
     const sql = `SELECT * FROM \`${database}.${table}\` LIMIT ${limit}`
-    return this.query(sql, `sample_${database}_${table}`)
+    return this.query(sql, {}, `sample_${database}_${table}`)
   }
 
   async getTable(database: string, table: string): Promise<Table> {
@@ -362,7 +357,13 @@ export default class BigQueryOauthConnection extends BaseConnection {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
-  async query_core(sql: string, identifier: string | null = null): Promise<Results> {
+  async query_core(
+    sql: string,
+    parameters: Record<string, any> | null = null,
+    identifier: string | null = null,
+  ): Promise<Results> {
+    //@ts-ignore
+    let _ = parameters
     const queryId =
       identifier || `query_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
     try {
