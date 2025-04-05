@@ -13,7 +13,7 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should handle multiple key-value pairs', () => {
-      expect(objectToSqlExpression({ id: 1, name: 'test' })).toBe("id=1 AND name='test'")
+      expect(objectToSqlExpression({ id: 1, name: 'test' })).toBe("id=1 AND name='''test'''")
     })
 
     it('should handle null values', () => {
@@ -21,7 +21,7 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should handle string values', () => {
-      expect(objectToSqlExpression({ name: 'John' })).toBe("name='John'")
+      expect(objectToSqlExpression({ name: 'John' })).toBe("name='''John'''")
     })
 
     it('should handle numeric values', () => {
@@ -35,7 +35,7 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should escape single quotes in string values', () => {
-      expect(objectToSqlExpression({ name: "O'Connor" })).toBe("name='O''Connor'")
+      expect(objectToSqlExpression({ name: "O'Connor" })).toBe("name='''O''Connor'''")
     })
 
     it('should handle complex objects by converting to JSON strings', () => {
@@ -57,7 +57,7 @@ describe('objectToSqlExpression', () => {
         metadata: null,
       }
       expect(objectToSqlExpression(mixedObj)).toBe(
-        "id=1 AND name='Test' AND active=true AND tags='[1,2,3]' AND metadata IS NULL",
+        "id=1 AND name='''Test''' AND active=true AND tags='[1,2,3]' AND metadata IS NULL",
       )
     })
   })
@@ -77,7 +77,7 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should handle multiple objects with different keys', () => {
-      expect(objectToSqlExpression([{ id: 1 }, { name: 'test' }])).toBe("id=1 AND name='test'")
+      expect(objectToSqlExpression([{ id: 1 }, { name: 'test' }])).toBe("id=1 AND name='''test'''")
     })
 
     it('should group multiple values for the same key with OR in parentheses', () => {
@@ -89,7 +89,7 @@ describe('objectToSqlExpression', () => {
         { id: 1, type: 'user' },
         { id: 2, status: 'active' },
       ])
-      expect(result).toBe("(id=1 OR id=2) AND type='user' AND status='active'")
+      expect(result).toBe("(id=1 OR id=2) AND type='''user''' AND status='''active'''")
     })
 
     it('should handle complex mixed case with various data types', () => {
@@ -100,7 +100,7 @@ describe('objectToSqlExpression', () => {
       ])
 
       expect(result).toBe(
-        "(id=1 OR id=2) AND (name='John' OR name='O''Connor') AND active=true AND tags='[1,2]' AND status='pending' AND metadata IS NULL",
+        "(id=1 OR id=2) AND (name='''John''' OR name='''O''Connor''') AND active=true AND tags='[1,2]' AND status='''pending''' AND metadata IS NULL",
       )
     })
   })
@@ -108,23 +108,25 @@ describe('objectToSqlExpression', () => {
   // Edge cases and special scenarios
   describe('edge cases', () => {
     it('should handle objects with empty string values', () => {
-      expect(objectToSqlExpression({ name: '' })).toBe("name=''")
+      expect(objectToSqlExpression({ name: '' })).toBe("name=''''''")
     })
 
     it('should handle objects with special characters in string values', () => {
       expect(objectToSqlExpression({ query: 'SELECT * FROM users' })).toBe(
-        "query='SELECT * FROM users'",
+        "query='''SELECT * FROM users'''",
       )
     })
 
     it('should handle objects with string values containing JSON', () => {
-      expect(objectToSqlExpression({ data: '{"name":"John"}' })).toBe('data=\'{"name":"John"}\'')
+      expect(objectToSqlExpression({ data: '{"name":"John"}' })).toBe(
+        "data='''{\"name\":\"John\"}'''",
+      )
     })
 
     it('should handle objects with undefined values', () => {
       // TypeScript may complain about undefined, but testing for robustness
       // @ts-ignore
-      expect(objectToSqlExpression({ id: undefined })).toBe("id IS NULL")
+      expect(objectToSqlExpression({ id: undefined })).toBe('id IS NULL')
     })
 
     it('should handle deeply nested objects', () => {

@@ -46,9 +46,11 @@ test('test', async ({ page }) => {
   )
   await page.getByTestId('editor').click()
   await page.waitForTimeout(500)
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')
+  // console.log(process.platform ==='darwin' ? 'Meta+A' : 'Control+A')
+  // await page.keyboard.press('ControlOrMeta+a');
+  await page.getByTestId('editor').click({ clickCount: 3 });
+  // await page.keyboard.press('Control+A')
   // 3. Delete the selected content
-  await page.waitForTimeout(500)
   await page.keyboard.press('Delete')
   // 4. Type or paste new content
   const newContent = `import lineitem as lineitem;

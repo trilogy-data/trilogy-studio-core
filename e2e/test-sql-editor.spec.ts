@@ -34,6 +34,23 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
   await page.getByTestId('editor-run-button').click()
   await expect(page.getByTestId('query-results-length')).toContainText('1')
+
+  // check for errors
+  if (isMobile) {
+    await page.getByTestId('editor-tab').click()
+  }
+  await page.getByTestId('editor').click()
+  const newContent = `import lineitem as lineitem;
+SELECT
+    sum(lineitem.extended_price)->sales,
+    lineitem.supplier.nation.name,
+order by
+    sales desc;`
+  await page.keyboard.type(newContent)
+  await page.getByTestId('editor-run-button').click()
+  await expect(page.getByTestId('error-text')).toContainText(
+    'Parser Error: syntax error at or near "lineitem" LINE 1: SELECT 1;import lineitem as lineitem; ^',
+  )
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }

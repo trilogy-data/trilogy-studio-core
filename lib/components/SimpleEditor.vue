@@ -58,6 +58,7 @@ import { EditorModel } from '../main'
 import { Results } from '../editors/results'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
+import { type QueryUpdate } from '../stores/queryExecutionService'
 import type { Import } from '../stores/resolver'
 import SymbolsPane, { type CompletionItem } from './SymbolsPane.vue'
 
@@ -300,11 +301,11 @@ export default defineComponent({
           queryInput,
           // Progress callback for connection issues
           () => {},
-          (message: { error?: boolean; text?: string; running?: boolean }) => {
+          (message: QueryUpdate) => {
             if (!queryDone && message.error) {
               this.editor.loading = false
-              if (message.text) {
-                this.editor.setError(message.text)
+              if (message.message) {
+                this.editor.setError(message.message)
               }
             }
             if (!queryDone && message.running) {

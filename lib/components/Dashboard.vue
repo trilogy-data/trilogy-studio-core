@@ -283,6 +283,7 @@ function getItemData(itemId: string): GridItemData {
     connectionName: dashboard.value.connection,
     chartFilters: item.chartFilters || [],
     conceptFilters: item.conceptFilters || [],
+    parameters: item.parameters || {},
     onRefresh: handleRefresh, // Add refresh callback to be used by chart components
   }
 }

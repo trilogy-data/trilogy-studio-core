@@ -18,7 +18,7 @@ export function useFilterDebounce(initialValue = '', onChange?: OnChangeFunction
 
     debounceTimeout.value = window.setTimeout(() => {
       applyFilter(filterInput.value)
-    }, 300)
+    }, 500)
   }
 
   function applyFilter(filterValue: string) {

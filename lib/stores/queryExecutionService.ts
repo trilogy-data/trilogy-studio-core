@@ -13,10 +13,11 @@ export interface QueryInput {
   editorType: string
   imports: Import[]
   extraFilters?: string[]
+  parameters?: Record<string, any>
 }
 
 export interface QueryUpdate {
-  text: string
+  message: string
   error?: boolean
   running?: boolean
 }
@@ -171,16 +172,16 @@ export default class QueryExecutionService {
       try {
         if (onProgress)
           onProgress({
-            text: 'Connection is not active... Attempting to automatically reconnect.',
+            message: 'Connection is not active... Attempting to automatically reconnect.',
             error: true,
           })
         await this.connectionStore.resetConnection(connectionId)
-        if (onProgress) onProgress({ text: 'Reconnect Successful', running: true })
+        if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
         // Return special status to indicate retry needed
       } catch (connectionError) {
         if (onFailure) {
           onFailure({
-            text: 'Connection failed to reconnect.',
+            message: 'Connection failed to reconnect.',
             error: true,
             running: false,
           })
@@ -217,6 +218,7 @@ export default class QueryExecutionService {
           sources,
           queryInput.imports,
           queryInput.extraFilters,
+          queryInput.parameters,
         ),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
@@ -251,7 +253,7 @@ export default class QueryExecutionService {
       // Second step: Execute query
       //@ts-ignore
       const sqlResponse: Results = await Promise.race([
-        conn.query(generatedSql),
+        conn.query(generatedSql, queryInput.parameters),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
             reject(new Error('Query cancelled by user')),
@@ -308,7 +310,7 @@ export default class QueryExecutionService {
       })
       if (onFailure) {
         onFailure({
-          text: errorMessage,
+          message: errorMessage,
           error: true,
           running: false,
         })

@@ -4,7 +4,6 @@ import {
   BigQueryOauthConnection,
   DuckDBConnection,
   MotherDuckConnection,
-  SnowflakeBasicAuthConnection,
   SnowflakeJwtConnection,
 } from '../connections'
 import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
@@ -123,10 +122,6 @@ export default class LocalStorage extends AbstractStorage {
         case 'snowflake':
           // @ts-ignore
           connections[connection.name] = reactive(SnowflakeJwtConnection.fromJSON(connection))
-          break
-        case 'snowflake-basic':
-          // @ts-ignore
-          connections[connection.name] = reactive(SnowflakeBasicAuthConnection.fromJSON(connection))
           break
         // Uncomment if needed:
         // case "sqlserver":

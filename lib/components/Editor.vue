@@ -519,6 +519,7 @@ export default defineComponent({
     async runQuery(): Promise<any> {
       this.$emit('query-started')
       this.editorData.setError(null)
+      const name = this.editorName
 
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
@@ -581,26 +582,27 @@ export default defineComponent({
       }
       // Define callbacks with mounting status checks
       const onProgress = (message: QueryUpdate) => {
-        let editor = this.editorStore.editors[this.editorName]
+        let editor = this.editorStore.editors[name]
         if (message.error) {
           editor.loading = false
-          editor.setError(message.text)
+          editor.setError(message.message)
         }
         if (message.running) {
           editor.error = null
           editor.loading = true
         }
       }
-
+      //callback all use cached editor name
+      // in case user has navigated away
       const onSuccess = (result: QueryResult) => {
-        console.log(`calling success callback`)
-        let editor = this.editorStore.editors[this.editorName]
+        console.log(`calling success callback for ${name}`)
+        let editor = this.editorStore.editors[name]
         if (result.success) {
           if (result.generatedSql) {
             editor.generated_sql = result.generatedSql
           }
           if (result.results) {
-            this.editorStore.setEditorResults(this.editorName, result.results)
+            this.editorStore.setEditorResults(name, result.results)
           }
         } else if (result.error) {
           editor.setError(result.error)
@@ -613,7 +615,7 @@ export default defineComponent({
 
       const onError = (error: any) => {
         console.error('Query execution error:', error)
-        let editor = this.editorStore.editors[this.editorName]
+        let editor = this.editorStore.editors[name]
         editor.setError(error.message || 'An error occurred during query execution')
         editor.loading = false
         editor.cancelCallback = null
@@ -638,8 +640,9 @@ export default defineComponent({
         if (cancellation.isActive()) {
           cancellation.cancel()
         }
-        this.editorData.loading = false
-        this.editorData.cancelCallback = null
+        let editor = this.editorStore.editors[name]
+        editor.loading = false
+        editor.cancelCallback = null
       }
 
       await resultPromise

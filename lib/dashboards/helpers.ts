@@ -142,8 +142,6 @@ export interface SelectionConfig {
 export const generateVegaSpec = (
   data: readonly Row[] | null,
   config: ChartConfig,
-  isMobile: boolean,
-  containerHeight: number | undefined,
   columns: Map<string, ResultColumn>,
   chartSelection: Object[] | null,
 ) => {
@@ -153,7 +151,8 @@ export const generateVegaSpec = (
     data: { values: data },
     width: 'container',
     // 28 is the chart control height
-    height: isMobile ? containerHeight : containerHeight ? containerHeight - 150 : 'container',
+    height: 'container',
+    // height: isMobile ? containerHeight : containerHeight ? containerHeight - 150 : 'container',
     params: [
       {
         name: 'highlight',

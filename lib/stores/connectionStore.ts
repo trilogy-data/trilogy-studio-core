@@ -5,7 +5,6 @@ import {
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
-  SnowflakeBasicAuthConnection,
 } from '../connections'
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
@@ -143,17 +142,19 @@ const useConnectionStore = defineStore('connections', {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
-      } else if (type === 'snowflake-basic') {
-        this.connections[name] = new SnowflakeBasicAuthConnection(name, {
-          account: options.account,
-          username: options.username,
-          password: options.password,
-          warehouse: options.warehouse,
-          role: options.role,
-          database: options.database,
-          schema: options.schema,
-        })
-      } else if (type === 'snowflake') {
+      }
+      // else if (type === 'snowflake-basic') {
+      //   this.connections[name] = new SnowflakeBasicAuthConnection(name, {
+      //     account: options.account,
+      //     username: options.username,
+      //     password: options.password,
+      //     warehouse: options.warehouse,
+      //     role: options.role,
+      //     database: options.database,
+      //     schema: options.schema,
+      //   })
+      // }
+      else if (type === 'snowflake') {
         this.connections[name] = new SnowflakeJwtConnection(name, {
           account: options.account,
           username: options.username,

@@ -1,17 +1,31 @@
 <template>
   <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
-    <ErrorMessage v-if="error" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart v-else-if="results" :columns="results.headers" :data="results.data" :showControls="editMode"
-      :initialConfig="chartConfig || undefined" :containerHeight="chartHeight"
-      :onChartConfigChange="onChartConfigChange" :chartSelection @dimension-click="handleDimensionClick"
-      @background-click="handleBackgroundClick" />
+    <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <VegaLiteChart
+      v-else-if="results"
+      :columns="results.headers"
+      :data="results.data"
+      :showControls="editMode"
+      :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight"
+      :container-width="chartWidth"
+      :onChartConfigChange="onChartConfigChange"
+      :chartSelection
+      @dimension-click="handleDimensionClick"
+      @background-click="handleBackgroundClick"
+    />
 
     <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
     <div v-if="!loading" class="chart-actions">
-      <button v-if="onRefresh" @click="handleLocalRefresh" class="chart-refresh-button" title="Refresh this chart">
+      <button
+        v-if="onRefresh"
+        @click="handleLocalRefresh"
+        class="chart-refresh-button"
+        title="Refresh this chart"
+      >
         <span class="refresh-icon">⟳</span>
       </button>
     </div>
@@ -78,7 +92,11 @@ export default defineComponent({
     })
 
     const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId).height || 300) - 100
+      return (props.getItemData(props.itemId).height || 300) - 75
+    })
+
+    const chartWidth = computed(() => {
+      return (props.getItemData(props.itemId).width || 300) - 100
     })
 
     const chartConfig = computed(() => {
@@ -87,6 +105,10 @@ export default defineComponent({
 
     const chartImports = computed(() => {
       return props.getItemData(props.itemId).imports || []
+    })
+
+    const chartParameters = computed(() => {
+      return props.getItemData(props.itemId).parameters || []
     })
 
     const filters = computed(() => {
@@ -151,6 +173,7 @@ export default defineComponent({
           editorType: 'trilogy',
           imports: chartImports.value,
           extraFilters: filters.value,
+          parameters: chartParameters.value,
         }
 
         // Get the query execution service from the provider
@@ -165,17 +188,16 @@ export default defineComponent({
           connName,
           queryInput,
           // Progress callback for connection issues
-          () => { },
+          () => {},
           (message) => {
             if (message.error) {
-              error.value = message.text
+              error.value = message.message
             }
           },
         )
 
         // Handle result
         const result = await resultPromise
-        
 
         // Update component state based on result
         if (result.success && result.results) {
@@ -267,6 +289,7 @@ export default defineComponent({
       error,
       query,
       chartHeight,
+      chartWidth,
       chartConfig,
       onChartConfigChange,
       onRefresh,
@@ -291,7 +314,7 @@ export default defineComponent({
   /* padding: 5px; */
   color: #666;
   position: relative;
-  overflow-y: scroll;
+  overflow-y: hidden;
 }
 
 .loading-overlay {

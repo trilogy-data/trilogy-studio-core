@@ -85,6 +85,7 @@ class QueryInSchema(BaseModel):
     dialect: Dialects
     full_model: ModelInSchema
     extra_filters: Optional[list[str]] = None
+    parameters: Optional[dict[str, str | int | float]] = None
     # chart_type: ChartType | None = None
 
 
