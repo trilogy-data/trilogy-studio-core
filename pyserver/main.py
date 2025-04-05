@@ -22,7 +22,7 @@ from trilogy.authoring import (
     RawSQLStatement,
     DEFAULT_NAMESPACE,
 )
-from trilogy.core.statements.execute import ProcessedRawSQLStatement
+from trilogy.core.statements.execute import ProcessedRawSQLStatement, ProcessedQueryPersist, ProcessedShowStatement, ProcessedQuery
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
@@ -175,7 +175,7 @@ def validate_query(query: ValidateQueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
-def generate_query_core(query: QueryInSchema)-> tuple[list, list[QueryOutColumn]]:
+def generate_query_core(query: QueryInSchema)-> tuple[ProcessedQuery | ProcessedQueryPersist | ProcessedShowStatement | ProcessedRawSQLStatement | None, list[QueryOutColumn]]:
     env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
     for imp in query.imports:
@@ -197,7 +197,7 @@ def generate_query_core(query: QueryInSchema)-> tuple[list, list[QueryOutColumn]
         else:
             variable_prefix += f"\n const {key[1:]} <- {variable};"
     if isinstance(final, RawSQLStatement):
-        return final, []
+        return ProcessedRawSQLStatement(text=final.text), []
     if not isinstance(final, (SelectStatement, MultiSelectStatement)):
         columns = []
         generated = None
@@ -236,8 +236,8 @@ def generate_query_core(query: QueryInSchema)-> tuple[list, list[QueryOutColumn]
                         + filterQuery.where_clause.conditional
                     )
         generated = dialect.generate_queries(environment=env, statements=[final])
-        if not generated:
-            return None, []
+    if not generated:
+        return None, []
     return generated[-1], columns
 
 

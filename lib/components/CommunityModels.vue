@@ -24,7 +24,7 @@
               </option>
             </select>
           </div>
-          
+
           <div class="import-status-filter">
             <label class="text-faint filter-label">Import Status</label>
             <select v-model="importStatus" class="px-3 py-2 border rounded">
@@ -49,7 +49,18 @@
         <div v-for="file in filteredFiles" :key="file.name" class="model-item">
           <div class="font-semibold flex items-center">
             <span class="imported-indicator mr-2" v-if="modelExists(file.name)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="check-icon"
+              >
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
@@ -59,7 +70,9 @@
             @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
             :data-testid="`import-${file.name}`"
           >
-            {{ creatorIsExpanded[file.name] ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import' }}
+            {{
+              creatorIsExpanded[file.name] ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import'
+            }}
           </button>
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
             <model-creator
@@ -146,15 +159,6 @@ if (!modelStore) {
   throw new Error('ModelConfigStore not found in context')
 }
 
-// Cache the imported models status to avoid excessive checks
-const importedModelsCache = computed(() => {
-  const cache: Record<string, boolean> = {}
-  files.value.forEach(file => {
-    cache[file.name] = modelExists(file.name)
-  })
-  return cache
-})
-
 const modelExists = (name: string) => {
   return name in modelStore.models
 }
@@ -173,7 +177,7 @@ const availableEngines = computed(() => {
   return Array.from(engines).sort()
 })
 
-const getDefaultConnection = (engine:string) => {
+const getDefaultConnection = (engine: string) => {
   switch (engine) {
     case 'bigquery':
       return 'new-bigquery-oauth'
@@ -188,15 +192,16 @@ const filteredFiles = computed(() => {
   return files.value.filter((file) => {
     const nameMatch = file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const engineMatch = !selectedEngine.value || file.engine === selectedEngine.value
-    
+
     // Handle the import status filter
     let importMatch = true
     if (importStatus.value !== 'all') {
       const isImported = modelExists(file.name)
-      importMatch = (importStatus.value === 'imported' && isImported) || 
-                   (importStatus.value === 'not-imported' && !isImported)
+      importMatch =
+        (importStatus.value === 'imported' && isImported) ||
+        (importStatus.value === 'not-imported' && !isImported)
     }
-    
+
     return nameMatch && engineMatch && importMatch
   })
 })

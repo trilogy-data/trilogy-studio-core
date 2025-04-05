@@ -2,8 +2,15 @@
   <div class="vega-lite-chart no-drag">
     <!-- Toggle button always visible -->
     <div class="controls-toggle" v-if="showControls">
-      <button @click="toggleControls" class="toggle-controls-btn" :class="{ active: showingControls }">
-        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
+      <button
+        @click="toggleControls"
+        class="toggle-controls-btn"
+        :class="{ active: showingControls }"
+      >
+        <i
+          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
+          class="icon"
+        ></i>
         <span>{{ showingControls ? 'View Chart' : 'Edit Chart' }}</span>
       </button>
     </div>
@@ -17,8 +24,14 @@
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="control-section">
           <div class="chart-type-icons">
-            <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
-              class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label">
+            <button
+              v-for="type in charts"
+              :key="type.value"
+              @click="updateConfig('chartType', type.value)"
+              class="chart-icon"
+              :class="{ selected: internalConfig.chartType === type.value }"
+              :title="type.label"
+            >
               <div class="icon-container">
                 <i :class="type.icon" class="icon"></i>
               </div>
@@ -29,15 +42,24 @@
         <!-- Group axes controls  -->
         <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
           <label class="control-section-label">Axes</label>
-          <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')" :key="control.id"
-            class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -45,17 +67,29 @@
         </div>
 
         <!-- Group appearance controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'appearance')">
+        <div
+          class="control-section"
+          v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
+        >
           <label class="control-section-label">Appearance</label>
-          <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')" :key="control.id"
-            class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -65,15 +99,24 @@
         <!-- Group advanced controls -->
         <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
           <label class="control-section-label">Advanced</label>
-          <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
-            class="control-group no-drag">
+          <div
+            v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+            :key="control.id"
+            class="control-group no-drag"
+          >
             <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select :id="control.id" :value="internalConfig[control.field]"
+            <select
+              :id="control.id"
+              :value="internalConfig[control.field]"
               @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag">
+              class="form-select no-drag"
+            >
               <option v-if="control.allowEmpty" value="">None</option>
-              <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                :value="column.name">
+              <option
+                v-for="column in filteredColumnsInternal(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
                 {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
               </option>
             </select>
@@ -124,11 +167,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => { },
+      default: () => {},
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => { },
+      default: () => {},
     },
   },
 
@@ -234,14 +277,14 @@ export default defineComponent({
         //   }
         // }
 
-        if (internalConfig.value.geoField && internalConfig.value.geoField ) {
+        if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoConcept = props.columns.get(internalConfig.value.geoField)?.address
           if (!geoConcept) {
             return
           }
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum.abbr },
-            chart: { 'Feature': item.datum.abbr  },
+            chart: { Feature: item.datum.abbr },
             append,
           })
         }

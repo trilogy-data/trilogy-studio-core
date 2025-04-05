@@ -108,7 +108,7 @@ export const Controls: ChartControl[] = [
     visibleFor: ['usa-map'],
     allowEmpty: true,
     columnFilter: 'categorical',
-    filterGroup: 'axes'
+    filterGroup: 'axes',
   },
   {
     id: 'latitude',

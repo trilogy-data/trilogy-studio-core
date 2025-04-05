@@ -4,7 +4,13 @@
       <div>
         <div class="form-row">
           <label for="model-name">Name</label>
-          <input type="text" v-model.trim="modelDetails.name" id="model-name" required @input="validateForm" />
+          <input
+            type="text"
+            v-model.trim="modelDetails.name"
+            id="model-name"
+            required
+            @input="validateForm"
+          />
         </div>
         <div class="form-row">
           <label for="model-import">Assign To Connection</label>
@@ -64,11 +70,12 @@
         </div>
       </div>
       <div class="button-row">
-        <loading-button 
+        <loading-button
           data-testid="model-creation-submit"
           :action="performSubmit"
           class="submit-button"
-          :disabled="!isFormValid">
+          :disabled="!isFormValid"
+        >
           Submit
         </loading-button>
         <button type="button" @click="close()">Cancel</button>
@@ -129,7 +136,7 @@ option {
 }
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject, computed } from 'vue'
+import { defineComponent, ref, inject } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import { ModelImport } from '../models'
@@ -138,7 +145,6 @@ import { EditorTag } from '../editors'
 import { ModelSource } from '../models'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
-
 
 export async function fetchModelImportBase(url: string): Promise<ModelImport> {
   const response = await fetch(url)
@@ -159,7 +165,15 @@ function purposeToTag(purpose: string): EditorTag | null {
 
 export async function fetchModelImports(
   modelImport: ModelImport,
-): Promise<{ name: string; alias: string; purpose: EditorTag | null; content: string, type?: string | undefined }[]> {
+): Promise<
+  {
+    name: string
+    alias: string
+    purpose: EditorTag | null
+    content: string
+    type?: string | undefined
+  }[]
+> {
   return Promise.all(
     modelImport.components.map(async (component) => {
       try {
@@ -171,7 +185,7 @@ export async function fetchModelImports(
         return {
           name: component.name,
           alias: component.alias,
-          purpose:  purposeToTag(component.purpose),
+          purpose: purposeToTag(component.purpose),
           content,
           type: component.type,
         }
@@ -219,10 +233,9 @@ export default defineComponent({
     // display text
     const text = props.formDefaults.importAddress ? 'Import' : 'New'
     const isPopupControl = props.formDefaults.importAddress ? false : true
-    
+
     // Form validation state
     const isFormValid = ref(false)
-
 
     // Placeholder for editor details
     const modelDetails = ref({
@@ -243,26 +256,31 @@ export default defineComponent({
 
     let connections = connectionStore.connections
 
-
     // Function to validate the form
     function validateForm() {
       if (!modelDetails.value.name || !modelDetails.value.connection) {
         isFormValid.value = false
         return
       }
-      
+
       // Check for required fields based on connection type
-      if (modelDetails.value.connection === 'new-motherduck' && !modelDetails.value.options.mdToken) {
+      if (
+        modelDetails.value.connection === 'new-motherduck' &&
+        !modelDetails.value.options.mdToken
+      ) {
         isFormValid.value = false
 
         return
       }
-      
-      if (modelDetails.value.connection === 'new-bigquery-oauth' && !modelDetails.value.options.projectId) {
+
+      if (
+        modelDetails.value.connection === 'new-bigquery-oauth' &&
+        !modelDetails.value.options.projectId
+      ) {
         isFormValid.value = false
         return
       }
-      
+
       // If we made it here, the form is valid
       isFormValid.value = true
     }
@@ -294,13 +312,12 @@ export default defineComponent({
         connectionName = `${modelDetails.value.name}-connection`
         if (!connections[connectionName]) {
           connectionStore.newConnection(connectionName, typeName, {
-          mdToken: modelDetails.value.options.mdToken,
-          projectId: modelDetails.value.options.projectId,
-          username: modelDetails.value.options.username,
-          password: modelDetails.value.options.password,
-        })
+            mdToken: modelDetails.value.options.mdToken,
+            projectId: modelDetails.value.options.projectId,
+            username: modelDetails.value.options.username,
+            password: modelDetails.value.options.password,
+          })
         }
-
       }
 
       connectionStore.connections[connectionName].setModel(modelDetails.value.name)
@@ -312,11 +329,9 @@ export default defineComponent({
             if (!editorStore.editors[response.name]) {
               if (response.type === 'sql') {
                 editorStore.newEditor(response.name, 'sql', connectionName, response.content)
-              }
-              else {
+              } else {
                 editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
               }
-              
             } else {
               editorStore.editors[response.name].contents = response.content
             }
@@ -334,13 +349,13 @@ export default defineComponent({
           throw new Error('Failed to import model definition')
         }
       }
-      
+
       // Save all changes
       await saveAll()
-      
+
       // Wait a moment to show success state before closing
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
       // Close the modal after successful submission
       emit('close')
     }
