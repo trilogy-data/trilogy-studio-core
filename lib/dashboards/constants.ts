@@ -4,9 +4,10 @@ export interface ChartControl {
   id: string
   label: string
   field: keyof ChartConfig
-  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'all'
+  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'longitude' | 'latitude' | 'all'
   allowEmpty: boolean
   visibleFor: string[] // Array of chart types where this control should be visible
+  filterGroup: 'axes' | 'appearance'
 }
 
 export const Controls: ChartControl[] = [
@@ -17,6 +18,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'categorical',
     allowEmpty: false,
     visibleFor: ['boxplot'],
+    filterGroup: 'axes',
   },
   {
     id: 'category-axis',
@@ -25,6 +27,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'categorical',
     allowEmpty: false,
     visibleFor: ['barh'],
+    filterGroup: 'axes',
   },
   {
     id: 'value-axis',
@@ -33,6 +36,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'numeric',
     allowEmpty: false,
     visibleFor: ['barh'],
+    filterGroup: 'axes',
   },
   {
     id: 'x-axis',
@@ -41,6 +45,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'all',
     allowEmpty: false,
     visibleFor: ['bar', 'line', 'point', 'area'],
+    filterGroup: 'axes',
   },
   {
     id: 'y-axis-numeric',
@@ -49,6 +54,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'numeric',
     allowEmpty: false,
     visibleFor: ['bar', 'line', 'area'],
+    filterGroup: 'axes',
   },
   {
     id: 'y-axis-all',
@@ -57,14 +63,16 @@ export const Controls: ChartControl[] = [
     columnFilter: 'all',
     allowEmpty: false,
     visibleFor: ['heatmap', 'point'],
+    filterGroup: 'axes',
   },
   {
     id: 'color-field',
-    label: 'Value Field',
+    label: 'Color Scale',
     field: 'colorField',
     columnFilter: 'numeric',
     allowEmpty: false,
-    visibleFor: ['heatmap'],
+    visibleFor: ['heatmap', 'usa-map'],
+    filterGroup: 'appearance',
   },
   {
     id: 'color-by',
@@ -73,6 +81,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'categorical',
     allowEmpty: true,
     visibleFor: ['bar', 'barh', 'line', 'point', 'area'],
+    filterGroup: 'appearance',
   },
   {
     id: 'size',
@@ -80,7 +89,8 @@ export const Controls: ChartControl[] = [
     field: 'sizeField',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point'],
+    visibleFor: ['point', 'usa-map'],
+    filterGroup: 'appearance',
   },
   {
     id: 'trellis-field',
@@ -89,6 +99,34 @@ export const Controls: ChartControl[] = [
     columnFilter: 'categorical',
     allowEmpty: true,
     visibleFor: ['line'],
+    filterGroup: 'appearance',
+  },
+  // {
+  //   id: 'geo-field',
+  //   label: 'State Field',
+  //   field: 'geoField',
+  //   visibleFor: ['usa-map'],
+  //   allowEmpty: true,
+  //   columnFilter: 'categorical',
+  //          filterGroup: 'appearance'
+  // },
+  {
+    id: 'latitude',
+    label: 'Latitude',
+    field: 'yField',
+    visibleFor: ['usa-map'],
+    allowEmpty: true,
+    columnFilter: 'latitude',
+    filterGroup: 'axes',
+  },
+  {
+    id: 'longitude',
+    label: 'Longtitude',
+    field: 'xField',
+    visibleFor: ['usa-map'],
+    allowEmpty: true,
+    columnFilter: 'longitude',
+    filterGroup: 'axes',
   },
 ]
 
@@ -127,5 +165,10 @@ export const Charts = [
     value: 'boxplot',
     label: 'Box Plot',
     icon: 'mdi mdi-chart-box',
+  },
+  {
+    value: 'usa-map',
+    label: 'USA Map',
+    icon: 'mdi mdi-map',
   },
 ]

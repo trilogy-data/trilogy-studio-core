@@ -52,7 +52,7 @@ const SYMBOL_ICONS: Record<string, string> = {
   constant: 'K',
   enum: 'E',
   keyword: 'K',
-  default: '𝑆',
+  default: 'C',
 }
 
 export default defineComponent({
@@ -164,7 +164,7 @@ export default defineComponent({
 .symbols-search {
   flex: 1;
   height: 24px;
-  background-color: var(--input-bg, #3c3c3c);
+  background-color: var(--sidebar-bg);
   color: var(--text-color, #d4d4d4);
   border: 1px solid var(--border-color, #444);
   padding: 0 6px;

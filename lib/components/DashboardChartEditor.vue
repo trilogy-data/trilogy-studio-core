@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, defineEmits } from 'vue'
 import SimpleEditor from './SimpleEditor.vue'
-import HighlightComponent from './HighlightComponent.vue'
 import { type Import } from '../stores/resolver'
 interface EditorRef {
   getContent: () => string
@@ -35,13 +34,13 @@ function cancel(): void {
 <template>
   <div class="editor-overlay">
     <div class="content-editor">
-      <div class="editor-description">
+      <!-- <div class="editor-description">
         <HighlightComponent type="tip"
           >Enter a raw Trilogy script to be used for this chart. The last select will be the output.
           You should not set a where clause (the dashboard will manage that), but can set any other
           part of the query.</HighlightComponent
         >
-      </div>
+      </div> -->
       <div class="editor-body">
         <SimpleEditor
           class="editor-body"

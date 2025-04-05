@@ -8,13 +8,16 @@ const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 // Helper functions to identify column types
 export const isNumericColumn = (column: ResultColumn): boolean => {
-  return [
-    ColumnType.NUMBER,
-    ColumnType.INTEGER,
-    ColumnType.FLOAT,
-    ColumnType.MONEY,
-    ColumnType.PERCENT,
-  ].includes(column.type)
+  return (
+    [
+      ColumnType.NUMBER,
+      ColumnType.INTEGER,
+      ColumnType.FLOAT,
+      ColumnType.MONEY,
+      ColumnType.PERCENT,
+    ].includes(column.type) &&
+    !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
+  )
 }
 
 export const isTemporalColumn = (column: ResultColumn): boolean => {
@@ -415,7 +418,71 @@ export const generateVegaSpec = (
         spec = { ...spec, ...heatmapSpec }
       }
       break
+    case 'usa-map':
+      // First, we need to set up the correct projection
+      spec.projection = {
+        type: 'albersUsa',
+      }
 
+      const usaMapSpec = {
+        layer: [
+          {
+            data: {
+              url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2.2.0/data/us-10m.json',
+              format: { type: 'topojson', feature: 'states' },
+            },
+            mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
+          },
+          {
+            mark: { type: 'circle', tooltip: true },
+            encoding: {
+              longitude: { field: config.xField, type: 'quantitative' },
+              latitude: { field: config.yField, type: 'quantitative' },
+              size: {
+                field: config.sizeField,
+                type: 'quantitative',
+                title: config.sizeField,
+                scale: { rangeMax: 1000 },
+              },
+              color: config.colorField
+                ? {
+                    field: config.colorField,
+                    type: 'quantitative',
+                    title: config.colorField,
+                    scale: { scheme: 'viridis' },
+                  }
+                : { value: 'steelblue' },
+              tooltip: [
+                {
+                  field: config.xField,
+                  type: 'quantitative',
+                  title: config.xField
+                    ? columns.get(config.xField)?.description || config.xField
+                    : config.xField,
+                },
+                {
+                  field: config.yField,
+                  type: 'quantitative',
+                  title: config.yField
+                    ? columns.get(config.yField)?.description || config.yField
+                    : config.yField,
+                },
+                {
+                  field: config.sizeField,
+                  type: 'quantitative',
+                  title: config.sizeField
+                    ? columns.get(config.sizeField)?.description || config.sizeField
+                    : config.sizeField,
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      // Replace the existing spec with the updated usaMapSpec
+      spec = { ...spec, ...usaMapSpec }
+      break
     case 'boxplot':
       const boxplotSpec = {
         mark: { type: 'boxplot', extent: 'min-max' },
@@ -448,9 +515,16 @@ export const generateVegaSpec = (
   return spec
 }
 
+export const columHasTraitEnding = (column: ResultColumn, trait: string): boolean => {
+  if (column.traits) {
+    return column.traits.some((t) => t.endsWith(trait))
+  }
+  return false
+}
+
 // Filter columns by type for UI controls
 export const filteredColumns = (
-  filter: 'numeric' | 'categorical' | 'temporal' | 'all',
+  filter: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
   columns: Map<string, ResultColumn>,
 ) => {
   const result: ResultColumn[] = []
@@ -462,6 +536,10 @@ export const filteredColumns = (
     } else if (filter === 'categorical' && isCategoricalColumn(column)) {
       result.push(column)
     } else if (filter === 'temporal' && isTemporalColumn(column)) {
+      result.push(column)
+    } else if (filter === 'latitude' && columHasTraitEnding(column, 'latitude')) {
+      result.push(column)
+    } else if (filter === 'longitude' && columHasTraitEnding(column, 'longitude')) {
       result.push(column)
     }
   })
@@ -479,6 +557,8 @@ export const determineDefaultConfig = (
   const numericColumns = filteredColumns('numeric', columns)
   const categoricalColumns = filteredColumns('categorical', columns)
   const temporalColumns = filteredColumns('temporal', columns)
+  const latitudeColumns = filteredColumns('latitude', columns)
+  const longitudeColumns = filteredColumns('longitude', columns)
 
   if (numericColumns.length === 0) {
     console.log('No numeric columns found')
@@ -569,6 +649,26 @@ export const determineDefaultConfig = (
     )
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
+    }
+  } else if (defaults.chartType === 'usa-map') {
+    // For USA map, we need:
+    // 1. A field to join with geographic data (state codes/names)
+    // 2. A numeric field for the color encoding
+
+    // Look for columns that might contain state information
+    if (latitudeColumns.length > 0) {
+      defaults.yField = latitudeColumns[0].name
+    }
+    if (longitudeColumns.length > 0) {
+      defaults.xField = longitudeColumns[0].name
+    }
+
+    // Use the first numeric column for the color encoding
+    if (numericColumns.length > 0) {
+      defaults.sizeField = numericColumns[0].name
+    }
+    if (numericColumns.length > 1) {
+      defaults.colorField = numericColumns[1].name
     }
   }
 
@@ -676,8 +776,9 @@ export const determineEligibleChartTypes = (
     eligibleCharts.push('boxplot')
   }
 
+  eligibleCharts.push('usa-map')
   // Ensure all chart types are from the predefined list
   return eligibleCharts.filter((chart) =>
-    ['bar', 'barh', 'line', 'point', 'area', 'heatmap', 'boxplot'].includes(chart),
+    ['bar', 'barh', 'line', 'point', 'area', 'heatmap', 'boxplot', 'usa-map'].includes(chart),
   )
 }

@@ -58,11 +58,21 @@
           </button>
         </div>
       </div>
-      <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
+      <div class="editor-content">
+        <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
+        <SymbolsPane :symbols="editorData.completionSymbols || []" ref="symbolsPane" />
+      </div>
     </template>
   </div>
 </template>
 <style>
+.editor-content {
+  display: flex;
+  flex-grow: 1;
+  position: relative;
+  min-height: 250px;
+}
+
 .tag {
   /* Push to the right */
   font-size: 8px;
@@ -182,6 +192,7 @@
   border: none;
   height: calc(100% - 40px);
   position: relative;
+  width: 100%;
 }
 
 .button-cancel {
@@ -258,6 +269,7 @@ import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import type { QueryResult, QueryUpdate } from '../stores/queryExecutionService'
+import SymbolsPane from './SymbolsPane.vue'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
@@ -337,6 +349,7 @@ export default defineComponent({
   components: {
     LoadingButton,
     ErrorMessage,
+    SymbolsPane,
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -414,6 +427,7 @@ export default defineComponent({
       handler() {
         this.$nextTick(() => {
           this.createEditor()
+          this.validateQuery(false)
         })
       },
     },

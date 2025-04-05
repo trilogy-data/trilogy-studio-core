@@ -39,16 +39,11 @@
           </div>
         </div>
 
-        <!-- Group axes controls -->
-        <div
-          class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by')"
-        >
+        <!-- Group axes controls  -->
+        <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
           <label class="control-section-label">Axes</label>
           <div
-            v-for="control in visibleControls.filter(
-              (c) => c.id.includes('axis') || c.id === 'group-by',
-            )"
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
             :key="control.id"
             class="control-group no-drag"
           >
@@ -74,13 +69,11 @@
         <!-- Group appearance controls -->
         <div
           class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size')"
+          v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
         >
           <label class="control-section-label">Appearance</label>
           <div
-            v-for="control in visibleControls.filter(
-              (c) => c.id.includes('color') || c.id === 'size',
-            )"
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
             :key="control.id"
             class="control-group no-drag"
           >
@@ -222,6 +215,7 @@ export default defineComponent({
     })
 
     // Internal configuration that merges provided config with defaults
+
     const internalConfig = ref<ChartConfig>({
       chartType: 'bar',
       xField: '',
@@ -231,6 +225,8 @@ export default defineComponent({
       sizeField: '',
       groupField: '',
       trellisField: '',
+      geoField: '',
+      showDebug: false,
     })
 
     // Determine reasonable defaults based on column types
@@ -245,7 +241,9 @@ export default defineComponent({
       }
     }
 
-    const filteredColumnsInternal = (type: 'numeric' | 'categorical' | 'temporal' | 'all') => {
+    const filteredColumnsInternal = (
+      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
+    ) => {
       return filteredColumns(type, props.columns)
     }
 
@@ -258,12 +256,32 @@ export default defineComponent({
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
       if (item && item.datum) {
+        // Special handling for USA map clicks
+        if (internalConfig.value.chartType === 'usa-map') {
+          // For USA map, we need to handle the click on a state
+          if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
+            const stateName = item.datum.geo.properties.name
+            const geoField = internalConfig.value.geoField || ''
+
+            if (geoField) {
+              emit('dimension-click', {
+                filters: { [geoField]: stateName },
+                chart: { [geoField]: stateName },
+                append,
+              })
+            }
+            emit('point-click', item.datum)
+            return
+          }
+        }
+
+        // Original handling for other chart types
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
         if (!xFieldRaw || !yFieldRaw) {
           return
         }
-        //map the fields to the actual column names  from the props.columns - the fields will be names with . replaced with _
+        //map the fields to the actual column names from the props.columns - the fields will be names with . replaced with _
         let xField = props.columns.get(xFieldRaw)?.address
         let yField = props.columns.get(yFieldRaw)?.address
         if (!xField || !yField) {
@@ -292,6 +310,7 @@ export default defineComponent({
         emit('background-click')
       }
     }
+
     // Render the chart
     const renderChart = async (force: boolean = false) => {
       if (!vegaContainer.value || showingControls.value) return
@@ -321,11 +340,12 @@ export default defineComponent({
     }
 
     const updateConfig = (field: keyof ChartConfig, value: string) => {
+      // @ts-ignore
       internalConfig.value[field] = value
       if (field === 'chartType') {
         // Reset other fields when changing chart type
         const configDefaults = determineDefaultConfig(props.data, props.columns, value)
-
+        // Normal chart type fields
         internalConfig.value.xField = configDefaults.xField
         internalConfig.value.yField = configDefaults.yField
         internalConfig.value.yAggregation = configDefaults.yAggregation
@@ -333,6 +353,7 @@ export default defineComponent({
         internalConfig.value.sizeField = configDefaults.sizeField
         internalConfig.value.groupField = configDefaults.groupField
         internalConfig.value.trellisField = configDefaults.trellisField
+        internalConfig.value.showDebug = configDefaults.showDebug
       }
 
       // Notify parent component if the callback is provided

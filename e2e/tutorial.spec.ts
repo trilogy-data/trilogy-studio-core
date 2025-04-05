@@ -48,7 +48,7 @@ test('test', async ({ page }) => {
   await page.waitForTimeout(500)
   // console.log(process.platform ==='darwin' ? 'Meta+A' : 'Control+A')
   // await page.keyboard.press('ControlOrMeta+a');
-  await page.getByTestId('editor').click({ clickCount: 3 });
+  await page.getByTestId('editor').click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
   // 3. Delete the selected content
   await page.keyboard.press('Delete')
