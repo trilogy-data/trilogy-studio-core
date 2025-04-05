@@ -228,7 +228,7 @@ export default class QueryExecutionService {
       ])
 
       // Check if SQL was generated
-      if (!resolveResponse) {
+      if (!resolveResponse || !resolveResponse.data.generated_sql) {
         if (onSuccess) {
           onSuccess({
             success: true,

@@ -68,6 +68,7 @@ export interface ChartConfig {
   groupField?: string
   trellisField?: string
   geoField?: string
+  showDebug?: boolean
 }
 
 type SerializableValue =

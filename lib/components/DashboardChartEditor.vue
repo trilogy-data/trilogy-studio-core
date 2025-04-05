@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, defineEmits } from 'vue'
 import SimpleEditor from './SimpleEditor.vue'
-import HighlightComponent from './HighlightComponent.vue'
 import { type Import } from '../stores/resolver'
 interface EditorRef {
   getContent: () => string

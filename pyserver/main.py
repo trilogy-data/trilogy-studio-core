@@ -244,7 +244,6 @@ def generate_query(query: QueryInSchema):
     try:
         generated, columns = generate_query_core(query)
     except Exception as e:
-
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     if not generated:
         return QueryOut(generated_sql=None, columns=columns)

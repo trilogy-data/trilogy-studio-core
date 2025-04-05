@@ -39,73 +39,11 @@
           </div>
         </div>
 
-        <!-- USA Map specific controls - only show when usa-map chart type is selected -->
-        <div class="control-section" v-if="internalConfig.chartType === 'usa-map'">
-          <label class="control-section-label">Geographic Data</label>
-          <div class="control-group no-drag">
-            <label class="chart-label" for="geo-field">Lat Field</label>
-            <select
-              id="geo-field"
-              :value="internalConfig.yField"
-              @change="updateConfig('yField', ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
-            >
-              <option value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal('numeric')"
-                :key="column.name"
-                :value="column.name"
-              >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
-            <label class="chart-label" for="geo-field">Long Field</label>
-            <select
-              id="geo-field"
-              :value="internalConfig.xField"
-              @change="updateConfig('xField', ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
-            >
-              <option value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal('numeric')"
-                :key="column.name"
-                :value="column.name"
-              >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
-          </div>
-          <div class="control-group no-drag">
-            <label class="chart-label" for="color-field-map">Size Field</label>
-            <select
-              id="color-field-map"
-              :value="internalConfig.sizeField"
-              @change="updateConfig('sizeField', ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
-            >
-              <option value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal('numeric')"
-                :key="column.name"
-                :value="column.name"
-              >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Group axes controls - not shown for USA map -->
-        <div
-          class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by') && internalConfig.chartType !== 'usa-map'"
-        >
+        <!-- Group axes controls  -->
+        <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
           <label class="control-section-label">Axes</label>
           <div
-            v-for="control in visibleControls.filter(
-              (c) => c.id.includes('axis') || c.id === 'group-by',
-            )"
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
             :key="control.id"
             class="control-group no-drag"
           >
@@ -128,16 +66,14 @@
           </div>
         </div>
 
-        <!-- Group appearance controls - not shown for USA map if already showing the dedicated controls -->
+        <!-- Group appearance controls -->
         <div
           class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size') && internalConfig.chartType !== 'usa-map'"
+          v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
         >
           <label class="control-section-label">Appearance</label>
           <div
-            v-for="control in visibleControls.filter(
-              (c) => c.id.includes('color') || c.id === 'size',
-            )"
+            v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
             :key="control.id"
             class="control-group no-drag"
           >
@@ -161,7 +97,7 @@
         </div>
 
         <!-- Group advanced controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') && internalConfig.chartType !== 'usa-map'">
+        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
           <label class="control-section-label">Advanced</label>
           <div
             v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
@@ -279,6 +215,7 @@ export default defineComponent({
     })
 
     // Internal configuration that merges provided config with defaults
+
     const internalConfig = ref<ChartConfig>({
       chartType: 'bar',
       xField: '',
@@ -288,7 +225,8 @@ export default defineComponent({
       sizeField: '',
       groupField: '',
       trellisField: '',
-      geoField: '', // Added for usa-map chart type
+      geoField: '',
+      showDebug: false,
     })
 
     // Determine reasonable defaults based on column types
@@ -303,7 +241,9 @@ export default defineComponent({
       }
     }
 
-    const filteredColumnsInternal = (type: 'numeric' | 'categorical' | 'temporal' | 'all') => {
+    const filteredColumnsInternal = (
+      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
+    ) => {
       return filteredColumns(type, props.columns)
     }
 
@@ -322,7 +262,7 @@ export default defineComponent({
           if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
             const stateName = item.datum.geo.properties.name
             const geoField = internalConfig.value.geoField || ''
-            
+
             if (geoField) {
               emit('dimension-click', {
                 filters: { [geoField]: stateName },
@@ -334,7 +274,7 @@ export default defineComponent({
             return
           }
         }
-        
+
         // Original handling for other chart types
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
@@ -370,7 +310,7 @@ export default defineComponent({
         emit('background-click')
       }
     }
-    
+
     // Render the chart
     const renderChart = async (force: boolean = false) => {
       if (!vegaContainer.value || showingControls.value) return
@@ -400,29 +340,21 @@ export default defineComponent({
     }
 
     const updateConfig = (field: keyof ChartConfig, value: string) => {
+      // @ts-ignore
       internalConfig.value[field] = value
       if (field === 'chartType') {
         // Reset other fields when changing chart type
         const configDefaults = determineDefaultConfig(props.data, props.columns, value)
 
-        // If switching to usa-map, we need to set up the specific fields
-        if (value === 'usa-map') {
-          internalConfig.value.geoField = configDefaults.geoField || ''
-          internalConfig.value.colorField = configDefaults.colorField || ''
-          // Clear fields not used by usa-map
-          internalConfig.value.xField = ''
-          internalConfig.value.yField = ''
-          internalConfig.value.trellisField = ''
-        } else {
-          // Normal chart type fields
-          internalConfig.value.xField = configDefaults.xField
-          internalConfig.value.yField = configDefaults.yField
-          internalConfig.value.yAggregation = configDefaults.yAggregation
-          internalConfig.value.colorField = configDefaults.colorField
-          internalConfig.value.sizeField = configDefaults.sizeField
-          internalConfig.value.groupField = configDefaults.groupField
-          internalConfig.value.trellisField = configDefaults.trellisField
-        }
+        // Normal chart type fields
+        internalConfig.value.xField = configDefaults.xField
+        internalConfig.value.yField = configDefaults.yField
+        internalConfig.value.yAggregation = configDefaults.yAggregation
+        internalConfig.value.colorField = configDefaults.colorField
+        internalConfig.value.sizeField = configDefaults.sizeField
+        internalConfig.value.groupField = configDefaults.groupField
+        internalConfig.value.trellisField = configDefaults.trellisField
+        internalConfig.value.showDebug = configDefaults.showDebug
       }
 
       // Notify parent component if the callback is provided
@@ -491,11 +423,6 @@ export default defineComponent({
         // Special case for trellis field - only show if hasTrellisOption is true
         if (control.id === 'trellis-field' && !this.hasTrellisOption) {
           return false
-        }
-        // Don't show regular controls for usa-map, we have dedicated controls
-        if (this.internalConfig.chartType === 'usa-map' && 
-            (control.id.includes('axis') || control.id.includes('color'))) {
-          return false;
         }
         return control.visibleFor.includes(this.internalConfig.chartType)
       })
