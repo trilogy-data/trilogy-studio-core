@@ -141,7 +141,7 @@ def test_parse_with_variables():
     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST)
     final, columns = generate_query_core(query)
     dialect = get_dialect_generator(query.dialect, rendering=Rendering(parameters=True))
-    generated_sql = dialect.compile_statement(final[-1])
+    generated_sql = dialect.compile_statement(final)
     assert ":param1" in generated_sql, generated_sql
 
 
@@ -183,7 +183,7 @@ def test_parse_with_variables_two():
     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST_TWO)
     final, columns = generate_query_core(query)
     dialect = get_dialect_generator(query.dialect)
-    generated_sql = dialect.compile_statement(final[-1])
+    generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
 
@@ -193,5 +193,5 @@ def test_parse_error():
     query = QueryInSchema.model_validate(INVALID_PARSE_DEBUG)
     final, columns = generate_query_core(query)
     dialect = get_dialect_generator(query.dialect)
-    generated_sql = dialect.compile_statement(final[-1])
+    generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql

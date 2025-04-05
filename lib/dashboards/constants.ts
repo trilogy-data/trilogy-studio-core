@@ -101,15 +101,15 @@ export const Controls: ChartControl[] = [
     visibleFor: ['line'],
     filterGroup: 'appearance',
   },
-  // {
-  //   id: 'geo-field',
-  //   label: 'State Field',
-  //   field: 'geoField',
-  //   visibleFor: ['usa-map'],
-  //   allowEmpty: true,
-  //   columnFilter: 'categorical',
-  //          filterGroup: 'appearance'
-  // },
+  {
+    id: 'geo-field',
+    label: 'State Field',
+    field: 'geoField',
+    visibleFor: ['usa-map'],
+    allowEmpty: true,
+    columnFilter: 'categorical',
+    filterGroup: 'axes',
+  },
   {
     id: 'latitude',
     label: 'Latitude',

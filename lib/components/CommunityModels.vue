@@ -24,6 +24,15 @@
               </option>
             </select>
           </div>
+
+          <div class="import-status-filter">
+            <label class="text-faint filter-label">Import Status</label>
+            <select v-model="importStatus" class="px-3 py-2 border rounded">
+              <option value="all">All Models</option>
+              <option value="imported">Imported Only</option>
+              <option value="not-imported">Not Imported</option>
+            </select>
+          </div>
         </div>
 
         <!-- <div class="branch-selector flex gap-4 items-center">
@@ -38,20 +47,38 @@
 
       <div v-if="filteredFiles.length">
         <div v-for="file in filteredFiles" :key="file.name" class="model-item">
-          <div class="font-semibold">
+          <div class="font-semibold flex items-center">
+            <span class="imported-indicator mr-2" v-if="modelExists(file.name)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="check-icon"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
           </div>
           <button
             @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
             :data-testid="`import-${file.name}`"
           >
-            {{ creatorIsExpanded[file.name] ? 'Hide' : 'Import' }}
+            {{
+              creatorIsExpanded[file.name] ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import'
+            }}
           </button>
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
             <model-creator
               :formDefaults="{
                 importAddress: file.downloadUrl,
-                connection: `new-${file.engine}`,
+                connection: getDefaultConnection(file.engine),
                 name: file.name,
               }"
               :absolute="false"
@@ -87,8 +114,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineProps } from 'vue'
+import { ref, onMounted, computed, defineProps, inject } from 'vue'
 import ModelCreator from './ModelCreator.vue'
+import { type ModelConfigStoreType } from '../stores/modelStore'
 const props = defineProps({
   initialSearch: {
     type: String,
@@ -116,6 +144,7 @@ const creatorIsExpanded = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
 const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref('')
+const importStatus = ref('all') // New ref for import status filter
 const loading = ref(false)
 
 // GitHub branch support
@@ -124,6 +153,15 @@ const branches = ref(['main', 'develop', 'staging'])
 
 const repoOwner = 'trilogy-data'
 const repoName = 'trilogy-public-models'
+
+const modelStore = inject<ModelConfigStoreType>('modelStore')
+if (!modelStore) {
+  throw new Error('ModelConfigStore not found in context')
+}
+
+const modelExists = (name: string) => {
+  return name in modelStore.models
+}
 
 const toggleComponents = (index: string) => {
   isExpanded.value[index] = !isExpanded.value[index]
@@ -139,11 +177,32 @@ const availableEngines = computed(() => {
   return Array.from(engines).sort()
 })
 
+const getDefaultConnection = (engine: string) => {
+  switch (engine) {
+    case 'bigquery':
+      return 'new-bigquery-oauth'
+    case 'duckdb':
+      return 'new-duckdb'
+    default:
+      return `new-${engine}`
+  }
+}
+
 const filteredFiles = computed(() => {
   return files.value.filter((file) => {
     const nameMatch = file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const engineMatch = !selectedEngine.value || file.engine === selectedEngine.value
-    return nameMatch && engineMatch
+
+    // Handle the import status filter
+    let importMatch = true
+    if (importStatus.value !== 'all') {
+      const isImported = modelExists(file.name)
+      importMatch =
+        (importStatus.value === 'imported' && isImported) ||
+        (importStatus.value === 'not-imported' && !isImported)
+    }
+
+    return nameMatch && engineMatch && importMatch
   })
 })
 
@@ -304,5 +363,31 @@ onMounted(async () => {
 
 .bg-button-hover:hover {
   background-color: var(--button-hover-bg);
+}
+
+/* New styles for the imported model indicator */
+.imported-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-icon {
+  color: #22c55e; /* Green color for the checkmark */
+  stroke-width: 3;
+}
+
+/* Make filter row more responsive */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .filter-row > div {
+    flex: 1 0 100%;
+    margin-bottom: 8px;
+  }
 }
 </style>

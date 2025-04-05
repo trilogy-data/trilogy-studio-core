@@ -2,7 +2,7 @@
   <button
     :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
     v-bind="$attrs"
-    :disabled="isLoading"
+    :disabled="disabled || isLoading"
     @click.stop="handleClick"
   >
     <span :class="{ 'hidden-text': isLoading }">
@@ -39,6 +39,10 @@ export default {
     keyCombination: {
       type: Array<string>,
       default: null, // Optional property
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
     },
   },
   components: {
@@ -143,6 +147,11 @@ export default {
   border: 1px solid transparent;
   /* width: 100%; */
   position: relative;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .spinner {

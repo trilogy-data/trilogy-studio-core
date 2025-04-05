@@ -3,6 +3,7 @@ export class ImportFile {
   name: string
   alias: string
   purpose: string
+  type: string | undefined
 
   constructor(url: string, name: string, alias: string, purpose: string) {
     this.url = url

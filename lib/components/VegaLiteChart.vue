@@ -255,24 +255,38 @@ export default defineComponent({
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
+      console.log(item)
+      console.log(event)
       if (item && item.datum) {
         // Special handling for USA map clicks
-        if (internalConfig.value.chartType === 'usa-map') {
-          // For USA map, we need to handle the click on a state
-          if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
-            const stateName = item.datum.geo.properties.name
-            const geoField = internalConfig.value.geoField || ''
+        // if (internalConfig.value.chartType === 'usa-map') {
+        //   // For USA map, we need to handle the click on a state
+        //   if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
+        //     const stateName = item.datum.geo.properties.name
+        //     const geoField = internalConfig.value.geoField || ''
 
-            if (geoField) {
-              emit('dimension-click', {
-                filters: { [geoField]: stateName },
-                chart: { [geoField]: stateName },
-                append,
-              })
-            }
-            emit('point-click', item.datum)
+        //     if (geoField) {
+        //       emit('dimension-click', {
+        //         filters: { [geoField]: stateName },
+        //         chart: { [geoField]: stateName },
+        //         append,
+        //       })
+        //     }
+        //     emit('point-click', item.datum)
+        //     return
+        //   }
+        // }
+
+        if (internalConfig.value.geoField && internalConfig.value.geoField) {
+          let geoConcept = props.columns.get(internalConfig.value.geoField)?.address
+          if (!geoConcept) {
             return
           }
+          emit('dimension-click', {
+            filters: { [geoConcept]: item.datum.abbr },
+            chart: { Feature: item.datum.abbr },
+            append,
+          })
         }
 
         // Original handling for other chart types
