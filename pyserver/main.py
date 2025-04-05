@@ -22,6 +22,7 @@ from trilogy.authoring import (
     RawSQLStatement,
     DEFAULT_NAMESPACE,
 )
+from trilogy.core.statements.execute import ProcessedRawSQLStatement
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
@@ -174,7 +175,7 @@ def validate_query(query: ValidateQueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
-def generate_query_core(query: QueryInSchema):
+def generate_query_core(query: QueryInSchema)-> tuple[list, list[QueryOutColumn]]:
     env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
     for imp in query.imports:
@@ -196,8 +197,7 @@ def generate_query_core(query: QueryInSchema):
         else:
             variable_prefix += f"\n const {key[1:]} <- {variable};"
     if isinstance(final, RawSQLStatement):
-        output = QueryOut(generated_sql=final.text, columns=[])
-        return output
+        return final, []
     if not isinstance(final, (SelectStatement, MultiSelectStatement)):
         columns = []
         generated = None
@@ -236,22 +236,29 @@ def generate_query_core(query: QueryInSchema):
                         + filterQuery.where_clause.conditional
                     )
         generated = dialect.generate_queries(environment=env, statements=[final])
-    return generated, columns
+        if not generated:
+            return None, []
+    return generated[-1], columns
 
 
 @router.post("/generate_query")
 def generate_query(query: QueryInSchema):
     try:
-        generated, columns = generate_query_core(query)
+        target, columns = generate_query_core(query)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
-    if not generated:
+    if not target:
         return QueryOut(generated_sql=None, columns=columns)
-    dialect = get_dialect_generator(query.dialect)
-    output = QueryOut(
-        generated_sql=dialect.compile_statement(generated[-1]), columns=columns
-    )
-    return output
+   
+    if isinstance(target, RawSQLStatement):
+        output = QueryOut(generated_sql=target.text, columns=columns)
+        return output
+    else:
+        dialect = get_dialect_generator(query.dialect)
+        output = QueryOut(
+            generated_sql=dialect.compile_statement(target), columns=columns
+        )
+        return output
 
 
 @router.post("/parse_model")

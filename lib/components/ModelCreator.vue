@@ -4,7 +4,7 @@
       <div>
         <div class="form-row">
           <label for="model-name">Name</label>
-          <input type="text" v-model="modelDetails.name" id="model-name" required />
+          <input type="text" v-model.trim="modelDetails.name" id="model-name" required @input="validateForm" />
         </div>
         <div class="form-row">
           <label for="model-import">Assign To Connection</label>
@@ -14,6 +14,7 @@
             placeholder="Models must have a connection."
             data-testid="model-creator-connection"
             required
+            @change="validateForm"
           >
             <option
               v-for="connection in connections"
@@ -25,16 +26,18 @@
             <option value="new-duckdb">New DuckDB</option>
             <option value="new-motherduck">New MotherDuck</option>
             <option value="new-bigquery-oauth">New Bigquery Oauth</option>
+            <option value="new-bigquery">New Bigquery Oauth</option>
           </select>
         </div>
         <div v-if="modelDetails.connection === 'new-motherduck'" class="form-row">
           <label for="md-token">MotherDuck Token</label>
           <input
             type="text"
-            v-model="modelDetails.options.mdToken"
+            v-model.trim="modelDetails.options.mdToken"
             id="md-token"
             placeholder="MotherDuck Token"
             required
+            @input="validateForm"
           />
         </div>
 
@@ -42,10 +45,11 @@
           <label for="project-id">BigQuery Project ID</label>
           <input
             type="text"
-            v-model="modelDetails.options.projectId"
+            v-model.trim="modelDetails.options.projectId"
             id="project-id"
             placeholder="Billing Project ID"
             required
+            @input="validateForm"
           />
         </div>
         <div class="form-row">
@@ -53,13 +57,20 @@
           <input
             placeholder="Optional. Import github definition."
             type="text"
-            v-model="modelDetails.importAddress"
+            v-model.trim="modelDetails.importAddress"
             id="model-import"
+            @input="validateForm"
           />
         </div>
       </div>
       <div class="button-row">
-        <button data-testid="model-creation-submit" type="submit">Submit</button>
+        <loading-button 
+          data-testid="model-creation-submit"
+          :action="performSubmit"
+          class="submit-button"
+          :disabled="!isFormValid">
+          Submit
+        </loading-button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -105,9 +116,20 @@ option {
   font-size: 12px;
   font-weight: 300;
 }
+
+.submit-button {
+  /* Ensure consistent styling with button */
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--color);
+  cursor: pointer;
+  font-size: var(--small-font-size);
+  height: var(--sidebar-sub-item-height);
+  padding: 0 10px;
+}
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue'
+import { defineComponent, ref, inject, computed } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import { ModelImport } from '../models'
@@ -117,15 +139,27 @@ import { ModelSource } from '../models'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
 
+
 export async function fetchModelImportBase(url: string): Promise<ModelImport> {
   const response = await fetch(url)
   const content = await response.text()
   return JSON.parse(content)
 }
 
+function purposeToTag(purpose: string): EditorTag | null {
+  switch (purpose) {
+    case 'source':
+      return EditorTag.SOURCE
+    case 'setup':
+      return EditorTag.STARTUP_SCRIPT
+    default:
+      return null
+  }
+}
+
 export async function fetchModelImports(
   modelImport: ModelImport,
-): Promise<{ name: string; alias: string; purpose: EditorTag | null; content: string }[]> {
+): Promise<{ name: string; alias: string; purpose: EditorTag | null; content: string, type?: string | undefined }[]> {
   return Promise.all(
     modelImport.components.map(async (component) => {
       try {
@@ -137,15 +171,16 @@ export async function fetchModelImports(
         return {
           name: component.name,
           alias: component.alias,
-          purpose: component.purpose == 'source' ? EditorTag.SOURCE : null,
+          purpose:  purposeToTag(component.purpose),
           content,
+          type: component.type,
         }
       } catch (error) {
         console.error(error)
         return {
           name: component.name,
           alias: component.alias,
-          purpose: component.purpose == 'source' ? EditorTag.SOURCE : null,
+          purpose: purposeToTag(component.purpose),
           content: '', // Return empty content on failure
         }
       }
@@ -184,6 +219,10 @@ export default defineComponent({
     // display text
     const text = props.formDefaults.importAddress ? 'Import' : 'New'
     const isPopupControl = props.formDefaults.importAddress ? false : true
+    
+    // Form validation state
+    const isFormValid = ref(false)
+
 
     // Placeholder for editor details
     const modelDetails = ref({
@@ -204,6 +243,33 @@ export default defineComponent({
 
     let connections = connectionStore.connections
 
+
+    // Function to validate the form
+    function validateForm() {
+      if (!modelDetails.value.name || !modelDetails.value.connection) {
+        isFormValid.value = false
+        return
+      }
+      
+      // Check for required fields based on connection type
+      if (modelDetails.value.connection === 'new-motherduck' && !modelDetails.value.options.mdToken) {
+        isFormValid.value = false
+
+        return
+      }
+      
+      if (modelDetails.value.connection === 'new-bigquery-oauth' && !modelDetails.value.options.projectId) {
+        isFormValid.value = false
+        return
+      }
+      
+      // If we made it here, the form is valid
+      isFormValid.value = true
+    }
+
+    // Initial validation
+    validateForm()
+
     // Function to create the editor by collecting details from the form
     const createModel = () => {
       modelDetails.value.name = props.formDefaults.name || ''
@@ -212,34 +278,45 @@ export default defineComponent({
       modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
     }
 
-    // Function to submit the editor details
-    const submitModelCreation = async () => {
-      if (modelDetails.value.name) {
-        // check if it already exists
-        if (!modelStore.models[modelDetails.value.name]) {
-          modelStore.newModelConfig(modelDetails.value.name)
-        }
-        let connectionName = modelDetails.value.connection
+    // Function to submit the editor details - now wrapped in a function that will be passed to LoadingButton
+    const performSubmit = async () => {
+      if (!modelDetails.value.name) {
+        throw new Error('Model name is required')
+      }
 
-        if (connectionName.startsWith('new-')) {
-          let typeName = connectionName.replace('new-', '')
-          connectionName = `${modelDetails.value.name}-connection`
+      if (!modelStore.models[modelDetails.value.name]) {
+        modelStore.newModelConfig(modelDetails.value.name)
+      }
+      let connectionName = modelDetails.value.connection
+
+      if (connectionName.startsWith('new-')) {
+        let typeName = connectionName.replace('new-', '')
+        connectionName = `${modelDetails.value.name}-connection`
+        if (!connections[connectionName]) {
           connectionStore.newConnection(connectionName, typeName, {
-            mdToken: modelDetails.value.options.mdToken,
-            projectId: modelDetails.value.options.projectId,
-            username: modelDetails.value.options.username,
-            password: modelDetails.value.options.password,
-          })
+          mdToken: modelDetails.value.options.mdToken,
+          projectId: modelDetails.value.options.projectId,
+          username: modelDetails.value.options.username,
+          password: modelDetails.value.options.password,
+        })
         }
 
-        connectionStore.connections[connectionName].setModel(modelDetails.value.name)
-        if (modelDetails.value.importAddress) {
-          const data = await fetchModelImports(
-            await fetchModelImportBase(modelDetails.value.importAddress),
-          )
+      }
+
+      connectionStore.connections[connectionName].setModel(modelDetails.value.name)
+      if (modelDetails.value.importAddress) {
+        try {
+          const modelImportBase = await fetchModelImportBase(modelDetails.value.importAddress)
+          const data = await fetchModelImports(modelImportBase)
           modelStore.models[modelDetails.value.name].sources = data.map((response) => {
             if (!editorStore.editors[response.name]) {
-              editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
+              if (response.type === 'sql') {
+                editorStore.newEditor(response.name, 'sql', connectionName, response.content)
+              }
+              else {
+                editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
+              }
+              
             } else {
               editorStore.editors[response.name].contents = response.content
             }
@@ -252,10 +329,26 @@ export default defineComponent({
             }
             return new ModelSource(response.name, response.alias || response.name, [], [])
           })
+        } catch (error) {
+          console.error('Error importing model:', error)
+          throw new Error('Failed to import model definition')
         }
-        await saveAll()
-        emit('close')
       }
+      
+      // Save all changes
+      await saveAll()
+      
+      // Wait a moment to show success state before closing
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Close the modal after successful submission
+      emit('close')
+    }
+
+    // Function for the old form submission - now uses the LoadingButton's action
+    const submitModelCreation = async () => {
+      // This is kept for the form submit handler, but now uses the LoadingButton
+      // We can keep it empty as LoadingButton handles the action
     }
 
     return {
@@ -263,6 +356,9 @@ export default defineComponent({
       connections,
       createModel,
       submitModelCreation,
+      performSubmit,
+      validateForm,
+      isFormValid,
       text,
       isPopupControl,
     }

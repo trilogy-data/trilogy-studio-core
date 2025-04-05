@@ -364,6 +364,10 @@ export default class BigQueryOauthConnection extends BaseConnection {
   ): Promise<Results> {
     //@ts-ignore
     let _ = parameters
+
+    if (!this.projectId) {
+      throw new Error('Cannot run BigQuery queries without a billing project set.')
+    }
     const queryId =
       identifier || `query_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
     try {
