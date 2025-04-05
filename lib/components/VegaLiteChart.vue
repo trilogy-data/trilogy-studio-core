@@ -43,16 +43,32 @@
         <div class="control-section" v-if="internalConfig.chartType === 'usa-map'">
           <label class="control-section-label">Geographic Data</label>
           <div class="control-group no-drag">
-            <label class="chart-label" for="geo-field">State Field</label>
+            <label class="chart-label" for="geo-field">Lat Field</label>
             <select
               id="geo-field"
-              :value="internalConfig.geoField"
-              @change="updateConfig('geoField', ($event.target as HTMLInputElement).value)"
+              :value="internalConfig.yField"
+              @change="updateConfig('yField', ($event.target as HTMLInputElement).value)"
               class="form-select no-drag"
             >
               <option value="">None</option>
               <option
-                v-for="column in filteredColumnsInternal('categorical')"
+                v-for="column in filteredColumnsInternal('numeric')"
+                :key="column.name"
+                :value="column.name"
+              >
+                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+              </option>
+            </select>
+            <label class="chart-label" for="geo-field">Long Field</label>
+            <select
+              id="geo-field"
+              :value="internalConfig.xField"
+              @change="updateConfig('xField', ($event.target as HTMLInputElement).value)"
+              class="form-select no-drag"
+            >
+              <option value="">None</option>
+              <option
+                v-for="column in filteredColumnsInternal('numeric')"
                 :key="column.name"
                 :value="column.name"
               >
@@ -61,11 +77,11 @@
             </select>
           </div>
           <div class="control-group no-drag">
-            <label class="chart-label" for="color-field-map">Color Field</label>
+            <label class="chart-label" for="color-field-map">Size Field</label>
             <select
               id="color-field-map"
-              :value="internalConfig.colorField"
-              @change="updateConfig('colorField', ($event.target as HTMLInputElement).value)"
+              :value="internalConfig.sizeField"
+              @change="updateConfig('sizeField', ($event.target as HTMLInputElement).value)"
               class="form-select no-drag"
             >
               <option value="">None</option>

@@ -415,84 +415,48 @@ export const generateVegaSpec = (
         spec = { ...spec, ...heatmapSpec }
       }
       break
-      case 'usa-map':
-        // First, we need to set up the correct projection
-        spec.projection = {
-          type: "albersUsa"
-        };
-        
-        // We need to ensure the data can be joined with the US geography data
-        // The data should have a property that can be matched with states (like state code or state name)
-        const usaMapSpec = {
-          mark: {
-            type: 'geoshape',
-            stroke: 'white',
-            strokeWidth: 1
+    case 'usa-map':
+      // First, we need to set up the correct projection
+      spec.projection = {
+        type: "albersUsa"
+      };
+
+
+      const usaMapSpec = {
+        "layer": [
+          {
+            "data": {
+              "url": "https://cdn.jsdelivr.net/npm/vega-datasets@2.2.0/data/us-10m.json",
+              "format": { "type": "topojson", "feature": "states" }
+            },
+            "mark": { "type": "geoshape", "fill": "#e5e5e5", "stroke": "white" }
           },
-          transform: [
-            {
-              // Assume we have a field in the data that matches with the state names or codes
-              // This field should be specified in config.geoField or default to config.colorField 
-              lookup: config.geoField || config.colorField,
-              from: {
-                data: {
-                  url: "https://cdn.jsdelivr.net/npm/vega-datasets@2.2.0/data/us-10m.json",
-                  format: {
-                    type: "topojson",
-                    feature: "states"
-                  }
-                },
-                key: "id"
+          {
+            "mark": { "type": "circle", "tooltip": true },
+            "encoding": {
+              "longitude": { "field": config.xField, "type": "quantitative" },
+              "latitude": { "field": config.yField, "type": "quantitative" },
+              "size": {
+                "field": config.sizeField,
+                "type": "quantitative",
+                "title":  config.sizeField,
+                "scale": { "rangeMax": 1000 }
               },
-              // Fields to carry over from secondary dataset
-              as: ["geo"]
-            }
-          ],
-          encoding: {
-            shape: {
-              field: "geo",
-              type: "geojson"
-            },
-            color: {
-              field: config.colorField,
-              type: getVegaFieldType(config.colorField || '', columns),
-              title: columns.get(config.colorField || '')?.description || config.colorField,
-              scale: { scheme: "viridis" },
-              ...getFormatHint(config.colorField || '', columns)
-            },
-            tooltip: [
-              ...tooltipFields,
-              {
-                field: "geo.properties.name", 
-                type: "nominal",
-                title: "State"
-              }
-            ],
-            fillOpacity: {
-              condition: { param: 'select', value: 1 },
-              value: 0.7
-            },
-            strokeWidth: {
-              condition: [
-                {
-                  param: 'select',
-                  empty: false,
-                  value: 2
-                },
-                {
-                  param: 'highlight',
-                  empty: false,
-                  value: 1
-                }
-              ],
-              value: 0.5
+              "color": { "value": "steelblue" },
+              "tooltip": [
+                { "field": config.xField, "type": "quantitative", "title": columns.get(config.xField)?.description || config.xField },
+                { "field": config.yField, "type": "quantitative", "title": columns.get(config.yField)?.description || config.yField },
+                { "field": config.sizeField, "type": "quantitative", "title": columns.get(config.sizeField)?.description || config.sizeField }
+
+              ]
             }
           }
-        };
-      
-        // Replace the existing spec with the updated usaMapSpec
-        spec = { ...spec, ...usaMapSpec };
-        break;
+        ]
+      };
+
+      // Replace the existing spec with the updated usaMapSpec
+      spec = { ...spec, ...usaMapSpec };
+      break;
     case 'boxplot':
       const boxplotSpec = {
         mark: { type: 'boxplot', extent: 'min-max' },
@@ -651,15 +615,15 @@ export const determineDefaultConfig = (
     // For USA map, we need:
     // 1. A field to join with geographic data (state codes/names)
     // 2. A numeric field for the color encoding
-    
+
     // Look for columns that might contain state information
-    const stateColumns = categoricalColumns.filter(col => 
-      col.name.toLowerCase().includes('state') || 
+    const stateColumns = categoricalColumns.filter(col =>
+      col.name.toLowerCase().includes('state') ||
       col.name.toLowerCase().includes('region') ||
       col.name.toLowerCase() === 'location' ||
       col.name.toLowerCase() === 'area'
     );
-    
+
     if (stateColumns.length > 0) {
       // Use the first column that looks like it contains state information
       defaults.geoField = stateColumns[0].name;
@@ -667,7 +631,7 @@ export const determineDefaultConfig = (
       // Fallback to the first categorical column
       defaults.geoField = categoricalColumns[0].name;
     }
-    
+
     // Use the first numeric column for the color encoding
     if (numericColumns.length > 0) {
       defaults.colorField = numericColumns[0].name;
