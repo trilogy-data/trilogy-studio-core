@@ -9,60 +9,47 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input
-              v-else
-              ref="nameInput"
-              v-model="editableName"
-              @blur="finishEditing"
-              @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing"
-              class="name-input"
-              type="text"
-            />
+            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing" class="name-input" type="text" />
           </div>
         </div>
         <div class="menu-actions">
-          <button
-            v-if="editorData.type === 'sql'"
-            class="toggle-button tag-inactive action-item"
+          <button v-if="editorData.type === 'sql'" class="toggle-button tag-inactive action-item"
             :class="{ tag: editorData.tags.includes(EditorTag.STARTUP_SCRIPT) }"
-            @click="toggleTag(EditorTag.STARTUP_SCRIPT)"
-          >
+            @click="toggleTag(EditorTag.STARTUP_SCRIPT)">
             {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
             Script
           </button>
-          <button
-            v-if="!(editorData.type === 'sql') && connectionHasModel"
-            class="toggle-button tag-inactive action-item"
-            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag(EditorTag.SOURCE)"
-          >
+          <button v-if="!(editorData.type === 'sql') && connectionHasModel"
+            class="toggle-button tag-inactive action-item" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag(EditorTag.SOURCE)">
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
           </button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
-          <loading-button
-            v-if="!(editorData.type === 'sql')"
-            :useDefaultStyle="false"
-            class="action-item"
-            :action="validateQuery"
-            >Parse</loading-button
-          >
+          <loading-button v-if="!(editorData.type === 'sql')" :useDefaultStyle="false" class="action-item"
+            :action="validateQuery">Parse</loading-button>
 
-          <button
-            @click="() => (editorData.loading ? cancelQuery() : runQuery())"
-            class="action-item"
-            :class="{ 'button-cancel': editorData.loading }"
-            data-testid="editor-run-button"
-          >
+          <button @click="() => (editorData.loading ? cancelQuery() : runQuery())" class="action-item"
+            :class="{ 'button-cancel': editorData.loading }" data-testid="editor-run-button">
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
       </div>
-      <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
+      <div class="editor-content">
+        <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
+        <SymbolsPane :symbols="editorData.completionSymbols || []" ref="symbolsPane" />
+      </div>
     </template>
   </div>
 </template>
 <style>
+.editor-content {
+  display: flex;
+  flex-grow: 1;
+  position: relative;
+  min-height: 250px;
+}
+
 .tag {
   /* Push to the right */
   font-size: 8px;
@@ -182,6 +169,7 @@
   border: none;
   height: calc(100% - 40px);
   position: relative;
+  width:100%;
 }
 
 .button-cancel {
@@ -258,6 +246,7 @@ import { EditorTag } from '../editors'
 import type { ContentInput } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import type { QueryResult, QueryUpdate } from '../stores/queryExecutionService'
+import SymbolsPane from './SymbolsPane.vue'
 
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
@@ -266,10 +255,10 @@ function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): 
   const selected = editor.getSelection()
   let text =
     selected &&
-    !(
-      selected.startColumn === selected.endColumn &&
-      selected.startLineNumber === selected.endLineNumber
-    )
+      !(
+        selected.startColumn === selected.endColumn &&
+        selected.startLineNumber === selected.endLineNumber
+      )
       ? (editor.getModel()?.getValueInRange(selected) as string)
       : editor.getValue()
   // hack for mobile? getValue not returning values
@@ -337,6 +326,7 @@ export default defineComponent({
   components: {
     LoadingButton,
     ErrorMessage,
+    SymbolsPane,
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -414,6 +404,7 @@ export default defineComponent({
       handler() {
         this.$nextTick(() => {
           this.createEditor()
+          this.validateQuery(false)
         })
       },
     },
@@ -493,11 +484,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
@@ -556,11 +547,11 @@ export default defineComponent({
       const sources: ContentInput[] =
         conn && conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
 
       // Prepare imports
@@ -626,7 +617,7 @@ export default defineComponent({
         this.editorData.connection,
         queryInput,
         // Starter callback (empty for now)
-        () => {},
+        () => { },
         // Progress callback
         onProgress,
         // Failure callback
@@ -765,7 +756,7 @@ export default defineComponent({
                   this.editorData.setError(error)
                   throw error
                 })
-                .finally(() => {})
+                .finally(() => { })
             } catch (error) {
               if (error instanceof Error) {
                 this.editorData.setError(error.message)

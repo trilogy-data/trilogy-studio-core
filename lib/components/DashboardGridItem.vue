@@ -163,7 +163,7 @@ const hasFilters = computed(() => {
           <span class="filter-source"
             >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
           >
-          <span class="filter-value">{{ filter.value }}</span>
+          <span class="filter-value">{{ filter.value.replace(/'''/g, "'") }}</span>
         </span>
         <button
           class="filter-remove-btn"

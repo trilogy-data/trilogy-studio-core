@@ -90,6 +90,14 @@ export const Controls: ChartControl[] = [
     allowEmpty: true,
     visibleFor: ['line'],
   },
+  {
+    id: 'geo-field',
+    label: 'State Field',
+    field: 'geoField',
+    visibleFor: ['usa-map'],
+    allowEmpty: true,
+    columnFilter: 'categorical',
+  },
 ]
 
 export const Charts = [
@@ -128,4 +136,9 @@ export const Charts = [
     label: 'Box Plot',
     icon: 'mdi mdi-chart-box',
   },
+  {
+    value: 'usa-map',
+    label: 'USA Map',
+    icon: 'mdi mdi-map',
+  }
 ]

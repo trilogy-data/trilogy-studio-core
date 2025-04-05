@@ -39,10 +39,51 @@
           </div>
         </div>
 
-        <!-- Group axes controls -->
+        <!-- USA Map specific controls - only show when usa-map chart type is selected -->
+        <div class="control-section" v-if="internalConfig.chartType === 'usa-map'">
+          <label class="control-section-label">Geographic Data</label>
+          <div class="control-group no-drag">
+            <label class="chart-label" for="geo-field">State Field</label>
+            <select
+              id="geo-field"
+              :value="internalConfig.geoField"
+              @change="updateConfig('geoField', ($event.target as HTMLInputElement).value)"
+              class="form-select no-drag"
+            >
+              <option value="">None</option>
+              <option
+                v-for="column in filteredColumnsInternal('categorical')"
+                :key="column.name"
+                :value="column.name"
+              >
+                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+              </option>
+            </select>
+          </div>
+          <div class="control-group no-drag">
+            <label class="chart-label" for="color-field-map">Color Field</label>
+            <select
+              id="color-field-map"
+              :value="internalConfig.colorField"
+              @change="updateConfig('colorField', ($event.target as HTMLInputElement).value)"
+              class="form-select no-drag"
+            >
+              <option value="">None</option>
+              <option
+                v-for="column in filteredColumnsInternal('numeric')"
+                :key="column.name"
+                :value="column.name"
+              >
+                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Group axes controls - not shown for USA map -->
         <div
           class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by')"
+          v-if="visibleControls.some((c) => c.id.includes('axis') || c.id === 'group-by') && internalConfig.chartType !== 'usa-map'"
         >
           <label class="control-section-label">Axes</label>
           <div
@@ -71,10 +112,10 @@
           </div>
         </div>
 
-        <!-- Group appearance controls -->
+        <!-- Group appearance controls - not shown for USA map if already showing the dedicated controls -->
         <div
           class="control-section"
-          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size')"
+          v-if="visibleControls.some((c) => c.id.includes('color') || c.id === 'size') && internalConfig.chartType !== 'usa-map'"
         >
           <label class="control-section-label">Appearance</label>
           <div
@@ -104,7 +145,7 @@
         </div>
 
         <!-- Group advanced controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
+        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') && internalConfig.chartType !== 'usa-map'">
           <label class="control-section-label">Advanced</label>
           <div
             v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
@@ -231,6 +272,7 @@ export default defineComponent({
       sizeField: '',
       groupField: '',
       trellisField: '',
+      geoField: '', // Added for usa-map chart type
     })
 
     // Determine reasonable defaults based on column types
@@ -258,12 +300,32 @@ export default defineComponent({
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
       if (item && item.datum) {
+        // Special handling for USA map clicks
+        if (internalConfig.value.chartType === 'usa-map') {
+          // For USA map, we need to handle the click on a state
+          if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
+            const stateName = item.datum.geo.properties.name
+            const geoField = internalConfig.value.geoField || ''
+            
+            if (geoField) {
+              emit('dimension-click', {
+                filters: { [geoField]: stateName },
+                chart: { [geoField]: stateName },
+                append,
+              })
+            }
+            emit('point-click', item.datum)
+            return
+          }
+        }
+        
+        // Original handling for other chart types
         let xFieldRaw = internalConfig.value.xField
         let yFieldRaw = internalConfig.value.yField
         if (!xFieldRaw || !yFieldRaw) {
           return
         }
-        //map the fields to the actual column names  from the props.columns - the fields will be names with . replaced with _
+        //map the fields to the actual column names from the props.columns - the fields will be names with . replaced with _
         let xField = props.columns.get(xFieldRaw)?.address
         let yField = props.columns.get(yFieldRaw)?.address
         if (!xField || !yField) {
@@ -292,6 +354,7 @@ export default defineComponent({
         emit('background-click')
       }
     }
+    
     // Render the chart
     const renderChart = async (force: boolean = false) => {
       if (!vegaContainer.value || showingControls.value) return
@@ -326,13 +389,24 @@ export default defineComponent({
         // Reset other fields when changing chart type
         const configDefaults = determineDefaultConfig(props.data, props.columns, value)
 
-        internalConfig.value.xField = configDefaults.xField
-        internalConfig.value.yField = configDefaults.yField
-        internalConfig.value.yAggregation = configDefaults.yAggregation
-        internalConfig.value.colorField = configDefaults.colorField
-        internalConfig.value.sizeField = configDefaults.sizeField
-        internalConfig.value.groupField = configDefaults.groupField
-        internalConfig.value.trellisField = configDefaults.trellisField
+        // If switching to usa-map, we need to set up the specific fields
+        if (value === 'usa-map') {
+          internalConfig.value.geoField = configDefaults.geoField || ''
+          internalConfig.value.colorField = configDefaults.colorField || ''
+          // Clear fields not used by usa-map
+          internalConfig.value.xField = ''
+          internalConfig.value.yField = ''
+          internalConfig.value.trellisField = ''
+        } else {
+          // Normal chart type fields
+          internalConfig.value.xField = configDefaults.xField
+          internalConfig.value.yField = configDefaults.yField
+          internalConfig.value.yAggregation = configDefaults.yAggregation
+          internalConfig.value.colorField = configDefaults.colorField
+          internalConfig.value.sizeField = configDefaults.sizeField
+          internalConfig.value.groupField = configDefaults.groupField
+          internalConfig.value.trellisField = configDefaults.trellisField
+        }
       }
 
       // Notify parent component if the callback is provided
@@ -401,6 +475,11 @@ export default defineComponent({
         // Special case for trellis field - only show if hasTrellisOption is true
         if (control.id === 'trellis-field' && !this.hasTrellisOption) {
           return false
+        }
+        // Don't show regular controls for usa-map, we have dedicated controls
+        if (this.internalConfig.chartType === 'usa-map' && 
+            (control.id.includes('axis') || control.id.includes('color'))) {
+          return false;
         }
         return control.visibleFor.includes(this.internalConfig.chartType)
       })

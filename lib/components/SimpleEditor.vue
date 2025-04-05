@@ -16,10 +16,7 @@
       </div>
     </div>
     <div class="editor-content">
-      <!-- Main editor pane -->
       <div ref="editorElement" class="monaco-editor"></div>
-
-      <!-- Completion symbols pane (imported component) -->
       <SymbolsPane
         :symbols="editor.completionSymbols || []"
         @select-symbol="insertSymbol"
@@ -122,6 +119,7 @@ export default defineComponent({
       this.createEditor()
       // Set up keyboard shortcut to focus on the symbol search box
       document.addEventListener('keydown', this.handleKeyboardShortcuts)
+      this.validateQuery()
     })
   },
 
