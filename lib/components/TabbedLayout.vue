@@ -5,6 +5,7 @@
         class="tab-button"
         :class="{ active: activeTab === 'sql' }"
         @click="activeTab = 'sql'"
+        data-testid="editor-tab"
       >
         Editor
       </button>

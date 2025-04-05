@@ -171,8 +171,6 @@ export default class DuckDBConnection extends BaseConnection {
       }
 
       let prepared = await this.connection.prepare(modifiedSql)
-      console.log(Object.values(parameters))
-      console.log(modifiedSql)
       result = await prepared.query(...params)
       await prepared.close()
     } else {

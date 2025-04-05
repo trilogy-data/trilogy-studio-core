@@ -36,6 +36,9 @@ test('test', async ({ page, isMobile }) => {
   await expect(page.getByTestId('query-results-length')).toContainText('1')
 
   // check for errors
+  if (isMobile) {
+    await page.getByTestId('editor-tab').click()
+  }
   await page.getByTestId('editor').click()
   const newContent = `import lineitem as lineitem;
 SELECT
