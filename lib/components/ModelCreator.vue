@@ -1,6 +1,6 @@
 <template>
   <div v-if="visible" class="creator-container">
-    <form @submit.prevent="submitModelCreation">
+    <form>
       <div>
         <div class="form-row">
           <label for="model-name">Name</label>
