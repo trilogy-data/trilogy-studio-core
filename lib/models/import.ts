@@ -1,9 +1,11 @@
+
+
 export class ImportFile {
   url: string
   name: string
   alias: string
   purpose: string
-  type: string | undefined
+  type?: string | undefined
 
   constructor(url: string, name: string, alias: string, purpose: string) {
     this.url = url
@@ -15,10 +17,18 @@ export class ImportFile {
 
 export class ModelImport {
   name: string
+  engine:string
+  description:string
+  link: string
+  tags: string[]
   components: ImportFile[]
 
-  constructor(name: string, components: ImportFile[]) {
+  constructor(name: string, engine:string, description:string, link:string, tags:string[] = [], components: ImportFile[]=[]) {
     this.name = name
+    this.engine = engine
     this.components = components
+    this.description = description
+    this.link = link
+    this.tags = tags
   }
 }

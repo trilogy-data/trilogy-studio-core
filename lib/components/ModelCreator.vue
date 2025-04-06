@@ -1,32 +1,16 @@
 <template>
   <div v-if="visible" class="creator-container">
-    <form @submit.prevent="submitModelCreation">
+    <form>
       <div>
         <div class="form-row">
           <label for="model-name">Name</label>
-          <input
-            type="text"
-            v-model.trim="modelDetails.name"
-            id="model-name"
-            required
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="modelDetails.name" id="model-name" required @input="validateForm" />
         </div>
         <div class="form-row">
           <label for="model-import">Assign To Connection</label>
-          <select
-            v-model="modelDetails.connection"
-            id="model-connection"
-            placeholder="Models must have a connection."
-            data-testid="model-creator-connection"
-            required
-            @change="validateForm"
-          >
-            <option
-              v-for="connection in connections"
-              :key="connection.name"
-              :value="connection.name"
-            >
+          <select v-model="modelDetails.connection" id="model-connection" placeholder="Models must have a connection."
+            data-testid="model-creator-connection" required @change="validateForm">
+            <option v-for="connection in connections" :key="connection.name" :value="connection.name">
               {{ connection.name }}
             </option>
             <option value="new-duckdb">New DuckDB</option>
@@ -37,45 +21,24 @@
         </div>
         <div v-if="modelDetails.connection === 'new-motherduck'" class="form-row">
           <label for="md-token">MotherDuck Token</label>
-          <input
-            type="text"
-            v-model.trim="modelDetails.options.mdToken"
-            id="md-token"
-            placeholder="MotherDuck Token"
-            required
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="modelDetails.options.mdToken" id="md-token" placeholder="MotherDuck Token"
+            required @input="validateForm" />
         </div>
 
         <div v-if="modelDetails.connection === 'new-bigquery-oauth'" class="form-row">
           <label for="project-id">BigQuery Project ID</label>
-          <input
-            type="text"
-            v-model.trim="modelDetails.options.projectId"
-            id="project-id"
-            placeholder="Billing Project ID"
-            required
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="modelDetails.options.projectId" id="project-id"
+            placeholder="Billing Project ID" required @input="validateForm" />
         </div>
         <div class="form-row">
           <label for="model-import">Import From Address</label>
-          <input
-            placeholder="Optional. Import github definition."
-            type="text"
-            v-model.trim="modelDetails.importAddress"
-            id="model-import"
-            @input="validateForm"
-          />
+          <input placeholder="Optional. Import github definition." type="text" v-model.trim="modelDetails.importAddress"
+            id="model-import" @input="validateForm" />
         </div>
       </div>
       <div class="button-row">
-        <loading-button
-          data-testid="model-creation-submit"
-          :action="performSubmit"
-          class="submit-button"
-          :disabled="!isFormValid"
-        >
+        <loading-button data-testid="model-creation-submit" :action="performSubmit" class="submit-button"
+          :disabled="!isFormValid">
           Submit
         </loading-button>
         <button type="button" @click="close()">Cancel</button>
@@ -326,23 +289,46 @@ export default defineComponent({
           const modelImportBase = await fetchModelImportBase(modelDetails.value.importAddress)
           const data = await fetchModelImports(modelImportBase)
           modelStore.models[modelDetails.value.name].sources = data.map((response) => {
-            if (!editorStore.editors[response.name]) {
-              if (response.type === 'sql') {
-                editorStore.newEditor(response.name, 'sql', connectionName, response.content)
-              } else {
-                editorStore.newEditor(response.name, 'trilogy', connectionName, response.content)
+            let editorName = response.name
+
+            // Handle name collisions by appending a suffix if needed
+            if (editorStore.editors[editorName] && editorStore.editors[editorName].connection !== connectionName) {
+              let suffix = 1
+              while (editorStore.editors[`${response.name}_${suffix}`]) {
+                // If the editor with suffix exists but has the same connection, we can use it
+                if (editorStore.editors[`${response.name}_${suffix}`].connection === connectionName) {
+                  editorName = `${response.name}_${suffix}`
+                  break
+                }
+                // Otherwise, keep incrementing the suffix
+                suffix++
               }
-            } else {
-              editorStore.editors[response.name].contents = response.content
+              // If we exited the loop without finding a matching connection, use the latest suffix
+              if (editorStore.editors[editorName]?.connection !== connectionName) {
+                editorName = `${response.name}_${suffix}`
+              }
             }
-            // add source as a tag
+
+            // Create or update the editor based on editorName
+            if (!editorStore.editors[editorName]) {
+              if (response.type === 'sql') {
+                editorStore.newEditor(editorName, 'sql', connectionName, response.content)
+              } else {
+                editorStore.newEditor(editorName, 'trilogy', connectionName, response.content)
+              }
+            } else if (editorStore.editors[editorName].connection === connectionName) {
+              editorStore.editors[editorName].contents = response.content
+            }
+
+            // Add source as a tag
             if (
               response.purpose &&
-              !editorStore.editors[response.name].tags.includes(response.purpose)
+              !editorStore.editors[editorName].tags.includes(response.purpose)
             ) {
-              editorStore.editors[response.name].tags.push(response.purpose)
+              editorStore.editors[editorName].tags.push(response.purpose)
             }
-            return new ModelSource(response.name, response.alias || response.name, [], [])
+
+            return new ModelSource(editorName, response.alias || response.name, [], [])
           })
         } catch (error) {
           console.error('Error importing model:', error)
@@ -360,17 +346,11 @@ export default defineComponent({
       emit('close')
     }
 
-    // Function for the old form submission - now uses the LoadingButton's action
-    const submitModelCreation = async () => {
-      // This is kept for the form submit handler, but now uses the LoadingButton
-      // We can keep it empty as LoadingButton handles the action
-    }
 
     return {
       modelDetails,
       connections,
       createModel,
-      submitModelCreation,
       performSubmit,
       validateForm,
       isFormValid,

@@ -22,7 +22,12 @@ from trilogy.authoring import (
     RawSQLStatement,
     DEFAULT_NAMESPACE,
 )
-from trilogy.core.statements.execute import ProcessedRawSQLStatement, ProcessedQueryPersist, ProcessedShowStatement, ProcessedQuery
+from trilogy.core.statements.execute import (
+    ProcessedRawSQLStatement,
+    ProcessedQueryPersist,
+    ProcessedShowStatement,
+    ProcessedQuery,
+)
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
@@ -175,7 +180,16 @@ def validate_query(query: ValidateQueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
-def generate_query_core(query: QueryInSchema)-> tuple[ProcessedQuery | ProcessedQueryPersist | ProcessedShowStatement | ProcessedRawSQLStatement | None, list[QueryOutColumn]]:
+def generate_query_core(
+    query: QueryInSchema,
+) -> tuple[
+    ProcessedQuery
+    | ProcessedQueryPersist
+    | ProcessedShowStatement
+    | ProcessedRawSQLStatement
+    | None,
+    list[QueryOutColumn],
+]:
     env = parse_env_from_full_model(query.full_model.sources)
     dialect = get_dialect_generator(query.dialect)
     for imp in query.imports:
@@ -249,7 +263,7 @@ def generate_query(query: QueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     if not target:
         return QueryOut(generated_sql=None, columns=columns)
-   
+
     if isinstance(target, RawSQLStatement):
         output = QueryOut(generated_sql=target.text, columns=columns)
         return output
