@@ -15,7 +15,7 @@ const props = defineProps<{
   item: LayoutItem
   editMode: boolean
   getItemData: (itemId: string, dashboardId: string) => GridItemData
-  setItemData: (itemId: string, dashboardId:string, data: any) => void
+  setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
 // Emits

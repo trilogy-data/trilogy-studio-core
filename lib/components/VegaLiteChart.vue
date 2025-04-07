@@ -230,7 +230,7 @@ export default defineComponent({
     })
 
     // Determine reasonable defaults based on column types
-    const initializeConfig = (force:boolean = false) => {
+    const initializeConfig = (force: boolean = false) => {
       if (props.initialConfig && !force) {
         // Use external config if provided
         internalConfig.value = { ...internalConfig.value, ...props.initialConfig }

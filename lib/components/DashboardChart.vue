@@ -76,7 +76,7 @@ export default defineComponent({
       required: true,
     },
     setItemData: {
-      type: Function  as PropType<(itemId: string, dashboardId: string, content:any)=> null>,
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -116,11 +116,15 @@ export default defineComponent({
     })
 
     const filters = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).filters || []).map((filter) => filter.value)
+      return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
+        (filter) => filter.value,
+      )
     })
 
     const chartSelection = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map((filter) => filter.value)
+      return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map(
+        (filter) => filter.value,
+      )
     })
 
     const connectionName = computed(() => {

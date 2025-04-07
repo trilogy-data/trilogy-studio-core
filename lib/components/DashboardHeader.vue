@@ -1,6 +1,6 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
-import { computed, type Ref} from 'vue'
+import { computed, type Ref } from 'vue'
 import { useConnectionStore } from '../stores'
 import { useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
@@ -13,7 +13,7 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  filterError: String
+  filterError: String,
 })
 
 const emit = defineEmits([

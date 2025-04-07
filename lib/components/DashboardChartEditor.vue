@@ -2,7 +2,7 @@
 import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
 import SimpleEditor from './SimpleEditor.vue'
 import { type Import } from '../stores/resolver'
-import { nextTick } from 'process';
+import { nextTick } from 'process'
 interface EditorRef {
   getContent: () => string
 }
@@ -43,14 +43,12 @@ onMounted(() => {
   nextTick(() => {
     document.addEventListener('click', handleClickOutside)
   })
-
 })
 
 // Remove event listener on unmounted
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
-
 
 // Add SQL syntax validation or preview functionality here if needed
 </script>
@@ -66,8 +64,13 @@ onUnmounted(() => {
         >
       </div> -->
       <div class="editor-body">
-        <SimpleEditor class="editor-body" :initContent="queryText" :connectionName="connectionName" :imports="imports"
-          ref="editor"></SimpleEditor>
+        <SimpleEditor
+          class="editor-body"
+          :initContent="queryText"
+          :connectionName="connectionName"
+          :imports="imports"
+          ref="editor"
+        ></SimpleEditor>
       </div>
 
       <div class="editor-actions">

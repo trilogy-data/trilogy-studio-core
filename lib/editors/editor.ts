@@ -17,7 +17,7 @@ interface CompetionSymbol {
 
 export interface EditorInterface {
   name: string
-  type:  'trilogy' | 'sql' | 'preql'
+  type: 'trilogy' | 'sql' | 'preql'
   syntax: string
   connection: string
   results: ResultsInterface

@@ -25,10 +25,7 @@
     </div>
 
     <div v-if="editor.error" class="error-message">{{ editor.error }}</div>
-    <loading-view
-      v-if="editor.loading"
-      :text="`Loading...`"
-      :startTime="editor.startTime"/>
+    <loading-view v-if="editor.loading" :text="`Loading...`" :startTime="editor.startTime" />
     <div v-if="lastOperation" class="results-summary">
       <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
         {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
@@ -253,7 +250,7 @@ export default defineComponent({
       this.$emit('query-started')
       this.editor.setError(null)
       let queryDone = false
-      
+
       const connectionStore = this.connectionStore as ConnectionStoreType
       const queryExecutionService = this.queryExecutionService as QueryExecutionService
       const monacoInstance = globalEditor
@@ -501,7 +498,9 @@ export default defineComponent({
   height: 100%;
 }
 
-.timing, .row-count, .operation-type {
+.timing,
+.row-count,
+.operation-type {
   height: 18px;
   display: flex;
   align-items: center;

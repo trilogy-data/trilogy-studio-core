@@ -113,27 +113,24 @@ const selectedConnection = computed(() => {
 async function handleFilterChange(newFilter: string) {
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
-    
-    await queryExecutionService?.generateQuery(
-      dashboard.value.connection,
-      {
+
+    await queryExecutionService
+      ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
         queryType: 'duckdb',
         editorType: 'trilogy',
         extraFilters: [newFilter],
-        imports: dashboard.value.imports
-      }
-    ).then(() => {
-      if (dashboard.value && dashboard.value.id) {
-        dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
-      }
-      
-    }).catch((error) => {
-      filterError.value = error.message
-      return false
-    })
-
-
+        imports: dashboard.value.imports,
+      })
+      .then(() => {
+        if (dashboard.value && dashboard.value.id) {
+          dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+        }
+      })
+      .catch((error) => {
+        filterError.value = error.message
+        return false
+      })
   }
 }
 
@@ -253,7 +250,7 @@ function closeEditors(): void {
 }
 
 // Get item data from the dashboard
-function getItemData(itemId: string, dashboardId:string): GridItemData {
+function getItemData(itemId: string, dashboardId: string): GridItemData {
   if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
     return {
       type: CELL_TYPES.CHART,
@@ -322,7 +319,7 @@ function getItemData(itemId: string, dashboardId:string): GridItemData {
 }
 
 // Use a wrapper function to set data via the store
-function setItemData(itemId: string, dashboardId:string, data: any): void {
+function setItemData(itemId: string, dashboardId: string, data: any): void {
   if (!dashboard.value || !dashboard.value.id) return
 
   if (!dashboardId || dashboard.value.id !== dashboardId) {
@@ -424,20 +421,57 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
-      :filterError="filterError" @connection-change="onConnectionChange" @filter-change="handleFilterChange"
-      @import-change="handleImportChange" @add-item="openAddItemModal" @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode" @refresh="handleRefresh" />
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
+      :selected-connection="selectedConnection"
+      :filterError="filterError"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh"
+    />
 
     <div class="grid-container">
-      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
-        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
-        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
-          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle">
-          <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
-            @dimension-click="setCrossFilter" :set-item-data="setItemData" @edit-content="openEditor"
-            @remove-filter="removeFilter" @background-click="unSelect" @update-dimensions="updateItemDimensions" />
+      <GridLayout
+        :col-num="12"
+        :row-height="30"
+        :is-draggable="draggable"
+        :is-resizable="resizable"
+        :layout="layout"
+        :vertical-compact="true"
+        :use-css-transforms="true"
+        @layout-updated="onLayoutUpdated"
+      >
+        <grid-item
+          v-for="item in layout"
+          :key="item.i"
+          :static="item.static"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :i="item.i"
+          :data-i="item.i"
+          drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle"
+        >
+          <DashboardGridItem
+            :dashboard-id="dashboard.id"
+            :item="item"
+            :edit-mode="editMode"
+            :filter="filter"
+            :get-item-data="getItemData"
+            @dimension-click="setCrossFilter"
+            :set-item-data="setItemData"
+            @edit-content="openEditor"
+            @remove-filter="removeFilter"
+            @background-click="unSelect"
+            @update-dimensions="updateItemDimensions"
+          />
         </grid-item>
       </GridLayout>
     </div>
@@ -467,13 +501,22 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
-        :imports="getItemData(editingItem.i, dashboard.id).imports || []" :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor" @save="saveContent" @cancel="closeEditors" />
+      <ChartEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :content="getItemData(editingItem.i, dashboard.id).content" @save="saveContent" @cancel="closeEditors" />
+      <MarkdownEditor
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">
