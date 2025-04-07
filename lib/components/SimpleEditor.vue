@@ -207,7 +207,7 @@ export default defineComponent({
         const conn = connectionStore.connections[this.editor.connection]
         const queryInput = {
           text,
-          queryType: conn ? conn.query_type : '',
+          queryType: conn ? conn.query_type : 'trilogy',
           editorType: this.editor.type,
           sources: [],
           imports: this.imports,

@@ -173,6 +173,7 @@ export default defineComponent({
         try {
           editorStore.newEditor(
             editorDetails.value.name,
+            // @ts-ignore
             editorDetails.value.type,
             editorDetails.value.connection,
             '',

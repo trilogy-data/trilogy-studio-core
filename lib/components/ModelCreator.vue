@@ -288,6 +288,7 @@ export default defineComponent({
         try {
           const modelImportBase = await fetchModelImportBase(modelDetails.value.importAddress)
           const data = await fetchModelImports(modelImportBase)
+          // @ts-ignore
           modelStore.models[modelDetails.value.name].sources = data.map((response) => {
             let editorName = response.name
 

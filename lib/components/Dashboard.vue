@@ -114,7 +114,7 @@ async function handleFilterChange(newFilter: string) {
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
     
-    let valid = await queryExecutionService?.generateQuery(
+    await queryExecutionService?.generateQuery(
       dashboard.value.connection,
       {
         text: 'select 1 as test;',
@@ -123,12 +123,11 @@ async function handleFilterChange(newFilter: string) {
         extraFilters: [newFilter],
         imports: dashboard.value.imports
       }
-    ).then((result) => {
-      if (result?.data.items?.length > 0) {
-        throw new Error('Invalid filter')
-      } 
-      filterError.value = ''
-      dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+    ).then(() => {
+      if (dashboard.value && dashboard.value.id) {
+        dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+      }
+      
     }).catch((error) => {
       filterError.value = error.message
       return false
@@ -325,6 +324,11 @@ function getItemData(itemId: string, dashboardId:string): GridItemData {
 // Use a wrapper function to set data via the store
 function setItemData(itemId: string, dashboardId:string, data: any): void {
   if (!dashboard.value || !dashboard.value.id) return
+
+  if (!dashboardId || dashboard.value.id !== dashboardId) {
+    console.warn('Dashboard ID mismatch. Cannot set item data.')
+    return
+  }
 
   // Update specific properties through store actions
   if (data.name) {

@@ -12,7 +12,7 @@ const useEditorStore = defineStore('editors', {
     editorList: (state) => Object.keys(state.editors).map((key) => state.editors[key]),
   },
   actions: {
-    newEditor(name: string, type: string, connection: string, contents: string | undefined) {
+    newEditor(name: string, type:  'trilogy' | 'sql' | 'preql', connection: string, contents: string | undefined) {
       let editor = new Editor({
         name,
         type,
