@@ -73,10 +73,10 @@ onUnmounted(() => {
   <div class="import-selector">
     <div class="import-selector-header" @click="toggleDropdown">
       <label>Root Source</label>
-      <div class="import-summary" :class="{ 'has-imports': activeCount > 0 }">
+      <div class="import-summary" :class="{ 'has-imports': activeCount > 0 }" data-testid="dashboard-import-selector">
         <span v-if="activeCount === 0">No imports</span>
         <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
-        <span v-else>1 import selected</span>
+        <span v-else>{{ activeImports.length }} import(s) selected</span>
         <svg
           class="dropdown-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -109,6 +109,7 @@ onUnmounted(() => {
           class="import-item"
           :class="{ active: isImportActive(importItem.name) }"
           @click="toggleImport(importItem)"
+          :data-testid="`set-dashboard-source-${importItem.name}`"
         >
           <div class="import-checkbox">
             <svg

@@ -33,7 +33,6 @@ function cancel(): void {
 
 function handleClickOutside(event: MouseEvent): void {
   const importSelector = document.querySelector('.content-editor')
-  console.log(importSelector)
   if (importSelector && !importSelector.contains(event.target as Node) && props.showing) {
     emit('cancel')
   }
@@ -74,7 +73,7 @@ onUnmounted(() => {
       </div>
 
       <div class="editor-actions">
-        <button @click="saveQuery" class="save-button">Save Query</button>
+        <button @click="saveQuery" class="save-button" data-testid="save-dashboard-chart">Save Query</button>
         <button @click="cancel" class="cancel-button">Cancel</button>
       </div>
     </div>

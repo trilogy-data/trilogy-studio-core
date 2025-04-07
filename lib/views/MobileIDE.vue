@@ -65,7 +65,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard :name="activeDashboard" />
+        <mobile-dashboard :name="activeDashboard" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
@@ -167,7 +167,7 @@ import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
 import WelcomePage from '../components/WelcomePage.vue'
-import Dashboard from '../components/Dashboard.vue'
+import MobileDashboard from '../components/MobileDashboard.vue'
 import ResultsContainer from '../components/Results.vue'
 import TutorialPage from '../components/TutorialPage.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
@@ -207,7 +207,7 @@ export default {
     LoadingView,
     HintComponent,
     WelcomePage,
-    Dashboard,
+    MobileDashboard,
     ResultsContainer,
     LoadingButton,
     TabbedLayout,

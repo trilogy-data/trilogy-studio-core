@@ -145,7 +145,7 @@ const hasFilters = computed(() => {
           :placeholder="itemData.type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'"
         />
       </div>
-      <button @click="openEditor" class="edit-button">Edit Content</button>
+      <button @click="openEditor" class="edit-button" data-testid='edit-dashboard-item-content'>Edit Content</button>
     </div>
 
     <!-- Non-edit mode title display -->

@@ -6,6 +6,7 @@
         @click="toggleControls"
         class="toggle-controls-btn"
         :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn"
       >
         <i
           :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
@@ -18,7 +19,7 @@
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
-      <div v-show="!showingControls" ref="vegaContainer" class="vega-container"></div>
+      <div v-show="!showingControls" ref="vegaContainer" class="vega-container" data-testid="vega-chart-container"></div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
@@ -31,6 +32,7 @@
               class="chart-icon"
               :class="{ selected: internalConfig.chartType === type.value }"
               :title="type.label"
+              :data-testid="`chart-type-${type.value}`"
             >
               <div class="icon-container">
                 <i :class="type.icon" class="icon"></i>
@@ -255,8 +257,6 @@ export default defineComponent({
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
-      console.log(item)
-      console.log(event)
       if (item && item.datum) {
         // Special handling for USA map clicks
         // if (internalConfig.value.chartType === 'usa-map') {
@@ -347,6 +347,9 @@ export default defineComponent({
           removeEventListener = () => {
             result.view.removeEventListener('click', handlePointClick)
           }
+          // set test handler
+          // @ts-ignore
+          vegaContainer._vegaView = result.view;
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -389,15 +392,35 @@ export default defineComponent({
       () => [props.containerHeight, props.containerWidth],
       () => renderChart(true),
     )
+    // watch(
+    //   () => props.data,
+    //   () => renderChart(true),
+    //   { deep: true },
+    // )
     watch(
-      () => props.data,
-      () => renderChart(true),
-      { deep: true },
-    )
-    watch(
-      () => props.columns,
+      () => [props.columns, props.data],
       () => {
-        initializeConfig() // force column reset on column change
+        // check if any internal config is no longer found
+        let force = false;
+        // check that all if xField, yField, colorField, sizeField, groupField, trellisField are still in the columns if they are set
+        for (const field of [
+          'xField',
+          'yField',
+          'colorField',
+          'sizeField',
+          'groupField',
+          'trellisField',
+        ]) {
+          if (internalConfig.value[field] && !props.columns.has(internalConfig.value[field])) {
+            force = true
+            internalConfig.value[field] = ''
+          }
+        }
+        console.log('update')
+        console.log(force)
+        if (force) {
+          initializeConfig(force) // force column reset on column change
+        }
         renderChart()
       },
       { deep: true },

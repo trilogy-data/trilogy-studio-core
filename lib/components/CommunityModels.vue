@@ -48,7 +48,7 @@
       <div v-if="filteredFiles.length">
         <div v-for="file in filteredFiles" :key="file.name" class="model-item">
           <div class="font-semibold flex items-center">
-            <span class="imported-indicator mr-2" v-if="modelExists(file.name)">
+            <span class="imported-indicator mr-2" v-if="modelExists(file.name)" :data-testid="`imported-${file.name}`">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"

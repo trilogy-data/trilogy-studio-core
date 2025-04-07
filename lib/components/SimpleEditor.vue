@@ -16,7 +16,7 @@
       </div>
     </div>
     <div class="editor-content">
-      <div ref="editorElement" class="monaco-editor"></div>
+      <div ref="editorElement" class="monaco-editor" data-testid="simple-editor-content"></div>
       <SymbolsPane
         :symbols="editor.completionSymbols || []"
         @select-symbol="insertSymbol"
