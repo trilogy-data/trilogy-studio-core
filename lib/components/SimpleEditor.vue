@@ -27,9 +27,8 @@
     <div v-if="editor.error" class="error-message">{{ editor.error }}</div>
     <loading-view
       v-if="editor.loading"
-      :loadingText="`Loading...`"
-      :errorText="editor.error"
-      :showError="!!editor.error"/>
+      :text="`Loading...`"
+      :startTime="editor.startTime"/>
     <div v-if="lastOperation" class="results-summary">
       <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
         {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
@@ -389,7 +388,9 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 400px;
   border: 1px solid var(--border-color, #444);
+  overflow: hidden;
 }
 
 .menu-bar {
@@ -399,6 +400,7 @@ export default defineComponent({
   justify-content: space-between;
   padding-right: 0.5rem;
   height: 40px;
+  min-height: 40px;
 }
 
 .menu-actions {
@@ -407,10 +409,11 @@ export default defineComponent({
   gap: 0.15rem;
   align-items: center;
   flex-grow: 1;
+  height: 100%;
 }
 
 .action-item {
-  height: 25px;
+  height: 28px;
   width: 80px;
   font-weight: 500;
   cursor: pointer;
@@ -426,12 +429,14 @@ export default defineComponent({
   flex-grow: 1;
   position: relative;
   min-height: 250px;
+  height: calc(400px - 40px - 40px); /* Subtract menu-bar and results-summary heights */
 }
 
 .monaco-editor {
   flex: 1;
   min-height: 250px;
-  height: 100%;
+  height: 300x; /* Subtract menu-bar and results-summary heights */
+  width: 100%;
 }
 
 .button-cancel {
@@ -446,6 +451,9 @@ export default defineComponent({
   padding: 0.5rem;
   border-left: 3px solid var(--error-color, #d32f2f);
   margin-bottom: 0.5rem;
+  min-height: 32px;
+  max-height: 80px;
+  overflow-y: auto;
 }
 
 /* Results summary section */
@@ -457,6 +465,8 @@ export default defineComponent({
   font-size: 0.85rem;
   background-color: var(--sidebar-bg, #252525);
   gap: 0.5rem;
+  height: 32px;
+  min-height: 32px;
 }
 
 .status-badge {
@@ -466,6 +476,9 @@ export default defineComponent({
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  height: 18px;
+  display: flex;
+  align-items: center;
 }
 
 .status-badge.success {
@@ -485,6 +498,13 @@ export default defineComponent({
   gap: 1rem;
   align-items: center;
   color: var(--text-subtle, #aaa);
+  height: 100%;
+}
+
+.timing, .row-count, .operation-type {
+  height: 18px;
+  display: flex;
+  align-items: center;
 }
 
 .timing::before {
@@ -503,34 +523,74 @@ export default defineComponent({
   font-style: italic;
 }
 
+/* Enhanced Mobile View */
 @media screen and (max-width: 768px) {
-  .editor-content {
-    flex-direction: column;
+  .editor-container {
+    min-height: 300px;
+    height: 100%;
   }
 
   .menu-bar {
     height: 60px;
+    min-height: 60px;
     flex-direction: column;
+    padding: 0.5rem;
   }
 
   .menu-actions {
-    justify-content: center;
+    justify-content: space-between;
     width: 100%;
+    height: 100%;
   }
 
   .action-item {
     flex-grow: 1;
-    width: auto;
+    width: calc(50% - 0.25rem);
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .editor-content {
+    height: calc(100% - 60px - 64px); /* Adjust for taller menu bar and results summary in mobile */
+    min-height: 200px;
+  }
+
+  .monaco-editor {
+    min-height: 200px;
   }
 
   .results-summary {
+    height: 64px;
+    min-height: 64px;
     flex-direction: column;
     align-items: flex-start;
+    padding: 0.75rem;
   }
 
   .results-details {
     flex-wrap: wrap;
     gap: 0.5rem;
+    margin-top: 0.25rem;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .status-badge {
+    height: 20px;
+    font-size: 0.75rem;
+  }
+
+  /* Adjustments for touch devices */
+  .action-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Improved mobile scrolling for error messages */
+  .error-message {
+    max-height: 120px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>

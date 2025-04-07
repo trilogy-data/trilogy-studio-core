@@ -70,8 +70,8 @@ export const Controls: ChartControl[] = [
     label: 'Color Scale',
     field: 'colorField',
     columnFilter: 'numeric',
-    allowEmpty: false,
-    visibleFor: ['heatmap', 'usa-map'],
+    allowEmpty: true,
+    visibleFor: ['heatmap','usa-map'],
     filterGroup: 'appearance',
   },
   {

@@ -51,6 +51,7 @@ export function createMonacoEditor(
     acceptSuggestionOnEnter: 'off',
     tabCompletion: 'on',
     theme: 'trilogyStudio',
+    
   }
 
   // Merge default options with provided options

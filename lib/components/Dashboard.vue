@@ -121,7 +121,6 @@ async function handleFilterChange(newFilter: string) {
         queryType: 'duckdb',
         editorType: 'trilogy',
         extraFilters: [newFilter],
-        sources:
         imports: dashboard.value.imports
       }
     ).then((result) => {
