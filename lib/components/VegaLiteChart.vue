@@ -397,7 +397,7 @@ export default defineComponent({
     watch(
       () => props.columns,
       () => {
-        initializeConfig(true) // force column reset on column change
+        initializeConfig() // force column reset on column change
         renderChart()
       },
       { deep: true },
