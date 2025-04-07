@@ -154,14 +154,26 @@ def format_query(query: QueryInSchema):
 
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
+    filter_validation = []
     try:
         # check filters, but return main validation
         if query.extra_filters:
             for filter_string in query.extra_filters:
                 try:
-                    get_diagnostics(
+                    print(f"WHERE {filter_string} SELECT 1 as ftest;")
+                    base = get_diagnostics(
                         f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
                     )
+                    print(base)
+                    if base.items:
+                        filter_validation.append({
+                            'startLineNumber': 0,
+                            'startColumn': 0,
+                            'endLineNumber': 0,
+                            'endColumn': 0,
+                            'message': 'Invalid additional filter provided to query.',
+                            'severity': base.items[0].severity,
+                        })
                 except Exception as e:
                     raise HTTPException(
                         status_code=422,
@@ -175,7 +187,9 @@ def validate_query(query: ValidateQueryInSchema):
             else:
                 imp_string = f"import {imp.name};\n"
             base += imp_string
-        return get_diagnostics(base + query.query, query.sources)
+        base = get_diagnostics(base + query.query, query.sources)
+        base.items += filter_validation
+        return base
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
@@ -235,7 +249,6 @@ def generate_query_core(
                 for v in variables:
                     # remove the prefix
                     filter_string = filter_string.replace(v[0], v[0][1:])
-                print(f"{base}\nWHERE {filter_string} SELECT 1 as ftest;")
                 _, fparsed = parse_text(
                     f"{base}\nWHERE {filter_string} SELECT 1 as ftest;", env
                 )

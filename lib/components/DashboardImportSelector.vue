@@ -36,7 +36,7 @@ function toggleImport(importItem: Import): void {
     newImports = []
   } else {
     // If not active, select only this one
-    newImports = [{ name: importItem.name, alias: importItem.name }]
+    newImports = [{ name: importItem.name, alias: '' }]
   }
 
   emit('update:imports', newImports)

@@ -25,6 +25,11 @@
     </div>
 
     <div v-if="editor.error" class="error-message">{{ editor.error }}</div>
+    <loading-view
+      v-if="editor.loading"
+      :loadingText="`Loading...`"
+      :errorText="editor.error"
+      :showError="!!editor.error"/>
     <div v-if="lastOperation" class="results-summary">
       <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
         {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
@@ -58,6 +63,7 @@ import type QueryExecutionService from '../stores/queryExecutionService'
 import { type QueryUpdate } from '../stores/queryExecutionService'
 import type { Import } from '../stores/resolver'
 import SymbolsPane, { type CompletionItem } from './SymbolsPane.vue'
+import LoadingView from './LoadingView.vue'
 
 interface OperationState {
   success: boolean
@@ -72,6 +78,7 @@ export default defineComponent({
   name: 'EnhancedEditor',
   components: {
     SymbolsPane,
+    LoadingView,
   },
   props: {
     onSave: {
@@ -247,6 +254,7 @@ export default defineComponent({
       this.$emit('query-started')
       this.editor.setError(null)
       let queryDone = false
+      
       const connectionStore = this.connectionStore as ConnectionStoreType
       const queryExecutionService = this.queryExecutionService as QueryExecutionService
       const monacoInstance = globalEditor
@@ -272,6 +280,7 @@ export default defineComponent({
 
         // Set component to loading state
         this.editor.loading = true
+        this.lastOperation = null
         this.editor.startTime = Date.now()
 
         // Prepare query input

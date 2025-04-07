@@ -327,9 +327,12 @@ export default defineComponent({
             ) {
               editorStore.editors[editorName].tags.push(response.purpose)
             }
+            if (response.type === 'sql') {
+              return null
+            }
 
             return new ModelSource(editorName, response.alias || response.name, [], [])
-          })
+          }).filter((source) => source)
         } catch (error) {
           console.error('Error importing model:', error)
           throw new Error('Failed to import model definition')

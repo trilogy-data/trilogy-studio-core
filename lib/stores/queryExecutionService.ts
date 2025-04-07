@@ -10,7 +10,7 @@ import { type ValidateResponse, type QueryResponse } from './resolver'
 export interface QueryInput {
   text: string
   queryType: string
-  editorType: string
+  editorType: 'trilogy' | 'sql' | 'preql'
   imports: Import[]
   extraFilters?: string[]
   parameters?: Record<string, any>
@@ -55,6 +55,35 @@ export default class QueryExecutionService {
     this.editorStore = editorStore
   }
 
+  async generateQuery(
+    connectionId: string,
+    queryInput: QueryInput,
+    sources: ContentInput[] | null = null,
+  ): Promise<QueryResponse | null> {
+    const conn = this.connectionStore.connections[connectionId]
+
+    if (!sources) {
+      sources = conn.model
+        ? this.modelStore.models[conn.model].sources.map((source) => ({
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
+        : []
+    }
+
+    return this.trilogyResolver.resolve_query(
+      queryInput.text,
+      conn.query_type,
+      queryInput.editorType,
+      sources,
+      queryInput.imports,
+      queryInput.extraFilters,
+      queryInput.parameters,
+    )
+  }
+
   async validateQuery(
     connectionId: string,
     queryInput: QueryInput,
@@ -85,11 +114,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     }
 
@@ -98,6 +127,7 @@ export default class QueryExecutionService {
       queryInput.text,
       sources,
       queryInput.imports,
+      queryInput.extraFilters,
     )
     // Return the imports from the validation result
     return validation
@@ -198,11 +228,11 @@ export default class QueryExecutionService {
     const sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
 
     let resolveResponse: QueryResponse | null = null

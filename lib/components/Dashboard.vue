@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -15,6 +15,7 @@ import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import { type Import } from '../stores/resolver'
+import QueryExecutionService from '../stores/queryExecutionService'
 
 // Props definition
 const props = defineProps<{
@@ -24,10 +25,11 @@ const props = defineProps<{
 
 // Initialize the dashboard store
 const dashboardStore = useDashboardStore()
-
+const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 // Add filter state and debouncing
 const filter = ref('')
 const filterInput = ref('')
+const filterError = ref('')
 const debounceTimeout = ref<number | null>(null)
 
 // Ensure dashboard is set as active when component mounts
@@ -108,10 +110,32 @@ const selectedConnection = computed(() => {
   return dashboard.value.connection
 })
 
-function handleFilterChange(newFilter: string) {
+async function handleFilterChange(newFilter: string) {
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
-    dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+    
+    let valid = await queryExecutionService?.generateQuery(
+      dashboard.value.connection,
+      {
+        text: 'select 1 as test;',
+        queryType: 'duckdb',
+        editorType: 'trilogy',
+        extraFilters: [newFilter],
+        sources:
+        imports: dashboard.value.imports
+      }
+    ).then((result) => {
+      if (result?.data.items?.length > 0) {
+        throw new Error('Invalid filter')
+      } 
+      filterError.value = ''
+      dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+    }).catch((error) => {
+      filterError.value = error.message
+      return false
+    })
+
+
   }
 }
 
@@ -231,7 +255,18 @@ function closeEditors(): void {
 }
 
 // Get item data from the dashboard
-function getItemData(itemId: string): GridItemData {
+function getItemData(itemId: string, dashboardId:string): GridItemData {
+  if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
+    return {
+      type: CELL_TYPES.CHART,
+      content: '',
+      name: `Item ${itemId}`,
+      width: 0,
+      height: 0,
+      imports: [],
+      filters: [],
+    }
+  }
   if (!dashboard.value) {
     return {
       type: CELL_TYPES.CHART,
@@ -289,7 +324,7 @@ function getItemData(itemId: string): GridItemData {
 }
 
 // Use a wrapper function to set data via the store
-function setItemData(itemId: string, data: any): void {
+function setItemData(itemId: string, dashboardId:string, data: any): void {
   if (!dashboard.value || !dashboard.value.id) return
 
   // Update specific properties through store actions
@@ -386,55 +421,20 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :selected-connection="selectedConnection"
-      @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange"
-      @import-change="handleImportChange"
-      @add-item="openAddItemModal"
-      @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode"
-      @refresh="handleRefresh"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
+      :filterError="filterError" @connection-change="onConnectionChange" @filter-change="handleFilterChange"
+      @import-change="handleImportChange" @add-item="openAddItemModal" @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode" @refresh="handleRefresh" />
 
     <div class="grid-container">
-      <GridLayout
-        :col-num="12"
-        :row-height="30"
-        :is-draggable="draggable"
-        :is-resizable="resizable"
-        :layout="layout"
-        :vertical-compact="true"
-        :use-css-transforms="true"
-        @layout-updated="onLayoutUpdated"
-      >
-        <grid-item
-          v-for="item in layout"
-          :key="item.i"
-          :static="item.static"
-          :x="item.x"
-          :y="item.y"
-          :w="item.w"
-          :h="item.h"
-          :i="item.i"
-          :data-i="item.i"
-          drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle"
-        >
-          <DashboardGridItem
-            :item="item"
-            :edit-mode="editMode"
-            :filter="filter"
-            :get-item-data="getItemData"
-            @dimension-click="setCrossFilter"
-            :set-item-data="setItemData"
-            @edit-content="openEditor"
-            @remove-filter="removeFilter"
-            @background-click="unSelect"
-            @update-dimensions="updateItemDimensions"
-          />
+      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
+        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle">
+          <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter" :get-item-data="getItemData"
+            @dimension-click="setCrossFilter" :set-item-data="setItemData" @edit-content="openEditor"
+            @remove-filter="removeFilter" @background-click="unSelect" @update-dimensions="updateItemDimensions" />
         </grid-item>
       </GridLayout>
     </div>
@@ -464,21 +464,13 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i).connectionName || ''"
-        :imports="getItemData(editingItem.i).imports || []"
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []" :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i, dashboard.id).content" @save="saveContent" @cancel="closeEditors" />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">

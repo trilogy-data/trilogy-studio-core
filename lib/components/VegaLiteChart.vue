@@ -230,8 +230,8 @@ export default defineComponent({
     })
 
     // Determine reasonable defaults based on column types
-    const initializeConfig = () => {
-      if (props.initialConfig) {
+    const initializeConfig = (force:boolean = false) => {
+      if (props.initialConfig && !force) {
         // Use external config if provided
         internalConfig.value = { ...internalConfig.value, ...props.initialConfig }
       } else {
@@ -397,7 +397,7 @@ export default defineComponent({
     watch(
       () => props.columns,
       () => {
-        initializeConfig()
+        initializeConfig(true) // force column reset on column change
         renderChart()
       },
       { deep: true },

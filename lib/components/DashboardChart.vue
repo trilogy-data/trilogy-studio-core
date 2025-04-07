@@ -58,12 +58,16 @@ export default defineComponent({
     LoadingView,
   },
   props: {
+    dashboardId: {
+      type: String,
+      required: true,
+    },
     itemId: {
       type: String,
       required: true,
     },
     getItemData: {
-      type: Function as PropType<(itemId: string) => GridItemData>,
+      type: Function as PropType<(itemId: string, dashboardId: string) => GridItemData>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -72,7 +76,7 @@ export default defineComponent({
       required: true,
     },
     setItemData: {
-      type: Function,
+      type: Function  as PropType<(itemId: string, dashboardId: string, content:any)=> null>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -88,44 +92,44 @@ export default defineComponent({
       window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
     })
     const query = computed(() => {
-      return props.getItemData(props.itemId).content
+      return props.getItemData(props.itemId, props.dashboardId).content
     })
 
     const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId).height || 300) - 75
+      return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
     })
 
     const chartWidth = computed(() => {
-      return (props.getItemData(props.itemId).width || 300) - 100
+      return (props.getItemData(props.itemId, props.dashboardId).width || 300) - 100
     })
 
     const chartConfig = computed(() => {
-      return props.getItemData(props.itemId).chartConfig || null
+      return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
     const chartImports = computed(() => {
-      return props.getItemData(props.itemId).imports || []
+      return props.getItemData(props.itemId, props.dashboardId).imports || []
     })
 
     const chartParameters = computed(() => {
-      return props.getItemData(props.itemId).parameters || []
+      return props.getItemData(props.itemId, props.dashboardId).parameters || []
     })
 
     const filters = computed(() => {
-      return (props.getItemData(props.itemId).filters || []).map((filter) => filter.value)
+      return (props.getItemData(props.itemId, props.dashboardId).filters || []).map((filter) => filter.value)
     })
 
     const chartSelection = computed(() => {
-      return (props.getItemData(props.itemId).chartFilters || []).map((filter) => filter.value)
+      return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map((filter) => filter.value)
     })
 
     const connectionName = computed(() => {
-      return props.getItemData(props.itemId).connectionName || []
+      return props.getItemData(props.itemId, props.dashboardId).connectionName || []
     })
 
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
-      const itemData = props.getItemData(props.itemId)
+      const itemData = props.getItemData(props.itemId, props.dashboardId)
       return itemData.onRefresh || null
     })
 
@@ -133,7 +137,7 @@ export default defineComponent({
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
-      props.setItemData(props.itemId, { chartConfig: chartConfig })
+      props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
     }
     if (!connectionStore || !queryExecutionService) {
       throw new Error('Connection store not found!')
