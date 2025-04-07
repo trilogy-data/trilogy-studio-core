@@ -48,9 +48,12 @@ test('test-create-dashboard-and-pixels', async ({ page, isMobile  }) => {
   // dashboard
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('dashboard-creator-add').click()
+    
   }
   await page.getByTestId('sidebar-icon-dashboard').click()
+  if (isMobile) {
+    await page.getByTestId('dashboard-creator-add').click()
+  }
   await page.getByTestId('dashboard-creator-name').click();
   await page.getByTestId('dashboard-creator-name').fill('faa-test');
   await page.getByTestId('dashboard-creator-submit').click();
