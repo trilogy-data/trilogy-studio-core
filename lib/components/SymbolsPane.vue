@@ -9,7 +9,7 @@
         @input="filterSymbols"
         ref="symbolSearchInput"
       />
-      <div class="symbol-count">{{ filteredSymbols.length }} symbols</div>
+      <div class="symbol-count">({{ filteredSymbols.length }})</div>
     </div>
     <div class="symbols-list">
       <div
@@ -18,8 +18,13 @@
         class="symbol-item"
         @click="$emit('select-symbol', symbol)"
       >
-        <div class="symbol-icon" :class="symbol.type.toLowerCase()">
-          {{ getSymbolIcon(symbol.type) }}
+        <div 
+          class="symbol-icon" 
+          :class="getIconClass(symbol)"
+          v-tooltip="getIconTooltip(symbol)"
+        >
+          <i v-if="getIconType(symbol) === 'mdi'" :class="getIconMdiClass(symbol)"></i>
+          <template v-else>{{ getSymbolChar(symbol) }}</template>
         </div>
         <div class="symbol-details">
           <div class="symbol-label">{{ symbol.label }}</div>
@@ -39,20 +44,32 @@ export interface CompletionItem {
   description: string
   type: string
   insertText: string
+  trilogyType?: string
+  trilogySubType?: string
 }
 
-const SYMBOL_ICONS: Record<string, string> = {
-  function: 'ƒ',
-  variable: 'V',
-  class: 'C',
-  interface: 'I',
-  method: 'M',
-  property: 'P',
-  field: 'F',
-  constant: 'K',
-  enum: 'E',
-  keyword: 'K',
-  default: 'C',
+// Centralized icon configuration for easier management
+const ICON_CONFIG = {
+  // MDI icons for trilogy subtypes
+  trilogy: {
+    key: { icon: 'mdi-key-outline', tooltip: 'Key' },
+    property: { icon: 'mdi-tag-outline', tooltip: 'Property' },
+    metric: { icon: 'mdi-cube-outline', tooltip: 'Metric' }
+  },
+  // Character icons for standard types
+  standard: {
+    function: { char: 'ƒ', tooltip: 'Function' },
+    variable: { char: 'V', tooltip: 'Variable' },
+    class: { char: 'C', tooltip: 'Class' },
+    interface: { char: 'I', tooltip: 'Interface' },
+    method: { char: 'M', tooltip: 'Method' },
+    property: { char: 'P', tooltip: 'Property' },
+    field: { char: 'F', tooltip: 'Field' },
+    constant: { char: 'K', tooltip: 'Constant' },
+    enum: { char: 'E', tooltip: 'Enum' },
+    keyword: { char: 'K', tooltip: 'Keyword' },
+    default: { char: 'S', tooltip: 'Symbol' }
+  }
 }
 
 export default defineComponent({
@@ -69,6 +86,45 @@ export default defineComponent({
     const searchQuery = ref('')
     const filteredSymbols = ref<CompletionItem[]>([])
     const symbolSearchInput = ref<HTMLInputElement | null>(null)
+
+    // Determine icon display type (mdi or character)
+    const getIconType = (symbol: CompletionItem): string => {
+      return symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType] 
+        ? 'mdi' 
+        : 'char'
+    }
+
+    // Get MDI class for trilogy subtypes
+    const getIconMdiClass = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType]) {
+        return `mdi ${ICON_CONFIG.trilogy[symbol.trilogySubType].icon}`
+      }
+      return ''
+    }
+
+    // Get symbol character for standard types
+    const getSymbolChar = (symbol: CompletionItem): string => {
+      const type = symbol.type.toLowerCase()
+      return ICON_CONFIG.standard[type]?.char || ICON_CONFIG.standard.default.char
+    }
+
+    // Get CSS class for the icon container
+    const getIconClass = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType) {
+        return symbol.trilogySubType.toLowerCase()
+      }
+      return symbol.type.toLowerCase()
+    }
+
+    // Get tooltip text for the icon
+    const getIconTooltip = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType]) {
+        return ICON_CONFIG.trilogy[symbol.trilogySubType].tooltip
+      }
+      
+      const type = symbol.type.toLowerCase()
+      return ICON_CONFIG.standard[type]?.tooltip || ICON_CONFIG.standard.default.tooltip
+    }
 
     // Filter symbols based on search query
     const filterSymbols = (): void => {
@@ -108,6 +164,7 @@ export default defineComponent({
         })
         .sort(sortMatches)
     }
+
     // Watch for changes in symbols or search query
     watch(
       () => props.symbols,
@@ -121,10 +178,6 @@ export default defineComponent({
       filterSymbols()
     })
 
-    const getSymbolIcon = (type: string): string => {
-      return SYMBOL_ICONS[type.toLowerCase()] || SYMBOL_ICONS.default
-    }
-
     const focusSearch = (): void => {
       if (symbolSearchInput.value) {
         symbolSearchInput.value.focus()
@@ -136,7 +189,11 @@ export default defineComponent({
       filteredSymbols,
       symbolSearchInput,
       filterSymbols,
-      getSymbolIcon,
+      getIconType,
+      getIconMdiClass,
+      getSymbolChar,
+      getIconClass,
+      getIconTooltip,
       focusSearch,
     }
   },
@@ -152,6 +209,7 @@ export default defineComponent({
   flex-direction: column;
   background-color: var(--sidebar-bg, #252525);
   font-size: 12px;
+  overflow-y: scroll;
 }
 
 .search-container {
@@ -162,7 +220,7 @@ export default defineComponent({
 }
 
 .symbols-search {
-  flex: 1;
+  flex: 0.9;
   height: 24px;
   background-color: var(--sidebar-bg);
   color: var(--text-color, #d4d4d4);
@@ -172,13 +230,14 @@ export default defineComponent({
 }
 
 .symbol-count {
-  margin-left: 4px;
+  margin-left: 8px;
+  margin-right: 8px;
   font-size: 10px;
   color: var(--text-subtle, #aaa);
 }
 
 .symbols-list {
-  overflow-y: auto;
+  overflow-y: scroll;
   flex-grow: 1;
 }
 
@@ -237,6 +296,12 @@ export default defineComponent({
 }
 .symbol-icon.keyword {
   color: #569cd6;
+}
+.symbol-icon.key {
+  color: #f8c555;
+}
+.symbol-icon.metric {
+  color: #75beff;
 }
 
 .symbol-details {

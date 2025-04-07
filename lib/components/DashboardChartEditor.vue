@@ -73,7 +73,9 @@ onUnmounted(() => {
       </div>
 
       <div class="editor-actions">
-        <button @click="saveQuery" class="save-button" data-testid="save-dashboard-chart">Save Query</button>
+        <button @click="saveQuery" class="save-button" data-testid="save-dashboard-chart">
+          Save Query
+        </button>
         <button @click="cancel" class="cancel-button">Cancel</button>
       </div>
     </div>

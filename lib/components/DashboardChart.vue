@@ -3,6 +3,7 @@
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <VegaLiteChart
       v-else-if="results"
+      :id="`${itemId}-${dashboardId}`"
       :columns="results.headers"
       :data="results.data"
       :showControls="editMode"

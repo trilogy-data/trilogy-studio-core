@@ -113,6 +113,13 @@ const selectedConnection = computed(() => {
 })
 
 async function handleFilterChange(newFilter: string) {
+  if (!newFilter || newFilter === '') {
+    filterError.value = ''
+    if (dashboard.value && dashboard.value.id) {
+      dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+    }
+    return
+  }
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
 
@@ -423,21 +430,57 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
-      :filterError="filterError" @connection-change="onConnectionChange" @filter-change="handleFilterChange"
-      @import-change="handleImportChange" @add-item="openAddItemModal" @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode" @refresh="handleRefresh" />
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
+      :selected-connection="selectedConnection"
+      :filterError="filterError"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh"
+    />
 
     <div class="grid-container">
-      <GridLayout :col-num="12" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
-        :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
-        <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
-          :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle">
-          <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
-            :get-item-data="getItemData" @dimension-click="setCrossFilter" :set-item-data="setItemData"
-            @edit-content="openEditor" @remove-filter="removeFilter" @background-click="unSelect"
-            @update-dimensions="updateItemDimensions" />
+      <GridLayout
+        :col-num="12"
+        :row-height="30"
+        :is-draggable="draggable"
+        :is-resizable="resizable"
+        :layout="layout"
+        :vertical-compact="true"
+        :use-css-transforms="true"
+        @layout-updated="onLayoutUpdated"
+      >
+        <grid-item
+          v-for="item in layout"
+          :key="item.i"
+          :static="item.static"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :i="item.i"
+          :data-i="item.i"
+          drag-ignore-from=".no-drag"
+          drag-handle-class=".grid-item-drag-handle"
+        >
+          <DashboardGridItem
+            :dashboard-id="dashboard.id"
+            :item="item"
+            :edit-mode="editMode"
+            :filter="filter"
+            :get-item-data="getItemData"
+            @dimension-click="setCrossFilter"
+            :set-item-data="setItemData"
+            @edit-content="openEditor"
+            @remove-filter="removeFilter"
+            @background-click="unSelect"
+            @update-dimensions="updateItemDimensions"
+          />
         </grid-item>
       </GridLayout>
     </div>
@@ -447,15 +490,22 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
-        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor" @save="saveContent"
-        @cancel="closeEditors" />
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :content="getItemData(editingItem.i, dashboard.id).content" @save="saveContent"
-        @cancel="closeEditors" />
+      <MarkdownEditor
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">
@@ -483,14 +533,6 @@ onBeforeUnmount(() => {
   font-size: var(--font-size);
   color: var(--text-color);
   background-color: var(--bg-color);
-}
-
-.dashboard-controls {
-  display: flex;
-  justify-content: space-between;
-  padding: 15px;
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border);
 }
 
 .grid-actions {

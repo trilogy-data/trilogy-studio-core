@@ -22,6 +22,11 @@ function toggleDropdown(): void {
   showDropdown.value = !showDropdown.value
 }
 
+// Close dropdown
+function closeDropdown(): void {
+  showDropdown.value = false
+}
+
 // Check if import is active
 function isImportActive(importName: string): boolean {
   return props.activeImports.some((imp) => imp.name === importName)
@@ -73,7 +78,11 @@ onUnmounted(() => {
   <div class="import-selector">
     <div class="import-selector-header" @click="toggleDropdown">
       <label>Root Source</label>
-      <div class="import-summary" :class="{ 'has-imports': activeCount > 0 }" data-testid="dashboard-import-selector">
+      <div
+        class="import-summary"
+        :class="{ 'has-imports': activeCount > 0 }"
+        data-testid="dashboard-import-selector"
+      >
         <span v-if="activeCount === 0">No imports</span>
         <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
         <span v-else>{{ activeImports.length }} import(s) selected</span>
@@ -97,9 +106,32 @@ onUnmounted(() => {
     <div class="import-dropdown" v-if="showDropdown">
       <div class="import-dropdown-header">
         <h4>Available Data Sources</h4>
-        <button v-if="activeCount > 0" class="clear-all-button" @click="clearAllImports">
-          Clear Selection
-        </button>
+        <div class="dropdown-action-buttons">
+          <button v-if="activeCount > 0" class="clear-all-button" @click="clearAllImports">
+            Clear Selection
+          </button>
+          <button
+            class="close-dropdown-button"
+            @click.stop="closeDropdown"
+            title="Close dropdown"
+            data-testid="close-model-selector"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="import-list">
@@ -226,6 +258,12 @@ onUnmounted(() => {
   color: var(--text-color);
 }
 
+.dropdown-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .clear-all-button {
   border: none;
   background: none;
@@ -237,6 +275,24 @@ onUnmounted(() => {
 
 .clear-all-button:hover {
   text-decoration: underline;
+}
+
+.close-dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  opacity: 0.7;
+  padding: 4px;
+}
+
+.close-dropdown-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
 }
 
 .import-list {

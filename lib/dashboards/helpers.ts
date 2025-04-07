@@ -147,6 +147,7 @@ export const generateVegaSpec = (
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
   chartSelection: Object[] | null,
+  isMobile: boolean = false,
 ) => {
   let intChart = chartSelection ? chartSelection.map((x) => toRaw(x)) : []
   let spec: any = {
@@ -186,6 +187,18 @@ export const generateVegaSpec = (
 
   // Basic encoding object that we'll modify based on chart type
   let encoding: any = {}
+  let legendConfig = {}
+  if (isMobile) {
+    legendConfig = {
+      legend: {
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
+  }
+
+  console.log(isMobile)
+  console.log(legendConfig)
 
   // Add color encoding if specified (and not for special chart types)
   if (config.colorField && !['heatmap'].includes(config.chartType)) {
@@ -196,6 +209,11 @@ export const generateVegaSpec = (
       title: columns.get(config.colorField)?.description || config.colorField,
       scale: fieldType === 'quantitative' ? { scheme: 'viridis' } : { scheme: 'category10' },
       ...getFormatHint(config.colorField, columns),
+      ...legendConfig,
+    }
+  } else {
+    encoding.color = {
+      ...legendConfig,
     }
   }
 
@@ -277,6 +295,9 @@ export const generateVegaSpec = (
             type: getVegaFieldType(config.yField || '', columns),
             title: columns.get(config.yField || '')?.description || config.yField,
             sort: '-x',
+            axis: {
+              labelExpr: isMobile ? "slice(datum.label, 0, 10) + '...'" : 'datum.label',
+            },
             ...getFormatHint(config.yField || '', columns),
           },
           x: {
@@ -470,6 +491,7 @@ export const generateVegaSpec = (
                       type: 'quantitative',
                       title: config.colorField,
                       scale: { scheme: 'viridis' },
+                      ...legendConfig,
                     }
                   : { value: 'steelblue' },
                 tooltip: [

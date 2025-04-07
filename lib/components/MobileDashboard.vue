@@ -102,6 +102,13 @@ const selectedConnection = computed(() => {
 })
 
 async function handleFilterChange(newFilter: string) {
+  if (!newFilter || newFilter === '') {
+    filterError.value = ''
+    if (dashboard.value && dashboard.value.id) {
+      dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+    }
+    return
+  }
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
 
@@ -391,29 +398,32 @@ function unSelect(itemId: string): void {
 }
 
 // Calculate approximate height for mobile items based on original proportions
-function calculateMobileHeight(item: LayoutItem): number {
+function calculateMobileHeight(item: LayoutItem): number | string {
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
-    return 300; // Default height if we can't calculate
+    return 300 // Default height if we can't calculate
   }
 
-  
-  const gridItem = dashboard.value.gridItems[item.i];
-  
+  if (getItemData(item.i, dashboard.value.id).type === CELL_TYPES.MARKDOWN) {
+    return '100%' // Full height for markdown items
+  }
+
+  const gridItem = dashboard.value.gridItems[item.i]
+
   // If we have stored width and height, use that to calculate ratio
   if (gridItem.width && gridItem.height) {
-    const aspectRatio = gridItem.height / gridItem.width;
-    const viewportWidth = window.innerWidth - 30; // Adjust for padding
-    
+    const aspectRatio = gridItem.height / gridItem.width
+    const viewportWidth = window.innerWidth - 30 // Adjust for padding
+
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
-    const calculatedHeight = viewportWidth * aspectRatio;
-    return Math.max(Math.min(calculatedHeight, 700), 400);
+    const calculatedHeight = viewportWidth * aspectRatio
+    return Math.max(Math.min(calculatedHeight, 700), 400)
   }
-  
+
   // If no stored dimensions, use the grid layout's width and height
-  const aspectRatio = item.h / item.w;
+  const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return Math.max(Math.min(aspectRatio * 12 * 30, 600), 400);
+  return Math.max(Math.min(aspectRatio * 12 * 30, 600), 400)
 }
 
 // Clean up any event listeners
@@ -424,69 +434,65 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-mobile-container" v-if="dashboard">
-    <DashboardHeader 
-      :dashboard="dashboard" 
-      :edit-mode="editMode" 
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
       :selected-connection="selectedConnection"
-      :filterError="filterError" 
-      @connection-change="onConnectionChange" 
+      :filterError="filterError"
+      @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
-      @import-change="handleImportChange" 
-      @add-item="openAddItemModal" 
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
       @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode" 
-      @refresh="handleRefresh" 
+      @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh"
     />
 
     <div class="mobile-container">
       <!-- Mobile layout - vertically stacked grid items -->
-      <div 
-        v-for="item in sortedLayout" 
-        :key="item.i" 
-        :data-i="item.i" 
+      <div
+        v-for="item in sortedLayout"
+        :key="item.i"
+        :data-i="item.i"
         class="mobile-item"
         :style="{ height: `${calculateMobileHeight(item)}px` }"
       >
-        <DashboardGridItem 
-          :dashboard-id="dashboard.id" 
-          :item="item" 
-          :edit-mode="editMode" 
+        <DashboardGridItem
+          :dashboard-id="dashboard.id"
+          :item="item"
+          :edit-mode="editMode"
           :filter="filter"
-          :get-item-data="getItemData" 
-          @dimension-click="setCrossFilter" 
+          :get-item-data="getItemData"
+          @dimension-click="setCrossFilter"
           :set-item-data="setItemData"
-          @edit-content="openEditor" 
-          @remove-filter="removeFilter" 
+          @edit-content="openEditor"
+          @remove-filter="removeFilter"
           @background-click="unSelect"
-          @update-dimensions="updateItemDimensions" 
+          @update-dimensions="updateItemDimensions"
         />
       </div>
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal 
-      :show="showAddItemModal" 
-      @add="addItem" 
-      @close="closeAddModal" 
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="addItem" @close="closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor 
+      <ChartEditor
         :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
-        :content="getItemData(editingItem.i, dashboard.id).content" 
-        :showing="showQueryEditor" 
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor"
         @save="saveContent"
-        @cancel="closeEditors" 
+        @cancel="closeEditors"
       />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor 
-        :content="getItemData(editingItem.i, dashboard.id).content" 
+      <MarkdownEditor
+        :content="getItemData(editingItem.i, dashboard.id).content"
         @save="saveContent"
-        @cancel="closeEditors" 
+        @cancel="closeEditors"
       />
     </Teleport>
   </div>
@@ -511,18 +517,21 @@ onBeforeUnmount(() => {
   font-size: var(--font-size);
   color: var(--text-color);
   background-color: var(--bg-color);
-  overflow: hidden; /* Prevent double scrollbars */
+  overflow: hidden;
+  /* Prevent double scrollbars */
 }
 
 .mobile-container {
   flex: 1;
-  overflow-y: auto; /* Explicitly enable vertical scrolling */
-  padding: 15px;
+  overflow-y: auto;
+  /* Explicitly enable vertical scrolling */
+  padding: 5px 10px;
   background-color: var(--bg-color);
   display: flex;
   flex-direction: column;
   gap: 15px;
-  padding-bottom: 80px; /* Add padding at the bottom for better scrolling experience */
+  padding-bottom: 80px;
+  /* Add padding at the bottom for better scrolling experience */
 }
 
 .mobile-item {

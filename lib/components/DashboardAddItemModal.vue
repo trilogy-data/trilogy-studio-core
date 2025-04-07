@@ -8,8 +8,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'add': [type: CellType]
-  'close': []
+  add: [type: CellType]
+  close: []
 }>()
 
 // Item type selection
@@ -42,7 +42,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
-
 </script>
 
 <template>
@@ -61,7 +60,9 @@ onUnmounted(() => {
           </label>
         </div>
         <div class="editor-actions">
-          <button @click="addItem" class="add-button" data-testid='dashboard-add-item-confirm'>Add</button>
+          <button @click="addItem" class="add-button" data-testid="dashboard-add-item-confirm">
+            Add
+          </button>
           <button @click="closeModal" class="cancel-button">Cancel</button>
         </div>
       </div>

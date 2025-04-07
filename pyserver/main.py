@@ -160,11 +160,9 @@ def validate_query(query: ValidateQueryInSchema):
         if query.extra_filters:
             for filter_string in query.extra_filters:
                 try:
-                    print(f"WHERE {filter_string} SELECT 1 as ftest;")
                     base = get_diagnostics(
                         f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
                     )
-                    print(base)
                     if base.items:
                         filter_validation.append({
                             'startLineNumber': 0,
@@ -217,7 +215,6 @@ def generate_query_core(
     variables = query.parameters or {}
     variable_prefix = ""
     for key, variable in variables.items():
-        print(variable)
         if isinstance(variable, str):
             if "'''" in variable:
                 raise ValueError("cannot safely parse strings with triple quotes")
