@@ -55,7 +55,7 @@
         :startTime="editor.startTime"
       />
       <div v-else-if="editor.error" class="error-message">{{ editor.error }}</div>
-      <div v-else-if="lastOperation" class="results-summary">
+      <div v-else-if="lastOperation" class="results-summary" data-testid="simple-editor-results">
         <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
           {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
         </div>
