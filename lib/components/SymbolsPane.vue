@@ -9,7 +9,32 @@
         @input="filterSymbols"
         ref="symbolSearchInput"
       />
-      <div class="symbol-count">{{ filteredSymbols.length }} symbols</div>
+      <div class="symbol-count">({{ filteredSymbols.length }})</div>
+    </div>
+    <div class="filter-container">
+      <label class="filter-label">
+        <input type="checkbox" v-model="filters.keys" @change="filterSymbols" />
+        <i class="mdi mdi-key-outline" title="Show Keys"></i>
+        <!-- <span>Keys</span> -->
+      </label>
+      <label class="filter-label">
+        <input type="checkbox" v-model="filters.properties" @change="filterSymbols" />
+        <i class="mdi mdi-tag-outline" title="Show Properties"></i>
+        <!-- <span>Properties</span> -->
+      </label>
+      <label class="filter-label">
+        <input type="checkbox" v-model="filters.metrics" @change="filterSymbols" />
+        <i class="mdi mdi-cube-outline" title="Show Metrics"></i>
+        <!-- <span>Metrics</span> -->
+      </label>
+      <button
+        v-if="isFiltering"
+        class="clear-filters-btn"
+        @click="clearFilters"
+        v-tooltip="'Clear all filters'"
+      >
+        <i class="mdi mdi-filter-remove-outline"></i>
+      </button>
     </div>
     <div class="symbols-list">
       <div
@@ -18,8 +43,9 @@
         class="symbol-item"
         @click="$emit('select-symbol', symbol)"
       >
-        <div class="symbol-icon" :class="symbol.type.toLowerCase()">
-          {{ getSymbolIcon(symbol.type) }}
+        <div class="symbol-icon" :class="getIconClass(symbol)" :title="getIconTooltip(symbol)">
+          <i v-if="getIconType(symbol) === 'mdi'" :class="getIconMdiClass(symbol)"></i>
+          <template v-else>{{ getSymbolChar(symbol) }}</template>
         </div>
         <div class="symbol-details">
           <div class="symbol-label">{{ symbol.label }}</div>
@@ -32,27 +58,39 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType, watch } from 'vue'
+import { defineComponent, ref, type PropType, watch, computed } from 'vue'
 
 export interface CompletionItem {
   label: string
   description: string
   type: string
   insertText: string
+  trilogyType?: 'concept' | 'function' | 'type'
+  trilogySubType?: 'property' | 'key' | 'metric'
 }
 
-const SYMBOL_ICONS: Record<string, string> = {
-  function: 'ƒ',
-  variable: 'V',
-  class: 'C',
-  interface: 'I',
-  method: 'M',
-  property: 'P',
-  field: 'F',
-  constant: 'K',
-  enum: 'E',
-  keyword: 'K',
-  default: 'C',
+// Centralized icon configuration for easier management
+const ICON_CONFIG = {
+  // MDI icons for trilogy subtypes
+  trilogy: {
+    key: { icon: 'mdi-key-outline', tooltip: 'Key' },
+    property: { icon: 'mdi-tag-outline', tooltip: 'Property' },
+    metric: { icon: 'mdi-cube-outline', tooltip: 'Metric' },
+  },
+  // Character icons for standard types
+  standard: {
+    function: { char: 'ƒ', tooltip: 'Function' },
+    variable: { char: 'V', tooltip: 'Variable' },
+    class: { char: 'C', tooltip: 'Class' },
+    interface: { char: 'I', tooltip: 'Interface' },
+    method: { char: 'M', tooltip: 'Method' },
+    property: { char: 'P', tooltip: 'Property' },
+    field: { char: 'F', tooltip: 'Field' },
+    constant: { char: 'K', tooltip: 'Constant' },
+    enum: { char: 'E', tooltip: 'Enum' },
+    keyword: { char: 'K', tooltip: 'Keyword' },
+    default: { char: 'S', tooltip: 'Symbol' },
+  },
 }
 
 export default defineComponent({
@@ -70,7 +108,64 @@ export default defineComponent({
     const filteredSymbols = ref<CompletionItem[]>([])
     const symbolSearchInput = ref<HTMLInputElement | null>(null)
 
-    // Filter symbols based on search query
+    // Filter checkboxes
+    const filters = ref({
+      keys: true,
+      properties: true,
+      metrics: true,
+    })
+
+    // Computed property to check if any filters are applied
+    const isFiltering = computed(() => {
+      return !filters.value.keys || !filters.value.properties || !filters.value.metrics
+    })
+
+    // Function to clear all filters (reset to default state)
+    const clearFilters = () => {
+      filters.value.keys = true
+      filters.value.properties = true
+      filters.value.metrics = true
+      filterSymbols()
+    }
+
+    // Determine icon display type (mdi or character)
+    const getIconType = (symbol: CompletionItem): string => {
+      return symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType] ? 'mdi' : 'char'
+    }
+
+    // Get MDI class for trilogy subtypes
+    const getIconMdiClass = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType]) {
+        return `mdi ${ICON_CONFIG.trilogy[symbol.trilogySubType].icon}`
+      }
+      return ''
+    }
+
+    // Get symbol character for standard types
+    const getSymbolChar = (symbol: CompletionItem): string => {
+      const type = symbol.type.toLowerCase() as keyof typeof ICON_CONFIG.standard
+      return ICON_CONFIG.standard[type]?.char || ICON_CONFIG.standard.default.char
+    }
+
+    // Get CSS class for the icon container
+    const getIconClass = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType) {
+        return symbol.trilogySubType.toLowerCase()
+      }
+      return symbol.type.toLowerCase()
+    }
+
+    // Get tooltip text for the icon
+    const getIconTooltip = (symbol: CompletionItem): string => {
+      if (symbol.trilogySubType && ICON_CONFIG.trilogy[symbol.trilogySubType]) {
+        return ICON_CONFIG.trilogy[symbol.trilogySubType].tooltip
+      }
+
+      const type = symbol.type.toLowerCase() as keyof typeof ICON_CONFIG.standard
+      return ICON_CONFIG.standard[type]?.tooltip || ICON_CONFIG.standard.default.tooltip
+    }
+
+    // Filter symbols based on search query and checkbox filters
     const filterSymbols = (): void => {
       if (!props.symbols) {
         filteredSymbols.value = []
@@ -79,35 +174,57 @@ export default defineComponent({
 
       const query = searchQuery.value.toLowerCase().trim()
 
-      if (!query) {
-        filteredSymbols.value = [...props.symbols]
-        return
+      // Start with all symbols
+      let filtered = [...props.symbols]
+
+      // Apply type filters (keys, properties, metrics)
+      filtered = filtered.filter((symbol: CompletionItem) => {
+        // If it's a key and keys are filtered out
+        if (symbol.trilogySubType === 'key' && !filters.value.keys) {
+          return false
+        }
+        // If it's a property and properties are filtered out
+        if (symbol.trilogySubType === 'property' && !filters.value.properties) {
+          return false
+        }
+        // If it's a metric and metrics are filtered out
+        if (symbol.trilogySubType === 'metric' && !filters.value.metrics) {
+          return false
+        }
+        // Keep all other symbols
+        return true
+      })
+
+      // If there's a search query, apply text filtering
+      if (query) {
+        // Sort function for prioritizing matches at the beginning
+        const sortMatches = (a: CompletionItem, b: CompletionItem): number => {
+          const aLabelLower = a.label.toLowerCase()
+          const bLabelLower = b.label.toLowerCase()
+
+          const aStartsWithQuery = aLabelLower.startsWith(query)
+          const bStartsWithQuery = bLabelLower.startsWith(query)
+
+          // Prioritize items that start with the query
+          if (aStartsWithQuery && !bStartsWithQuery) return -1
+          if (!aStartsWithQuery && bStartsWithQuery) return 1
+
+          // If both or neither start with the query, sort alphabetically
+          return aLabelLower.localeCompare(bLabelLower)
+        }
+
+        filtered = filtered
+          .filter((symbol: CompletionItem) => {
+            const label = symbol.label.toLowerCase()
+            const description = (symbol.description || '').toLowerCase()
+            return label.includes(query) || description.includes(query)
+          })
+          .sort(sortMatches)
       }
 
-      // Sort function for prioritizing matches at the beginning
-      const sortMatches = (a: CompletionItem, b: CompletionItem): number => {
-        const aLabelLower = a.label.toLowerCase()
-        const bLabelLower = b.label.toLowerCase()
-
-        const aStartsWithQuery = aLabelLower.startsWith(query)
-        const bStartsWithQuery = bLabelLower.startsWith(query)
-
-        // Prioritize items that start with the query
-        if (aStartsWithQuery && !bStartsWithQuery) return -1
-        if (!aStartsWithQuery && bStartsWithQuery) return 1
-
-        // If both or neither start with the query, sort alphabetically
-        return aLabelLower.localeCompare(bLabelLower)
-      }
-
-      filteredSymbols.value = props.symbols
-        .filter((symbol: CompletionItem) => {
-          const label = symbol.label.toLowerCase()
-          const description = (symbol.description || '').toLowerCase()
-          return label.includes(query) || description.includes(query)
-        })
-        .sort(sortMatches)
+      filteredSymbols.value = filtered
     }
+
     // Watch for changes in symbols or search query
     watch(
       () => props.symbols,
@@ -121,10 +238,6 @@ export default defineComponent({
       filterSymbols()
     })
 
-    const getSymbolIcon = (type: string): string => {
-      return SYMBOL_ICONS[type.toLowerCase()] || SYMBOL_ICONS.default
-    }
-
     const focusSearch = (): void => {
       if (symbolSearchInput.value) {
         symbolSearchInput.value.focus()
@@ -135,8 +248,15 @@ export default defineComponent({
       searchQuery,
       filteredSymbols,
       symbolSearchInput,
+      filters,
+      isFiltering,
+      clearFilters,
       filterSymbols,
-      getSymbolIcon,
+      getIconType,
+      getIconMdiClass,
+      getSymbolChar,
+      getIconClass,
+      getIconTooltip,
       focusSearch,
     }
   },
@@ -152,6 +272,7 @@ export default defineComponent({
   flex-direction: column;
   background-color: var(--sidebar-bg, #252525);
   font-size: 12px;
+  overflow-y: scroll;
 }
 
 .search-container {
@@ -162,7 +283,7 @@ export default defineComponent({
 }
 
 .symbols-search {
-  flex: 1;
+  flex: 0.9;
   height: 24px;
   background-color: var(--sidebar-bg);
   color: var(--text-color, #d4d4d4);
@@ -172,13 +293,80 @@ export default defineComponent({
 }
 
 .symbol-count {
-  margin-left: 4px;
+  margin-left: 8px;
+  margin-right: 8px;
   font-size: 10px;
   color: var(--text-subtle, #aaa);
 }
 
+.filter-container {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-color, #444);
+  background-color: rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-color, #d4d4d4);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.filter-label:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.filter-label input {
+  margin-right: 4px;
+}
+
+.filter-label i {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.filter-label i.mdi-key-outline {
+  color: #f8c555;
+}
+
+.filter-label i.mdi-tag-outline {
+  color: #9cdcfe;
+}
+
+.filter-label i.mdi-cube-outline {
+  color: #75beff;
+}
+
+.clear-filters-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-subtle, #aaa);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-filters-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-color, #d4d4d4);
+}
+
 .symbols-list {
-  overflow-y: auto;
+  overflow-y: scroll;
   flex-grow: 1;
 }
 
@@ -237,6 +425,12 @@ export default defineComponent({
 }
 .symbol-icon.keyword {
   color: #569cd6;
+}
+.symbol-icon.key {
+  color: #f8c555;
+}
+.symbol-icon.metric {
+  color: #75beff;
 }
 
 .symbol-details {

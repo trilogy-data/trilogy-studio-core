@@ -61,12 +61,14 @@ export default class AxiosResolver {
     query: string,
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
+    extraFilters: string[] | null = null,
   ): Promise<ValidateResponse> {
     return axios
       .post(`${this.address}/validate_query`, {
         query: query,
         sources: sources || [],
         imports: imports || [],
+        extra_filters: extraFilters || [],
       })
       .catch((error: Error) => {
         console.log(error)

@@ -16,26 +16,57 @@
       </div>
     </div>
     <div class="editor-content">
-      <div ref="editorElement" class="monaco-editor"></div>
-      <SymbolsPane
-        :symbols="editor.completionSymbols || []"
-        @select-symbol="insertSymbol"
-        ref="symbolsPane"
-      />
-    </div>
-
-    <div v-if="editor.error" class="error-message">{{ editor.error }}</div>
-    <div v-if="lastOperation" class="results-summary">
-      <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
-        {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
+      <div
+        ref="editorElement"
+        class="monaco-editor"
+        :class="{
+          'monaco-width-with-panel': isPanelVisible,
+          'monaco-width-no-panel': !isPanelVisible,
+        }"
+        data-testid="simple-editor-content"
+      ></div>
+      <div class="sidebar-panel" v-show="isPanelVisible">
+        <SymbolsPane
+          :symbols="editor.completionSymbols || []"
+          @select-symbol="insertSymbol"
+          ref="symbolsPane"
+        />
       </div>
-      <div class="results-details">
-        <div v-if="lastOperation.duration" class="timing">{{ lastOperation.duration }}ms</div>
-        <div v-if="lastOperation.rows !== undefined" class="row-count">
-          {{ lastOperation.rows }} {{ lastOperation.rows === 1 ? 'row' : 'rows' }}
+      <div class="be-sidebar-container">
+        <!-- Icon panel (always visible) -->
+        <div class="be-sidebar-icons">
+          <button
+            class="sidebar-icon-button"
+            :class="{ active: isPanelVisible }"
+            @click="togglePanel('symbols')"
+            title="Symbols"
+          >
+            <i class="mdi mdi-tag-search-outline"></i>
+          </button>
+          <!-- Add more icons for other panels here if needed -->
         </div>
-        <div v-if="lastOperation.type" class="operation-type">
-          {{ lastOperation.type }}
+      </div>
+    </div>
+    <div class="result-wrapper">
+      <loading-view
+        class="loading-view"
+        v-if="editor.loading"
+        :text="`Loading...`"
+        :startTime="editor.startTime"
+      />
+      <div v-else-if="editor.error" class="error-message">{{ editor.error }}</div>
+      <div v-else-if="lastOperation" class="results-summary" data-testid="simple-editor-results">
+        <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
+          {{ lastOperation.success ? 'SUCCESS' : 'FAILED' }}
+        </div>
+        <div class="results-details">
+          <div v-if="lastOperation.duration" class="timing">{{ lastOperation.duration }}ms</div>
+          <div v-if="lastOperation.rows !== undefined" class="row-count">
+            {{ lastOperation.rows }} {{ lastOperation.rows === 1 ? 'row' : 'rows' }}
+          </div>
+          <div v-if="lastOperation.type" class="operation-type">
+            {{ lastOperation.type }}
+          </div>
         </div>
       </div>
     </div>
@@ -58,6 +89,7 @@ import type QueryExecutionService from '../stores/queryExecutionService'
 import { type QueryUpdate } from '../stores/queryExecutionService'
 import type { Import } from '../stores/resolver'
 import SymbolsPane, { type CompletionItem } from './SymbolsPane.vue'
+import LoadingView from './LoadingView.vue'
 
 interface OperationState {
   success: boolean
@@ -72,6 +104,7 @@ export default defineComponent({
   name: 'EnhancedEditor',
   components: {
     SymbolsPane,
+    LoadingView,
   },
   props: {
     onSave: {
@@ -99,7 +132,7 @@ export default defineComponent({
     },
   },
 
-  inject: ['queryExecutionService', 'connectionStore', 'modelStore', 'editorStore'],
+  inject: ['queryExecutionService', 'connectionStore', 'modelStore', 'editorStore', 'isMobile'],
 
   data() {
     return {
@@ -111,7 +144,16 @@ export default defineComponent({
         storage: 'local',
         contents: this.initContent,
       }),
+      // New properties for collapsible sidebar
+      activePanel: 'symbols',
+      isPanelVisible: false,
     }
+  },
+
+  created() {
+    // Set initial panel visibility based on mobile status
+    // Panel will be collapsed by default on mobile
+    this.isPanelVisible = !(this.isMobile as boolean)
   },
 
   mounted() {
@@ -131,6 +173,49 @@ export default defineComponent({
   },
 
   methods: {
+    // New methods for panel management
+    togglePanel(panelName: string): void {
+      if (this.activePanel === panelName && this.isPanelVisible) {
+        this.isPanelVisible = false
+      } else {
+        this.activePanel = panelName
+        this.isPanelVisible = true
+
+        // If symbols panel is opened, focus the search box
+        if (panelName === 'symbols' && this.$refs.symbolsPane) {
+          this.$nextTick(() => {
+            this.focusSymbolSearch()
+          })
+        }
+      }
+
+      // Trigger editor layout update to adjust for panel visibility
+      if (globalEditor) {
+        this.$nextTick(() => {
+          globalEditor?.layout()
+        })
+      }
+    },
+
+    closePanel(): void {
+      this.isPanelVisible = false
+      // Trigger editor layout update
+      if (globalEditor) {
+        this.$nextTick(() => {
+          globalEditor?.layout()
+        })
+      }
+    },
+
+    getPanelTitle(): string {
+      switch (this.activePanel) {
+        case 'symbols':
+          return 'Symbols'
+        default:
+          return ''
+      }
+    },
+
     createEditor(): void {
       // Configure the editor theme
       configureEditorTheme(this.theme === 'vs-dark' ? 'dark' : 'light')
@@ -149,14 +234,14 @@ export default defineComponent({
 
       // Add symbol insertion shortcut
       globalEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
-        this.focusSymbolSearch()
+        this.togglePanel('symbols')
       })
     },
 
     handleKeyboardShortcuts(event: KeyboardEvent): void {
       // Ctrl+Shift+O to focus on symbol search (mimicking VS Code)
       if (event.ctrlKey && event.shiftKey && event.key === 'O') {
-        this.focusSymbolSearch()
+        this.togglePanel('symbols')
         event.preventDefault()
       }
     },
@@ -185,6 +270,11 @@ export default defineComponent({
           },
         ])
         globalEditor.focus()
+
+        // Auto-collapse panel on mobile after inserting a symbol
+        if (this.isMobile) {
+          this.closePanel()
+        }
       }
     },
 
@@ -201,7 +291,7 @@ export default defineComponent({
         const conn = connectionStore.connections[this.editor.connection]
         const queryInput = {
           text,
-          queryType: conn ? conn.query_type : '',
+          queryType: conn ? conn.query_type : 'trilogy',
           editorType: this.editor.type,
           sources: [],
           imports: this.imports,
@@ -247,6 +337,7 @@ export default defineComponent({
       this.$emit('query-started')
       this.editor.setError(null)
       let queryDone = false
+
       const connectionStore = this.connectionStore as ConnectionStoreType
       const queryExecutionService = this.queryExecutionService as QueryExecutionService
       const monacoInstance = globalEditor
@@ -272,6 +363,7 @@ export default defineComponent({
 
         // Set component to loading state
         this.editor.loading = true
+        this.lastOperation = null
         this.editor.startTime = Date.now()
 
         // Prepare query input
@@ -375,12 +467,14 @@ export default defineComponent({
 })
 </script>
 
-<style>
+<style scoped>
 .editor-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 400px;
   border: 1px solid var(--border-color, #444);
+  overflow: hidden;
 }
 
 .menu-bar {
@@ -390,6 +484,7 @@ export default defineComponent({
   justify-content: space-between;
   padding-right: 0.5rem;
   height: 40px;
+  min-height: 40px;
 }
 
 .menu-actions {
@@ -398,10 +493,11 @@ export default defineComponent({
   gap: 0.15rem;
   align-items: center;
   flex-grow: 1;
+  height: 100%;
 }
 
 .action-item {
-  height: 25px;
+  height: 28px;
   width: 80px;
   font-weight: 500;
   cursor: pointer;
@@ -417,12 +513,132 @@ export default defineComponent({
   flex-grow: 1;
   position: relative;
   min-height: 250px;
+  height: calc(400px - 40px - 40px);
+  background-color: var(--sidebar-bg, #252525);
+  /* Subtract menu-bar and results-summary heights */
 }
 
 .monaco-editor {
   flex: 1;
   min-height: 250px;
+  height: 300px;
+}
+
+.monaco-width-no-panel {
+  width: calc(100% - 32px);
+}
+
+.monaco-width-with-panel {
+  width: calc(100% - 240px - 32px);
+}
+
+/* Sidebar and panel styles */
+.be-sidebar-container {
   height: 100%;
+  width: 32px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--border-color, #444);
+  border-top: 1px solid var(--border-color, #444);
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+.sidebar-icons {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--sidebar-bg, #252525);
+  border-left: 1px solid var(--border-color, #444);
+  padding: 0.5rem 0;
+  z-index: 10;
+  background-color: var(--sidebar-bg, #252525);
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+.sidebar-icon-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-subtle, #aaa);
+  transition: background-color 0.2s ease;
+  border-radius: 0;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+.sidebar-icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-icon-button.active {
+  color: var(--accent-color, #0088ff);
+  background-color: rgba(0, 136, 255, 0.1);
+}
+
+.sidebar-panel {
+  width: 240px;
+  height: 100%;
+  background-color: var(--sidebar-bg, #252525);
+  border-left: 1px solid var(--border-color, #444);
+  border-top: 1px solid var(--border-color, #444);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #444);
+  background-color: var(--sidebar-bg, #1e1e1e);
+  min-height: 40px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.panel-close {
+  background: transparent;
+  border: none;
+  color: var(--text-subtle, #aaa);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.panel-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.panel-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  height: calc(100% - 40px);
+}
+
+/* Icon symbols */
+.icon-symbols {
+  font-style: normal;
+  font-size: 1.2rem;
 }
 
 .button-cancel {
@@ -434,20 +650,26 @@ export default defineComponent({
 .error-message {
   background-color: rgba(211, 47, 47, 0.1);
   color: var(--error-color, #d32f2f);
-  padding: 0.5rem;
   border-left: 3px solid var(--error-color, #d32f2f);
   margin-bottom: 0.5rem;
+  padding-left: 5px;
+  min-height: 32px;
+  max-height: 80px;
+  font-size: 10px;
+  overflow-y: scroll;
 }
 
 /* Results summary section */
 .results-summary {
   display: flex;
   align-items: center;
-  padding: 0.5rem;
+  padding-left: 5px;
   border-top: 1px solid var(--border-color, #444);
   font-size: 0.85rem;
   background-color: var(--sidebar-bg, #252525);
   gap: 0.5rem;
+  height: 32px;
+  min-height: 32px;
 }
 
 .status-badge {
@@ -457,6 +679,9 @@ export default defineComponent({
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  height: 18px;
+  display: flex;
+  align-items: center;
 }
 
 .status-badge.success {
@@ -476,6 +701,15 @@ export default defineComponent({
   gap: 1rem;
   align-items: center;
   color: var(--text-subtle, #aaa);
+  height: 100%;
+}
+
+.timing,
+.row-count,
+.operation-type {
+  height: 18px;
+  display: flex;
+  align-items: center;
 }
 
 .timing::before {
@@ -494,34 +728,102 @@ export default defineComponent({
   font-style: italic;
 }
 
+.result-wrapper {
+  height: 40px;
+  padding: 5px;
+  background-color: var(--sidebar-bg, #252525);
+}
+
+.loading-view {
+  max-height: 32px;
+  height: 32px;
+  padding: 0;
+  flex-direction: row;
+  background-color: var(--sidebar-bg, #252525);
+  margin-bottom: 0;
+}
+
+/* Enhanced Mobile View */
 @media screen and (max-width: 768px) {
-  .editor-content {
-    flex-direction: column;
+  .editor-container {
+    min-height: 300px;
+    height: 100%;
   }
 
   .menu-bar {
     height: 60px;
+    min-height: 60px;
     flex-direction: column;
+    padding: 0.5rem;
   }
 
   .menu-actions {
-    justify-content: center;
+    justify-content: space-between;
     width: 100%;
+    height: 100%;
   }
 
   .action-item {
     flex-grow: 1;
-    width: auto;
+    width: calc(50% - 0.25rem);
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .editor-content {
+    height: calc(100% - 60px - 64px);
+    /* Adjust for taller menu bar and results summary in mobile */
+    min-height: 200px;
+  }
+
+  .monaco-editor {
+    min-height: 200px;
+  }
+
+  /* Mobile sidebar adjustments */
+  .sidebar-icons {
+    width: 32px;
+  }
+
+  .sidebar-panel {
+    width: 220px;
+    /* Slightly narrower on mobile */
   }
 
   .results-summary {
+    height: 64px;
+    min-height: 64px;
     flex-direction: column;
     align-items: flex-start;
+    padding: 0.75rem;
   }
 
   .results-details {
     flex-wrap: wrap;
     gap: 0.5rem;
+    margin-top: 0.25rem;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .status-badge {
+    height: 20px;
+    font-size: 0.75rem;
+  }
+
+  /* Adjustments for touch devices */
+  .action-item,
+  .sidebar-icon-button,
+  .panel-close {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Improved mobile scrolling for error messages */
+  .error-message {
+    max-height: 120px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>

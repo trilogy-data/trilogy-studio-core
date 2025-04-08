@@ -5,7 +5,7 @@ test('test', async ({ page, isMobile }) => {
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('sidebar-icon-community-models').click()
+  await page.getByTestId('sidebar-link-community-models').click()
   await page.getByTestId('community-model-search').fill('titanic')
   await page.getByTestId('import-titanic').click()
   await page.getByTestId('model-creator-connection').selectOption('New DuckDB')
@@ -13,7 +13,7 @@ test('test', async ({ page, isMobile }) => {
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('sidebar-icon-connections').click()
+  await page.getByTestId('sidebar-link-connections').click()
   await page.getByTestId('refresh-connection-titanic-connection').click()
   await page.waitForFunction(() => {
     const element = document.querySelector('[data-testid="status-icon-titanic-connection"]')
@@ -26,7 +26,7 @@ test('test', async ({ page, isMobile }) => {
     // Check if the background color is green (in RGB format)
     return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
   })
-  await page.getByTestId('sidebar-icon-editors').click()
+  await page.getByTestId('sidebar-link-editors').click()
   // make sure the button has fully loaded
 
   // this status is flaky depending on device

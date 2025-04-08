@@ -6,6 +6,7 @@
         @click="toggleControls"
         class="toggle-controls-btn"
         :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn"
       >
         <i
           :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
@@ -18,108 +19,116 @@
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
-      <div v-show="!showingControls" ref="vegaContainer" class="vega-container"></div>
+      <div
+        v-show="!showingControls"
+        ref="vegaContainer"
+        class="vega-container"
+        data-testid="vega-chart-container"
+      ></div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
-        <div class="control-section">
-          <div class="chart-type-icons">
-            <button
-              v-for="type in charts"
-              :key="type.value"
-              @click="updateConfig('chartType', type.value)"
-              class="chart-icon"
-              :class="{ selected: internalConfig.chartType === type.value }"
-              :title="type.label"
-            >
-              <div class="icon-container">
-                <i :class="type.icon" class="icon"></i>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Group axes controls  -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
-          <label class="control-section-label">Axes</label>
-          <div
-            v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
-            :key="control.id"
-            class="control-group no-drag"
-          >
-            <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select
-              :id="control.id"
-              :value="internalConfig[control.field]"
-              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
-            >
-              <option v-if="control.allowEmpty" value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal(control.columnFilter)"
-                :key="column.name"
-                :value="column.name"
+        <div class="inner-padding">
+          <div class="control-section">
+            <div class="chart-type-icons">
+              <button
+                v-for="type in charts"
+                :key="type.value"
+                @click="updateConfig('chartType', type.value)"
+                class="chart-icon"
+                :class="{ selected: internalConfig.chartType === type.value }"
+                :title="type.label"
+                :data-testid="`chart-type-${type.value}`"
               >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
+                <div class="icon-container">
+                  <i :class="type.icon" class="icon"></i>
+                </div>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- Group appearance controls -->
-        <div
-          class="control-section"
-          v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
-        >
-          <label class="control-section-label">Appearance</label>
-          <div
-            v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
-            :key="control.id"
-            class="control-group no-drag"
-          >
-            <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select
-              :id="control.id"
-              :value="internalConfig[control.field]"
-              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
+          <!-- Group axes controls  -->
+          <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
+            <label class="control-section-label">Axes</label>
+            <div
+              v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
+              :key="control.id"
+              class="control-group no-drag"
             >
-              <option v-if="control.allowEmpty" value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal(control.columnFilter)"
-                :key="column.name"
-                :value="column.name"
+              <label class="chart-label" :for="control.id">{{ control.label }}</label>
+              <select
+                :id="control.id"
+                :value="internalConfig[control.field]"
+                @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
+                class="form-select no-drag"
               >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
+                <option v-if="control.allowEmpty" value="">None</option>
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
+                  {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+                </option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <!-- Group advanced controls -->
-        <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
-          <label class="control-section-label">Advanced</label>
+          <!-- Group appearance controls -->
           <div
-            v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
-            :key="control.id"
-            class="control-group no-drag"
+            class="control-section"
+            v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
           >
-            <label class="chart-label" :for="control.id">{{ control.label }}</label>
-            <select
-              :id="control.id"
-              :value="internalConfig[control.field]"
-              @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-              class="form-select no-drag"
+            <label class="control-section-label">Appearance</label>
+            <div
+              v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
+              :key="control.id"
+              class="control-group no-drag"
             >
-              <option v-if="control.allowEmpty" value="">None</option>
-              <option
-                v-for="column in filteredColumnsInternal(control.columnFilter)"
-                :key="column.name"
-                :value="column.name"
+              <label class="chart-label" :for="control.id">{{ control.label }}</label>
+              <select
+                :id="control.id"
+                :value="internalConfig[control.field]"
+                @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
+                class="form-select no-drag"
               >
-                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-              </option>
-            </select>
+                <option v-if="control.allowEmpty" value="">None</option>
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
+                  {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Group advanced controls -->
+          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
+            <label class="control-section-label">Advanced</label>
+            <div
+              v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+              :key="control.id"
+              class="control-group no-drag"
+            >
+              <label class="chart-label" :for="control.id">{{ control.label }}</label>
+              <select
+                :id="control.id"
+                :value="internalConfig[control.field]"
+                @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
+                class="form-select no-drag"
+              >
+                <option v-if="control.allowEmpty" value="">None</option>
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
+                  {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -128,10 +137,19 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed, inject, onUnmounted } from 'vue'
+import {
+  defineComponent,
+  ref,
+  type Ref,
+  watch,
+  onMounted,
+  computed,
+  inject,
+  onUnmounted,
+} from 'vue'
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
-import type { ResultColumn, Row, ChartConfig } from '../editors/results'
+import type { ResultColumn, Row, ChartConfig, FieldKey } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import { Controls, Charts, type ChartControl } from '../dashboards/constants'
@@ -177,6 +195,7 @@ export default defineComponent({
 
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
     const lastSpec = ref<string | null>(null)
 
     // event hookups
@@ -230,8 +249,8 @@ export default defineComponent({
     })
 
     // Determine reasonable defaults based on column types
-    const initializeConfig = () => {
-      if (props.initialConfig) {
+    const initializeConfig = (force: boolean = false) => {
+      if (props.initialConfig && !force) {
         // Use external config if provided
         internalConfig.value = { ...internalConfig.value, ...props.initialConfig }
       } else {
@@ -250,13 +269,17 @@ export default defineComponent({
     // Generate Vega-Lite spec based on current configuration
 
     const generateVegaSpecInternal = () => {
-      return generateVegaSpec(props.data, internalConfig.value, props.columns, props.chartSelection)
+      return generateVegaSpec(
+        props.data,
+        internalConfig.value,
+        props.columns,
+        props.chartSelection,
+        isMobile.value,
+      )
     }
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
-      console.log(item)
-      console.log(event)
       if (item && item.datum) {
         // Special handling for USA map clicks
         // if (internalConfig.value.chartType === 'usa-map') {
@@ -339,7 +362,7 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          actions: true,
+          actions: internalConfig.value.showDebug ? true : false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
@@ -389,15 +412,33 @@ export default defineComponent({
       () => [props.containerHeight, props.containerWidth],
       () => renderChart(true),
     )
+    // watch(
+    //   () => props.data,
+    //   () => renderChart(true),
+    //   { deep: true },
+    // )
     watch(
-      () => props.data,
-      () => renderChart(true),
-      { deep: true },
-    )
-    watch(
-      () => props.columns,
+      () => [props.columns, props.data],
       () => {
-        initializeConfig()
+        // check if any internal config is no longer found
+        let force = false
+        // check that all if xField, yField, colorField, sizeField, groupField, trellisField are still in the columns if they are set
+        for (const field of [
+          'xField',
+          'yField',
+          'colorField',
+          'sizeField',
+          'groupField',
+          'trellisField',
+        ] as FieldKey[]) {
+          if (internalConfig.value[field] && !props.columns.has(internalConfig.value[field])) {
+            force = true
+            internalConfig.value[field] = ''
+          }
+        }
+        if (force) {
+          initializeConfig(force) // force column reset on column change
+        }
         renderChart()
       },
       { deep: true },
@@ -496,10 +537,14 @@ export default defineComponent({
 }
 
 .chart-controls-panel {
-  width: 100%;
+  width: calc(100% - 10px);
   height: 100%;
   padding: 4px;
   background-color: var(--bg-color);
+}
+
+.inner-padding {
+  padding: 5px;
 }
 
 .control-section {

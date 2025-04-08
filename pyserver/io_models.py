@@ -6,12 +6,17 @@ from trilogy.authoring import (
     ListType,
     StructType,
 )  # , NumericType, TraitDataType
-from trilogy.core.models.core import NumericType, TraitDataType
-from trilogy.core.models.core import MapType
+from trilogy.core.models.core import NumericType, TraitDataType, MapType
 from pydantic import BaseModel, Field
 
 from trilogy import Dialects
 from enum import Enum
+
+
+class TrilogyType(Enum):
+    CONCEPT = "concept"
+    FUNCTION = "function"
+    TYPE = "type"
 
 
 class LineageItem(BaseModel):
@@ -130,6 +135,8 @@ class CompletionItem(BaseModel):
     type: str
     datatype: str
     insertText: str
+    trilogyType: TrilogyType | None = None
+    trilogySubType: Purpose | str | None = None
     description: str | None = None
 
 

@@ -57,6 +57,14 @@ export interface ResultsInterface {
   data: readonly Row[]
 }
 
+export type FieldKey =
+  | 'xField'
+  | 'yField'
+  | 'colorField'
+  | 'sizeField'
+  | 'groupField'
+  | 'trellisField'
+
 // Chart configuration interface
 export interface ChartConfig {
   chartType: string

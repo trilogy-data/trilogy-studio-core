@@ -11,10 +11,11 @@ import {
 
 // Props definition
 const props = defineProps<{
+  dashboardId: string
   item: LayoutItem
   editMode: boolean
-  getItemData: (itemId: string) => GridItemData
-  setItemData: (itemId: string, data: any) => void
+  getItemData: (itemId: string, dashboardId: string) => GridItemData
+  setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
 // Emits
@@ -34,7 +35,7 @@ const editableItemName = ref('')
 function startTitleEditing(): void {
   if (!props.editMode) return // Only allow editing in edit mode
 
-  const itemData = props.getItemData(props.item.i)
+  const itemData = props.getItemData(props.item.i, props.dashboardId)
   editingItemTitle.value = true
   editableItemName.value = itemData.name
 
@@ -50,13 +51,13 @@ function startTitleEditing(): void {
 // Save edited title
 function saveTitleEdit(): void {
   if (editingItemTitle.value) {
-    const itemData = props.getItemData(props.item.i)
+    const itemData = props.getItemData(props.item.i, props.dashboardId)
 
     // Don't allow empty names
     const newName = editableItemName.value.trim() || itemData.name
 
     // Update item name via setItemData
-    props.setItemData(props.item.i, { name: newName })
+    props.setItemData(props.item.i, props.dashboardId, { name: newName })
 
     editingItemTitle.value = false
   }
@@ -87,7 +88,7 @@ function removeFilter(filterSource: string): void {
 }
 
 // Get item data
-const itemData = computed(() => props.getItemData(props.item.i))
+const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
 
 // Compute if item has filters
 const hasFilters = computed(() => {
@@ -144,7 +145,9 @@ const hasFilters = computed(() => {
           :placeholder="itemData.type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'"
         />
       </div>
-      <button @click="openEditor" class="edit-button">Edit Content</button>
+      <button @click="openEditor" class="edit-button" data-testid="edit-dashboard-item-content">
+        Edit Content
+      </button>
     </div>
 
     <!-- Non-edit mode title display -->
@@ -179,6 +182,7 @@ const hasFilters = computed(() => {
     <!-- Render the appropriate component based on cell type -->
     <component
       :is="itemData.type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
+      :dashboardId="props.dashboardId"
       :itemId="item.i"
       :setItemData="setItemData"
       :getItemData="getItemData"

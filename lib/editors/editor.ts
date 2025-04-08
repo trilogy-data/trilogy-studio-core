@@ -17,7 +17,7 @@ interface CompetionSymbol {
 
 export interface EditorInterface {
   name: string
-  type: string
+  type: 'trilogy' | 'sql' | 'preql'
   syntax: string
   connection: string
   results: ResultsInterface
@@ -39,7 +39,7 @@ export interface EditorInterface {
 
 export default class Editor implements EditorInterface {
   name: string
-  type: string
+  type: 'trilogy' | 'sql' | 'preql'
   syntax: string
   connection: string
   results: Results
@@ -78,7 +78,7 @@ export default class Editor implements EditorInterface {
     tags = null,
   }: {
     name: string
-    type: string
+    type: 'trilogy' | 'sql' | 'preql'
     connection: string
     storage: string
     contents?: string | null
@@ -159,7 +159,7 @@ export default class Editor implements EditorInterface {
     // Initialize a new Editor instance
     const editor = new Editor({
       name: parsed.name || '',
-      type: parsed.type || 'unknown',
+      type: parsed.type || 'trilogy',
       connection: parsed.connection || '',
       storage: parsed.storage || 'local',
       contents: parsed.contents || null,

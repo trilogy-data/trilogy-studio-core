@@ -5,6 +5,7 @@ import QueryHistoryStorage from '../data/connectionHistoryStorage'
 import type { QueryRecord } from '../data/connectionHistoryStorage'
 export interface QueryData {
   query: string
+  generatedQuery?: string | null
   executionTime: number
   status: 'success' | 'error'
   errorMessage?: string | null

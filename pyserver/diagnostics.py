@@ -10,6 +10,7 @@ from io_models import (
     ModelSourceInSchema,
     CompletionItem,
     Import,
+    TrilogyType,
 )
 from env_helpers import parse_env_from_full_model
 from trilogy.parsing.parse_engine import ParseToObjects
@@ -97,6 +98,8 @@ def get_diagnostics(
                     description=v.metadata.description,
                     type="concept",
                     insertText=k,
+                    trilogyType=TrilogyType.CONCEPT,
+                    trilogySubType=v.purpose,
                 )
             )
             seen.add(k)
@@ -124,6 +127,8 @@ def get_diagnostics(
                         description=v.metadata.description,
                         type="concept",
                         insertText=k,
+                        trilogyType=TrilogyType.CONCEPT,
+                        trilogySubType=v.purpose,
                     )
                 )
 

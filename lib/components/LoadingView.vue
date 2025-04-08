@@ -121,7 +121,6 @@ export default defineComponent({
 
 .loading-text {
   font-size: 1.1rem;
-  margin-bottom: 1rem;
   min-width: 120px;
   text-align: center;
   height: 24px;

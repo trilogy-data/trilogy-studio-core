@@ -5,7 +5,7 @@ test('test', async ({ page, isMobile }) => {
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('sidebar-icon-connections').click()
+  await page.getByTestId('sidebar-link-connections').click()
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('duckdb-test')
@@ -23,7 +23,7 @@ test('test', async ({ page, isMobile }) => {
     return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
   })
 
-  await page.getByTestId('sidebar-icon-editors').click()
+  await page.getByTestId('sidebar-link-editors').click()
   await page.getByTestId('editor-creator-add').click()
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test-one')
@@ -65,7 +65,7 @@ order by
   expect(count).toBe(0)
 
   // now let's look at the connection history
-  await page.getByTestId('sidebar-icon-connections').click()
+  await page.getByTestId('sidebar-link-connections').click()
   await page.getByTestId('connection-duckdb-test').click()
 
   if (isMobile) {

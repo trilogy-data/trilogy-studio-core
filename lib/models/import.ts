@@ -1,5 +1,3 @@
-
-
 export class ImportFile {
   url: string
   name: string
@@ -17,13 +15,20 @@ export class ImportFile {
 
 export class ModelImport {
   name: string
-  engine:string
-  description:string
+  engine: string
+  description: string
   link: string
   tags: string[]
   components: ImportFile[]
 
-  constructor(name: string, engine:string, description:string, link:string, tags:string[] = [], components: ImportFile[]=[]) {
+  constructor(
+    name: string,
+    engine: string,
+    description: string,
+    link: string,
+    tags: string[] = [],
+    components: ImportFile[] = [],
+  ) {
     this.name = name
     this.engine = engine
     this.components = components

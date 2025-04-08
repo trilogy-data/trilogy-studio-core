@@ -4,6 +4,7 @@ export interface QueryRecord {
   id: number
   connectionName: string
   query: string
+  generatedQuery?: string | null
   timestamp: string
   executionTime: number // in milliseconds
   status: 'success' | 'error'
@@ -70,6 +71,7 @@ class QueryHistoryStorage {
     const queryRecord: Omit<QueryRecord, 'id'> = {
       connectionName,
       query: queryData.query,
+      generatedQuery: queryData.generatedQuery || null,
       timestamp: new Date().toISOString(),
       executionTime: queryData.executionTime,
       status: queryData.status,

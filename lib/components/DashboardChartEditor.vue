@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { ref, defineEmits } from 'vue'
+import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
 import SimpleEditor from './SimpleEditor.vue'
 import { type Import } from '../stores/resolver'
+import { nextTick } from 'process'
 interface EditorRef {
   getContent: () => string
 }
@@ -10,6 +11,7 @@ const props = defineProps<{
   content: string
   connectionName: string
   imports: Import[]
+  showing: boolean
 }>()
 
 const emit = defineEmits(['save', 'cancel'])
@@ -28,6 +30,25 @@ function saveQuery(): void {
 function cancel(): void {
   emit('cancel')
 }
+
+function handleClickOutside(event: MouseEvent): void {
+  const importSelector = document.querySelector('.content-editor')
+  if (importSelector && !importSelector.contains(event.target as Node) && props.showing) {
+    emit('cancel')
+  }
+}
+
+onMounted(() => {
+  nextTick(() => {
+    document.addEventListener('click', handleClickOutside)
+  })
+})
+
+// Remove event listener on unmounted
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
 // Add SQL syntax validation or preview functionality here if needed
 </script>
 
@@ -52,7 +73,9 @@ function cancel(): void {
       </div>
 
       <div class="editor-actions">
-        <button @click="saveQuery" class="save-button">Save Query</button>
+        <button @click="saveQuery" class="save-button" data-testid="save-dashboard-chart">
+          Save Query
+        </button>
         <button @click="cancel" class="cancel-button">Cancel</button>
       </div>
     </div>
