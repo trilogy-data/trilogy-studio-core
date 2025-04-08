@@ -83,7 +83,10 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   if (browser.browserType().name() === 'webkit') {
     await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
   }
-  await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
+  else {
+    await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
+  }
+ 
   await page.keyboard.type('select\n    origin.state,\n    count\n\norder by count desc;')
   await page.getByTestId('editor-run-button').click()
 
