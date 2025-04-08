@@ -535,30 +535,7 @@ onBeforeUnmount(() => {
   background-color: var(--bg-color);
 }
 
-.grid-actions {
-  display: flex;
-  gap: 10px;
-}
 
-.grid-actions button {
-  padding: 8px 16px;
-  border: 1px solid var(--border-light);
-  cursor: pointer;
-  font-weight: 500;
-  background-color: var(--button-bg);
-  color: var(--text-color);
-  font-size: var(--button-font-size);
-}
-
-.add-button {
-  background-color: var(--special-text) !important;
-  color: white !important;
-}
-
-.clear-button {
-  background-color: var(--delete-color) !important;
-  color: white !important;
-}
 
 .toggle-mode-button {
   background-color: var(--button-bg) !important;

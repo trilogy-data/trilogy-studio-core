@@ -46,7 +46,7 @@ test.describe('CSV Upload Component', () => {
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
     }
-    await page.getByTestId('sidebar-icon-connections').locator('i').click()
+    await page.getByTestId('sidebar-link-connections').click()
     await page.getByTestId('connection-creator-add').click()
     await page.getByTestId('connection-creator-name').click()
     await page.getByTestId('connection-creator-name').fill('upload-test')

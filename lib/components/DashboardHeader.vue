@@ -31,14 +31,6 @@ const emit = defineEmits([
 const connectionStore = useConnectionStore()
 const modelStore = useModelConfigStore()
 
-// Add state for mobile controls visibility
-const showMobileControls = ref(false)
-
-// Function to toggle mobile controls visibility
-function toggleMobileControls() {
-  showMobileControls.value = !showMobileControls.value
-}
-
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
   props.dashboard?.filter || '',
@@ -86,31 +78,16 @@ function handleRefresh() {
       <div class="filter-container">
         <label for="filter">Where</label>
         <div class="filter-input-wrapper">
-          <input
-            id="filter"
-            data-testid="filter-input"
-            type="text"
-            v-model="filterInput"
-            @input="onFilterInput"
-            placeholder="Enter filter criteria..."
-            :class="{ 'filter-error': filterStatus === 'error' }"
-          />
+          <input id="filter" data-testid="filter-input" type="text" v-model="filterInput" @input="onFilterInput"
+            placeholder="Enter filter criteria..." :class="{ 'filter-error': filterStatus === 'error' }" />
           <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
-            <div
-              v-if="filterStatus === 'error'"
-              class="filter-icon error"
-              data-testid="filter-error-icon"
-            >
+            <div v-if="filterStatus === 'error'" class="filter-icon error" data-testid="filter-error-icon">
               <span class="icon-x">✕</span>
               <Tooltip :content="filterError || 'Unknown Error'" position="bottom">
                 <span class="tooltip-trigger" data-testid="filter-error-tooltip-trigger"></span>
               </Tooltip>
             </div>
-            <div
-              v-else-if="filterStatus === 'valid'"
-              class="filter-icon valid"
-              data-testid="filter-valid-icon"
-            >
+            <div v-else-if="filterStatus === 'valid'" class="filter-icon valid" data-testid="filter-valid-icon">
               <Tooltip content="This is a syntactically correct filter." position="top">
                 <span class="icon-check" data-testid="filter-valid-tooltip-trigger">✓</span>
               </Tooltip>
@@ -118,73 +95,42 @@ function handleRefresh() {
           </div>
         </div>
       </div>
-
-      <!-- Mobile toggle button -->
-      <button
-        class="mobile-toggle-button"
-        @click="toggleMobileControls"
-        data-testid="toggle-mobile-controls"
-      >
-        {{ showMobileControls ? '▲' : '▼' }}
-      </button>
+      <div class="grid-actions">
+        <button @click="$emit('toggle-edit-mode')" class="toggle-mode-button  generic-button" data-testid="toggle-edit-mode-button">
+          {{ editMode ? 'View Mode' : 'Edit' }}
+        </button>
+        <button @click="handleRefresh" class="add-button  generic-button" data-testid="refresh-button">
+          ⟳ Refresh
+        </button>
+      </div>
     </div>
 
-    <!-- Main controls row - this will be collapsible on mobile -->
-    <div class="controls-row top-row" :class="{ 'mobile-hidden': !showMobileControls }">
+
+    <div class="controls-row top-row" v-if="editMode" >
       <div class="dashboard-left-controls">
         <div class="connection-selector">
           <label for="connection">Connection</label>
-          <select
-            id="connection"
-            data-testid="connection-selector"
-            @change="$emit('connection-change', $event)"
-            :value="selectedConnection"
-          >
-            <option
-              v-for="conn in Object.values(connectionStore.connections).filter(
-                (conn) => conn.model,
-              )"
-              :key="conn.name"
-              :value="conn.name"
-            >
+          <select id="connection" data-testid="connection-selector" @change="$emit('connection-change', $event)"
+            :value="selectedConnection">
+            <option v-for="conn in Object.values(connectionStore.connections).filter(
+              (conn) => conn.model,
+            )" :key="conn.name" :value="conn.name">
               {{ conn.name }}
             </option>
           </select>
         </div>
-        <DashboardImportSelector
-          :available-imports="availableImports"
-          :active-imports="activeImports"
-          @update:imports="handleImportsChange"
-        />
+        <DashboardImportSelector :available-imports="availableImports" :active-imports="activeImports"
+          @update:imports="handleImportsChange" />
       </div>
 
       <div class="grid-actions">
-        <button
-          @click="$emit('add-item')"
-          class="add-button"
-          v-if="editMode"
-          data-testid="add-item-button"
-        >
+        <button @click="$emit('add-item')" class="add-button  generic-button" v-if="editMode" data-testid="add-item-button">
           Add Item
         </button>
-        <button
-          @click="$emit('clear-items')"
-          class="clear-button"
-          v-if="editMode"
-          data-testid="clear-items-button"
-        >
+        <button @click="$emit('clear-items')" class="clear-button  generic-button" v-if="editMode" data-testid="clear-items-button">
           Clear All
         </button>
-        <button
-          @click="$emit('toggle-edit-mode')"
-          class="toggle-mode-button"
-          data-testid="toggle-edit-mode-button"
-        >
-          {{ editMode ? 'View Mode' : 'Edit Mode' }}
-        </button>
-        <button @click="handleRefresh" class="add-button" data-testid="refresh-button">
-          ⟳ Refresh
-        </button>
+
       </div>
     </div>
   </div>
@@ -311,13 +257,7 @@ function handleRefresh() {
   cursor: help;
 }
 
-.grid-actions {
-  display: flex;
-  gap: 10px;
-}
-
 .grid-actions button {
-  padding: 8px 16px;
   border: 1px solid var(--border-light);
   cursor: pointer;
   font-weight: 500;
@@ -325,9 +265,27 @@ function handleRefresh() {
   font-size: var(--button-font-size);
 }
 
+.grid-actions {
+  display: flex;
+}
+
+
+
+.generic-button {
+  width: 85px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 5px;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
 .add-button {
   background-color: var(--special-text) !important;
   color: white !important;
+
 }
 
 .clear-button {
@@ -338,22 +296,6 @@ function handleRefresh() {
 .toggle-mode-button {
   background-color: var(--button-bg) !important;
   color: var(--text-color) !important;
-}
-
-/* Mobile toggle button styles - hidden by default on desktop */
-.mobile-toggle-button {
-  display: none;
-  background-color: var(--button-bg);
-  color: var(--text-color);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  margin-left: 10px;
-  font-size: 12px;
 }
 
 /* Media queries for responsiveness */
@@ -368,10 +310,7 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
-  /* Display the toggle button on mobile */
-  .mobile-toggle-button {
-    display: flex;
-  }
+
 
   /* Adjust the filter row to accommodate the toggle button */
   .filter-row {
@@ -407,24 +346,30 @@ function handleRefresh() {
   }
 
   .grid-actions {
-    flex-wrap: nowrap; /* Keep buttons in one row */
+    flex-wrap: nowrap;
+    /* Keep buttons in one row */
     justify-content: space-between;
     width: 100%;
   }
 
   .grid-actions button {
-    padding: 6px 8px; /* Reduced padding */
+    padding: 3px 4px;
+    /* Reduced padding */
     font-size: calc(var(--button-font-size) - 1px);
     text-align: center;
-    flex: 1; /* Equal width buttons */
-    min-width: 0; /* Remove min-width to allow buttons to shrink */
-    white-space: nowrap; /* Prevent text wrapping */
+    flex: 1;
+    /* Equal width buttons */
+    min-width: 0;
+    /* Remove min-width to allow buttons to shrink */
+    white-space: nowrap;
+    /* Prevent text wrapping */
   }
 }
 
 @media (max-width: 480px) {
+
   .connection-selector,
-  .dashboard-left-controls > div {
+  .dashboard-left-controls>div {
     width: 100%;
   }
 
@@ -440,7 +385,8 @@ function handleRefresh() {
   }
 
   .filter-container {
-    flex-direction: row; /* Keep horizontal for filter on mobile */
+    flex-direction: row;
+    /* Keep horizontal for filter on mobile */
     align-items: center;
   }
 
@@ -450,23 +396,29 @@ function handleRefresh() {
   }
 
   .grid-actions {
-    gap: 4px; /* Reduced gap between buttons */
+    gap: 4px;
+    /* Reduced gap between buttons */
   }
 
   .grid-actions button {
-    min-width: 0; /* Remove min-width completely */
+    min-width: 0;
+    /* Remove min-width completely */
     font-size: calc(var(--button-font-size) - 2px);
-    padding: 6px 4px; /* Further reduced padding */
+    padding: 6px 4px;
+    /* Further reduced padding */
     overflow: hidden;
-    text-overflow: ellipsis; /* Add ellipsis for text overflow */
+    text-overflow: ellipsis;
+    /* Add ellipsis for text overflow */
   }
 }
 
 /* Extra small screen size handling */
 @media (max-width: 360px) {
   .grid-actions button {
-    font-size: calc(var(--button-font-size) - 3px); /* Even smaller font */
-    padding: 5px 3px; /* Minimal padding */
+    font-size: calc(var(--button-font-size) - 3px);
+    /* Even smaller font */
+    padding: 5px 3px;
+    /* Minimal padding */
   }
 
   /* For the refresh button, just show the icon on very small screens */
