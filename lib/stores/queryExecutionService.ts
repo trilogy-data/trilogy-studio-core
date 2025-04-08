@@ -299,7 +299,8 @@ export default class QueryExecutionService {
       resultSize = sqlResponse.data.length
       columnCount = sqlResponse.headers.size
       useQueryHistoryService(connectionId).recordQuery({
-        query: generatedSql,
+        query: queryInput.text,
+        generatedQuery: generatedSql,
         executionTime: new Date().getTime() - startTime,
         status: 'success',
         resultSize: resultSize,
@@ -331,7 +332,8 @@ export default class QueryExecutionService {
           ? error.message
           : 'Unknown error occurred'
       useQueryHistoryService(connectionId).recordQuery({
-        query: generatedSql,
+        query: queryInput.text,
+        generatedQuery: generatedSql,
         executionTime: new Date().getTime() - startTime,
         status: 'error',
         resultSize: resultSize,
