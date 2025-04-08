@@ -17,7 +17,7 @@
           </tooltip>
         </template>
         <template v-else>
-          <i :class="item.icon"></i>
+          <i :class="item.icon" :data-testid="`sidebar-link-${item.screen}`"></i>
           <div>{{ item.tooltip }}</div>
         </template>
       </div>
@@ -33,7 +33,7 @@
           </tooltip>
         </template>
         <template v-else>
-          <i :class="item.icon"></i>
+          <i :class="item.icon" :data-testid="`sidebar-link-${item.screen}`"></i>
           <div>{{ item.tooltip }}</div>
         </template>
       </div>
