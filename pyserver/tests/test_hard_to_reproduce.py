@@ -30,7 +30,7 @@ def test_read_main(test_client: TestClient):
 
 def _generate_query_worker(test_client: TestClient, query_json: str):
     """Worker function to execute a single API call"""
-    response = test_client.post("generate_query", data=query_json) #type: ignore
+    response = test_client.post("generate_query", data=query_json)  # type: ignore
     if response.status_code != 200:
         print(f"Error: {response.status_code} - {response.text}")
     return response.status_code
@@ -42,7 +42,7 @@ def test_generate_query_parallel(
     """Execute API requests in parallel using ThreadPoolExecutor"""
     query = QueryInSchema.model_validate(X)
     query_json = query.model_dump_json()
-    response = test_client.post("/generate_query", data=query_json) #type: ignore
+    response = test_client.post("/generate_query", data=query_json)  # type: ignore
     response.raise_for_status()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks to the executor

@@ -69,6 +69,7 @@ from io_models import (
     ModelInSchema,
     Model,
     ValidateQueryInSchema,
+    ValidateItem,
 )
 
 # ruff: noqa: E402
@@ -154,7 +155,7 @@ def format_query(query: QueryInSchema):
 
 @router.post("/validate_query")
 def validate_query(query: ValidateQueryInSchema):
-    filter_validation = []
+    filter_validation: list[ValidateItem] = []
     try:
         # check filters, but return main validation
         if query.extra_filters:
@@ -164,28 +165,30 @@ def validate_query(query: ValidateQueryInSchema):
                         f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
                     )
                     if base.items:
-                        filter_validation.append({
-                            'startLineNumber': 0,
-                            'startColumn': 0,
-                            'endLineNumber': 0,
-                            'endColumn': 0,
-                            'message': 'Invalid additional filter provided to query.',
-                            'severity': base.items[0].severity,
-                        })
+                        filter_validation.append(
+                            ValidateItem(
+                                startLineNumber=0,
+                                startColumn=0,
+                                endLineNumber=0,
+                                endColumn=0,
+                                message=base.items[0].message,
+                                severity=base.items[0].severity,
+                            )
+                        )
                 except Exception as e:
                     raise HTTPException(
                         status_code=422,
                         detail=f"Filter validation error for {filter_string}: "
                         + str(e),
                     )
-        base = ""
+        base_imp_string = ""
         for imp in query.imports:
             if imp.alias:
                 imp_string = f"import {imp.name} as {imp.alias};\n"
             else:
                 imp_string = f"import {imp.name};\n"
-            base += imp_string
-        base = get_diagnostics(base + query.query, query.sources)
+            base_imp_string += imp_string
+        base = get_diagnostics(base_imp_string + query.query, query.sources)
         base.items += filter_validation
         return base
     except Exception as e:

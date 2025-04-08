@@ -3,7 +3,6 @@ import logging
 from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
 from trilogy.core.statements.author import ImportStatement
-from trilogy.core.enums import Purpose
 from io_models import (
     ValidateItem,
     ValidateResponse,

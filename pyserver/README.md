@@ -6,4 +6,8 @@ fly deploy
 
 ## Tests
 
+Basic pytest coverage.
+
+```bash
 mypy . --explicit-package-bases
+```

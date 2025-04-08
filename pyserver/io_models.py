@@ -7,16 +7,17 @@ from trilogy.authoring import (
     StructType,
 )  # , NumericType, TraitDataType
 from trilogy.core.models.core import NumericType, TraitDataType, MapType
-from trilogy.core.enums import Purpose
 from pydantic import BaseModel, Field
 
 from trilogy import Dialects
 from enum import Enum
 
+
 class TrilogyType(Enum):
     CONCEPT = "concept"
     FUNCTION = "function"
     TYPE = "type"
+
 
 class LineageItem(BaseModel):
     token: str
