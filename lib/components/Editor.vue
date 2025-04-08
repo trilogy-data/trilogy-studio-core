@@ -9,51 +9,28 @@
               {{ editorData.name }}
               <span class="edit-indicator">✎</span>
             </span>
-            <input
-              v-else
-              ref="nameInput"
-              v-model="editableName"
-              @blur="finishEditing"
-              @keyup.enter="finishEditing"
-              @keyup.esc="cancelEditing"
-              class="name-input"
-              type="text"
-            />
+            <input v-else ref="nameInput" v-model="editableName" @blur="finishEditing" @keyup.enter="finishEditing"
+              @keyup.esc="cancelEditing" class="name-input" type="text" />
           </div>
         </div>
         <div class="menu-actions">
-          <button
-            v-if="editorData.type === 'sql'"
-            class="toggle-button tag-inactive action-item"
+          <button v-if="editorData.type === 'sql'" class="toggle-button tag-inactive action-item"
             :class="{ tag: editorData.tags.includes(EditorTag.STARTUP_SCRIPT) }"
-            @click="toggleTag(EditorTag.STARTUP_SCRIPT)"
-          >
+            @click="toggleTag(EditorTag.STARTUP_SCRIPT)">
             {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
             Script
           </button>
-          <button
-            v-if="!(editorData.type === 'sql') && connectionHasModel"
-            class="toggle-button tag-inactive action-item"
-            :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag(EditorTag.SOURCE)"
-          >
+          <button v-if="!(editorData.type === 'sql') && connectionHasModel"
+            class="toggle-button tag-inactive action-item" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
+            @click="toggleTag(EditorTag.SOURCE)">
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
           </button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
-          <loading-button
-            v-if="!(editorData.type === 'sql')"
-            :useDefaultStyle="false"
-            class="action-item"
-            :action="validateQuery"
-            >Parse</loading-button
-          >
+          <loading-button v-if="!(editorData.type === 'sql')" :useDefaultStyle="false" class="action-item"
+            :action="validateQuery">Parse</loading-button>
 
-          <button
-            @click="() => (editorData.loading ? cancelQuery() : runQuery())"
-            class="action-item"
-            :class="{ 'button-cancel': editorData.loading }"
-            data-testid="editor-run-button"
-          >
+          <button @click="() => (editorData.loading ? cancelQuery() : runQuery())" class="action-item"
+            :class="{ 'button-cancel': editorData.loading }" data-testid="editor-run-button">
             {{ editorData.loading ? 'Cancel' : 'Run' }}
           </button>
         </div>
@@ -274,14 +251,22 @@ import SymbolsPane from './SymbolsPane.vue'
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
 
+interface QueryPartial {
+  text: string
+  queryType: string
+  editorType: 'trilogy' | 'sql' | 'preql'
+  sources: ContentInput[]
+  imports: Import[]
+}
+
 function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): string {
   const selected = editor.getSelection()
   let text =
     selected &&
-    !(
-      selected.startColumn === selected.endColumn &&
-      selected.startLineNumber === selected.endLineNumber
-    )
+      !(
+        selected.startColumn === selected.endColumn &&
+        selected.startLineNumber === selected.endLineNumber
+      )
       ? (editor.getModel()?.getValueInRange(selected) as string)
       : editor.getValue()
   // hack for mobile? getValue not returning values
@@ -507,11 +492,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       }
       let annotations = await this.trilogyResolver.validate_query(editorItem.getValue(), sources)
@@ -529,6 +514,62 @@ export default defineComponent({
         await this.editorData.cancelCallback()
       }
       this.editorData.loading = false
+    },
+
+    async formatQuery() {
+      const editorItem = editorMap.get(this.context)
+      if (!editorItem) {
+        return
+      }
+      const text = getEditorText(editorItem, this.editorData.contents)
+      if (!text) {
+        return
+      }
+      const queryInput = await this.buildQueryArgs(text)
+      try {
+        const formatted = await this.trilogyResolver.format_query(text, queryInput.queryType, queryInput.editorType, queryInput.sources, queryInput.imports)
+        if (formatted.data && formatted.data.text) {
+          editorItem.setValue(formatted.data.text)
+          this.editorData.contents = formatted.data.text
+        }
+      } catch (error) {
+        console.error('Error formatting query:', error)
+      }
+    },
+
+    async buildQueryArgs(text: string): Promise<QueryPartial> {
+      // Prepare sources for validation
+      // Prepare query input
+      const conn = this.connectionStore.connections[this.editorData.connection]
+      const sources: ContentInput[] =
+        conn && conn.model
+          ? this.modelStore.models[conn.model].sources.map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+          : []
+
+      // Prepare imports
+      let imports: Import[] = []
+      if (this.editorData.type !== 'sql') {
+        try {
+          imports = (await this.validateQuery(false, sources)) || []
+        } catch (error) {
+          console.log('Validation failed. May not have proper imports.')
+        }
+      }
+
+      // Create query input object
+      const partial: QueryPartial = {
+        text,
+        queryType: conn ? conn.query_type : '',
+        editorType: this.editorData.type,
+        sources,
+        imports,
+      }
+      return partial
     },
     async runQuery(): Promise<any> {
       this.$emit('query-started')
@@ -556,8 +597,6 @@ export default defineComponent({
       this.editorData.startTime = Date.now()
       this.editorData.loading = true
 
-      // Prepare query input
-      const conn = this.connectionStore.connections[this.editorData.connection]
       // Get selected text or full content
       const text = getEditorText(editor, this.editorData.contents)
       if (!text) {
@@ -566,34 +605,15 @@ export default defineComponent({
         return
       }
 
-      // Prepare sources for validation
-      const sources: ContentInput[] =
-        conn && conn.model
-          ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
-
-      // Prepare imports
-      let imports: Import[] = []
-      if (this.editorData.type !== 'sql') {
-        try {
-          imports = (await this.validateQuery(false, sources)) || []
-        } catch (error) {
-          console.log('Validation failed. May not have proper imports.')
-        }
-      }
-
       // Create query input object
+      const queryPartial = await this.buildQueryArgs(text)
       const queryInput: QueryInput = {
         text,
-        queryType: conn ? conn.query_type : '',
-        editorType: this.editorData.type,
-        imports,
+        queryType: queryPartial.queryType,
+        editorType: queryPartial.editorType,
+        imports: queryPartial.imports,
       }
+
       // Define callbacks with mounting status checks
       const onProgress = (message: QueryUpdate) => {
         let editor = this.editorStore.editors[name]
@@ -640,7 +660,7 @@ export default defineComponent({
         this.editorData.connection,
         queryInput,
         // Starter callback (empty for now)
-        () => {},
+        () => { },
         // Progress callback
         onProgress,
         // Failure callback
@@ -779,7 +799,7 @@ export default defineComponent({
                   this.editorData.setError(error)
                   throw error
                 })
-                .finally(() => {})
+                .finally(() => { })
             } catch (error) {
               if (error instanceof Error) {
                 this.editorData.setError(error.message)
@@ -792,19 +812,15 @@ export default defineComponent({
           }
         })
       }
-      // if (this.formatTextCallback) {
-      //     editor.addAction({
-      //         id: 'format-preql',
-      //         label: 'Format Trilogy',
-      //         keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI],
-      //         run: function () {
+      if (this.editorData.type !== 'sql') {
+        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, async () => {
+          
+          this.formatQuery()
+        }
+        )
 
-      //             this.formatTextCallback(editor.getValue()).then((response) => {
-      //                 editor.setValue(response)
-      //             })
-      //         }
-      //     });
-      // }
+      }
+
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
       })

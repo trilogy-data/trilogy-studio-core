@@ -8,6 +8,12 @@ export interface QueryResponse {
   }
 }
 
+export interface FormatQueryResponse {
+  data: {
+    text: string
+  }
+}
+
 interface ValidateItem {
   startLineNumber: number
   startColumn: number
@@ -75,7 +81,33 @@ export default class AxiosResolver {
         throw Error(this.getErrorMessage(error))
       })
   }
-
+  async format_query(
+    query: string,
+    dialect: string,
+    type: string,
+    sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
+    extraFilters: string[] | null = null,
+    parameters: Record<string, string> | null = null,
+  ): Promise<FormatQueryResponse> {
+    if (type === 'sql') {
+      // return it as is
+      return { data: { generated_sql: query, columns: [] } }
+    }
+    return axios
+      .post(`${this.address}/format_query`, {
+        query: query,
+        dialect: dialect,
+        full_model: { name: '', sources: sources || [] },
+        imports: imports || [],
+        extra_filters: extraFilters || [],
+        parameters: parameters || {},
+      })
+      .catch((error: Error) => {
+        console.log(error)
+        throw Error(this.getErrorMessage(error))
+      })
+  }
   async resolve_query(
     query: string,
     dialect: string,

@@ -132,10 +132,10 @@ export default {
           name: 'Find and Replace',
           keys: ['H'],
         },
-        // {
-        //     name: 'Format',
-        //     keys: ['Shift', 'I']
-        // },
+        {
+            name: 'Format',
+            keys: ['K']
+        },
         // {
         //     name: 'Format',
         //     keys: ['B']
