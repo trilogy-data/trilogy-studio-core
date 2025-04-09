@@ -158,6 +158,7 @@ import {
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
+  getGeoTraitType
 } from '../dashboards/helpers'
 
 import type { ScenegraphEvent } from 'vega'
@@ -301,13 +302,16 @@ export default defineComponent({
         // }
 
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
-          let geoConcept = props.columns.get(internalConfig.value.geoField)?.address
-          if (!geoConcept) {
+          let geoField = props.columns.get(internalConfig.value.geoField)
+          let geoConcept = geoField?.address
+          if (!geoConcept || !geoField) {
             return
           }
+          let type = getGeoTraitType(geoField)
           emit('dimension-click', {
-            filters: { [geoConcept]: item.datum.abbr },
-            chart: { Feature: item.datum.abbr },
+   
+            filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
+            chart: type == 'state' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
             append,
           })
         }
@@ -362,8 +366,8 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          // actions: internalConfig.value.showDebug ? true : false,
-          actions:true,
+          actions: internalConfig.value.showDebug ? true : false,
+          // actions:true,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
