@@ -1,8 +1,7 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
 import { computed, ref, type Ref } from 'vue'
-import { useConnectionStore } from '../stores'
-import { useModelConfigStore } from '../stores'
+import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import Tooltip from './Tooltip.vue' // Import the Tooltip component
@@ -30,7 +29,17 @@ const emit = defineEmits([
 
 const connectionStore = useConnectionStore()
 const modelStore = useModelConfigStore()
+const llmStore = useLLMConnectionStore()
 
+
+const filterLLM = () =>{
+  let concepts = this.editorData.completionSymbols.map((item) => ({
+                name: item.label,
+                type: item.datatype,
+                description: item.description,
+              }))
+  llmStore.generateQueryCompletion(text, concepts)]
+}
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
   props.dashboard?.filter || '',

@@ -195,16 +195,16 @@ export default class LocalStorage extends AbstractStorage {
       switch (connection.type) {
         case 'openai':
           // @ts-ignore
-          connections[connection.name] = reactive(OpenAIProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await OpenAIProvider.fromJSON(connection))
           break
         case 'mistral':
           // @ts-ignore
-          connections[connection.name] = reactive(MistralProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // Handle the async operation properly
           // @ts-ignore
-          connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await  AnthropicProvider.fromJSON(connection))
           break
 
         default:

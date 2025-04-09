@@ -18,7 +18,7 @@ export default function useScreenNavigation() {
     pushHashToUrl('editor', editor)
     activeEditor.value = editor
     let editorStore = useEditorStore()
-    editorStore.activeEditorName = editor
+    editorStore.activeEditorId = editor
     mobileMenuOpen.value = false
   }
 

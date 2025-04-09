@@ -241,7 +241,7 @@ export default {
     }
     let editor = getDefaultValueFromHash('editor')
     if (editor) {
-      editorStore.activeEditorName = editor
+      editorStore.activeEditorId = editor
     }
     const {
       activeScreen,

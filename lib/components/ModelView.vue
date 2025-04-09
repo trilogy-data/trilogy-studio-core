@@ -5,7 +5,7 @@
     </div>
     <div v-else-if="selectedType === 'source' && selectedSourceFull" class="editor-display">
       <Editor
-        :editorName="selectedSourceFull.editor"
+        :editorId="selectedSourceFull.editor"
         context="modelView"
         @save-editors="saveEditorsCall"
       />

@@ -285,6 +285,8 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
 
   const item = dashboard.value.gridItems[itemId]
 
+  const globalCompletion = []
+
   if (!item) {
     return {
       type: CELL_TYPES.CHART,
@@ -435,6 +437,7 @@ onBeforeUnmount(() => {
       :edit-mode="editMode"
       :selected-connection="selectedConnection"
       :filterError="filterError"
+      :globalCompletion="globalCompletion"
       @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
       @import-change="handleImportChange"

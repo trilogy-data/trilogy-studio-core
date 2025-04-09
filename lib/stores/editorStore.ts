@@ -7,6 +7,7 @@ const useEditorStore = defineStore('editors', {
   state: () => ({
     editors: {} as Record<string, Editor>, // Use an object instead of Map
     activeEditorName: '',
+    activeEditorId: '',
   }),
   getters: {
     editorList: (state) => Object.keys(state.editors).map((key) => state.editors[key]),
@@ -18,17 +19,27 @@ const useEditorStore = defineStore('editors', {
       connection: string,
       contents: string | undefined,
     ) {
+      let baseName = name;
+      let uniqueName = name;
+      let suffix = 1;
+      
+      // Keep trying new names with incremented suffixes until we find a unique one
+      while (uniqueName in this.editors) {
+        uniqueName = `${baseName}_${suffix}`;
+        suffix++;
+      }
+      
       let editor = new Editor({
-        name,
+        id: uniqueName,
+        name: baseName,
         type,
         connection,
         storage: 'local',
         contents: contents || '',
-      })
-      if (name in this.editors) {
-        throw Error(`An editor with name ${name} already exists.`)
-      }
-      this.editors[editor.name] = editor
+      });
+      
+      this.editors[editor.id] = editor;
+      return editor;
     },
     addEditor(editor: Editor) {
       this.editors[editor.name] = editor
@@ -41,37 +52,35 @@ const useEditorStore = defineStore('editors', {
       }
       return base.filter((editor) => tags.every((tag) => editor.tags.includes(tag)))
     },
-    updateEditorName(name: string, newName: string) {
-      this.editors[newName] = this.editors[name]
-      this.editors[newName].name = newName
-      delete this.editors[name]
+    updateEditorName(id: string, newName: string) {
+      this.editors[id].name = newName
     },
-    removeEditor(name: string) {
-      if (this.editors[name]) {
-        delete this.editors[name]
+    removeEditor(id: string) {
+      if (this.editors[id]) {
+        delete this.editors[id]
       } else {
-        throw new Error(`Editor with name "${name}" not found.`)
+        throw new Error(`Editor with id "${id}" not found.`)
       }
     },
-    setEditorContents(name: string, contents: string) {
-      if (this.editors[name]) {
-        this.editors[name].setContent(contents)
+    setEditorContents(id: string, contents: string) {
+      if (this.editors[id]) {
+        this.editors[id].setContent(contents)
       } else {
-        throw new Error(`Editor with name "${name}" not found.`)
+        throw new Error(`Editor with id "${id}" not found.`)
       }
     },
-    setEditorResults(name: string, results: Results) {
-      if (this.editors[name]) {
-        let editor = this.editors[name]
+    setEditorResults(id: string, results: Results) {
+      if (this.editors[id]) {
+        let editor = this.editors[id]
         editor.results = results
         // clean error state
         editor.setError(null)
       } else {
-        throw new Error(`Editor with name "${name}" not found.`)
+        throw new Error(`Editor with id "${id}" not found.`)
       }
     },
     getCurrentEditorAutocomplete(word: string) {
-      let activeEditor = this.editors[this.activeEditorName]
+      let activeEditor = this.editors[this.activeEditorId]
       return activeEditor.getAutocomplete(word)
     },
   },

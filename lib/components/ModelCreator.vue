@@ -141,7 +141,7 @@ import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import { ModelImport } from '../models'
 import type { EditorStoreType } from '../stores/editorStore'
-import { EditorTag } from '../editors'
+import { Editor, EditorTag } from '../editors'
 import { ModelSource } from '../models'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
@@ -327,53 +327,36 @@ export default defineComponent({
           modelStore.models[modelDetails.value.name].sources = data
             .map((response) => {
               let editorName = response.name
-
-              // Handle name collisions by appending a suffix if needed
-              if (
-                editorStore.editors[editorName] &&
-                editorStore.editors[editorName].connection !== connectionName
-              ) {
-                let suffix = 1
-                while (editorStore.editors[`${response.name}_${suffix}`]) {
-                  // If the editor with suffix exists but has the same connection, we can use it
-                  if (
-                    editorStore.editors[`${response.name}_${suffix}`].connection === connectionName
-                  ) {
-                    editorName = `${response.name}_${suffix}`
-                    break
-                  }
-                  // Otherwise, keep incrementing the suffix
-                  suffix++
-                }
-                // If we exited the loop without finding a matching connection, use the latest suffix
-                if (editorStore.editors[editorName]?.connection !== connectionName) {
-                  editorName = `${response.name}_${suffix}`
-                }
-              }
-
+              let existing = Object.values(editorStore.editors).find(
+                // this should filter on name not ID
+                (editor) => editor.name === editorName && editor.connection === connectionName,
+              )
               // Create or update the editor based on editorName
-              if (!editorStore.editors[editorName]) {
+              let editor:Editor
+              if (!existing) {
                 if (response.type === 'sql') {
-                  editorStore.newEditor(editorName, 'sql', connectionName, response.content)
+                  editor=editorStore.newEditor(editorName, 'sql', connectionName, response.content)
                 } else {
-                  editorStore.newEditor(editorName, 'trilogy', connectionName, response.content)
+                  editor=editorStore.newEditor(editorName, 'trilogy', connectionName, response.content)
                 }
-              } else if (editorStore.editors[editorName].connection === connectionName) {
-                editorStore.editors[editorName].contents = response.content
+              } else  {
+                // get the existing one from the filter list
+                editor=existing
+                editorStore.setEditorContents(existing.id, response.content)
               }
 
               // Add source as a tag
               if (
                 response.purpose &&
-                !editorStore.editors[editorName].tags.includes(response.purpose)
+                !editorStore.editors[editor.id].tags.includes(response.purpose)
               ) {
-                editorStore.editors[editorName].tags.push(response.purpose)
+                editorStore.editors[editor.id].tags.push(response.purpose)
               }
               if (response.type === 'sql') {
                 return null
               }
 
-              return new ModelSource(editorName, response.alias || response.name, [], [])
+              return new ModelSource(editor.id, response.alias || response.name, [], [])
             })
             .filter((source) => source)
         } catch (error) {

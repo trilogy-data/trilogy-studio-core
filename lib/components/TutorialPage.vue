@@ -64,7 +64,7 @@
           <div class="editor-top">
             <editor
               context="main-trilogy"
-              editorName="my-first-editor"
+              editorId="my-first-editor"
               @save-editors="saveEditorsCall"
             />
           </div>

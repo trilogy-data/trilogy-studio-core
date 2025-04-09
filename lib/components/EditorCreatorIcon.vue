@@ -91,7 +91,7 @@ export default defineComponent({
         const editorName = `trilogy-new-${props.connection}_${timestamp}`
 
         // Create a new editor with trilogy type
-        editorStore.newEditor(
+        const editor = editorStore.newEditor(
           editorName,
           props.type === 'trilogy' ? 'preql' : 'sql',
           props.connection,
@@ -102,7 +102,7 @@ export default defineComponent({
         await saveEditors()
 
         // Emit event to update screen and select the new editor
-        setActiveEditor(editorName)
+        setActiveEditor(editor.id)
         setActiveScreen('editors')
       } catch (error) {
         console.error('Failed to create new editor:', error)
