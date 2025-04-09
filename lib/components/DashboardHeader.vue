@@ -118,6 +118,7 @@ function handleRefresh() {
             class="sparkle-button"
             data-testid="filter-llm-button"
             :disabled="isLoading"
+            title="Transform text to filter if you have a configured LLM connection"
           >
             <i class="mdi mdi-creation" :class="{ spinning: isLoading }"></i>
             <Tooltip content="Text to filter" position="top">
