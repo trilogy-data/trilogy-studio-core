@@ -261,7 +261,7 @@ export default defineComponent({
     }
 
     const filteredColumnsInternal = (
-      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
+      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
     ) => {
       return filteredColumns(type, props.columns)
     }
@@ -362,7 +362,8 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          actions: internalConfig.value.showDebug ? true : false,
+          // actions: internalConfig.value.showDebug ? true : false,
+          actions:true,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
@@ -429,6 +430,7 @@ export default defineComponent({
           'colorField',
           'sizeField',
           'groupField',
+          'geoField',
           'trellisField',
         ] as FieldKey[]) {
           if (internalConfig.value[field] && !props.columns.has(internalConfig.value[field])) {
