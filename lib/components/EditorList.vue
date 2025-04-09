@@ -2,51 +2,27 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
-        >
+        <button @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'">
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveEditors" :keyCombination="['control', 's']">
           Save
         </loading-button>
       </div>
-      <editor-creator-inline
-        :visible="creatorVisible"
-        @close="creatorVisible = !creatorVisible"
-        :testTag="testTag"
-      />
-      <span
-        v-for="tag in EditorTag"
-        :key="tag"
-        :class="{ 'tag-excluded': !hiddenTags.has(tag) }"
-        class="tag"
-        @click="toggleTagFilter(tag)"
-      >
-        {{ hiddenTags.has(tag) ? 'Show' : 'Hide' }} {{ tag.charAt(0).toUpperCase()
-        }}{{ tag.slice(1) }} Editors
+      <editor-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" :testTag="testTag" />
+      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': hiddenTags.has(tag) }" class="tag"
+        @click="toggleTagFilter(tag)">
+        {{ formatEditorTag(tag) }} Editors
       </span>
     </template>
-    <div
-      v-for="item in contentList"
-      :key="item.key"
-      :data-testid="`editor-list-id-${item.key}`"
-      :class="{
-        'sidebar-item': item.type !== 'creator',
-        'sidebar-item-selected': activeEditor === item.label,
-      }"
-      @click="clickAction(item.type, item.label, item.key)"
-    >
-      <div
-        v-if="!['creator'].includes(item.type) && !isMobile"
-        v-for="_ in item.indent"
-        class="sidebar-padding"
-      ></div>
-      <i
-        v-if="!['editor', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-      >
+    <div v-for="item in contentList" :key="item.key" :data-testid="`editor-list-id-${item.key}`" :class="{
+      'sidebar-item': item.type !== 'creator',
+      'sidebar-item-selected': activeEditor === item.objectKey,
+    }" @click="clickAction(item.type, item.objectKey, item.key)">
+      <div v-if="!['creator'].includes(item.type) && !isMobile" v-for="_ in item.indent" class="sidebar-padding"></div>
+      <i v-if="!['editor', 'creator'].includes(item.type)"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -66,8 +42,7 @@
             connectionStore.connections[item.label]?.model
               ? connectionStore.connections[item.label]?.model
               : 'No Model Set'
-          }})</span
-        >
+          }})</span>
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -83,11 +58,7 @@
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span
-          class="remove-btn"
-          @click.stop="deleteEditor(item.editor)"
-          :data-testid="`delete-editor-${item.label}`"
-        >
+        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -117,7 +88,7 @@ import EditorCreatorInline from './EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
-import { EditorTag } from '../editors'
+import { EditorTag, Editor } from '../editors'
 import StatusIcon from './StatusIcon.vue'
 import type { Connection } from '../connections'
 import trilogyIcon from '../static/trilogy.png'
@@ -173,7 +144,7 @@ export default {
       Object.values(editorStore.editors).forEach((item) => {
         let storageKey = `s-${item.storage}`
         let connectionKey = `c-${item.storage}-${item.connection}`
-        if (current === item.name) {
+        if (current === item.id) {
           collapsed.value[storageKey] = false
           collapsed.value[connectionKey] = false
         } else {
@@ -216,13 +187,20 @@ export default {
   data() {
     return {
       showDeleteConfirmationState: false,
-      editorToDelete: null,
+      editorToDelete: null as string | null,
     }
   },
   methods: {
-    // @ts-ignore
-    showDeleteConfirmation(editor) {
-      this.editorToDelete = editor.name
+    formatEditorTag(tag: string) {
+      // Split the tag by underscores and convert to array
+      const words: string[] = tag.split('_');
+      // Capitalize the first letter of each word and join with spaces
+      return words
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    },
+    showDeleteConfirmation(editor: Editor) {
+      this.editorToDelete = editor.id
       this.showDeleteConfirmationState = true
     },
     cancelDelete() {
@@ -240,17 +218,16 @@ export default {
       this.showDeleteConfirmationState = false
       this.editorToDelete = null
     },
-    // @ts-ignore
-    deleteEditor(editor) {
+    deleteEditor(editor:Editor) {
       // Replace direct deletion with confirmation
       this.showDeleteConfirmation(editor)
     },
     saveEditors() {
       this.$emit('save-editors')
     },
-    clickAction(type: string, label: string, key: string) {
+    clickAction(type: string, objectKey: string, key: string) {
       if (type === 'editor') {
-        this.$emit('editor-selected', label)
+        this.$emit('editor-selected', objectKey)
       } else {
         this.toggleCollapse(key)
       }
@@ -318,11 +295,21 @@ export default {
   /* margin-left: 5px; */
   border-radius: 3px;
   padding: 2px;
-  background-color: hsl(210, 100%, 50%, 0.25);
+  background-color: hsla(210, 100%, 50%, 0.516);
   border: 1px solid hsl(210, 100%, 50%, 0.5);
   color: var(--tag-font);
   line-height: 10px;
   cursor: pointer;
+}
+
+.tag-excluded {
+  background-color: hsla(0, 0%, 69%, 0.1);
+  border: 1px solid hsl(210, 100%, 50%, 0.25);
+}
+
+.tag:hover {
+  background-color: hsl(210, 100%, 50%, 0.5);
+  border: 1px solid hsl(210, 100%, 50%, 0.75);
 }
 
 .tag-container {

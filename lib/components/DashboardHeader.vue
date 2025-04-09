@@ -32,14 +32,14 @@ const modelStore = useModelConfigStore()
 const llmStore = useLLMConnectionStore()
 
 
-const filterLLM = () =>{
-  let concepts = this.editorData.completionSymbols.map((item) => ({
-                name: item.label,
-                type: item.datatype,
-                description: item.description,
-              }))
-  llmStore.generateQueryCompletion(text, concepts)]
-}
+// const filterLLM = () =>{
+//   let concepts = this.editorData.completionSymbols.map((item) => ({
+//                 name: item.label,
+//                 type: item.datatype,
+//                 description: item.description,
+//               }))
+//   llmStore.generateQueryCompletion(text, concepts)]
+// }
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
   props.dashboard?.filter || '',

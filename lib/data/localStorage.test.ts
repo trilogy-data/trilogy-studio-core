@@ -68,13 +68,14 @@ describe('EditorLocalStorage', () => {
 
   it('should save and load an editor', async () => {
     const editor: Editor = new Editor({
-      name: 'editor1',
+      id: 'editor1',
+      name: 'editor1s',
       type: 'preql',
       connection: 'test-connection',
       storage: 'abc',
       contents: 'test content',
     })
-    expect(editor.name).toBe('editor1')
+    expect(editor.name).toBe('editor1s')
     await localStorage.saveEditor(editor)
     const loadedEditors = await localStorage.loadEditors()
 
@@ -85,14 +86,16 @@ describe('EditorLocalStorage', () => {
   it('should save and clear editors', async () => {
     const editors: Editor[] = [
       new Editor({
-        name: 'editor1',
+        id: 'editor1',
+        name: 'editor1sz',
         type: 'preql',
         connection: 'test-connection',
         storage: 'abc',
         contents: 'content1',
       }),
       new Editor({
-        name: 'editor2',
+        id: 'editor2',
+        name: 'editor2sa',
         type: 'preql',
         connection: 'test-connection',
         storage: 'abc',
@@ -113,7 +116,8 @@ describe('EditorLocalStorage', () => {
     editors[0].setContent('content3')
     await localStorage.saveEditors([
       new Editor({
-        name: 'editor3',
+        id: 'editor3',
+        name: 'editor3A',
         type: 'preql',
         connection: 'test-connection',
         storage: 'abc',
@@ -126,8 +130,9 @@ describe('EditorLocalStorage', () => {
     expect(storedEditors['editor3'].contents).toBe('content4')
   })
 
-  it('should delete an editor by name', () => {
+  it('should delete an editor by id', () => {
     const editor: Editor = new Editor({
+      id: 'editor1',
       name: 'editor1',
       type: 'preql',
       connection: 'test-connection',
@@ -144,7 +149,8 @@ describe('EditorLocalStorage', () => {
 
   it('should check if an editor exists', async () => {
     const editor: Editor = new Editor({
-      name: 'editor1',
+      id: 'editor1',
+      name: 'funky',
       type: 'preql',
       connection: 'test-connection',
       storage: 'local',

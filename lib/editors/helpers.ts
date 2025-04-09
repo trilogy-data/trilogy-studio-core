@@ -7,6 +7,7 @@ export function buildEditorTree(
 ) {
   const list: Array<{
     key: string
+    objectKey: string
     label: string
     type: string
     indent: Array<number>
@@ -45,7 +46,7 @@ export function buildEditorTree(
     const storageKey = `s-${storage}`
 
     // Add storage item
-    list.push({ key: storageKey, label: storage, type: 'storage', indent: [] })
+    list.push({ objectKey: storage, key: storageKey, label: storage, type: 'storage', indent: [] })
 
     // If storage is not collapsed, add connections and editors
     if (!collapsed[storageKey]) {
@@ -56,6 +57,7 @@ export function buildEditorTree(
         if (!processedConnections.has(connectionKey)) {
           list.push({
             key: connectionKey,
+            objectKey: connection,
             label: connection,
             type: 'connection',
             indent: [0],
@@ -89,8 +91,9 @@ export function buildEditorTree(
                 return
               }
 
-              const editorKey = `e-${storage}-${connection}-${editor.name}`
+              const editorKey = `e-${storage}-${connection}-${editor.id}`
               list.push({
+                objectKey: editor.id,
                 key: editorKey,
                 label: editor.name,
                 type: 'editor',

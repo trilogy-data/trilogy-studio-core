@@ -26,13 +26,13 @@
             <editor
               v-if="activeEditorData.type == 'preql'"
               context="main-trilogy"
-              :editorName="activeEditor"
+              :editorId="activeEditor"
               @save-editors="saveEditorsCall"
             />
             <editor
               v-else
               context="main-sql"
-              :editorName="activeEditor"
+              :editorId="activeEditor"
               @save-editors="saveEditorsCall"
             />
           </template>
@@ -297,7 +297,7 @@ export default {
         this.saveModels,
       )
       this.setActiveScreen('editors')
-      this.setActiveEditor('example_query_1')
+      this.setActiveEditor('tutorial_one_basic_1')
     },
   },
   computed: {

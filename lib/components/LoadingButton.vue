@@ -14,6 +14,7 @@
       :content="errorMessage || ''"
       :inline="false"
       position="left"
+      class="status error overlay"
       ><span class="status error overlay">✖</span>
     </tooltip>
     <span v-else-if="isLoading" class="status loading overlay">

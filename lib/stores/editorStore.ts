@@ -42,7 +42,7 @@ const useEditorStore = defineStore('editors', {
       return editor;
     },
     addEditor(editor: Editor) {
-      this.editors[editor.name] = editor
+      this.editors[editor.id] = editor
     },
     getConnectionEditors(connection: string, tags: EditorTag[] = []) {
       // return Object.values(this.editors).filter((editor) => editor.connection === connection)

@@ -20,11 +20,11 @@
             {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
             Script
           </button>
-          <button v-if="!(editorData.type === 'sql') && connectionHasModel"
+          <loading-button v-if="!(editorData.type === 'sql') && connectionHasModel"
             class="toggle-button tag-inactive action-item" :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag(EditorTag.SOURCE)">
+            :action="()=>toggleTag(EditorTag.SOURCE)">
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
-          </button>
+          </loading-button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
           <loading-button v-if="!(editorData.type === 'sql')" :useDefaultStyle="false" class="action-item"
             :action="validateQuery">Parse</loading-button>
@@ -436,7 +436,7 @@ export default defineComponent({
         let model = this.connectionStore.connections[this.editorData.connection].model
         if (model) {
           this.modelStore.models[model].addModelSourceSimple(
-            this.editorData.name,
+            this.editorData.id,
             this.editorData.name,
           )
           this.$emit('save-models')

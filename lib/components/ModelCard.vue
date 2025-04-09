@@ -56,7 +56,7 @@
       <div class="section-title">Model Sources ({{ config.sources.length }})</div>
       <div class="model-source" v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
         <div class="source-header">
-          <div class="source-title">{{ source.alias }} ({{ source.editor }})</div>
+          <div class="source-title">{{ source.alias }}</div>
           <button class="btn remove-btn" @click.stop="removeSource(index, sourceIndex)">
             Remove
           </button>

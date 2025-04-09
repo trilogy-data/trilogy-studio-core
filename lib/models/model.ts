@@ -373,7 +373,8 @@ export class ModelConfig {
       if (existing.editor === source.editor) {
         return true
       }
-      throw new Error(`Alias ${source.alias} already exists`)
+      //remove it, add new one
+      this.sources = this.sources.filter((s) => s.alias !== source.alias)
     }
     this.sources.push(source)
     this.changed = true

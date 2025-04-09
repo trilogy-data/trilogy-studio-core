@@ -31,7 +31,7 @@
         v-if="isFiltering"
         class="clear-filters-btn"
         @click="clearFilters"
-        v-tooltip="'Clear all filters'"
+        title="'Clear all filters'"
       >
         <i class="mdi mdi-filter-remove-outline"></i>
       </button>
