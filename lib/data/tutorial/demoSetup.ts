@@ -14,18 +14,15 @@ export default async function setupDemo(
 ) {
   let connName = 'demo-connection'
   let modelName = 'demo-model'
-  let importAddress = 'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/main/studio/demo-model.json'
+  let importAddress =
+    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/main/studio/demo-model.json'
   let connection = new DuckDBConnection(connName, modelName)
   connectionStore.addConnection(connection)
   await connection.connect()
   //force create
   modelStore.newModelConfig(modelName, true)
   const modelImportService = new ModelImportService(editorStore, modelStore)
-  await modelImportService.importModel(
-    modelName, 
-    importAddress, 
-    connName
-  )
+  await modelImportService.importModel(modelName, importAddress, connName)
   // Save state
   saveEditors(Object.values(editorStore.editors))
   saveConnections(Object.values(connectionStore.connections))

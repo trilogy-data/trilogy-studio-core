@@ -2,27 +2,50 @@
   <sidebar-list title="Editors">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveEditors" :keyCombination="['control', 's']">
           Save
         </loading-button>
       </div>
-      <editor-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" :testTag="testTag" />
-      <span v-for="tag in EditorTag" :key="tag" :class="{ 'tag-excluded': hiddenTags.has(tag) }" class="tag"
-        @click="toggleTagFilter(tag)">
+      <editor-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+        :testTag="testTag"
+      />
+      <span
+        v-for="tag in EditorTag"
+        :key="tag"
+        :class="{ 'tag-excluded': hiddenTags.has(tag) }"
+        class="tag"
+        @click="toggleTagFilter(tag)"
+      >
         {{ formatEditorTag(tag) }} Editors
       </span>
     </template>
-    <div v-for="item in contentList" :key="item.key" :data-testid="`editor-list-id-${item.key}`" :class="{
-      'sidebar-item': item.type !== 'creator',
-      'sidebar-item-selected': activeEditor === item.objectKey,
-    }" @click="clickAction(item.type, item.objectKey, item.key)">
-      <div v-if="!['creator'].includes(item.type) && !isMobile" v-for="_ in item.indent" class="sidebar-padding"></div>
-      <i v-if="!['editor', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
+    <div
+      v-for="item in contentList"
+      :key="item.key"
+      :data-testid="`editor-list-id-${item.key}`"
+      :class="{
+        'sidebar-item': item.type !== 'creator',
+        'sidebar-item-selected': activeEditor === item.objectKey,
+      }"
+      @click="clickAction(item.type, item.objectKey, item.key)"
+    >
+      <div
+        v-if="!['creator'].includes(item.type) && !isMobile"
+        v-for="_ in item.indent"
+        class="sidebar-padding"
+      ></div>
+      <i
+        v-if="!['editor', 'creator'].includes(item.type)"
+        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+      >
       </i>
       <template v-if="item.type == 'editor'">
         <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
@@ -42,7 +65,8 @@
             connectionStore.connections[item.label]?.model
               ? connectionStore.connections[item.label]?.model
               : 'No Model Set'
-          }})</span>
+          }})</span
+        >
       </span>
       <template v-if="item.type === 'editor'">
         <span class="tag-container">
@@ -58,7 +82,11 @@
       </template>
 
       <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span class="remove-btn" @click.stop="deleteEditor(item.editor)" :data-testid="`delete-editor-${item.label}`">
+        <span
+          class="remove-btn"
+          @click.stop="deleteEditor(item.editor)"
+          :data-testid="`delete-editor-${item.label}`"
+        >
           <i class="mdi mdi-trash-can"></i>
         </span>
       </tooltip>
@@ -193,11 +221,11 @@ export default {
   methods: {
     formatEditorTag(tag: string) {
       // Split the tag by underscores and convert to array
-      const words: string[] = tag.split('_');
+      const words: string[] = tag.split('_')
       // Capitalize the first letter of each word and join with spaces
       return words
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
     },
     showDeleteConfirmation(editor: Editor) {
       this.editorToDelete = editor.id
@@ -218,7 +246,7 @@ export default {
       this.showDeleteConfirmationState = false
       this.editorToDelete = null
     },
-    deleteEditor(editor:Editor) {
+    deleteEditor(editor: Editor) {
       // Replace direct deletion with confirmation
       this.showDeleteConfirmation(editor)
     },

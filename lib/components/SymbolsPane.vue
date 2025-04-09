@@ -59,15 +59,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, type PropType, watch, computed } from 'vue'
-
-export interface CompletionItem {
-  label: string
-  description: string
-  type: string
-  insertText: string
-  trilogyType?: 'concept' | 'function' | 'type'
-  trilogySubType?: 'property' | 'key' | 'metric'
-}
+import type { CompletionItem } from '../stores/resolver'
 
 // Centralized icon configuration for easier management
 const ICON_CONFIG = {

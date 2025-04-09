@@ -133,8 +133,8 @@ export default {
           keys: ['H'],
         },
         {
-            name: 'Format',
-            keys: ['K']
+          name: 'Format',
+          keys: ['K'],
         },
         // {
         //     name: 'Format',

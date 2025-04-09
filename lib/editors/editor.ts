@@ -1,18 +1,11 @@
 import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
-
+import { type CompletionItem } from '../stores/resolver'
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
   STARTUP_SCRIPT = 'startup_script',
   // SCHEDULED = 'scheduled',
-}
-
-interface CompetionSymbol {
-  label: string
-  description: string
-  type: string
-  insertText: string
 }
 
 export interface EditorInterface {
@@ -58,7 +51,7 @@ export default class Editor implements EditorInterface {
   changed: boolean
   deleted: boolean
   chartConfig?: ChartConfig
-  completionSymbols: any[]
+  completionSymbols: CompletionItem[]
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -111,7 +104,7 @@ export default class Editor implements EditorInterface {
     this.completionSymbols = []
   }
 
-  getAutocomplete(word: string): CompetionSymbol[] {
+  getAutocomplete(word: string): CompletionItem[] {
     return this.completionSymbols.filter((symbol) => symbol.label.startsWith(word))
   }
 

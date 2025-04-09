@@ -158,7 +158,7 @@ import {
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
-  getGeoTraitType
+  getGeoTraitType,
 } from '../dashboards/helpers'
 
 import type { ScenegraphEvent } from 'vega'
@@ -262,7 +262,14 @@ export default defineComponent({
     }
 
     const filteredColumnsInternal = (
-      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
+      type:
+        | 'numeric'
+        | 'categorical'
+        | 'temporal'
+        | 'latitude'
+        | 'longitude'
+        | 'geographic'
+        | 'all',
     ) => {
       return filteredColumns(type, props.columns)
     }
@@ -309,7 +316,6 @@ export default defineComponent({
           }
           let type = getGeoTraitType(geoField)
           emit('dimension-click', {
-   
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
             chart: type == 'state' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
             append,

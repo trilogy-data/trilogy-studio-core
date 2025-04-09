@@ -9,7 +9,7 @@ const useModelConfigStore = defineStore('models', {
     modelList: (state) => Object.keys(state.models).map((key) => state.models[key]),
   },
   actions: {
-    newModelConfig(name: string, force:boolean = false) {
+    newModelConfig(name: string, force: boolean = false) {
       let model = new ModelConfig({ name: name, storage: 'local', sources: [], description: '' })
       if (name in this.models && !force) {
         throw Error(`ModelConfig with ${name} already exists.`)

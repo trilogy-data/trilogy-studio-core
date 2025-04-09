@@ -19,16 +19,16 @@ const useEditorStore = defineStore('editors', {
       connection: string,
       contents: string | undefined,
     ) {
-      let baseName = name;
-      let uniqueName = name;
-      let suffix = 1;
-      
+      let baseName = name
+      let uniqueName = name
+      let suffix = 1
+
       // Keep trying new names with incremented suffixes until we find a unique one
       while (uniqueName in this.editors) {
-        uniqueName = `${baseName}_${suffix}`;
-        suffix++;
+        uniqueName = `${baseName}_${suffix}`
+        suffix++
       }
-      
+
       let editor = new Editor({
         id: uniqueName,
         name: baseName,
@@ -36,10 +36,10 @@ const useEditorStore = defineStore('editors', {
         connection,
         storage: 'local',
         contents: contents || '',
-      });
-      
-      this.editors[editor.id] = editor;
-      return editor;
+      })
+
+      this.editors[editor.id] = editor
+      return editor
     },
     addEditor(editor: Editor) {
       this.editors[editor.id] = editor

@@ -1,4 +1,3 @@
-
 import { getDatabaseCredential, storeDatabaseCredential } from '../data/secure'
 // Generic interface for LLM responses
 export interface LLMResponse {
@@ -93,7 +92,7 @@ export abstract class LLMProvider {
     json: string | Partial<LLMProvider>,
   ): Promise<T> {
     let restored = typeof json === 'string' ? JSON.parse(json) : json
-    
+
     const instance = new this(
       restored.name,
       restored.apiKey,

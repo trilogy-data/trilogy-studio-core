@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { LLMProvider } from '../llm'
 import type { LLMRequestOptions, LLMMessage, ModelConceptInput } from '../llm'
-import { AnthropicProvider, OpenAIProvider, MistralProvider, createPrompt } from '../llm'
+import {
+  AnthropicProvider,
+  OpenAIProvider,
+  MistralProvider,
+  createPrompt,
+  createFilterPrompt,
+} from '../llm'
 
 const extractLastTripleQuotedText = (input: string): string | null => {
   // Use the 's' flag (dotAll) to make the dot match newlines as well
@@ -9,10 +15,10 @@ const extractLastTripleQuotedText = (input: string): string | null => {
   for (const quote of ["'''", '```', '"""']) {
     const matches = input.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'))
     if (matches) {
-      return matches[matches.length - 1].slice(3, -3)
+      return extractLastTripleQuotedText(matches[matches.length - 1].slice(3, -3))
     }
   }
-  return null
+  return input
 }
 
 const useLLMConnectionStore = defineStore('llmConnections', {
@@ -98,6 +104,18 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       }
       let raw = await this.generateCompletion(connection, {
         prompt: createPrompt(inputString, concepts),
+      })
+
+      return extractLastTripleQuotedText(raw.text)
+    },
+
+    async generateFilterQuery(inputString: string, concepts: ModelConceptInput[]) {
+      let connection: string = this.activeConnection || ''
+      if (connection === '') {
+        throw new Error('No active LLM connection')
+      }
+      let raw = await this.generateCompletion(connection, {
+        prompt: createFilterPrompt(inputString, concepts),
       })
 
       return extractLastTripleQuotedText(raw.text)

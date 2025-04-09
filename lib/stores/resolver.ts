@@ -23,12 +23,16 @@ interface ValidateItem {
   severity: number
 }
 
-interface CompletionItem {
+export interface CompletionItem {
   label: string
   description: string
   type: string
+  datatype: string
   insertText: string
+  trilogyType?: 'concept' | 'function' | 'type'
+  trilogySubType?: 'property' | 'key' | 'metric'
 }
+
 export interface ValidateResponse {
   data: {
     items: ValidateItem[]
@@ -92,7 +96,7 @@ export default class AxiosResolver {
   ): Promise<FormatQueryResponse> {
     if (type === 'sql') {
       // return it as is
-      return { data: { generated_sql: query, columns: [] } }
+      return { data: { text: query } }
     }
     return axios
       .post(`${this.address}/format_query`, {

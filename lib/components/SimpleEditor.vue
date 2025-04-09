@@ -87,8 +87,8 @@ import { Results } from '../editors/results'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
 import { type QueryUpdate } from '../stores/queryExecutionService'
-import type { Import } from '../stores/resolver'
-import SymbolsPane, { type CompletionItem } from './SymbolsPane.vue'
+import type { Import, CompletionItem } from '../stores/resolver'
+import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
 
 interface OperationState {
@@ -138,6 +138,7 @@ export default defineComponent({
     return {
       lastOperation: null as OperationState | null,
       editor: new EditorModel({
+        id: 'simple-editor',
         name: 'My Query',
         type: 'trilogy',
         connection: this.connectionName,

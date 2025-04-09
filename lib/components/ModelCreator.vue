@@ -192,7 +192,7 @@ export default defineComponent({
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveAll = inject<Function>('saveAll')
-    
+
     if (!connectionStore || !modelStore || !editorStore || !saveAll) {
       throw 'must inject modelStore to ModelCreator'
     }
@@ -252,7 +252,7 @@ export default defineComponent({
       if (!modelStore.models[modelDetails.value.name]) {
         modelStore.newModelConfig(modelDetails.value.name)
       }
-      
+
       // Create or use existing connection
       let connectionName = modelDetails.value.connection
 
@@ -271,14 +271,14 @@ export default defineComponent({
 
       // Set the model in the connection
       connectionStore.connections[connectionName].setModel(modelDetails.value.name)
-      
+
       // Import model from URL if specified
       if (modelDetails.value.importAddress) {
         try {
           await modelImportService.importModel(
-            modelDetails.value.name, 
-            modelDetails.value.importAddress, 
-            connectionName
+            modelDetails.value.name,
+            modelDetails.value.importAddress,
+            connectionName,
           )
         } catch (error) {
           console.error('Error importing model:', error)

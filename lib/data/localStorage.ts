@@ -204,7 +204,7 @@ export default class LocalStorage extends AbstractStorage {
         case 'anthropic':
           // Handle the async operation properly
           // @ts-ignore
-          connections[connection.name] = reactive(await  AnthropicProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await AnthropicProvider.fromJSON(connection))
           break
 
         default:

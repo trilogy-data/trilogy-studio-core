@@ -65,7 +65,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('dashboard-creator-submit').click()
   await page.getByText('faa-test').click()
 
-
   // set up the source
   await page.getByTestId('dashboard-import-selector').click()
   await page.getByTestId('set-dashboard-source-flight').locator('div').first().click()
@@ -82,15 +81,13 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('simple-editor-content').click()
   if (browser.browserType().name() === 'webkit') {
     await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  }
-  else {
+  } else {
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
- 
+
   await page.keyboard.type('select\n    origin.state,\n    count\norder by count desc;')
   await page.getByTestId('editor-run-button').click()
   await page.getByTestId('simple-editor-results')
-
 
   // save it
   await page.getByTestId('save-dashboard-chart').click()
@@ -143,7 +140,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
         y: Math.round(canvasBounds.y + canvasBounds.height * relY),
         color: color.hex,
       })
-
     }
   }
 
@@ -172,7 +168,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   const relativePointsToCheck = [texasCheck, texasCheck2, texasCheck3]
 
-  let atLeastOneMatch = false;
+  let atLeastOneMatch = false
 
   // Check each point
   for (const point of relativePointsToCheck) {
@@ -181,14 +177,14 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     // Get the pixel color at the calculated position
     const color = await getRelativePixelColor(page, point.relX, point.relY)
     console.log(`Pixel at relative (${point.relX}, ${point.relY}): ${color.hex}`)
-    
+
     // If the color is in the expected colors list, set the flag to true
     if (point.expectedColors.includes(color.hex)) {
-      atLeastOneMatch = true;
-      break; // We can exit the loop early once we find a match
+      atLeastOneMatch = true
+      break // We can exit the loop early once we find a match
     }
   }
-  
+
   // Final assertion that checks if at least one pixel matched
-  expect(atLeastOneMatch).toBe(true);
+  expect(atLeastOneMatch).toBe(true)
 })
