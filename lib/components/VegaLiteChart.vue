@@ -317,7 +317,7 @@ export default defineComponent({
           let type = getGeoTraitType(geoField)
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
-            chart: type == 'state' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
+            chart: type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
             append,
           })
         }
@@ -401,6 +401,7 @@ export default defineComponent({
         internalConfig.value.sizeField = configDefaults.sizeField
         internalConfig.value.groupField = configDefaults.groupField
         internalConfig.value.trellisField = configDefaults.trellisField
+        internalConfig.value.geoField = configDefaults.geoField
         internalConfig.value.showDebug = configDefaults.showDebug
       }
 
@@ -447,10 +448,13 @@ export default defineComponent({
             force = true
             internalConfig.value[field] = ''
           }
+
         }
-        if (force) {
+        if (force ) {
+          console.log('force reinitialize', force)
           initializeConfig(force) // force column reset on column change
         }
+
         renderChart()
       },
       { deep: true },
@@ -467,7 +471,11 @@ export default defineComponent({
     //   },
     //   { deep: true },
     // )
-
+    const eligible = computed(() => {
+      return Charts.filter((x) =>
+        determineEligibleChartTypes(props.data, props.columns).includes(x.value),
+      )
+    })
     return {
       vegaContainer,
       internalConfig,
@@ -477,9 +485,7 @@ export default defineComponent({
       showingControls,
       updateConfig,
       toggleControls,
-      charts: Charts.filter((x) =>
-        determineEligibleChartTypes(props.data, props.columns).includes(x.value),
-      ),
+      charts: eligible,
     }
   },
   computed: {

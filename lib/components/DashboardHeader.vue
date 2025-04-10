@@ -5,9 +5,13 @@ import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import Tooltip from './Tooltip.vue' // Import the Tooltip component
+import DashboardSharePopup from './DashboardSharePopup.vue' // Import the new popup component
 import { type Import, type CompletionItem } from '../stores/resolver'
 const props = defineProps({
-  dashboard: Object,
+  dashboard: {
+    type: Object,
+    required: true,
+  },
   editMode: Boolean,
   selectedConnection: {
     type: String,
@@ -35,6 +39,17 @@ const modelStore = useModelConfigStore()
 const llmStore = useLLMConnectionStore()
 
 const isLoading = ref(false)
+const isSharePopupOpen = ref(false) // State for share popup visibility
+
+// Toggle share popup visibility
+// function toggleSharePopup() {
+//   isSharePopupOpen.value = !isSharePopupOpen.value
+// }
+
+// Close share popup
+function closeSharePopup() {
+  isSharePopupOpen.value = false
+}
 
 const filterLLM = () => {
   isLoading.value = true
@@ -149,6 +164,13 @@ function handleRefresh() {
         </div>
       </div>
       <div class="grid-actions">
+        <!-- <button
+          @click="toggleSharePopup"
+          class="share-button generic-button"
+          data-testid="share-dashboard-button"
+        >
+          Share
+        </button> -->
         <button
           @click="$emit('toggle-edit-mode')"
           class="toggle-mode-button generic-button"
@@ -213,6 +235,11 @@ function handleRefresh() {
         </button>
       </div>
     </div>
+    <DashboardSharePopup
+      :dashboard="dashboard"
+      :is-open="isSharePopupOpen"
+      @close="closeSharePopup"
+    />
   </div>
 </template>
 

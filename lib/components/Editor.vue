@@ -60,7 +60,11 @@
       </div>
       <div class="editor-content">
         <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
-        <SymbolsPane :symbols="editorData.completionSymbols || []" ref="symbolsPane" />
+        <SymbolsPane
+          :symbols="editorData.completionSymbols || []"
+          ref="symbolsPane"
+          v-if="!isMobile"
+        />
       </div>
     </template>
   </div>

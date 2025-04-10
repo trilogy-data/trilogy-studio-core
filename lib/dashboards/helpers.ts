@@ -3,6 +3,7 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { toRaw } from 'vue'
 import { lookupCountry } from './countryLookup'
+
 const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
@@ -56,8 +57,11 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
 }
 
 export const getGeoTraitType = (column: ResultColumn): string => {
-  if (getColumnHasTraitInternal(column, 'usa_state')) {
-    return 'usa_state'
+  if (getColumnHasTraitInternal(column, 'us_state')) {
+    return 'us_state'
+  }
+  if (getColumnHasTraitInternal(column, 'us_state_short')) {
+    return 'us_state_short'
   }
   if (getColumnHasTraitInternal(column, 'country')) {
     return 'country'
@@ -551,12 +555,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                      field: config.colorField,
-                      type: 'quantitative',
-                      title: config.colorField,
-                      scale: { scheme: 'viridis' },
-                      ...legendConfig,
-                    }
+                    field: config.colorField,
+                    type: 'quantitative',
+                    title: config.colorField,
+                    scale: { scheme: 'viridis' },
+                    ...legendConfig,
+                  }
                   : { value: 'steelblue' },
                 tooltip: [
                   {
@@ -588,7 +592,7 @@ export const generateVegaSpec = (
 
         // Replace the existing spec with the updated usaMapSpec
         spec = { ...spec, ...usaMapSpec }
-      } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'usa_state')) {
+      } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
         spec.projection = {
           type: 'albersUsa',
         }
@@ -676,7 +680,7 @@ export const generateVegaSpec = (
               from: {
                 data: { ...spec.data },
                 key: config.geoField,
-                fields: [config.colorField, config.sizeField].filter((x) => x),
+                fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
               },
             },
           ],
@@ -877,7 +881,7 @@ export const filteredColumns = (
       result.push(column)
     } else if (
       filter === 'geographic' &&
-      column.traits?.some((trait) => trait.endsWith('state') || trait.endsWith('country'))
+      column.traits?.some((trait) => trait.endsWith('state') || trait.endsWith('state_short') || trait.endsWith('country'))
     ) {
       result.push(column)
     }
@@ -1076,7 +1080,6 @@ export const determineEligibleChartTypes = (
   const latitudeColumns = filteredColumns('latitude', columns)
   const longitudeColumns = filteredColumns('longitude', columns)
   const geoColumns = filteredColumns('geographic', columns)
-
   const eligibleCharts: string[] = []
 
   // If no numeric columns, very limited chart options
@@ -1120,7 +1123,6 @@ export const determineEligibleChartTypes = (
     eligibleCharts.push('boxplot')
   }
   if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
-    console.log('adding usa')
     eligibleCharts.push('usa-map')
   }
   // Ensure all chart types are from the predefined list
