@@ -317,7 +317,8 @@ export default defineComponent({
           let type = getGeoTraitType(geoField)
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
-            chart: type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
+            chart:
+              type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
             append,
           })
         }
@@ -448,9 +449,8 @@ export default defineComponent({
             force = true
             internalConfig.value[field] = ''
           }
-
         }
-        if (force ) {
+        if (force) {
           console.log('force reinitialize', force)
           initializeConfig(force) // force column reset on column change
         }

@@ -555,12 +555,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                    field: config.colorField,
-                    type: 'quantitative',
-                    title: config.colorField,
-                    scale: { scheme: 'viridis' },
-                    ...legendConfig,
-                  }
+                      field: config.colorField,
+                      type: 'quantitative',
+                      title: config.colorField,
+                      scale: { scheme: 'viridis' },
+                      ...legendConfig,
+                    }
                   : { value: 'steelblue' },
                 tooltip: [
                   {
@@ -881,7 +881,10 @@ export const filteredColumns = (
       result.push(column)
     } else if (
       filter === 'geographic' &&
-      column.traits?.some((trait) => trait.endsWith('state') || trait.endsWith('state_short') || trait.endsWith('country'))
+      column.traits?.some(
+        (trait) =>
+          trait.endsWith('state') || trait.endsWith('state_short') || trait.endsWith('country'),
+      )
     ) {
       result.push(column)
     }
