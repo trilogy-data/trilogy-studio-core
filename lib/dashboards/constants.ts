@@ -103,7 +103,7 @@ export const Controls: ChartControl[] = [
   },
   {
     id: 'geo-field',
-    label: 'State Field',
+    label: 'Geo Field',
     field: 'geoField',
     visibleFor: ['usa-map'],
     allowEmpty: true,

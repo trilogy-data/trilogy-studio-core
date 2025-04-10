@@ -67,10 +67,10 @@ export default {
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
-    const updateApiKey = (connection: LLMProvider, apiKey: string) => {
+    const updateApiKey = async (connection: LLMProvider, apiKey: string) => {
       if (apiKey) {
         // Replace the old connection
-        llmConnectionStore.connections[connection.name].setApiKey(apiKey)
+        await llmConnectionStore.connections[connection.name].setApiKey(apiKey)
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
       }

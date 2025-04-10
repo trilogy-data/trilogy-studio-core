@@ -9,9 +9,9 @@ const useModelConfigStore = defineStore('models', {
     modelList: (state) => Object.keys(state.models).map((key) => state.models[key]),
   },
   actions: {
-    newModelConfig(name: string) {
+    newModelConfig(name: string, force: boolean = false) {
       let model = new ModelConfig({ name: name, storage: 'local', sources: [], description: '' })
-      if (name in this.models) {
+      if (name in this.models && !force) {
         throw Error(`ModelConfig with ${name} already exists.`)
       }
       this.models[model.name] = model // Add model using object notation

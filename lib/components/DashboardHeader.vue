@@ -1,21 +1,27 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
-import { computed, ref, type Ref } from 'vue'
-import { useConnectionStore } from '../stores'
-import { useModelConfigStore } from '../stores'
+import { computed, type Ref, ref } from 'vue'
+import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import Tooltip from './Tooltip.vue' // Import the Tooltip component
-import { type Import } from '../stores/resolver'
-
+import DashboardSharePopup from './DashboardSharePopup.vue' // Import the new popup component
+import { type Import, type CompletionItem } from '../stores/resolver'
 const props = defineProps({
-  dashboard: Object,
+  dashboard: {
+    type: Object,
+    required: true,
+  },
   editMode: Boolean,
   selectedConnection: {
     type: String,
     required: true,
   },
   filterError: String,
+  globalCompletion: {
+    type: Array as () => CompletionItem[],
+    default: () => [],
+  },
 })
 
 const emit = defineEmits([
@@ -30,7 +36,41 @@ const emit = defineEmits([
 
 const connectionStore = useConnectionStore()
 const modelStore = useModelConfigStore()
+const llmStore = useLLMConnectionStore()
 
+const isLoading = ref(false)
+const isSharePopupOpen = ref(false) // State for share popup visibility
+
+// Toggle share popup visibility
+// function toggleSharePopup() {
+//   isSharePopupOpen.value = !isSharePopupOpen.value
+// }
+
+// Close share popup
+function closeSharePopup() {
+  isSharePopupOpen.value = false
+}
+
+const filterLLM = () => {
+  isLoading.value = true
+  let concepts = props.globalCompletion.map((item) => ({
+    name: item.label,
+    type: item.datatype,
+    description: item.description,
+  }))
+  llmStore
+    .generateFilterQuery(filterInput.value, concepts)
+    .then((response) => {
+      if (response && response.length > 0) {
+        filterInput.value = response
+        emit('filter-change', response)
+      }
+      isLoading.value = false
+    })
+    .catch(() => {
+      isLoading.value = false
+    })
+}
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
   props.dashboard?.filter || '',
@@ -78,16 +118,44 @@ function handleRefresh() {
       <div class="filter-container">
         <label for="filter">Where</label>
         <div class="filter-input-wrapper">
-          <input id="filter" data-testid="filter-input" type="text" v-model="filterInput" @input="onFilterInput"
-            placeholder="Enter filter criteria..." :class="{ 'filter-error': filterStatus === 'error' }" />
+          <input
+            id="filter"
+            data-testid="filter-input"
+            type="text"
+            v-model="filterInput"
+            @input="onFilterInput"
+            placeholder="Enter filter criteria..."
+            :class="{ 'filter-error': filterStatus === 'error' }"
+            :disabled="isLoading"
+          />
+          <button
+            @click="filterLLM"
+            class="sparkle-button"
+            data-testid="filter-llm-button"
+            :disabled="isLoading"
+            title="Transform text to filter if you have a configured LLM connection"
+          >
+            <i class="mdi mdi-creation" :class="{ spinning: isLoading }"></i>
+            <Tooltip content="Text to filter" position="top">
+              <span class="tooltip-trigger"></span>
+            </Tooltip>
+          </button>
           <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
-            <div v-if="filterStatus === 'error'" class="filter-icon error" data-testid="filter-error-icon">
+            <div
+              v-if="filterStatus === 'error'"
+              class="filter-icon error"
+              data-testid="filter-error-icon"
+            >
               <span class="icon-x">✕</span>
               <Tooltip :content="filterError || 'Unknown Error'" position="bottom">
                 <span class="tooltip-trigger" data-testid="filter-error-tooltip-trigger"></span>
               </Tooltip>
             </div>
-            <div v-else-if="filterStatus === 'valid'" class="filter-icon valid" data-testid="filter-valid-icon">
+            <div
+              v-else-if="filterStatus === 'valid'"
+              class="filter-icon valid"
+              data-testid="filter-valid-icon"
+            >
               <Tooltip content="This is a syntactically correct filter." position="top">
                 <span class="icon-check" data-testid="filter-valid-tooltip-trigger">✓</span>
               </Tooltip>
@@ -96,43 +164,82 @@ function handleRefresh() {
         </div>
       </div>
       <div class="grid-actions">
-        <button @click="$emit('toggle-edit-mode')" class="toggle-mode-button  generic-button" data-testid="toggle-edit-mode-button">
+        <!-- <button
+          @click="toggleSharePopup"
+          class="share-button generic-button"
+          data-testid="share-dashboard-button"
+        >
+          Share
+        </button> -->
+        <button
+          @click="$emit('toggle-edit-mode')"
+          class="toggle-mode-button generic-button"
+          data-testid="toggle-edit-mode-button"
+        >
           {{ editMode ? 'View Mode' : 'Edit' }}
         </button>
-        <button @click="handleRefresh" class="add-button  generic-button" data-testid="refresh-button">
+        <button
+          @click="handleRefresh"
+          class="add-button generic-button"
+          data-testid="refresh-button"
+        >
           ⟳ Refresh
         </button>
       </div>
     </div>
 
-
-    <div class="controls-row top-row" v-if="editMode" >
+    <div class="controls-row top-row" v-if="editMode">
       <div class="dashboard-left-controls">
         <div class="connection-selector">
           <label for="connection">Connection</label>
-          <select id="connection" data-testid="connection-selector" @change="$emit('connection-change', $event)"
-            :value="selectedConnection">
-            <option v-for="conn in Object.values(connectionStore.connections).filter(
-              (conn) => conn.model,
-            )" :key="conn.name" :value="conn.name">
+          <select
+            id="connection"
+            data-testid="connection-selector"
+            @change="$emit('connection-change', $event)"
+            :value="selectedConnection"
+          >
+            <option
+              v-for="conn in Object.values(connectionStore.connections).filter(
+                (conn) => conn.model,
+              )"
+              :key="conn.name"
+              :value="conn.name"
+            >
               {{ conn.name }}
             </option>
           </select>
         </div>
-        <DashboardImportSelector :available-imports="availableImports" :active-imports="activeImports"
-          @update:imports="handleImportsChange" />
+        <DashboardImportSelector
+          :available-imports="availableImports"
+          :active-imports="activeImports"
+          @update:imports="handleImportsChange"
+        />
       </div>
 
       <div class="grid-actions">
-        <button @click="$emit('add-item')" class="add-button  generic-button" v-if="editMode" data-testid="add-item-button">
+        <button
+          @click="$emit('add-item')"
+          class="add-button generic-button"
+          v-if="editMode"
+          data-testid="add-item-button"
+        >
           Add Item
         </button>
-        <button @click="$emit('clear-items')" class="clear-button  generic-button" v-if="editMode" data-testid="clear-items-button">
+        <button
+          @click="$emit('clear-items')"
+          class="clear-button generic-button"
+          v-if="editMode"
+          data-testid="clear-items-button"
+        >
           Clear All
         </button>
-
       </div>
     </div>
+    <DashboardSharePopup
+      :dashboard="dashboard"
+      :is-open="isSharePopupOpen"
+      @close="closeSharePopup"
+    />
   </div>
 </template>
 
@@ -210,6 +317,38 @@ function handleRefresh() {
   font-size: var(--font-size);
 }
 
+.sparkle-button {
+  position: absolute;
+  right: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  width: 30px;
+  height: 30px;
+  z-index: 2;
+}
+
+.mdi {
+  font-size: 16px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1.5s linear infinite;
+}
+
 .filter-error {
   border-color: #ff3b30 !important;
 }
@@ -269,8 +408,6 @@ function handleRefresh() {
   display: flex;
 }
 
-
-
 .generic-button {
   width: 85px;
   height: 32px;
@@ -285,7 +422,6 @@ function handleRefresh() {
 .add-button {
   background-color: var(--special-text) !important;
   color: white !important;
-
 }
 
 .clear-button {
@@ -310,8 +446,6 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
-
-
   /* Adjust the filter row to accommodate the toggle button */
   .filter-row {
     display: flex;
@@ -364,12 +498,15 @@ function handleRefresh() {
     white-space: nowrap;
     /* Prevent text wrapping */
   }
+
+  .sparkle-button {
+    right: 30px;
+  }
 }
 
 @media (max-width: 480px) {
-
   .connection-selector,
-  .dashboard-left-controls>div {
+  .dashboard-left-controls > div {
     width: 100%;
   }
 
@@ -410,6 +547,10 @@ function handleRefresh() {
     text-overflow: ellipsis;
     /* Add ellipsis for text overflow */
   }
+
+  .sparkle-button {
+    right: 25px;
+  }
 }
 
 /* Extra small screen size handling */
@@ -425,6 +566,10 @@ function handleRefresh() {
   button[data-testid='refresh-button'] {
     padding: 5px;
     width: auto;
+  }
+
+  .sparkle-button {
+    right: 20px;
   }
 }
 </style>

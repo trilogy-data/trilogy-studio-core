@@ -56,14 +56,24 @@ const trilogyRules = [
 
 const rulesInput = 'Rule: ' + trilogyRules.join('\nRule: ')
 
-export function createPrompt(query: string, concepttInputs: ModelConceptInput[] = testFields) {
-  const fields = concepttInputs
+export function createPrompt(query: string, conceptInputs: ModelConceptInput[] = testFields) {
+  const fields = conceptInputs
     .map(
       (field) =>
         `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
     )
     .join(', ')
   return `You are a helpful assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. A single virtual table is available with fields - to be listed later, with a name, type, and description. Even better, the where clause can reference fields that you don't select on. Follow these rules ${rulesInput}. Using only these fields: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes -ex """ - to make it easy for the user to copy and paste.`
+}
+
+export function createFilterPrompt(query: string, conceptInputs: ModelConceptInput[] = testFields) {
+  const fields = conceptInputs
+    .map(
+      (field) =>
+        `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
+    )
+    .join(', ')
+  return `You are a helpful assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. A single virtual table is available with fields - to be listed later, with a name, type, and description. Even better, the where clause can reference fields that you don't select on and arbitrary aggregates and calculations. Follow these rules ${rulesInput}. Using only these fields: ${fields}, do your best to create a trilogy WHERE CLAUSE to filter a dashboard by the following user request - "show me data where: ${query}" Return your where clause within triple double quotes -ex """ - to make it easy for the user to copy and paste. This should be only the portion of a SQL query after the WHERE keyword, excluding any ordering.`
 }
 
 const testCases: TestScenario[] = [

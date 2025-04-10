@@ -158,6 +158,7 @@ import {
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
+  getGeoTraitType,
 } from '../dashboards/helpers'
 
 import type { ScenegraphEvent } from 'vega'
@@ -261,7 +262,14 @@ export default defineComponent({
     }
 
     const filteredColumnsInternal = (
-      type: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
+      type:
+        | 'numeric'
+        | 'categorical'
+        | 'temporal'
+        | 'latitude'
+        | 'longitude'
+        | 'geographic'
+        | 'all',
     ) => {
       return filteredColumns(type, props.columns)
     }
@@ -301,13 +309,16 @@ export default defineComponent({
         // }
 
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
-          let geoConcept = props.columns.get(internalConfig.value.geoField)?.address
-          if (!geoConcept) {
+          let geoField = props.columns.get(internalConfig.value.geoField)
+          let geoConcept = geoField?.address
+          if (!geoConcept || !geoField) {
             return
           }
+          let type = getGeoTraitType(geoField)
           emit('dimension-click', {
-            filters: { [geoConcept]: item.datum.abbr },
-            chart: { Feature: item.datum.abbr },
+            filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
+            chart:
+              type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
             append,
           })
         }
@@ -363,6 +374,7 @@ export default defineComponent({
       try {
         await vegaEmbed(vegaContainer.value, spec, {
           actions: internalConfig.value.showDebug ? true : false,
+          // actions:true,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
@@ -390,6 +402,7 @@ export default defineComponent({
         internalConfig.value.sizeField = configDefaults.sizeField
         internalConfig.value.groupField = configDefaults.groupField
         internalConfig.value.trellisField = configDefaults.trellisField
+        internalConfig.value.geoField = configDefaults.geoField
         internalConfig.value.showDebug = configDefaults.showDebug
       }
 
@@ -429,6 +442,7 @@ export default defineComponent({
           'colorField',
           'sizeField',
           'groupField',
+          'geoField',
           'trellisField',
         ] as FieldKey[]) {
           if (internalConfig.value[field] && !props.columns.has(internalConfig.value[field])) {
@@ -437,8 +451,10 @@ export default defineComponent({
           }
         }
         if (force) {
+          console.log('force reinitialize', force)
           initializeConfig(force) // force column reset on column change
         }
+
         renderChart()
       },
       { deep: true },
@@ -455,7 +471,11 @@ export default defineComponent({
     //   },
     //   { deep: true },
     // )
-
+    const eligible = computed(() => {
+      return Charts.filter((x) =>
+        determineEligibleChartTypes(props.data, props.columns).includes(x.value),
+      )
+    })
     return {
       vegaContainer,
       internalConfig,
@@ -465,9 +485,7 @@ export default defineComponent({
       showingControls,
       updateConfig,
       toggleControls,
-      charts: Charts.filter((x) =>
-        determineEligibleChartTypes(props.data, props.columns).includes(x.value),
-      ),
+      charts: eligible,
     }
   },
   computed: {

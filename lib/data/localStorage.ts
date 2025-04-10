@@ -42,11 +42,11 @@ export default class LocalStorage extends AbstractStorage {
     // override editors we've changed
     editorsList.forEach((editor) => {
       if (editor.changed) {
-        editors[editor.name] = editor
+        editors[editor.id] = editor
         editor.changed = false
       }
       if (editor.deleted) {
-        delete editors[editor.name]
+        delete editors[editor.id]
       }
     })
     localStorage.setItem(
@@ -60,8 +60,8 @@ export default class LocalStorage extends AbstractStorage {
     let raw = storedData ? JSON.parse(storedData) : []
     // map the raw array to a Record<string, EditorInterface> with the editorInterface wrapped in reactive
     return raw.reduce((acc: Record<string, EditorInterface>, editor: EditorInterface) => {
-      acc[editor.name] = reactive(EditorInterface.fromJSON(editor))
-      acc[editor.name].storage = 'local'
+      acc[editor.id] = reactive(EditorInterface.fromJSON(editor))
+      acc[editor.id].storage = 'local'
       return acc
     }, {})
   }
@@ -81,10 +81,10 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.removeItem(this.editorStorageKey)
   }
 
-  async hasEditor(name: string): Promise<boolean> {
+  async hasEditor(id: string): Promise<boolean> {
     const editors = await this.loadEditors()
     // any editor has the property name == name
-    return Object.values(editors).some((editor) => editor.name === name)
+    return Object.values(editors).some((editor) => editor.id === id)
   }
 
   async saveConnections(
@@ -195,16 +195,16 @@ export default class LocalStorage extends AbstractStorage {
       switch (connection.type) {
         case 'openai':
           // @ts-ignore
-          connections[connection.name] = reactive(OpenAIProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await OpenAIProvider.fromJSON(connection))
           break
         case 'mistral':
           // @ts-ignore
-          connections[connection.name] = reactive(MistralProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // Handle the async operation properly
           // @ts-ignore
-          connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
+          connections[connection.name] = reactive(await AnthropicProvider.fromJSON(connection))
           break
 
         default:

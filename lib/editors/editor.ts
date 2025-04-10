@@ -1,6 +1,6 @@
 import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
-
+import { type CompletionItem } from '../stores/resolver'
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
@@ -8,14 +8,8 @@ export enum EditorTag {
   // SCHEDULED = 'scheduled',
 }
 
-interface CompetionSymbol {
-  label: string
-  description: string
-  type: string
-  insertText: string
-}
-
 export interface EditorInterface {
+  id: string
   name: string
   type: 'trilogy' | 'sql' | 'preql'
   syntax: string
@@ -38,6 +32,7 @@ export interface EditorInterface {
 }
 
 export default class Editor implements EditorInterface {
+  id: string
   name: string
   type: 'trilogy' | 'sql' | 'preql'
   syntax: string
@@ -56,7 +51,7 @@ export default class Editor implements EditorInterface {
   changed: boolean
   deleted: boolean
   chartConfig?: ChartConfig
-  completionSymbols: any[]
+  completionSymbols: CompletionItem[]
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -70,6 +65,7 @@ export default class Editor implements EditorInterface {
     }
   }
   constructor({
+    id,
     name,
     type,
     connection,
@@ -77,6 +73,7 @@ export default class Editor implements EditorInterface {
     contents = null,
     tags = null,
   }: {
+    id: string
     name: string
     type: 'trilogy' | 'sql' | 'preql'
     connection: string
@@ -84,6 +81,7 @@ export default class Editor implements EditorInterface {
     contents?: string | null
     tags?: EditorTag[] | null
   }) {
+    this.id = id
     this.name = name
     this.type = type
     this.syntax = 'preql'
@@ -106,7 +104,7 @@ export default class Editor implements EditorInterface {
     this.completionSymbols = []
   }
 
-  getAutocomplete(word: string): CompetionSymbol[] {
+  getAutocomplete(word: string): CompletionItem[] {
     return this.completionSymbols.filter((symbol) => symbol.label.startsWith(word))
   }
 
@@ -137,6 +135,8 @@ export default class Editor implements EditorInterface {
 
   toJSON(preserveResults: boolean = false): object {
     return {
+      // default for migration
+      id: this.id || this.name,
       name: this.name,
       type: this.type,
       syntax: this.syntax,
@@ -158,6 +158,7 @@ export default class Editor implements EditorInterface {
     const parsed: Partial<Editor> = typeof json === 'string' ? JSON.parse(json) : json
     // Initialize a new Editor instance
     const editor = new Editor({
+      id: parsed.id || parsed.name || '',
       name: parsed.name || '',
       type: parsed.type || 'trilogy',
       connection: parsed.connection || '',

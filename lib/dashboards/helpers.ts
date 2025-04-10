@@ -2,9 +2,45 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { toRaw } from 'vue'
+import { lookupCountry } from './countryLookup'
+
 const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
+
+/**
+ * Determines if more than 80% of data rows are within the US bounding box
+ * @param rows - Array of data objects
+ * @param latField - Name of the field containing latitude value
+ * @param longField - Name of the field containing longitude value
+ * @returns Boolean indicating if more than 80% of points are in the US bounding box
+ */
+function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): boolean {
+  // US bounding box coordinates
+  const top = 49.3457868 // north lat
+  const left = -124.7844079 // west long
+  const right = -66.9513812 // east long
+  const bottom = 24.7433195 // south lat
+
+  // Count points inside the bounding box
+  let insideCount = 0
+
+  for (const row of rows) {
+    const lat = Number(row[latField])
+    const lng = Number(row[longField])
+
+    // Check if point is inside the bounding box
+    if (bottom <= lat && lat <= top && left <= lng && lng <= right) {
+      insideCount++
+    }
+  }
+
+  // Calculate percentage of points inside the box
+  const percentageInside = (insideCount / rows.length) * 100
+
+  // Return true if more than 80% of points are inside the box
+  return percentageInside > 80
+}
 
 // Helper functions to identify column types
 export const isNumericColumn = (column: ResultColumn): boolean => {
@@ -18,6 +54,19 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
     ].includes(column.type) &&
     !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
   )
+}
+
+export const getGeoTraitType = (column: ResultColumn): string => {
+  if (getColumnHasTraitInternal(column, 'us_state')) {
+    return 'us_state'
+  }
+  if (getColumnHasTraitInternal(column, 'us_state_short')) {
+    return 'us_state_short'
+  }
+  if (getColumnHasTraitInternal(column, 'country')) {
+    return 'country'
+  }
+  return 'unknown'
 }
 
 export const isTemporalColumn = (column: ResultColumn): boolean => {
@@ -65,6 +114,25 @@ const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>)
   } else {
     return 'nominal'
   }
+}
+
+const getColumnHasTraitInternal = (column: ResultColumn, trait: string) => {
+  if (column.traits && column.traits.some((t) => t.endsWith(trait))) {
+    return true
+  }
+  return false
+}
+
+const getColumnHasTrait = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+  trait: string,
+): boolean => {
+  if (!fieldName || !columns.get(fieldName)) return false
+
+  const column = columns.get(fieldName)
+  if (!column) return false
+  return getColumnHasTraitInternal(column, trait)
 }
 
 const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): any => {
@@ -196,9 +264,6 @@ export const generateVegaSpec = (
       },
     }
   }
-
-  console.log(isMobile)
-  console.log(legendConfig)
 
   // Add color encoding if specified (and not for special chart types)
   if (config.colorField && !['heatmap'].includes(config.chartType)) {
@@ -441,11 +506,14 @@ export const generateVegaSpec = (
       break
     case 'usa-map':
       // First, we need to set up the correct projection
-      spec.projection = {
-        type: 'albersUsa',
-      }
 
       if (config.xField && config.yField) {
+        //@ts-ignore
+        if (isDataMostlyInUS(data, config.yField, config.xField)) {
+          spec.projection = {
+            type: 'albersUsa',
+          }
+        }
         const usaMapSpec = {
           params: [
             {
@@ -524,7 +592,10 @@ export const generateVegaSpec = (
 
         // Replace the existing spec with the updated usaMapSpec
         spec = { ...spec, ...usaMapSpec }
-      } else if (config.geoField) {
+      } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
+        spec.projection = {
+          type: 'albersUsa',
+        }
         const usaStateSpec = {
           params: [
             {
@@ -609,7 +680,7 @@ export const generateVegaSpec = (
               from: {
                 data: { ...spec.data },
                 key: config.geoField,
-                fields: [config.colorField, config.sizeField].filter((x) => x),
+                fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
               },
             },
           ],
@@ -655,6 +726,98 @@ export const generateVegaSpec = (
             ...usaStateSpec,
           },
         }
+      } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'country')) {
+        let lookupField: string = config.geoField
+        //@ts-ignore
+        const idLookup = (row) => {
+          const lookup = lookupCountry(row[lookupField], 'name')
+          if (lookup) {
+            return Number(lookup['country-code'])
+          } else {
+            return null
+          }
+        }
+        const base = {
+          $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+          width: 'container',
+          height: 'container',
+          layer: [
+            {
+              data: {
+                url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/world-110m.json',
+                format: { type: 'topojson', feature: 'countries' },
+              },
+              transform: [
+                {
+                  filter: 'datum.id !== 10', // Filter out Antarctica (country code 10)
+                },
+              ],
+              mark: { type: 'geoshape', fill: '#e0e0e0', stroke: '#bbb', strokeWidth: 0.5 },
+              projection: { type: 'mercator' },
+            },
+            {
+              data: {
+                url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/world-110m.json',
+                format: { type: 'topojson', feature: 'countries' },
+              },
+              transform: [
+                {
+                  lookup: 'id',
+                  from: {
+                    data: {
+                      values: data?.map((row) => {
+                        return {
+                          id: idLookup(row),
+                          ...row,
+                        }
+                      }),
+                    },
+                    key: 'id',
+                    fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
+                  },
+                },
+              ],
+              params: [
+                {
+                  name: 'highlight',
+                  select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+                },
+                {
+                  name: 'select',
+                  select: 'point',
+                  value: intChart,
+                },
+              ],
+              mark: { type: 'geoshape' },
+              projection: { type: 'mercator' },
+              encoding: {
+                color: {
+                  field: config.colorField,
+                  type: 'quantitative',
+                  scale: { type: 'quantize', nice: true },
+                  legend: { title: config.colorField },
+                },
+                opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
+                tooltip: [
+                  { field: config.geoField, type: 'nominal', title: config.geoField },
+                  { field: config.colorField, type: 'quantitative', title: config.colorField },
+                ],
+                stroke: {
+                  condition: { param: 'highlight', empty: false, value: 'black' },
+                  value: '#666',
+                },
+                strokeWidth: {
+                  condition: { param: 'highlight', empty: false, value: 2 },
+                  value: 0.5,
+                },
+              },
+            },
+          ],
+          config: { view: { stroke: null } },
+        }
+        spec = {
+          ...base,
+        }
       }
 
       break
@@ -699,7 +862,7 @@ export const columHasTraitEnding = (column: ResultColumn, trait: string): boolea
 
 // Filter columns by type for UI controls
 export const filteredColumns = (
-  filter: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'all',
+  filter: 'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
   columns: Map<string, ResultColumn>,
 ) => {
   const result: ResultColumn[] = []
@@ -715,6 +878,14 @@ export const filteredColumns = (
     } else if (filter === 'latitude' && columHasTraitEnding(column, 'latitude')) {
       result.push(column)
     } else if (filter === 'longitude' && columHasTraitEnding(column, 'longitude')) {
+      result.push(column)
+    } else if (
+      filter === 'geographic' &&
+      column.traits?.some(
+        (trait) =>
+          trait.endsWith('state') || trait.endsWith('state_short') || trait.endsWith('country'),
+      )
+    ) {
       result.push(column)
     }
   })
@@ -734,6 +905,7 @@ export const determineDefaultConfig = (
   const temporalColumns = filteredColumns('temporal', columns)
   const latitudeColumns = filteredColumns('latitude', columns)
   const longitudeColumns = filteredColumns('longitude', columns)
+  const geoColumns = filteredColumns('geographic', columns)
 
   if (numericColumns.length === 0) {
     console.log('No numeric columns found')
@@ -831,11 +1003,12 @@ export const determineDefaultConfig = (
     // 2. A numeric field for the color encoding
 
     // Look for columns that might contain state information
-    if (latitudeColumns.length > 0) {
+    if (latitudeColumns.length > 0 && longitudeColumns.length > 0) {
       defaults.yField = latitudeColumns[0].name
-    }
-    if (longitudeColumns.length > 0) {
       defaults.xField = longitudeColumns[0].name
+    }
+    if (geoColumns.length > 0) {
+      defaults.geoField = geoColumns[0].name
     }
 
     // Use the first numeric column for the color encoding
@@ -907,7 +1080,9 @@ export const determineEligibleChartTypes = (
   const numericColumns = filteredColumns('numeric', columns)
   const categoricalColumns = filteredColumns('categorical', columns)
   const temporalColumns = filteredColumns('temporal', columns)
-
+  const latitudeColumns = filteredColumns('latitude', columns)
+  const longitudeColumns = filteredColumns('longitude', columns)
+  const geoColumns = filteredColumns('geographic', columns)
   const eligibleCharts: string[] = []
 
   // If no numeric columns, very limited chart options
@@ -950,8 +1125,9 @@ export const determineEligibleChartTypes = (
   if (numericColumns.length > 0) {
     eligibleCharts.push('boxplot')
   }
-
-  eligibleCharts.push('usa-map')
+  if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
+    eligibleCharts.push('usa-map')
+  }
   // Ensure all chart types are from the predefined list
   return eligibleCharts.filter((chart) =>
     ['bar', 'barh', 'line', 'point', 'area', 'heatmap', 'boxplot', 'usa-map'].includes(chart),

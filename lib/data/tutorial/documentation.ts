@@ -611,7 +611,7 @@ complete_for_clause?
     new Article('Stored Info', [
       new Paragraph(
         'Secret Storage',
-        'For databases that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to local browser storage. Local storage is only accessible per website but has some risk from cross-site scripting attacks.',
+        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but may fall back to local browser storage. Be careful storing credentials and be prepared to rotate - consider using a passowrd manager..',
       ),
       new Paragraph(
         'Secret Storage',

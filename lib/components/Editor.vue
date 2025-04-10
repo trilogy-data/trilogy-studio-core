@@ -31,14 +31,14 @@
             {{ editorData.tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup
             Script
           </button>
-          <button
+          <loading-button
             v-if="!(editorData.type === 'sql') && connectionHasModel"
             class="toggle-button tag-inactive action-item"
             :class="{ tag: editorData.tags.includes(EditorTag.SOURCE) }"
-            @click="toggleTag(EditorTag.SOURCE)"
+            :action="() => toggleTag(EditorTag.SOURCE)"
           >
             {{ editorData.tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
-          </button>
+          </loading-button>
           <button class="action-item" @click="$emit('save-editors')">Save</button>
           <loading-button
             v-if="!(editorData.type === 'sql')"
@@ -60,7 +60,11 @@
       </div>
       <div class="editor-content">
         <div ref="editor" id="editor" class="editor-fix-styles" data-testid="editor"></div>
-        <SymbolsPane :symbols="editorData.completionSymbols || []" ref="symbolsPane" />
+        <SymbolsPane
+          :symbols="editorData.completionSymbols || []"
+          ref="symbolsPane"
+          v-if="!isMobile"
+        />
       </div>
     </template>
   </div>
@@ -274,6 +278,14 @@ import SymbolsPane from './SymbolsPane.vue'
 let editorMap: Map<string, editor.IStandaloneCodeEditor> = new Map()
 let mountedMap: Map<string, boolean> = new Map()
 
+interface QueryPartial {
+  text: string
+  queryType: string
+  editorType: 'trilogy' | 'sql' | 'preql'
+  sources: ContentInput[]
+  imports: Import[]
+}
+
 function getEditorText(editor: editor.IStandaloneCodeEditor, fallback: string): string {
   const selected = editor.getSelection()
   let text =
@@ -327,7 +339,7 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    editorName: {
+    editorId: {
       type: String,
       required: true,
     },
@@ -404,7 +416,7 @@ export default defineComponent({
       return this.connectionStore.connections[this.editorData.connection].model !== null
     },
     editorData() {
-      return this.editorStore.editors[this.editorName]
+      return this.editorStore.editors[this.editorId]
     },
     error() {
       return this.editorData.error
@@ -423,7 +435,7 @@ export default defineComponent({
     },
   },
   watch: {
-    editorName: {
+    editorId: {
       handler() {
         this.$nextTick(() => {
           this.createEditor()
@@ -451,7 +463,7 @@ export default defineComponent({
         let model = this.connectionStore.connections[this.editorData.connection].model
         if (model) {
           this.modelStore.models[model].addModelSourceSimple(
-            this.editorData.name,
+            this.editorData.id,
             this.editorData.name,
           )
           this.$emit('save-models')
@@ -471,7 +483,7 @@ export default defineComponent({
     },
     finishEditing() {
       this.isEditing = false
-      this.editorStore.updateEditorName(this.editorName, this.editableName)
+      this.editorStore.updateEditorName(this.editorId, this.editableName)
       this.setActiveEditor(this.editableName)
     },
     cancelEditing() {
@@ -530,10 +542,72 @@ export default defineComponent({
       }
       this.editorData.loading = false
     },
+
+    async formatQuery() {
+      const editorItem = editorMap.get(this.context)
+      if (!editorItem) {
+        return
+      }
+      const text = getEditorText(editorItem, this.editorData.contents)
+      if (!text) {
+        return
+      }
+      const queryInput = await this.buildQueryArgs(text)
+      try {
+        const formatted = await this.trilogyResolver.format_query(
+          text,
+          queryInput.queryType,
+          queryInput.editorType,
+          queryInput.sources,
+          queryInput.imports,
+        )
+        if (formatted.data && formatted.data.text) {
+          editorItem.setValue(formatted.data.text)
+          this.editorData.contents = formatted.data.text
+        }
+      } catch (error) {
+        console.error('Error formatting query:', error)
+      }
+    },
+
+    async buildQueryArgs(text: string): Promise<QueryPartial> {
+      // Prepare sources for validation
+      // Prepare query input
+      const conn = this.connectionStore.connections[this.editorData.connection]
+      const sources: ContentInput[] =
+        conn && conn.model
+          ? this.modelStore.models[conn.model].sources.map((source) => ({
+              alias: source.alias,
+              contents: this.editorStore.editors[source.editor]
+                ? this.editorStore.editors[source.editor].contents
+                : '',
+            }))
+          : []
+
+      // Prepare imports
+      let imports: Import[] = []
+      if (this.editorData.type !== 'sql') {
+        try {
+          imports = (await this.validateQuery(false, sources)) || []
+        } catch (error) {
+          console.log('Validation failed. May not have proper imports.')
+        }
+      }
+
+      // Create query input object
+      const partial: QueryPartial = {
+        text,
+        queryType: conn ? conn.query_type : '',
+        editorType: this.editorData.type,
+        sources,
+        imports,
+      }
+      return partial
+    },
     async runQuery(): Promise<any> {
       this.$emit('query-started')
       this.editorData.setError(null)
-      const name = this.editorName
+      const id = this.editorId
 
       const editor = editorMap.get(this.context)
       if (this.loading || !editor) {
@@ -556,47 +630,26 @@ export default defineComponent({
       this.editorData.startTime = Date.now()
       this.editorData.loading = true
 
-      // Prepare query input
-      const conn = this.connectionStore.connections[this.editorData.connection]
       // Get selected text or full content
       const text = getEditorText(editor, this.editorData.contents)
       if (!text) {
-        this.editorStore.setEditorResults(this.editorName, new Results(new Map(), []))
+        this.editorStore.setEditorResults(id, new Results(new Map(), []))
         this.editorData.loading = false
         return
       }
 
-      // Prepare sources for validation
-      const sources: ContentInput[] =
-        conn && conn.model
-          ? this.modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
-
-      // Prepare imports
-      let imports: Import[] = []
-      if (this.editorData.type !== 'sql') {
-        try {
-          imports = (await this.validateQuery(false, sources)) || []
-        } catch (error) {
-          console.log('Validation failed. May not have proper imports.')
-        }
-      }
-
       // Create query input object
+      const queryPartial = await this.buildQueryArgs(text)
       const queryInput: QueryInput = {
         text,
-        queryType: conn ? conn.query_type : '',
-        editorType: this.editorData.type,
-        imports,
+        queryType: queryPartial.queryType,
+        editorType: queryPartial.editorType,
+        imports: queryPartial.imports,
       }
+
       // Define callbacks with mounting status checks
       const onProgress = (message: QueryUpdate) => {
-        let editor = this.editorStore.editors[name]
+        let editor = this.editorStore.editors[id]
         if (message.error) {
           editor.loading = false
           editor.setError(message.message)
@@ -609,14 +662,14 @@ export default defineComponent({
       //callback all use cached editor name
       // in case user has navigated away
       const onSuccess = (result: QueryResult) => {
-        console.log(`calling success callback for ${name}`)
-        let editor = this.editorStore.editors[name]
+        console.log(`calling success callback for ${id}`)
+        let editor = this.editorStore.editors[id]
         if (result.success) {
           if (result.generatedSql) {
             editor.generated_sql = result.generatedSql
           }
           if (result.results) {
-            this.editorStore.setEditorResults(name, result.results)
+            this.editorStore.setEditorResults(id, result.results)
           }
         } else if (result.error) {
           editor.setError(result.error)
@@ -629,7 +682,7 @@ export default defineComponent({
 
       const onError = (error: any) => {
         console.error('Query execution error:', error)
-        let editor = this.editorStore.editors[name]
+        let editor = this.editorStore.editors[id]
         editor.setError(error.message || 'An error occurred during query execution')
         editor.loading = false
         editor.cancelCallback = null
@@ -654,7 +707,7 @@ export default defineComponent({
         if (cancellation.isActive()) {
           cancellation.cancel()
         }
-        let editor = this.editorStore.editors[name]
+        let editor = this.editorStore.editors[id]
         editor.loading = false
         editor.cancelCallback = null
       }
@@ -663,7 +716,7 @@ export default defineComponent({
     },
 
     getEditor() {
-      editorMap.get(this.editorName)
+      editorMap.get(this.editorId)
     },
 
     createEditor() {
@@ -719,7 +772,7 @@ export default defineComponent({
       editor.setTheme('trilogyStudio')
       let suggestDebounceTimer: number | null = null
       editorItem.onDidChangeModelContent(() => {
-        this.editorStore.setEditorContents(this.editorName, editorItem.getValue())
+        this.editorStore.setEditorContents(this.editorId, editorItem.getValue())
         // editorItem.getAction("editor.action.triggerSuggest")?.run();
         // this.$emit('update:contents', editor.getValue());
         // this.editorData.contents = editor.getValue();
@@ -792,19 +845,12 @@ export default defineComponent({
           }
         })
       }
-      // if (this.formatTextCallback) {
-      //     editor.addAction({
-      //         id: 'format-preql',
-      //         label: 'Format Trilogy',
-      //         keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI],
-      //         run: function () {
+      if (this.editorData.type !== 'sql') {
+        editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, async () => {
+          this.formatQuery()
+        })
+      }
 
-      //             this.formatTextCallback(editor.getValue()).then((response) => {
-      //                 editor.setValue(response)
-      //             })
-      //         }
-      //     });
-      // }
       editorItem.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
         this.$emit('save-editors')
       })

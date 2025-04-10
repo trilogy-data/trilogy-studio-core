@@ -139,66 +139,10 @@ option {
 import { defineComponent, ref, inject } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import { ModelImport } from '../models'
 import type { EditorStoreType } from '../stores/editorStore'
-import { EditorTag } from '../editors'
-import { ModelSource } from '../models'
+import { ModelImportService } from '../models/helpers'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
-
-export async function fetchModelImportBase(url: string): Promise<ModelImport> {
-  const response = await fetch(url)
-  const content = await response.text()
-  return JSON.parse(content)
-}
-
-function purposeToTag(purpose: string): EditorTag | null {
-  switch (purpose) {
-    case 'source':
-      return EditorTag.SOURCE
-    case 'setup':
-      return EditorTag.STARTUP_SCRIPT
-    default:
-      return null
-  }
-}
-
-export async function fetchModelImports(modelImport: ModelImport): Promise<
-  {
-    name: string
-    alias: string
-    purpose: EditorTag | null
-    content: string
-    type?: string | undefined
-  }[]
-> {
-  return Promise.all(
-    modelImport.components.map(async (component) => {
-      try {
-        const response = await fetch(component.url)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
-        }
-        const content = await response.text()
-        return {
-          name: component.name,
-          alias: component.alias,
-          purpose: purposeToTag(component.purpose),
-          content,
-          type: component.type,
-        }
-      } catch (error) {
-        console.error(error)
-        return {
-          name: component.name,
-          alias: component.alias,
-          purpose: purposeToTag(component.purpose),
-          content: '', // Return empty content on failure
-        }
-      }
-    }),
-  )
-}
 
 export default defineComponent({
   name: 'ModelCreator',
@@ -243,15 +187,20 @@ export default defineComponent({
       options: { mdToken: '', projectId: '', username: '', password: '' },
     })
 
-    // Array of available connection names
+    // Get required services
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveAll = inject<Function>('saveAll')
+
     if (!connectionStore || !modelStore || !editorStore || !saveAll) {
       throw 'must inject modelStore to ModelCreator'
     }
 
+    // Create the model import service
+    const modelImportService = new ModelImportService(editorStore, modelStore)
+
+    // Array of available connection names
     let connections = connectionStore.connections
 
     // Function to validate the form
@@ -267,7 +216,6 @@ export default defineComponent({
         !modelDetails.value.options.mdToken
       ) {
         isFormValid.value = false
-
         return
       }
 
@@ -294,15 +242,18 @@ export default defineComponent({
       modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
     }
 
-    // Function to submit the editor details - now wrapped in a function that will be passed to LoadingButton
+    // Function to submit the editor details
     const performSubmit = async () => {
       if (!modelDetails.value.name) {
         throw new Error('Model name is required')
       }
 
+      // Create or get the model
       if (!modelStore.models[modelDetails.value.name]) {
         modelStore.newModelConfig(modelDetails.value.name)
       }
+
+      // Create or use existing connection
       let connectionName = modelDetails.value.connection
 
       if (connectionName.startsWith('new-')) {
@@ -318,64 +269,17 @@ export default defineComponent({
         }
       }
 
+      // Set the model in the connection
       connectionStore.connections[connectionName].setModel(modelDetails.value.name)
+
+      // Import model from URL if specified
       if (modelDetails.value.importAddress) {
         try {
-          const modelImportBase = await fetchModelImportBase(modelDetails.value.importAddress)
-          const data = await fetchModelImports(modelImportBase)
-          // @ts-ignore
-          modelStore.models[modelDetails.value.name].sources = data
-            .map((response) => {
-              let editorName = response.name
-
-              // Handle name collisions by appending a suffix if needed
-              if (
-                editorStore.editors[editorName] &&
-                editorStore.editors[editorName].connection !== connectionName
-              ) {
-                let suffix = 1
-                while (editorStore.editors[`${response.name}_${suffix}`]) {
-                  // If the editor with suffix exists but has the same connection, we can use it
-                  if (
-                    editorStore.editors[`${response.name}_${suffix}`].connection === connectionName
-                  ) {
-                    editorName = `${response.name}_${suffix}`
-                    break
-                  }
-                  // Otherwise, keep incrementing the suffix
-                  suffix++
-                }
-                // If we exited the loop without finding a matching connection, use the latest suffix
-                if (editorStore.editors[editorName]?.connection !== connectionName) {
-                  editorName = `${response.name}_${suffix}`
-                }
-              }
-
-              // Create or update the editor based on editorName
-              if (!editorStore.editors[editorName]) {
-                if (response.type === 'sql') {
-                  editorStore.newEditor(editorName, 'sql', connectionName, response.content)
-                } else {
-                  editorStore.newEditor(editorName, 'trilogy', connectionName, response.content)
-                }
-              } else if (editorStore.editors[editorName].connection === connectionName) {
-                editorStore.editors[editorName].contents = response.content
-              }
-
-              // Add source as a tag
-              if (
-                response.purpose &&
-                !editorStore.editors[editorName].tags.includes(response.purpose)
-              ) {
-                editorStore.editors[editorName].tags.push(response.purpose)
-              }
-              if (response.type === 'sql') {
-                return null
-              }
-
-              return new ModelSource(editorName, response.alias || response.name, [], [])
-            })
-            .filter((source) => source)
+          await modelImportService.importModel(
+            modelDetails.value.name,
+            modelDetails.value.importAddress,
+            connectionName,
+          )
         } catch (error) {
           console.error('Error importing model:', error)
           throw new Error('Failed to import model definition')

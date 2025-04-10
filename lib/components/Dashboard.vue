@@ -16,7 +16,7 @@ import {
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
-import { type Import } from '../stores/resolver'
+import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 
 // Props definition
@@ -44,6 +44,8 @@ onMounted(() => {
       filter.value = dashboard.value.filter
       filterInput.value = dashboard.value.filter
     }
+    // populate our autocomplete
+    populateCompletion()
   }
 
   // Set up resize observer to track window resizing
@@ -80,6 +82,7 @@ const resizable = ref(true)
 const editingItem = ref<LayoutItem | null>(null)
 const showQueryEditor = ref(false)
 const showMarkdownEditor = ref(false)
+const globalCompletion = ref<CompletionItem[]>([])
 
 // Get the active dashboard
 const dashboard = computed(() => {
@@ -144,9 +147,32 @@ async function handleFilterChange(newFilter: string) {
   }
 }
 
-function handleImportChange(newImports: Import[]) {
+async function populateCompletion() {
+  if (dashboard.value && dashboard.value.id) {
+    await queryExecutionService
+      ?.validateQuery(dashboard.value.connection, {
+        text: 'select 1 as test;',
+        queryType: 'duckdb',
+        editorType: 'trilogy',
+        imports: dashboard.value.imports,
+      })
+      .then((results) => {
+        if (results) {
+          globalCompletion.value = results.data.completion_items
+        }
+
+        filterError.value = ''
+      })
+      .catch((error) => {
+        console.log(error)
+      })
+  }
+}
+
+async function handleImportChange(newImports: Import[]) {
   if (dashboard.value && dashboard.value.id) {
     dashboardStore.updateDashboardImports(dashboard.value.id, newImports)
+    await populateCompletion()
   }
 }
 
@@ -323,7 +349,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
     chartFilters: item.chartFilters || [],
     conceptFilters: item.conceptFilters || [],
     parameters: item.parameters || {},
-    onRefresh: handleRefresh, // Add refresh callback to be used by chart components
+    onRefresh: handleRefresh, // Add refresh callback to be used by chart components,
   }
 }
 
@@ -435,6 +461,7 @@ onBeforeUnmount(() => {
       :edit-mode="editMode"
       :selected-connection="selectedConnection"
       :filterError="filterError"
+      :globalCompletion="globalCompletion"
       @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
       @import-change="handleImportChange"
@@ -534,8 +561,6 @@ onBeforeUnmount(() => {
   color: var(--text-color);
   background-color: var(--bg-color);
 }
-
-
 
 .toggle-mode-button {
   background-color: var(--button-bg) !important;
