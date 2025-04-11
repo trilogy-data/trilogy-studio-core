@@ -55,6 +55,10 @@ onUnmounted(() => {
             Chart
           </label>
           <label>
+            <input type="radio" v-model="newItemType" :value="CELL_TYPES.TABLE" />
+            Table
+          </label>
+          <label>
             <input type="radio" v-model="newItemType" :value="CELL_TYPES.MARKDOWN" />
             Markdown
           </label>
@@ -88,7 +92,6 @@ onUnmounted(() => {
 .add-item-modal {
   background-color: var(--bg-color);
   padding: 20px;
-  border-radius: 5px;
   max-width: 500px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }

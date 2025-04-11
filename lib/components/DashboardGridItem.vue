@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
+import DashboardTable from './DashboardTable.vue'
 import {
   type GridItemData,
   type LayoutItem,
@@ -94,13 +95,46 @@ const itemData = computed(() => props.getItemData(props.item.i, props.dashboardI
 const hasFilters = computed(() => {
   return itemData.value.filters && itemData.value.filters.length > 0
 })
+
+// Determine which component to render based on the cell type
+const cellComponent = computed(() => {
+  switch (itemData.value.type) {
+    case CELL_TYPES.CHART:
+      return DashboardChart
+    case CELL_TYPES.TABLE:
+      return DashboardTable
+    case CELL_TYPES.MARKDOWN:
+    default:
+      return DashboardMarkdown
+  }
+})
+
+// Determine placeholder text based on cell type
+const getPlaceholderText = computed(() => {
+  switch (itemData.value.type) {
+    case CELL_TYPES.CHART:
+      return 'Chart Name'
+    case CELL_TYPES.TABLE:
+      return 'Table Name'
+    case CELL_TYPES.MARKDOWN:
+    default:
+      return 'Note Name'
+  }
+})
+
+// Check if the item type supports filters
+const supportsFilters = computed(() => {
+  //@ts-ignore
+  return [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.value.type)
+})
 </script>
 
 <template>
   <div
     class="grid-item-content"
     :class="{
-      'grid-item-chart-style': itemData.type === CELL_TYPES.CHART,
+      //@ts-ignore
+      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
       'grid-item-edit-style': editMode,
     }"
   >
@@ -142,7 +176,7 @@ const hasFilters = computed(() => {
           @keyup.esc="cancelTitleEdit"
           class="title-input"
           type="text"
-          :placeholder="itemData.type === CELL_TYPES.CHART ? 'Chart Name' : 'Note Name'"
+          :placeholder="getPlaceholderText"
         />
       </div>
       <button @click="openEditor" class="edit-button" data-testid="edit-dashboard-item-content">
@@ -156,7 +190,7 @@ const hasFilters = computed(() => {
     </div> -->
 
     <!-- Filters display (for both edit and view modes) -->
-    <div class="filters-container" v-if="hasFilters && itemData.type === CELL_TYPES.CHART">
+    <div class="filters-container" v-if="hasFilters && supportsFilters">
       <div
         class="filter-tag"
         v-for="(filter, index) in itemData.filters"
@@ -181,7 +215,7 @@ const hasFilters = computed(() => {
 
     <!-- Render the appropriate component based on cell type -->
     <component
-      :is="itemData.type === CELL_TYPES.CHART ? DashboardChart : DashboardMarkdown"
+      :is="cellComponent"
       :dashboardId="props.dashboardId"
       :itemId="item.i"
       :setItemData="setItemData"

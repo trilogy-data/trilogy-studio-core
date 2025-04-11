@@ -236,8 +236,12 @@ export const generateVegaSpec = (
       },
       {
         name: 'select',
-        select: 'point',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
         value: intChart,
+        nearest: true,
       },
     ],
     mark: {
@@ -361,7 +365,9 @@ export const generateVegaSpec = (
             title: columns.get(config.yField || '')?.description || config.yField,
             sort: '-x',
             axis: {
-              labelExpr: isMobile ? "slice(datum.label, 0, 10) + '...'" : 'datum.label',
+              labelExpr: isMobile
+                ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
+                : 'datum.label',
             },
             ...getFormatHint(config.yField || '', columns),
           },
@@ -593,138 +599,134 @@ export const generateVegaSpec = (
         // Replace the existing spec with the updated usaMapSpec
         spec = { ...spec, ...usaMapSpec }
       } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-        spec.projection = {
-          type: 'albersUsa',
-        }
-        const usaStateSpec = {
-          params: [
+        const base = {
+          $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+          width: 'container',
+          height: 'container',
+          config: { scale: { bandPaddingInner: 0.2 }, view: { stroke: null } },
+          projection: { type: 'albersUsa' },
+          layer: [
             {
-              name: 'highlight',
-              select: { type: 'point', on: 'pointerover', clear: 'mouseout' },
+              data: {
+                url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/us-10m.json',
+                format: { type: 'topojson', feature: 'states' },
+              },
+              mark: {
+                type: 'geoshape',
+                fill: '#e0e0e0',
+                stroke: '#bbb',
+                strokeWidth: 0.5,
+              },
             },
             {
-              name: 'select',
-              select: 'point',
-              // override the default selection for now
-            },
-          ],
-          config: {
-            scale: { bandPaddingInner: 0.2 },
-            view: { stroke: null },
-          },
-          transform: [
-            {
-              lookup: 'id',
-              from: {
-                data: {
-                  values: [
-                    { id: 1, abbr: 'AL' },
-                    { id: 2, abbr: 'AK' },
-                    { id: 4, abbr: 'AZ' },
-                    { id: 5, abbr: 'AR' },
-                    { id: 6, abbr: 'CA' },
-                    { id: 8, abbr: 'CO' },
-                    { id: 9, abbr: 'CT' },
-                    { id: 10, abbr: 'DE' },
-                    { id: 11, abbr: 'DC' },
-                    { id: 12, abbr: 'FL' },
-                    { id: 13, abbr: 'GA' },
-                    { id: 15, abbr: 'HI' },
-                    { id: 16, abbr: 'ID' },
-                    { id: 17, abbr: 'IL' },
-                    { id: 18, abbr: 'IN' },
-                    { id: 19, abbr: 'IA' },
-                    { id: 20, abbr: 'KS' },
-                    { id: 21, abbr: 'KY' },
-                    { id: 22, abbr: 'LA' },
-                    { id: 23, abbr: 'ME' },
-                    { id: 24, abbr: 'MD' },
-                    { id: 25, abbr: 'MA' },
-                    { id: 26, abbr: 'MI' },
-                    { id: 27, abbr: 'MN' },
-                    { id: 28, abbr: 'MS' },
-                    { id: 29, abbr: 'MO' },
-                    { id: 30, abbr: 'MT' },
-                    { id: 31, abbr: 'NE' },
-                    { id: 32, abbr: 'NV' },
-                    { id: 33, abbr: 'NH' },
-                    { id: 34, abbr: 'NJ' },
-                    { id: 35, abbr: 'NM' },
-                    { id: 36, abbr: 'NY' },
-                    { id: 37, abbr: 'NC' },
-                    { id: 38, abbr: 'ND' },
-                    { id: 39, abbr: 'OH' },
-                    { id: 40, abbr: 'OK' },
-                    { id: 41, abbr: 'OR' },
-                    { id: 42, abbr: 'PA' },
-                    { id: 44, abbr: 'RI' },
-                    { id: 45, abbr: 'SC' },
-                    { id: 46, abbr: 'SD' },
-                    { id: 47, abbr: 'TN' },
-                    { id: 48, abbr: 'TX' },
-                    { id: 49, abbr: 'UT' },
-                    { id: 50, abbr: 'VT' },
-                    { id: 51, abbr: 'VA' },
-                    { id: 53, abbr: 'WA' },
-                    { id: 54, abbr: 'WV' },
-                    { id: 55, abbr: 'WI' },
-                    { id: 56, abbr: 'WY' },
-                  ],
+              data: {
+                url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/us-10m.json',
+                format: { type: 'topojson', feature: 'states' },
+              },
+              mark: { type: 'geoshape' },
+              params: [
+                {
+                  name: 'highlight',
+                  select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
                 },
-                key: 'id',
-                fields: ['abbr'],
+                { name: 'select', select: 'point', value: [] },
+              ],
+              encoding: {
+                color: {
+                  field: config.colorField,
+                  type: 'quantitative',
+                  scale: { type: 'quantize', nice: true, zero: true },
+                  legend: { title: config.colorField },
+                },
+                opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
+                stroke: {
+                  condition: { param: 'highlight', empty: false, value: 'black' },
+                  value: null,
+                },
+                strokeWidth: {
+                  condition: { param: 'highlight', empty: false, value: 2 },
+                  value: 0.5,
+                },
               },
-            },
-            {
-              lookup: 'abbr',
-              from: {
-                data: { ...spec.data },
-                key: config.geoField,
-                fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
-              },
+              transform: [
+                {
+                  lookup: 'id',
+                  from: {
+                    data: {
+                      values: [
+                        { id: 1, abbr: 'AL' },
+                        { id: 2, abbr: 'AK' },
+                        { id: 4, abbr: 'AZ' },
+                        { id: 5, abbr: 'AR' },
+                        { id: 6, abbr: 'CA' },
+                        { id: 8, abbr: 'CO' },
+                        { id: 9, abbr: 'CT' },
+                        { id: 10, abbr: 'DE' },
+                        { id: 11, abbr: 'DC' },
+                        { id: 12, abbr: 'FL' },
+                        { id: 13, abbr: 'GA' },
+                        { id: 15, abbr: 'HI' },
+                        { id: 16, abbr: 'ID' },
+                        { id: 17, abbr: 'IL' },
+                        { id: 18, abbr: 'IN' },
+                        { id: 19, abbr: 'IA' },
+                        { id: 20, abbr: 'KS' },
+                        { id: 21, abbr: 'KY' },
+                        { id: 22, abbr: 'LA' },
+                        { id: 23, abbr: 'ME' },
+                        { id: 24, abbr: 'MD' },
+                        { id: 25, abbr: 'MA' },
+                        { id: 26, abbr: 'MI' },
+                        { id: 27, abbr: 'MN' },
+                        { id: 28, abbr: 'MS' },
+                        { id: 29, abbr: 'MO' },
+                        { id: 30, abbr: 'MT' },
+                        { id: 31, abbr: 'NE' },
+                        { id: 32, abbr: 'NV' },
+                        { id: 33, abbr: 'NH' },
+                        { id: 34, abbr: 'NJ' },
+                        { id: 35, abbr: 'NM' },
+                        { id: 36, abbr: 'NY' },
+                        { id: 37, abbr: 'NC' },
+                        { id: 38, abbr: 'ND' },
+                        { id: 39, abbr: 'OH' },
+                        { id: 40, abbr: 'OK' },
+                        { id: 41, abbr: 'OR' },
+                        { id: 42, abbr: 'PA' },
+                        { id: 44, abbr: 'RI' },
+                        { id: 45, abbr: 'SC' },
+                        { id: 46, abbr: 'SD' },
+                        { id: 47, abbr: 'TN' },
+                        { id: 48, abbr: 'TX' },
+                        { id: 49, abbr: 'UT' },
+                        { id: 50, abbr: 'VT' },
+                        { id: 51, abbr: 'VA' },
+                        { id: 53, abbr: 'WA' },
+                        { id: 54, abbr: 'WV' },
+                        { id: 55, abbr: 'WI' },
+                        { id: 56, abbr: 'WY' },
+                      ],
+                    },
+                    key: 'id',
+                    fields: ['abbr'],
+                  },
+                },
+                {
+                  lookup: 'abbr',
+                  from: {
+                    data: {
+                      values: data,
+                    },
+                    key: config.geoField,
+                    fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
+                  },
+                },
+              ],
             },
           ],
-          mark: {
-            type: 'geoshape',
-          },
-          encoding: {
-            color: {
-              field: config.colorField,
-              type: 'quantitative',
-              scale: {
-                type: 'quantize',
-                nice: true,
-              },
-              legend: {
-                title: config.colorField,
-              },
-            },
-            opacity: {
-              condition: { param: 'select', value: 1 },
-              value: 0.3,
-            },
-            stroke: {
-              condition: { param: 'highlight', empty: false, value: 'black' },
-              value: null,
-            },
-            strokeWidth: {
-              condition: { param: 'highlight', empty: false, value: 2 },
-              value: 0.5,
-            },
-          },
         }
         spec = {
-          ...spec,
-          ...{
-            data: {
-              url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/us-10m.json',
-              format: {
-                type: 'topojson',
-                feature: 'states',
-              },
-            },
-            ...usaStateSpec,
-          },
+          ...base,
         }
       } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'country')) {
         let lookupField: string = config.geoField
@@ -850,6 +852,23 @@ export const generateVegaSpec = (
       break
   }
 
+  // universal configs
+  if (isMobile) {
+    spec.point = {
+      size: 80, // Larger hit area for touch targets
+    }
+    spec.signals = [
+      {
+        name: 'touchSignal',
+        on: [
+          {
+            events: 'touchend',
+            update: 'datum', // This is crucial for touch events
+          },
+        ],
+      },
+    ]
+  }
   return spec
 }
 
@@ -915,6 +934,11 @@ export const determineDefaultConfig = (
   // Select appropriate chart type based on available column types
   if (chartType) {
     defaults.chartType = chartType
+  } else if (longitudeColumns.length > 0 && latitudeColumns.length > 0) {
+    // Geospatial data - use map
+    defaults.chartType = 'usa-map'
+  } else if (geoColumns.length > 0) {
+    defaults.chartType = 'usa-map'
   } else if (temporalColumns.length > 0 && numericColumns.length > 0) {
     // Time series data - use line chart
     defaults.chartType = 'line'
@@ -1006,65 +1030,22 @@ export const determineDefaultConfig = (
     if (latitudeColumns.length > 0 && longitudeColumns.length > 0) {
       defaults.yField = latitudeColumns[0].name
       defaults.xField = longitudeColumns[0].name
+      if (numericColumns.length > 0) {
+        defaults.sizeField = numericColumns[0].name
+      }
+      if (numericColumns.length > 1) {
+        defaults.colorField = numericColumns[1].name
+      }
     }
     if (geoColumns.length > 0) {
       defaults.geoField = geoColumns[0].name
-    }
-
-    // Use the first numeric column for the color encoding
-    if (numericColumns.length > 0) {
-      defaults.sizeField = numericColumns[0].name
-    }
-    if (numericColumns.length > 1) {
-      defaults.colorField = numericColumns[1].name
+      if (numericColumns.length > 0) {
+        defaults.colorField = numericColumns[0].name
+      }
     }
   }
 
   return defaults
-}
-
-// Helper to create a default selection config based on chart type
-export const getDefaultSelectionConfig = (
-  chartType: string,
-  config: ChartConfig,
-): SelectionConfig => {
-  const defaultConfig: SelectionConfig = {
-    enabled: true,
-    selectionType: 'single',
-    on: 'click',
-  }
-
-  switch (chartType) {
-    case 'bar':
-    case 'barh':
-      defaultConfig.encodings = ['x']
-      break
-    case 'line':
-      if (config.colorField) {
-        defaultConfig.fields = [config.colorField]
-      } else {
-        defaultConfig.encodings = ['x']
-      }
-      break
-    case 'point':
-      defaultConfig.nearest = true
-      defaultConfig.encodings = ['x', 'y']
-      break
-    case 'area':
-      defaultConfig.encodings = ['x']
-      break
-    case 'heatmap':
-      defaultConfig.encodings = ['x', 'y']
-      break
-    case 'boxplot':
-      defaultConfig.encodings = ['x']
-      break
-    default:
-      defaultConfig.encodings = ['x']
-      break
-  }
-
-  return defaultConfig
 }
 
 /**
