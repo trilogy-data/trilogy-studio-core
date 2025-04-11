@@ -105,8 +105,28 @@
           </div>
 
           <!-- Group advanced controls -->
-          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field')">
+          <div
+            class="control-section"
+            v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
+          >
             <label class="control-section-label">Advanced</label>
+            <!-- Debug mode toggle -->
+            <div class="control-group no-drag">
+              <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
+              <div class="toggle-switch-container">
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    id="debug-mode-toggle"
+                    :checked="internalConfig.showDebug"
+                    @change="toggleDebugMode"
+                    data-testid="debug-mode-toggle"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <!-- Existing trellis field control -->
             <div
               v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
               :key="control.id"
@@ -229,13 +249,27 @@ export default defineComponent({
       }
     }
 
+    // Toggle debug mode
+    const toggleDebugMode = () => {
+      internalConfig.value.showDebug = !internalConfig.value.showDebug
+
+      // Notify parent component if the callback is provided
+      if (props.onChartConfigChange) {
+        props.onChartConfigChange({ ...internalConfig.value })
+      }
+
+      // Re-render chart to apply debug mode changes
+      if (!showingControls.value) {
+        renderChart(true)
+      }
+    }
+
     // Flag to determine if we should show the trellis option
     const hasTrellisOption = computed(() => {
       return props.data && props.data.length > 0 && Object.keys(props.columns).length > 2
     })
 
     // Internal configuration that merges provided config with defaults
-
     const internalConfig = ref<ChartConfig>({
       chartType: 'bar',
       xField: '',
@@ -275,7 +309,6 @@ export default defineComponent({
     }
 
     // Generate Vega-Lite spec based on current configuration
-
     const generateVegaSpecInternal = () => {
       return generateVegaSpec(
         props.data,
@@ -289,25 +322,6 @@ export default defineComponent({
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
       if (item && item.datum) {
-        // Special handling for USA map clicks
-        // if (internalConfig.value.chartType === 'usa-map') {
-        //   // For USA map, we need to handle the click on a state
-        //   if (item.datum.geo && item.datum.geo.properties && item.datum.geo.properties.name) {
-        //     const stateName = item.datum.geo.properties.name
-        //     const geoField = internalConfig.value.geoField || ''
-
-        //     if (geoField) {
-        //       emit('dimension-click', {
-        //         filters: { [geoField]: stateName },
-        //         chart: { [geoField]: stateName },
-        //         append,
-        //       })
-        //     }
-        //     emit('point-click', item.datum)
-        //     return
-        //   }
-        // }
-
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoField = props.columns.get(internalConfig.value.geoField)
           let geoConcept = geoField?.address
@@ -373,24 +387,21 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          actions: internalConfig.value.showDebug ? true : false,
-          // actions:true,
+          actions: internalConfig.value.showDebug,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
           if (isMobile.value) {
             result.view.addEventListener('touchend', handlePointClick)
-          removeEventListener = () => {
-            result.view.removeEventListener('touchend', handlePointClick)
-          }
-          }
-          else {
+            removeEventListener = () => {
+              result.view.removeEventListener('touchend', handlePointClick)
+            }
+          } else {
             result.view.addEventListener('click', handlePointClick)
-          removeEventListener = () => {
-            result.view.removeEventListener('click', handlePointClick)
+            removeEventListener = () => {
+              result.view.removeEventListener('click', handlePointClick)
+            }
           }
-          }
-
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -493,6 +504,7 @@ export default defineComponent({
       showingControls,
       updateConfig,
       toggleControls,
+      toggleDebugMode,
       charts: eligible,
     }
   },
@@ -657,6 +669,57 @@ export default defineComponent({
 
 .icon {
   font-size: var(--icon-size);
+}
+
+/* Styles for the toggle switch */
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-light);
+  transition: 0.4s;
+  border-radius: 10px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--special-text);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(16px);
 }
 
 /* Mobile responsiveness */

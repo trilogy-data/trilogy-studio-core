@@ -261,8 +261,7 @@ function openEditor(item: LayoutItem): void {
       showQueryEditor.value = true
     } else if (itemData.type === CELL_TYPES.MARKDOWN) {
       showMarkdownEditor.value = true
-    }
-    else if (itemData.type === CELL_TYPES.TABLE) {
+    } else if (itemData.type === CELL_TYPES.TABLE) {
       showQueryEditor.value = true
     }
   }

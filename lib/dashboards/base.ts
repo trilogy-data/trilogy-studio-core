@@ -111,9 +111,9 @@ export class DashboardModel implements Dashboard {
     const itemId = this.nextId.toString()
 
     // Create grid item layout with height based on type
-    let defaultHeight = 10; // Default height for CHART and TABLE
+    let defaultHeight = 10 // Default height for CHART and TABLE
     if (type === CELL_TYPES.MARKDOWN) {
-      defaultHeight = 3; // Smaller height for markdown
+      defaultHeight = 3 // Smaller height for markdown
     }
 
     this.layout.push({
@@ -126,19 +126,19 @@ export class DashboardModel implements Dashboard {
     })
 
     // Default name based on type
-    let defaultName = `Note ${itemId}`;
+    let defaultName = `Note ${itemId}`
     if (type === CELL_TYPES.CHART) {
-      defaultName = `Chart ${itemId}`;
+      defaultName = `Chart ${itemId}`
     } else if (type === CELL_TYPES.TABLE) {
-      defaultName = `Table ${itemId}`;
+      defaultName = `Table ${itemId}`
     }
 
     // Default content based on type
-    let defaultContent = '# Markdown Cell\nEnter your markdown content here.';
+    let defaultContent = '# Markdown Cell\nEnter your markdown content here.'
     if (type === CELL_TYPES.CHART) {
-      defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim";
+      defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim"
     } else if (type === CELL_TYPES.TABLE) {
-      defaultContent = "SELECT 'column1' as header1, 'column2' as header2 UNION ALL SELECT 'data1', 'data2'";
+      defaultContent = "SELECT [1,2,3,4] as value, 'example' as dim"
     }
 
     // Initialize with default content

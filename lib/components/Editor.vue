@@ -771,23 +771,51 @@ export default defineComponent({
       })
       editor.setTheme('trilogyStudio')
       let suggestDebounceTimer: number | null = null
-      editorItem.onDidChangeModelContent(() => {
-        this.editorStore.setEditorContents(this.editorId, editorItem.getValue())
-        // editorItem.getAction("editor.action.triggerSuggest")?.run();
-        // this.$emit('update:contents', editor.getValue());
-        // this.editorData.contents = editor.getValue();
+      const keywordsToWatch: string[] = [';'] // customize these
+      let keywordDebounceTimer: number | null = null
+      const keywordDebounceDelay = 500 // milliseconds
+      editorItem.onDidChangeModelContent((event) => {
+        // Save editor contents as before
+        const currentContent = editorItem.getValue()
+        this.editorStore.setEditorContents(this.editorId, currentContent)
 
-        // Clear previous timer
+        // Handle suggestion debounce (your existing functionality)
         if (suggestDebounceTimer) {
           clearTimeout(suggestDebounceTimer)
         }
 
-        // Set new timer
         suggestDebounceTimer = window.setTimeout(() => {
           if (editorItem.hasTextFocus() && !editorItem.getSelection()?.isEmpty()) {
             editorItem.trigger('completion', 'editor.action.triggerSuggest', { auto: true })
           }
-        }, 200) // Adjust delay as needed
+        }, 200)
+
+        // Add keyword checking with debounce, focusing on changes
+        if (keywordDebounceTimer) {
+          clearTimeout(keywordDebounceTimer)
+        }
+
+        keywordDebounceTimer = window.setTimeout(() => {
+          // Get the changes from the event
+          const changes = event.changes
+          let newContent = ''
+
+          // Extract only the new text that was added
+          changes.forEach((change) => {
+            if (change.text) {
+              newContent += change.text
+            }
+          })
+
+          // Check if new content contains any of the keywords
+          const containsKeyword = keywordsToWatch.some((keyword) =>
+            newContent.toLowerCase().includes(keyword.toLowerCase()),
+          )
+
+          if (containsKeyword) {
+            console.log('statement finished')
+          }
+        }, keywordDebounceDelay)
       })
       editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
         this.validateQuery()

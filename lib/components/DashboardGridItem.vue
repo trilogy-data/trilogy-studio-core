@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
-import DashboardTable from './DashboardTable.vue' 
+import DashboardTable from './DashboardTable.vue'
 import {
   type GridItemData,
   type LayoutItem,

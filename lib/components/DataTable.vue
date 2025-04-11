@@ -47,8 +47,6 @@
 .tabulator-cell {
   border: 0;
 }
-
-
 </style>
 
 <script lang="ts">
@@ -57,8 +55,8 @@ import { DateTime } from 'luxon'
 import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
-import type { PropType } from 'vue'
-import { shallowRef, computed, inject, } from 'vue'
+import type { PropType, ShallowRef } from 'vue'
+import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
 function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
@@ -227,7 +225,7 @@ function typeToFormatter(col: ResultColumn) {
 export default {
   data() {
     return {
-      tabulator: null as Tabulator | null,
+      tabulator: null as ShallowRef<Tabulator> | null,
       selectedCell: null,
     }
   },
@@ -322,76 +320,82 @@ export default {
   },
   methods: {
     create() {
+      let target = this.$refs.tabulator as HTMLElement
+      let tab = new Tabulator(target, {
+        // data: this.tableData, //link data to table
+        pagination: this.tableData.length > 1000, //enable pagination
+        // paginationMode: 'remote', //enable remote pagination
+        // reactiveData: true,
+        renderHorizontal: 'virtual',
+        // columns: this.tableColumns, //define table columns
+        maxHeight: '100%',
+        minHeight: '100%',
+        minWidth: '100%',
+        // dynamic rowheights required for struct/array
+        // rowHeight: 30,
+        //@ts-ignore
+        data: this.tableData,
+        columns: this.tableColumns,
+        // height: this.actualTableHeight,
+        nestedFieldSeparator: false,
+        clipboard: 'copy',
+        keybindings: {
+          copyToClipboard: true,
+        },
+        downloadConfig: {
+          columnHeaders: true,
+        },
+        resizableColumns: true,
+        dependencies: {
+          DateTime: DateTime,
+        },
+      })
+
+      tab.on('cellClick', (_, cell) => {
+        let fieldName = cell.getField()
+        let fullField = this.headers.get(fieldName)
+        if (!fullField) {
+          return
+        }
+        let field = fullField.address
+        if (!field) {
+          return
+        }
+        let value = cell.getValue()
+
+        // Check if cell is already highlighted
+        const element = cell.getElement()
+        if (element.classList.contains('highlighted-cell')) {
+          // If already highlighted, remove all highlighting and emit background-click
+          const highlightedCells = target.querySelectorAll('.highlighted-cell')
+          highlightedCells.forEach((highlightedCell) => {
+            highlightedCell.classList.remove('highlighted-cell')
+          })
+          this.$emit('background-click', {
+            filters: { [field]: value },
+          })
+        } else {
+          // If not highlighted yet, find all cells with the same value in this column and highlight them
+          this.$emit('cell-click', {
+            filters: { [field]: value },
+            append: true,
+          })
+
+          // Get all cells in this column with the same value
+          const column = tab.getColumn(cell.getField())
+          const cells = column.getCells()
+
+          // Highlight all matching cells
+          cells.forEach((cellInColumn) => {
+            if (cellInColumn.getValue() === value) {
+              cellInColumn.getElement().classList.add('highlighted-cell')
+            }
+          })
+        }
+      })
       // @ts-ignore
-      this.tabulator = shallowRef(
-        // @ts-ignore
-        new Tabulator(this.$refs.tabulator, {
-          // data: this.tableData, //link data to table
-          pagination: this.tableData.length > 1000, //enable pagination
-          // paginationMode: 'remote', //enable remote pagination
-          // reactiveData: true,
-          renderHorizontal: 'virtual',
-          // columns: this.tableColumns, //define table columns
-          maxHeight: '100%',
-          minHeight: '100%',
-          minWidth: '100%',
-          // rowHeight: 30,
-          data: this.tableData, //assign data to table
-          // dataTree:true,
-          columns: this.tableColumns,
-          // height: this.actualTableHeight,
-          nestedFieldSeparator: false,
-          clipboard: 'copy',
-          keybindings: {
-            copyToClipboard: true,
-          },
-          downloadConfig: {
-            columnHeaders: true,
-          },
-          resizableColumns: true,
-          dependencies: {
-            DateTime: DateTime,
-          },
-          
-        }),
-      )
-      this.tabulator.on('cellClick', (e, cell) => {
-  console.log('cellClick', e, cell);
-  let field = this.headers.get(cell.getField()).address;
-  let value = cell.getValue();
-  console.log(field, value);
- 
-  // Check if cell is already highlighted
-  const element = cell.getElement();
-  if (element.classList.contains("highlighted-cell")) {
-    // If already highlighted, remove all highlighting and emit background-click
-    const highlightedCells = this.$refs.tabulator.querySelectorAll(".highlighted-cell");
-    highlightedCells.forEach(highlightedCell => {
-      highlightedCell.classList.remove("highlighted-cell");
-    });
-    this.$emit('background-click', {
-      filters: { [field]: value },
-    });
-  } else {
-    // If not highlighted yet, find all cells with the same value in this column and highlight them
-    this.$emit('cell-click', {
-      filters: { [field]: value },
-      append: true
-    });
-    
-    // Get all cells in this column with the same value
-    const column = this.tabulator.getColumn(cell.getField());
-    const cells = column.getCells();
-    
-    // Highlight all matching cells
-    cells.forEach(cellInColumn => {
-      if (cellInColumn.getValue() === value) {
-        cellInColumn.getElement().classList.add("highlighted-cell");
-      }
-    });
-  }
-});
-      
+      this.tabulator = shallowRef(tab)
+
       this.updateTableTheme()
     },
     updateTable() {
