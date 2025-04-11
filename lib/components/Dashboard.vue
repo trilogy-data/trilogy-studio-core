@@ -262,6 +262,9 @@ function openEditor(item: LayoutItem): void {
     } else if (itemData.type === CELL_TYPES.MARKDOWN) {
       showMarkdownEditor.value = true
     }
+    else if (itemData.type === CELL_TYPES.TABLE) {
+      showQueryEditor.value = true
+    }
   }
 }
 
@@ -644,7 +647,6 @@ onBeforeUnmount(() => {
   width: 100%;
   color: var(--text-color);
   background-color: var(--bg-color);
-  padding: 2rem;
   text-align: center;
 }
 

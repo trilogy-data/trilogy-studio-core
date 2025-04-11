@@ -236,8 +236,13 @@ export const generateVegaSpec = (
       },
       {
         name: 'select',
-        select: 'point',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
         value: intChart,
+        nearest: true
+
       },
     ],
     mark: {
@@ -361,7 +366,9 @@ export const generateVegaSpec = (
             title: columns.get(config.yField || '')?.description || config.yField,
             sort: '-x',
             axis: {
-              labelExpr: isMobile ? "slice(datum.label, 0, 10) + '...'" : 'datum.label',
+              labelExpr: isMobile ? 
+                "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label" : 
+                'datum.label',
             },
             ...getFormatHint(config.yField || '', columns),
           },
@@ -850,6 +857,23 @@ export const generateVegaSpec = (
       break
   }
 
+  // universal configs
+  if (isMobile) {
+     spec.point =  {
+      "size": 80 // Larger hit area for touch targets
+    }
+    spec.signals =  [
+      {
+        name: "touchSignal",
+        on: [
+          {
+            events: "touchend", 
+            update: "datum" // This is crucial for touch events
+          }
+        ]
+      }
+    ]
+  }
   return spec
 }
 
@@ -1021,50 +1045,6 @@ export const determineDefaultConfig = (
   }
 
   return defaults
-}
-
-// Helper to create a default selection config based on chart type
-export const getDefaultSelectionConfig = (
-  chartType: string,
-  config: ChartConfig,
-): SelectionConfig => {
-  const defaultConfig: SelectionConfig = {
-    enabled: true,
-    selectionType: 'single',
-    on: 'click',
-  }
-
-  switch (chartType) {
-    case 'bar':
-    case 'barh':
-      defaultConfig.encodings = ['x']
-      break
-    case 'line':
-      if (config.colorField) {
-        defaultConfig.fields = [config.colorField]
-      } else {
-        defaultConfig.encodings = ['x']
-      }
-      break
-    case 'point':
-      defaultConfig.nearest = true
-      defaultConfig.encodings = ['x', 'y']
-      break
-    case 'area':
-      defaultConfig.encodings = ['x']
-      break
-    case 'heatmap':
-      defaultConfig.encodings = ['x', 'y']
-      break
-    case 'boxplot':
-      defaultConfig.encodings = ['x']
-      break
-    default:
-      defaultConfig.encodings = ['x']
-      break
-  }
-
-  return defaultConfig
 }
 
 /**

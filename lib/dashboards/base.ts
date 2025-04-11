@@ -28,7 +28,7 @@ export interface FilterInput {
   value: Record<string, string>
 }
 export interface GridItemData {
-  type: string
+  type: 'chart' | 'markdown' | 'table'
   content: string
   name: string
   width?: number
@@ -61,6 +61,7 @@ export interface Dashboard {
 export const CELL_TYPES = {
   CHART: 'chart',
   MARKDOWN: 'markdown',
+  TABLE: 'table',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
@@ -109,22 +110,36 @@ export class DashboardModel implements Dashboard {
   addItem(type: CellType, x = 0, y = 0): string {
     const itemId = this.nextId.toString()
 
-    // Create grid item layout
+    // Create grid item layout with height based on type
+    let defaultHeight = 10; // Default height for CHART and TABLE
+    if (type === CELL_TYPES.MARKDOWN) {
+      defaultHeight = 3; // Smaller height for markdown
+    }
+
     this.layout.push({
       x,
       y,
       w: 4,
-      h: type === CELL_TYPES.MARKDOWN ? 3 : 10,
+      h: defaultHeight,
       i: itemId,
       static: false,
     })
 
-    // Default content and name based on type
-    const defaultName = type === CELL_TYPES.CHART ? `Chart ${itemId}` : `Note ${itemId}`
-    const defaultContent =
-      type === CELL_TYPES.CHART
-        ? "SELECT unnest([1,2,3,4]) as value, 'example' as dim"
-        : '# Markdown Cell\nEnter your markdown content here.'
+    // Default name based on type
+    let defaultName = `Note ${itemId}`;
+    if (type === CELL_TYPES.CHART) {
+      defaultName = `Chart ${itemId}`;
+    } else if (type === CELL_TYPES.TABLE) {
+      defaultName = `Table ${itemId}`;
+    }
+
+    // Default content based on type
+    let defaultContent = '# Markdown Cell\nEnter your markdown content here.';
+    if (type === CELL_TYPES.CHART) {
+      defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim";
+    } else if (type === CELL_TYPES.TABLE) {
+      defaultContent = "SELECT 'column1' as header1, 'column2' as header2 UNION ALL SELECT 'data1', 'data2'";
+    }
 
     // Initialize with default content
     this.gridItems[itemId] = {
@@ -137,7 +152,6 @@ export class DashboardModel implements Dashboard {
 
     this.nextId++
     this.updatedAt = new Date()
-
     return itemId
   }
 

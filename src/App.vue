@@ -22,6 +22,7 @@ import {
   EditModule,
   ExportModule,
   PageModule,
+  InteractionModule,
 } from 'tabulator-tables'
 import * as monaco from 'monaco-editor'
 
@@ -34,6 +35,7 @@ Tabulator.registerModule([
   EditModule,
   ExportModule,
   PageModule,
+  InteractionModule,
 ])
 
 const apiUrl = import.meta.env.VITE_RESOLVER_URL

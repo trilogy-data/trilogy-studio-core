@@ -47,6 +47,8 @@
 .tabulator-cell {
   border: 0;
 }
+
+
 </style>
 
 <script lang="ts">
@@ -56,7 +58,7 @@ import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { PropType } from 'vue'
-import { shallowRef, computed, inject } from 'vue'
+import { shallowRef, computed, inject, } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 
 function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
@@ -239,6 +241,14 @@ export default {
       required: true,
     },
     containerHeight: Number,
+    cellClick: {
+      type: Function,
+      default: () => {},
+    },
+    backgroundClick: {
+      type: Function,
+      default: () => {},
+    },
   },
   setup() {
     // Inject the store that has been provided elsewhere in the app
@@ -342,8 +352,46 @@ export default {
           dependencies: {
             DateTime: DateTime,
           },
+          
         }),
       )
+      this.tabulator.on('cellClick', (e, cell) => {
+  console.log('cellClick', e, cell);
+  let field = this.headers.get(cell.getField()).address;
+  let value = cell.getValue();
+  console.log(field, value);
+ 
+  // Check if cell is already highlighted
+  const element = cell.getElement();
+  if (element.classList.contains("highlighted-cell")) {
+    // If already highlighted, remove all highlighting and emit background-click
+    const highlightedCells = this.$refs.tabulator.querySelectorAll(".highlighted-cell");
+    highlightedCells.forEach(highlightedCell => {
+      highlightedCell.classList.remove("highlighted-cell");
+    });
+    this.$emit('background-click', {
+      filters: { [field]: value },
+    });
+  } else {
+    // If not highlighted yet, find all cells with the same value in this column and highlight them
+    this.$emit('cell-click', {
+      filters: { [field]: value },
+      append: true
+    });
+    
+    // Get all cells in this column with the same value
+    const column = this.tabulator.getColumn(cell.getField());
+    const cells = column.getCells();
+    
+    // Highlight all matching cells
+    cells.forEach(cellInColumn => {
+      if (cellInColumn.getValue() === value) {
+        cellInColumn.getElement().classList.add("highlighted-cell");
+      }
+    });
+  }
+});
+      
       this.updateTableTheme()
     },
     updateTable() {

@@ -378,10 +378,19 @@ export default defineComponent({
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
-          result.view.addEventListener('click', handlePointClick)
+          if (isMobile.value) {
+            result.view.addEventListener('touchend', handlePointClick)
+          removeEventListener = () => {
+            result.view.removeEventListener('touchend', handlePointClick)
+          }
+          }
+          else {
+            result.view.addEventListener('click', handlePointClick)
           removeEventListener = () => {
             result.view.removeEventListener('click', handlePointClick)
           }
+          }
+
         })
       } catch (error) {
         console.error('Error rendering Vega chart:', error)
@@ -451,7 +460,6 @@ export default defineComponent({
           }
         }
         if (force) {
-          console.log('force reinitialize', force)
           initializeConfig(force) // force column reset on column change
         }
 
