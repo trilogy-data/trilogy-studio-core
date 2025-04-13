@@ -44,7 +44,7 @@ function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): 
 }
 
 export function convertTimestampToISODate(timestamp: number): Date {
-  const date = new Date(timestamp);
+  const date = new Date(timestamp)
   return date
 }
 
@@ -410,60 +410,61 @@ export const generateVegaSpec = (
         //   }
         // }
         // ],
-        layer: [{
-          params: [
-            {
-              "name": "brush",
-              "select": { "type": "interval", "encodings": ["x"] }
-            }
-          ],
-          mark: { "type": "line", "color": "lightgray" },
-          data: { values: data },
-          encoding: {
-            x: {
-              field: config.xField,
-              type: getVegaFieldType(config.xField || '', columns),
-              title: columns.get(config.xField || '')?.description || config.xField,
-              ...getFormatHint(config.xField || '', columns),
+        layer: [
+          {
+            params: [
+              {
+                name: 'brush',
+                select: { type: 'interval', encodings: ['x'] },
+              },
+            ],
+            mark: { type: 'line', color: 'lightgray' },
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
             },
-            y: {
-              field: config.yField,
-              type: getVegaFieldType(config.yField || '', columns),
-              title: columns.get(config.yField || '')?.description || config.yField,
-              ...getFormatHint(config.yField || '', columns),
-            },
-            tooltip: tooltipFields,
-            ...encoding,
           },
-        },
-        {
-          transform: [
-            {
-              "filter": {
-                "param": "brush"
-              }
-            }
-          ],
-          mark: { "type": "line", "color": "steelblue" },
-          data: { values: data },
-          encoding: {
-            x: {
-              field: config.xField,
-              type: getVegaFieldType(config.xField || '', columns),
-              title: columns.get(config.xField || '')?.description || config.xField,
-              ...getFormatHint(config.xField || '', columns),
+          {
+            transform: [
+              {
+                filter: {
+                  param: 'brush',
+                },
+              },
+            ],
+            mark: { type: 'line', color: 'steelblue' },
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
             },
-            y: {
-              field: config.yField,
-              type: getVegaFieldType(config.yField || '', columns),
-              title: columns.get(config.yField || '')?.description || config.yField,
-              ...getFormatHint(config.yField || '', columns),
-            },
-            tooltip: tooltipFields,
-            ...encoding,
           },
-        }
-        ]
+        ],
       }
 
       if (config.trellisField) {
@@ -530,50 +531,49 @@ export const generateVegaSpec = (
       break
     case 'headline':
       const headlineSpec = {
-        $schema: "https://vega.github.io/schema/vega-lite/v6.json",
-        description: "A simple headline metric display",
+        $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+        description: 'A simple headline metric display',
         width: 'container',
         height: 'container',
         data: {
-          "values": data ? data[0] : [
-          ]
+          values: data ? data[0] : [],
         },
         layer: [
           {
-            "mark": {
-              "type": "text",
-              "fontSize": 36,
-              "fontWeight": "bold",
-              "align": "center",
-              "baseline": "middle",
-              "dx": 0,
-              "dy": -20
+            mark: {
+              type: 'text',
+              fontSize: 36,
+              fontWeight: 'bold',
+              align: 'center',
+              baseline: 'middle',
+              dx: 0,
+              dy: -20,
             },
-            "encoding": {
-              "text": { "field": config.xField, "type": "quantitative" },
-              "color": { "value": "#333333" }
-            }
+            encoding: {
+              text: { field: config.xField, type: 'quantitative' },
+              color: { value: '#333333' },
+            },
           },
           {
-            "mark": {
-              "type": "text",
-              "fontSize": 14,
-              "fontWeight": "normal",
-              "align": "center",
-              "baseline": "top",
-              "dx": 0,
-              "dy": 10
+            mark: {
+              type: 'text',
+              fontSize: 14,
+              fontWeight: 'normal',
+              align: 'center',
+              baseline: 'top',
+              dx: 0,
+              dy: 10,
             },
-            "encoding": {
-              "text": { "value": config.xField },
-              "color": { "value": "#666666" }
-            }
-          }
+            encoding: {
+              text: { value: config.xField },
+              color: { value: '#666666' },
+            },
+          },
         ],
         config: {
-          "view": { "stroke": null },
-          "axis": { "grid": false, "domain": false }
-        }
+          view: { stroke: null },
+          axis: { grid: false, domain: false },
+        },
       }
 
       spec = { ...headlineSpec }
@@ -662,12 +662,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                    field: config.colorField,
-                    type: 'quantitative',
-                    title: config.colorField,
-                    scale: { scheme: 'viridis' },
-                    ...legendConfig,
-                  }
+                      field: config.colorField,
+                      type: 'quantitative',
+                      title: config.colorField,
+                      scale: { scheme: 'viridis' },
+                      ...legendConfig,
+                    }
                   : { value: 'steelblue' },
                 tooltip: [
                   {
@@ -1105,9 +1105,7 @@ export const determineDefaultConfig = (
     }
   } else if (defaults.chartType === 'headline') {
     defaults.xField = numericColumns[0].name
-  }
-
-  else if (defaults.chartType === 'line') {
+  } else if (defaults.chartType === 'line') {
     defaults.xField = temporalColumns[0].name
     const nonTemporalNumericColumns = numericColumns.filter(
       (col) => col.name !== temporalColumns[0].name,
@@ -1216,7 +1214,5 @@ export const determineEligibleChartTypes = (
     eligibleCharts.push('usa-map')
   }
   // Ensure all chart types are from the predefined list
-  return eligibleCharts.filter((chart) =>
-    Charts.map(x => x.value).includes(chart),
-  )
+  return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
 }

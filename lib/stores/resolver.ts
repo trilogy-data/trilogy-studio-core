@@ -19,7 +19,7 @@ class LRUCache<T> {
     if (!this.cache.has(key)) return undefined
 
     // Update the key's position to most recently used
-    this.keyOrder = this.keyOrder.filter(k => k !== key)
+    this.keyOrder = this.keyOrder.filter((k) => k !== key)
     this.keyOrder.push(key)
 
     return this.cache.get(key)
@@ -29,7 +29,7 @@ class LRUCache<T> {
   set(key: string, value: T): void {
     // If the key already exists, update its position
     if (this.cache.has(key)) {
-      this.keyOrder = this.keyOrder.filter(k => k !== key)
+      this.keyOrder = this.keyOrder.filter((k) => k !== key)
     }
     // If cache is at capacity, remove the least recently used item
     else if (this.keyOrder.length >= this.capacity) {
@@ -150,10 +150,10 @@ export default class AxiosResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
     }
-    
+
     // Generate hash of request params
     const cacheKey = this.createHash(requestParams)
-    
+
     // Check if result exists in cache
     const cachedResult = this.validateCache.get(cacheKey)
     if (cachedResult) {
@@ -163,10 +163,10 @@ export default class AxiosResolver {
     // Not in cache, make the API call
     try {
       const response = await axios.post(`${this.address}/validate_query`, requestParams)
-      
+
       // Cache the result
       this.validateCache.set(cacheKey, response)
-      
+
       return response
     } catch (error: any) {
       console.log(error)
@@ -196,10 +196,10 @@ export default class AxiosResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
     }
-    
+
     // Generate hash of request params
     const cacheKey = this.createHash(requestParams)
-    
+
     // Check if result exists in cache
     const cachedResult = this.formatCache.get(cacheKey)
     if (cachedResult) {
@@ -209,10 +209,10 @@ export default class AxiosResolver {
     // Not in cache, make the API call
     try {
       const response = await axios.post(`${this.address}/format_query`, requestParams)
-      
+
       // Cache the result
       this.formatCache.set(cacheKey, response)
-      
+
       return response
     } catch (error: any) {
       console.log(error)
@@ -242,10 +242,10 @@ export default class AxiosResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
     }
-    
+
     // Generate hash of request params
     const cacheKey = this.createHash(requestParams)
-    
+
     // Check if result exists in cache
     const cachedResult = this.queryCache.get(cacheKey)
     if (cachedResult) {
@@ -255,10 +255,10 @@ export default class AxiosResolver {
     // Not in cache, make the API call
     try {
       const response = await axios.post(`${this.address}/generate_query`, requestParams)
-      
+
       // Cache the result
       this.queryCache.set(cacheKey, response)
-      
+
       return response
     } catch (error: any) {
       console.log(error)
@@ -271,10 +271,10 @@ export default class AxiosResolver {
       name: name,
       sources: sources,
     }
-    
+
     // Generate hash of request params
     const cacheKey = this.createHash(requestParams)
-    
+
     // Check if result exists in cache
     const cachedResult = this.modelCache.get(cacheKey)
     if (cachedResult) {
@@ -285,10 +285,10 @@ export default class AxiosResolver {
     try {
       const response = await axios.post(`${this.address}/parse_model`, requestParams)
       const modelConfig = ModelConfig.fromJSON(response.data)
-      
+
       // Cache the result
       this.modelCache.set(cacheKey, modelConfig)
-      
+
       return modelConfig
     } catch (error: any) {
       throw Error(this.getErrorMessage(error))
@@ -302,13 +302,13 @@ export default class AxiosResolver {
     this.queryCache.clear()
     this.modelCache.clear()
   }
-  
-  getCacheStats(): { validate: number, format: number, query: number, model: number } {
+
+  getCacheStats(): { validate: number; format: number; query: number; model: number } {
     return {
       validate: this.validateCache.size(),
       format: this.formatCache.size(),
       query: this.queryCache.size(),
-      model: this.modelCache.size()
+      model: this.modelCache.size(),
     }
   }
 }

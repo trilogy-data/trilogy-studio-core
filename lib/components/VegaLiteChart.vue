@@ -179,7 +179,7 @@ import {
   filteredColumns,
   determineEligibleChartTypes,
   getGeoTraitType,
-  convertTimestampToISODate
+  convertTimestampToISODate,
 } from '../dashboards/helpers'
 
 import type { ScenegraphEvent } from 'vega'
@@ -323,37 +323,33 @@ export default defineComponent({
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
       if (item && internalConfig.value.chartType == 'line') {
-        console.log(event)
-        console.log(item)
+        if (!internalConfig.value.xField) {
+          return
+        }
         //layer_1 has selection
-        let line = item.items.find((x: any) => x.name=='layer_1_marks' )
-        let comp = item.items.find((x: any) => x.name=='layer_0_marks' )
+        let line = item.items.find((x: any) => x.name == 'layer_1_marks')
+        let comp = item.items.find((x: any) => x.name == 'layer_0_marks')
         if (line.items.length === comp.items.length) {
           emit('background-click')
           return
         }
         let start = line.items[0].datum[internalConfig.value.xField]
         let end = line.items[line.items.length - 1].datum[internalConfig.value.xField]
-        console.log('start', start)
-        console.log('end', end)
         let timeField = props.columns.get(internalConfig.value.xField)
         let timeAddress = timeField?.address
-        console.log(timeField)
-        console.log(timeAddress)
         if (!timeField || !timeAddress) {
           return
         }
-        console.log(timeField)
         if (timeField.type == 'date') {
           emit('dimension-click', {
-          filters: { [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)] },
-          chart: { [internalConfig.value.xField]: [start, end] },
-          append,
-        })
+            filters: {
+              [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
+            },
+            chart: { [internalConfig.value.xField]: [start, end] },
+            append,
+          })
         }
-       
-      }
-      else if (item && item.datum) {
+      } else if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoField = props.columns.get(internalConfig.value.geoField)
           let geoConcept = geoField?.address

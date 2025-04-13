@@ -1,6 +1,8 @@
 <template>
   <div class="parent">
-    <error-message v-if="!editorData">An editor by this ID ({{ editorId }}) could not be found.</error-message>
+    <error-message v-if="!editorData"
+      >An editor by this ID ({{ editorId }}) could not be found.</error-message
+    >
     <template v-else>
       <div class="menu-bar">
         <div class="menu-left">

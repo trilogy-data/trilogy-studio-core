@@ -92,9 +92,9 @@ function removeFilter(filterSource: string): void {
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
 
 // Compute if item has filters
-const hasFilters = computed(() => {
-  return itemData.value.filters && itemData.value.filters.length > 0
-})
+// const hasFilters = computed(() => {
+//   return itemData.value.filters && itemData.value.filters.length > 0
+// })
 
 // Determine which component to render based on the cell type
 const cellComponent = computed(() => {
