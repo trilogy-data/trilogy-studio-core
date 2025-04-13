@@ -59,6 +59,38 @@ export function objectToSqlExpression(
  * @param value - The value to compare against
  * @returns A formatted SQL condition
  */
+function formatValue(value:unknown) {
+  //handle date
+  if (value instanceof Date) {
+     // Get year, month, and day
+    const year = value.getFullYear();
+    // getMonth() is 0-indexed, so add 1
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    
+    // Format as YYYY-MM-DD
+    return `'${year}-${month}-${day}'::date`;
+    }
+  // Handle null values
+  if (value === null) {
+    return 'NULL'
+  }
+  // Handle string values
+  if (typeof value === 'string') {
+    // Escape single quotes in strings
+    const escapedValue = value.replace(/'/g, "''")
+    return `'${escapedValue}'`
+  }
+  // Handle boolean values
+  if (typeof value === 'boolean') {
+    return value ? 'TRUE' : 'FALSE'
+  }
+  // Handle number values
+  if (typeof value === 'number') {
+    return value.toString()
+  }
+}
+
 function formatCondition(key: string, value: unknown): string {
   // Handle different value types
   if (value === null) {
@@ -67,7 +99,11 @@ function formatCondition(key: string, value: unknown): string {
     // Escape single quotes in strings
     const escapedValue = value.replace(/'/g, "''")
     return `${key}='''${escapedValue}'''`
-  } else if (typeof value === 'number' || typeof value === 'boolean') {
+  } else if (Array.isArray(value)) {
+    // Handle array values
+    return `${key} between ${formatValue(value[0])} and ${formatValue(value[1])}`
+  }
+  else if (typeof value === 'number' || typeof value === 'boolean') {
     return `${key}=${value}`
   } else if (value === undefined) {
     return `${key} IS NULL`

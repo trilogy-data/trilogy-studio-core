@@ -148,6 +148,8 @@ export class ModelImportService {
           return new ModelSource(editor.id, response.alias || response.name, [], [])
         })
         .filter((source) => source)
+        // mark changes
+        this.modelStore.models[modelName].changed = true
     } catch (error) {
       console.error('Error importing model:', error)
       throw new Error('Failed to import model definition')

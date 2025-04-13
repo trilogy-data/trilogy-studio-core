@@ -1,5 +1,5 @@
 <template>
-  <div class="vega-lite-chart no-drag">
+  <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Toggle button always visible -->
     <div class="controls-toggle" v-if="showControls">
       <button
@@ -179,6 +179,7 @@ import {
   filteredColumns,
   determineEligibleChartTypes,
   getGeoTraitType,
+  convertTimestampToISODate
 } from '../dashboards/helpers'
 
 import type { ScenegraphEvent } from 'vega'
@@ -321,7 +322,38 @@ export default defineComponent({
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
-      if (item && item.datum) {
+      if (item && internalConfig.value.chartType == 'line') {
+        console.log(event)
+        console.log(item)
+        //layer_1 has selection
+        let line = item.items.find((x: any) => x.name=='layer_1_marks' )
+        let comp = item.items.find((x: any) => x.name=='layer_0_marks' )
+        if (line.items.length === comp.items.length) {
+          emit('background-click')
+          return
+        }
+        let start = line.items[0].datum[internalConfig.value.xField]
+        let end = line.items[line.items.length - 1].datum[internalConfig.value.xField]
+        console.log('start', start)
+        console.log('end', end)
+        let timeField = props.columns.get(internalConfig.value.xField)
+        let timeAddress = timeField?.address
+        console.log(timeField)
+        console.log(timeAddress)
+        if (!timeField || !timeAddress) {
+          return
+        }
+        console.log(timeField)
+        if (timeField.type == 'date') {
+          emit('dimension-click', {
+          filters: { [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)] },
+          chart: { [internalConfig.value.xField]: [start, end] },
+          append,
+        })
+        }
+       
+      }
+      else if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoField = props.columns.get(internalConfig.value.geoField)
           let geoConcept = geoField?.address
@@ -524,6 +556,10 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.overflow-hidden {
+  overflow-y: hidden;
+}
+
 .vega-lite-chart {
   width: 100%;
   height: 100%;
@@ -579,6 +615,7 @@ export default defineComponent({
   height: 100%;
   padding: 4px;
   background-color: var(--bg-color);
+  overflow-y: scroll;
 }
 
 .inner-padding {

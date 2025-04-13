@@ -190,7 +190,7 @@ const supportsFilters = computed(() => {
     </div> -->
 
     <!-- Filters display (for both edit and view modes) -->
-    <div class="filters-container" v-if="hasFilters && supportsFilters">
+    <div class="filters-container" v-if="supportsFilters">
       <div
         class="filter-tag"
         v-for="(filter, index) in itemData.filters"
@@ -241,7 +241,7 @@ const supportsFilters = computed(() => {
 }
 
 .grid-item-chart-style {
-  border: 1px solid var(--border);
+  /* border: 1px solid var(--border); */
 }
 
 .grid-item-header,
@@ -343,7 +343,7 @@ const supportsFilters = computed(() => {
   flex-wrap: wrap;
   gap: 4px;
   /* padding: 3px 6px; */
-  border-bottom: 1px solid var(--border);
+  /* border-bottom: 1px solid var(--border); */
   /*background-color: var(--sidebar-bg);*/
   min-height: 24px;
 }
@@ -351,7 +351,7 @@ const supportsFilters = computed(() => {
 .filter-tag {
   display: flex;
   align-items: center;
-  background-color: var(--sidebar-selector-bg);
+  /* background-color: var(--sidebar-selector-bg); */
   /* border: 1px solid var(--border); */
   padding: 1px 6px 1px 6px;
   font-size: calc(var(--small-font-size) - 1px);
