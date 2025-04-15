@@ -247,7 +247,7 @@ function handleRefresh() {
 .dashboard-controls {
   display: flex;
   flex-direction: column;
-  background-color: var( --query-window-bg);
+  background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border);
 }
 

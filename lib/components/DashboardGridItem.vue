@@ -207,7 +207,9 @@ const supportsFilters = computed(() => {
           <span class="filter-source"
             >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
           >
-          <span class="filter-value">{{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span>
+          <span class="filter-value">{{
+            filter.value.replace(/'''/g, "'").replace('local.', '')
+          }}</span>
         </span>
         <button
           class="filter-remove-btn"
