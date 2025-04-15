@@ -45,7 +45,7 @@ describe('objectToSqlExpression', () => {
 
     it('should handle arrays by converting to JSON strings', () => {
       const arrayObj = { tags: [1, 2, 3] }
-      expect(objectToSqlExpression(arrayObj)).toBe("tags='[1,2,3]'")
+      expect(objectToSqlExpression(arrayObj)).toBe("tags between 1 and 3")
     })
 
     it('should handle mixed data types in a single object', () => {
@@ -57,7 +57,7 @@ describe('objectToSqlExpression', () => {
         metadata: null,
       }
       expect(objectToSqlExpression(mixedObj)).toBe(
-        "id=1 AND name='''Test''' AND active=true AND tags='[1,2,3]' AND metadata IS NULL",
+        "id=1 AND name='''Test''' AND active=true AND tags between 1 and 3 AND metadata IS NULL",
       )
     })
   })
@@ -100,7 +100,7 @@ describe('objectToSqlExpression', () => {
       ])
 
       expect(result).toBe(
-        "(id=1 OR id=2) AND (name='''John''' OR name='''O''Connor''') AND active=true AND tags='[1,2]' AND status='''pending''' AND metadata IS NULL",
+        "(id=1 OR id=2) AND (name='''John''' OR name='''O''Connor''') AND active=true AND tags between 1 and 2 AND status='''pending''' AND metadata IS NULL",
       )
     })
   })

@@ -23,10 +23,15 @@ from trilogy.authoring import (
     MultiSelectStatement,
     SelectStatement,
     ConceptRef,
+    Parenthetical,
 )
 from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
-from trilogy.core.models.author import MultiSelectLineage, RowsetItem
+from trilogy.core.models.author import (
+    MultiSelectLineage,
+    RowsetItem,
+    FunctionCallWrapper,
+)
 from typing import Any, List, Union
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
@@ -59,8 +64,10 @@ def flatten_lineage(
         SelectStatement,
         MultiSelectLineage,
         RowsetItem,
+        FunctionCallWrapper,
         # RowsetItem,
         MultiSelectStatement,
+        Parenthetical,
     ],
     depth: int = 0,
 ) -> List[LineageItem]:
@@ -70,15 +77,15 @@ def flatten_lineage(
         chain = [
             LineageItem(token=input.operator.name, depth=depth),
             LineageItem(token="(", depth=depth),
-        ]  # ], ')']
+        ]  
         chain += flatten_array(input.arguments, depth + 1)
         chain += [LineageItem(token=")", depth=depth)]
     elif isinstance(input, WindowItem):
         chain = [
             LineageItem(token="rank", depth=depth),
             LineageItem(token="(", depth=depth),
-        ]  # ], ')']
-        chain += flatten_lineage(input.content, depth + 1)
+        ]  
+        chain += flatten_lineage(input.content, depth + 1) # type: ignore
         chain += [LineageItem(token="over", depth=depth)]
         chain += flatten_array(input.over, depth + 1)
         chain += [LineageItem(token="order by", depth=depth)]
@@ -88,13 +95,21 @@ def flatten_lineage(
         chain = [
             LineageItem(token="filter", depth=depth),
             LineageItem(token="(", depth=depth),
-        ]  # ], ')']
+        ] 
         chain += flatten_lineage(input.content, depth + 1)
         chain += [LineageItem(token="by", depth=depth)]
         chain += flatten_array(input.where.concept_arguments, depth + 1)
         chain += [LineageItem(token=")", depth=depth)]
     elif isinstance(input, AggregateWrapper):
         return flatten_lineage(input.function, depth)
+    elif isinstance(input, FunctionCallWrapper):
+        chain = [
+            LineageItem(token=input.name, depth=depth),
+            LineageItem(token="(", depth=depth),
+        ]
+        for arg in input.args:
+            chain += flatten_array(arg, depth + 1)
+        chain += (LineageItem(token=")", depth=depth),)
     # elif isinstance(input, RowsetItem):
     #     chain = []
     #     chain += [LineageItem(token="(", depth=depth)]

@@ -1,6 +1,8 @@
 <template>
   <div class="parent">
-    <error-message v-if="!editorData">An editor by this name could not be found.</error-message>
+    <error-message v-if="!editorData"
+      >An editor by this ID ({{ editorId }}) could not be found.</error-message
+    >
     <template v-else>
       <div class="menu-bar">
         <div class="menu-left">
@@ -496,7 +498,7 @@ export default defineComponent({
     ): Promise<Import[] | null> {
       const editorItem = editorMap.get(this.context)
       // TODO - syntax validation for SQL?
-      if (!editorItem || this.editorData.type === 'sql') {
+      if (!editorItem || !this.editorData || this.editorData.type === 'sql') {
         return null
       }
       try {
@@ -721,7 +723,9 @@ export default defineComponent({
 
     createEditor() {
       let editorElement = document.getElementById('editor')
-      if (!editorElement) {
+      if (!editorElement || !this.editorData) {
+        editorMap.delete(this.context)
+        mountedMap.delete(this.context)
         return
       }
 
@@ -813,7 +817,7 @@ export default defineComponent({
           )
 
           if (containsKeyword) {
-            console.log('statement finished')
+            console.log('Keyword detected')
           }
         }, keywordDebounceDelay)
       })

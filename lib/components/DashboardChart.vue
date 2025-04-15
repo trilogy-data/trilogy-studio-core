@@ -20,7 +20,7 @@
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
-    <div v-if="!loading" class="chart-actions">
+    <div v-if="!loading && editMode" class="chart-actions">
       <button
         v-if="onRefresh"
         @click="handleLocalRefresh"

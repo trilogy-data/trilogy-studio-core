@@ -3,6 +3,7 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { toRaw } from 'vue'
 import { lookupCountry } from './countryLookup'
+import { Charts } from './constants'
 
 const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
@@ -40,6 +41,11 @@ function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): 
 
   // Return true if more than 80% of points are inside the box
   return percentageInside > 80
+}
+
+export function convertTimestampToISODate(timestamp: number): Date {
+  const date = new Date(timestamp)
+  return date
 }
 
 // Helper functions to identify column types
@@ -394,31 +400,140 @@ export const generateVegaSpec = (
       break
 
     case 'line':
+
       const lineSpec = {
-        mark: { type: 'line', point: true },
-        encoding: {
-          x: {
-            field: config.xField,
-            type: getVegaFieldType(config.xField || '', columns),
-            title: columns.get(config.xField || '')?.description || config.xField,
-            ...getFormatHint(config.xField || '', columns),
+        data: undefined,
+        params: [],
+        layer: [
+          {
+            params: [
+              {
+                name: 'brush',
+                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                //@ts-ignore
+                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
+              },
+            ],
+            mark: { type: 'line', color: 'lightgray' },
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
           },
-          y: {
-            field: config.yField,
-            type: getVegaFieldType(config.yField || '', columns),
-            title: columns.get(config.yField || '')?.description || config.yField,
-            ...getFormatHint(config.yField || '', columns),
+          {
+            transform: [
+              {
+                filter: {
+                  param: 'brush',
+                },
+              },
+            ],
+            mark: { type: 'line', color: 'steelblue' },
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
           },
-          tooltip: tooltipFields,
-          ...encoding,
-        },
+        ],
       }
 
-      if (config.trellisField) {
-        spec.spec = lineSpec
-      } else {
-        spec = { ...spec, ...lineSpec }
+      spec = { ...spec, ...lineSpec }
+      break
+
+
+
+    case 'area':
+
+      const areaSpec = {
+        data: undefined,
+        // params: [],
+        layer: [
+          {
+            params: [
+              {
+                name: 'brush',
+                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                //@ts-ignore
+                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
+              },
+            ],
+            mark: { type: 'area', line: true},
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
+          },
+          {
+            transform: [
+              {
+                filter: {
+                  param: 'brush',
+                },
+              },
+            ],
+            mark: { type: 'area', line: true},
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
+          },
+        ],
       }
+
+      spec = { ...spec, ...areaSpec }
+      console.log(spec)
       break
 
     case 'point':
@@ -449,34 +564,55 @@ export const generateVegaSpec = (
       }
       break
 
-    case 'area':
-      const areaSpec = {
-        mark: { type: 'area', line: true, point: true },
-        encoding: {
-          x: {
-            field: config.xField,
-            type: getVegaFieldType(config.xField || '', columns),
-            title: columns.get(config.xField || '')?.description || config.xField,
-            ...getFormatHint(config.xField || '', columns),
+    case 'headline':
+      const headlineSpec = {
+        $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+        description: 'A simple headline metric display',
+        width: 'container',
+        height: 'container',
+        data: {
+          values: data ? data[0] : [],
+        },
+        layer: [
+          {
+            mark: {
+              type: 'text',
+              fontSize: 36,
+              fontWeight: 'bold',
+              align: 'center',
+              baseline: 'middle',
+              dx: 0,
+              dy: -20,
+            },
+            encoding: {
+              text: { field: config.xField, type: 'quantitative' },
+              color: { value: '#333333' },
+            },
           },
-          y: {
-            field: config.yField,
-            type: getVegaFieldType(config.yField || '', columns),
-            title: columns.get(config.yField || '')?.description || config.yField,
-            ...getFormatHint(config.yField || '', columns),
+          {
+            mark: {
+              type: 'text',
+              fontSize: 14,
+              fontWeight: 'normal',
+              align: 'center',
+              baseline: 'top',
+              dx: 0,
+              dy: 10,
+            },
+            encoding: {
+              text: { value: config.xField },
+              color: { value: '#666666' },
+            },
           },
-          tooltip: tooltipFields,
-          ...encoding,
+        ],
+        config: {
+          view: { stroke: null },
+          axis: { grid: false, domain: false },
         },
       }
 
-      if (config.trellisField) {
-        spec.spec = areaSpec
-      } else {
-        spec = { ...spec, ...areaSpec }
-      }
+      spec = { ...headlineSpec }
       break
-
     case 'heatmap':
       const heatmapSpec = {
         mark: 'rect',
@@ -561,12 +697,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                      field: config.colorField,
-                      type: 'quantitative',
-                      title: config.colorField,
-                      scale: { scheme: 'viridis' },
-                      ...legendConfig,
-                    }
+                    field: config.colorField,
+                    type: 'quantitative',
+                    title: config.colorField,
+                    scale: { scheme: 'viridis' },
+                    ...legendConfig,
+                  }
                   : { value: 'steelblue' },
                 tooltip: [
                   {
@@ -603,7 +739,7 @@ export const generateVegaSpec = (
           $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
           width: 'container',
           height: 'container',
-          config: { scale: { bandPaddingInner: 0.2 }, view: { stroke: null } },
+          // config: { scale: { bandPaddingInner: 0.2 }, view: { stroke: null } },
           projection: { type: 'albersUsa' },
           layer: [
             {
@@ -611,12 +747,7 @@ export const generateVegaSpec = (
                 url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/us-10m.json',
                 format: { type: 'topojson', feature: 'states' },
               },
-              mark: {
-                type: 'geoshape',
-                fill: '#e0e0e0',
-                stroke: '#bbb',
-                strokeWidth: 0.5,
-              },
+              mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
             },
             {
               data: {
@@ -1002,6 +1133,8 @@ export const determineDefaultConfig = (
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
     }
+  } else if (defaults.chartType === 'headline') {
+    defaults.xField = numericColumns[0].name
   } else if (defaults.chartType === 'line') {
     defaults.xField = temporalColumns[0].name
     const nonTemporalNumericColumns = numericColumns.filter(
@@ -1105,12 +1238,11 @@ export const determineEligibleChartTypes = (
   // Boxplot for numeric data with potential grouping
   if (numericColumns.length > 0) {
     eligibleCharts.push('boxplot')
+    eligibleCharts.push('headline')
   }
   if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
     eligibleCharts.push('usa-map')
   }
   // Ensure all chart types are from the predefined list
-  return eligibleCharts.filter((chart) =>
-    ['bar', 'barh', 'line', 'point', 'area', 'heatmap', 'boxplot', 'usa-map'].includes(chart),
-  )
+  return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
 }

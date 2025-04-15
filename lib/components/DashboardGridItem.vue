@@ -32,6 +32,9 @@ const emit = defineEmits<{
 const editingItemTitle = ref(false)
 const editableItemName = ref('')
 
+// Header visibility state
+const isHeaderVisible = ref(false)
+
 // Start editing an item title
 function startTitleEditing(): void {
   if (!props.editMode) return // Only allow editing in edit mode
@@ -91,11 +94,6 @@ function removeFilter(filterSource: string): void {
 // Get item data
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
 
-// Compute if item has filters
-const hasFilters = computed(() => {
-  return itemData.value.filters && itemData.value.filters.length > 0
-})
-
 // Determine which component to render based on the cell type
 const cellComponent = computed(() => {
   switch (itemData.value.type) {
@@ -137,8 +135,25 @@ const supportsFilters = computed(() => {
       'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
       'grid-item-edit-style': editMode,
     }"
+    @mouseenter="isHeaderVisible = true"
+    @mouseleave="isHeaderVisible = false"
   >
-    <div class="grid-item-header" v-if="editMode">
+    <!-- Edit Content button (always visible in edit mode) -->
+    <button 
+      v-if="editMode" 
+      @click="openEditor" 
+      class="edit-button always-visible" 
+      data-testid="edit-dashboard-item-content"
+    >
+      Edit Content
+    </button>
+    
+    <!-- Transparent overlay header (only in edit mode) -->
+    <div 
+      v-if="editMode" 
+      class="grid-item-header overlay-header" 
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+    >
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
         <svg
@@ -179,18 +194,10 @@ const supportsFilters = computed(() => {
           :placeholder="getPlaceholderText"
         />
       </div>
-      <button @click="openEditor" class="edit-button" data-testid="edit-dashboard-item-content">
-        Edit Content
-      </button>
     </div>
 
-    <!-- Non-edit mode title display -->
-    <!--<div class="view-mode-header" v-if="!editMode">
-      <div class="item-title">{{ itemData.name }}</div>
-    </div> -->
-
     <!-- Filters display (for both edit and view modes) -->
-    <div class="filters-container" v-if="hasFilters && supportsFilters">
+    <div class="filters-container" v-if="supportsFilters">
       <div
         class="filter-tag"
         v-for="(filter, index) in itemData.filters"
@@ -213,17 +220,20 @@ const supportsFilters = computed(() => {
       </div>
     </div>
 
-    <!-- Render the appropriate component based on cell type -->
-    <component
-      :is="cellComponent"
-      :dashboardId="props.dashboardId"
-      :itemId="item.i"
-      :setItemData="setItemData"
-      :getItemData="getItemData"
-      :editMode="editMode"
-      @dimension-click="dimensionClick"
-      @background-click="backgroundClick"
-    />
+    <!-- Content area -->
+    <div class="content-area">
+      <!-- Render the appropriate component based on cell type -->
+      <component
+        :is="cellComponent"
+        :dashboardId="props.dashboardId"
+        :itemId="item.i"
+        :setItemData="setItemData"
+        :getItemData="getItemData"
+        :editMode="editMode"
+        @dimension-click="dimensionClick"
+        @background-click="backgroundClick"
+      />
+    </div>
   </div>
 </template>
 
@@ -234,6 +244,7 @@ const supportsFilters = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
+  position: relative; /* Important for positioning the overlay header */
 }
 
 .grid-item-edit-style {
@@ -241,24 +252,47 @@ const supportsFilters = computed(() => {
 }
 
 .grid-item-chart-style {
-  border: 1px solid var(--border);
+  /* border: 1px solid var(--border); */
 }
 
-.grid-item-header,
-.view-mode-header {
+.overlay-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.header-visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.grid-item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding-left: 4px;
-  /* padding: 4px; */
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid transparent;
   height: var(--chart-control-height);
 }
 
 /* Make sure non-drag-handle content doesn't trigger dragging */
 .grid-item-content *:not(.grid-item-drag-handle) {
   touch-action: auto !important;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 .item-title-container {
@@ -285,7 +319,7 @@ const supportsFilters = computed(() => {
 }
 
 .editable-title:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .edit-indicator {
@@ -311,13 +345,21 @@ const supportsFilters = computed(() => {
 }
 
 .edit-button {
-  padding: 4px 8px;
+  /* padding: 4px 8px;*/
   background-color: var(--special-text);
   color: white;
   border: none;
   cursor: pointer;
   font-size: var(--small-font-size);
   margin-left: 8px;
+}
+
+.edit-button.always-visible {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 20;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .grid-item-drag-handle {
@@ -343,7 +385,7 @@ const supportsFilters = computed(() => {
   flex-wrap: wrap;
   gap: 4px;
   /* padding: 3px 6px; */
-  border-bottom: 1px solid var(--border);
+  /* border-bottom: 1px solid var(--border); */
   /*background-color: var(--sidebar-bg);*/
   min-height: 24px;
 }
@@ -351,7 +393,7 @@ const supportsFilters = computed(() => {
 .filter-tag {
   display: flex;
   align-items: center;
-  background-color: var(--sidebar-selector-bg);
+  /* background-color: var(--sidebar-selector-bg); */
   /* border: 1px solid var(--border); */
   padding: 1px 6px 1px 6px;
   font-size: calc(var(--small-font-size) - 1px);

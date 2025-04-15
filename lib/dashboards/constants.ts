@@ -39,6 +39,15 @@ export const Controls: ChartControl[] = [
     filterGroup: 'axes',
   },
   {
+    id: 'value-axis',
+    label: 'Value',
+    field: 'xField',
+    columnFilter: 'numeric',
+    allowEmpty: false,
+    visibleFor: ['headline'],
+    filterGroup: 'axes',
+  },
+  {
     id: 'x-axis',
     label: 'X Axis',
     field: 'xField',
@@ -168,7 +177,12 @@ export const Charts = [
   },
   {
     value: 'usa-map',
-    label: 'USA Map',
+    label: 'Map',
     icon: 'mdi mdi-map',
+  },
+  {
+    value: 'headline',
+    label: 'Headline',
+    icon: 'mdi mdi-numeric-1-box-outline',
   },
 ]
