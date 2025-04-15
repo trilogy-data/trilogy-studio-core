@@ -191,7 +191,7 @@ function handleRefresh() {
     <div class="controls-row top-row" v-if="editMode">
       <div class="dashboard-left-controls">
         <div class="connection-selector">
-          <label for="connection">Connection</label>
+          <!-- <label for="connection">Connection</label> -->
           <select
             id="connection"
             data-testid="connection-selector"
@@ -247,13 +247,13 @@ function handleRefresh() {
 .dashboard-controls {
   display: flex;
   flex-direction: column;
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border);
 }
 
 .controls-row {
   display: flex;
-  padding: 5px 5px;
+  padding: 5px 10px;
 }
 
 .top-row {

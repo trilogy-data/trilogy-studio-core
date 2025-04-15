@@ -223,7 +223,9 @@ export const generateVegaSpec = (
   chartSelection: Object[] | null,
   isMobile: boolean = false,
 ) => {
-  let intChart = chartSelection ? chartSelection.map((x) => toRaw(x)) : []
+  let intChart: Array<Partial<ChartConfig>> = chartSelection
+    ? chartSelection.map((x) => toRaw(x))
+    : []
   let spec: any = {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
@@ -400,7 +402,6 @@ export const generateVegaSpec = (
       break
 
     case 'line':
-
       const lineSpec = {
         data: undefined,
         params: [],
@@ -409,9 +410,12 @@ export const generateVegaSpec = (
             params: [
               {
                 name: 'brush',
-                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                select: { type: 'interval', encodings: ['x'], value: intChart },
                 //@ts-ignore
-                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
+                value:
+                  intChart.length > 0 && config.xField
+                    ? { x: intChart[0][config.xField as keyof typeof config] }
+                    : undefined,
               },
             ],
             mark: { type: 'line', color: 'lightgray' },
@@ -466,10 +470,7 @@ export const generateVegaSpec = (
       spec = { ...spec, ...lineSpec }
       break
 
-
-
     case 'area':
-
       const areaSpec = {
         data: undefined,
         // params: [],
@@ -478,12 +479,15 @@ export const generateVegaSpec = (
             params: [
               {
                 name: 'brush',
-                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                select: { type: 'interval', encodings: ['x'], value: intChart },
                 //@ts-ignore
-                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
+                value:
+                  intChart.length > 0 && config.xField
+                    ? { x: intChart[0][config.xField as keyof typeof config] }
+                    : undefined,
               },
             ],
-            mark: { type: 'area', line: true},
+            mark: { type: 'area', line: true },
             data: { values: data },
             encoding: {
               x: {
@@ -510,7 +514,7 @@ export const generateVegaSpec = (
                 },
               },
             ],
-            mark: { type: 'area', line: true},
+            mark: { type: 'area', line: true },
             data: { values: data },
             encoding: {
               x: {
@@ -697,12 +701,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                    field: config.colorField,
-                    type: 'quantitative',
-                    title: config.colorField,
-                    scale: { scheme: 'viridis' },
-                    ...legendConfig,
-                  }
+                      field: config.colorField,
+                      type: 'quantitative',
+                      title: config.colorField,
+                      scale: { scheme: 'viridis' },
+                      ...legendConfig,
+                    }
                   : { value: 'steelblue' },
                 tooltip: [
                   {

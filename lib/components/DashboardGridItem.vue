@@ -139,19 +139,19 @@ const supportsFilters = computed(() => {
     @mouseleave="isHeaderVisible = false"
   >
     <!-- Edit Content button (always visible in edit mode) -->
-    <button 
-      v-if="editMode" 
-      @click="openEditor" 
-      class="edit-button always-visible" 
+    <button
+      v-if="editMode"
+      @click="openEditor"
+      class="edit-button always-visible"
       data-testid="edit-dashboard-item-content"
     >
       Edit Content
     </button>
-    
+
     <!-- Transparent overlay header (only in edit mode) -->
-    <div 
-      v-if="editMode" 
-      class="grid-item-header overlay-header" 
+    <div
+      v-if="editMode"
+      class="grid-item-header overlay-header"
       :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
     >
       <!-- Drag handle icon -->
@@ -207,7 +207,9 @@ const supportsFilters = computed(() => {
           <span class="filter-source"
             >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
           >
-          <span class="filter-value">{{ filter.value.replace(/'''/g, "'") }}</span>
+          <span class="filter-value">{{
+            filter.value.replace(/'''/g, "'").replace('local.', '')
+          }}</span>
         </span>
         <button
           class="filter-remove-btn"
@@ -396,7 +398,7 @@ const supportsFilters = computed(() => {
   /* background-color: var(--sidebar-selector-bg); */
   /* border: 1px solid var(--border); */
   padding: 1px 6px 1px 6px;
-  font-size: calc(var(--small-font-size) - 1px);
+  font-size: calc(var(--small-font-size) - 5px);
 }
 
 .filter-content {

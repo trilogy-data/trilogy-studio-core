@@ -45,7 +45,7 @@ describe('objectToSqlExpression', () => {
 
     it('should handle arrays by converting to JSON strings', () => {
       const arrayObj = { tags: [1, 2, 3] }
-      expect(objectToSqlExpression(arrayObj)).toBe("tags between 1 and 3")
+      expect(objectToSqlExpression(arrayObj)).toBe('tags between 1 and 3')
     })
 
     it('should handle mixed data types in a single object', () => {

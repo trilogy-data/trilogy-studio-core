@@ -45,20 +45,22 @@ export function useFilterDebounce(initialValue = '', onChange?: OnChangeFunction
   }
 }
 
+export const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+): ((...args: Parameters<T>) => void) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null
 
-export const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  
   return function executedFunction(...args: Parameters<T>): void {
     const later = () => {
-      clearTimeout(timeout as ReturnType<typeof setTimeout>);
-      func(...args);
-    };
-    
-    if (timeout) {
-      clearTimeout(timeout);
+      clearTimeout(timeout as ReturnType<typeof setTimeout>)
+      func(...args)
     }
-    
-    timeout = setTimeout(later, wait);
-  };
-};
+
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+
+    timeout = setTimeout(later, wait)
+  }
+}

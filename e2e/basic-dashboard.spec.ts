@@ -22,10 +22,26 @@ async function getPixelColor(page, x, y) {
     ({ x, y }) => {
       const canvas = document.querySelector('.vega-container canvas')
       if (!canvas) return null
-
+      
+      // Get the canvas's CSS dimensions (how it appears on screen)
+      const displayRect = canvas.getBoundingClientRect()
+      
+      // Get the canvas's actual dimensions (its internal coordinate system)
+      const width = canvas.width
+      const height = canvas.height
+      
+      // Calculate the scale ratio between display size and actual size
+      const scaleX = width / displayRect.width
+      const scaleY = height / displayRect.height
+      
+      // Convert the coordinates from parent CSS space to canvas internal space
+      const canvasX = Math.round(x * scaleX)
+      const canvasY = Math.round(y * scaleY)
+      
+      // Now use the converted coordinates
       const context = canvas.getContext('2d')
-      const pixelData = context.getImageData(x, y, 1, 1).data
-
+      const pixelData = context.getImageData(canvasX, canvasY, 1, 1).data
+      
       return {
         r: pixelData[0],
         g: pixelData[1],
@@ -124,7 +140,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   }
   const results = [] as PixelColor[]
 
-  for (let xStep = 1; xStep < gridSize; xStep++) {
+  for (let xStep = 0; xStep < gridSize; xStep++) {
     for (let yStep = 0; yStep < gridSize; yStep++) {
       // Calculate relative position
       const relX = xStep / (gridSize - 1)
@@ -148,22 +164,23 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   // Define points to check relative to the canvas
   // These are relative coordinates (x%, y%) within the canvas
+  const nonWhite = ['#86d0bb', '#225aa5', '#c7e9b5']
   const texasCheck = {
     relX: 0.555555555555555,
     relY: 0.555555555555555,
-    expectedColors: ['#86d0bb', '#225aa5', '#c7e9b5'], // Adjust this hex value if needed for exact matching
+    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
   }
 
   const texasCheck2 = {
     relX: 0.5555555555555556,
     relY: 0.6666666666666666,
-    expectedColors: ['#86d0bb', '#225aa5', '#c7e9b5'], // Adjust this hex value if needed for exact matching
+    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
   }
 
   const texasCheck3 = {
     relX: 0.5555555555555556,
     relY: 0.8888888888888888,
-    expectedColors: ['#86d0bb', '#225aa5', '#c7e9b5'], // Adjust this hex value if needed for exact matching
+    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
   }
 
   const relativePointsToCheck = [texasCheck, texasCheck2, texasCheck3]
