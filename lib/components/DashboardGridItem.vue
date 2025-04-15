@@ -207,7 +207,7 @@ const supportsFilters = computed(() => {
           <span class="filter-source"
             >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
           >
-          <span class="filter-value">{{ filter.value.replace(/'''/g, "'") }}</span>
+          <span class="filter-value">{{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span>
         </span>
         <button
           class="filter-remove-btn"
@@ -396,7 +396,7 @@ const supportsFilters = computed(() => {
   /* background-color: var(--sidebar-selector-bg); */
   /* border: 1px solid var(--border); */
   padding: 1px 6px 1px 6px;
-  font-size: calc(var(--small-font-size) - 1px);
+  font-size: calc(var(--small-font-size) - 5px);
 }
 
 .filter-content {
