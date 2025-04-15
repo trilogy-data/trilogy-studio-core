@@ -77,7 +77,7 @@ onUnmounted(() => {
 <template>
   <div class="import-selector">
     <div class="import-selector-header" @click="toggleDropdown">
-      <label>Root Source</label>
+      <label>Data</label>
       <div
         class="import-summary"
         :class="{ 'has-imports': activeCount > 0 }"
