@@ -128,7 +128,7 @@ import {
 } from '../dashboards/helpers'
 import { debounce } from '../utility/debounce'
 
-import type { ScenegraphEvent, SignalListenerHandler } from 'vega'
+import type { ScenegraphEvent, SignalValue } from 'vega'
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -265,17 +265,22 @@ export default defineComponent({
         isMobile.value,
       )
     }
-    const handleBrush = debounce((event:SignalListenerHandler, item) => {
+    const handleBrush = debounce((_:string, item:SignalValue) => {
 
   if (item && ['line', 'area'].includes(internalConfig.value.chartType)) {
     if (!internalConfig.value.xField) {
       return;
     }
-    let values = item['yearmonthdate_' + internalConfig.value.xField];
-    if (!values || values.length == 0) {
+    let dateLookup = 'yearmonthdate_' + internalConfig.value.xField
+    console.log(item)
+    console.log(dateLookup)
+    const values = item[dateLookup as keyof typeof item] ?? [];
+
+    // Check if values exists and has elements in a single condition
+    if (!values || !Array.isArray(values) || values.length === 0) {
       emit('background-click');
       return;
-    }
+}
     let start = values[0];
     let end = values[values.length - 1];
     let timeField = props.columns.get(internalConfig.value.xField);
