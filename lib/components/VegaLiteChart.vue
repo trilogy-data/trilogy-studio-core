@@ -326,8 +326,6 @@ export default defineComponent({
           return
         }
         let dateLookup = 'yearmonthdate_' + internalConfig.value.xField
-        console.log(item)
-        console.log(dateLookup)
         const values = item[dateLookup as keyof typeof item] ?? []
 
         // Check if values exists and has elements in a single condition

@@ -223,7 +223,7 @@ export const generateVegaSpec = (
   chartSelection: Object[] | null,
   isMobile: boolean = false,
 ) => {
-  let intChart = chartSelection ? chartSelection.map((x) => toRaw(x)) : []
+  let intChart:Array<Partial<ChartConfig>> = chartSelection ? chartSelection.map((x) => toRaw(x)) : []
   let spec: any = {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
@@ -412,7 +412,7 @@ export const generateVegaSpec = (
                 //@ts-ignore
                 value:
                   intChart.length > 0 && config.xField
-                    ? { x: intChart[0][config.xField] }
+                    ? { x: intChart[0][config.xField as keyof typeof config] }
                     : undefined,
               },
             ],
@@ -481,7 +481,7 @@ export const generateVegaSpec = (
                 //@ts-ignore
                 value:
                   intChart.length > 0 && config.xField
-                    ? { x: intChart[0][config.xField] }
+                    ? { x: intChart[0][config.xField as keyof typeof config] }
                     : undefined,
               },
             ],
