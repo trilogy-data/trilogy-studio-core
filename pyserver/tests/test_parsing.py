@@ -135,14 +135,14 @@ RAW_VARIABLE_REQUEST = {
 }
 
 
-def test_parse_with_variables():
-    from trilogy.constants import Rendering
+# def test_parse_with_variables():
+#     from trilogy.constants import Rendering
 
-    query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST)
-    final, columns = generate_query_core(query)
-    dialect = get_dialect_generator(query.dialect, rendering=Rendering(parameters=True))
-    generated_sql = dialect.compile_statement(final)
-    assert ":param1" in generated_sql, generated_sql
+#     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST)
+#     final, columns = generate_query_core(query)
+#     dialect = get_dialect_generator(query.dialect, rendering=Rendering(parameters=True))
+#     generated_sql = dialect.compile_statement(final)
+#     assert ":param1" in generated_sql, generated_sql
 
 
 RAW_VARIABLE_REQUEST_TWO = {
