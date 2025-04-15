@@ -400,22 +400,18 @@ export const generateVegaSpec = (
       break
 
     case 'line':
+
       const lineSpec = {
-        // mark: { type: 'line', point: true },
-        // params: [
-        //   {select: {
-        //     "type": "interval",
-        //     "on": "[pointerdown[!event.shiftKey], pointerup] > pointermove",
-        //     "translate": "[pointerdown[!event.shiftKey], pointerup] > pointermove"
-        //   }
-        // }
-        // ],
+        data: undefined,
+        params: [],
         layer: [
           {
             params: [
               {
                 name: 'brush',
-                select: { type: 'interval', encodings: ['x'] },
+                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                //@ts-ignore
+                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
               },
             ],
             mark: { type: 'line', color: 'lightgray' },
@@ -467,11 +463,77 @@ export const generateVegaSpec = (
         ],
       }
 
-      if (config.trellisField) {
-        spec.spec = lineSpec
-      } else {
-        spec = { ...spec, ...lineSpec }
+      spec = { ...spec, ...lineSpec }
+      break
+
+
+
+    case 'area':
+
+      const areaSpec = {
+        data: undefined,
+        // params: [],
+        layer: [
+          {
+            params: [
+              {
+                name: 'brush',
+                select: { type: 'interval', encodings: ['x'], value: intChart, },
+                //@ts-ignore
+                value: (intChart.length > 0 && config.xField) ? { "x": intChart[0][config.xField] } : undefined
+              },
+            ],
+            mark: { type: 'area', line: true},
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
+          },
+          {
+            transform: [
+              {
+                filter: {
+                  param: 'brush',
+                },
+              },
+            ],
+            mark: { type: 'area', line: true},
+            data: { values: data },
+            encoding: {
+              x: {
+                field: config.xField,
+                type: getVegaFieldType(config.xField || '', columns),
+                title: columns.get(config.xField || '')?.description || config.xField,
+                ...getFormatHint(config.xField || '', columns),
+              },
+              y: {
+                field: config.yField,
+                type: getVegaFieldType(config.yField || '', columns),
+                title: columns.get(config.yField || '')?.description || config.yField,
+                ...getFormatHint(config.yField || '', columns),
+              },
+              tooltip: tooltipFields,
+              ...encoding,
+            },
+          },
+        ],
       }
+
+      spec = { ...spec, ...areaSpec }
+      console.log(spec)
       break
 
     case 'point':
@@ -502,33 +564,6 @@ export const generateVegaSpec = (
       }
       break
 
-    case 'area':
-      const areaSpec = {
-        mark: { type: 'area', line: true, point: true },
-        encoding: {
-          x: {
-            field: config.xField,
-            type: getVegaFieldType(config.xField || '', columns),
-            title: columns.get(config.xField || '')?.description || config.xField,
-            ...getFormatHint(config.xField || '', columns),
-          },
-          y: {
-            field: config.yField,
-            type: getVegaFieldType(config.yField || '', columns),
-            title: columns.get(config.yField || '')?.description || config.yField,
-            ...getFormatHint(config.yField || '', columns),
-          },
-          tooltip: tooltipFields,
-          ...encoding,
-        },
-      }
-
-      if (config.trellisField) {
-        spec.spec = areaSpec
-      } else {
-        spec = { ...spec, ...areaSpec }
-      }
-      break
     case 'headline':
       const headlineSpec = {
         $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
@@ -662,12 +697,12 @@ export const generateVegaSpec = (
 
                 color: config.colorField
                   ? {
-                      field: config.colorField,
-                      type: 'quantitative',
-                      title: config.colorField,
-                      scale: { scheme: 'viridis' },
-                      ...legendConfig,
-                    }
+                    field: config.colorField,
+                    type: 'quantitative',
+                    title: config.colorField,
+                    scale: { scheme: 'viridis' },
+                    ...legendConfig,
+                  }
                   : { value: 'steelblue' },
                 tooltip: [
                   {
@@ -704,7 +739,7 @@ export const generateVegaSpec = (
           $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
           width: 'container',
           height: 'container',
-          config: { scale: { bandPaddingInner: 0.2 }, view: { stroke: null } },
+          // config: { scale: { bandPaddingInner: 0.2 }, view: { stroke: null } },
           projection: { type: 'albersUsa' },
           layer: [
             {
@@ -712,12 +747,7 @@ export const generateVegaSpec = (
                 url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/us-10m.json',
                 format: { type: 'topojson', feature: 'states' },
               },
-              mark: {
-                type: 'geoshape',
-                fill: '#e0e0e0',
-                stroke: '#bbb',
-                strokeWidth: 0.5,
-              },
+              mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
             },
             {
               data: {

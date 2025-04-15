@@ -101,7 +101,7 @@ function formatCondition(key: string, value: unknown): string {
     return `${key}='''${escapedValue}'''`
   } else if (Array.isArray(value)) {
     // Handle array values
-    return `${key} between ${formatValue(value[0])} and ${formatValue(value[1])}`
+    return `${key} between ${formatValue(value[0])} and ${formatValue(value[value.length - 1])}`
   } else if (typeof value === 'number' || typeof value === 'boolean') {
     return `${key}=${value}`
   } else if (value === undefined) {
