@@ -139,19 +139,19 @@ const supportsFilters = computed(() => {
     @mouseleave="isHeaderVisible = false"
   >
     <!-- Edit Content button (always visible in edit mode) -->
-    <button 
-      v-if="editMode" 
-      @click="openEditor" 
-      class="edit-button always-visible" 
+    <button
+      v-if="editMode"
+      @click="openEditor"
+      class="edit-button always-visible"
       data-testid="edit-dashboard-item-content"
     >
       Edit Content
     </button>
-    
+
     <!-- Transparent overlay header (only in edit mode) -->
-    <div 
-      v-if="editMode" 
-      class="grid-item-header overlay-header" 
+    <div
+      v-if="editMode"
+      class="grid-item-header overlay-header"
       :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
     >
       <!-- Drag handle icon -->
