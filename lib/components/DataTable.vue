@@ -251,7 +251,7 @@ export default {
     prettyPrint: {
       type: Boolean,
       default: false,
-    }
+    },
   },
   setup() {
     // Inject the store that has been provided elsewhere in the app
@@ -294,7 +294,7 @@ export default {
       this.headers.forEach((details, _) => {
         let formatting = typeToFormatter(details)
         const result = {
-          title: this.prettyPrint? snakeCaseToCapitalizedWords(details.name) : details.name,
+          title: this.prettyPrint ? snakeCaseToCapitalizedWords(details.name) : details.name,
 
           // titleFormatter: 'plaintext',
           field: details.name,

@@ -7,12 +7,10 @@ const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
 const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
 
-
 export function convertTimestampToISODate(timestamp: number): Date {
   const date = new Date(timestamp)
   return date
 }
-
 
 export const getColumnHasTrait = (
   fieldName: string,
@@ -25,7 +23,6 @@ export const getColumnHasTrait = (
   if (!column) return false
   return getColumnHasTraitInternal(column, trait)
 }
-
 
 const getColumnHasTraitInternal = (column: ResultColumn, trait: string) => {
   if (column.traits && column.traits.some((t) => t.endsWith(trait))) {
@@ -91,9 +88,6 @@ export const isCategoricalColumn = (column: ResultColumn): boolean => {
   return false
 }
 
-
-
-
 // Interface for selection configuration
 export interface SelectionConfig {
   enabled: boolean
@@ -104,8 +98,6 @@ export interface SelectionConfig {
   nearest?: boolean
   resolve?: 'global' | 'union' | 'intersect'
 }
-
-
 
 export const columHasTraitEnding = (column: ResultColumn, trait: string): boolean => {
   if (column.traits) {

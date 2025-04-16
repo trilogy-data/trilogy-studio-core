@@ -136,25 +136,51 @@ const filterCount = computed(() => {
 </script>
 
 <template>
-  <div class="grid-item-content" :class="{
-    //@ts-ignore
-    'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
-    'grid-item-edit-style': editMode,
-  }" @mouseenter="isHeaderVisible = true; isFiltersVisible = true" 
-     @mouseleave="isHeaderVisible = false; isFiltersVisible = false">
+  <div
+    class="grid-item-content"
+    :class="{
+      //@ts-ignore
+      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
+      'grid-item-edit-style': editMode,
+    }"
+    @mouseenter="
+      isHeaderVisible = true
+      isFiltersVisible = true
+    "
+    @mouseleave="
+      isHeaderVisible = false
+      isFiltersVisible = false
+    "
+  >
     <!-- Edit Content button (always visible in edit mode) -->
-    <button v-if="editMode" @click="openEditor" class="edit-button always-visible"
-      data-testid="edit-dashboard-item-content">
+    <button
+      v-if="editMode"
+      @click="openEditor"
+      class="edit-button always-visible"
+      data-testid="edit-dashboard-item-content"
+    >
       Edit Content
     </button>
 
     <!-- Transparent overlay header (only in edit mode) -->
-    <div v-if="editMode" class="grid-item-header overlay-header"
-      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }">
+    <div
+      v-if="editMode"
+      class="grid-item-header overlay-header"
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+    >
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -170,9 +196,17 @@ const filterCount = computed(() => {
         </div>
 
         <!-- Edit title input -->
-        <input v-else :id="`title-input-${item.i}`" v-model="editableItemName" @blur="saveTitleEdit"
-          @keyup.enter="saveTitleEdit" @keyup.esc="cancelTitleEdit" class="title-input" type="text"
-          :placeholder="getPlaceholderText" />
+        <input
+          v-else
+          :id="`title-input-${item.i}`"
+          v-model="editableItemName"
+          @blur="saveTitleEdit"
+          @keyup.enter="saveTitleEdit"
+          @keyup.esc="cancelTitleEdit"
+          class="title-input"
+          type="text"
+          :placeholder="getPlaceholderText"
+        />
       </div>
     </div>
 
@@ -180,40 +214,69 @@ const filterCount = computed(() => {
     <div class="filters-container" v-if="supportsFilters">
       <!-- Edit mode - show filters normally -->
       <template v-if="editMode">
-        <div class="filter-tag" v-for="(filter, index) in itemData.filters"
-          :key="`${filter.source}-${filter.value}-${index}`">
+        <div
+          class="filter-tag"
+          v-for="(filter, index) in itemData.filters"
+          :key="`${filter.source}-${filter.value}-${index}`"
+        >
           <span class="filter-content">
-            <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
-            <span class="filter-value"> {{
-              filter.value.replace(/'''/g, "'").replace('local.', '')
-              }}</span>
+            <span class="filter-source"
+              >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+            >
+            <span class="filter-value">
+              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+            >
           </span>
-          <button class="filter-remove-btn" @click="removeFilter(filter.source)" title="Remove filter"
-            v-if="filter.source !== 'global'">
+          <button
+            class="filter-remove-btn"
+            @click="removeFilter(filter.source)"
+            title="Remove filter"
+            v-if="filter.source !== 'global'"
+          >
             ×
           </button>
         </div>
       </template>
-      
+
       <!-- View mode - show icon with count, or detailed filters on mouseover -->
       <template v-else>
         <div class="filter-summary" v-if="!isFiltersVisible && filterCount > 0">
-          <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            class="filter-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
           </svg>
         </div>
-        
+
         <div v-if="isFiltersVisible && filterCount > 0" class="filter-details">
-          <div class="filter-tag" v-for="(filter, index) in itemData.filters"
-            :key="`${filter.source}-${filter.value}-${index}`">
+          <div
+            class="filter-tag"
+            v-for="(filter, index) in itemData.filters"
+            :key="`${filter.source}-${filter.value}-${index}`"
+          >
             <span class="filter-content">
-              <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
-              <span class="filter-value"> {{
-                filter.value.replace(/'''/g, "'").replace('local.', '')
-                }}</span>
+              <span class="filter-source"
+                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+              >
+              <span class="filter-value">
+                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+              >
             </span>
-            <button class="filter-remove-btn" @click="removeFilter(filter.source)" title="Remove filter"
-              v-if="filter.source !== 'global'">
+            <button
+              class="filter-remove-btn"
+              @click="removeFilter(filter.source)"
+              title="Remove filter"
+              v-if="filter.source !== 'global'"
+            >
               ×
             </button>
           </div>
@@ -224,9 +287,16 @@ const filterCount = computed(() => {
     <!-- Content area -->
     <div class="content-area" :class="{ 'content-area-filter': supportsFilters }">
       <!-- Render the appropriate component based on cell type -->
-      <component :is="cellComponent" :dashboardId="props.dashboardId" :itemId="item.i" :setItemData="setItemData"
-        :getItemData="getItemData" :editMode="editMode" @dimension-click="dimensionClick"
-        @background-click="backgroundClick" />
+      <component
+        :is="cellComponent"
+        :dashboardId="props.dashboardId"
+        :itemId="item.i"
+        :setItemData="setItemData"
+        :getItemData="getItemData"
+        :editMode="editMode"
+        @dimension-click="dimensionClick"
+        @background-click="backgroundClick"
+      />
     </div>
   </div>
 </template>
