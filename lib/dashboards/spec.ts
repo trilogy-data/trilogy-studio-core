@@ -192,7 +192,7 @@ const createColorEncoding = (colorField: string | undefined, columns: Map<string
             field: colorField,
             type: fieldType,
             title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
-            scale: fieldType === 'quantitative' ? { scheme: 'viridis' } : { scheme: 'category10' },
+            scale: fieldType === 'quantitative' ? { scheme: 'viridis' } : { scheme: 'category20c' },
             ...getFormatHint(colorField, columns),
             ...legendConfig,
         }
@@ -251,6 +251,7 @@ const createInteractiveLayer = (
     columns: Map<string, ResultColumn>,
     tooltipFields: any[],
     encoding: any,
+    intChart: Array<Partial<ChartConfig>> = [],
     filtered: boolean = false,
     markColor: string = 'steelblue'
 ) => {
@@ -271,7 +272,7 @@ const createInteractiveLayer = (
     }
 
     if (!filtered) {
-        layer.params = [createBrushParam([], config)]
+        layer.params = [createBrushParam(intChart, config)]
     }
 
     return layer
@@ -363,8 +364,8 @@ const createAreaChartSpec = (
     return {
         data: undefined,
         layer: [
-            createInteractiveLayer(config, data, columns, tooltipFields, encoding),
-            createInteractiveLayer(config, data, columns, tooltipFields, encoding, true)
+            createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
+            createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true)
         ]
     }
 }

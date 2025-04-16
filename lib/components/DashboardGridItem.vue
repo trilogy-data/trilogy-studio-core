@@ -238,6 +238,7 @@ const filterCount = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
+  border: 1px solid var(--border);
   position: relative;
   /* Important for positioning the overlay header */
   overflow-y: hidden;
