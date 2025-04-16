@@ -193,6 +193,8 @@ export const determineDefaultConfig = (
   } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
     // Two categorical dimensions and a numeric - use heatmap
     defaults.chartType = 'heatmap'
+  } else if (numericColumns.length > 0 && categoricalColumns.length == 0) {
+    defaults.chartType = 'headline'
   }
 
   // now set defaults for each chart type

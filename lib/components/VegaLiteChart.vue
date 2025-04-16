@@ -177,7 +177,6 @@ import {
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
-  getGeoTraitType,
   convertTimestampToISODate,
 } from '../dashboards/helpers'
 
@@ -365,10 +364,9 @@ export default defineComponent({
           if (!geoConcept || !geoField) {
             return
           }
-          let type = getGeoTraitType(geoField)
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
-            chart: { [internalConfig.value.geoField]: item.datum[internalConfig.value.geoField] }, 
+            chart: { [internalConfig.value.geoField]: item.datum[internalConfig.value.geoField] },
             append,
           })
         } else if (internalConfig.value.colorField) {

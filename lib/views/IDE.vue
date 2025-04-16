@@ -180,6 +180,7 @@ import useScreenNavigation from './useScreenNavigation'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
+import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 
 export default {
   name: 'IDEComponent',
@@ -219,17 +220,22 @@ export default {
     const editorStore = inject<EditorStoreType>('editorStore')
 
     let modelStore = inject<ModelConfigStoreType>('modelStore')
+    let dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const trilogyResolver = inject<ResolverType>('trilogyResolver')
     let saveEditors = inject<Function>('saveEditors')
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
+    let saveDashboards = inject<Function>('saveDashboards')
 
     if (
       !editorStore ||
       !connectionStore ||
+      !dashboardStore ||
       !trilogyResolver ||
       !modelStore ||
       !saveConnections ||
+      !saveDashboards ||
+      !saveEditors ||
       !saveModels
     ) {
       throw new Error(
@@ -254,10 +260,12 @@ export default {
     return {
       connectionStore,
       editorStore,
+      dashboardStore,
       trilogyResolver,
       saveEditors,
       saveConnections,
       saveModels,
+      saveDashboards,
       modelStore,
       activeScreen,
       setActiveScreen,
@@ -292,9 +300,11 @@ export default {
         this.editorStore,
         this.connectionStore,
         this.modelStore,
+        this.dashboardStore,
         this.saveEditors,
         this.saveConnections,
         this.saveModels,
+        this.saveDashboards,
       )
       this.setActiveScreen('editors')
       this.setActiveEditor('tutorial_one_basic_1')

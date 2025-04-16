@@ -25,12 +25,9 @@
         @close="creatorVisible = !creatorVisible"
         :testTag="testTag"
       />
-      <dashboard-import-popup
-        :isOpen="importPopupVisible"
-        @close="importPopupVisible = false"
-      />
+      <dashboard-import-popup :isOpen="importPopupVisible" @close="importPopupVisible = false" />
     </template>
-    
+
     <dashboard-list-item
       v-for="item in contentList"
       :key="item.key"
@@ -40,7 +37,7 @@
       @click="clickAction(item)"
       @delete="showDeleteConfirmation"
     />
-    
+
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -255,14 +252,14 @@ export default {
       } else {
         this.toggleCollapse(item.key)
       }
-    }
+    },
   },
   components: {
     DashboardCreatorInline,
     DashboardImportPopup,
     DashboardListItem,
     SidebarList,
-    LoadingButton
+    LoadingButton,
   },
 }
 </script>

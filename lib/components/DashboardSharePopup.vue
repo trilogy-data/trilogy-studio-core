@@ -13,15 +13,15 @@ const jsonString = ref<string>('')
 // Function to filter out unwanted properties
 const filterDashboard = (dashboard: any): any => {
   if (!dashboard) return null
-  
+
   // Create a deep copy to avoid modifying the original
   const dashboardCopy = JSON.parse(JSON.stringify(dashboard))
-  
+
   // Remove top level properties
   delete dashboardCopy.id
   delete dashboardCopy.connection
   delete dashboardCopy.storage
-  
+
   // Remove specified properties from each item if items exist
   if (dashboardCopy.layout && Array.isArray(dashboardCopy.layout)) {
     dashboardCopy.layout = dashboardCopy.layout.map((item: any) => {
@@ -31,7 +31,7 @@ const filterDashboard = (dashboard: any): any => {
       return itemCopy
     })
   }
-  
+
   return dashboardCopy
 }
 

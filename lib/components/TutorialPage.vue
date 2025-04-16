@@ -109,6 +109,8 @@ import Editor from './Editor.vue'
 import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
 
+import { type DashboardStoreType } from '../stores/dashboardStore'
+
 import ResultsView from './ResultsView.vue'
 import CommunityModels from './CommunityModels.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
@@ -134,30 +136,36 @@ export default {
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
+    const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const saveEditors = inject<Function>('saveEditors')
     const saveConnections = inject<Function>('saveConnections')
     const saveModels = inject<Function>('saveModels')
+    const saveDashboards = inject<Function>('saveDashboards')
 
     if (
       !editorStore ||
       !connectionStore ||
       !modelStore ||
+      !dashboardStore ||
       !llmConnectionStore ||
       !saveEditors ||
       !saveConnections ||
-      !saveModels
+      !saveModels ||
+      !saveDashboards
     ) {
       throw new Error('Editor store is not provided!')
     }
     return {
       editorStore,
       connectionStore,
+      dashboardStore,
       llmConnectionStore,
       modelStore,
       saveEditors,
       saveConnections,
       saveModels,
+      saveDashboards,
       demoConnectionName,
       demoModelName,
     }
@@ -218,9 +226,11 @@ export default {
         this.editorStore,
         this.connectionStore,
         this.modelStore,
+        this.dashboardStore,
         this.saveEditors,
         this.saveConnections,
         this.saveModels,
+        this.saveDashboards,
       )
     },
     saveEditorsCall() {
