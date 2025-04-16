@@ -368,8 +368,7 @@ export default defineComponent({
           let type = getGeoTraitType(geoField)
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
-            chart:
-              type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
+            chart: { [internalConfig.value.geoField]: item.datum[internalConfig.value.geoField] }, 
             append,
           })
         } else if (internalConfig.value.colorField) {

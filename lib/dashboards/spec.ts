@@ -543,6 +543,7 @@ const createUSAMapSpec = (
           {
             name: 'select',
             select: 'point',
+            // value: intChart,
           },
         ],
         layer: [
@@ -635,7 +636,7 @@ const createUSAMapSpec = (
               name: 'highlight',
               select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
             },
-            { name: 'select', select: 'point', value: [] },
+            { name: 'select', select: 'point', value: intChart}
           ],
           encoding: {
             color: {

@@ -1,24 +1,48 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-
 const props = defineProps<{
   dashboard: object | null
   isOpen: boolean
 }>()
-
 const emit = defineEmits<{
   close: []
 }>()
-
 // Create a ref for the formatted JSON string
 const jsonString = ref<string>('')
+
+// Function to filter out unwanted properties
+const filterDashboard = (dashboard: any): any => {
+  if (!dashboard) return null
+  
+  // Create a deep copy to avoid modifying the original
+  const dashboardCopy = JSON.parse(JSON.stringify(dashboard))
+  
+  // Remove top level properties
+  delete dashboardCopy.id
+  delete dashboardCopy.connection
+  delete dashboardCopy.storage
+  
+  // Remove specified properties from each item if items exist
+  if (dashboardCopy.layout && Array.isArray(dashboardCopy.layout)) {
+    dashboardCopy.layout = dashboardCopy.layout.map((item: any) => {
+      const itemCopy = { ...item }
+      delete itemCopy.static
+      delete itemCopy.moved
+      return itemCopy
+    })
+  }
+  
+  return dashboardCopy
+}
 
 // Format the dashboard object as pretty-printed JSON when it changes
 watch(
   () => props.dashboard,
   (newDashboard) => {
     if (newDashboard) {
-      jsonString.value = JSON.stringify(newDashboard, null, 2)
+      // Filter the dashboard before stringifying
+      const filteredDashboard = filterDashboard(newDashboard)
+      jsonString.value = JSON.stringify(filteredDashboard, null, 2)
     }
   },
   { immediate: true, deep: true },
@@ -48,7 +72,6 @@ const handleClickOutside = (event: MouseEvent): void => {
   }
 }
 </script>
-
 <template>
   <div v-if="isOpen" class="popup-overlay" @click="handleClickOutside">
     <div class="popup-content" ref="popupContent" data-testid="dashboard-share-popup">
@@ -71,7 +94,6 @@ const handleClickOutside = (event: MouseEvent): void => {
     </div>
   </div>
 </template>
-
 <style scoped>
 .popup-overlay {
   position: fixed;
@@ -85,7 +107,6 @@ const handleClickOutside = (event: MouseEvent): void => {
   align-items: center;
   z-index: 1000;
 }
-
 .popup-content {
   background-color: var(--sidebar-bg);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -95,7 +116,6 @@ const handleClickOutside = (event: MouseEvent): void => {
   display: flex;
   flex-direction: column;
 }
-
 .popup-header {
   display: flex;
   justify-content: space-between;
@@ -103,12 +123,10 @@ const handleClickOutside = (event: MouseEvent): void => {
   padding: 15px;
   border-bottom: 1px solid var(--border);
 }
-
 .popup-header h3 {
   margin: 0;
   color: var(--text-color);
 }
-
 .close-button {
   background: none;
   border: none;
@@ -116,20 +134,17 @@ const handleClickOutside = (event: MouseEvent): void => {
   cursor: pointer;
   color: var(--text-color);
 }
-
 .popup-body {
   padding: 15px;
   flex: 1;
   overflow: auto;
 }
-
 .json-container {
   background-color: var(--sidebar-selector-bg);
   padding: 10px;
   overflow: auto;
   max-height: 50vh;
 }
-
 .json-container pre {
   margin: 0;
   color: var(--sidebar-selector-font);
@@ -137,14 +152,12 @@ const handleClickOutside = (event: MouseEvent): void => {
   font-family: monospace;
   font-size: 14px;
 }
-
 .popup-footer {
   padding: 15px;
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid var(--border);
 }
-
 .copy-button {
   background-color: var(--special-text);
   color: white;
@@ -153,35 +166,28 @@ const handleClickOutside = (event: MouseEvent): void => {
   cursor: pointer;
   font-weight: 500;
 }
-
 .copy-button:hover {
   opacity: 0.9;
 }
-
 /* Media queries for responsiveness */
 @media (max-width: 768px) {
   .popup-content {
     width: 95%;
   }
-
   .json-container {
     max-height: 40vh;
   }
 }
-
 @media (max-width: 480px) {
   .popup-header {
     padding: 10px;
   }
-
   .popup-body {
     padding: 10px;
   }
-
   .popup-footer {
     padding: 10px;
   }
-
   .json-container {
     max-height: 30vh;
   }

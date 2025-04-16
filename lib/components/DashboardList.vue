@@ -1,3 +1,4 @@
+<!-- DashboardList.vue -->
 <template>
   <sidebar-list title="Dashboards">
     <template #actions>
@@ -8,6 +9,13 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
+        <button
+          @click="importPopupVisible = true"
+          class="import-button"
+          data-testid="dashboard-import-button"
+        >
+          Import
+        </button>
         <loading-button :action="saveDashboards" :keyCombination="['control', 'd']">
           Save
         </loading-button>
@@ -17,61 +25,22 @@
         @close="creatorVisible = !creatorVisible"
         :testTag="testTag"
       />
+      <dashboard-import-popup
+        :isOpen="importPopupVisible"
+        @close="importPopupVisible = false"
+      />
     </template>
-    <div
+    
+    <dashboard-list-item
       v-for="item in contentList"
       :key="item.key"
-      :data-testid="`dashboard-list-id-${item.key}`"
-      :class="{
-        'sidebar-item': item.type !== 'creator',
-        'sidebar-item-selected': activeDashboardKey === item.id,
-      }"
-      @click="clickAction(item.type, item.id, item.key)"
-    >
-      <div
-        v-if="!['creator'].includes(item.type) && !isMobile"
-        v-for="_ in item.indent"
-        class="sidebar-padding"
-      ></div>
-      <i
-        v-if="!['dashboard', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-      >
-      </i>
-      <template v-if="item.type === 'dashboard'">
-        <tooltip content="Dashboard" position="right">
-          <i class="mdi mdi-view-dashboard"></i>
-        </tooltip>
-      </template>
-
-      <span class="truncate-text">
-        {{ item.label }}
-        <span class="text-light" v-if="item.type === 'connection'">
-          ({{
-            connectionStore.connections[item.label]?.model
-              ? connectionStore.connections[item.label]?.model
-              : 'No Model Set'
-          }})</span
-        >
-      </span>
-
-      <template v-if="item.type === 'connection'">
-        <span class="tag-container">
-          <dashboard-creator-icon :connection="item.label" title="New Dashboard" />
-        </span>
-        <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
-      </template>
-
-      <tooltip v-if="item.type === 'dashboard'" content="Delete Dashboard" position="left">
-        <span
-          class="remove-btn"
-          @click.stop="deleteDashboard(item.dashboard)"
-          :data-testid="`delete-dashboard-${item.label}`"
-        >
-          <i class="mdi mdi-trash-can"></i>
-        </span>
-      </tooltip>
-    </div>
+      :item="item"
+      :is-active="activeDashboardKey === item.id"
+      :is-collapsed="collapsed[item.key]"
+      @click="clickAction(item)"
+      @delete="showDeleteConfirmation"
+    />
+    
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -98,13 +67,11 @@ import { inject, ref, computed, onMounted } from 'vue'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
-import DashboardCreatorIcon from './DashboardCreatorIcon.vue'
+import DashboardImportPopup from './DashboardImportPopup.vue'
+import DashboardListItem from './DashboardListItem.vue'
 import { DashboardModel } from '../dashboards'
 import SidebarList from './SidebarList.vue'
-import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
-import StatusIcon from './StatusIcon.vue'
-import type { Connection } from '../connections'
 import { getDefaultValueFromHash } from '../stores/urlStore'
 
 // Helper function to build dashboard tree
@@ -191,7 +158,6 @@ export default {
   setup() {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const isMobile = inject<boolean>('isMobile', false)
     const saveDashboards = inject<Function>('saveDashboards')
 
     if (!dashboardStore || !connectionStore || !saveDashboards) {
@@ -200,6 +166,7 @@ export default {
 
     const collapsed = ref<Record<string, boolean>>({})
     const creatorVisible = ref(false)
+    const importPopupVisible = ref(false)
 
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
@@ -209,19 +176,6 @@ export default {
     }
 
     const current = getDefaultValueFromHash('dashboard') || ''
-
-    const connectionStateToStatus = (connection: Connection | null) => {
-      if (!connection) {
-        return 'disabled'
-      }
-      if (connection.running) {
-        return 'running'
-      } else if (connection.connected) {
-        return 'connected'
-      } else {
-        return 'disabled'
-      }
-    }
 
     onMounted(() => {
       Object.values(dashboardStore.dashboards).forEach((item) => {
@@ -254,14 +208,13 @@ export default {
     })
 
     return {
-      isMobile,
       connectionStore,
       dashboardStore,
       contentList,
       toggleCollapse,
       collapsed,
-      connectionStateToStatus,
       creatorVisible,
+      importPopupVisible,
       saveDashboards,
     }
   },
@@ -295,70 +248,43 @@ export default {
       this.showDeleteConfirmationState = false
       this.dashboardToDelete = null
     },
-
-    deleteDashboard(dashboard: DashboardModel) {
-      // Replace direct deletion with confirmation
-      this.showDeleteConfirmation(dashboard)
-    },
-    clickAction(type: string, id: string, key: string) {
-      if (type === 'dashboard') {
-        console.log('Dashboard clicked:', id)
-        this.$emit('dashboard-key-selected', id)
+    clickAction(item: any) {
+      if (item.type === 'dashboard') {
+        console.log('Dashboard clicked:', item.id)
+        this.$emit('dashboard-key-selected', item.id)
       } else {
-        this.toggleCollapse(key)
+        this.toggleCollapse(item.key)
       }
-    },
+    }
   },
   components: {
     DashboardCreatorInline,
-    DashboardCreatorIcon,
+    DashboardImportPopup,
+    DashboardListItem,
     SidebarList,
-    Tooltip,
-    LoadingButton,
-    StatusIcon,
+    LoadingButton
   },
 }
 </script>
 
 <style scoped>
-.icon-display {
+.button-container {
   display: flex;
-  justify-content: center;
-  /* Horizontal center */
-  align-items: center;
-  /* Vertical center */
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.active-dashboard {
-  font-weight: bold;
-}
-
-.remove-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-}
-
-.tag {
-  /* Push to the right */
-  font-size: 8px;
-  /* margin-left: 5px; */
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsl(210, 100%, 50%, 0.25);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
+.import-button {
+  background-color: var(--button-bg);
+  color: var(--text-color);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-.text-light {
-  color: var(--text-faint);
+.import-button:hover {
+  background-color: var(--button-hover-bg);
 }
 
 .confirmation-overlay {
