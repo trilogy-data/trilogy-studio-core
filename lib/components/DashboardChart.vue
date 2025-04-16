@@ -150,6 +150,7 @@ export default defineComponent({
 
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
+      const dashboardId = props.dashboardId
       startTime.value = Date.now()
       loading.value = true
       error.value = null
@@ -207,7 +208,12 @@ export default defineComponent({
 
         // Handle result
         const result = await resultPromise
-
+        if (props.dashboardId != dashboardId) {
+          console.log('Query result ignored due to dashboard ID mismatch')
+          loading.value = false
+          startTime.value = null
+          return
+        }
         // Update component state based on result
         if (result.success && result.results) {
           results.value = result.results

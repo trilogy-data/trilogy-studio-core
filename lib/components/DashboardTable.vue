@@ -8,6 +8,7 @@
       :results="results.data"
       :containerHeight="chartHeight"
       :container-width="chartWidth"
+      :prettyPrint="true"
       @cell-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
     />

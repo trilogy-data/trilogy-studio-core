@@ -129,7 +129,6 @@ export default {
   margin-bottom: 10px;
   background-color: var(--sidebar-selector-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
 }
 
 .dashboard-creator h4 {

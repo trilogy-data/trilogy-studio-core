@@ -74,8 +74,8 @@ export default defineComponent({
 /* Markdown Component Styles */
 .markdown-content {
   height: 100%;
-  padding: 5px;
-  overflow: auto;
+  padding: 0px 10px 0px 10px;
+  overflow-y: hidden;
 }
 
 .rendered-markdown {
@@ -88,7 +88,6 @@ export default defineComponent({
   margin-top: 0.25em;
   margin-bottom: 0.25em;
   border-bottom: 1px solid #eee;
-  padding-bottom: 0.2em;
 }
 
 .rendered-markdown h2 {

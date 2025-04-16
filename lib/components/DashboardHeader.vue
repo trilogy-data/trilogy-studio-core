@@ -42,9 +42,9 @@ const isLoading = ref(false)
 const isSharePopupOpen = ref(false) // State for share popup visibility
 
 // Toggle share popup visibility
-// function toggleSharePopup() {
-//   isSharePopupOpen.value = !isSharePopupOpen.value
-// }
+function toggleSharePopup() {
+  isSharePopupOpen.value = !isSharePopupOpen.value
+}
 
 // Close share popup
 function closeSharePopup() {
@@ -164,13 +164,13 @@ function handleRefresh() {
         </div>
       </div>
       <div class="grid-actions">
-        <!-- <button
+        <button
           @click="toggleSharePopup"
           class="share-button generic-button"
           data-testid="share-dashboard-button"
         >
-          Share
-        </button> -->
+          Export (WIP)
+        </button>
         <button
           @click="$emit('toggle-edit-mode')"
           class="toggle-mode-button generic-button"

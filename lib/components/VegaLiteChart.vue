@@ -174,13 +174,14 @@ import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import { Controls, Charts, type ChartControl } from '../dashboards/constants'
 import {
-  generateVegaSpec,
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
   getGeoTraitType,
   convertTimestampToISODate,
 } from '../dashboards/helpers'
+
+import { generateVegaSpec } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 
 import type { ScenegraphEvent, SignalValue } from 'vega'

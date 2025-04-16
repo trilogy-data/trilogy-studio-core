@@ -35,6 +35,9 @@ const editableItemName = ref('')
 // Header visibility state
 const isHeaderVisible = ref(false)
 
+// Filter visibility state
+const isFiltersVisible = ref(false)
+
 // Start editing an item title
 function startTitleEditing(): void {
   if (!props.editMode) return // Only allow editing in edit mode
@@ -125,6 +128,11 @@ const supportsFilters = computed(() => {
   //@ts-ignore
   return [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.value.type)
 })
+
+// Get the count of filters applied to this item
+const filterCount = computed(() => {
+  return itemData.value.filters ? itemData.value.filters.length : 0
+})
 </script>
 
 <template>
@@ -135,8 +143,18 @@ const supportsFilters = computed(() => {
       'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
       'grid-item-edit-style': editMode,
     }"
-    @mouseenter="isHeaderVisible = true"
-    @mouseleave="isHeaderVisible = false"
+    @mouseenter="
+      () => {
+        isHeaderVisible = true
+        isFiltersVisible = true
+      }
+    "
+    @mouseleave="
+      () => {
+        isHeaderVisible = false
+        isFiltersVisible = false
+      }
+    "
   >
     <!-- Edit Content button (always visible in edit mode) -->
     <button
@@ -196,34 +214,82 @@ const supportsFilters = computed(() => {
       </div>
     </div>
 
-    <!-- Filters display (for both edit and view modes) -->
+    <!-- Filters display container -->
     <div class="filters-container" v-if="supportsFilters">
-      <div
-        class="filter-tag"
-        v-for="(filter, index) in itemData.filters"
-        :key="`${filter.source}-${filter.value}-${index}`"
-      >
-        <span class="filter-content">
-          <span class="filter-source"
-            >{{ filter.source === 'global' ? filter.source : 'cross' }}:</span
-          >
-          <span class="filter-value">{{
-            filter.value.replace(/'''/g, "'").replace('local.', '')
-          }}</span>
-        </span>
-        <button
-          class="filter-remove-btn"
-          @click="removeFilter(filter.source)"
-          title="Remove filter"
-          v-if="filter.source !== 'global'"
+      <!-- Edit mode - show filters normally -->
+      <template v-if="editMode">
+        <div
+          class="filter-tag"
+          v-for="(filter, index) in itemData.filters"
+          :key="`${filter.source}-${filter.value}-${index}`"
         >
-          ×
-        </button>
-      </div>
+          <span class="filter-content">
+            <span class="filter-source"
+              >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+            >
+            <span class="filter-value">
+              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+            >
+          </span>
+          <button
+            class="filter-remove-btn"
+            @click="removeFilter(filter.source)"
+            title="Remove filter"
+            v-if="filter.source !== 'global'"
+          >
+            ×
+          </button>
+        </div>
+      </template>
+
+      <!-- View mode - show icon with count, or detailed filters on mouseover -->
+      <template v-else>
+        <div class="filter-summary" v-if="!isFiltersVisible && filterCount > 0">
+          <svg
+            class="filter-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+        </div>
+
+        <div v-if="isFiltersVisible && filterCount > 0" class="filter-details">
+          <div
+            class="filter-tag"
+            v-for="(filter, index) in itemData.filters"
+            :key="`${filter.source}-${filter.value}-${index}`"
+          >
+            <span class="filter-content">
+              <span class="filter-source"
+                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+              >
+              <span class="filter-value">
+                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+              >
+            </span>
+            <button
+              class="filter-remove-btn"
+              @click="removeFilter(filter.source)"
+              title="Remove filter"
+              v-if="filter.source !== 'global'"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Content area -->
-    <div class="content-area">
+    <div class="content-area" :class="{ 'content-area-filter': supportsFilters }">
       <!-- Render the appropriate component based on cell type -->
       <component
         :is="cellComponent"
@@ -246,7 +312,10 @@ const supportsFilters = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
-  position: relative; /* Important for positioning the overlay header */
+  border: 1px solid var(--border);
+  position: relative;
+  /* Important for positioning the overlay header */
+  overflow-y: hidden;
 }
 
 .grid-item-edit-style {
@@ -295,6 +364,10 @@ const supportsFilters = computed(() => {
   flex-direction: column;
   width: 100%;
   height: 100%;
+}
+
+.content-area-filter {
+  height: calc(100% - 24px);
 }
 
 .item-title-container {
@@ -385,7 +458,7 @@ const supportsFilters = computed(() => {
 .filters-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  /* gap: 4px; */
   /* padding: 3px 6px; */
   /* border-bottom: 1px solid var(--border); */
   /*background-color: var(--sidebar-bg);*/
@@ -397,13 +470,13 @@ const supportsFilters = computed(() => {
   align-items: center;
   /* background-color: var(--sidebar-selector-bg); */
   /* border: 1px solid var(--border); */
-  padding: 1px 6px 1px 6px;
+  padding: 0px 3px 0px 3px;
   font-size: calc(var(--small-font-size) - 5px);
 }
 
 .filter-content {
   display: flex;
-  gap: 2px;
+  /* gap: 2px; */
   align-items: center;
 }
 
@@ -443,5 +516,45 @@ const supportsFilters = computed(() => {
   font-style: italic;
   color: var(--text-muted);
   font-size: var(--small-font-size);
+}
+
+/* View mode filter summary styles */
+.filter-summary {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  /* background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.5); */
+  /* border-radius: 12px; */
+  cursor: pointer;
+}
+
+.filter-icon {
+  margin-right: 3px;
+  color: var(--special-text);
+}
+
+.filter-count {
+  font-size: calc(var(--small-font-size) - 3px);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.filter-details {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 2px;
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.7);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

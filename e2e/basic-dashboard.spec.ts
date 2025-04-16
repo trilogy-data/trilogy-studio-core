@@ -22,26 +22,26 @@ async function getPixelColor(page, x, y) {
     ({ x, y }) => {
       const canvas = document.querySelector('.vega-container canvas')
       if (!canvas) return null
-      
+
       // Get the canvas's CSS dimensions (how it appears on screen)
       const displayRect = canvas.getBoundingClientRect()
-      
+
       // Get the canvas's actual dimensions (its internal coordinate system)
       const width = canvas.width
       const height = canvas.height
-      
+
       // Calculate the scale ratio between display size and actual size
       const scaleX = width / displayRect.width
       const scaleY = height / displayRect.height
-      
+
       // Convert the coordinates from parent CSS space to canvas internal space
       const canvasX = Math.round(x * scaleX)
       const canvasY = Math.round(y * scaleY)
-      
+
       // Now use the converted coordinates
       const context = canvas.getContext('2d')
       const pixelData = context.getImageData(canvasX, canvasY, 1, 1).data
-      
+
       return {
         r: pixelData[0],
         g: pixelData[1],

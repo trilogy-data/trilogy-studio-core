@@ -58,6 +58,7 @@ import { ColumnType } from '../editors/results'
 import type { PropType, ShallowRef } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
+import { snakeCaseToCapitalizedWords } from '../dashboards/formatting.ts'
 
 function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   if (!data) {
@@ -247,6 +248,10 @@ export default {
       type: Function,
       default: () => {},
     },
+    prettyPrint: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     // Inject the store that has been provided elsewhere in the app
@@ -289,7 +294,7 @@ export default {
       this.headers.forEach((details, _) => {
         let formatting = typeToFormatter(details)
         const result = {
-          title: details.name,
+          title: this.prettyPrint ? snakeCaseToCapitalizedWords(details.name) : details.name,
 
           // titleFormatter: 'plaintext',
           field: details.name,
