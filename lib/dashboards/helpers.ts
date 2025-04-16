@@ -233,7 +233,7 @@ export const determineDefaultConfig = (
     }
   } else if (defaults.chartType === 'headline') {
     defaults.xField = numericColumns[0].name
-  } else if (defaults.chartType === 'line') {
+  } else if (['line', 'area'].includes(defaults.chartType || '')) {
     defaults.xField = temporalColumns[0].name
     const nonTemporalNumericColumns = numericColumns.filter(
       (col) => col.name !== temporalColumns[0].name,

@@ -4,7 +4,7 @@ import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ConnectionStoreType } from '../stores/connectionStore'
 import { DashboardModel } from '../dashboards'
 
-//@ts-ignore
+// @ts-ignore
 const props = defineProps<{
   isOpen: boolean
 }>()
