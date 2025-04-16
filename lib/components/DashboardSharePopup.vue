@@ -53,7 +53,7 @@ const handleClickOutside = (event: MouseEvent): void => {
   <div v-if="isOpen" class="popup-overlay" @click="handleClickOutside">
     <div class="popup-content" ref="popupContent" data-testid="dashboard-share-popup">
       <div class="popup-header">
-        <h3>Dashboard JSON</h3>
+        <h3>Definition</h3>
         <button @click="emit('close')" class="close-button" data-testid="close-popup-button">
           ✕
         </button>
@@ -65,7 +65,7 @@ const handleClickOutside = (event: MouseEvent): void => {
       </div>
       <div class="popup-footer">
         <button @click="copyToClipboard" class="copy-button" data-testid="copy-json-button">
-          {{ copySuccess ? 'Copied!' : 'Copy JSON' }}
+          {{ copySuccess ? 'Copied!' : 'Copy' }}
         </button>
       </div>
     </div>

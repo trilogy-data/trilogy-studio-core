@@ -132,7 +132,7 @@ const generateTooltipFields = (
 /**
  * Create a base chart specification
  */
-const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | null, isMobile: boolean = false) => {
+const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | null) => {
     const intChart: Array<Partial<ChartConfig>> = chartSelection
         ? chartSelection.map((x) => toRaw(x))
         : []
@@ -268,7 +268,8 @@ const createInteractiveLayer = (
             y: createFieldEncoding(config.yField || '', columns),
             tooltip: tooltipFields,
             ...encoding
-        }
+        },
+        params: undefined as Array<any> | undefined,
     }
 
     if (!filtered) {
@@ -344,8 +345,8 @@ const createLineChartSpec = (
         data: undefined,
         params: [],
         layer: [
-            createInteractiveLayer(config, data, columns, tooltipFields, encoding),
-            createInteractiveLayer(config, data, columns, tooltipFields, encoding, true)
+            createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
+            createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true)
         ]
     }
 }
@@ -825,7 +826,7 @@ export const generateVegaSpec = (
         : []
 
     // Create base spec
-    let spec: any = createBaseSpec(data, chartSelection, isMobile)
+    let spec: any = createBaseSpec(data, chartSelection)
 
     // Set up color encoding
     let encoding: any = {}
