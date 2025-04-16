@@ -144,12 +144,16 @@ const filterCount = computed(() => {
       'grid-item-edit-style': editMode,
     }"
     @mouseenter="
-      isHeaderVisible = true
-      isFiltersVisible = true
+      () => {
+        isHeaderVisible = true
+        isFiltersVisible = true
+      }
     "
     @mouseleave="
-      isHeaderVisible = false
-      isFiltersVisible = false
+      () => {
+        isHeaderVisible = false
+        isFiltersVisible = false
+      }
     "
   >
     <!-- Edit Content button (always visible in edit mode) -->
