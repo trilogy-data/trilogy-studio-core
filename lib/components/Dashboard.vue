@@ -87,7 +87,7 @@ const globalCompletion = ref<CompletionItem[]>([])
 // Get the active dashboard
 const dashboard = computed(() => {
   // Try to find the dashboard by name
-  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.name === props.name)
+  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
   if (!dashboard && props.connectionId) {
@@ -475,7 +475,7 @@ onBeforeUnmount(() => {
 
     <div class="grid-container">
       <GridLayout
-        :col-num="12"
+        :col-num="16"
         :row-height="30"
         :is-draggable="draggable"
         :is-resizable="resizable"

@@ -1,14 +1,22 @@
 import { Editor, EditorTag } from '../editors'
 import { ModelImport } from './import'
 import { ModelSource } from './model'
-
+import { type EditorStoreType } from '../stores/editorStore'
+import { type DashboardStoreType } from '../stores/dashboardStore'
+import { type ModelConfigStoreType } from '../stores/modelStore'
 export class ModelImportService {
-  private editorStore: any
-  private modelStore: any
+  private editorStore: EditorStoreType
+  private modelStore: ModelConfigStoreType
+  private dashboardStore: DashboardStoreType
 
-  constructor(editorStore: any, modelStore: any) {
+  constructor(
+    editorStore: EditorStoreType,
+    modelStore: ModelConfigStoreType,
+    dashboardStore: DashboardStoreType,
+  ) {
     this.editorStore = editorStore
     this.modelStore = modelStore
+    this.dashboardStore = dashboardStore
   }
 
   /**
@@ -49,7 +57,7 @@ export class ModelImportService {
       alias: string
       purpose: EditorTag | null
       content: string
-      type?: string | undefined
+      type?: 'sql' | 'dashboard' | undefined
     }[]
   > {
     return Promise.all(
@@ -65,7 +73,7 @@ export class ModelImportService {
             alias: component.alias,
             purpose: this.purposeToTag(component.purpose),
             content,
-            type: component.type,
+            type: component.type as 'sql' | 'dashboard' | undefined,
           }
         } catch (error) {
           console.error(error)
@@ -87,6 +95,13 @@ export class ModelImportService {
    * @param connectionName Connection name to associate with the model
    * @returns Promise resolving when import is complete
    */
+  /**
+   * Imports a model from a URL and creates editors for its components
+   * @param modelName Name of the model to create
+   * @param importAddress URL to import the model from
+   * @param connectionName Connection name to associate with the model
+   * @returns Promise resolving when import is complete
+   */
   public async importModel(
     modelName: string,
     importAddress: string,
@@ -100,15 +115,58 @@ export class ModelImportService {
       const modelImportBase = await this.fetchModelImportBase(importAddress)
       const data = await this.fetchModelImports(modelImportBase)
 
-      // Create model sources from imported components
+      // Process imported components
+      //@ts-ignore
       this.modelStore.models[modelName].sources = data
         .map((response) => {
+          // Handle dashboard imports
+          if (response.type === 'dashboard' && response.content) {
+            try {
+              // Parse dashboard JSON
+              const dashboardObj = JSON.parse(response.content)
+
+              // Set storage to "local"
+              dashboardObj.storage = 'local'
+
+              // Set connection to the selected connection
+              dashboardObj.connection = connectionName
+
+              // Check if a dashboard with the same name already exists on this connection
+              const existingDashboard = Object.values(this.dashboardStore.dashboards).find(
+                (dashboard) =>
+                  dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
+              )
+
+              if (existingDashboard) {
+                // Reuse the existing dashboard's ID
+                dashboardObj.id = existingDashboard.id
+
+                // Update the existing dashboard
+                this.dashboardStore.dashboards[existingDashboard.id] = dashboardObj
+              } else {
+                // No existing dashboard found, generate a new ID
+                dashboardObj.id = Math.random().toString(36).substring(2, 15)
+
+                // Add it to dashboard store
+                this.dashboardStore.addDashboard(dashboardObj)
+              }
+
+              // Return null as we don't need to create a model source for dashboards
+              return null
+            } catch (error) {
+              console.error('Error importing dashboard:', error)
+              return null
+            }
+          }
+
+          // Handle non-dashboard components (SQL and trilogy files)
           let editorName = response.name
           // @ts-ignore
           let existing: Editor | undefined = Object.values(this.editorStore.editors).find(
             // @ts-ignore
             (editor) => editor.name === editorName && editor.connection === connectionName,
           )
+
           // Create or update the editor based on editorName
           let editor: Editor
           if (!existing || existing === undefined) {
@@ -148,7 +206,8 @@ export class ModelImportService {
           return new ModelSource(editor.id, response.alias || response.name, [], [])
         })
         .filter((source) => source)
-      // mark changes
+
+      // Mark changes
       this.modelStore.models[modelName].changed = true
     } catch (error) {
       console.error('Error importing model:', error)

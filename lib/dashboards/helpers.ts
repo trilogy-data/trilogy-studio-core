@@ -193,6 +193,8 @@ export const determineDefaultConfig = (
   } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
     // Two categorical dimensions and a numeric - use heatmap
     defaults.chartType = 'heatmap'
+  } else if (numericColumns.length > 0 && categoricalColumns.length == 0) {
+    defaults.chartType = 'headline'
   }
 
   // now set defaults for each chart type
@@ -231,7 +233,7 @@ export const determineDefaultConfig = (
     }
   } else if (defaults.chartType === 'headline') {
     defaults.xField = numericColumns[0].name
-  } else if (defaults.chartType === 'line') {
+  } else if (['line', 'area'].includes(defaults.chartType || '')) {
     defaults.xField = temporalColumns[0].name
     const nonTemporalNumericColumns = numericColumns.filter(
       (col) => col.name !== temporalColumns[0].name,
@@ -256,7 +258,9 @@ export const determineDefaultConfig = (
     // 2. A numeric field for the color encoding
 
     // Look for columns that might contain state information
+    let isLatLong = false
     if (latitudeColumns.length > 0 && longitudeColumns.length > 0) {
+      isLatLong = true
       defaults.yField = latitudeColumns[0].name
       defaults.xField = longitudeColumns[0].name
       if (numericColumns.length > 0) {
@@ -268,7 +272,7 @@ export const determineDefaultConfig = (
     }
     if (geoColumns.length > 0) {
       defaults.geoField = geoColumns[0].name
-      if (numericColumns.length > 0) {
+      if (numericColumns.length > 0 && !isLatLong) {
         defaults.colorField = numericColumns[0].name
       }
     }

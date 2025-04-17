@@ -6,6 +6,8 @@ import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { isTemporalColumn, isNumericColumn, getColumnHasTrait } from './helpers'
 
+const HIGHLIGHT_COLOR = '#FF7F7F'
+
 /**
  * Determines if more than 80% of data rows are within the US bounding box
  * @param rows - Array of data objects
@@ -151,7 +153,7 @@ const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | 
         name: 'highlight',
         select: {
           type: 'point',
-          on: 'pointerover',
+          on: 'mouseover',
           clear: 'mouseout',
         },
       },
@@ -203,6 +205,14 @@ const createColorEncoding = (
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
       scale: fieldType === 'quantitative' ? { scheme: 'viridis' } : { scheme: 'category20c' },
+      condition: [
+        {
+          param: 'highlight',
+          empty: false,
+          value: HIGHLIGHT_COLOR,
+        },
+      ],
+
       ...getFormatHint(colorField, columns),
       ...legendConfig,
     }
@@ -280,11 +290,21 @@ const createInteractiveLayer = (
       tooltip: tooltipFields,
       ...encoding,
     },
-    params: undefined as Array<any> | undefined,
+    params: [] as Array<any>,
   }
 
   if (!filtered) {
-    layer.params = [createBrushParam(intChart, config)]
+    layer.params = [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      createBrushParam(intChart, config),
+    ]
   }
 
   return layer
@@ -523,6 +543,7 @@ const createUSAMapSpec = (
           {
             name: 'select',
             select: 'point',
+            // value: intChart,
           },
         ],
         layer: [
@@ -615,7 +636,7 @@ const createUSAMapSpec = (
               name: 'highlight',
               select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
             },
-            { name: 'select', select: 'point', value: [] },
+            { name: 'select', select: 'point', value: intChart },
           ],
           encoding: {
             color: {
@@ -882,6 +903,7 @@ export const generateVegaSpec = (
   switch (config.chartType) {
     case 'bar':
       chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding)
+
       break
 
     case 'barh':
@@ -910,7 +932,6 @@ export const generateVegaSpec = (
 
     case 'usa-map':
       chartSpec = createUSAMapSpec(config, data, columns, isMobile, intChart)
-      console.log(chartSpec)
       break
 
     case 'boxplot':
@@ -942,6 +963,9 @@ export const generateVegaSpec = (
       },
     ]
   }
-
+  if (config.chartType === 'barh') {
+    console.log('look at this')
+    console.log(spec)
+  }
   return spec
 }

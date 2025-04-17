@@ -143,6 +143,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import { ModelImportService } from '../models/helpers'
 import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
+import type { DashboardStoreType } from '../stores/dashboardStore'
 
 export default defineComponent({
   name: 'ModelCreator',
@@ -191,14 +192,15 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const saveAll = inject<Function>('saveAll')
 
-    if (!connectionStore || !modelStore || !editorStore || !saveAll) {
+    if (!connectionStore || !modelStore || !editorStore || !saveAll || !dashboardStore) {
       throw 'must inject modelStore to ModelCreator'
     }
 
     // Create the model import service
-    const modelImportService = new ModelImportService(editorStore, modelStore)
+    const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
 
     // Array of available connection names
     let connections = connectionStore.connections

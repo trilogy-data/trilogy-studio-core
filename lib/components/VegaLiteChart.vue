@@ -177,7 +177,6 @@ import {
   determineDefaultConfig,
   filteredColumns,
   determineEligibleChartTypes,
-  getGeoTraitType,
   convertTimestampToISODate,
 } from '../dashboards/helpers'
 
@@ -357,84 +356,65 @@ export default defineComponent({
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
-      if (item && ['line', 'area'].includes(internalConfig.value.chartType)) {
-        if (!internalConfig.value.xField) {
-          return
-        }
-        //layer_1 has selection
-        let line = item.items.find((x: any) => x.name == 'layer_1_marks')
-        let comp = item.items.find((x: any) => x.name == 'layer_0_marks')
-        if (!line || !comp || line.items.length === comp.items.length) {
-          emit('background-click')
-          return
-        }
-        if (line.items.length == 0) {
-          emit('background-click')
-          return
-        }
-        let start = line.items[0].datum[internalConfig.value.xField]
-        let end = line.items[line.items.length - 1].datum[internalConfig.value.xField]
-        let timeField = props.columns.get(internalConfig.value.xField)
-        let timeAddress = timeField?.address
-        if (!timeField || !timeAddress) {
-          return
-        }
-        if (timeField.type == 'date') {
-          emit('dimension-click', {
-            filters: {
-              [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
-            },
-            chart: { [internalConfig.value.xField]: [start, end] },
-            append,
-          })
-        }
-      } else if (item && item.datum) {
+
+      if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoField = props.columns.get(internalConfig.value.geoField)
           let geoConcept = geoField?.address
           if (!geoConcept || !geoField) {
             return
           }
-          let type = getGeoTraitType(geoField)
           emit('dimension-click', {
             filters: { [geoConcept]: item.datum[internalConfig.value.geoField] },
-            chart:
-              type == 'us_state_short' ? { Feature: item.datum.abbr } : { Feature: item.datum.id },
+            chart: { [internalConfig.value.geoField]: item.datum[internalConfig.value.geoField] },
             append,
           })
-        }
-
-        // Original handling for other chart types
-        let xFieldRaw = internalConfig.value.xField
-        let yFieldRaw = internalConfig.value.yField
-        if (!xFieldRaw || !yFieldRaw) {
-          return
-        }
-        //map the fields to the actual column names from the props.columns - the fields will be names with . replaced with _
-        let xField = props.columns.get(xFieldRaw)?.address
-        let yField = props.columns.get(yFieldRaw)?.address
-        if (!xField || !yField) {
-          return
-        }
-        // eligible are categorical and temporal fields
-        let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
-        eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
-        if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
+        } else if (internalConfig.value.colorField) {
+          let colorField = props.columns.get(internalConfig.value.colorField)
+          let colorConcept = colorField?.address
+          if (!colorConcept || !colorField) {
+            return
+          }
           emit('dimension-click', {
-            filters: { [xField]: item.datum[xFieldRaw] },
-            chart: { [xFieldRaw]: item.datum[xFieldRaw] },
+            filters: { [colorConcept]: item.datum[internalConfig.value.colorField] },
+            chart: {
+              [internalConfig.value.colorField]: item.datum[internalConfig.value.colorField],
+            },
             append,
           })
+        } else {
+          // Original handling for other chart types
+          let xFieldRaw = internalConfig.value.xField
+          let yFieldRaw = internalConfig.value.yField
+          if (!xFieldRaw || !yFieldRaw) {
+            return
+          }
+          //map the fields to the actual column names from the props.columns - the fields will be names with . replaced with _
+          let xField = props.columns.get(xFieldRaw)?.address
+          let yField = props.columns.get(yFieldRaw)?.address
+          if (!xField || !yField) {
+            return
+          }
+          // eligible are categorical and temporal fields
+          let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
+          eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+          if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
+            emit('dimension-click', {
+              filters: { [xField]: item.datum[xFieldRaw] },
+              chart: { [xFieldRaw]: item.datum[xFieldRaw] },
+              append,
+            })
+          }
+          // todo: figure out if we want to support both?
+          else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
+            emit('dimension-click', {
+              filters: { [yField]: item.datum[yFieldRaw] },
+              chart: { [yFieldRaw]: item.datum[yFieldRaw] },
+              append,
+            })
+          }
+          emit('point-click', item.datum)
         }
-        // todo: figure out if we want to support both?
-        else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-          emit('dimension-click', {
-            filters: { [yField]: item.datum[yFieldRaw] },
-            chart: { [yFieldRaw]: item.datum[yFieldRaw] },
-            append,
-          })
-        }
-        emit('point-click', item.datum)
       } else {
         emit('background-click')
       }
@@ -460,8 +440,10 @@ export default defineComponent({
         }).then((result) => {
           if (['area', 'line'].includes(internalConfig.value.chartType)) {
             result.view.addSignalListener('brush', handleBrush)
+            result.view.addEventListener('click', handlePointClick)
             removeEventListener = () => {
               result.view.removeSignalListener('brush', handleBrush)
+              result.view.removeEventListener('click', handlePointClick)
             }
           } else if (isMobile.value) {
             result.view.addEventListener('touchend', handlePointClick)

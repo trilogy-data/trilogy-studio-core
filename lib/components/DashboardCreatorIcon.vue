@@ -1,7 +1,7 @@
 <template>
-  <tooltip :content="title">
+  <tooltip :content="title" position="left">
     <span @click.stop="createDashboard" class="dashboard-creator-icon">
-      <i class="mdi mdi-view-dashboard-plus"></i>
+      <i class="mdi mdi-table-plus"></i>
     </span>
   </tooltip>
 </template>

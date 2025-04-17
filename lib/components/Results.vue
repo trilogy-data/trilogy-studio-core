@@ -193,6 +193,7 @@ export default {
 .sql-view {
   background: var(--result-window-bg);
   color: var(--text-color);
+  height: 100%;
 }
 
 .sql-view pre {
