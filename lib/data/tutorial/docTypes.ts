@@ -12,10 +12,12 @@ export class Paragraph {
 export class Article {
   title: string
   paragraphs: Paragraph[]
+  displayName: string | undefined
 
-  constructor(title: string, paragraphs: Paragraph[]) {
+  constructor(title: string,  paragraphs: Paragraph[],   displayName: string | undefined = undefined) {
     this.title = title
     this.paragraphs = paragraphs
+    this.displayName = displayName
   }
 }
 

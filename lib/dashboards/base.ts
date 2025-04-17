@@ -55,6 +55,8 @@ export interface Dashboard {
   updatedAt: Date
   filter: string | null
   imports: Import[]
+  version: number
+  published: boolean
 }
 
 // Cell types enum
@@ -79,6 +81,8 @@ export class DashboardModel implements Dashboard {
   updatedAt: Date
   filter: string | null = null
   imports: Import[] = []
+  version: number
+  published: boolean = false
 
   constructor({
     id,
@@ -92,6 +96,8 @@ export class DashboardModel implements Dashboard {
     updatedAt,
     filter = null,
     imports = [],
+    version = 1,
+    published = false,
   }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
     this.id = id
     this.name = name
@@ -104,6 +110,8 @@ export class DashboardModel implements Dashboard {
     this.updatedAt = updatedAt || new Date()
     this.filter = filter
     this.imports = imports
+    this.version = version 
+    this.published = published
   }
 
   // Add a new item to the dashboard
@@ -335,6 +343,8 @@ export class DashboardModel implements Dashboard {
       updatedAt: this.updatedAt,
       filter: this.filter,
       imports: this.imports,
+      version: this.version,
+      published: this.published,
     }
   }
 

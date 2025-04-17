@@ -86,7 +86,7 @@ export default {
           topic.articles.forEach((article) => {
             list.push({
               id: `article${KeySeparator}${topic.title}${KeySeparator}${article.title}`,
-              name: article.title,
+              name: article.displayName || article.title,
               indent: 1,
               count: article.paragraphs.length,
               type: 'article',

@@ -1,5 +1,5 @@
 import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
-
+import { DashboardTutorial } from './dashboardTutorial.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
     new Article('Welcome', [
@@ -13,16 +13,16 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Purpose',
-        'If this is your first time, we recommend that you use the demo model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
+        'In the rest of this tutorial, we will walk you through a demo-model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
       ),
       new Paragraph(
         'Purpose',
-        'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections, however. ',
+        'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections for reuse. ',
         'tip',
       ),
       new Paragraph(
         'Purpose',
-        'Models can be imported - in fact, Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo is available there. Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
+        'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
       ),
       new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
       new Paragraph('ModelList', '', 'model-validator'),
@@ -78,14 +78,15 @@ order by
       new Paragraph('Purpose', '', 'demo-editor'),
       new Paragraph(
         'Purpose',
-        'For the second query, could you figure out how to visualize the data?',
+        'For the second query, could you figure out how to visualize the data? Editors support inline visualization for rapid introspection; to create more complicated visuals, check out the dashboarding tutorial up next.',
         'tip',
       ),
       new Paragraph(
         'Purpose',
         'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',
       ),
-    ]),
+    ], 'Welcome and Query Tutorial'),
+    DashboardTutorial,
     new Article('Functionality', [
       new Paragraph(
         'Tip',
@@ -112,6 +113,7 @@ order by
         'tip',
       ),
     ]),
+    
     new Article('Querying', [
       new Paragraph(
         'Querying',
