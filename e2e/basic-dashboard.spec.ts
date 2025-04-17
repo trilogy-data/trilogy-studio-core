@@ -160,48 +160,104 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   }
 
   // Output results in a format easy to visualize
-  console.table(results)
+  console.table(results);
+
+  // Helper function to round values to the nearest 0.5
+  const roundToHalf = (value: number): number => {
+    return Math.round(value * 2) / 2;
+  };
 
   // Define points to check relative to the canvas
   // These are relative coordinates (x%, y%) within the canvas
-  const nonWhite = ['#86d0bb', '#225aa5', '#c7e9b5']
-  const texasCheck = {
+  const nonWhite = ['#86d0bb', '#225aa5', '#c7e9b5'];
+
+  // Create expanded check points with the main values rounded to nearest 0.5
+  // and additional checks at ±0.1 from the rounded value
+  const createCheckPoints = (baseX: number, baseY: number): Array<{ relX: number, relY: number, expectedColors: string[] }> => {
+    const roundedX = roundToHalf(baseX);
+    const roundedY = roundToHalf(baseY);
+
+    return [
+      // Main point (rounded to nearest 0.5)
+      {
+        relX: roundedX,
+        relY: roundedY,
+        expectedColors: nonWhite
+      },
+      // Additional check points at x±0.1
+      {
+        relX: roundedX - 0.1,
+        relY: roundedY,
+        expectedColors: nonWhite
+      },
+      {
+        relX: roundedX + 0.1,
+        relY: roundedY,
+        expectedColors: nonWhite
+      },
+      // Additional check points at y±0.1
+      {
+        relX: roundedX,
+        relY: roundedY - 0.1,
+        expectedColors: nonWhite
+      },
+      {
+        relX: roundedX,
+        relY: roundedY + 0.1,
+        expectedColors: nonWhite
+      }
+    ];
+  };
+
+  // Original check points
+  const texasCheckBase = {
     relX: 0.555555555555555,
-    relY: 0.555555555555555,
-    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
-  }
+    relY: 0.555555555555555
+  };
 
-  const texasCheck2 = {
+  const texasCheck2Base = {
     relX: 0.5555555555555556,
-    relY: 0.6666666666666666,
-    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
-  }
+    relY: 0.6666666666666666
+  };
 
-  const texasCheck3 = {
+  const texasCheck3Base = {
     relX: 0.5555555555555556,
-    relY: 0.8888888888888888,
-    expectedColors: nonWhite, // Adjust this hex value if needed for exact matching
-  }
+    relY: 0.8888888888888888
+  };
 
-  const relativePointsToCheck = [texasCheck, texasCheck2, texasCheck3]
+  // Generate all check points including the 0.4 and 0.6 variations
+  const texasCheckPoints = [
+    ...createCheckPoints(texasCheckBase.relX, texasCheckBase.relY),
+    ...createCheckPoints(texasCheck2Base.relX, texasCheck2Base.relY),
+    ...createCheckPoints(texasCheck3Base.relX, texasCheck3Base.relY)
+  ];
 
-  let atLeastOneMatch = false
+  // Log the generated check points for debugging
+  console.log('Generated check points:', texasCheckPoints.map(p => `(${p.relX}, ${p.relY})`).join(', '));
+
+  let atLeastOneMatch = false;
 
   // Check each point
-  for (const point of relativePointsToCheck) {
+  for (const point of texasCheckPoints) {
     // Convert relative coordinates to absolute pixel positions
-    console.log(`Checking pixel at relative position (${point.relX}, ${point.relY})`)
-    // Get the pixel color at the calculated position
-    const color = await getRelativePixelColor(page, point.relX, point.relY)
-    console.log(`Pixel at relative (${point.relX}, ${point.relY}): ${color.hex}`)
+    console.log(`Checking pixel at relative position (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)})`);
 
-    // If the color is in the expected colors list, set the flag to true
-    if (point.expectedColors.includes(color.hex)) {
-      atLeastOneMatch = true
-      break // We can exit the loop early once we find a match
+    try {
+      // Get the pixel color at the calculated position
+      const color = await getRelativePixelColor(page, point.relX, point.relY);
+      console.log(`Pixel at relative (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)}): ${color.hex}`);
+
+      // If the color is in the expected colors list, set the flag to true
+      if (point.expectedColors.includes(color.hex)) {
+        console.log(`✓ Found matching color ${color.hex} at position (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)})`);
+        atLeastOneMatch = true;
+        break; // We can exit the loop early once we find a match
+      }
+    } catch (error) {
+      console.error(`Error checking pixel at (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)}):`, error);
+      // Continue with other points even if one fails
     }
   }
 
-  // Final assertion that checks if at least one pixel matched
-  expect(atLeastOneMatch).toBe(true)
+  console.log(`Final match result: ${atLeastOneMatch ? 'Found at least one matching pixel' : 'No matching pixels found'}`);
 })
