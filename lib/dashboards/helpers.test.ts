@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   determineDefaultConfig,
   determineEligibleChartTypes,
@@ -11,7 +11,6 @@ import {
   getGeoTraitType
 } from './helpers'
 import { type Row, type ResultColumn } from '../editors/results'
-import { Charts } from './constants'
 import { ColumnType } from '../editors/results'
 
 describe('Chart Utils', () => {
