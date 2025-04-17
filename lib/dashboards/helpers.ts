@@ -258,7 +258,9 @@ export const determineDefaultConfig = (
     // 2. A numeric field for the color encoding
 
     // Look for columns that might contain state information
+    let isLatLong = false;
     if (latitudeColumns.length > 0 && longitudeColumns.length > 0) {
+      isLatLong = true
       defaults.yField = latitudeColumns[0].name
       defaults.xField = longitudeColumns[0].name
       if (numericColumns.length > 0) {
@@ -270,7 +272,7 @@ export const determineDefaultConfig = (
     }
     if (geoColumns.length > 0) {
       defaults.geoField = geoColumns[0].name
-      if (numericColumns.length > 0) {
+      if (numericColumns.length > 0 && !isLatLong) {
         defaults.colorField = numericColumns[0].name
       }
     }
