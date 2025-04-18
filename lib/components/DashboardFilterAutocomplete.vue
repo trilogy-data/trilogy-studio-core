@@ -94,32 +94,32 @@ watch(filteredItems, (items) => {
 })
 
 // Handle keyboard navigation in dropdown
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (!isVisible.value) return
+// const handleKeyDown = (event: KeyboardEvent) => {
+//   if (!isVisible.value) return
 
-  switch (event.key) {
-    case 'ArrowDown':
-      event.preventDefault()
-      selectedIndex.value = (selectedIndex.value + 1) % filteredItems.value.length
-      break
-    case 'ArrowUp':
-      event.preventDefault()
-      selectedIndex.value =
-        (selectedIndex.value - 1 + filteredItems.value.length) % filteredItems.value.length
-      break
-    case 'Enter':
-    case 'Tab':
-      if (filteredItems.value.length > 0) {
-        event.preventDefault()
-        selectCompletion(filteredItems.value[selectedIndex.value])
-      }
-      break
-    case 'Escape':
-      event.preventDefault()
-      isVisible.value = false
-      break
-  }
-}
+//   switch (event.key) {
+//     case 'ArrowDown':
+//       event.preventDefault()
+//       selectedIndex.value = (selectedIndex.value + 1) % filteredItems.value.length
+//       break
+//     case 'ArrowUp':
+//       event.preventDefault()
+//       selectedIndex.value =
+//         (selectedIndex.value - 1 + filteredItems.value.length) % filteredItems.value.length
+//       break
+//     case 'Enter':
+//     case 'Tab':
+//       if (filteredItems.value.length > 0) {
+//         event.preventDefault()
+//         selectCompletion(filteredItems.value[selectedIndex.value])
+//       }
+//       break
+//     case 'Escape':
+//       event.preventDefault()
+//       isVisible.value = false
+//       break
+//   }
+// }
 
 // Apply the selected completion
 const selectCompletion = (item: CompletionItem) => {
@@ -162,13 +162,12 @@ watch(
   },
 )
 
-
 // Setup event listeners
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside)
   if (props.inputElement) {
-    console.log('Adding event listeners to inputElement')
-    console.log(props.inputElement)
+    // console.log('Adding event listeners to inputElement')
+    // console.log(props.inputElement)
     // props.inputElement.addEventListener('keydown', handleKeyDown)
     // props.inputElement.addEventListener('click', updateCurrentWord)
     // props.inputElement.addEventListener('focus', updateCurrentWord)
