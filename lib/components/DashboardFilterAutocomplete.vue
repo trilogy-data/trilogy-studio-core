@@ -162,22 +162,25 @@ watch(
   },
 )
 
+
 // Setup event listeners
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside)
   if (props.inputElement) {
-    props.inputElement.addEventListener('keydown', handleKeyDown)
-    props.inputElement.addEventListener('click', updateCurrentWord)
-    props.inputElement.addEventListener('focus', updateCurrentWord)
+    console.log('Adding event listeners to inputElement')
+    console.log(props.inputElement)
+    // props.inputElement.addEventListener('keydown', handleKeyDown)
+    // props.inputElement.addEventListener('click', updateCurrentWord)
+    // props.inputElement.addEventListener('focus', updateCurrentWord)
   }
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside)
   if (props.inputElement) {
-    props.inputElement.removeEventListener('keydown', handleKeyDown)
-    props.inputElement.removeEventListener('click', updateCurrentWord)
-    props.inputElement.removeEventListener('focus', updateCurrentWord)
+    // props.inputElement.removeEventListener('keydown', handleKeyDown)
+    // props.inputElement.removeEventListener('click', updateCurrentWord)
+    // props.inputElement.removeEventListener('focus', updateCurrentWord)
   }
 })
 

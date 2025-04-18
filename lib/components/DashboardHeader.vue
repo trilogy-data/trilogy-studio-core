@@ -1,6 +1,6 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
-import { computed, type Ref, ref } from 'vue'
+import { computed, type Ref, ref, watch } from 'vue'
 import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
@@ -46,7 +46,7 @@ const llmStore = useLLMConnectionStore()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
-const filterInputRef = ref<HTMLInputElement | null>(null) // Reference to the filter input element
+const filterInputRef = ref<HTMLInputElement | null>(props.dashboard.filter) // Reference to the filter input element
 
 // Toggle share popup visibility
 function toggleSharePopup() {
@@ -127,6 +127,16 @@ function handleRefresh() {
   emit('refresh')
 }
 
+// watch for dashboard change
+watch(
+  () => props.dashboard,
+  (newDashboard) => {
+    if (newDashboard) {
+      filterInput.value = newDashboard.filter || ''
+    }
+  },
+)
+
 // Handle completion selection
 function handleCompletionSelected(completion: { text: string; cursorPosition: number }) {
   filterInput.value = completion.text
@@ -165,6 +175,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
             :input-value="filterInput"
             :completion-items="globalCompletion"
             :input-element="filterInputRef"
+            v-if="filterInputRef"
             @select-completion="handleCompletionSelected"
           />
 

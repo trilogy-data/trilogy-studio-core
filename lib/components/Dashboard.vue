@@ -117,6 +117,7 @@ const selectedConnection = computed(() => {
 })
 
 async function handleFilterChange(newFilter: string) {
+  console.log('New filter:', newFilter)
   if (!newFilter || newFilter === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
