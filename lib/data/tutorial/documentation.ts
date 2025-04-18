@@ -2,90 +2,94 @@ import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
 import { DashboardTutorial } from './dashboardTutorial.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
-    new Article('Welcome', [
-      new Paragraph(
-        'Purpose',
-        'Trilogy Studio is intended as an accessible demonstration of the features of the Trilogy language, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
-      ),
-      new Paragraph(
-        'Purpose',
-        'Trilogy is SQL with a built in semantic layer; it should feel like SQL, but faster and more expressive. The boilerplate of SQL is delegated to the semantic engine, while the expressiveness of SQL is still fully available. You can read more about the language in the Trilogy reference section.',
-      ),
-      new Paragraph(
-        'Purpose',
-        'In the rest of this tutorial, we will walk you through a demo-model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
-      ),
-      new Paragraph(
-        'Purpose',
-        'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections for reuse. ',
-        'tip',
-      ),
-      new Paragraph(
-        'Purpose',
-        'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
-      ),
-      new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
-      new Paragraph('ModelList', '', 'model-validator'),
-      new Paragraph(
-        'Purpose',
-        `Now that you have the model imported and associated with a connection, we just need to click the plug icon to connect to it.`,
-      ),
-      new Paragraph(
-        'Purpose',
-        `If you had set up the connection first, you could click the connection name to toggle details, and click the model dropdown and select the "demo-model".`,
+    new Article(
+      'Welcome',
+      [
+        new Paragraph(
+          'Purpose',
+          'Trilogy Studio is intended as an accessible demonstration of the features of the Trilogy language, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
+        ),
+        new Paragraph(
+          'Purpose',
+          'Trilogy is SQL with a built in semantic layer; it should feel like SQL, but faster and more expressive. The boilerplate of SQL is delegated to the semantic engine, while the expressiveness of SQL is still fully available. You can read more about the language in the Trilogy reference section.',
+        ),
+        new Paragraph(
+          'Purpose',
+          'In the rest of this tutorial, we will walk you through a demo-model - based on the TPC-H dataset - to get started. This will give you a feel for how Trilogy works and how you can use it to query data.',
+        ),
+        new Paragraph(
+          'Purpose',
+          'A "model" is a collection of associated Trilogy files that define a specific semantic layer. Models can be imported and exported, and are the primary way to share and reuse Trilogy code. In Trilogy Studio, a model will always be associated with a connection, representing a database backend. You can assign the same model to multiple connections for reuse. ',
+          'tip',
+        ),
+        new Paragraph(
+          'Purpose',
+          'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
+        ),
+        new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
+        new Paragraph('ModelList', '', 'model-validator'),
+        new Paragraph(
+          'Purpose',
+          `Now that you have the model imported and associated with a connection, we just need to click the plug icon to connect to it.`,
+        ),
+        new Paragraph(
+          'Purpose',
+          `If you had set up the connection first, you could click the connection name to toggle details, and click the model dropdown and select the "demo-model".`,
 
-        'tip',
-      ),
-      new Paragraph(
-        'Purpose',
-        `You can also run normal SQL against a connection, using a 'sql' typed editor. This is a good way to debug or test queries that you are not sure how to write in Trilogy, or to manage databases.`,
-        'tip',
-      ),
-      new Paragraph('ConnectionList', '', 'connections'),
-      new Paragraph('ConnectionList', '', 'connection-validator'),
-      new Paragraph(
-        'Purpose',
-        'When the above indicator is green, you are good to move on! Note that normally, you will manage connections through the connection panel available on the sidebar - this component is just embedded here as well for the tutorial.',
-        'tip',
-      ),
-      new Paragraph(
-        'Purpose',
-        'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
-      ),
-      new Paragraph('Purpose', '', 'editors'),
-      new Paragraph('Purpose', '', 'editor-validator'),
-      new Paragraph(
-        'Purpose',
-        'When the above indicator is green, you are good to move on! Note again that normally editors are managed through the sidebar. You will also see that some editors are marked as sources - these are importable by other editors on the model. As these often are metadata only, you can use the toggle at the top to hide these if desired. Any editor can be made a source by toggling a button in the editor.',
-        'tip',
-      ),
-      new Paragraph(
-        'Purpose',
-        `Editors are your interactive SQL experience. They let you write Trilogy, validate it, run it, and look at the results. Running (ctrl-enter) will either execute the full editor or the highlighted chunk of code (with any imports). Try running the following queries.`,
-      ),
+          'tip',
+        ),
+        new Paragraph(
+          'Purpose',
+          `You can also run normal SQL against a connection, using a 'sql' typed editor. This is a good way to debug or test queries that you are not sure how to write in Trilogy, or to manage databases.`,
+          'tip',
+        ),
+        new Paragraph('ConnectionList', '', 'connections'),
+        new Paragraph('ConnectionList', '', 'connection-validator'),
+        new Paragraph(
+          'Purpose',
+          'When the above indicator is green, you are good to move on! Note that normally, you will manage connections through the connection panel available on the sidebar - this component is just embedded here as well for the tutorial.',
+          'tip',
+        ),
+        new Paragraph(
+          'Purpose',
+          'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
+        ),
+        new Paragraph('Purpose', '', 'editors'),
+        new Paragraph('Purpose', '', 'editor-validator'),
+        new Paragraph(
+          'Purpose',
+          'When the above indicator is green, you are good to move on! Note again that normally editors are managed through the sidebar. You will also see that some editors are marked as sources - these are importable by other editors on the model. As these often are metadata only, you can use the toggle at the top to hide these if desired. Any editor can be made a source by toggling a button in the editor.',
+          'tip',
+        ),
+        new Paragraph(
+          'Purpose',
+          `Editors are your interactive SQL experience. They let you write Trilogy, validate it, run it, and look at the results. Running (ctrl-enter) will either execute the full editor or the highlighted chunk of code (with any imports). Try running the following queries.`,
+        ),
 
-      new Paragraph('Purpose', 'SELECT unnest([1,2,3,4]) as constant;', 'code'),
-      new Paragraph(
-        'Purpose',
-        `import lineitem as lineitem;
+        new Paragraph('Purpose', 'SELECT unnest([1,2,3,4]) as constant;', 'code'),
+        new Paragraph(
+          'Purpose',
+          `import lineitem as lineitem;
 SELECT
     sum(lineitem.extended_price)->sales,
     lineitem.supplier.nation.name,
 order by
     sales desc;`,
-        'code',
-      ),
-      new Paragraph('Purpose', '', 'demo-editor'),
-      new Paragraph(
-        'Purpose',
-        'For the second query, could you figure out how to visualize the data? Editors support inline visualization for rapid introspection; to create more complicated visuals, check out the dashboarding tutorial up next.',
-        'tip',
-      ),
-      new Paragraph(
-        'Purpose',
-        'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',
-      ),
-    ], 'Welcome and Query Tutorial'),
+          'code',
+        ),
+        new Paragraph('Purpose', '', 'demo-editor'),
+        new Paragraph(
+          'Purpose',
+          'For the second query, could you figure out how to visualize the data? Editors support inline visualization for rapid introspection; to create more complicated visuals, check out the dashboarding tutorial up next.',
+          'tip',
+        ),
+        new Paragraph(
+          'Purpose',
+          'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',
+        ),
+      ],
+      'Welcome and Query Tutorial',
+    ),
     DashboardTutorial,
     new Article('Functionality', [
       new Paragraph(
@@ -113,7 +117,7 @@ order by
         'tip',
       ),
     ]),
-    
+
     new Article('Querying', [
       new Paragraph(
         'Querying',

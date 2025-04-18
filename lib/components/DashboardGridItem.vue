@@ -278,7 +278,7 @@ const filterCount = computed(() => {
             <button
               class="filter-remove-btn"
               @click="removeFilter(filter.source)"
-              title="Remove filter"
+              :title="`Remove ${filter.source} filter`"
               v-if="filter.source !== 'global'"
             >
               ×

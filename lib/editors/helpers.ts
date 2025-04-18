@@ -4,6 +4,8 @@ export function buildEditorTree(
   editors: Editor[],
   collapsed: Record<string, boolean>,
   hiddenTags: Set<string>,
+  // Add a new parameter to track active connections
+  activeConnections: Set<string> = new Set<string>(),
 ) {
   const list: Array<{
     key: string
@@ -13,17 +15,29 @@ export function buildEditorTree(
     indent: Array<number>
     editor?: any
   }> = []
-
   // Track connections we've already processed for deduplication
   const processedConnections = new Set<string>()
 
-  // sort for rendering
-  const sorted = Object.values(editors).sort(
-    (a, b) =>
-      a.storage.localeCompare(b.storage) ||
-      a.connection.localeCompare(b.connection) ||
-      a.name.localeCompare(b.name),
-  )
+  // Modified sort logic to prioritize active connections
+  const sorted = Object.values(editors).sort((a, b) => {
+    // First compare storage
+    const storageComparison = a.storage.localeCompare(b.storage)
+    if (storageComparison !== 0) return storageComparison
+
+    // Then prioritize active connections
+    const aIsActive = activeConnections.has(a.connection)
+    const bIsActive = activeConnections.has(b.connection)
+
+    if (aIsActive && !bIsActive) return -1 // a is active, b is not -> a comes first
+    if (!aIsActive && bIsActive) return 1 // b is active, a is not -> b comes first
+
+    // If both have same active status, fall back to alphabetical
+    const connectionComparison = a.connection.localeCompare(b.connection)
+    if (connectionComparison !== 0) return connectionComparison
+
+    // Finally sort by name
+    return a.name.localeCompare(b.name)
+  })
 
   // Group editors by storage and connection for clearer organization
   const storageGroups: Record<string, Record<string, any[]>> = {}
@@ -33,26 +47,40 @@ export function buildEditorTree(
     if (!storageGroups[editor.storage]) {
       storageGroups[editor.storage] = {}
     }
-
     if (!storageGroups[editor.storage][editor.connection]) {
       storageGroups[editor.storage][editor.connection] = []
     }
-
     storageGroups[editor.storage][editor.connection].push(editor)
   })
 
   // Then, build the list with proper order and indentation
   Object.entries(storageGroups).forEach(([storage, connections]) => {
     const storageKey = `s-${storage}`
-
     // Add storage item
-    list.push({ objectKey: storage, key: storageKey, label: storage, type: 'storage', indent: [] })
+    list.push({
+      objectKey: storage,
+      key: storageKey,
+      label: 'Browser Storage',
+      type: 'storage',
+      indent: [],
+    })
 
     // If storage is not collapsed, add connections and editors
     if (!collapsed[storageKey]) {
-      Object.entries(connections).forEach(([connection, editors]) => {
-        const connectionKey = `c-${storage}-${connection}`
+      // Sort connections to show active ones first
+      const sortedConnections = Object.entries(connections).sort(([connA], [connB]) => {
+        const aIsActive = activeConnections.has(connA)
+        const bIsActive = activeConnections.has(connB)
 
+        if (aIsActive && !bIsActive) return -1 // a is active, b is not -> a comes first
+        if (!aIsActive && bIsActive) return 1 // b is active, a is not -> b comes first
+
+        // If both have same active status, fall back to alphabetical
+        return connA.localeCompare(connB)
+      })
+
+      sortedConnections.forEach(([connection, editors]) => {
+        const connectionKey = `c-${storage}-${connection}`
         // Add connection item if not already processed
         if (!processedConnections.has(connectionKey)) {
           list.push({
@@ -62,22 +90,7 @@ export function buildEditorTree(
             type: 'connection',
             indent: [0],
           })
-
           processedConnections.add(connectionKey)
-
-          // ===================================================
-          // INSERT NEW DATA ELEMENT AFTER CONNECTION HERE
-          // You can inject a new item into the list right after
-          // each connection is added, for example:
-          // if (connectionCreatorVisible[connection] === true) {
-          //   list.push({
-          //     key: `data-${connectionKey}`,
-          //     label: connection,
-          //     type: 'creator',
-          //     indent: [0],
-          //   })
-          // }
-          // ===================================================
 
           // If connection is not collapsed, add editors
           if (!collapsed[connectionKey]) {
@@ -90,7 +103,6 @@ export function buildEditorTree(
               ) {
                 return
               }
-
               const editorKey = `e-${storage}-${connection}-${editor.id}`
               list.push({
                 objectKey: editor.id,
@@ -106,6 +118,5 @@ export function buildEditorTree(
       })
     }
   })
-
   return list
 }

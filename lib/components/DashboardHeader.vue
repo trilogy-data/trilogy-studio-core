@@ -4,9 +4,11 @@ import { computed, type Ref, ref } from 'vue'
 import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
-import Tooltip from './Tooltip.vue' // Import the Tooltip component
-import DashboardSharePopup from './DashboardSharePopup.vue' // Import the new popup component
+import Tooltip from './Tooltip.vue'
+import DashboardSharePopup from './DashboardSharePopup.vue'
+import FilterAutocomplete from './DashboardFilterAutocomplete.vue' // Import the new component
 import { type Import, type CompletionItem } from '../stores/resolver'
+
 const props = defineProps({
   dashboard: {
     type: Object,
@@ -21,6 +23,10 @@ const props = defineProps({
   globalCompletion: {
     type: Array as () => CompletionItem[],
     default: () => [],
+  },
+  validateFilter: {
+    type: Function,
+    default: () => true,
   },
 })
 
@@ -39,7 +45,8 @@ const modelStore = useModelConfigStore()
 const llmStore = useLLMConnectionStore()
 
 const isLoading = ref(false)
-const isSharePopupOpen = ref(false) // State for share popup visibility
+const isSharePopupOpen = ref(false)
+const filterInputRef = ref<HTMLInputElement | null>(null) // Reference to the filter input element
 
 // Toggle share popup visibility
 function toggleSharePopup() {
@@ -59,7 +66,7 @@ const filterLLM = () => {
     description: item.description,
   }))
   llmStore
-    .generateFilterQuery(filterInput.value, concepts)
+    .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
     .then((response) => {
       if (response && response.length > 0) {
         filterInput.value = response
@@ -71,6 +78,16 @@ const filterLLM = () => {
       isLoading.value = false
     })
 }
+
+// Handle keyboard shortcut for LLM generation
+function handleFilterKeydown(event: KeyboardEvent) {
+  // Check for Ctrl+Shift+Enter (or Command+Shift+Enter on Mac)
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
+    event.preventDefault()
+    filterLLM()
+  }
+}
+
 // Use the extracted filter debounce composable
 const { filterInput, onFilterInput } = useFilterDebounce(
   props.dashboard?.filter || '',
@@ -109,6 +126,18 @@ function handleImportsChange(newImports: Import[]) {
 function handleRefresh() {
   emit('refresh')
 }
+
+// Handle completion selection
+function handleCompletionSelected(completion: { text: string; cursorPosition: number }) {
+  filterInput.value = completion.text
+  emit('filter-change', completion.text)
+
+  // Set cursor position and focus the input
+  if (filterInputRef.value) {
+    filterInputRef.value.focus()
+    filterInputRef.value.setSelectionRange(completion.cursorPosition, completion.cursorPosition)
+  }
+}
 </script>
 
 <template>
@@ -124,10 +153,21 @@ function handleRefresh() {
             type="text"
             v-model="filterInput"
             @input="onFilterInput"
-            placeholder="Enter filter criteria..."
+            @keydown="handleFilterKeydown"
+            placeholder="Enter filter SQL clause... (Ctrl+Shift+Enter for text to SQL with configured LLM)"
             :class="{ 'filter-error': filterStatus === 'error' }"
             :disabled="isLoading"
+            ref="filterInputRef"
           />
+
+          <!-- Add the FilterAutocomplete component -->
+          <FilterAutocomplete
+            :input-value="filterInput"
+            :completion-items="globalCompletion"
+            :input-element="filterInputRef"
+            @select-completion="handleCompletionSelected"
+          />
+
           <button
             @click="filterLLM"
             class="sparkle-button"
@@ -135,10 +175,18 @@ function handleRefresh() {
             :disabled="isLoading"
             title="Transform text to filter if you have a configured LLM connection"
           >
-            <i class="mdi mdi-creation" :class="{ spinning: isLoading }"></i>
-            <Tooltip content="Text to filter" position="top">
-              <span class="tooltip-trigger"></span>
-            </Tooltip>
+            <div class="button-content">
+              <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
+              <div v-if="isLoading" class="loader-container">
+                <div class="loader"></div>
+              </div>
+              <Tooltip
+                :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'"
+                position="top"
+              >
+                <span class="tooltip-trigger"></span>
+              </Tooltip>
+            </div>
           </button>
           <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
             <div
@@ -180,7 +228,7 @@ function handleRefresh() {
         </button>
         <button
           @click="handleRefresh"
-          class="add-button generic-button"
+          class="refresh-button generic-button"
           data-testid="refresh-button"
         >
           ⟳ Refresh
@@ -191,7 +239,7 @@ function handleRefresh() {
     <div class="controls-row top-row" v-if="editMode">
       <div class="dashboard-left-controls">
         <div class="connection-selector">
-          <!-- <label for="connection">Connection</label> -->
+          <label for="connection">Connection</label>
           <select
             id="connection"
             data-testid="connection-selector"
@@ -247,7 +295,7 @@ function handleRefresh() {
 .dashboard-controls {
   display: flex;
   flex-direction: column;
-  background-color: var(--query-window-bg);
+  /* background-color: var(--query-window-bg); */
   border-bottom: 1px solid var(--border);
 }
 
@@ -283,9 +331,9 @@ function handleRefresh() {
 .connection-selector select {
   padding: 8px;
   border: 1px solid var(--border);
-  background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   font-size: var(--font-size);
+  background-color: var(--bg-color);
 }
 
 .filter-container {
@@ -296,9 +344,10 @@ function handleRefresh() {
 
 .filter-container label {
   margin-right: 10px;
-  font-weight: bold;
+  font-weight: 400;
   color: var(--text-color);
   white-space: nowrap;
+  font-size: 18px;
 }
 
 .filter-input-wrapper {
@@ -306,15 +355,16 @@ function handleRefresh() {
   display: flex;
   align-items: center;
   width: 100%;
+  margin-top: 5px;
 }
 
 .filter-container input {
-  padding: 8px;
+  padding: 4px;
   border: 1px solid var(--border);
-  background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   width: 100%;
   font-size: var(--font-size);
+  height: 20px;
 }
 
 .sparkle-button {
@@ -332,8 +382,48 @@ function handleRefresh() {
   z-index: 2;
 }
 
+.button-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .mdi {
   font-size: 16px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Improved loader animation */
+.loader-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.loader {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 2px solid var(--special-text);
+  width: 16px;
+  height: 16px;
+  animation: loader-spin 1s linear infinite;
+}
+
+@keyframes loader-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes spin {
@@ -424,13 +514,23 @@ function handleRefresh() {
   color: white !important;
 }
 
+.refresh-button {
+  border: 1px solid var(--special-text) !important;
+  color: var(--special-text) !important;
+  background-color: transparent !important;
+}
+
 .clear-button {
   background-color: var(--delete-color) !important;
   color: white !important;
 }
 
+.share-button {
+  background-color: transparent !important;
+}
+
 .toggle-mode-button {
-  background-color: var(--button-bg) !important;
+  background-color: transparent !important;
   color: var(--text-color) !important;
 }
 
@@ -455,6 +555,8 @@ function handleRefresh() {
 
   .filter-container {
     flex: 1;
+    margin-top: 5px;
+    padding-right: 10px;
   }
 
   /* Hide the top row by default on mobile, it will be toggled */

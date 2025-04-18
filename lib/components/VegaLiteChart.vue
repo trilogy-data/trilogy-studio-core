@@ -170,6 +170,7 @@ import {
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
 import type { ResultColumn, Row, ChartConfig, FieldKey } from '../editors/results'
+import { ColumnType } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import { Controls, Charts, type ChartControl } from '../dashboards/constants'
@@ -213,6 +214,10 @@ export default defineComponent({
     chartSelection: {
       type: Array as PropType<Object[]>,
       default: () => {},
+    },
+    chartTitle: {
+      type: String,
+      default: '',
     },
   },
 
@@ -276,6 +281,7 @@ export default defineComponent({
       chartType: 'bar',
       xField: '',
       yField: '',
+      yField2: '',
       yAggregation: 'sum',
       colorField: '',
       sizeField: '',
@@ -318,6 +324,7 @@ export default defineComponent({
         props.columns,
         props.chartSelection,
         isMobile.value,
+        props.chartTitle,
       )
     }
     const handleBrush = debounce((_: string, item: SignalValue) => {
@@ -325,9 +332,18 @@ export default defineComponent({
         if (!internalConfig.value.xField) {
           return
         }
-        let dateLookup = 'yearmonthdate_' + internalConfig.value.xField
-        const values = item[dateLookup as keyof typeof item] ?? []
+        let timeField = props.columns.get(internalConfig.value.xField)
+        if (!timeField) {
+          return
+        }
+        let dateLookup = internalConfig.value.xField
+        if (
+          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
+        ) {
+          dateLookup = 'yearmonthdate_' + internalConfig.value.xField
+        }
 
+        const values = item[dateLookup as keyof typeof item] ?? []
         // Check if values exists and has elements in a single condition
         if (!values || !Array.isArray(values) || values.length === 0) {
           emit('background-click')
@@ -335,16 +351,23 @@ export default defineComponent({
         }
         let start = values[0]
         let end = values[values.length - 1]
-        let timeField = props.columns.get(internalConfig.value.xField)
         let timeAddress = timeField?.address
         if (!timeField || !timeAddress) {
           return
         }
-        if (timeField.type == 'date') {
+        if (
+          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
+        ) {
           emit('dimension-click', {
             filters: {
               [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
             },
+            chart: { [internalConfig.value.xField]: [start, end] },
+            append: false,
+          })
+        } else if ([ColumnType.NUMBER, ColumnType.INTEGER].includes(timeField?.type)) {
+          emit('dimension-click', {
+            filters: { [timeAddress]: [start, end] },
             chart: { [internalConfig.value.xField]: [start, end] },
             append: false,
           })
@@ -472,6 +495,7 @@ export default defineComponent({
         // Normal chart type fields
         internalConfig.value.xField = configDefaults.xField
         internalConfig.value.yField = configDefaults.yField
+        internalConfig.value.yField2 = configDefaults.yField2
         internalConfig.value.yAggregation = configDefaults.yAggregation
         internalConfig.value.colorField = configDefaults.colorField
         internalConfig.value.sizeField = configDefaults.sizeField

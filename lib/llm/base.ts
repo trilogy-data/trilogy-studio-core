@@ -1,4 +1,3 @@
-import { getDatabaseCredential, storeDatabaseCredential } from '../data/secure'
 // Generic interface for LLM responses
 export interface LLMResponse {
   text: string
@@ -48,16 +47,14 @@ export abstract class LLMProvider {
     this.error = null
     this.saveCredential = saveCredential
     this.isDefault = false
-    if (this.saveCredential) {
-      storeDatabaseCredential(`trilogy-llm-${this.type}`, this.apiKey)
-    }
   }
 
-  async setApiKey(apiKey: string): Promise<void> {
+  setApiKey(apiKey: string): void {
     this.apiKey = apiKey
-    if (this.saveCredential) {
-      await storeDatabaseCredential(`trilogy-llm-${this.type}`, this.apiKey)
-    }
+  }
+
+  getApiKey(): string {
+    return this.apiKey
   }
 
   abstract reset(): void
@@ -80,10 +77,15 @@ export abstract class LLMProvider {
       name: this.name,
       model: this.model,
       type: this.type,
-      apiKey: this.saveCredential ? this.apiKey : null,
+      // redacted will trigger a fetch from the secure store
+      apiKey: this.saveCredential ? 'saved' : null,
       saveCredential: this.saveCredential,
       isDefault: this.isDefault,
     }
+  }
+
+  getCredentialName(): string {
+    return `trilogy-llm-${this.type}`
   }
 
   // Create instance from JSON
@@ -99,8 +101,6 @@ export abstract class LLMProvider {
       restored.model,
       restored.saveCredential,
     )
-    let apiKey = await getDatabaseCredential(`trilogy-llm-${instance.type}`)
-    restored.apiKey = apiKey ? apiKey.value : ''
     instance.isDefault = restored.isDefault || false
     return instance
   }

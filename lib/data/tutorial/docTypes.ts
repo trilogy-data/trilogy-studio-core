@@ -14,7 +14,7 @@ export class Article {
   paragraphs: Paragraph[]
   displayName: string | undefined
 
-  constructor(title: string,  paragraphs: Paragraph[],   displayName: string | undefined = undefined) {
+  constructor(title: string, paragraphs: Paragraph[], displayName: string | undefined = undefined) {
     this.title = title
     this.paragraphs = paragraphs
     this.displayName = displayName

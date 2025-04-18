@@ -110,7 +110,7 @@ export class DashboardModel implements Dashboard {
     this.updatedAt = updatedAt || new Date()
     this.filter = filter
     this.imports = imports
-    this.version = version 
+    this.version = version
     this.published = published
   }
 

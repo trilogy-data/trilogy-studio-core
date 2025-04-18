@@ -129,7 +129,14 @@ export default defineComponent({
   emits: ['toggle', 'setActive', 'refresh', 'updateApiKey', 'updateModel', 'toggleSaveCredential'],
   setup(props, { emit }) {
     const apiKeyInput = ref('')
-    const modelInput = ref('')
+
+    const modelInput = computed({
+      get: () => props.item.connection?.model || '',
+      set: (value) => {
+        // This is only for the local UI state before submission
+        return value
+      },
+    })
 
     // Determine if item is expandable
     const isExpandable = computed(() => {

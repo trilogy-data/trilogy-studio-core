@@ -101,6 +101,9 @@
             <span v-if="scenarioResults[index].passed" class="pass-indicator">✓</span>
             <span v-else class="fail-indicator">✗</span>
           </div>
+          <div v-if="testRunDetails[index]" class="test-run-details">
+            {{ testRunDetails[index].passed }}/5 runs passed
+          </div>
         </div>
       </div>
     </div>
@@ -118,6 +121,12 @@ import type { TestScenario } from '../llm/data/testCases'
 interface TestResult {
   passed: boolean
   reason?: string
+}
+
+interface TestRunDetail {
+  passed: number
+  total: number
+  runs: TestResult[]
 }
 
 interface MessageWithTest extends LLMMessage {
@@ -152,6 +161,11 @@ export default defineComponent({
     const error = ref('')
     const messagesContainer = ref<HTMLElement | null>(null)
     const scenarioResults = ref<(TestResult | null)[]>([])
+    const testRunDetails = ref<(TestRunDetail | null)[]>([])
+
+    // Constants
+    const TEST_ITERATIONS = 5
+    const REQUIRED_PASSES = 4
 
     // Connection state
     const selectedProvider = ref(
@@ -299,22 +313,9 @@ export default defineComponent({
       }
     }
 
-    const runScenario = async (index: number) => {
-      if (isLoading.value || !selectedProvider.value) return
-
-      const scenario = scenarios.value[index]
-
-      // Clear existing messages
-      messages.value = []
-
-      // Add test description message
-      messages.value.push({
-        role: 'user',
-        content: `RUNNING TEST: ${scenario.name}\n\n${scenario.prompt}`,
-      })
-
-      isLoading.value = true
-      error.value = ''
+    // Run a single test iteration (for a specific scenario)
+    const runTestIteration = async (scenarioIndex: number): Promise<TestResult> => {
+      const scenario = scenarios.value[scenarioIndex]
 
       try {
         const options: LLMRequestOptions = {
@@ -327,20 +328,93 @@ export default defineComponent({
         )
 
         // Evaluate the response
-        const testResult = evaluateResponse(response.text, scenario.expectedResponse)
+        return evaluateResponse(response.text, scenario.expectedResponse)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+        return {
+          passed: false,
+          reason: `Error: ${errorMessage}`,
+        }
+      }
+    }
 
-        // Update scenario results
-        scenarioResults.value[index] = testResult
+    // Run a scenario multiple times and aggregate results
+    const runScenario = async (index: number) => {
+      if (isLoading.value || !selectedProvider.value) return
 
-        // Add AI response with test results
+      const scenario = scenarios.value[index]
+
+      // Clear existing messages
+      messages.value = []
+
+      // Add test description message
+      messages.value.push({
+        role: 'user',
+        content: `RUNNING TEST: ${scenario.name} (${TEST_ITERATIONS} iterations)`,
+      })
+
+      isLoading.value = true
+      error.value = ''
+
+      try {
+        // Initialize test run details
+        const runDetails: TestRunDetail = {
+          passed: 0,
+          total: TEST_ITERATIONS,
+          runs: [],
+        }
+
+        // Update messages to show we're starting the tests
         messages.value.push({
           role: 'assistant',
-          content: response.text,
-          modelInfo: {
-            totalTokens: response.usage.totalTokens,
-          },
-          testResult: testResult,
+          content: `Running ${TEST_ITERATIONS} iterations of test "${scenario.name}"...`,
         })
+
+        // Run the test multiple times
+        for (let i = 0; i < TEST_ITERATIONS; i++) {
+          // Add progress indicator
+          if (i > 0) {
+            messages.value[messages.value.length - 1].content +=
+              `\nRunning iteration ${i + 1}/${TEST_ITERATIONS}...`
+          }
+
+          // Run the test iteration
+          const iterationResult = await runTestIteration(index)
+
+          // Track results
+          runDetails.runs.push(iterationResult)
+          if (iterationResult.passed) {
+            runDetails.passed++
+          }
+        }
+
+        // Consider the test passed overall if at least REQUIRED_PASSES runs passed
+        const overallResult: TestResult = {
+          passed: runDetails.passed >= REQUIRED_PASSES,
+          reason:
+            runDetails.passed >= REQUIRED_PASSES
+              ? undefined
+              : `Only ${runDetails.passed}/${TEST_ITERATIONS} runs passed (need at least ${REQUIRED_PASSES})`,
+        }
+
+        // Update scenario results
+        scenarioResults.value[index] = overallResult
+        testRunDetails.value[index] = runDetails
+
+        // Update the last message with final results
+        messages.value[messages.value.length - 1].content =
+          `Test "${scenario.name}" completed: ${runDetails.passed}/${TEST_ITERATIONS} runs passed.\n\n` +
+          `${overallResult.passed ? '✓ OVERALL PASSED' : '✗ OVERALL FAILED'}\n\n` +
+          `Iteration Results:\n` +
+          runDetails.runs
+            .map(
+              (result, idx) =>
+                `Iteration ${idx + 1}: ${result.passed ? '✓ PASSED' : '✗ FAILED'}${result.reason ? ' - ' + result.reason : ''}`,
+            )
+            .join('\n')
+
+        // Add test result to the last message
+        messages.value[messages.value.length - 1].testResult = overallResult
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'An unknown error occurred'
 
@@ -366,7 +440,7 @@ export default defineComponent({
       // Add start message
       messages.value.push({
         role: 'user',
-        content: 'RUNNING ALL TESTS IN SEQUENCE',
+        content: 'RUNNING ALL TESTS IN SEQUENCE (5 iterations each)',
       })
 
       try {
@@ -419,6 +493,7 @@ export default defineComponent({
       scenarios,
       runScenario,
       scenarioResults,
+      testRunDetails,
       runAllScenarios,
     }
   },
@@ -508,6 +583,12 @@ pre {
   top: 15px;
   right: 15px;
   font-size: 1.2em;
+}
+
+.test-run-details {
+  font-size: 0.8em;
+  margin-top: 8px;
+  color: var(--text-muted);
 }
 
 .pass-indicator {

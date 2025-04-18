@@ -76,10 +76,7 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'dashboard' && demoEditorCorrect" class="dashboard">
-            <dashboard
-              name="demo-dashboard"
-              connectionId="demo-model-connection"
-            />
+          <dashboard name="demo-dashboard" connectionId="demo-model-connection" />
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
@@ -175,7 +172,6 @@ export default {
       saveDashboards,
       demoConnectionName,
       demoModelName,
-      
     }
   },
   components: {

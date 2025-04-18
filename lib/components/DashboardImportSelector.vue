@@ -218,7 +218,6 @@ onUnmounted(() => {
   align-items: center;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
   min-width: 150px;
   justify-content: space-between;
