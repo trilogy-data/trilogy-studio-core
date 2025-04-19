@@ -57,6 +57,7 @@ export interface Dashboard {
   imports: Import[]
   version: number
   published: boolean
+  description: string
 }
 
 // Cell types enum
@@ -83,6 +84,7 @@ export class DashboardModel implements Dashboard {
   imports: Import[] = []
   version: number
   published: boolean = false
+  description: string = ''
 
   constructor({
     id,
@@ -98,6 +100,7 @@ export class DashboardModel implements Dashboard {
     imports = [],
     version = 1,
     published = false,
+    description = '',
   }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
     this.id = id
     this.name = name
@@ -112,10 +115,11 @@ export class DashboardModel implements Dashboard {
     this.imports = imports
     this.version = version
     this.published = published
+    this.description = description
   }
 
   // Add a new item to the dashboard
-  addItem(type: CellType, x = 0, y = 0): string {
+  addItem(type: CellType, x = 0, y = 0, w = 4, h: number | null = null): string {
     const itemId = this.nextId.toString()
 
     // Create grid item layout with height based on type
@@ -127,8 +131,8 @@ export class DashboardModel implements Dashboard {
     this.layout.push({
       x,
       y,
-      w: 4,
-      h: defaultHeight,
+      w: w,
+      h: h || defaultHeight,
       i: itemId,
       static: false,
     })
@@ -345,6 +349,7 @@ export class DashboardModel implements Dashboard {
       imports: this.imports,
       version: this.version,
       published: this.published,
+      description: this.description,
     }
   }
 

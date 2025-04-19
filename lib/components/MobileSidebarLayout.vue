@@ -79,7 +79,7 @@
 
 .nested-page-content {
   flex: 1 1 auto;
-  height: calc(100% - 40px);
+  height: 100%;
   z-index: 1;
   overflow: scroll;
 }

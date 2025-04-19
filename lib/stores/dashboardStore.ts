@@ -106,9 +106,16 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     // Add item to dashboard
-    addItemToDashboard(dashboardId: string, type: CellType, x = 0, y = 0) {
+    addItemToDashboard(
+      dashboardId: string,
+      type: CellType,
+      x = 0,
+      y = 0,
+      w = 4,
+      h: number | null = null,
+    ) {
       if (this.dashboards[dashboardId]) {
-        return this.dashboards[dashboardId].addItem(type, x, y)
+        return this.dashboards[dashboardId].addItem(type, x, y, w, h)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
@@ -175,6 +182,14 @@ export const useDashboardStore = defineStore('dashboards', {
     updateDashboardConnection(dashboardId: string, connection: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].connection = connection
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateDashboardDescription(dashboardId: string, description: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].description = description
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

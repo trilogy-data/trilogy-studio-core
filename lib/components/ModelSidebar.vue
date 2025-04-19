@@ -73,7 +73,7 @@ import LoadingButton from './LoadingButton.vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import AxiosResolver from '../stores/resolver'
-import trilogyIcon from '../static/trilogy.png'
+import trilogyIcon from '../static/trilogy_small.webp'
 import { KeySeparator } from '../data/constants'
 import { getDefaultValueFromHash } from '../stores/urlStore'
 
