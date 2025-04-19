@@ -16,6 +16,7 @@ import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import { type Import } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
+import DashboardCTA from './DashboardCTA.vue'
 
 // Props definition
 const props = defineProps<{
@@ -171,6 +172,12 @@ function updateItemDimensions(itemId: string): void {
 
 // Modal state for adding a new item
 const showAddItemModal = ref(false)
+
+// Get the dashboard layout from the store
+const layout = computed(() => {
+  if (!dashboard.value) return []
+  return dashboard.value.layout
+})
 
 // Add a new item modal
 function openAddItemModal(): void {
@@ -447,8 +454,10 @@ onBeforeUnmount(() => {
       @toggle-edit-mode="toggleEditMode"
       @refresh="handleRefresh"
     />
-
-    <div class="mobile-container">
+    <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
+      <DashboardCTA :dashboard-id="dashboard.id" />
+    </div>
+    <div v-else class="mobile-container">
       <!-- Mobile layout - vertically stacked grid items -->
       <div
         v-for="item in sortedLayout"

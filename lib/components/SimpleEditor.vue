@@ -6,6 +6,14 @@
           Parse
         </button>
         <button
+          class="action-item"
+          @click="generateLLMQuery"
+          title="Generate query using AI"
+          data-testid="editor-generate-button"
+        >
+          Generate
+        </button>
+        <button
           @click="editor.loading ? cancelQuery() : runQuery()"
           class="action-item"
           :class="{ 'button-cancel': editor.loading }"
@@ -132,7 +140,14 @@ export default defineComponent({
     },
   },
 
-  inject: ['queryExecutionService', 'connectionStore', 'modelStore', 'editorStore', 'isMobile'],
+  inject: [
+    'queryExecutionService',
+    'connectionStore',
+    'modelStore',
+    'editorStore',
+    'isMobile',
+    'llmConnectionStore',
+  ],
 
   data() {
     return {
@@ -231,18 +246,32 @@ export default defineComponent({
       setupEditorKeybindings(globalEditor, {
         onValidate: () => this.validateQuery(),
         onRun: () => this.runQuery(),
+        onGenerateLLM: () => this.generateLLMQuery(), // Add LLM generation shortcut
       })
 
       // Add symbol insertion shortcut
       globalEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
         this.togglePanel('symbols')
       })
+
+      // Add LLM generate shortcut (ctrl-shift-enter)
+      globalEditor.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+        () => {
+          this.generateLLMQuery()
+        },
+      )
     },
 
     handleKeyboardShortcuts(event: KeyboardEvent): void {
       // Ctrl+Shift+O to focus on symbol search (mimicking VS Code)
       if (event.ctrlKey && event.shiftKey && event.key === 'O') {
         this.togglePanel('symbols')
+        event.preventDefault()
+      }
+      // Ctrl+shift+enter to generate with llm
+      if (event.ctrlKey && event.shiftKey && event.key === 'Enter') {
+        this.generateLLMQuery()
         event.preventDefault()
       }
     },
@@ -452,6 +481,126 @@ export default defineComponent({
         // Reset loading state
         this.editor.loading = false
         this.editor.cancelCallback = null
+        if (globalEditor) {
+          globalEditor.layout()
+        }
+      }
+    },
+
+    // Add the LLM query generation method
+    async generateLLMQuery(): Promise<void> {
+      if (this.editor.loading || !globalEditor) return
+
+      const llmStore = this.llmConnectionStore as any
+      const queryExecutionService = this.queryExecutionService as QueryExecutionService
+      const connectionStore = this.connectionStore as ConnectionStoreType
+
+      if (!llmStore) {
+        this.editor.setError('LLM connection store not available')
+        return
+      }
+
+      try {
+        // Analytics tracking
+        try {
+          // @ts-ignore
+          window.goatcounter &&
+            window.goatcounter.count({
+              path: 'studio-llm-generation',
+              title: this.editor.type,
+              event: true,
+            })
+        } catch (error) {
+          console.log(error)
+        }
+
+        // Set loading state
+        this.editor.loading = true
+        this.editor.startTime = Date.now()
+        this.editor.results = new Results(new Map(), [])
+        this.editor.setError(null)
+
+        // Get current text and selection range
+        const text = globalEditor.getValue()
+
+        // Validate query to get completion symbols
+        await this.validateQuery(false)
+
+        // Check if we have completion symbols for LLM generation
+        if (!this.editor.completionSymbols || this.editor.completionSymbols.length === 0) {
+          throw new Error('There are no imported concepts for LLM generation')
+        }
+
+        // Extract concept information for LLM
+        const concepts = this.editor.completionSymbols.map((item) => ({
+          name: item.label,
+          type: item.datatype,
+          description: item.description,
+        }))
+
+        // Create validator function
+        const validator = async (generatedText: string): Promise<boolean> => {
+          const conn = connectionStore.connections[this.editor.connection]
+          const queryInput = {
+            text: generatedText,
+            queryType: conn ? conn.query_type : '',
+            editorType: this.editor.type,
+            imports: this.imports,
+          }
+
+          try {
+            const { resultPromise } = await queryExecutionService.executeQuery(
+              this.editor.connection,
+              queryInput,
+              () => {},
+              () => {},
+              (error) => {
+                throw error
+              },
+              () => true,
+              true, // Explain mode
+            )
+
+            await resultPromise
+            return true
+          } catch (error) {
+            throw error
+          }
+        }
+
+        // Generate LLM query completion
+        const generatedQuery = await llmStore.generateQueryCompletion(text, concepts, validator)
+
+        if (generatedQuery) {
+          // Insert the generated query
+          globalEditor.setValue(generatedQuery)
+
+          // Update editor content
+          this.editor.contents = globalEditor.getValue()
+
+          // Update last operation state
+          this.lastOperation = {
+            success: true,
+            duration: Date.now() - (this.editor.startTime || 0),
+            type: 'LLM Generation',
+          }
+        } else {
+          throw new Error('LLM could not successfully generate query')
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          this.editor.setError(error.message)
+        } else {
+          this.editor.setError('Unknown error occurred during LLM generation')
+        }
+
+        this.lastOperation = {
+          success: false,
+          duration: 0,
+          type: 'LLM Generation',
+        }
+      } finally {
+        this.editor.loading = false
         if (globalEditor) {
           globalEditor.layout()
         }
@@ -766,7 +915,7 @@ export default defineComponent({
 
   .action-item {
     flex-grow: 1;
-    width: calc(50% - 0.25rem);
+    width: calc(33% - 0.3rem); /* Adjust for 3 buttons instead of 2 */
     height: 36px;
     font-size: 0.9rem;
   }

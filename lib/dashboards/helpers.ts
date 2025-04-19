@@ -13,7 +13,7 @@ export function convertTimestampToISODate(timestamp: number): Date {
 }
 
 export const getColumnHasTrait = (
-  fieldName: string,
+  fieldName: string | undefined,
   columns: Map<string, ResultColumn>,
   trait: string,
 ): boolean => {
@@ -58,6 +58,17 @@ export const getGeoTraitType = (column: ResultColumn): string => {
   return 'unknown'
 }
 
+export const getColumnFormat = (
+  field: string | undefined,
+  columns: Map<string, ResultColumn>,
+): string | null => {
+  if (!field || !columns.get(field)) return null
+  if (getColumnHasTrait(field, columns, 'usd')) {
+    return '$,.2f'
+  }
+  return null
+}
+
 export const isTemporalColumn = (column: ResultColumn): boolean => {
   let base = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIME, ColumnType.TIMESTAMP].includes(
     column.type,
@@ -80,6 +91,9 @@ export const isCategoricalColumn = (column: ResultColumn): boolean => {
     ColumnType.PHONE,
   ].includes(column.type)
   if (base) {
+    return true
+  }
+  if (column.purpose === 'key') {
     return true
   }
   if (column.traits && categoricalTraits.some((trait) => column.traits?.includes(trait))) {

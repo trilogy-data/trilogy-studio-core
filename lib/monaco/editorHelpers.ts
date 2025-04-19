@@ -34,6 +34,7 @@ interface EditorCallbacks {
   onRun?: () => void
   onSave?: () => void
   onContentChange?: (content: string) => void
+  onGenerateLLM?: (content: string) => void
 }
 
 /**

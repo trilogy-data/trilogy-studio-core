@@ -49,7 +49,7 @@ export interface ResultColumn {
   children?: Map<string, ResultColumn>
   traits?: string[]
   description?: string
-  // purpose: string
+  purpose?: string
 }
 
 export interface ResultsInterface {

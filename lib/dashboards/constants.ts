@@ -98,7 +98,16 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['bar', 'barh', 'line', 'point', 'area'],
+    visibleFor: ['bar', 'barh', 'point'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'color-by',
+    label: 'Color By (optional)',
+    field: 'colorField',
+    columnFilter: 'categorical',
+    allowEmpty: true,
+    visibleFor: ['line', 'area'],
     filterGroup: 'appearance',
   },
   {
@@ -107,7 +116,7 @@ export const Controls: ChartControl[] = [
     field: 'sizeField',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point', 'usa-map'],
+    visibleFor: ['point', 'usa-map', 'tree'],
     filterGroup: 'appearance',
   },
   {
@@ -144,6 +153,15 @@ export const Controls: ChartControl[] = [
     visibleFor: ['usa-map'],
     allowEmpty: true,
     columnFilter: 'longitude',
+    filterGroup: 'axes',
+  },
+  {
+    id: 'tree',
+    label: 'Split Field',
+    field: 'xField',
+    visibleFor: ['tree'],
+    allowEmpty: false,
+    columnFilter: 'categorical',
     filterGroup: 'axes',
   },
 ]
@@ -193,5 +211,10 @@ export const Charts = [
     value: 'headline',
     label: 'Headline',
     icon: 'mdi mdi-numeric-1-box-outline',
+  },
+  {
+    value: 'tree',
+    label: 'Tree',
+    icon: 'mdi mdi-tree',
   },
 ]

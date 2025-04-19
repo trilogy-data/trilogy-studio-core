@@ -138,6 +138,7 @@ const filterCount = computed(() => {
 <template>
   <div
     class="grid-item-content"
+    :data-testid="`dashboard-component-${item.i}`"
     :class="{
       //@ts-ignore
       'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
@@ -161,7 +162,7 @@ const filterCount = computed(() => {
       v-if="editMode"
       @click="openEditor"
       class="edit-button always-visible"
-      data-testid="edit-dashboard-item-content"
+      :data-testid="`edit-dashboard-item-content-${item.i}`"
     >
       Edit Content
     </button>

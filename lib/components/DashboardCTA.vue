@@ -148,7 +148,11 @@ function generateDashboardWithLLM(): void {
         rows="3"
         class="description-input"
       ></textarea>
-      <button @click="updateDescription" class="action-button save-button">
+      <button
+        @click="updateDescription"
+        class="action-button save-button"
+        data-testid="dashboard-description-save"
+      >
         <i class="mdi mdi-content-save"></i> Save
       </button>
     </div>
@@ -170,6 +174,7 @@ function generateDashboardWithLLM(): void {
           :key="template.id"
           :class="['template-card', { selected: selectedTemplate === template.id }]"
           @click="selectTemplate(template.id)"
+          :data-testid="`template-card-${template.id}`"
         >
           <div class="template-icon">
             <i :class="['mdi', template.icon]"></i>
