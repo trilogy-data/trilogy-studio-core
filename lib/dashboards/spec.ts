@@ -196,7 +196,15 @@ const createColorEncoding = (
           direction: 'horizontal',
         },
       }
-    : {}
+    : {
+        condition: [
+          {
+            param: 'highlight',
+            empty: false,
+            value: HIGHLIGHT_COLOR,
+          },
+        ],
+      }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -276,7 +284,8 @@ const createInteractiveLayer = (
   filtered: boolean = false,
   markColor: string = 'steelblue',
 ) => {
-  const layer = {
+  // Create the main layer for the primary y-axis
+  const mainLayer = {
     ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
     mark: {
       type: config.chartType === 'line' ? 'line' : 'area',
@@ -294,7 +303,7 @@ const createInteractiveLayer = (
   }
 
   if (!filtered) {
-    layer.params = [
+    mainLayer.params = [
       {
         name: 'highlight',
         select: {
@@ -307,7 +316,43 @@ const createInteractiveLayer = (
     ]
   }
 
-  return layer
+  // If no secondary y field is defined, return just the main layer
+  if (!config.yField2) {
+    return [mainLayer]
+  }
+
+  // Create a secondary layer for the second y-axis
+  const secondaryLayer = {
+    ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
+    mark: {
+      type: config.chartType === 'line' ? 'line' : 'area',
+      ...(config.chartType === 'area' ? { line: true } : {}),
+      ...(filtered ? { color: 'orange' } : { color: 'lightgray' }),
+      strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
+    },
+    data: { values: data },
+    encoding: {
+      x: createFieldEncoding(config.xField || '', columns),
+      y: createFieldEncoding(config.yField2, columns),
+      tooltip: tooltipFields,
+      ...encoding,
+    },
+    params: !filtered
+      ? [
+          {
+            name: 'highlight2',
+            select: {
+              type: 'point',
+              on: 'mouseover',
+              clear: 'mouseout',
+            },
+          },
+        ]
+      : [],
+  }
+
+  // Return an array containing both layers
+  return [mainLayer, secondaryLayer]
 }
 
 /**
@@ -372,13 +417,27 @@ const createLineChartSpec = (
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
 ) => {
+  let base = createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart)
+  let filtered = createInteractiveLayer(
+    config,
+    data,
+    columns,
+    tooltipFields,
+    encoding,
+    intChart,
+    true,
+  )
+  // if there are two fields in both, we have two ys. Layer them independently
+  let layers = []
+  if (base.length > 1 && filtered.length > 1) {
+    layers = [{ layer: [base[0], filtered[0]] }, { layer: [base[1], filtered[1]] }]
+  } else {
+    layers = [...base, ...filtered]
+  }
   return {
     data: undefined,
     params: [],
-    layer: [
-      createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
-      createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true),
-    ],
+    layer: layers,
   }
 }
 
@@ -396,8 +455,8 @@ const createAreaChartSpec = (
   return {
     data: undefined,
     layer: [
-      createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
-      createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true),
+      ...createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
+      ...createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true),
     ],
   }
 }
@@ -861,6 +920,7 @@ export const generateVegaSpec = (
   columns: Map<string, ResultColumn>,
   chartSelection: Object[] | null,
   isMobile: boolean = false,
+  title: string = '',
 ) => {
   let intChart: Array<Partial<ChartConfig>> = chartSelection
     ? chartSelection.map((x) => toRaw(x))
@@ -963,9 +1023,17 @@ export const generateVegaSpec = (
       },
     ]
   }
-  if (config.chartType === 'barh') {
-    console.log('look at this')
-    console.log(spec)
+
+  if (title && config.chartType === 'usa-map') {
+    spec.title = title
+  }
+
+  if (config.yField2) {
+    spec.resolve = {
+      scale: {
+        y: 'independent',
+      },
+    }
   }
   return spec
 }

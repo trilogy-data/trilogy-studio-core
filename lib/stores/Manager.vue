@@ -1,4 +1,14 @@
 <template>
+  <CredentialManager
+    :showPrompt="showCredentialPrompt"
+    :bypassMode="bypassMode"
+    :error="credentialError"
+    :storedCredentialLabels="storedCredentialLabels"
+    @submit-keyphrase="handleKeyphraseSubmit"
+    @show-bypass-warning="showBypassWarning"
+    @confirm-bypass="confirmBypass"
+    @cancel-bypass="cancelBypass"
+  />
   <template v-if="loaded">
     <IDE v-if="!isMobile" />
     <MobileIDE v-else />
@@ -12,18 +22,25 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
+import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
+// Import credential manager
+import { CredentialManager as CredentialService } from '../data/credentialService'
+// Import credential constants or define them here
+import { CREDENTIAL_PREFIX as credentialPrefix } from '../data/credentialHelpers'
 
 import QueryResolver from './resolver'
 import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 import { IDE, MobileIDE } from '../views'
+
 export default {
   name: 'ContextManager',
   components: {
     IDE,
     MobileIDE,
+    CredentialManager,
   },
   props: {
     connectionStore: {
@@ -61,7 +78,216 @@ export default {
     },
   },
   setup(props) {
-    // provide('connections', props.connections);
+    // Credential state management (upleveled from CredentialManager)
+    const showCredentialPrompt = ref(false)
+    const bypassMode = ref(false)
+    const credentialError = ref('')
+    const activeKeyphrase = ref<string | null>(null)
+    const storedCredentialLabels = ref<string[]>([])
+    const pendingCredentialOperations = ref<
+      Array<{
+        resolve: (value: any) => void
+        reject: (reason?: any) => void
+        operation: 'save' | 'get'
+        params: any
+      }>
+    >([])
+
+    // Initialize credential service
+    const credentialService = new CredentialService({
+      credentialPrefix,
+      // Other options as needed
+    })
+
+    // Check for credentials and update stored labels
+    const checkForCredentials = async () => {
+      try {
+        const credentials = credentialService.listCredentials()
+        storedCredentialLabels.value = credentials.map((cred) => cred.label)
+        return credentials.length > 0
+      } catch (err) {
+        console.error('Error checking for credentials:', err)
+        storedCredentialLabels.value = []
+        return false
+      }
+    }
+
+    // Handle keyphrase submission
+    const handleKeyphraseSubmit = async (keyphrase: string) => {
+      if (!keyphrase.trim()) {
+        credentialError.value = 'Keyphrase cannot be empty'
+        return
+      }
+
+      // Verify the keyphrase
+      const isValid = await verifyKeyphrase(keyphrase)
+      const hasCredentials = storedCredentialLabels.value.length > 0
+
+      if (!isValid && hasCredentials) {
+        credentialError.value = 'Invalid keyphrase. Please try again.'
+        return
+      }
+
+      // Set the active keyphrase and close the prompt
+      activeKeyphrase.value = keyphrase
+      showCredentialPrompt.value = false
+      credentialError.value = ''
+
+      // Complete ALL pending operations
+      if (pendingCredentialOperations.value.length > 0) {
+        // Process all pending operations
+        const operations = [...pendingCredentialOperations.value]
+        pendingCredentialOperations.value = [] // Clear the queue
+
+        // Process each operation sequentially to avoid race conditions
+        for (const { resolve, operation, params } of operations) {
+          try {
+            if (operation === 'save') {
+              const { label, type, value } = params
+              const result = await credentialService.storeCredential(label, type, value, keyphrase)
+              resolve(!!result)
+            } else if (operation === 'get') {
+              const { label, type } = params
+              const result = await credentialService.getCredential(label, type, keyphrase)
+              resolve(result)
+            }
+          } catch (error) {
+            console.error(`Error in credential operation:`, error)
+            resolve(null)
+          }
+        }
+
+        // Refresh the credential list after all operations
+        await checkForCredentials()
+      }
+    }
+
+    // Verify keyphrase can decrypt existing credentials
+    const verifyKeyphrase = async (phrase: string): Promise<boolean> => {
+      const credentials = credentialService.listCredentials()
+      if (!credentials || credentials.length < 1) {
+        return true
+      }
+
+      try {
+        const test = credentials[0]
+        const result = await credentialService.getCredential(test.label, test.type, phrase)
+        return result !== null
+      } catch (err) {
+        console.error('Error verifying keyphrase:', err)
+        return false
+      }
+    }
+
+    // Bypass warning handlers
+    const showBypassWarning = () => {
+      bypassMode.value = true
+    }
+
+    // Update confirmBypass to resolve all pending operations with null
+    const confirmBypass = () => {
+      activeKeyphrase.value = null
+      showCredentialPrompt.value = false
+      bypassMode.value = false
+
+      // Resolve all pending operations with null
+      if (pendingCredentialOperations.value.length > 0) {
+        const operations = [...pendingCredentialOperations.value]
+        pendingCredentialOperations.value = [] // Clear the queue
+
+        for (const operation of operations) {
+          operation.resolve(null)
+        }
+      }
+    }
+
+    const cancelBypass = () => {
+      bypassMode.value = false
+    }
+
+    const storeCredential = async (
+      label: string,
+      type: 'llm' | 'connection',
+      value: string,
+    ): Promise<boolean> => {
+      // If keyphrase already set, use it directly
+      if (activeKeyphrase.value) {
+        try {
+          const result = await credentialService.storeCredential(
+            label,
+            type,
+            value,
+            activeKeyphrase.value,
+          )
+          await checkForCredentials() // Refresh the list
+          return !!result
+        } catch (error) {
+          console.error('Error saving credential:', error)
+          return false
+        }
+      }
+
+      // Otherwise, show prompt and return a promise
+      return new Promise((resolve, reject) => {
+        // Add this operation to the array
+        pendingCredentialOperations.value.push({
+          resolve,
+          reject,
+          operation: 'save',
+          params: { label, type, value },
+        })
+
+        // Only show the prompt if it's not already visible
+        if (!showCredentialPrompt.value) {
+          showCredentialPrompt.value = true
+        }
+      })
+    }
+
+    const getCredential = async (
+      label: string,
+      type: 'llm' | 'connection',
+    ): Promise<{ label: string; value: string; type: string } | null> => {
+      // If keyphrase already set, use it directly
+      if (activeKeyphrase.value) {
+        return await credentialService.getCredential(label, type, activeKeyphrase.value)
+      }
+
+      // Otherwise, show prompt and return a promise
+      return new Promise((resolve, reject) => {
+        // Add this operation to the array
+        pendingCredentialOperations.value.push({
+          resolve,
+          reject,
+          operation: 'get',
+          params: { label, type },
+        })
+
+        console.log('Fetching credential:', label)
+
+        // Only show the prompt if it's not already visible
+        if (!showCredentialPrompt.value) {
+          showCredentialPrompt.value = true
+        }
+      })
+    }
+
+    // const listCredentials = (): Array<{ label: string; type: string }> => {
+    //   return credentialService.listCredentials()
+    // }
+
+    // Check for credentials on initialization
+    checkForCredentials()
+
+    // provide credential methods for use elsewhere in the app
+    provide('credentialManager', {
+      saveCredential: storeCredential,
+      getCredential,
+      hasKeyphrase: () => activeKeyphrase.value !== null,
+      refreshCredentials: checkForCredentials,
+    })
+
+    // Original provides
     provide('editorStore', props.editorStore)
     provide('connectionStore', props.connectionStore)
     provide('modelStore', props.modelStore)
@@ -79,6 +305,7 @@ export default {
         props.editorStore,
       ),
     )
+
     const windowWidth = ref(window.innerWidth)
     const loaded = ref(false)
     const loadingPromises = []
@@ -94,11 +321,16 @@ export default {
       )
 
       loadingPromises.push(
-        source.loadConnections().then((connections) => {
+        (async () => {
+          const connections = await source.loadConnections()
           for (let connection of Object.values(connections)) {
+            if (connection.getSecret() == 'saved') {
+              let cred = await getCredential(connection.getSecretName(), 'connection')
+              connection.setSecret(cred ? cred.value : '')
+            }
             props.connectionStore.addConnection(connection)
           }
-        }),
+        })(),
       )
 
       loadingPromises.push(
@@ -110,14 +342,20 @@ export default {
       )
 
       loadingPromises.push(
-        source.loadLLMConnections().then((llmConnections) => {
+        (async () => {
+          const llmConnections = await source.loadLLMConnections()
           for (let llmConnection of Object.values(llmConnections)) {
+            if (llmConnection.getApiKey() == 'saved') {
+              let apiKey = await getCredential(llmConnection.getCredentialName(), 'llm')
+              llmConnection.setApiKey(apiKey ? apiKey.value : '')
+            }
             props.llmConnectionStore.addConnection(llmConnection)
             if (llmConnection.isDefault) {
               props.llmConnectionStore.activeConnection = llmConnection.name
+              props.llmConnectionStore.resetConnection(llmConnection.name)
             }
           }
-        }),
+        })(),
       )
       loadingPromises.push(
         source.loadDashboards().then((dashboards) => {
@@ -157,7 +395,22 @@ export default {
           ),
         )
       }
-      console.log('Connections saved')
+
+      // Then save credentials for each connection if they have a secret
+      const savePromises = Object.values(props.connectionStore.connections).map(
+        async (connection) => {
+          if (connection.getSecret() && connection.saveCredential) {
+            // Store the API key in the credential manager
+            let secret = connection.getSecret()
+            if (secret) {
+              return await storeCredential(connection.getSecretName(), 'connection', secret)
+            }
+          }
+          console.log('Connections saved')
+          return true
+        },
+      )
+      await Promise.all(savePromises)
     }
     const saveModels = async () => {
       for (let source of props.storageSources) {
@@ -167,8 +420,12 @@ export default {
       }
       console.log('Models saved')
     }
+
+    // Modified to handle credentials
     const saveLLMConnections = async () => {
-      console.log('saving connections')
+      console.log('saving llm connections')
+
+      // First save connections to storage
       for (let source of props.storageSources) {
         await source.saveLLMConnections(
           Object.values(props.llmConnectionStore.connections).filter(
@@ -176,7 +433,26 @@ export default {
           ),
         )
       }
+
+      // Then save credentials for each connection if they have apiKey
+      const savePromises = Object.values(props.llmConnectionStore.connections).map(
+        async (connection) => {
+          if (connection.getApiKey()) {
+            // Store the API key in the credential manager
+            return await storeCredential(
+              connection.getCredentialName(),
+              'llm',
+              connection.getApiKey(),
+            )
+          }
+          return true
+        },
+      )
+
+      // Wait for all credential save operations to complete
+      await Promise.all(savePromises)
     }
+
     const saveDashboards = async () => {
       console.log('saving dashboards')
       for (let source of props.storageSources) {
@@ -187,6 +463,7 @@ export default {
         )
       }
     }
+
     const saveAll = async () => {
       await Promise.all([
         saveEditors(),
@@ -196,6 +473,7 @@ export default {
         saveDashboards(),
       ])
     }
+
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
@@ -207,10 +485,21 @@ export default {
       windowWidth.value = window.innerWidth
     }
     provide('isMobile', isMobile)
+
     return {
       loaded,
       isMobile,
       handleResize,
+      // For CredentialManager component props
+      showCredentialPrompt,
+      bypassMode,
+      credentialError,
+      storedCredentialLabels,
+      // Methods for credentials
+      handleKeyphraseSubmit,
+      showBypassWarning,
+      confirmBypass,
+      cancelBypass,
     }
   },
   mounted() {

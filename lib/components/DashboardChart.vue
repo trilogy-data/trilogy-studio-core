@@ -12,6 +12,7 @@
       :container-width="chartWidth"
       :onChartConfigChange="onChartConfigChange"
       :chartSelection
+      :chartTitle
       @dimension-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
     />
@@ -94,6 +95,10 @@ export default defineComponent({
     })
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
+    })
+
+    const chartTitle = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).name || ''
     })
 
     const chartHeight = computed(() => {
@@ -306,6 +311,7 @@ export default defineComponent({
       chartHeight,
       chartWidth,
       chartConfig,
+      chartTitle,
       onChartConfigChange,
       onRefresh,
       handleLocalRefresh,

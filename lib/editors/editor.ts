@@ -133,6 +133,11 @@ export default class Editor implements EditorInterface {
     this.changed = true
   }
 
+  setChartConfig(chartConfig: ChartConfig) {
+    this.chartConfig = chartConfig
+    this.changed = true
+  }
+
   toJSON(preserveResults: boolean = false): object {
     return {
       // default for migration

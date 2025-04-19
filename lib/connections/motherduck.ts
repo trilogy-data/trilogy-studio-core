@@ -1,7 +1,7 @@
 import BaseConnection from './base'
 import { MDConnection } from '@motherduck/wasm-client'
 import { Results, ColumnType } from '../editors/results'
-import { getDatabaseCredential, storeDatabaseCredential } from '../data/secure'
+
 // @ts-ignore
 export default class MotherDuckConnection extends BaseConnection {
   // @ts-ignore
@@ -23,8 +23,16 @@ export default class MotherDuckConnection extends BaseConnection {
       type: this.type,
       model: this.model,
       // secure field
-      mdToken: '',
+      mdToken: this.saveCredential ? 'saved' : '',
     }
+  }
+
+  // integrate with generic interface
+  getSecret(): string | null {
+    return this.mdToken
+  }
+  setSecret(secret: string): void {
+    this.mdToken = secret
   }
 
   static async fromJSON(fields: {
@@ -32,11 +40,7 @@ export default class MotherDuckConnection extends BaseConnection {
     mdToken: string
     model: string | null
   }): Promise<MotherDuckConnection> {
-    let mdToken = await getDatabaseCredential(`trilogy-motherduck-${fields.name}`)
-    if (!mdToken) {
-      mdToken = { label: `trilogy-motherduck-${fields.name}`, value: '' }
-    }
-    let base = new MotherDuckConnection(fields.name, mdToken.value)
+    let base = new MotherDuckConnection(fields.name, '')
     if (fields.model) {
       base.model = fields.model
     }
@@ -53,9 +57,6 @@ export default class MotherDuckConnection extends BaseConnection {
       mdToken: this.mdToken,
     })
     this.error = null
-    if (this.saveCredential) {
-      await storeDatabaseCredential(`trilogy-motherduck-${this.name}`, this.mdToken)
-    }
     return true
   }
 

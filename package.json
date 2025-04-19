@@ -59,6 +59,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@types/prismjs": "^1.26.5",
+    "@types/webappsec-credential-management": "^0.6.9",
     "jose": "^6.0.10",
     "luxon": "^3.5.0",
     "prismjs": "^1.29.0",

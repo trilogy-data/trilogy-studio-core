@@ -70,6 +70,7 @@ export interface ChartConfig {
   chartType: string
   xField?: string
   yField?: string
+  yField2?: string
   yAggregation?: string
   colorField?: string
   sizeField?: string

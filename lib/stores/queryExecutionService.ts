@@ -139,6 +139,7 @@ export default class QueryExecutionService {
     onProgress?: (message: QueryUpdate) => void,
     onFailure?: (message: QueryUpdate) => void,
     onSuccess?: (message: QueryResult) => void,
+    dryRun: boolean = false,
   ): Promise<{
     resultPromise: Promise<QueryResult>
     cancellation: QueryCancellation
@@ -165,6 +166,7 @@ export default class QueryExecutionService {
         onProgress,
         onFailure,
         onSuccess,
+        dryRun,
       ),
     }
   }
@@ -178,6 +180,7 @@ export default class QueryExecutionService {
     onProgress?: (message: QueryUpdate) => void,
     onFailure?: (message: QueryUpdate) => void,
     onSuccess?: (message: QueryResult) => void,
+    dryRun: boolean = false,
   ): Promise<QueryResult> {
     let resultSize = 0
     let columnCount = 0
@@ -198,7 +201,7 @@ export default class QueryExecutionService {
       }
     }
 
-    if (!conn.connected) {
+    if (!conn.connected && !dryRun) {
       try {
         if (onProgress)
           onProgress({
@@ -258,7 +261,7 @@ export default class QueryExecutionService {
       ])
 
       // Check if SQL was generated
-      if (!resolveResponse || !resolveResponse.data.generated_sql) {
+      if (!resolveResponse || !resolveResponse.data.generated_sql || dryRun) {
         if (onSuccess) {
           onSuccess({
             success: true,

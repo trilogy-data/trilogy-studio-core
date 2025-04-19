@@ -42,7 +42,7 @@ from trilogy.render import get_dialect_generator
 from trilogy import CONFIG
 from trilogy import __version__
 
-print(f"Starting Trilogy Server v{__version__}")
+
 
 # Define the path to the .env file
 env_path = Path(__file__).parent / ".env"
@@ -415,6 +415,7 @@ def test():
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     try:
+        print(f"Starting Trilogy Server v{__version__}")
         cli()
         sys.exit(0)
     except:  # noqa: E722

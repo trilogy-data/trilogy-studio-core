@@ -254,6 +254,10 @@ button:focus-visible {
   color: var(--text-faint);
 }
 
+.text-bold {
+  font-weight: bold;
+}
+
 .truncate-text {
   white-space: nowrap;
   overflow: hidden;
@@ -300,7 +304,6 @@ button:focus-visible {
   background-color: var(--button-bg, #f5f5f5);
   border: 1px solid var(--border-color, #ddd);
   padding: 6px 12px;
-  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -309,7 +312,6 @@ button:focus-visible {
   color: white;
   border: none;
   padding: 6px 12px;
-  border-radius: 4px;
   cursor: pointer;
 }
 

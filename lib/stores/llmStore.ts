@@ -97,28 +97,104 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return this.connections[name]
     },
 
-    async generateQueryCompletion(inputString: string, concepts: ModelConceptInput[]) {
+    // Common method for generating and validating LLM responses
+    async generateValidatedCompletion(
+      promptCreator: Function,
+      inputString: string,
+      concepts: ModelConceptInput[],
+      validator: Function | null = null,
+      maxAttempts = 3,
+    ) {
       let connection: string = this.activeConnection || ''
       if (connection === '') {
         throw new Error('No active LLM connection')
       }
+
+      let base = promptCreator(inputString, concepts)
+      let attempts = 0
+      let passed = false
+      let extract = '' as string | null
+
+      // Initial completion generation
       let raw = await this.generateCompletion(connection, {
-        prompt: createPrompt(inputString, concepts),
+        prompt: base,
       })
 
-      return extractLastTripleQuotedText(raw.text)
+      // Extract the response
+      extract = extractLastTripleQuotedText(raw.text)
+
+      // Validation loop
+      if (validator) {
+        console.log('Validating llm response with:', validator)
+        console.log('extract:', extract)
+
+        while (attempts < maxAttempts && !passed) {
+          try {
+            // Attempt validation
+            passed = await validator(extract)
+            console.log('validation passed')
+            passed = true
+          } catch (e) {
+            console.log('validation failed')
+            console.log(e)
+
+            // Increment attempts counter
+            attempts++
+
+            // If max attempts reached, break out of the loop
+            if (attempts >= maxAttempts) {
+              console.log(`Max attempts (${maxAttempts}) reached, returning last response`)
+              break
+            }
+
+            // Add feedback to the prompt for next attempt
+            let message = (e as Error).message
+            base += `\n\nYour response was """${extract}""", which failed validation on validation error: ${message}. Can you return a new response that fixes the error? Ensure the portion to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
+
+            // Generate new completion with updated prompt
+            raw = await this.generateCompletion(connection, {
+              prompt: base,
+            })
+
+            // Extract the new response
+            extract = extractLastTripleQuotedText(raw.text)
+            console.log(`Attempt ${attempts}. New extract:`, extract)
+          }
+        }
+      }
+
+      console.log('returning llm response')
+      return extract
     },
 
-    async generateFilterQuery(inputString: string, concepts: ModelConceptInput[]) {
-      let connection: string = this.activeConnection || ''
-      if (connection === '') {
-        throw new Error('No active LLM connection')
-      }
-      let raw = await this.generateCompletion(connection, {
-        prompt: createFilterPrompt(inputString, concepts),
-      })
+    async generateQueryCompletion(
+      inputString: string,
+      concepts: ModelConceptInput[],
+      validator: Function | null = null,
+      maxAttempts = 3,
+    ) {
+      return this.generateValidatedCompletion(
+        createPrompt,
+        inputString,
+        concepts,
+        validator,
+        maxAttempts,
+      )
+    },
 
-      return extractLastTripleQuotedText(raw.text)
+    async generateFilterQuery(
+      inputString: string,
+      concepts: ModelConceptInput[],
+      validator: Function | null = null,
+      maxAttempts = 3,
+    ) {
+      return this.generateValidatedCompletion(
+        createFilterPrompt,
+        inputString,
+        concepts,
+        validator,
+        maxAttempts,
+      )
     },
 
     async generateCompletion(

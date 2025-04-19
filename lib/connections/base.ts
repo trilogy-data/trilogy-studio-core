@@ -127,6 +127,19 @@ export default abstract class BaseConnection {
   abstract getColumns(database: string, table: string, schema: string | null): Promise<Column[]>
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
+  getSecret(): string | null {
+    return null
+  }
+  // @ts-ignore
+  setSecret(secret: string): void {
+    // Do nothing
+    // subclasses should implement this if needed
+  }
+
+  getSecretName(): string {
+    return `trilogy-connection-${this.type}-${this.name}`
+  }
+
   abstract query_core(
     sql: string,
     parameters: Record<string, any> | null,

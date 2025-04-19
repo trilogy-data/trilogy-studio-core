@@ -486,7 +486,6 @@ export default defineComponent({
     finishEditing() {
       this.isEditing = false
       this.editorStore.updateEditorName(this.editorId, this.editableName)
-      this.setActiveEditor(this.editableName)
     },
     cancelEditing() {
       this.isEditing = false
@@ -831,12 +830,16 @@ export default defineComponent({
         editorItem.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, async () => {
           if (!this.loading && this.llmStore) {
             try {
+              let editorId = this.editorData.id
               this.editorData.loading = true
+              this.editorData.startTime = Date.now()
+              this.editorData.results = new Results(new Map(), [])
               this.editorData.setError(null)
-              await this.validateQuery(false)
               let text = getEditorText(editorItem, this.editorData.contents)
               // get range at time of submission
               let range = getEditorRange(editorItem)
+              await this.validateQuery(false)
+
               // run our async call
               let concepts = this.editorData.completionSymbols.map((item) => ({
                 name: item.label,
@@ -849,13 +852,70 @@ export default defineComponent({
                   'Invalid editor for LLM generation - there are no parsed concepts. Check imports and concept definitions.',
                 )
               }
-              await Promise.all([this.llmStore.generateQueryCompletion(text, concepts)])
-                .then((results) => {
-                  let query = results[0]
+              const validator = async (text: string) => {
+                const queryPartial = await this.buildQueryArgs(text)
+                const queryInput: QueryInput = {
+                  // run an explain here, not the query
+                  text,
+                  queryType: queryPartial.queryType,
+                  editorType: queryPartial.editorType,
+                  imports: queryPartial.imports,
+                }
+
+                const onError = (error: any) => {
+                  throw error
+                }
+                let results = await this.queryExecutionService.executeQuery(
+                  this.editorData.connection,
+                  queryInput,
+                  // Starter callback (empty for now)
+                  () => {},
+                  // Progress callback
+                  () => {},
+                  // Failure callback
+                  onError,
+                  // Success callback
+                  () => {
+                    return true
+                  },
+                  true,
+                )
+                // wait on that promise
+                await results.resultPromise
+                return true
+              }
+              await this.llmStore
+                .generateQueryCompletion(text, concepts, validator)
+                .then((query) => {
                   if (query) {
-                    let op = { range: range, text: `${text}\n${query}`, forceMoveMarkers: true }
-                    editorItem.executeEdits('gen-ai-prompt-shortcut', [op])
-                    this.editorData.contents = editorItem.getValue()
+                    // Instead of updating through the monaco editor model
+                    // Get the target editor directly
+                    let targetEditor = this.editorStore.editors[editorId]
+                    if (!targetEditor) {
+                      throw new Error('Target editor not found.')
+                    }
+
+                    // Determine where to insert the query text
+                    // If we have a range, calculate the insertion position
+                    let insertionPosition = range
+                      ? range.startLineNumber
+                      : targetEditor.contents.split('\n').length
+
+                    // Split the content into lines
+                    let contentLines = targetEditor.contents.split('\n')
+
+                    // Insert the query at the appropriate position
+                    contentLines.splice(insertionPosition, 0, query)
+
+                    // Update the editor contents directly
+                    console.log('contentLines', contentLines)
+                    targetEditor.setContent(contentLines.join('\n'))
+
+                    // this is hack, but also splice it into the editor
+                    if (this.editorData.id === editorId) {
+                      let op = { range: range, text: `${text}\n${query}`, forceMoveMarkers: true }
+                      editorItem.executeEdits('gen-ai-prompt-shortcut', [op])
+                    }
                   } else {
                     throw new Error('LLM could not successfully generate query.')
                   }

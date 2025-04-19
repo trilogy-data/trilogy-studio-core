@@ -61,18 +61,6 @@ onMounted(() => {
 })
 
 // Mode Toggle (edit/view)
-const editMode = ref(true)
-const toggleEditMode = () => {
-  editMode.value = !editMode.value
-  // Update all items to be non-draggable and non-resizable in view mode
-  draggable.value = editMode.value
-  resizable.value = editMode.value
-
-  // Trigger resize on mode toggle to ensure charts update
-  nextTick(() => {
-    triggerResize()
-  })
-}
 
 // Draggable and resizable states
 const draggable = ref(true)
@@ -102,6 +90,19 @@ const dashboard = computed(() => {
   return dashboard
 })
 
+const editMode = dashboard.value ? ref(!dashboard.value.published) : ref(true)
+const toggleEditMode = () => {
+  editMode.value = !editMode.value
+  // Update all items to be non-draggable and non-resizable in view mode
+  draggable.value = editMode.value
+  resizable.value = editMode.value
+
+  // Trigger resize on mode toggle to ensure charts update
+  nextTick(() => {
+    triggerResize()
+  })
+}
+
 // Get the dashboard layout from the store
 const layout = computed(() => {
   if (!dashboard.value) return []
@@ -116,6 +117,7 @@ const selectedConnection = computed(() => {
 })
 
 async function handleFilterChange(newFilter: string) {
+  console.log('New filter:', newFilter)
   if (!newFilter || newFilter === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
@@ -165,6 +167,26 @@ async function populateCompletion() {
       })
       .catch((error) => {
         console.log(error)
+      })
+  }
+}
+
+const validateFilter = async (filter: string) => {
+  console.log('Validating filter:', filter)
+  if (dashboard.value && dashboard.value.id) {
+    await queryExecutionService
+      ?.validateQuery(dashboard.value.connection, {
+        text: 'select 1 as test;',
+        queryType: 'duckdb',
+        editorType: 'trilogy',
+        imports: dashboard.value.imports,
+        extraFilters: [filter],
+      })
+      .then(() => {
+        return true
+      })
+      .catch((error) => {
+        throw error
       })
   }
 }
@@ -444,7 +466,6 @@ function removeFilter(itemId: string, filterSource: string): void {
 function unSelect(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to remove item cross filters
-  console.log('unselecting item')
   dashboardStore.removeItemCrossFilterSource(dashboard.value.id, itemId)
 }
 
@@ -464,6 +485,7 @@ onBeforeUnmount(() => {
       :selected-connection="selectedConnection"
       :filterError="filterError"
       :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter"
       @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
       @import-change="handleImportChange"

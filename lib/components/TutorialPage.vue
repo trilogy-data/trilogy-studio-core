@@ -75,6 +75,9 @@
             />
           </div>
         </div>
+        <div v-else-if="paragraph.type === 'dashboard' && demoEditorCorrect" class="dashboard">
+          <dashboard name="demo-dashboard" connectionId="demo-model-connection" />
+        </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
       </template>
@@ -114,6 +117,7 @@ import { type DashboardStoreType } from '../stores/dashboardStore'
 import ResultsView from './ResultsView.vue'
 import CommunityModels from './CommunityModels.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
+import Dashboard from './Dashboard.vue'
 import CodeBlock from './CodeBlock.vue'
 
 const defaultDocumentationKey = 'Studio'
@@ -181,6 +185,7 @@ export default {
     ResultsView,
     CommunityModels,
     CodeBlock,
+    Dashboard,
   },
   computed: {
     demoConfig() {
@@ -257,6 +262,11 @@ export default {
 }
 
 .editor {
+  height: 800px;
+  border: 1px solid var(--border-color);
+}
+
+.dashboard {
   height: 800px;
   border: 1px solid var(--border-color);
 }

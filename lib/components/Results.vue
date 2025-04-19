@@ -34,6 +34,8 @@
           :data="results.data"
           :columns="results.headers"
           :containerHeight="containerHeight"
+          :initialConfig="chartConfig"
+          :onChartConfigChange="onChartChange"
         />
       </div>
       <div v-else-if="activeTab === 'sql'" class="sql-view">
@@ -63,7 +65,7 @@
 import DataTable from './DataTable.vue'
 import { Results } from '../editors/results'
 // import type {ChartConfig} from '../editors/results'
-import { ref, onMounted, onUpdated, inject } from 'vue'
+import { ref, onMounted, onUpdated, inject, type PropType } from 'vue'
 import Prism from 'prismjs'
 import VegaLiteChart from './VegaLiteChart.vue'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
@@ -71,6 +73,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import ErrorMessage from './ErrorMessage.vue'
 import LoadingButton from './LoadingButton.vue'
 import CodeBlock from './CodeBlock.vue'
+import type { ChartConfig } from '../editors/results'
 
 export default {
   name: 'ResultsContainer',
@@ -85,6 +88,7 @@ export default {
       required: true,
     },
     chartConfig: {
+      type: Object as PropType<ChartConfig>,
       required: false,
     },
     error: {
@@ -113,6 +117,9 @@ export default {
         return this.connectionStore.resetConnection(this.connection).then(() => {})
       }
       return Promise.resolve()
+    },
+    onChartChange(config: any) {
+      this.$emit('config-change', config)
     },
   },
   setup() {

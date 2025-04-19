@@ -73,6 +73,7 @@ export default {
         await llmConnectionStore.connections[connection.name].setApiKey(apiKey)
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
+        await saveConnections()
       }
     }
 
@@ -83,6 +84,8 @@ export default {
         llmConnectionStore.connections[connection.name].model = model
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
+        // save our new model
+        saveConnections()
       }
     }
 

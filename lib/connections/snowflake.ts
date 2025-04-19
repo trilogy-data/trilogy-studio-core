@@ -457,8 +457,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
       database: this.config.database,
       schema: this.config.schema,
       saveCredential: this.saveCredential,
-      privateKey: this.saveCredential ? this.config.privateKey : '',
-      privateKeyPassphrase: this.saveCredential ? this.config.privateKeyPassphrase : '',
+      privateKey: this.saveCredential ? 'saved' : '',
     }
   }
 
@@ -469,6 +468,14 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
   setPrivateKey(privateKey: string): void {
     this.config.privateKey = privateKey
+  }
+
+  // integrate with generic interface
+  getSecret(): string | null {
+    return this.config.privateKey
+  }
+  setSecret(secret: string): void {
+    this.config.privateKey = secret
   }
 
   /**

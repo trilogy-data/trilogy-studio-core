@@ -258,7 +258,7 @@ export default defineComponent({
 <style scoped>
 /* Symbols pane styling */
 .symbols-pane {
-  width: 250px;
+  width: 300px;
   border-left: 1px solid var(--border-color, #444);
   display: flex;
   flex-direction: column;

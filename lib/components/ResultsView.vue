@@ -13,7 +13,9 @@
       :generatedSql="editorData.generated_sql || undefined"
       :containerHeight="containerHeight"
       :type="editorData.type"
+      :chartConfig="editorData.chartConfig"
       :error="editorData.error || undefined"
+      @config-change="(config) => editorData.setChartConfig(config)"
     />
     <hint-component v-else />
   </div>
