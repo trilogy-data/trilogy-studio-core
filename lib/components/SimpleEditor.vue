@@ -505,6 +505,7 @@ export default defineComponent({
         try {
           // @ts-ignore
           window.goatcounter &&
+          // @ts-ignore
             window.goatcounter.count({
               path: 'studio-llm-generation',
               title: this.editor.type,
