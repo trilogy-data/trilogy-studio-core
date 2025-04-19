@@ -473,7 +473,7 @@ complete_for_clause?
     new Article('Functions', [
       new Paragraph(
         'Defining Functions',
-        'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are referencved with the @ prefix.',
+        'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are called with the @ prefix.',
       ),
       new Paragraph(
         'Example',
@@ -483,7 +483,7 @@ complete_for_clause?
       new Paragraph('Defining Functions', 'Functions may have optional defaults'),
       new Paragraph(
         'Example',
-        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n    @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
+        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n  @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
         'code',
       ),
     ]),
@@ -531,7 +531,7 @@ complete_for_clause?
       ),
       new Paragraph(
         'Query Processing',
-        'We process trilogy queries to transform them to SQL based on your model inputs.',
+        'We process Trilogy queries to transform them to SQL based on your model inputs.',
         'subsection',
       ),
       new Paragraph(
@@ -586,7 +586,7 @@ complete_for_clause?
       ),
       new Paragraph(
         'International Data',
-        'Telemetry data may cross borders. Query processing occurs in the US. We comply with international data protection laws.',
+        'Telemetry data may cross borders. Query processing occurs in the jurisdiction of your backend. SQL compilation happens in the US primarily. We comply with international data protection laws.',
         'section',
       ),
       new Paragraph(
@@ -617,7 +617,7 @@ complete_for_clause?
     new Article('Stored Info', [
       new Paragraph(
         'Secret Storage',
-        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but may fall back to local browser storage. Be careful storing credentials and be prepared to rotate - consider using a passowrd manager..',
+        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
       ),
       new Paragraph(
         'Secret Storage',
@@ -633,7 +633,7 @@ complete_for_clause?
     new Article('Google Account', [
       new Paragraph(
         'Google Account',
-        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This oken is only used to communicate directly with Bigquery with the google javascript client library.',
+        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This oken is only used to communicate directly with BigQuery with the standard google javascript client library.',
       ),
     ]),
     new Article('Telemetry', [
@@ -714,7 +714,7 @@ complete_for_clause?
       ),
       new Paragraph(
         'Contact',
-        "For questions about these terms, please post on the github repository <a href='https://github.com/trilogy-data/trilogy-studio-core'>here</a>.",
+        "For questions about these terms, please create an issue on the github repository <a href='https://github.com/trilogy-data/trilogy-studio-core'>here</a>.",
         'section',
       ),
       new Paragraph(

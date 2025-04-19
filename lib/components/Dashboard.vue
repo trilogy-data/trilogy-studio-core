@@ -18,11 +18,14 @@ import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
+import DashboardCTA from './DashboardCTA.vue'
 
 // Props definition
 const props = defineProps<{
   name: string
   connectionId?: string
+  // Add max-width configuration prop with default value
+  maxWidth?: number
 }>()
 
 // Initialize the dashboard store
@@ -33,6 +36,9 @@ const filter = ref('')
 const filterInput = ref('')
 const filterError = ref('')
 const debounceTimeout = ref<number | null>(null)
+
+// Set default max width if not provided
+const dashboardMaxWidth = computed(() => props.maxWidth || 1500)
 
 // Ensure dashboard is set as active when component mounts
 onMounted(() => {
@@ -494,46 +500,50 @@ onBeforeUnmount(() => {
       @toggle-edit-mode="toggleEditMode"
       @refresh="handleRefresh"
     />
-
-    <div class="grid-container">
-      <GridLayout
-        :col-num="16"
-        :row-height="30"
-        :is-draggable="draggable"
-        :is-resizable="resizable"
-        :layout="layout"
-        :vertical-compact="true"
-        :use-css-transforms="true"
-        @layout-updated="onLayoutUpdated"
-      >
-        <grid-item
-          v-for="item in layout"
-          :key="item.i"
-          :static="item.static"
-          :x="item.x"
-          :y="item.y"
-          :w="item.w"
-          :h="item.h"
-          :i="item.i"
-          :data-i="item.i"
-          drag-ignore-from=".no-drag"
-          drag-handle-class=".grid-item-drag-handle"
+    <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
+      <DashboardCTA :dashboard-id="dashboard.id" />
+    </div>
+    <div v-else class="grid-container">
+      <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
+        <GridLayout
+          :col-num="16"
+          :row-height="30"
+          :is-draggable="draggable"
+          :is-resizable="resizable"
+          :layout="layout"
+          :vertical-compact="true"
+          :use-css-transforms="true"
+          @layout-updated="onLayoutUpdated"
         >
-          <DashboardGridItem
-            :dashboard-id="dashboard.id"
-            :item="item"
-            :edit-mode="editMode"
-            :filter="filter"
-            :get-item-data="getItemData"
-            @dimension-click="setCrossFilter"
-            :set-item-data="setItemData"
-            @edit-content="openEditor"
-            @remove-filter="removeFilter"
-            @background-click="unSelect"
-            @update-dimensions="updateItemDimensions"
-          />
-        </grid-item>
-      </GridLayout>
+          <grid-item
+            v-for="item in layout"
+            :key="item.i"
+            :static="item.static"
+            :x="item.x"
+            :y="item.y"
+            :w="item.w"
+            :h="item.h"
+            :i="item.i"
+            :data-i="item.i"
+            drag-ignore-from=".no-drag"
+            drag-handle-class=".grid-item-drag-handle"
+          >
+            <DashboardGridItem
+              :dashboard-id="dashboard.id"
+              :item="item"
+              :edit-mode="editMode"
+              :filter="filter"
+              :get-item-data="getItemData"
+              @dimension-click="setCrossFilter"
+              :set-item-data="setItemData"
+              @edit-content="openEditor"
+              @remove-filter="removeFilter"
+              @background-click="unSelect"
+              @update-dimensions="updateItemDimensions"
+            />
+          </grid-item>
+        </GridLayout>
+      </div>
     </div>
 
     <!-- Add Item Modal -->
@@ -596,6 +606,15 @@ onBeforeUnmount(() => {
   overflow: auto;
   padding: 15px;
   background-color: var(--bg-color);
+  display: flex;
+  justify-content: center;
+}
+
+.grid-content {
+  width: 100%;
+  height: 100%;
+  /* Default max width can be overridden by prop */
+  /* max-width is set via inline style using the dashboardMaxWidth computed property */
 }
 
 .vue-grid-layout {
@@ -673,5 +692,11 @@ onBeforeUnmount(() => {
 
 .dashboard-not-found h2 {
   margin-bottom: 1rem;
+}
+
+.empty-dashboard-wrapper {
+  justify-content: center;
+  padding: 20px;
+  flex: 1;
 }
 </style>

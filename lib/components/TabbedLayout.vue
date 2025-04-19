@@ -55,7 +55,7 @@ export default {
 .tab-content {
   flex: 1;
   position: relative;
-  height: calc(100% - 40px); /* Subtract tabs height */
+  height: 100%; /* Subtract tabs height */
   overflow: hidden; /* Changed from auto to hidden */
   display: flex; /* Add flex display */
 }
