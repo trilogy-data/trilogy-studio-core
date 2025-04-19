@@ -276,7 +276,6 @@ export default {
   color: var(--text-color);
   border: none;
   padding: 4px 8px;
-  border-radius: 4px;
   cursor: pointer;
 }
 

@@ -4,8 +4,8 @@ import { ColumnType } from '../editors/results'
 import { toRaw } from 'vue'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isTemporalColumn, isNumericColumn, getColumnHasTrait } from './helpers'
-
+import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat } from './helpers'
+import { createTreemapSpec } from './treeSpec'
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
 /**
@@ -50,7 +50,9 @@ const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): a
 
   const column = columns.get(fieldName)
   if (!column) return {}
-
+  if (getColumnHasTrait(fieldName, columns, 'usd')) {
+    return { format: '$,.2f' }
+  }
   switch (column.type) {
     case ColumnType.MONEY:
       return { format: '$,.2f' }
@@ -363,11 +365,28 @@ const createBarChartSpec = (
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
   encoding: any,
+  data: readonly Row[] | null,
 ) => {
+  // Determine the number of unique values in the x-field
+  let xValueCount = 0
+  if (data && config.xField) {
+    // Create a Set to count unique values
+    const uniqueValues = new Set()
+    let lookup = config.xField
+    data.forEach((row) => {
+      if (row[lookup]) {
+        uniqueValues.add(row[lookup])
+      }
+    })
+    xValueCount = uniqueValues.size
+  }
+
+  // Set the label angle based on the count
+  const labelAngle = xValueCount > 7 ? -45 : 0
   return {
     mark: 'bar',
     encoding: {
-      x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle: -45 } }),
+      x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
       y: createFieldEncoding(config.yField || '', columns),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
@@ -489,7 +508,11 @@ const createPointChartSpec = (
 /**
  * Create chart specification for headline display
  */
-const createHeadlineSpec = (data: readonly Row[] | null, config: ChartConfig) => {
+const createHeadlineSpec = (
+  data: readonly Row[] | null,
+  config: ChartConfig,
+  columns: Map<string, ResultColumn>,
+) => {
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     description: 'A simple headline metric display',
@@ -510,7 +533,11 @@ const createHeadlineSpec = (data: readonly Row[] | null, config: ChartConfig) =>
           dy: -20,
         },
         encoding: {
-          text: { field: config.xField, type: 'quantitative' },
+          text: {
+            field: config.xField,
+            type: 'quantitative',
+            format: getColumnFormat(config.xField, columns),
+          },
           color: { value: '#333333' },
         },
       },
@@ -962,7 +989,7 @@ export const generateVegaSpec = (
 
   switch (config.chartType) {
     case 'bar':
-      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding)
+      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data)
 
       break
 
@@ -983,7 +1010,7 @@ export const generateVegaSpec = (
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(data, config)
+      chartSpec = createHeadlineSpec(data, config, columns)
       break
 
     case 'heatmap':
@@ -996,6 +1023,10 @@ export const generateVegaSpec = (
 
     case 'boxplot':
       chartSpec = createBoxplotSpec(config, columns, tooltipFields, encoding)
+      break
+
+    case 'tree':
+      chartSpec = createTreemapSpec(config, data, columns, tooltipFields, encoding)
       break
   }
 
@@ -1035,5 +1066,6 @@ export const generateVegaSpec = (
       },
     }
   }
+  console.log(spec)
   return spec
 }

@@ -53,6 +53,7 @@ const trilogyRules = [
   'Trilogy does not have the * symbol for counting. The count function requires a field as an argument. ID fields are good options for counts.',
   'Trilogy will let you immediately reuse a field by name after defining it in the select; do not duplicate calculations if you can avoid it.',
   'Only reference selected fields by name in the HAVING clause. Anything in HAVING should have been selected and addressable in the columns - the bit after the as.',
+  'End all statements with a semicolon.',
 ]
 
 const rulesInput = 'Rule: ' + trilogyRules.join('\nRule: ')

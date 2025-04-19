@@ -4,7 +4,7 @@
     <teleport to="body" v-if="showPrompt">
       <div class="overlay">
         <div class="modal">
-          <h2>For Your Safety</h2>
+          <h2>One Moment</h2>
           <h3>You have set or are setting a saved credential.</h3>
           <div v-if="!bypassMode">
             <p>
@@ -95,7 +95,6 @@ const emit = defineEmits([
 // Local state only for input binding
 const keyphraseInput = ref('')
 
-// Event handlers - now simply emit events to parent
 const submitKeyphrase = () => {
   emit('submit-keyphrase', keyphraseInput.value)
   keyphraseInput.value = '' // Clear after submission

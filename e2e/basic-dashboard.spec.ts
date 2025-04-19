@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-// use this if debug menus i on
+// use this if debug menus is on
 // const vegaSelector = '.vega-container .chart-wrapper canvas'
 const vegaSelector = '.vega-container canvas'
 
@@ -88,10 +88,33 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('close-model-selector').click()
   }
 
-  // ad our first dashboarrd
+  // Test the dashboard template functionality
+  // Check if quickstart section is visible
+  await expect(page.getByText('Quickstart')).toBeVisible()
+
+  // Add description for the dashboard
+  await page.getByPlaceholder('What is this dashboard for?').fill('FAA Flight Dashboard Analysis')
+  await page.getByTestId('dashboard-description-save').click()
+
+  // Test template selection
+  await page.getByTestId('template-card-summary').click()
+
+  // Verify template components were created (should check for expected number of components)
+  await expect(page.getByTestId('dashboard-component-0')).toBeVisible()
+  await expect(page.getByTestId('dashboard-component-1')).toBeVisible()
+  await expect(page.getByTestId('dashboard-component-2')).toBeVisible()
+  await expect(page.getByTestId('dashboard-component-3')).toBeVisible()
+  await expect(page.getByTestId('dashboard-component-4')).toBeVisible()
+  await expect(page.getByTestId('dashboard-component-5')).toBeVisible()
+
+  //reset it to simplify next test
+  await page.getByTestId('clear-items-button').click()
+
+  // Add a custom item to the dashboard
+
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content').click()
+  await page.getByTestId('edit-dashboard-item-content-0').click()
 
   // set content
   await page.getByTestId('simple-editor-content').click()
@@ -278,3 +301,44 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     `Final match result: ${atLeastOneMatch ? 'Found at least one matching pixel' : 'No matching pixels found'}`,
   )
 })
+
+// // Add a specific test for testing the AI assistance feature
+// test('test-ai-assisted-dashboard-creation', async ({ page, isMobile }) => {
+//   await page.goto('http://localhost:5173/trilogy-studio-core/')
+
+//   // Setup dashboard
+//   if (isMobile) {
+//     await page.getByTestId('mobile-menu-toggle').click()
+//   }
+//   await page.getByTestId('sidebar-link-dashboard').click()
+//   if (isMobile) {
+//     await page.getByTestId('dashboard-creator-add').click()
+//   }
+//   await page.getByTestId('dashboard-creator-name').click()
+//   await page.getByTestId('dashboard-creator-name').fill('ai-generated-dashboard')
+//   await page.getByTestId('dashboard-creator-submit').click()
+//   await page.getByText('ai-generated-dashboard').click()
+
+//   // Set up the source
+//   await page.getByTestId('dashboard-import-selector').click()
+//   await page.getByTestId('set-dashboard-source-flight').locator('div').first().click()
+//   if (isMobile) {
+//     await page.getByTestId('close-model-selector').click()
+//   }
+
+//   // Add description for the AI to use
+//   await page.getByPlaceholder('What is this dashboard for?').fill('Create a dashboard showing flight delays by state and carrier')
+//   await page.getByTestId('dashboard-description-save').click()
+
+//   // Check if AI assistance section is visible and click the generate button
+//   await expect(page.getByTestId('llm-generate-button')).toBeVisible()
+//   await page.getByTestId('llm-generate-button').click()
+
+//   // Verify AI generated components appear
+//   // This will depend on your AI implementation, but we can add expectations for common components
+//   await expect(page.getByTestId('ai-generated-component')).toBeVisible({ timeout: 10000 })
+
+//   // Check that the dashboard has the expected number of components
+//   const componentCount = await page.getByTestId(/^dashboard-component-/).count()
+//   expect(componentCount).toBeGreaterThan(3)
+// })

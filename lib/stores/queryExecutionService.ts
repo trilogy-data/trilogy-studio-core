@@ -368,6 +368,7 @@ export default class QueryExecutionService {
       if (column) {
         column.traits = header.traits || []
         column.address = header.name
+        column.purpose = header.purpose
         sqlResponse.headers.set(column.name, column)
       }
 
