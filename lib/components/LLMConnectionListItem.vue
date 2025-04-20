@@ -6,6 +6,14 @@
       @contextmenu.prevent="showContextMenu"
       :class="{ 'sidebar-item-selected': isSelected }"
     >
+      <!-- Context Menu -->
+      <context-menu
+        :items="contextMenuItems"
+        :position="contextMenuPosition"
+        :is-visible="contextMenuVisible"
+        @item-click="handleContextMenuItemClick"
+        @close="contextMenuVisible = false"
+      />
       <!-- Indentation -->
       <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
       <!-- Expandable Item Icons -->
@@ -43,11 +51,17 @@
         <form @submit.prevent="updateModel(item.connection, modelInput)">
           <button type="submit" class="customize-button">Update Model</button>
           <select v-model="modelInput" id="connection-type" required class="connection-customize">
-            <option v-for="model in item.connection.models" :value="model">{{ model }}</option>
+            <option v-for="model in item.connection.models" :value="model" :key="model">
+              {{ model }}
+            </option>
           </select>
         </form>
       </div>
-      <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+      <div
+        v-else-if="item.type === 'toggle-save-credential'"
+        class="md-token-container"
+        @click.stop
+      >
         <label class="save-credential-toggle">
           <input
             type="checkbox"
@@ -68,7 +82,10 @@
       <!-- Connection-specific Actions -->
       <div class="connection-actions" v-if="item.type === 'connection'">
         <!-- Set Active Button for Connection -->
-        <i v-if="item.connection.isDefault" class="mdi mdi-star loading-button is-active"></i>
+        <i
+          v-if="item.connection && item.connection.isDefault"
+          class="mdi mdi-star loading-button is-active"
+        ></i>
         <LoadingButton
           v-else
           class="loading-button"
@@ -80,6 +97,7 @@
         </LoadingButton>
         <!-- Refresh Button for Connection -->
         <connection-refresh
+          v-if="item.connection"
           :connection="item.connection"
           type="llm"
           :is-connected="isConnected(item.connection)"
@@ -94,18 +112,9 @@
           <i class="mdi mdi-delete-outline"></i>
         </LoadingButton>
         <!-- Status Indicator -->
-        <connection-status-icon :connection="item.connection" />
+        <connection-status-icon v-if="item.connection" :connection="item.connection" />
       </div>
     </div>
-    
-    <!-- Context Menu -->
-    <context-menu
-      :items="contextMenuItems"
-      :position="contextMenuPosition"
-      :is-visible="contextMenuVisible"
-      @item-click="handleContextMenuItemClick"
-      @close="contextMenuVisible = false"
-    />
   </div>
 </template>
 
@@ -118,6 +127,35 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import LoadingButton from './LoadingButton.vue'
 import ContextMenu from './ContextMenu.vue'
+import type { LLMProvider } from '../llm/base'
+
+interface ListItem {
+  id: string
+  name: string
+  indent: number
+  count?: number
+  type:
+    | 'connection'
+    | 'error'
+    | 'refresh-connection'
+    | 'api-key'
+    | 'model'
+    | 'toggle-save-credential'
+    | 'loading'
+  connection: LLMProvider
+}
+
+interface ContextMenuItem {
+  id: string
+  label: string
+  icon?: string
+  danger?: boolean
+}
+
+interface Position {
+  x: number
+  y: number
+}
 
 export default defineComponent({
   name: 'LLMConnectionListItem',
@@ -130,14 +168,7 @@ export default defineComponent({
   },
   props: {
     item: {
-      type: Object as PropType<{
-        id: string
-        name: string
-        indent: number
-        count: number
-        type: string
-        connection: any
-      }>,
+      type: Object as PropType<ListItem>,
       required: true,
     },
     isCollapsed: {
@@ -149,50 +180,59 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['toggle', 'setActive', 'refresh', 'updateApiKey', 'updateModel', 'toggleSaveCredential', 'deleteConnection'],
+  emits: [
+    'toggle',
+    'setActive',
+    'refresh',
+    'updateApiKey',
+    'updateModel',
+    'toggleSaveCredential',
+    'deleteConnection',
+  ],
   setup(props, { emit }) {
-    const apiKeyInput = ref('')
+    const apiKeyInput = ref<string>('')
 
-    const modelInput = computed({
+    const modelInput = computed<string>({
       get: () => props.item.connection?.model || '',
-      set: (value) => {
+      set: (value: string) => {
         // This is only for the local UI state before submission
         return value
       },
     })
 
     // Context Menu
-    const contextMenuVisible = ref(false)
-    const contextMenuPosition = ref({ x: 0, y: 0 })
-    
-    const contextMenuItems = computed(() => {
-      const items = []
-      
+    const contextMenuVisible = ref<boolean>(false)
+    const contextMenuPosition = ref<Position>({ x: 0, y: 0 })
+
+    const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      const items: ContextMenuItem[] = []
+
       if (props.item.type === 'connection') {
         // Add connection-specific menu items
         items.push(
           { id: 'set-default', label: 'Set as Default', icon: 'mdi-star-outline' },
           { id: 'refresh', label: 'Refresh Connection', icon: 'mdi-refresh' },
           { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
-          { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true }
+          { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true },
         )
       }
-      
+
       return items
     })
-    
-    const showContextMenu = (event) => {
+
+    const showContextMenu = (event: MouseEvent) => {
       // Only show context menu for connections
+      console.log('showContextMenu', props.item.type)
       if (props.item.type === 'connection') {
         contextMenuPosition.value = {
           x: event.clientX,
-          y: event.clientY
+          y: event.clientY,
         }
         contextMenuVisible.value = true
       }
     }
-    
-    const handleContextMenuItemClick = (item) => {
+
+    const handleContextMenuItemClick = (item: ContextMenuItem) => {
       switch (item.id) {
         case 'delete':
           deleteConnection(props.item.id)
@@ -212,8 +252,8 @@ export default defineComponent({
     }
 
     // Determine if item is expandable
-    const isExpandable = computed(() => {
-      return ['connection', 'models-category'].includes(props.item.type)
+    const isExpandable = computed<boolean>(() => {
+      return ['connection'].includes(props.item.type)
     })
 
     // Handle item click (toggle collapse)
@@ -222,7 +262,7 @@ export default defineComponent({
         toggleCollapse(props.item.id)
       }
     }
-    
+
     const toggleCollapse = (id: string) => {
       emit('toggle', id, props.item.connection?.name || '', props.item.type)
     }
@@ -233,12 +273,12 @@ export default defineComponent({
       emit('refresh', props.item.id, props.item.connection?.name || '', 'connection')
     }
 
-    const toggleSaveCredential = (connection: any) => {
+    const toggleSaveCredential = (connection: LLMProvider) => {
       emit('toggleSaveCredential', connection)
     }
 
     // Get provider type for icon
-    const getProviderType = (connection: any): string => {
+    const getProviderType = (connection: LLMProvider): string => {
       if (connection instanceof AnthropicProvider) {
         return 'anthropic'
       } else if (connection instanceof OpenAIProvider) {
@@ -250,7 +290,7 @@ export default defineComponent({
     }
 
     // Check if connection is connected
-    const isConnected = (connection: any): boolean => {
+    const isConnected = (connection: LLMProvider): boolean => {
       return connection && connection.connected === true
     }
 
@@ -266,11 +306,12 @@ export default defineComponent({
     }
 
     // Update API key
-    const updateApiKey = (connection: any, apiKey: string) => {
+    const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       emit('updateApiKey', connection, apiKey)
       apiKeyInput.value = ''
     }
-    const updateModel = (connection: any, model: string) => {
+
+    const updateModel = (connection: LLMProvider, model: string) => {
       emit('updateModel', connection, model)
       modelInput.value = ''
     }
@@ -294,7 +335,7 @@ export default defineComponent({
       contextMenuItems,
       showContextMenu,
       handleContextMenuItemClick,
-      toggleCollapse
+      toggleCollapse,
     }
   },
 })

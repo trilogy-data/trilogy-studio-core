@@ -37,11 +37,11 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Models can only be built off editors you have marked as a source. There\'s a toggle button in the top right of the editor. This is intended to make sure you only build off editors that are intended to be reusable resources.',
+      "Models can only be built off editors you have marked as a source. There's a toggle button in the top right of the editor. This is intended to make sure you only build off editors that are intended to be reusable resources.",
     ),
     new Paragraph(
       'Purpose',
-      'Each chart can have their own query, so it\'s easy to define metrics in place. For dimensions, it\'s best to define them in the model so that automatic cross-filtering can be applied; if they are local to a chart, they cannot be applied to other views.',
+      "Each chart can have their own query, so it's easy to define metrics in place. For dimensions, it's best to define them in the model so that automatic cross-filtering can be applied; if they are local to a chart, they cannot be applied to other views.",
     ),
     new Paragraph(
       'Purpose',

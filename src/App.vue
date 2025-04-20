@@ -24,7 +24,7 @@ import {
   PageModule,
   InteractionModule,
 } from 'tabulator-tables'
-import {Range, languages} from 'monaco-editor'
+import { Range, languages } from 'monaco-editor'
 
 Tabulator.registerModule([
   ResizeColumnsModule,
@@ -66,7 +66,7 @@ let llms = useLLMConnectionStore()
 let dashboards = useDashboardStore()
 
 // add model autocompletion
-function getModelCompletions(word: string, range: monaco.Range) {
+function getModelCompletions(word: string, range: Range) {
   // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
   // here you could do a server side lookup
   let completions = store.getCurrentEditorAutocomplete(word)
@@ -114,7 +114,7 @@ languages.registerCompletionItemProvider('trilogy', {
     } else if (fullIdentifier.endsWith('::')) {
       suggestions = dataTypes.map((type) => ({
         label: `${fullIdentifier}${type.label}`,
-        kind: monaco.languages.CompletionItemKind.Enum,
+        kind: languages.CompletionItemKind.Enum,
         insertText: `${fullIdentifier}${type.label}`,
         range: range,
         commitCharacters: ['\t'],

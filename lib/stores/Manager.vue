@@ -256,7 +256,7 @@ export default {
     ): Promise<{ label: string; value: string; type: string } | null> => {
       // If keyphrase already set, use it directly
       if (activeKeyphrase.value || skipKeyPhrase.value) {
-        return await credentialService.getCredential(label, type, activeKeyphrase.value)
+        return await credentialService.getCredential(label, type, activeKeyphrase.value || '')
       }
 
       // Otherwise, show prompt and return a promise

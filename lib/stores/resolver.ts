@@ -140,16 +140,16 @@ export default class TrilogyResolver {
   private async fetchWithErrorHandling(url: string, options: RequestInit): Promise<any> {
     try {
       const response = await fetch(url, options)
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw {
           message: `HTTP error ${response.status}`,
-          response: { data: errorData }
+          response: { data: errorData },
         }
       }
       let rData = await response.json()
-      return {'data': rData}
+      return { data: rData }
     } catch (error: any) {
       console.log(error)
       throw Error(this.getErrorMessage(error))
@@ -310,7 +310,7 @@ export default class TrilogyResolver {
       },
       body: JSON.stringify(requestParams),
     })
-    
+
     const modelConfig = ModelConfig.fromJSON(response.data)
 
     // Cache the result

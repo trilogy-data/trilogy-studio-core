@@ -246,7 +246,7 @@ export default {
       this.showDeleteConfirmationState = false
       this.dashboardToDelete = null
     },
-    dashboardCreated(id:string) {
+    dashboardCreated(id: string) {
       this.$emit('dashboard-key-selected', id)
     },
     clickAction(item: any) {

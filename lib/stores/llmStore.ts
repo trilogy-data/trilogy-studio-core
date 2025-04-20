@@ -90,12 +90,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
           options.saveCredential,
         )
       } else if (type === 'openai') {
-        connection = new OpenAIProvider(
-          name,
-          options.apiKey,
-          options.model,
-          options.saveCredential,
-        )
+        connection = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
       } else if (type === 'mistral') {
         connection = new MistralProvider(
           name,

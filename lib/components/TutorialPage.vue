@@ -79,7 +79,11 @@
           v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID"
           class="dashboard"
         >
-          <dashboard :name="demoDashboardID" connectionId="demo-model-connection" :viewMode="true" />
+          <dashboard
+            :name="demoDashboardID"
+            connectionId="demo-model-connection"
+            :viewMode="true"
+          />
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>

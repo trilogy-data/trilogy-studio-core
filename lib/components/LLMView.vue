@@ -150,7 +150,6 @@ export default defineComponent({
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
     // TODO: validate query syntax on resolver
-  
 
     // Chat state
     const messages = ref<MessageWithTest[]>([])

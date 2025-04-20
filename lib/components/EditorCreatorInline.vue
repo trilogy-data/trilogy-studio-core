@@ -82,7 +82,7 @@
   border: 1px solid var(--border-color);
   border-radius: 0;
   height: var(--sidebar-sub-item-height);
-  width:100%;
+  width: 100%;
 }
 
 .form-row input:focus,
