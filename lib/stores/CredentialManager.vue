@@ -5,11 +5,13 @@
       <div class="overlay">
         <div class="modal">
           <h2>One Moment</h2>
-          <h3>You have set or are setting a saved credential.</h3>
+          <h3>Securely accessing your credential storage</h3>
           <div v-if="!bypassMode">
             <p>
-              Enter a keyphrase to protect or access your saved credentials. This will be stored for
-              your session - you'll only need to enter it once per visit.
+              Enter a keyphrase to use saved credentials. (This is a secret phrase you created to
+              encrypt your credentials. It's not stored anywhere, so keep it safe.) You'll be asked
+              for it once per session. Credentials are encrypted in your browser local storage and
+              are never sent anywhere.
             </p>
             <div v-if="storedCredentialLabels.length > 0" class="stored-credentials">
               <div class="text-bold">Your stored credentials:</div>
@@ -21,7 +23,7 @@
             </div>
 
             <div class="form-group">
-              <label for="keyphrase">Keyphrase:</label>
+              <label for="keyphrase">Keyphrase</label>
               <input
                 type="password"
                 id="keyphrase"
@@ -38,8 +40,8 @@
               <button @click="showBypassWarning" class="secondary-button">Skip</button>
             </div>
             <p class="warning">
-              ⚠️ Use a unique keyphrase. Storing secrets in browser storage has risks. A password
-              manager also works well!
+              ⚠️ Use a unique keyphrase. If you lose it, you won't be able to access your
+              credentials. A password manager also works well!
             </p>
           </div>
 

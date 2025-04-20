@@ -325,6 +325,7 @@ export default defineComponent({
         props.chartSelection,
         isMobile.value,
         props.chartTitle,
+        currentTheme.value,
       )
     }
     const handleBrush = debounce((_: string, item: SignalValue) => {

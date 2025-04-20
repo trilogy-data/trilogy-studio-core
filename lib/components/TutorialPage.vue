@@ -75,8 +75,11 @@
             />
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'dashboard' && demoEditorCorrect" class="dashboard">
-          <dashboard name="demo-dashboard" connectionId="demo-model-connection" />
+        <div
+          v-else-if="paragraph.type === 'dashboard' && demoEditorCorrect && demoDashboardID"
+          class="dashboard"
+        >
+          <dashboard :name="demoDashboardID" connectionId="demo-model-connection" />
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
@@ -147,6 +150,14 @@ export default {
     const saveModels = inject<Function>('saveModels')
     const saveDashboards = inject<Function>('saveDashboards')
 
+    if (!editorStore || !connectionStore || !modelStore || !dashboardStore || !llmConnectionStore) {
+      throw new Error('Demo requires more stores!')
+    }
+
+    const demoDashboardID = Object.values(dashboardStore?.dashboards).find(
+      (d) => d.name === 'example-dashboard' && d.connection === 'demo-model-connection',
+    )?.id
+
     if (
       !editorStore ||
       !connectionStore ||
@@ -172,6 +183,7 @@ export default {
       saveDashboards,
       demoConnectionName,
       demoModelName,
+      demoDashboardID,
     }
   },
   components: {

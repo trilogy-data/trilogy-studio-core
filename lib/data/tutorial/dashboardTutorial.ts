@@ -21,6 +21,15 @@ export const DashboardTutorial = new Article(
       'Purpose',
       "Now that you have a connection and model set up, let\s get charting! Dashboards are accessed through the dashboard icon the left nav, but we'll drop one in right below. The demo model comes with a default example. ",
     ),
+    new Paragraph(
+      'Purpose',
+      `Dashboards are driven by Trilogy - so mostly, you'll just be writing queries. The one special thing on a dashboard is the global where clause. The filter bar at the top defines this; it will be concatenated to the where clause of every query on the dashboard. This is a great way to filter all of your charts at once.
+  You can also cross-filter by clicking on any element in the chart. This happens by default.`,
+    ),
+    new Paragraph(
+      'Purpose',
+      `In the below dashboard, try the following: Click on a manufacturer to filter other views. Go to edit mode and update the markdown on the top. Add a new chart. Change the horizontal bar chart to a vertical.`,
+    ),
     new Paragraph('Purpose', '', 'dashboard'),
     new Paragraph(
       'Purpose',

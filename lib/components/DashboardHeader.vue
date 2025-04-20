@@ -228,7 +228,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
           class="share-button generic-button"
           data-testid="share-dashboard-button"
         >
-          Export (WIP)
+          Export
         </button>
         <button
           @click="$emit('toggle-edit-mode')"
@@ -367,12 +367,14 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   align-items: center;
   width: 100%;
   margin-top: 5px;
+  background-color: var(--bg-color);
 }
 
 .filter-container input {
   padding: 4px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
+  background-color: var(--bg-color);
   width: 100%;
   font-size: var(--font-size);
   height: 20px;

@@ -512,6 +512,7 @@ const createHeadlineSpec = (
   data: readonly Row[] | null,
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
+  currentTheme: string,
 ) => {
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
@@ -525,7 +526,7 @@ const createHeadlineSpec = (
       {
         mark: {
           type: 'text',
-          fontSize: 36,
+          fontSize: { expr: 'min(30, width/8)' },
           fontWeight: 'bold',
           align: 'center',
           baseline: 'middle',
@@ -538,7 +539,8 @@ const createHeadlineSpec = (
             type: 'quantitative',
             format: getColumnFormat(config.xField, columns),
           },
-          color: { value: '#333333' },
+          // color: { value: currentTheme === 'light'? '#333333': '#ffffff'},
+          color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
         },
       },
       {
@@ -553,7 +555,8 @@ const createHeadlineSpec = (
         },
         encoding: {
           text: { value: snakeCaseToCapitalizedWords(config.xField) },
-          color: { value: '#666666' },
+          color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
+          // color: { value: '#666666' },
         },
       },
     ],
@@ -948,6 +951,7 @@ export const generateVegaSpec = (
   chartSelection: Object[] | null,
   isMobile: boolean = false,
   title: string = '',
+  currentTheme: string = 'light',
 ) => {
   let intChart: Array<Partial<ChartConfig>> = chartSelection
     ? chartSelection.map((x) => toRaw(x))
@@ -1010,7 +1014,7 @@ export const generateVegaSpec = (
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(data, config, columns)
+      chartSpec = createHeadlineSpec(data, config, columns, currentTheme)
       break
 
     case 'heatmap':
@@ -1066,6 +1070,5 @@ export const generateVegaSpec = (
       },
     }
   }
-  console.log(spec)
   return spec
 }

@@ -33,6 +33,9 @@ const getColumnHasTraitInternal = (column: ResultColumn, trait: string) => {
 
 // Helper functions to identify column types
 export const isNumericColumn = (column: ResultColumn): boolean => {
+  if (column.purpose === 'key') {
+    return false
+  }
   return (
     [
       ColumnType.NUMBER,

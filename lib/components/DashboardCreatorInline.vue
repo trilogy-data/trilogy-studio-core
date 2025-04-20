@@ -95,7 +95,6 @@ export default {
 
         // Close creator
         emit('close')
-
         // Select the new dashboard
         dashboardStore.setActiveDashboard(dashboard.id)
         emit('dashboard-selected', dashboard.id)

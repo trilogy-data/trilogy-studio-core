@@ -24,6 +24,7 @@
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
         :testTag="testTag"
+        @dashboard-created="dashboardCreated"
       />
       <dashboard-import-popup :isOpen="importPopupVisible" @close="importPopupVisible = false" />
     </template>
@@ -245,9 +246,11 @@ export default {
       this.showDeleteConfirmationState = false
       this.dashboardToDelete = null
     },
+    dashboardCreated(id:string) {
+      this.$emit('dashboard-key-selected', id)
+    },
     clickAction(item: any) {
       if (item.type === 'dashboard') {
-        console.log('Dashboard clicked:', item.id)
         this.$emit('dashboard-key-selected', item.id)
       } else {
         this.toggleCollapse(item.key)
