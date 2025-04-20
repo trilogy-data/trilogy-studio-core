@@ -3,13 +3,8 @@
     <form @submit.prevent="submitConnectionCreation">
       <div class="form-row">
         <label for="connection-name">Name</label>
-        <input
-          data-testid="connection-creator-name"
-          type="text"
-          v-model="connectionDetails.name"
-          id="connection-name"
-          required
-        />
+        <input data-testid="connection-creator-name" type="text" v-model="connectionDetails.name" id="connection-name"
+          required />
       </div>
 
       <div class="form-row">
@@ -27,42 +22,23 @@
       <!-- Dynamic Fields Based on Type -->
       <div v-if="connectionDetails.type === 'motherduck'" class="form-row">
         <label for="md-token">MotherDuck Token</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.mdToken"
-          id="md-token"
-          placeholder="MotherDuck Token"
-          required
-        />
+        <input type="password" v-model="connectionDetails.options.mdToken" id="md-token" placeholder="MotherDuck Token"
+          required />
         <label for="save-credential">Save Credential?</label>
-        <input
-          type="checkbox"
-          id="save-credential"
-          v-model="connectionDetails.options.saveCredential"
-          label="Save Credential?"
-        />
+        <input type="checkbox" id="save-credential" v-model="connectionDetails.options.saveCredential"
+          label="Save Credential?" />
       </div>
 
       <div v-if="connectionDetails.type === 'bigquery'" class="form-row">
         <label for="project-id">BigQuery Project ID</label>
-        <input
-          type="text"
-          v-model="connectionDetails.options.projectId"
-          id="project-id"
-          placeholder="Billing Project ID"
-          required
-        />
+        <input type="text" v-model="connectionDetails.options.projectId" id="project-id"
+          placeholder="Billing Project ID" required />
       </div>
       <div v-if="connectionDetails.type === 'sqlserver'" class="form-row">
         <label for="username">Username</label>
         <input type="text" v-model="connectionDetails.options.username" id="username" required />
         <label for="password">Password</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.password"
-          id="username"
-          required
-        />
+        <input type="password" v-model="connectionDetails.options.password" id="username" required />
       </div>
       <!-- <div v-if="connectionDetails.type === 'snowflake-basic'" class="form-row">
         <label for="account">Account</label>
@@ -77,19 +53,20 @@
           required
         />
       </div> -->
-      <div v-if="connectionDetails.type === 'snowflake'" class="form-row">
-        <label for="account">Account</label>
-        <input type="text" v-model="connectionDetails.options.account" id="account" required />
-        <label for="username">Username</label>
-        <input type="text" v-model="connectionDetails.options.username" id="username" required />
-        <label for="privateKey">Private Key</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.privateKey"
-          id="privateKey"
-          required
-        />
-      </div>
+      <template v-if="connectionDetails.type === 'snowflake'">
+        <div class="form-row">
+          <label for="account">Account</label>
+          <input type="text" v-model="connectionDetails.options.account" id="account" required />
+        </div>
+        <div class="form-row">
+          <label for="username">Username</label>
+          <input type="text" v-model="connectionDetails.options.username" id="username" required />
+        </div>
+        <div class="form-row">
+          <label for="privateKey">Private Key</label>
+          <input type="password" v-model="connectionDetails.options.privateKey" id="privateKey" required />
+        </div>
+      </template>
       <div class="button-row">
         <button data-testid="connection-creator-submit" type="submit">Submit</button>
         <button type="button" @click="close()">Cancel</button>

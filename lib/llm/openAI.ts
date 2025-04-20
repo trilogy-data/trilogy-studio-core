@@ -30,6 +30,7 @@ export class OpenAIProvider extends LLMProvider {
         this.error = 'Unknown error'
       }
       this.connected = false
+      throw e
     }
   }
 

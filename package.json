@@ -35,7 +35,6 @@
     "@vue/tsconfig": "^0.7.0",
     "axios": "^1.7.9",
     "buffer": "^6.0.3",
-    "font-awesome": "^4.7.0",
     "gapi": "^0.0.3",
     "monaco-editor": "^0.52.2",
     "pinia": "^2.3.1",
@@ -54,6 +53,7 @@
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
+    "@mdi/font": "^7.4.47",
     "@types/prismjs": "^1.26.5",
     "@types/webappsec-credential-management": "^0.6.9",
     "jose": "^6.0.10",

@@ -193,20 +193,20 @@ const createColorEncoding = (
 ) => {
   const legendConfig = isMobile
     ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
-      }
+      legend: {
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
     : {
-        condition: [
-          {
-            param: 'highlight',
-            empty: false,
-            value: HIGHLIGHT_COLOR,
-          },
-        ],
-      }
+      condition: [
+        {
+          param: 'highlight',
+          empty: false,
+          value: HIGHLIGHT_COLOR,
+        },
+      ],
+    }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -297,7 +297,7 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns),
+      y: createFieldEncoding(config.yField || '', columns, {axis: { format: getColumnFormat(config.yField, columns) }}),
       tooltip: tooltipFields,
       ...encoding,
     },
@@ -341,15 +341,15 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+      ]
       : [],
   }
 
@@ -387,7 +387,7 @@ const createBarChartSpec = (
     mark: 'bar',
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-      y: createFieldEncoding(config.yField || '', columns),
+      y: createFieldEncoding(config.yField || '', columns, { axis: { format: getColumnFormat(config.yField, columns) } }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,
@@ -417,7 +417,7 @@ const createBarHChartSpec = (
             : 'datum.label',
         },
       },
-      x: createFieldEncoding(config.xField || '', columns),
+      x: createFieldEncoding(config.xField || '', columns, { axis: { format: getColumnFormat(config.xField, columns) } }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,
@@ -606,11 +606,11 @@ const createUSAMapSpec = (
 ) => {
   const legendConfig = isMobile
     ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
-      }
+      legend: {
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
     : {}
 
   if (config.xField && config.yField) {
@@ -659,12 +659,12 @@ const createUSAMapSpec = (
               },
               color: config.colorField
                 ? {
-                    field: config.colorField,
-                    type: 'quantitative',
-                    title: snakeCaseToCapitalizedWords(config.colorField),
-                    scale: { scheme: 'viridis' },
-                    ...legendConfig,
-                  }
+                  field: config.colorField,
+                  type: 'quantitative',
+                  title: snakeCaseToCapitalizedWords(config.colorField),
+                  scale: { scheme: 'viridis' },
+                  ...legendConfig,
+                }
                 : { value: 'steelblue' },
               tooltip: [
                 {

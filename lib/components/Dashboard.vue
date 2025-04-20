@@ -26,6 +26,7 @@ const props = defineProps<{
   connectionId?: string
   // Add max-width configuration prop with default value
   maxWidth?: number
+  viewMode?: boolean
 }>()
 
 // Initialize the dashboard store
@@ -40,31 +41,7 @@ const debounceTimeout = ref<number | null>(null)
 // Set default max width if not provided
 const dashboardMaxWidth = computed(() => props.maxWidth || 1500)
 
-// Ensure dashboard is set as active when component mounts
-onMounted(() => {
-  if (dashboard.value && dashboard.value.id) {
-    dashboardStore.setActiveDashboard(dashboard.value.id)
 
-    // Initialize the filter from the dashboard if it exists
-    if (dashboard.value.filter) {
-      filter.value = dashboard.value.filter
-      filterInput.value = dashboard.value.filter
-    }
-    // populate our autocomplete
-    populateCompletion()
-  }
-
-  // Set up resize observer to track window resizing
-  const resizeObserver = new ResizeObserver(() => {
-    triggerResize()
-  })
-
-  // Observe the grid container
-  const gridContainer = document.querySelector('.grid-container')
-  if (gridContainer) {
-    resizeObserver.observe(gridContainer)
-  }
-})
 
 // watch dashboard ID and update completion
 watch(
@@ -94,6 +71,7 @@ const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
+  console.log('Dashboard:', dashboard)
   if (!dashboard && props.connectionId) {
     try {
       return dashboardStore.newDashboard(props.name, props.connectionId)
@@ -106,7 +84,33 @@ const dashboard = computed(() => {
   return dashboard
 })
 
-const editMode = dashboard.value ? ref(!dashboard.value.published) : ref(true)
+// Ensure dashboard is set as active when component mounts
+onMounted(() => {
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.setActiveDashboard(dashboard.value.id)
+
+    // Initialize the filter from the dashboard if it exists
+    if (dashboard.value.filter) {
+      filter.value = dashboard.value.filter
+      filterInput.value = dashboard.value.filter
+    }
+    // populate our autocomplete
+    populateCompletion()
+  }
+
+  // Set up resize observer to track window resizing
+  const resizeObserver = new ResizeObserver(() => {
+    triggerResize()
+  })
+
+  // Observe the grid container
+  const gridContainer = document.querySelector('.grid-container')
+  if (gridContainer) {
+    resizeObserver.observe(gridContainer)
+  }
+})
+
+const editMode = props.viewMode ? ref(false) : dashboard.value ? ref(!dashboard.value.published) : ref(true)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
@@ -464,10 +468,20 @@ function handleRefresh(itemId?: string): void {
 function setCrossFilter(info: DimensionClick): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to update item cross filters
+  //global fields 
+  let globalFields = globalCompletion.value.map((f) => f.label)
+  const finalFilters = Object.entries(info.filters)
+    .reduce((acc, [key, value]) => {
+      if (globalFields.includes(key)) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+  if (!finalFilters || Object.keys(finalFilters).length === 0) return
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
     info.source,
-    info.filters,
+    finalFilters,
     info.chart,
     info.append ? 'append' : 'add',
   )
@@ -495,62 +509,25 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :selected-connection="selectedConnection"
-      :filterError="filterError"
-      :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter"
-      @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange"
-      @import-change="handleImportChange"
-      @add-item="openAddItemModal"
-      @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode"
-      @refresh="handleRefresh"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :selected-connection="selectedConnection"
+      :filterError="filterError" :globalCompletion="globalCompletion" :validateFilter="validateFilter"
+      @connection-change="onConnectionChange" @filter-change="handleFilterChange" @import-change="handleImportChange"
+      @add-item="openAddItemModal" @clear-items="clearItems" @toggle-edit-mode="toggleEditMode"
+      @refresh="handleRefresh" />
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
     </div>
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
-        <GridLayout
-          :col-num="16"
-          :row-height="30"
-          :is-draggable="draggable"
-          :is-resizable="resizable"
-          :layout="layout"
-          :vertical-compact="true"
-          :use-css-transforms="true"
-          @layout-updated="onLayoutUpdated"
-        >
-          <grid-item
-            v-for="item in layout"
-            :key="item.i"
-            :static="item.static"
-            :x="item.x"
-            :y="item.y"
-            :w="item.w"
-            :h="item.h"
-            :i="item.i"
-            :data-i="item.i"
-            drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle"
-          >
-            <DashboardGridItem
-              :dashboard-id="dashboard.id"
-              :item="item"
-              :edit-mode="editMode"
-              :filter="filter"
-              :get-item-data="getItemData"
-              @dimension-click="setCrossFilter"
-              :set-item-data="setItemData"
-              @edit-content="openEditor"
-              @remove-filter="removeFilter"
-              @background-click="unSelect"
-              @update-dimensions="updateItemDimensions"
-            />
+        <GridLayout :col-num="16" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+          :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
+          <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+            :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+            drag-handle-class=".grid-item-drag-handle">
+            <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
+              :get-item-data="getItemData" @dimension-click="setCrossFilter" :set-item-data="setItemData"
+              @edit-content="openEditor" @remove-filter="removeFilter" @background-click="unSelect"
+              @update-dimensions="updateItemDimensions" />
           </grid-item>
         </GridLayout>
       </div>
@@ -561,22 +538,15 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor" @save="saveContent"
+        @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i, dashboard.id).content" @save="saveContent"
+        @cancel="closeEditors" />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">

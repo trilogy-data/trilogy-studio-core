@@ -1,7 +1,7 @@
 <!-- DashboardHeader.vue -->
 <script setup lang="ts">
 import { computed, type Ref, ref, watch } from 'vue'
-import { useConnectionStore, useLLMConnectionStore, useModelConfigStore } from '../stores'
+import { useConnectionStore, useLLMConnectionStore, useModelConfigStore, useEditorStore } from '../stores'
 import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import Tooltip from './Tooltip.vue'
@@ -41,6 +41,7 @@ const emit = defineEmits([
 ])
 
 const connectionStore = useConnectionStore()
+const editorStore = useEditorStore()
 const modelStore = useModelConfigStore()
 const llmStore = useLLMConnectionStore()
 
@@ -103,14 +104,17 @@ const filterStatus = computed(() => {
 })
 
 const availableImports: Ref<Import[]> = computed(() => {
-  const modelName = connectionStore.connections[props.selectedConnection].model
-  if (!modelName) {
-    return []
-  }
-  const imports = modelStore.models[modelName].sources || []
+
+  const imports = Object.values(editorStore.editors).filter((editor) => editor.connection === props.selectedConnection)
+  
+  // const modelName = connectionStore.connections[props.selectedConnection].model
+  // if (!modelName) {
+  //   return []
+  // }
+  // const imports = modelStore.models[modelName].sources || []
   return imports.map((importItem) => ({
-    name: importItem.alias,
-    alias: importItem.alias,
+    name: importItem.name,
+    alias: importItem.name,
   }))
 })
 

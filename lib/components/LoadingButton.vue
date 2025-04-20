@@ -57,6 +57,7 @@ export default {
 
     const handleKeydown = (event: KeyboardEvent) => {
       if (!props.keyCombination) return
+      if (!event.key) return
       keysPressed.add(event.key.toLowerCase())
       const requiredKeys = new Set(props.keyCombination.map((key) => key.toLowerCase()))
       if (Array.from(requiredKeys).every((key) => keysPressed.has(key))) {
@@ -66,7 +67,8 @@ export default {
       }
     }
     const handleKeyup = (event: KeyboardEvent) => {
-      // Remove the key from the set
+      if (!props.keyCombination) return
+      if (!event.key) return
       keysPressed.delete(event.key.toLowerCase())
     }
     const handleClick = async () => {

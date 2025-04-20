@@ -28,6 +28,8 @@
       @updateApiKey="updateApiKey"
       @updateModel="updateModel"
       @setActive="setActiveConnection"
+      @deleteConnection="deleteConnection"
+      @toggleSaveCredential="toggleSaveCredential"
     />
   </sidebar-list>
 </template>
@@ -285,6 +287,27 @@ export default {
       this.llmConnectionStore.activeConnection = connectionName
       this.llmConnectionStore.connections[connectionName].isDefault = true
     },
+    
+    deleteConnection(id: string, connectionName: string) {
+      // Ask for confirmation before deleting
+      if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
+        // Remove the connection from the store
+        delete this.llmConnectionStore.connections[connectionName]
+        
+        // If this was the active connection, reset active connection
+        if (this.llmConnectionStore.activeConnection === id) {
+          this.llmConnectionStore.activeConnection = ''
+        }
+        
+        // Save the updated connections
+        this.saveConnections()
+      }
+    },
+    
+    toggleSaveCredential(connection: LLMProvider) {
+      connection.saveCredential = !connection.saveCredential
+      this.saveConnections()
+    }
   },
   computed: {
     connections() {

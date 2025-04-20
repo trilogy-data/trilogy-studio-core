@@ -28,16 +28,29 @@ const useLLMConnectionStore = defineStore('llmConnections', {
   }),
 
   actions: {
-    addConnection(connection: LLMProvider) {
+    addConnection(connection: LLMProvider, checkForDefault: boolean = true) {
       // Use provider's constructor name or a unique property as identifier
       const name = connection.name
+
+      if (!this.activeConnection) {
+        this.activeConnection = name
+      }
+      //check for any defaults
+      if (checkForDefault) {
+        const existingDefaults: LLMProvider[] = Object.values(this.connections).filter(
+          (conn) => conn.isDefault,
+        )
+        if (existingDefaults.length === 0) {
+          connection.isDefault = true
+        }
+      }
       this.connections[name] = connection
       return connection
     },
 
-    resetConnection(name: string) {
+    async resetConnection(name: string) {
       if (this.connections[name]) {
-        return this.connections[name].reset()
+        return await this.connections[name].reset()
       } else {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
@@ -68,23 +81,23 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       if (this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" already exists.`)
       }
-
+      let connection: LLMProvider | null = null
       if (type === 'anthropic') {
-        this.connections[name] = new AnthropicProvider(
+        connection = new AnthropicProvider(
           name,
           options.apiKey,
           options.model,
           options.saveCredential,
         )
       } else if (type === 'openai') {
-        this.connections[name] = new OpenAIProvider(
+        connection = new OpenAIProvider(
           name,
           options.apiKey,
           options.model,
           options.saveCredential,
         )
       } else if (type === 'mistral') {
-        this.connections[name] = new MistralProvider(
+        connection = new MistralProvider(
           name,
           options.apiKey,
           options.model,
@@ -93,8 +106,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
-
-      return this.connections[name]
+      this.addConnection(connection)
+      this.resetConnection(name)
+      return connection
     },
 
     // Common method for generating and validating LLM responses

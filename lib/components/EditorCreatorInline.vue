@@ -2,9 +2,6 @@
   <div v-if="visible" class="creator-container">
     <form @submit.prevent="submitEditorCreation">
       <div class="form-row">
-        <tooltip position="right" content="Editors require unique names" :inline="true">
-          <i class="mdi mdi-information-outline"></i>
-        </tooltip>
         <label for="editor-name">Name</label>
         <input
           :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'"
@@ -15,9 +12,6 @@
         />
       </div>
       <div class="form-row">
-        <tooltip position="right" content="Use SQL editors to run raw SQL." :inline="true">
-          <i class="mdi mdi-information-outline"></i>
-        </tooltip>
         <label for="editor-type">Type</label>
 
         <select
@@ -31,13 +25,6 @@
         </select>
       </div>
       <div v-if="!connection" class="form-row">
-        <tooltip
-          position="right"
-          content="Editors are associated with a connection to run queries."
-          :inline="true"
-        >
-          <i class="mdi mdi-information-outline"></i>
-        </tooltip>
         <label for="connection-name">Connection</label>
         <select
           :data-testid="
@@ -84,6 +71,10 @@
   margin-right: 10px;
 }
 
+.form-row input {
+  width: 100%;
+}
+
 .form-row div .form-row input,
 .form-row select {
   flex: 1;
@@ -91,6 +82,7 @@
   border: 1px solid var(--border-color);
   border-radius: 0;
   height: var(--sidebar-sub-item-height);
+  width:100%;
 }
 
 .form-row input:focus,

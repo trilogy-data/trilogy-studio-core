@@ -148,8 +148,8 @@ export default class TrilogyResolver {
           response: { data: errorData }
         }
       }
-      
-      return await response.json()
+      let rData = await response.json()
+      return {'data': rData}
     } catch (error: any) {
       console.log(error)
       throw Error(this.getErrorMessage(error))
@@ -283,7 +283,7 @@ export default class TrilogyResolver {
 
     // Cache the result
     this.queryCache.set(cacheKey, response)
-
+    console.log('Query response:', response)
     return response
   }
 
