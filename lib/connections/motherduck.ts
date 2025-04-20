@@ -1,5 +1,5 @@
 import BaseConnection from './base'
-import { MDConnection } from '@motherduck/wasm-client'
+
 import { Results, ColumnType } from '../editors/results'
 
 // @ts-ignore
@@ -53,6 +53,9 @@ export default class MotherDuckConnection extends BaseConnection {
       this.error = 'Missing MotherDuck token.'
       return false
     }
+    //lazy import of import { MDConnection } from '@motherduck/wasm-client'
+    // to avoid loading the library if not needed
+    const { MDConnection } = await import('@motherduck/wasm-client')
     this.connection = MDConnection.create({
       mdToken: this.mdToken,
     })
@@ -66,9 +69,11 @@ export default class MotherDuckConnection extends BaseConnection {
     let headers = new Map(
       result.data
         .columnNames()
+        //@ts-ignore
         .map((header) => [header, { name: header, type: ColumnType.STRING, description: '' }]),
     )
     //rows are simple arrays of json objects
+    // @ts-ignore
     return new Results(headers, result.data.toRows())
   }
 }

@@ -348,7 +348,7 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   vertical-align: middle;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--bg-loading);
   backdrop-filter: blur(2px);
   z-index: 10;
 }

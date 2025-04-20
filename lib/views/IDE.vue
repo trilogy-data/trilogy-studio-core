@@ -173,7 +173,7 @@ import ConnectionView from '../components/ConnectionView.vue'
 import ResultsView from '../components/ResultsView.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
-import AxiosResolver from '../stores/resolver.ts'
+import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject } from 'vue'
 import useScreenNavigation from './useScreenNavigation'
@@ -215,7 +215,7 @@ export default {
     ResultsView,
   },
   setup() {
-    type ResolverType = typeof AxiosResolver
+    type ResolverType = typeof TrilogyResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
 

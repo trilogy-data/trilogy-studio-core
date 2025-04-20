@@ -129,24 +129,28 @@ export class CredentialManager {
     label: string,
     type: CredentialType,
     value: string,
-    password: string,
+    password: string | null = null,
   ): Promise<boolean> {
     const storageKey = this.getStorageKey(label, type)
     try {
-      const encryptedData = await this.encryptValue(value, password)
-      const storePayload = JSON.stringify(encryptedData) // Store IV/Salt *with* data
+
 
       if (this.useCredentialApi) {
         console.log(`Storing credential '${label}' (${type}) using Credential Management API.`)
         // @ts-ignore
         const credential = new PasswordCredential({
           id: storageKey, // Use the full unique key as ID
-          password: storePayload, // Store the JSON blob as the 'password'
+          password: value, // store the value here as password
           name: `Trilogy Studio: ${type} - ${label}`, // User-friendly name
         })
         await navigator.credentials.store(credential)
         return true
       } else {
+        if (!password) {
+          throw new CredentialError('Password is required for encryption when not using Credential API.')
+        }
+        const encryptedData = await this.encryptValue(value, password)
+        const storePayload = JSON.stringify(encryptedData) // Store IV/Salt *with* data
         console.log(`Storing credential '${label}' (${type}) using localStorage.`)
         localStorage.setItem(storageKey, storePayload)
         return true
@@ -174,7 +178,7 @@ export class CredentialManager {
   ): Promise<Credential | null> {
     const storageKey = this.getStorageKey(label, type)
     let storedPayload: string | null = null
-
+    let credential: string | null = null;
     try {
       if (this.useCredentialApi) {
         console.log(`Attempting to retrieve '${label}' (${type}) using Credential Management API.`)
@@ -197,7 +201,7 @@ export class CredentialManager {
           credential instanceof PasswordCredential &&
           credential.id === storageKey
         ) {
-          storedPayload = credential.password
+          password = credential.password
         } else if (credential) {
           console.warn(
             `Credential API returned a credential (${credential.id}), but it didn't match the expected key (${storageKey}).`,
@@ -311,5 +315,9 @@ export class CredentialManager {
       }
     }
     return credentials
+  }
+
+  getIsCredentialApiSupported(): boolean {
+    return this.isCredentialApiSupported
   }
 }

@@ -72,7 +72,7 @@ import ModelCreator from './ModelCreator.vue'
 import LoadingButton from './LoadingButton.vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
-import AxiosResolver from '../stores/resolver'
+import TrilogyResolver from '../stores/resolver'
 import trilogyIcon from '../static/trilogy_small.webp'
 import { KeySeparator } from '../data/constants'
 import { getDefaultValueFromHash } from '../stores/urlStore'
@@ -90,7 +90,7 @@ export default {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+    const trilogyResolver = inject<TrilogyResolver>('trilogyResolver')
 
     const creatorVisible = ref(false)
     const current = getDefaultValueFromHash('modelKey') || ''

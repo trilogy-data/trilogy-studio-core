@@ -5,7 +5,7 @@ import useQueryHistoryService from './connectionHistoryStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
-import { AxiosTrilogyResolver } from '.'
+import { TrilogyResolver } from '.'
 import { type ValidateResponse, type QueryResponse } from './resolver'
 export interface QueryInput {
   text: string
@@ -38,13 +38,13 @@ interface QueryCancellation {
 }
 
 export default class QueryExecutionService {
-  private trilogyResolver: AxiosTrilogyResolver
+  private trilogyResolver: TrilogyResolver
   private connectionStore: ConnectionStoreType
   private modelStore: ModelConfigStoreType
   private editorStore: EditorStoreType
 
   constructor(
-    trilogyResolver: AxiosTrilogyResolver,
+    trilogyResolver: TrilogyResolver,
     connectionStore: ConnectionStoreType,
     modelStore: ModelConfigStoreType,
     editorStore: EditorStoreType,

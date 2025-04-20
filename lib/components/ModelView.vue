@@ -55,7 +55,7 @@ import { ModelSource, ModelConfig } from '../models' // Adjust the import path
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import ModelConcept from './ModelConcept.vue'
-import AxiosResolver from '../stores/resolver'
+import TrilogyResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import ModelCard from './ModelCard.vue'
@@ -77,7 +77,7 @@ export default defineComponent({
 
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+    const trilogyResolver = inject<TrilogyResolver>('trilogyResolver')
     if (!modelStore || !editorStore || !trilogyResolver) {
       throw new Error('Missing model store or editor store!')
     }

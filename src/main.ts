@@ -1,9 +1,9 @@
-import { Buffer } from 'buffer'
+// import { Buffer } from 'buffer'
 
-window.Buffer = Buffer
+// window.Buffer = Buffer
 // polyfill for SQL Server Driver
 // @ts-ignore
-Error.captureStackTrace = (targetObject: object, constructorOpt?: Function) => {}
+// Error.captureStackTrace = (targetObject: object, constructorOpt?: Function) => {}
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'

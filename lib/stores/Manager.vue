@@ -83,6 +83,7 @@ export default {
     const bypassMode = ref(false)
     const credentialError = ref('')
     const activeKeyphrase = ref<string | null>(null)
+    const skipKeyPhrase = ref(false)
     const storedCredentialLabels = ref<string[]>([])
     const pendingCredentialOperations = ref<
       Array<{
@@ -98,6 +99,11 @@ export default {
       credentialPrefix,
       // Other options as needed
     })
+
+    if (credentialService.getIsCredentialApiSupported()) {
+      console.log('Native Credential API supported')
+      skipKeyPhrase.value = true
+    }
 
     // Check for credentials and update stored labels
     const checkForCredentials = async () => {
@@ -211,7 +217,7 @@ export default {
       value: string,
     ): Promise<boolean> => {
       // If keyphrase already set, use it directly
-      if (activeKeyphrase.value) {
+      if (activeKeyphrase.value || skipKeyPhrase.value) {
         try {
           const result = await credentialService.storeCredential(
             label,

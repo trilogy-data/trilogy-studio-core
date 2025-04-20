@@ -116,7 +116,6 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
-// import AxiosResolver from '../stores/resolver'
 
 interface TestResult {
   passed: boolean
@@ -151,7 +150,7 @@ export default defineComponent({
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
     // TODO: validate query syntax on resolver
-    // const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+  
 
     // Chat state
     const messages = ref<MessageWithTest[]>([])
