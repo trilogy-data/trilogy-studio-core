@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject } from 'vue'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -65,6 +65,16 @@ onMounted(() => {
     resizeObserver.observe(gridContainer)
   }
 })
+
+// watch dashboard ID and update completion
+watch(
+  () => props.name,
+  (newId) => {
+    if (newId) {
+      populateCompletion()
+    }
+  },
+)
 
 // Mode Toggle (edit/view)
 

@@ -27,9 +27,13 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: var(--background, #fff);
 }
-
 .icon-container {
   position: absolute;
   left: 16px;
@@ -37,18 +41,15 @@
   display: flex;
   align-items: center;
 }
-
 .hamburger-icon {
   font-size: 24px;
   display: flex;
 }
-
 .header {
   font-size: 20px;
   width: 100%;
   text-align: center;
 }
-
 .interface {
   position: relative;
   display: flex;
@@ -56,15 +57,14 @@
   width: 100%;
   height: 100%;
 }
-
 .interface-wrap {
   display: flex;
   flex-wrap: nowrap;
   flex: 1 1 auto;
   max-height: 100%;
   isolation: isolate;
+  margin-top: 40px; /* Add space for the fixed header */
 }
-
 .sidebar {
   background-color: var(--sidebar-bg);
   display: flex;
@@ -76,7 +76,6 @@
   z-index: 51;
   overflow-y: visible;
 }
-
 .nested-page-content {
   flex: 1 1 auto;
   height: 100%;
@@ -102,14 +101,12 @@ export default {
       if (this.menuOpen) {
         return 'Menu'
       }
-
       if (this.activeScreen) {
         return this.activeScreen
           .split('-')
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ')
       }
-
       return 'Trilogy'
     },
   },

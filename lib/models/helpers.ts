@@ -4,6 +4,7 @@ import { ModelSource } from './model'
 import { type EditorStoreType } from '../stores/editorStore'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
+import { DashboardModel } from '../dashboards'
 export class ModelImportService {
   private editorStore: EditorStoreType
   private modelStore: ModelConfigStoreType
@@ -57,7 +58,7 @@ export class ModelImportService {
       alias: string
       purpose: EditorTag | null
       content: string
-      type?: 'sql' | 'dashboard' | undefined
+      type?: 'sql' | 'dashboard' | 'trilogy' | undefined
     }[]
   > {
     return Promise.all(
@@ -73,7 +74,7 @@ export class ModelImportService {
             alias: component.alias,
             purpose: this.purposeToTag(component.purpose),
             content,
-            type: component.type as 'sql' | 'dashboard' | undefined,
+            type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
           }
         } catch (error) {
           console.error(error)
@@ -123,7 +124,7 @@ export class ModelImportService {
           if (response.type === 'dashboard' && response.content) {
             try {
               // Parse dashboard JSON
-              const dashboardObj = JSON.parse(response.content)
+              const dashboardObj = DashboardModel.fromSerialized(JSON.parse(response.content))
 
               // Set storage to "local"
               dashboardObj.storage = 'local'
