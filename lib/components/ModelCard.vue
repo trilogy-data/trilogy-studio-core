@@ -264,7 +264,7 @@ import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import ModelConcept from './ModelConcept.vue'
-import AxiosResolver from '../stores/resolver'
+import FetchResolver from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
 import ConceptTable from './ConceptTable.vue'
@@ -288,7 +288,7 @@ export default defineComponent({
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+    const trilogyResolver = inject<FetchResolver>('trilogyResolver')
 
     if (!modelStore || !editorStore || !trilogyResolver || !connectionStore) {
       throw new Error('Missing model store or editor store!')

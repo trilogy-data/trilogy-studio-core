@@ -83,6 +83,7 @@ export default {
     const bypassMode = ref(false)
     const credentialError = ref('')
     const activeKeyphrase = ref<string | null>(null)
+    const skipKeyPhrase = ref(false)
     const storedCredentialLabels = ref<string[]>([])
     const pendingCredentialOperations = ref<
       Array<{
@@ -99,10 +100,15 @@ export default {
       // Other options as needed
     })
 
+    if (credentialService.getIsCredentialApiSupported()) {
+      console.log('Native Credential API supported')
+      skipKeyPhrase.value = true
+    }
+
     // Check for credentials and update stored labels
     const checkForCredentials = async () => {
       try {
-        const credentials = credentialService.listCredentials()
+        const credentials = await credentialService.listCredentials()
         storedCredentialLabels.value = credentials.map((cred) => cred.label)
         return credentials.length > 0
       } catch (err) {
@@ -164,7 +170,7 @@ export default {
 
     // Verify keyphrase can decrypt existing credentials
     const verifyKeyphrase = async (phrase: string): Promise<boolean> => {
-      const credentials = credentialService.listCredentials()
+      const credentials = await credentialService.listCredentials()
       if (!credentials || credentials.length < 1) {
         return true
       }
@@ -211,7 +217,7 @@ export default {
       value: string,
     ): Promise<boolean> => {
       // If keyphrase already set, use it directly
-      if (activeKeyphrase.value) {
+      if (activeKeyphrase.value || skipKeyPhrase.value) {
         try {
           const result = await credentialService.storeCredential(
             label,
@@ -249,8 +255,8 @@ export default {
       type: 'llm' | 'connection',
     ): Promise<{ label: string; value: string; type: string } | null> => {
       // If keyphrase already set, use it directly
-      if (activeKeyphrase.value) {
-        return await credentialService.getCredential(label, type, activeKeyphrase.value)
+      if (activeKeyphrase.value || skipKeyPhrase.value) {
+        return await credentialService.getCredential(label, type, activeKeyphrase.value || '')
       }
 
       // Otherwise, show prompt and return a promise
@@ -349,7 +355,8 @@ export default {
               let apiKey = await getCredential(llmConnection.getCredentialName(), 'llm')
               llmConnection.setApiKey(apiKey ? apiKey.value : '')
             }
-            props.llmConnectionStore.addConnection(llmConnection)
+            // don't check for defaulting the connection when restoring API keys
+            props.llmConnectionStore.addConnection(llmConnection, false)
             if (llmConnection.isDefault) {
               props.llmConnectionStore.activeConnection = llmConnection.name
               props.llmConnectionStore.resetConnection(llmConnection.name)

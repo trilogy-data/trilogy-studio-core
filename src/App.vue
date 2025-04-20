@@ -8,7 +8,7 @@ import {
   useConnectionStore,
   useModelConfigStore,
   useUserSettingsStore,
-  AxiosTrilogyResolver,
+  TrilogyResolver,
   useLLMConnectionStore,
   useDashboardStore,
 } from 'trilogy-studio-core/stores'
@@ -24,7 +24,7 @@ import {
   PageModule,
   InteractionModule,
 } from 'tabulator-tables'
-import * as monaco from 'monaco-editor'
+import { Range, languages } from 'monaco-editor'
 
 Tabulator.registerModule([
   ResizeColumnsModule,
@@ -49,7 +49,7 @@ userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
 userSettingsStore.toggleTheme()
 userSettingsStore.toggleTheme()
 
-let resolver = new AxiosTrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
+let resolver = new TrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
 
 let localStorage = new LocalStorage()
 
@@ -66,14 +66,14 @@ let llms = useLLMConnectionStore()
 let dashboards = useDashboardStore()
 
 // add model autocompletion
-function getModelCompletions(word: string, range: monaco.Range) {
+function getModelCompletions(word: string, range: Range) {
   // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
   // here you could do a server side lookup
   let completions = store.getCurrentEditorAutocomplete(word)
   return completions.map((completion) => {
     return {
       label: completion.label,
-      kind: monaco.languages.CompletionItemKind.Variable,
+      kind: languages.CompletionItemKind.Variable,
       insertText: completion.insertText,
       range: range,
       commitCharacters: ['\t'],
@@ -88,12 +88,12 @@ function getLastContiguousToken(line: string): string | null {
 
 interface Completion {
   label: string
-  kind: monaco.languages.CompletionItemKind
+  kind: languages.CompletionItemKind
   insertText: string
-  range: monaco.Range
+  range: Range
 }
 
-monaco.languages.registerCompletionItemProvider('trilogy', {
+languages.registerCompletionItemProvider('trilogy', {
   provideCompletionItems: function (model, position) {
     // const word = model.getWordUntilPosition(position);
     const lineContent = model.getLineContent(position.lineNumber)
@@ -102,7 +102,7 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
     const lineToCursor = lineContent.substring(0, cursorIndex)
     const match = getLastContiguousToken(lineToCursor)
     let fullIdentifier = match ? match : ''
-    const range = new monaco.Range(
+    const range = new Range(
       position.lineNumber,
       position.column - fullIdentifier.length,
       position.lineNumber,
@@ -114,7 +114,7 @@ monaco.languages.registerCompletionItemProvider('trilogy', {
     } else if (fullIdentifier.endsWith('::')) {
       suggestions = dataTypes.map((type) => ({
         label: `${fullIdentifier}${type.label}`,
-        kind: monaco.languages.CompletionItemKind.Enum,
+        kind: languages.CompletionItemKind.Enum,
         insertText: `${fullIdentifier}${type.label}`,
         range: range,
         commitCharacters: ['\t'],

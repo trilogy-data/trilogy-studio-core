@@ -26,6 +26,7 @@ const props = defineProps<{
   connectionId?: string
   // Add max-width configuration prop with default value
   maxWidth?: number
+  viewMode?: boolean
 }>()
 
 // Initialize the dashboard store
@@ -39,32 +40,6 @@ const debounceTimeout = ref<number | null>(null)
 
 // Set default max width if not provided
 const dashboardMaxWidth = computed(() => props.maxWidth || 1500)
-
-// Ensure dashboard is set as active when component mounts
-onMounted(() => {
-  if (dashboard.value && dashboard.value.id) {
-    dashboardStore.setActiveDashboard(dashboard.value.id)
-
-    // Initialize the filter from the dashboard if it exists
-    if (dashboard.value.filter) {
-      filter.value = dashboard.value.filter
-      filterInput.value = dashboard.value.filter
-    }
-    // populate our autocomplete
-    populateCompletion()
-  }
-
-  // Set up resize observer to track window resizing
-  const resizeObserver = new ResizeObserver(() => {
-    triggerResize()
-  })
-
-  // Observe the grid container
-  const gridContainer = document.querySelector('.grid-container')
-  if (gridContainer) {
-    resizeObserver.observe(gridContainer)
-  }
-})
 
 // watch dashboard ID and update completion
 watch(
@@ -94,6 +69,7 @@ const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
+  console.log('Dashboard:', dashboard)
   if (!dashboard && props.connectionId) {
     try {
       return dashboardStore.newDashboard(props.name, props.connectionId)
@@ -106,7 +82,37 @@ const dashboard = computed(() => {
   return dashboard
 })
 
-const editMode = dashboard.value ? ref(!dashboard.value.published) : ref(true)
+// Ensure dashboard is set as active when component mounts
+onMounted(() => {
+  if (dashboard.value && dashboard.value.id) {
+    dashboardStore.setActiveDashboard(dashboard.value.id)
+
+    // Initialize the filter from the dashboard if it exists
+    if (dashboard.value.filter) {
+      filter.value = dashboard.value.filter
+      filterInput.value = dashboard.value.filter
+    }
+    // populate our autocomplete
+    populateCompletion()
+  }
+
+  // Set up resize observer to track window resizing
+  const resizeObserver = new ResizeObserver(() => {
+    triggerResize()
+  })
+
+  // Observe the grid container
+  const gridContainer = document.querySelector('.grid-container')
+  if (gridContainer) {
+    resizeObserver.observe(gridContainer)
+  }
+})
+
+const editMode = props.viewMode
+  ? ref(false)
+  : dashboard.value
+    ? ref(!dashboard.value.published)
+    : ref(true)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
@@ -464,10 +470,22 @@ function handleRefresh(itemId?: string): void {
 function setCrossFilter(info: DimensionClick): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to update item cross filters
+  //global fields
+  let globalFields = globalCompletion.value.map((f) => f.label)
+  const finalFilters = Object.entries(info.filters).reduce(
+    (acc, [key, value]) => {
+      if (globalFields.includes(key)) {
+        acc[key] = value
+      }
+      return acc
+    },
+    {} as Record<string, string>,
+  )
+  if (!finalFilters || Object.keys(finalFilters).length === 0) return
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
     info.source,
-    info.filters,
+    finalFilters,
     info.chart,
     info.append ? 'append' : 'add',
   )

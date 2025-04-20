@@ -10,15 +10,20 @@ import {
 } from '../llm'
 
 const extractLastTripleQuotedText = (input: string): string | null => {
+  // First, try to strip only the 'trilogy' language identifier after triple backticks
+  const strippedInput = input.replace(/```trilogy\n/g, '```\n')
+  
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // try with all 3 kinds of quotes (''', ```, """)
   for (const quote of ["'''", '```', '"""']) {
-    const matches = input.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'))
+    const matches = strippedInput.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'))
     if (matches) {
-      return extractLastTripleQuotedText(matches[matches.length - 1].slice(3, -3))
+      const content = matches[matches.length - 1].slice(3, -3)
+      // Recursively extract from the content in case there are nested quotes
+      return extractLastTripleQuotedText(content)
     }
   }
-  return input
+  return strippedInput
 }
 
 const useLLMConnectionStore = defineStore('llmConnections', {
@@ -28,16 +33,29 @@ const useLLMConnectionStore = defineStore('llmConnections', {
   }),
 
   actions: {
-    addConnection(connection: LLMProvider) {
+    addConnection(connection: LLMProvider, checkForDefault: boolean = true) {
       // Use provider's constructor name or a unique property as identifier
       const name = connection.name
+
+      if (!this.activeConnection) {
+        this.activeConnection = name
+      }
+      //check for any defaults
+      if (checkForDefault) {
+        const existingDefaults: LLMProvider[] = Object.values(this.connections).filter(
+          (conn) => conn.isDefault,
+        )
+        if (existingDefaults.length === 0) {
+          connection.isDefault = true
+        }
+      }
       this.connections[name] = connection
       return connection
     },
 
-    resetConnection(name: string) {
+    async resetConnection(name: string) {
       if (this.connections[name]) {
-        return this.connections[name].reset()
+        return await this.connections[name].reset()
       } else {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
@@ -68,23 +86,18 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       if (this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" already exists.`)
       }
-
+      let connection: LLMProvider | null = null
       if (type === 'anthropic') {
-        this.connections[name] = new AnthropicProvider(
+        connection = new AnthropicProvider(
           name,
           options.apiKey,
           options.model,
           options.saveCredential,
         )
       } else if (type === 'openai') {
-        this.connections[name] = new OpenAIProvider(
-          name,
-          options.apiKey,
-          options.model,
-          options.saveCredential,
-        )
+        connection = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
       } else if (type === 'mistral') {
-        this.connections[name] = new MistralProvider(
+        connection = new MistralProvider(
           name,
           options.apiKey,
           options.model,
@@ -93,8 +106,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
-
-      return this.connections[name]
+      this.addConnection(connection)
+      this.resetConnection(name)
+      return connection
     },
 
     // Common method for generating and validating LLM responses

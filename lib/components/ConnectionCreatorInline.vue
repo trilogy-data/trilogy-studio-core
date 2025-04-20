@@ -77,19 +77,25 @@
           required
         />
       </div> -->
-      <div v-if="connectionDetails.type === 'snowflake'" class="form-row">
-        <label for="account">Account</label>
-        <input type="text" v-model="connectionDetails.options.account" id="account" required />
-        <label for="username">Username</label>
-        <input type="text" v-model="connectionDetails.options.username" id="username" required />
-        <label for="privateKey">Private Key</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.privateKey"
-          id="privateKey"
-          required
-        />
-      </div>
+      <template v-if="connectionDetails.type === 'snowflake'">
+        <div class="form-row">
+          <label for="account">Account</label>
+          <input type="text" v-model="connectionDetails.options.account" id="account" required />
+        </div>
+        <div class="form-row">
+          <label for="username">Username</label>
+          <input type="text" v-model="connectionDetails.options.username" id="username" required />
+        </div>
+        <div class="form-row">
+          <label for="privateKey">Private Key</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.privateKey"
+            id="privateKey"
+            required
+          />
+        </div>
+      </template>
       <div class="button-row">
         <button data-testid="connection-creator-submit" type="submit">Submit</button>
         <button type="button" @click="close()">Cancel</button>

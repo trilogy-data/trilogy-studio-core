@@ -68,7 +68,7 @@ import type { LLMConnectionStoreType } from '../stores/llmStore.ts'
 import { Results } from '../editors/results'
 import type { QueryInput } from '../stores/queryExecutionService'
 
-import AxiosResolver from '../stores/resolver'
+import FetchResolver from '../stores/resolver'
 import type { Import } from '../stores/resolver'
 import LoadingButton from './LoadingButton.vue'
 import ErrorMessage from './ErrorMessage.vue'
@@ -135,7 +135,7 @@ export default defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
-    const trilogyResolver = inject<AxiosResolver>('trilogyResolver')
+    const trilogyResolver = inject<FetchResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
     const setActiveEditor = inject<Function>('setActiveEditor')

@@ -71,15 +71,19 @@
           <div class="editor-bottom">
             <results-view
               :editorData="editorStore.editors['my-first-editor']"
-              :containerHeight="400"
+              :containerHeight="200"
             />
           </div>
         </div>
         <div
-          v-else-if="paragraph.type === 'dashboard' && demoEditorCorrect && demoDashboardID"
+          v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID"
           class="dashboard"
         >
-          <dashboard :name="demoDashboardID" connectionId="demo-model-connection" />
+          <dashboard
+            :name="demoDashboardID"
+            connectionId="demo-model-connection"
+            :viewMode="true"
+          />
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
@@ -274,7 +278,7 @@ export default {
 }
 
 .editor {
-  height: 800px;
+  height: 500px;
   border: 1px solid var(--border-color);
 }
 
@@ -284,11 +288,11 @@ export default {
 }
 
 .editor-top {
-  height: 400px;
+  height: 300px;
 }
 
 .editor-bottom {
-  height: 400px;
+  height: 200px;
 }
 
 .test-result {

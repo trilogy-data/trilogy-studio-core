@@ -297,7 +297,9 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns),
+      y: createFieldEncoding(config.yField || '', columns, {
+        axis: { format: getColumnFormat(config.yField, columns) },
+      }),
       tooltip: tooltipFields,
       ...encoding,
     },
@@ -387,7 +389,9 @@ const createBarChartSpec = (
     mark: 'bar',
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-      y: createFieldEncoding(config.yField || '', columns),
+      y: createFieldEncoding(config.yField || '', columns, {
+        axis: { format: getColumnFormat(config.yField, columns) },
+      }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,
@@ -417,7 +421,9 @@ const createBarHChartSpec = (
             : 'datum.label',
         },
       },
-      x: createFieldEncoding(config.xField || '', columns),
+      x: createFieldEncoding(config.xField || '', columns, {
+        axis: { format: getColumnFormat(config.xField, columns) },
+      }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,

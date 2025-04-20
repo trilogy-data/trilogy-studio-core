@@ -22,6 +22,7 @@
   color: var(--text-color);
 
   --bg-color: #1E1E1E;
+  --bg-loading: #1e1e1eb4;
 
   --sidebar-selector-bg: #3C3C3C;
   --sidebar-selector-font: #FFFFFF;
@@ -54,7 +55,8 @@
 
   --error-color: #ff7c7c;
 
-  --bg-color: #FFFFFF;  
+  --bg-color: #FFFFFF;
+  --bg-loading: #FFFFFFb4;
 
   --sidebar-selector-bg: #E8E8E8;
   --sidebar-selector-font: #333333;
@@ -289,7 +291,7 @@ button:focus-visible {
 .confirmation-dialog {
   background-color: var(--background-color, white);
   padding: 20px;
-  width: 300px;
+  width: 400px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 

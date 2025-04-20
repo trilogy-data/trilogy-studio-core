@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { ModelConfig } from '../models'
 import crypto from 'crypto'
 
@@ -106,7 +105,7 @@ export interface Import {
   alias: string
 }
 
-export default class AxiosResolver {
+export default class TrilogyResolver {
   address: string
   private validateCache: LRUCache<ValidateResponse>
   private formatCache: LRUCache<FormatQueryResponse>
@@ -127,15 +126,34 @@ export default class AxiosResolver {
     return crypto.createHash('md5').update(stringified).digest('hex')
   }
 
-  getErrorMessage(error: Error): string {
-    let base = 'An error occured.'
-    if (axios.isAxiosError(error)) {
+  getErrorMessage(error: any): string {
+    let base = 'An error occurred.'
+    if (error instanceof Error) {
       base = error.message
-      if (error.response && error.response.data) {
-        base = error.response.data.detail
-      }
+    }
+    if (error.response && error.response.data) {
+      base = error.response.data.detail
     }
     return JSON.stringify(base)
+  }
+
+  private async fetchWithErrorHandling(url: string, options: RequestInit): Promise<any> {
+    try {
+      const response = await fetch(url, options)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw {
+          message: `HTTP error ${response.status}`,
+          response: { data: errorData },
+        }
+      }
+      let rData = await response.json()
+      return { data: rData }
+    } catch (error: any) {
+      console.log(error)
+      throw Error(this.getErrorMessage(error))
+    }
   }
 
   async validate_query(
@@ -161,17 +179,18 @@ export default class AxiosResolver {
     }
 
     // Not in cache, make the API call
-    try {
-      const response = await axios.post(`${this.address}/validate_query`, requestParams)
+    const response = await this.fetchWithErrorHandling(`${this.address}/validate_query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestParams),
+    })
 
-      // Cache the result
-      this.validateCache.set(cacheKey, response)
+    // Cache the result
+    this.validateCache.set(cacheKey, response)
 
-      return response
-    } catch (error: any) {
-      console.log(error)
-      throw Error(this.getErrorMessage(error))
-    }
+    return response
   }
 
   async format_query(
@@ -207,17 +226,18 @@ export default class AxiosResolver {
     }
 
     // Not in cache, make the API call
-    try {
-      const response = await axios.post(`${this.address}/format_query`, requestParams)
+    const response = await this.fetchWithErrorHandling(`${this.address}/format_query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestParams),
+    })
 
-      // Cache the result
-      this.formatCache.set(cacheKey, response)
+    // Cache the result
+    this.formatCache.set(cacheKey, response)
 
-      return response
-    } catch (error: any) {
-      console.log(error)
-      throw Error(this.getErrorMessage(error))
-    }
+    return response
   }
 
   async resolve_query(
@@ -253,17 +273,18 @@ export default class AxiosResolver {
     }
 
     // Not in cache, make the API call
-    try {
-      const response = await axios.post(`${this.address}/generate_query`, requestParams)
+    const response = await this.fetchWithErrorHandling(`${this.address}/generate_query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestParams),
+    })
 
-      // Cache the result
-      this.queryCache.set(cacheKey, response)
-
-      return response
-    } catch (error: any) {
-      console.log(error)
-      throw Error(this.getErrorMessage(error))
-    }
+    // Cache the result
+    this.queryCache.set(cacheKey, response)
+    console.log('Query response:', response)
+    return response
   }
 
   async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {
@@ -282,17 +303,20 @@ export default class AxiosResolver {
     }
 
     // Not in cache, make the API call
-    try {
-      const response = await axios.post(`${this.address}/parse_model`, requestParams)
-      const modelConfig = ModelConfig.fromJSON(response.data)
+    const response = await this.fetchWithErrorHandling(`${this.address}/parse_model`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestParams),
+    })
 
-      // Cache the result
-      this.modelCache.set(cacheKey, modelConfig)
+    const modelConfig = ModelConfig.fromJSON(response.data)
 
-      return modelConfig
-    } catch (error: any) {
-      throw Error(this.getErrorMessage(error))
-    }
+    // Cache the result
+    this.modelCache.set(cacheKey, modelConfig)
+
+    return modelConfig
   }
 
   // Cache management methods

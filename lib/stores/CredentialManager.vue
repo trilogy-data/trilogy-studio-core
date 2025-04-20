@@ -2,8 +2,8 @@
   <div>
     <!-- Component that will display the credential modal dialog -->
     <teleport to="body" v-if="showPrompt">
-      <div class="overlay">
-        <div class="modal">
+      <div class="confirmation-overlay">
+        <div class="confirmation-dialog">
           <h2>One Moment</h2>
           <h3>Securely accessing your credential storage</h3>
           <div v-if="!bypassMode">
@@ -13,10 +13,10 @@
               for it once per session. Credentials are encrypted in your browser local storage and
               are never sent anywhere.
             </p>
-            <div v-if="storedCredentialLabels.length > 0" class="stored-credentials">
+            <div v-if="storedCredentialLabels.length > 0" class="creator-container">
               <div class="text-bold">Your stored credentials:</div>
               <ul class="credential-list">
-                <li v-for="label in storedCredentialLabels" :key="label">
+                <li v-for="label in storedCredentialLabels" :key="label" class="truncate-text">
                   {{ label }}
                 </li>
               </ul>
@@ -33,28 +33,28 @@
               />
             </div>
 
-            <div class="error" v-if="error">{{ error }}</div>
+            <div class="error-message" v-if="error">{{ error }}</div>
 
-            <div class="button-group">
+            <div class="button-container">
               <button @click="submitKeyphrase" class="primary-button">Submit</button>
-              <button @click="showBypassWarning" class="secondary-button">Skip</button>
+              <button @click="showBypassWarning" class="cancel-btn">Skip</button>
             </div>
-            <p class="warning">
+            <p class="warning-message">
               ⚠️ Use a unique keyphrase. If you lose it, you won't be able to access your
               credentials. A password manager also works well!
             </p>
           </div>
 
           <div v-else>
-            <p class="warning">
+            <p class="warning-message">
               ⚠️ Warning: Bypassing encryption will cause all your saved credentials to become
               inaccessible.
             </p>
             <p>Your saved credentials will be lost and you will need to re-enter them.</p>
 
-            <div class="button-group">
-              <button @click="confirmBypass" class="danger-button">Confirm Skip</button>
-              <button @click="cancelBypass" class="secondary-button">Go Back</button>
+            <div class="dialog-actions">
+              <button @click="confirmBypass" class="confirm-btn">Confirm Skip</button>
+              <button @click="cancelBypass" class="cancel-btn">Go Back</button>
             </div>
           </div>
         </div>
@@ -116,30 +116,16 @@ const cancelBypass = () => {
 </script>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.modal {
-  background-color: var(--background-color);
-  padding: 24px;
-  width: 90%;
-  max-width: 480px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
+/* Using global variables from style.css */
 h2 {
+  font-size: var(--big-font-size);
   margin-top: 0;
-  color: #2c3e50;
+  color: var(--text-color);
+}
+
+h3 {
+  font-size: var(--font-size);
+  color: var(--text-color);
 }
 
 .form-group {
@@ -150,61 +136,34 @@ label {
   display: block;
   margin-bottom: 8px;
   font-weight: bold;
+  color: var(--text-color);
 }
 
 input {
   width: 100%;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 10px;
   border: 1px solid var(--border);
-  font-size: 16px;
-}
-
-.button-group {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-button {
-  padding: 10px 16px;
-  font-size: 16px;
-  cursor: pointer;
-  border: none;
+  background-color: var(--query-window-bg);
+  color: var(--query-window-font);
+  font-size: var(--font-size);
 }
 
 .primary-button {
-  background-color: #4caf50;
+  background-color: var(--special-text);
   color: white;
 }
 
-.secondary-button {
-  background-color: #f1f1f1;
-  color: #333;
-}
-
-.danger-button {
-  background-color: #f44336;
-  color: white;
-}
-
-.warning {
-  background-color: #fff3cd;
-  color: #856404;
-  padding: 12px;
-  margin: 16px 0;
-}
-
-.error {
-  color: #f44336;
+.error-message {
+  color: var(--error-color);
   margin-top: 8px;
 }
 
-.stored-credentials {
-  background-color: #e3f2fd;
+.warning-message {
+  background-color: rgba(204, 105, 0, 0.1);
+  color: var(--special-text);
   padding: 12px;
   margin: 16px 0;
+  border: 1px solid var(--border-light);
 }
 
 .credential-list {

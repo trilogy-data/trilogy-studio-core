@@ -15,11 +15,23 @@ import type {
   EncryptedData,
 } from './credentialHelpers'
 
+// Type definition for the combined credential JSON blob
+interface CredentialBlob {
+  [key: string]: string // Maps credential key to encrypted value
+}
+
+// The unified credential ID for the Credential Management API
+const UNIFIED_CREDENTIAL_ID = 'trilogy-studio-saved-passwords'
+
 export class CredentialManager {
   private readonly pbkdf2Iterations: number
   private readonly credentialPrefix: string
   private readonly useCredentialApi: boolean
   private readonly isCredentialApiSupported: boolean
+
+  // Request deduplication for Credential API operations
+  private pendingCredentialBlobFetch: Promise<CredentialBlob> | null = null
+  private pendingCredentialBlobStore: Promise<boolean> | null = null
 
   constructor(options: CredentialManagerOptions = {}) {
     this.pbkdf2Iterations = options.pbkdf2Iterations ?? DEFAULT_PBKDF2_ITERATIONS
@@ -114,6 +126,120 @@ export class CredentialManager {
     return `${this.credentialPrefix}${type}_${label}`
   }
 
+  private getCredentialBlobKey(label: string, type: CredentialType): string {
+    // Create a unique key for each credential within the blob
+    return `${type}_${label}`
+  }
+
+  // --- Credential API Blob Methods with Deduplication ---
+
+  /**
+   * Gets the credential blob from the Credential Management API with request deduplication
+   * @returns The credential blob, or an empty object if not found
+   */
+  private getCredentialBlob(): Promise<CredentialBlob> {
+    if (!this.useCredentialApi) {
+      return Promise.resolve({})
+    }
+
+    // If there's already a pending fetch operation, reuse it
+    if (this.pendingCredentialBlobFetch) {
+      console.log('Reusing pending credential blob fetch request')
+      return this.pendingCredentialBlobFetch
+    }
+
+    // Create a new fetch operation
+    this.pendingCredentialBlobFetch = this.fetchCredentialBlob().finally(() => {
+      // Clear the pending operation when it completes (success or failure)
+      this.pendingCredentialBlobFetch = null
+    })
+
+    return this.pendingCredentialBlobFetch
+  }
+
+  /**
+   * Actual implementation of the credential blob fetch
+   * @returns The credential blob, or an empty object if not found
+   */
+  private async fetchCredentialBlob(): Promise<CredentialBlob> {
+    try {
+      console.log('Performing actual credential blob fetch from Credential API')
+      const credential = (await navigator.credentials.get({
+        password: true,
+        mediation: 'optional', // Or 'silent' if preferred, but might fail
+      })) as PasswordCredential | null
+
+      // @ts-ignore
+      if (
+        credential &&
+        // @ts-ignore
+        credential instanceof PasswordCredential &&
+        credential.id === UNIFIED_CREDENTIAL_ID
+      ) {
+        try {
+          // @ts-ignore
+          return JSON.parse(credential.password) as CredentialBlob
+        } catch (error) {
+          console.warn('Failed to parse credential blob:', error)
+          return {}
+        }
+      }
+      return {}
+    } catch (error) {
+      console.error('Error retrieving credential blob:', error)
+      return {}
+    }
+  }
+
+  /**
+   * Stores the credential blob in the Credential Management API with request deduplication
+   * @param blob The credential blob to store
+   * @returns Promise<boolean> indicating if storage was successful
+   */
+  private storeCredentialBlob(blob: CredentialBlob): Promise<boolean> {
+    if (!this.useCredentialApi) {
+      return Promise.resolve(false)
+    }
+
+    // If there's already a pending store operation, reuse it
+    // Note: This is a simplification - in a real app, you might want to queue writes
+    // or ensure the latest blob is stored if there are multiple writes
+    if (this.pendingCredentialBlobStore) {
+      console.log('Reusing pending credential blob store request')
+      return this.pendingCredentialBlobStore
+    }
+
+    // Create a new store operation
+    this.pendingCredentialBlobStore = this.performCredentialBlobStore(blob).finally(() => {
+      // Clear the pending operation when it completes (success or failure)
+      this.pendingCredentialBlobStore = null
+    })
+
+    return this.pendingCredentialBlobStore
+  }
+
+  /**
+   * Actual implementation of the credential blob store
+   * @param blob The credential blob to store
+   * @returns Promise<boolean> indicating if storage was successful
+   */
+  private async performCredentialBlobStore(blob: CredentialBlob): Promise<boolean> {
+    try {
+      console.log('Performing actual credential blob store to Credential API')
+      // @ts-ignore
+      const credential = new PasswordCredential({
+        id: UNIFIED_CREDENTIAL_ID,
+        password: JSON.stringify(blob),
+        name: 'Trilogy Studio Saved Passwords',
+      })
+      await navigator.credentials.store(credential)
+      return true
+    } catch (error) {
+      console.error('Error storing credential blob:', error)
+      return false
+    }
+  }
+
   // --- Public API Methods ---
 
   /**
@@ -129,24 +255,40 @@ export class CredentialManager {
     label: string,
     type: CredentialType,
     value: string,
-    password: string,
+    password: string | null = null,
   ): Promise<boolean> {
-    const storageKey = this.getStorageKey(label, type)
     try {
-      const encryptedData = await this.encryptValue(value, password)
-      const storePayload = JSON.stringify(encryptedData) // Store IV/Salt *with* data
-
       if (this.useCredentialApi) {
         console.log(`Storing credential '${label}' (${type}) using Credential Management API.`)
-        // @ts-ignore
-        const credential = new PasswordCredential({
-          id: storageKey, // Use the full unique key as ID
-          password: storePayload, // Store the JSON blob as the 'password'
-          name: `Trilogy Studio: ${type} - ${label}`, // User-friendly name
-        })
-        await navigator.credentials.store(credential)
+
+        // For Credential API, we need to:
+        // 1. Get the current blob of all credentials
+        // 2. Add or update this credential in the blob
+        // 3. Store the updated blob
+        const blob = await this.getCredentialBlob()
+        // Add or update this credential in the blob
+        const blobKey = this.getCredentialBlobKey(label, type)
+        blob[blobKey] = value
+
+        // Store the updated blob
+        const success = await this.storeCredentialBlob(blob)
+        if (!success) {
+          throw new CredentialError('Failed to store credential blob.')
+        }
+
         return true
       } else {
+        // Traditional localStorage approach
+        if (!password) {
+          throw new CredentialError(
+            'Password is required for encryption when not using Credential API.',
+          )
+        }
+
+        const storageKey = this.getStorageKey(label, type)
+        const encryptedData = await this.encryptValue(value, password)
+        const storePayload = JSON.stringify(encryptedData)
+
         console.log(`Storing credential '${label}' (${type}) using localStorage.`)
         localStorage.setItem(storageKey, storePayload)
         return true
@@ -155,7 +297,6 @@ export class CredentialManager {
       console.error('Error storing credential:', error)
       throw new CredentialError(`Failed to store credential '${label}' (${type})`, error)
     }
-    return false
   }
 
   /**
@@ -172,59 +313,46 @@ export class CredentialManager {
     type: CredentialType,
     password: string,
   ): Promise<Credential | null> {
-    const storageKey = this.getStorageKey(label, type)
-    let storedPayload: string | null = null
-
     try {
+      let encryptedDataStr: string | null = null
+      let decryptedValue: string
       if (this.useCredentialApi) {
         console.log(`Attempting to retrieve '${label}' (${type}) using Credential Management API.`)
-        const credential = (await navigator.credentials.get({
-          password: true, // Indicates we want PasswordCredential
-          // mediation: 'silent', // Or 'optional' if user interaction is okay
-          // Using 'silent' might fail if the browser requires interaction.
-          // 'optional' is safer but might pop up UI. Consider your UX needs.
-          mediation: 'optional',
-          // We can filter by ID if we know it exactly
-          // id: storageKey // Note: ID matching might be strict or require user selection
-        })) as PasswordCredential | null // Type assertion for TypeScript
 
-        // Since 'get' without 'id' might return *any* password credential for the origin,
-        // we need to check if the returned credential ID matches our expected key.
-        // @ts-ignore
-        if (
-          credential &&
-          // @ts-ignore
-          credential instanceof PasswordCredential &&
-          credential.id === storageKey
-        ) {
-          storedPayload = credential.password
-        } else if (credential) {
-          console.warn(
-            `Credential API returned a credential (${credential.id}), but it didn't match the expected key (${storageKey}).`,
-          )
-          // Optionally, you could iterate if multiple credentials might be returned,
-          // but PasswordCredential usually returns one or null based on filtering.
+        // For Credential API:
+        // 1. Get the blob of all credentials
+        // 2. Extract this specific credential from the blob
+
+        const blob = await this.getCredentialBlob()
+        const blobKey = this.getCredentialBlobKey(label, type)
+
+        decryptedValue = blob[blobKey]
+        if (!decryptedValue) {
+          console.log(`Credential '${label}' (${type}) not found in Credential Management API.`)
+          return null
         }
+        return {
+          label,
+          type,
+          value: decryptedValue,
+        }
+      } else {
+        // Traditional localStorage approach
+        const storageKey = this.getStorageKey(label, type)
+        encryptedDataStr = localStorage.getItem(storageKey)
       }
 
-      // If not found via API (or API not used), try localStorage
-      if (!storedPayload && (!this.useCredentialApi || this.isCredentialApiSupported === false)) {
-        console.log(`Attempting to retrieve '${label}' (${type}) from localStorage.`)
-        storedPayload = localStorage.getItem(storageKey)
-      }
-
-      if (!storedPayload) {
-        console.log(`Credential '${label}' (${type}) not found.`)
+      if (!encryptedDataStr) {
         return null
       }
 
       // Parse and decrypt
-      const encryptedData = JSON.parse(storedPayload) as EncryptedData
-      const decryptedValue = await this.decryptValue(encryptedData, password)
+      const encryptedData = JSON.parse(encryptedDataStr) as EncryptedData
+      decryptedValue = await this.decryptValue(encryptedData, password)
 
       return {
-        label: label, // Original label
-        type: type, // Original type
+        label,
+        type,
         value: decryptedValue,
       }
     } catch (error) {
@@ -233,7 +361,6 @@ export class CredentialManager {
         throw error // Re-throw specific decryption error
       }
       console.error(`Error retrieving credential '${label}' (${type}):`, error)
-      // Don't throw DecryptionError for general errors, throw CredentialError
       throw new CredentialError(`Failed to retrieve credential '${label}' (${type})`, error)
     }
   }
@@ -246,41 +373,41 @@ export class CredentialManager {
    * @throws {CredentialError} If deletion fails for reasons other than not found.
    */
   async deleteCredential(label: string, type: CredentialType): Promise<boolean> {
-    const storageKey = this.getStorageKey(label, type)
-    let found = false // Track if we think the item existed
-
     try {
-      // Try deleting from localStorage first (always safe to try)
+      let found = false
+
+      if (this.useCredentialApi) {
+        console.log(`Attempting to delete '${label}' (${type}) from Credential Management API.`)
+
+        // For Credential API:
+        // 1. Get the current blob
+        // 2. Remove this credential from the blob
+        // 3. Store the updated blob
+
+        const blob = await this.getCredentialBlob()
+        const blobKey = this.getCredentialBlobKey(label, type)
+
+        if (blobKey in blob) {
+          delete blob[blobKey]
+          found = true
+
+          // Only update the blob in the Credential API if we actually removed something
+          await this.storeCredentialBlob(blob)
+          console.log(`Deleted credential '${label}' (${type}) from Credential API blob.`)
+        }
+      }
+
+      // Always check localStorage too, in case it was stored there
+      const storageKey = this.getStorageKey(label, type)
       const itemExistsInLocalStorage = localStorage.getItem(storageKey) !== null
+
       if (itemExistsInLocalStorage) {
         localStorage.removeItem(storageKey)
-        found = true // It definitely existed in localStorage
+        found = true
         console.log(`Deleted credential '${label}' (${type}) from localStorage.`)
       }
 
-      // If Credential API is supported and was likely used, attempt deletion there.
-      // Note: There isn't a direct navigator.credentials.delete(id).
-      // Deletion usually happens via browser UI or is tied to password manager sync.
-      // We *can* try storing 'null' or an empty credential, but browser behavior varies.
-      // The most reliable way user-side is often just removing from localStorage,
-      // and letting the user manage Credential API entries via their browser's password manager.
-      // For this example, we'll focus on the localStorage aspect.
-      if (this.useCredentialApi && !itemExistsInLocalStorage) {
-        // We could try a 'get' first to see if it exists in Credential API,
-        // but that might trigger UI. For simplicity, we'll assume if it's not
-        // in localStorage (when API is enabled), it might be in the API, but
-        // we can't programmatically delete it reliably. We'll return true if
-        // we deleted from localStorage or if API is enabled (assuming user manages it).
-        console.warn(
-          `Cannot programmatically delete credential '${label}' (${type}) from Credential Management API. Please manage via browser settings if needed.`,
-        )
-        // We can attempt to check if it existed using 'get' but it's imperfect
-        // TODO evaluate this option
-        // const cred = await navigator.credentials.get({ password: true, id: storageKey, mediation: 'silent' }).catch(() => null);
-        // found = !!cred; // If get succeeds silently, it existed.
-      }
-
-      return found // Return true if we removed it from localStorage
+      return found
     } catch (error) {
       console.error(`Error deleting credential '${label}' (${type}):`, error)
       throw new CredentialError(`Failed to delete credential '${label}' (${type})`, error)
@@ -288,18 +415,18 @@ export class CredentialManager {
   }
 
   /**
-   * Lists the labels and types of credentials stored via this manager (localStorage only).
-   * Note: Cannot reliably list credentials stored solely in the Credential Management API.
+   * Lists the labels and types of credentials stored via this manager.
+   * Includes credentials from both localStorage and the Credential Management API.
    */
-  listCredentials(): Array<{ label: string; type: CredentialType }> {
+  async listCredentials(): Promise<Array<{ label: string; type: CredentialType }>> {
     const credentials: Array<{ label: string; type: CredentialType }> = []
     const prefix = this.credentialPrefix
 
+    // First, check localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (key?.startsWith(prefix)) {
         const keyWithoutPrefix = key.substring(prefix.length)
-        // Expecting format like "connection_myDbLabel" or "llm_myApiKeyLabel"
         const parts = keyWithoutPrefix.split('_')
         if (parts.length >= 2) {
           const type = parts[0] as CredentialType
@@ -310,6 +437,31 @@ export class CredentialManager {
         }
       }
     }
+
+    // Then, check Credential API if available
+    if (this.useCredentialApi) {
+      const blob = await this.getCredentialBlob()
+
+      for (const key in blob) {
+        const parts = key.split('_')
+        if (parts.length >= 2) {
+          const type = parts[0] as CredentialType
+          const label = parts.slice(1).join('_')
+
+          // Avoid duplicates (in case the same credential exists in both storage mechanisms)
+          if (type === 'connection' || type === 'llm') {
+            if (!credentials.some((cred) => cred.label === label && cred.type === type)) {
+              credentials.push({ label, type })
+            }
+          }
+        }
+      }
+    }
+
     return credentials
+  }
+
+  getIsCredentialApiSupported(): boolean {
+    return this.isCredentialApiSupported
   }
 }
