@@ -79,7 +79,17 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('dashboard-creator-name').click()
   await page.getByTestId('dashboard-creator-name').fill('faa-test')
   await page.getByTestId('dashboard-creator-submit').click()
+
+  //check if the faa-test object eixsts
+  
+  const elementExists = await page.isVisible('[data-testid="dashboard-list-id-d-faa-test"]');
+  if (!elementExists) {
+    await page.getByTestId('dashboard-list-id-s-local').click()
+    await page.getByTestId('dashboard-list-id-c-local-faa-connection').click()
+  }
+
   await page.getByText('faa-test').click()
+
 
   // set up the source
   await page.getByTestId('dashboard-import-selector').click()
