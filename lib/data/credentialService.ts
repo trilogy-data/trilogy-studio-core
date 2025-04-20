@@ -172,6 +172,7 @@ export class CredentialManager {
       // @ts-ignore
       if (
         credential &&
+        // @ts-ignore
         credential instanceof PasswordCredential &&
         credential.id === UNIFIED_CREDENTIAL_ID
       ) {
