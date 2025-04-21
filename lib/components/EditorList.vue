@@ -27,70 +27,18 @@
         {{ formatEditorTag(tag) }} Editors
       </span>
     </template>
-    <div
+    
+    <editor-list-item
       v-for="item in contentList"
       :key="item.key"
-      :data-testid="`editor-list-id-${item.key}`"
-      :class="{
-        'sidebar-item': item.type !== 'creator',
-        'sidebar-item-selected': activeEditor === item.objectKey,
-      }"
-      @click="clickAction(item.type, item.objectKey, item.key)"
-    >
-      <div
-        v-if="!['creator'].includes(item.type) && !isMobile"
-        v-for="_ in item.indent"
-        class="sidebar-padding"
-      ></div>
-      <i
-        v-if="!['editor', 'creator'].includes(item.type)"
-        :class="collapsed[item.key] ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-      >
-      </i>
-      <template v-if="item.type == 'editor'">
-        <tooltip content="Raw SQL Editor" v-if="item.editor.type == 'sql'">
-          <span class="sql">SQL</span>
-          <!-- <i class="mdi mdi-alpha-s-box-outline"></i> -->
-        </tooltip>
-        <tooltip content="Trilogy Editor" class="icon-display" v-else>
-          <img :src="trilogyIcon" class="trilogy-icon" />
-          <!-- <i class="mdi mdi-alpha-t-box-outline"></i> -->
-        </tooltip>
-      </template>
-
-      <span class="truncate-text">
-        {{ item.label }}
-        <span class="text-light" v-if="item.type === 'connection'">
-          ({{
-            connectionStore.connections[item.label]?.model
-              ? connectionStore.connections[item.label]?.model
-              : 'No Model Set'
-          }})</span
-        >
-      </span>
-      <template v-if="item.type === 'editor'">
-        <span class="tag-container">
-          <span v-for="tag in item.editor.tags" :key="tag" class="tag">{{ tag }}</span>
-        </span>
-      </template>
-      <template v-else-if="item.type === 'connection'">
-        <span class="tag-container">
-          <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
-          <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
-        </span>
-        <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
-      </template>
-
-      <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
-        <span
-          class="remove-btn"
-          @click.stop="deleteEditor(item.editor)"
-          :data-testid="`delete-editor-${item.label}`"
-        >
-          <i class="mdi mdi-trash-can"></i>
-        </span>
-      </tooltip>
-    </div>
+      :item="item"
+      :active-editor="activeEditor"
+      :is-collapsed="collapsed[item.key]"
+      :is-mobile="isMobile"
+      @item-click="clickAction"
+      @delete-editor="showDeleteConfirmation"
+    />
+    
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -114,15 +62,11 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import EditorCreatorInline from './EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
-import Tooltip from './Tooltip.vue'
 import LoadingButton from './LoadingButton.vue'
 import { EditorTag, Editor } from '../editors'
-import StatusIcon from './StatusIcon.vue'
-import type { Connection } from '../connections'
-import trilogyIcon from '../static/trilogy_small.webp'
 import { getDefaultValueFromHash } from '../stores/urlStore'
 import { buildEditorTree } from '../editors'
-import EditorCreatorIcon from './EditorCreatorIcon.vue'
+import EditorListItem from './EditorListItem.vue'
 
 export default {
   name: 'EditorList',
@@ -155,18 +99,6 @@ export default {
       hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
     }
     const current = getDefaultValueFromHash('editor') || ''
-    const connectionStateToStatus = (connection: Connection | null) => {
-      if (!connection) {
-        return 'disabled'
-      }
-      if (connection.running) {
-        return 'running'
-      } else if (connection.connected) {
-        return 'connected'
-      } else {
-        return 'disabled'
-      }
-    }
 
     onMounted(() => {
       Object.values(editorStore.editors).forEach((item) => {
@@ -216,8 +148,6 @@ export default {
       toggleCollapse,
       collapsed,
       hiddenTags,
-      trilogyIcon,
-      connectionStateToStatus,
       creatorVisible,
     }
   },
@@ -255,10 +185,6 @@ export default {
       this.showDeleteConfirmationState = false
       this.editorToDelete = null
     },
-    deleteEditor(editor: Editor) {
-      // Replace direct deletion with confirmation
-      this.showDeleteConfirmation(editor)
-    },
     saveEditors() {
       this.$emit('save-editors')
     },
@@ -272,64 +198,16 @@ export default {
   },
   components: {
     EditorCreatorInline,
-    EditorCreatorIcon,
     SidebarList,
-    Tooltip,
     LoadingButton,
-    StatusIcon,
+    EditorListItem,
   },
 }
 </script>
 
 <style scoped>
-.sql {
-  /* black */
-  color: #000000;
-  font-style: bold;
-  font-size: 8px;
-  margin-right: 5px;
-}
-
-.trilogy {
-  /* reddish */
-  color: #ff4d4d;
-  font-style: bold;
-  margin-right: 5px;
-  font-weight: 500;
-}
-
-.icon-display {
-  display: flex;
-  justify-content: center;
-  /* Horizontal center */
-  align-items: center;
-  /* Vertical center */
-}
-
-.trilogy-icon {
-  width: var(--icon-size);
-  height: var(--icon-size);
-}
-
-.active-editor {
-  font-weight: bold;
-}
-
-.remove-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-}
-
 .tag {
-  /* Push to the right */
   font-size: 8px;
-  /* margin-left: 5px; */
   border-radius: 3px;
   padding: 2px;
   background-color: hsla(210, 100%, 50%, 0.516);
@@ -349,11 +227,49 @@ export default {
   border: 1px solid hsl(210, 100%, 50%, 0.75);
 }
 
-.tag-container {
-  vertical-align: middle;
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-.text-light {
-  color: var(--text-faint);
+.confirmation-dialog {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>

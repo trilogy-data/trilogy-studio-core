@@ -20,6 +20,9 @@ const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): a
   if (getColumnHasTrait(fieldName, columns, 'usd')) {
     return { format: '$,.2f' }
   }
+  if (getColumnHasTrait(fieldName, columns, 'percent')) {
+    return { format: '.1%' }
+  }
   switch (column.type) {
     case ColumnType.MONEY:
       return { format: '$,.2f' }

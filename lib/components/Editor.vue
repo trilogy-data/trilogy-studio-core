@@ -192,6 +192,17 @@ export default defineComponent({
   methods: {
     updateEditorName(newName: string): void {
       this.editorStore.updateEditorName(this.editorId, newName)
+      let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
+      if (isSource) {
+        let model = this.connectionStore.connections[this.editorData.connection].model
+        if (model) {
+          this.modelStore.models[model].updateModelSourceName(
+            this.editorData.id,
+            newName,
+          )
+          this.$emit('save-models')
+        }
+      }
     },
 
     toggleTag(tag: EditorTag): void {
