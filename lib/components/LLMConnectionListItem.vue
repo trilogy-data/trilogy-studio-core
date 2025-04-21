@@ -220,7 +220,7 @@ export default defineComponent({
         if (props.item.type === 'api-key' && newApiKey) {
           apiKeyInput.value = newApiKey
         }
-      }
+      },
     )
 
     const modelInput = computed<string>({

@@ -37,7 +37,13 @@
             <div class="error-message" v-if="error">{{ error }}</div>
 
             <div class="button-container">
-              <button @click="submitKeyphrase" class="primary-button" data-testid="submit-keyphrase">Submit</button>
+              <button
+                @click="submitKeyphrase"
+                class="primary-button"
+                data-testid="submit-keyphrase"
+              >
+                Submit
+              </button>
               <button @click="showBypassWarning" class="cancel-btn">Skip</button>
             </div>
             <p class="warning-message">

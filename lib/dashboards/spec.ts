@@ -9,7 +9,6 @@ import { createUSAMapSpec } from './mapSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
-
 /**
  * Get formatting hints for a field based on its column type
  */
@@ -161,20 +160,20 @@ const createColorEncoding = (
 ) => {
   const legendConfig = isMobile
     ? {
-      legend: {
-        orient: 'bottom',
-        direction: 'horizontal',
-      },
-    }
-    : {
-      condition: [
-        {
-          param: 'highlight',
-          empty: false,
-          value: HIGHLIGHT_COLOR,
+        legend: {
+          orient: 'bottom',
+          direction: 'horizontal',
         },
-      ],
-    }
+      }
+    : {
+        condition: [
+          {
+            param: 'highlight',
+            empty: false,
+            value: HIGHLIGHT_COLOR,
+          },
+        ],
+      }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -311,15 +310,15 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-        {
-          name: 'highlight2',
-          select: {
-            type: 'point',
-            on: 'mouseover',
-            clear: 'mouseout',
+          {
+            name: 'highlight2',
+            select: {
+              type: 'point',
+              on: 'mouseover',
+              clear: 'mouseout',
+            },
           },
-        },
-      ]
+        ]
       : [],
   }
 
@@ -567,8 +566,6 @@ const createHeatmapSpec = (
     },
   }
 }
-
-
 
 /**
  * Create chart specification for boxplot

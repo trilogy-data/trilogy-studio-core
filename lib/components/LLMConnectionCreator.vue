@@ -3,16 +3,28 @@
     <form @submit.prevent="submitConnectionCreation">
       <div class="form-row">
         <label for="llm-connection-name">Name</label>
-        <input type="text" v-model="connectionDetails.name" id="llm-connection-name" required
-        data-testid="llm-connection-creator-name" placeholder="Connection Name" />
+        <input
+          type="text"
+          v-model="connectionDetails.name"
+          id="llm-connection-name"
+          required
+          data-testid="llm-connection-creator-name"
+          placeholder="Connection Name"
+        />
       </div>
 
       <div class="form-row">
         <label for="llm-provider-type">Provider</label>
-        <select v-model="connectionDetails.type" id="llm-provider-type" required 
-        data-testid="llm-connection-creator-type">
+        <select
+          v-model="connectionDetails.type"
+          id="llm-provider-type"
+          required
+          data-testid="llm-connection-creator-type"
+        >
           <option value="openai" data-testid="llm-connection-creator-openai">OpenAI</option>
-          <option value="anthropic" data-testid="llm-connection-creator-anthropic">Anthropic</option>
+          <option value="anthropic" data-testid="llm-connection-creator-anthropic">
+            Anthropic
+          </option>
           <!-- <option value="cohere">Cohere</option> -->
           <!-- <option value="mistral">Mistral AI</option> -->
         </select>
