@@ -380,7 +380,7 @@ export default defineComponent({
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       let append = event.shiftKey
-
+      console.log('point click', event, item)
       if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
           let geoField = props.columns.get(internalConfig.value.geoField)

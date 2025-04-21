@@ -163,12 +163,10 @@ export class CredentialManager {
    */
   private async fetchCredentialBlob(): Promise<CredentialBlob> {
     try {
-      console.log('Performing actual credential blob fetch from Credential API')
       const credential = (await navigator.credentials.get({
         password: true,
         mediation: 'optional', // Or 'silent' if preferred, but might fail
       })) as PasswordCredential | null
-
       // @ts-ignore
       if (
         credential &&
@@ -225,7 +223,7 @@ export class CredentialManager {
    */
   private async performCredentialBlobStore(blob: CredentialBlob): Promise<boolean> {
     try {
-      console.log('Performing actual credential blob store to Credential API')
+      console.log('Performing create credential request Credential API')
       // @ts-ignore
       const credential = new PasswordCredential({
         id: UNIFIED_CREDENTIAL_ID,
@@ -275,6 +273,7 @@ export class CredentialManager {
         if (!success) {
           throw new CredentialError('Failed to store credential blob.')
         }
+        console.log(`Stored credential '${label}' (${type}) in Credential Management API.`)
 
         return true
       } else {
@@ -348,6 +347,7 @@ export class CredentialManager {
 
       // Parse and decrypt
       const encryptedData = JSON.parse(encryptedDataStr) as EncryptedData
+      console.log(encryptedData)
       decryptedValue = await this.decryptValue(encryptedData, password)
 
       return {
