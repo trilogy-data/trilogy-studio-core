@@ -241,7 +241,6 @@ export default defineComponent({
 
     // Handle individual chart refresh button click
     const handleLocalRefresh = () => {
-      console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
       }
@@ -256,7 +255,6 @@ export default defineComponent({
 
     // Targeted chart refresh handler
     const handleChartRefresh = (event: CustomEvent) => {
-      console.log('chartRefreshEvent')
       // Only refresh this chart if it's the target or no specific target
       if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
         console.log(`Chart ${props.itemId} received targeted refresh event`)

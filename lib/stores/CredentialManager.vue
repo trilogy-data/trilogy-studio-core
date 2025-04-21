@@ -30,13 +30,20 @@
                 v-model="keyphraseInput"
                 @keyup.enter="submitKeyphrase"
                 placeholder="Enter the keyphrase you used to save credentials"
+                data-testid="keyphrase-input"
               />
             </div>
 
             <div class="error-message" v-if="error">{{ error }}</div>
 
             <div class="button-container">
-              <button @click="submitKeyphrase" class="primary-button">Submit</button>
+              <button
+                @click="submitKeyphrase"
+                class="primary-button"
+                data-testid="submit-keyphrase"
+              >
+                Submit
+              </button>
               <button @click="showBypassWarning" class="cancel-btn">Skip</button>
             </div>
             <p class="warning-message">

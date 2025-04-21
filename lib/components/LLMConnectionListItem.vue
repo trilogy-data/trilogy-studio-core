@@ -38,13 +38,25 @@
       <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
         <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
           <button type="submit" class="customize-button">Update API Key</button>
-          <input
-            type="password"
-            id="api-key"
-            v-model="apiKeyInput"
-            placeholder="API Key"
-            class="connection-customize"
-          />
+          <div class="api-key-input-wrapper">
+            <input
+              :type="showApiKey ? 'text' : 'password'"
+              id="api-key"
+              v-model="apiKeyInput"
+              placeholder="API Key"
+              class="connection-customize"
+              :data-testid="`api-key-input-${item.connection.name}`"
+            />
+            <button
+              type="button"
+              class="visibility-toggle"
+              @click="toggleApiKeyVisibility"
+              :data-testid="`toggle-api-key-visibility-${item.connection.name}`"
+              :title="showApiKey ? 'Hide API Key' : 'Show API Key'"
+            >
+              <i :class="showApiKey ? 'mdi mdi-eye-off' : 'mdi mdi-eye'"></i>
+            </button>
+          </div>
         </form>
       </div>
       <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
@@ -119,7 +131,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, defineComponent } from 'vue'
+import { ref, computed, defineComponent, onMounted, watch } from 'vue'
 import type { PropType } from 'vue'
 import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
 import LLMProviderIcon from './LLMProviderIcon.vue'
@@ -191,6 +203,25 @@ export default defineComponent({
   ],
   setup(props, { emit }) {
     const apiKeyInput = ref<string>('')
+    const showApiKey = ref<boolean>(false)
+
+    // Initialize with current API key on mount
+    onMounted(() => {
+      if (props.item.type === 'api-key' && props.item.connection?.getApiKey()) {
+        apiKeyInput.value = props.item.connection.getApiKey()
+      }
+    })
+
+    // Watch for changes in the connection's API key
+    watch(
+      // @ts-ignore
+      () => props.item.connection?.apiKey,
+      (newApiKey) => {
+        if (props.item.type === 'api-key' && newApiKey) {
+          apiKeyInput.value = newApiKey
+        }
+      },
+    )
 
     const modelInput = computed<string>({
       get: () => props.item.connection?.model || '',
@@ -308,12 +339,16 @@ export default defineComponent({
     // Update API key
     const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       emit('updateApiKey', connection, apiKey)
-      apiKeyInput.value = ''
+      // We don't clear the input here anymore to maintain the current value
     }
 
     const updateModel = (connection: LLMProvider, model: string) => {
       emit('updateModel', connection, model)
       modelInput.value = ''
+    }
+
+    const toggleApiKeyVisibility = () => {
+      showApiKey.value = !showApiKey.value
     }
 
     return {
@@ -336,6 +371,9 @@ export default defineComponent({
       showContextMenu,
       handleContextMenuItemClick,
       toggleCollapse,
+      // API key visibility
+      showApiKey,
+      toggleApiKeyVisibility,
     }
   },
 })
@@ -405,10 +443,44 @@ export default defineComponent({
   background-color: var(--sidebar-bg);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  /* padding: 4px 8px; */
   color: var(--text-color);
   margin-left: 8px;
   font-size: 0.8em;
+  padding: 4px 8px;
+}
+
+.api-key-input-wrapper {
+  flex-grow: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.api-key-input-wrapper input {
+  padding-right: 30px;
+}
+
+.visibility-toggle {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.visibility-toggle:hover {
+  color: var(--text-color);
+}
+
+.visibility-toggle i {
+  font-size: 16px;
 }
 
 .customize-button {

@@ -12,7 +12,7 @@ import {
 const extractLastTripleQuotedText = (input: string): string | null => {
   // First, try to strip only the 'trilogy' language identifier after triple backticks
   const strippedInput = input.replace(/```trilogy\n/g, '```\n')
-  
+
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // try with all 3 kinds of quotes (''', ```, """)
   for (const quote of ["'''", '```', '"""']) {
