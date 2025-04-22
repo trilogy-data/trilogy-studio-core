@@ -176,7 +176,7 @@ const filterCount = computed(() => {
       v-if="editMode"
       @click="removeItem"
       class="remove-button always-visible"
-      :data-testid="`edit-dashboard-item-content-${item.i}`"
+      :data-testid="`remove-dashboard-item-${item.i}`"
     >
       Remove
     </button>
