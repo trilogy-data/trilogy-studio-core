@@ -236,7 +236,6 @@ export default defineComponent({
 
     // Targeted chart refresh handler
     const handleChartRefresh = (event: CustomEvent) => {
-      console.log('chartRefreshEvent')
       // Only refresh this chart if it's the target or no specific target
       if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
         console.log(`Chart ${props.itemId} received targeted refresh event`)

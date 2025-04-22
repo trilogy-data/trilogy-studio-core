@@ -129,7 +129,7 @@ export default defineComponent({
     EditorHeader,
     CodeEditor,
   },
-  emits: ['save-editors', 'save-models', 'query-started'],
+  emits: ['save-editors', 'save-models', 'query-started', 'query-finished'],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -192,6 +192,14 @@ export default defineComponent({
   methods: {
     updateEditorName(newName: string): void {
       this.editorStore.updateEditorName(this.editorId, newName)
+      let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
+      if (isSource) {
+        let model = this.connectionStore.connections[this.editorData.connection].model
+        if (model) {
+          this.modelStore.models[model].updateModelSourceName(this.editorData.id, newName)
+          this.$emit('save-models')
+        }
+      }
     },
 
     toggleTag(tag: EditorTag): void {
@@ -452,6 +460,7 @@ export default defineComponent({
       }
 
       await resultPromise
+      this.$emit('query-finished')
     },
 
     // Add the LLM query generation method
@@ -546,7 +555,6 @@ export default defineComponent({
                 contentLines.splice(insertionPosition, 0, query)
 
                 // Update the editor contents directly
-                console.log('contentLines', contentLines)
                 targetEditor.setContent(contentLines.join('\n'))
 
                 // Also update the CodeEditor with the new content

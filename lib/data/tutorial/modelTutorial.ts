@@ -1,5 +1,5 @@
 import { Article, Paragraph } from './docTypes.ts'
-
+import { Results } from '../../editors/results.ts'
 export const ModelTutorial = new Article(
   'Model Tutorial',
   [
@@ -24,58 +24,104 @@ export const ModelTutorial = new Article(
       "Let's set one up. If you haven't already done the first tutorial, go back and create `my-first-editor` using that. We'll use that as a base.",
     ),
     new Paragraph('Purpose', '', 'editor-validator'),
-    new Paragraph(
-      'Purpose',
-      'Clear the editor below. Define your first concept; pi, as const pi <- 3.14; This is the simplest possible concept; it has a constant value and does not require a datasource to resolve.  Then type select pi; and run the query. You should see a result of 3.14.',
-    ),
-    new Paragraph('Purpose', '', 'demo-editor'),
-    new Paragraph(
-      'Purpose',
-      `Let's get fancier. Define the following:
-<pre>
-key food_id int;
-property food_id.food_name string;
-property food_id.food_type string;
-property food_id.food_calories int;
 
-datasource food_info (
-    id:food_id,
-    name:food_name,
-    type: food_type,
-    calories:food_calories,
-)
-grain (food_id)
+    new Paragraph('Tutorial Queries', 'bsb', 'tutorial-prompts', {
+      context: 'sql-tutorial',
+      editorId: 'sql-basic-editor',
+      prompts: [
+        {
+          title: 'Declaring a Constant',
+          description:
+            'In the editor below, we will define pi and select it. A constant is the simplest possible concept; it does not require a datasource to resolve. Constants are useful for variables in scripts. Run and confirm you see 3.14.',
+          example: 'const pi <- 3.14; select pi;',
+          hints: ["Don't forget the semicolon at the end!"],
+          validationFn: (results: Results) => {
+            return results.data?.[0]?.pi === 3.14
+          },
+        },
+        {
+          title: 'Typing',
+          description:
+            "Trilogy has a core type system and a metadata based trait system. Let's check it out with the below statement. List and String are core types, while us_state_short is a trait. Any number of traits can modify a base type. Traits can be consumed by other systems; for example, here, if you click visualize, you will have a default state map.",
+          example: `import std.geography; 
+auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
+
+select 
+    unnest(states) as state, 
+    random(state)*100 as rank 
+order by 
+    state asc;`,
+          hints: [
+            "Don\'t forget the import statement. Importing without a name puts all values in the base namespace.",
+            "Make sure the state output is named state and you've ordered properly.",
+          ],
+          validationFn: (results: Results) => {
+            return (
+              results.data?.length === 3 &&
+              results.data?.[0]?.state === 'CA' &&
+              results.data?.[1]?.state === 'NY' &&
+              results.data?.[2]?.state === 'TX'
+            )
+          },
+        },
+        {
+          title: 'Typing',
+          description:
+            'In the last question, we imported from the standard library (under std) which is always available. Most of the time, you will be importing from your own model. Add an import from lineitem - the row level of orders in the demo model - and see if you can get the count of orders, aliased as order_count.',
+          example: `import lineitem;
+            ... your query here`,
+          hints: ['select count(order.id) as order_count;'],
+          validationFn: (results: Results) => {
+            return results.data?.length === 1 && results.data?.[0]?.order_count === 15000
+          },
+        },
+        {
+          title: 'Typing',
+          description:
+            "Now, let's try a datasouce. Datasources bind concepts to physical resources. We can extend our demo model by adding a new concept defining our HQ locations, and a mapping to regions. Then write a query to fetch total sales by headquarters.",
+          example: `import lineitem;
+
+
+property order.customer.nation.region.id.headquarters string;
+
+datasource region_headquarters (
+    region_id: ?order.customer.nation.region.id,
+    headquarters: order.customer.nation.region.headquarters,)
+grain (order.customer.nation.region.id)
 query '''
-select
-    1 as id, 'banana' as name, 'fruit' as type, 100 as calories
+select 1 as region_id, 'HQ1' as headquarters
 union all
-select             
-    2 as id, 'apple' as name, 'fruit' as type, 200 as calories
+select 2 as region_id, 'HQ2' as headquarters
 union all
-select
-    3 as id, 'orange' as name, 'fruit' as type, 50 as calories
+select 3 as region_id, 'HQ3' as headquarters
 union all
-select
-    4 as id, 'grape' as name, 'fruit' as type, 30 as calories
-union all
-select
-    5 as id, 'celery' as name, 'vegetable' as type, 10 as calories
-''';
-</pre>
-`,
-    ),
-    new Paragraph(
-      'Purpose',
-      `Then try running these queries:<br>
-select sum(food_calories) as total_calories;<br>
-where food_calories<100 select food_type, avg(food_calories) as avg_high_calorie;<br>
-select food_name, rank food_name by food_calories desc as calories_rank;<br>
+select 4 as region_id, 'HQ4' as headquarters
 ''';
 `,
-    ),
+          hints: [
+            `select 
+    order.customer.nation.region.headquarters,
+    total_revenue
+order by total_revenue desc;`,
+          ],
+          validationFn: (results: Results) => {
+            // at least one row has order_customer_nation_region_headquarters == HQ4 and total_revenue == 451328736.4183
+            return (
+              results.data?.some(
+                (row) =>
+                  row.order_customer_nation_region_headquarters === 'HQ4' &&
+                  Math.round(row.total_revenue) === 451328736,
+              ) ?? false
+            )
+          },
+        },
+        // More prompts...
+      ],
+    }),
     new Paragraph(
       'Purpose',
       `We've defined all the key parts of a model - a key, some properties, and a datasource to fetch. When working with a real database, you can save time by using the 'create model from table' button when browsing tables in the connection screen. This will build a default model you can then edit off that table.`,
+      'tip',
     ),
   ],
   'Model Tutorial',

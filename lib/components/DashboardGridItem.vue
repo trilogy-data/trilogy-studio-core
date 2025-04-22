@@ -26,6 +26,7 @@ const emit = defineEmits<{
   'dimension-click': [DimensionClick]
   'background-click': [itemId: string]
   'remove-filter': [itemId: string, filterSource: string]
+  'remove-item': [itemId: string]
 }>()
 
 // Item title editing states
@@ -80,12 +81,17 @@ function openEditor(): void {
   emit('edit-content', props.item)
 }
 
+function removeItem(): void {
+  if (confirm(`Are you sure you want to remove "${itemData.value.name}"?`)) {
+    emit('remove-item', props.item.i)
+  }
+}
+
 function dimensionClick(v: DimensionClick): void {
   emit('dimension-click', v)
 }
 
 function backgroundClick(): void {
-  console.log('emitting bg grid')
   emit('background-click', props.item.i)
 }
 
@@ -166,7 +172,14 @@ const filterCount = computed(() => {
     >
       Edit Content
     </button>
-
+    <button
+      v-if="editMode"
+      @click="removeItem"
+      class="remove-button always-visible"
+      :data-testid="`remove-dashboard-item-${item.i}`"
+    >
+      Remove
+    </button>
     <!-- Transparent overlay header (only in edit mode) -->
     <div
       v-if="editMode"
@@ -323,10 +336,6 @@ const filterCount = computed(() => {
   border: 1px solid var(--border);
 }
 
-.grid-item-chart-style {
-  /* border: 1px solid var(--border); */
-}
-
 .overlay-header {
   position: absolute;
   top: 0;
@@ -390,8 +399,8 @@ const filterCount = computed(() => {
   padding: 4px;
   border-radius: 3px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: left;
+  /* justify-content: space-between; */
 }
 
 .editable-title:hover {
@@ -422,9 +431,20 @@ const filterCount = computed(() => {
 
 .edit-button {
   /* padding: 4px 8px;*/
-  background-color: var(--special-text);
-  color: white;
-  border: none;
+  color: var(--special-text);
+  border: 1px solid var(--special-text);
+  background-color: transparent;
+  /* border: none; */
+  cursor: pointer;
+  font-size: var(--small-font-size);
+  margin-left: 8px;
+}
+
+.remove-button {
+  /* padding: 4px 8px;*/
+  color: var(--delete-color);
+  border: 1px solid var(--delete-color);
+  background-color: transparent;
   cursor: pointer;
   font-size: var(--small-font-size);
   margin-left: 8px;
@@ -433,9 +453,27 @@ const filterCount = computed(() => {
 .edit-button.always-visible {
   position: absolute;
   top: 4px;
+  right: 60px;
+  z-index: 20;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.remove-button.always-visible {
+  position: absolute;
+  top: 4px;
   right: 4px;
   z-index: 20;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.edit-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.remove-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .grid-item-drag-handle {

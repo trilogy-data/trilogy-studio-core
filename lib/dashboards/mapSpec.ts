@@ -1,7 +1,7 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnHasTrait } from './helpers'
+import { getColumnHasTrait, getColumnFormat } from './helpers'
 
 /**
  * Map of US state FIPS IDs to their two-letter abbreviations
@@ -82,6 +82,7 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
   title: snakeCaseToCapitalizedWords(
     field && columns.get(field)?.description ? columns.get(field)?.description : field,
   ),
+  format: getColumnFormat(field, columns),
 })
 
 /**
@@ -235,9 +236,13 @@ const createUSChoroplethMapSpec = (
         encoding: {
           color: {
             field: config.colorField,
+
             type: 'quantitative',
             scale: { type: 'quantize', nice: true, zero: true },
-            legend: { title: snakeCaseToCapitalizedWords(config.colorField) },
+            legend: {
+              title: snakeCaseToCapitalizedWords(config.colorField),
+              format: getColumnFormat(config.colorField, columns),
+            },
           },
           opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
           stroke: {
@@ -370,12 +375,23 @@ export const createUSAMapSpec = (
               field: config.colorField,
               type: 'quantitative',
               scale: { type: 'quantize', nice: true },
-              legend: { title: config.colorField },
+              legend: {
+                title: config.colorField,
+                format: getColumnFormat(config.colorField, columns),
+              },
             },
             opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
             tooltip: [
-              { field: config.geoField, type: 'nominal', title: config.geoField },
-              { field: config.colorField, type: 'quantitative', title: config.colorField },
+              {
+                field: config.geoField,
+                type: 'nominal',
+                title: snakeCaseToCapitalizedWords(config.geoField),
+              },
+              {
+                field: config.colorField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.colorField),
+              },
             ],
             stroke: {
               condition: { param: 'highlight', empty: false, value: 'black' },

@@ -208,7 +208,7 @@ export default class LocalStorage extends AbstractStorage {
           break
 
         default:
-          console.log(connection.type)
+          console.warn(`Unknown LLM connection type: ${connection.type}`)
       }
     }
 

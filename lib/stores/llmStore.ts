@@ -146,10 +146,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
           try {
             // Attempt validation
             passed = await validator(extract)
-            console.log('validation passed')
+            console.log('LLM response validation passed')
             passed = true
           } catch (e) {
-            console.log('validation failed')
+            console.log('LLM response validation failed')
             console.log(e)
 
             // Increment attempts counter

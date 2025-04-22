@@ -383,6 +383,14 @@ export class ModelConfig {
     this.addModelSource(new ModelSource(editor, alias, [], []))
   }
 
+  updateModelSourceName(id: string, newName: string) {
+    let source = this.sources.find((s) => s.editor === id)
+    if (source) {
+      source.alias = newName
+      this.changed = true
+    }
+  }
+
   setParseError(parseError: string) {
     this.parseError = parseError
     this.changed = true

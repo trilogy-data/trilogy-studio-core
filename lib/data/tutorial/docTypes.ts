@@ -1,11 +1,30 @@
+export interface TutorialPrompt {
+  title: string
+  description: string
+  validationFn: (results: any) => boolean
+  example?: string
+  hints?: string[]
+}
+
+export class DocData {
+  prompts?: TutorialPrompt[] | undefined
+  context?: string | undefined
+}
 export class Paragraph {
   title: string
   content: string
   type: string | null
-  constructor(title: string, content: string, type: string | null = null) {
+  data: DocData
+  constructor(
+    title: string,
+    content: string,
+    type: string | null = null,
+    data: object | null = null,
+  ) {
     this.title = title
     this.content = content
     this.type = type
+    this.data = data || {}
   }
 }
 

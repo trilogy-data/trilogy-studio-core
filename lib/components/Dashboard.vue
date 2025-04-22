@@ -498,6 +498,12 @@ function removeFilter(itemId: string, filterSource: string): void {
   dashboardStore.removeItemCrossFilter(dashboard.value.id, itemId, filterSource)
 }
 
+function removeItem(itemId: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+  // Use store to remove item from dashboard
+  dashboardStore.removeItemFromDashboard(dashboard.value.id, itemId)
+}
+
 function unSelect(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to remove item cross filters
@@ -569,6 +575,7 @@ onBeforeUnmount(() => {
               @remove-filter="removeFilter"
               @background-click="unSelect"
               @update-dimensions="updateItemDimensions"
+              @remove-item="removeItem"
             />
           </grid-item>
         </GridLayout>

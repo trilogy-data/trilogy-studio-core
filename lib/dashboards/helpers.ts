@@ -69,6 +69,9 @@ export const getColumnFormat = (
   if (getColumnHasTrait(field, columns, 'usd')) {
     return '$,.2f'
   }
+  if (getColumnHasTrait(field, columns, 'percent')) {
+    return '.1%'
+  }
   return null
 }
 

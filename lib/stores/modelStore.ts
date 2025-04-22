@@ -15,6 +15,7 @@ const useModelConfigStore = defineStore('models', {
         throw Error(`ModelConfig with ${name} already exists.`)
       }
       this.models[model.name] = model // Add model using object notation
+      return model
     },
     addModelConfig(model: ModelConfig) {
       this.models[model.name] = model // Add model using object notation
