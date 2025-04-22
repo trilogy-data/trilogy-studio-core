@@ -142,8 +142,7 @@ function typeToFormatter(col: ResultColumn) {
         precision: 4,
       },
     }
-  }
-  else if (col.traits?.includes('percent')) {
+  } else if (col.traits?.includes('percent')) {
     return {
       //@ts-ignore
       formatter: (cell) => {
