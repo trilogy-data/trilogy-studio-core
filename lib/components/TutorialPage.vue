@@ -4,38 +4,21 @@
       <h2>{{ currentData.title }}</h2>
       <template v-for="paragraph in currentData.paragraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
-          {{ paragraph.content }}</highlight-component
-        >
+          {{ paragraph.content }}</highlight-component>
 
-        <code-block
-          v-else-if="paragraph.type === 'code'"
-          language="sql"
-          :content="paragraph.content"
-        ></code-block>
-        <connection-list
-          v-else-if="paragraph.type === 'connections'"
-          :connections="connectionStore.connections"
-        />
+        <code-block v-else-if="paragraph.type === 'code'" language="sql" :content="paragraph.content"></code-block>
+        <connection-list v-else-if="paragraph.type === 'connections'" :connections="connectionStore.connections" />
         <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
-        <editor-list
-          v-else-if="paragraph.type === 'editors' && demoEditorCorrect"
-          :connections="editorStore.editors"
-          testTag="tutorial"
-        />
-        <tutorial-prompt
-          v-else-if="paragraph.type === 'tutorial-prompts'"
-          :prompts="paragraph.data.prompts || []"
-          :context="paragraph.data.context || 'main-trilogy'"
-          editorId="my-first-editor"
-        />
+        <editor-list v-else-if="paragraph.type === 'editors'" :connections="editorStore.editors" testTag="tutorial" />
+        <tutorial-prompt v-else-if="paragraph.type === 'tutorial-prompts' && demoEditorCorrect"
+          :prompts="paragraph.data.prompts || []" :context="paragraph.data.context || 'main-trilogy'"
+          editorId="my-first-editor" />
 
         <div v-else-if="paragraph.type === 'connection-validator'">
-          <div
-            :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"
-            data-testid="demo-connection-validator"
-          >
+          <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"
+            data-testid="demo-connection-validator">
             {{
               demoConnectionCorrect
                 ? `Great work: "${demoConnectionName}" found and connected with right model ✓`
@@ -44,10 +27,7 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'editor-validator'">
-          <div
-            :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']"
-            data-testid="editor-validator"
-          >
+          <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']" data-testid="editor-validator">
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
@@ -56,10 +36,7 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
-          <div
-            :class="['test-result', demoModelCorrect ? 'passed' : 'failed']"
-            data-testid="model-validator"
-          >
+          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']" data-testid="model-validator">
             {{
               demoModelCorrect
                 ? `Great work: "${demoModelName}" found ✓`
@@ -69,28 +46,14 @@
         </div>
         <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" class="editor">
           <div class="editor-top">
-            <editor
-              context="main-trilogy"
-              editorId="my-first-editor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor context="main-trilogy" editorId="my-first-editor" @save-editors="saveEditorsCall" />
           </div>
           <div class="editor-bottom">
-            <results-view
-              :editorData="editorStore.editors['my-first-editor']"
-              :containerHeight="200"
-            />
+            <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="200" />
           </div>
         </div>
-        <div
-          v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID"
-          class="dashboard"
-        >
-          <dashboard
-            :name="demoDashboardID"
-            connectionId="demo-model-connection"
-            :viewMode="true"
-          />
+        <div v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID" class="dashboard">
+          <dashboard :name="demoDashboardID" connectionId="demo-model-connection" :viewMode="true" />
         </div>
         <community-models v-else-if="paragraph.type === 'community-models'" initialSearch="demo" />
         <p v-else v-html="paragraph.content"></p>
@@ -99,11 +62,7 @@
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Models'">
       <model-card :config="demoConfig" />
     </section>
-    <section
-      id="navigation"
-      class="tutorial-section"
-      v-if="currentTopic === 'Overview' && currentNode === 'Demo'"
-    >
+    <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Overview' && currentNode === 'Demo'">
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
   </div>
