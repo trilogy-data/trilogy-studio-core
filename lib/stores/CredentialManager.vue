@@ -153,6 +153,7 @@ input {
   background-color: var(--query-window-bg);
   color: var(--query-window-font);
   font-size: var(--font-size);
+  box-sizing: border-box;
 }
 
 .primary-button {

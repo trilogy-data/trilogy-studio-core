@@ -54,8 +54,7 @@ test('test', async ({ page, isMobile, browserName }) => {
   if (browserName === 'chromium') {
     // credential storage doesn't work in playwright?
     expect(apiKey).toContain('')
-  }
-  else {
+  } else {
     expect(apiKey).toContain('bc123')
   }
 })

@@ -92,7 +92,6 @@ function dimensionClick(v: DimensionClick): void {
 }
 
 function backgroundClick(): void {
-  console.log('emitting bg grid')
   emit('background-click', props.item.i)
 }
 
@@ -210,7 +209,6 @@ const filterCount = computed(() => {
       <div class="item-title-container">
         <!-- Display title (clickable) -->
         <div v-if="!editingItemTitle" class="item-title editable-title" @click="startTitleEditing">
-      
           {{ itemData.name }}
           <span class="edit-indicator">✎</span>
         </div>
@@ -442,7 +440,6 @@ const filterCount = computed(() => {
   margin-left: 8px;
 }
 
-
 .remove-button {
   /* padding: 4px 8px;*/
   color: var(--delete-color);
@@ -478,7 +475,6 @@ const filterCount = computed(() => {
   opacity: 1;
   background-color: rgba(0, 0, 0, 0.1);
 }
-
 
 .grid-item-drag-handle {
   cursor: move !important;

@@ -239,8 +239,10 @@ const createUSChoroplethMapSpec = (
 
             type: 'quantitative',
             scale: { type: 'quantize', nice: true, zero: true },
-            legend: { title: snakeCaseToCapitalizedWords(config.colorField),format: getColumnFormat(config.colorField, columns), },
-            
+            legend: {
+              title: snakeCaseToCapitalizedWords(config.colorField),
+              format: getColumnFormat(config.colorField, columns),
+            },
           },
           opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
           stroke: {
@@ -252,7 +254,7 @@ const createUSChoroplethMapSpec = (
             value: 0.5,
           },
           tooltip: [
-            { field: config.geoField, title: snakeCaseToCapitalizedWords(config.geoField)},
+            { field: config.geoField, title: snakeCaseToCapitalizedWords(config.geoField) },
             createTooltipField(config.colorField || '', 'quantitative', columns),
           ],
         },
@@ -373,12 +375,23 @@ export const createUSAMapSpec = (
               field: config.colorField,
               type: 'quantitative',
               scale: { type: 'quantize', nice: true },
-              legend: { title: config.colorField, format: getColumnFormat(config.colorField, columns) },
+              legend: {
+                title: config.colorField,
+                format: getColumnFormat(config.colorField, columns),
+              },
             },
             opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
             tooltip: [
-              { field: config.geoField, type: 'nominal', title: snakeCaseToCapitalizedWords(config.geoField) },
-              { field: config.colorField, type: 'quantitative', title: snakeCaseToCapitalizedWords(config.colorField) },
+              {
+                field: config.geoField,
+                type: 'nominal',
+                title: snakeCaseToCapitalizedWords(config.geoField),
+              },
+              {
+                field: config.colorField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.colorField),
+              },
             ],
             stroke: {
               condition: { param: 'highlight', empty: false, value: 'black' },

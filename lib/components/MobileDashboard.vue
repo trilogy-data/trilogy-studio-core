@@ -400,7 +400,6 @@ function removeFilter(itemId: string, filterSource: string): void {
 function unSelect(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to remove item cross filters
-  console.log('unselecting item')
   dashboardStore.removeItemCrossFilterSource(dashboard.value.id, itemId)
 }
 

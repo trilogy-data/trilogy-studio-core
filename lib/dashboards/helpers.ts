@@ -70,7 +70,7 @@ export const getColumnFormat = (
     return '$,.2f'
   }
   if (getColumnHasTrait(field, columns, 'percent')) {
-    return  '.1%'
+    return '.1%'
   }
   return null
 }

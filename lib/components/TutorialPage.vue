@@ -20,10 +20,17 @@
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
         <editor-list
-          v-else-if="paragraph.type === 'editors'"
+          v-else-if="paragraph.type === 'editors' && demoEditorCorrect"
           :connections="editorStore.editors"
           testTag="tutorial"
         />
+        <tutorial-prompt
+          v-else-if="paragraph.type === 'tutorial-prompts'"
+          :prompts="paragraph.data.prompts || []"
+          :context="paragraph.data.context || 'main-trilogy'"
+          editorId="my-first-editor"
+        />
+
         <div v-else-if="paragraph.type === 'connection-validator'">
           <div
             :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"
@@ -126,6 +133,7 @@ import CommunityModels from './CommunityModels.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
 import Dashboard from './Dashboard.vue'
 import CodeBlock from './CodeBlock.vue'
+import TutorialPrompt from './TutorialPrompt.vue'
 
 const defaultDocumentationKey = 'Studio'
 const defaultDocumentationTopic = 'Welcome'
@@ -201,6 +209,7 @@ export default {
     ResultsView,
     CommunityModels,
     CodeBlock,
+    TutorialPrompt,
     Dashboard,
   },
   computed: {

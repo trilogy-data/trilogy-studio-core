@@ -502,7 +502,7 @@ function removeItem(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return
   // Use store to remove item from dashboard
   dashboardStore.removeItemFromDashboard(dashboard.value.id, itemId)
-} 
+}
 
 function unSelect(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return

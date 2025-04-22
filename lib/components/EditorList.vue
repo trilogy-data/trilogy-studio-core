@@ -27,7 +27,7 @@
         {{ formatEditorTag(tag) }} Editors
       </span>
     </template>
-    
+
     <editor-list-item
       v-for="item in contentList"
       :key="item.key"
@@ -38,7 +38,7 @@
       @item-click="clickAction"
       @delete-editor="showDeleteConfirmation"
     />
-    
+
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>

@@ -347,7 +347,6 @@ export class CredentialManager {
 
       // Parse and decrypt
       const encryptedData = JSON.parse(encryptedDataStr) as EncryptedData
-      console.log(encryptedData)
       decryptedValue = await this.decryptValue(encryptedData, password)
 
       return {

@@ -134,6 +134,23 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
 
 function typeToFormatter(col: ResultColumn) {
   let tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (col.traits?.includes('usd')) {
+    return {
+      formatter: 'money',
+      formatterParams: {
+        symbol: '$',
+        precision: 4,
+      },
+    }
+  }
+  else if (col.traits?.includes('percent')) {
+    return {
+      //@ts-ignore
+      formatter: (cell) => {
+        return (cell.getValue() * 100).toFixed(2) + '%'
+      },
+    }
+  }
   switch (col.type) {
     case ColumnType.ARRAY:
       return {
