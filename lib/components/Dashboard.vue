@@ -19,6 +19,8 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import DashboardCTA from './DashboardCTA.vue'
+import { truncateSync } from 'node:fs'
+import TutorialSidebar from './TutorialSidebar.vue'
 
 // Props definition
 const props = defineProps<{
@@ -197,13 +199,19 @@ const validateFilter = async (filter: string) => {
   console.log('Validating filter:', filter)
   if (dashboard.value && dashboard.value.id) {
     await queryExecutionService
-      ?.validateQuery(dashboard.value.connection, {
+      ?.executeQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
         queryType: 'duckdb',
         editorType: 'trilogy',
         imports: dashboard.value.imports,
         extraFilters: [filter],
-      })
+      },
+    ()=> {},
+    ()=> {},
+    () =>{},
+    ()=> {},
+    true
+    )
       .then(() => {
         return true
       })

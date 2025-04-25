@@ -309,6 +309,7 @@ export default class QueryExecutionService {
         resultSize: resultSize,
         resultColumns: columnCount,
         errorMessage: null,
+        extraFilters: queryInput.extraFilters,
       })
       if (onSuccess) {
         onSuccess({

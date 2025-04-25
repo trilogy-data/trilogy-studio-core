@@ -5,6 +5,7 @@ import {
   AnthropicProvider,
   OpenAIProvider,
   MistralProvider,
+  GoogleProvider,
   createPrompt,
   createFilterPrompt,
 } from '../llm'
@@ -103,7 +104,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
           options.model,
           options.saveCredential,
         )
-      } else {
+      } else if (type === 'google') {
+        connection = new GoogleProvider(name, options.apiKey, options.model, options.saveCredential)
+      }
+      else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
       this.addConnection(connection)

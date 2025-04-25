@@ -1,20 +1,16 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 
-/**
- * Provider implementation for Google's Gemini API
- */
-export class GeminiProvider extends LLMProvider {
-  private baseCompletionUrl: string = 'https://generativelanguage.googleapis.com/v1/models'
+export class GoogleProvider extends LLMProvider {
+  private baseCompletionUrl: string = 'https://generativelanguage.googleapis.com/v1'
   private baseModelUrl: string = 'https://generativelanguage.googleapis.com/v1/models'
   public models: string[] = []
-  public type: string = 'gemini'
+  public type: string = 'google'
 
   /**
-   * Creates a new Gemini API provider
    * @param name - Display name for the provider
-   * @param apiKey - Google API key with Gemini access
-   * @param model - Default Gemini model to use
+   * @param apiKey - Google API key
+   * @param model - Google model to use
    * @param saveCredential - Whether to persist the API key
    */
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
@@ -33,12 +29,11 @@ export class GeminiProvider extends LLMProvider {
       })
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.statusText}`)
+        throw new Error(`Google API error: ${response.statusText}`)
       }
 
       const data = await response.json()
       this.models = data.models
-        .filter((model: { name: string }) => model.name.includes('gemini'))
         .map((model: { name: string }) => model.name)
         .sort()
 
@@ -54,7 +49,7 @@ export class GeminiProvider extends LLMProvider {
   }
 
   /**
-   * Generates a completion using the Gemini API
+   * Generates a completion using the Google API
    * @param options - Request configuration options
    * @param history - Optional conversation history
    * @returns Promise resolving to the completion response
@@ -70,8 +65,8 @@ export class GeminiProvider extends LLMProvider {
       ? [...history, { role: 'user', content: options.prompt }]
       : [{ role: 'user', content: options.prompt }]
 
-    // Convert messages to Gemini format
-    const geminiMessages = this.convertToGeminiMessages(messages)
+
+    const googleMessages = this.convertToGoogleMessages(messages)
 
     // Construct URL with API key
     const url = `${this.baseCompletionUrl}/${this.model}:generateContent?key=${this.apiKey}`
@@ -80,9 +75,10 @@ export class GeminiProvider extends LLMProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // 'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        contents: geminiMessages,
+        contents: googleMessages,
         generationConfig: {
           maxOutputTokens: options.maxTokens || 1000,
           temperature: options.temperature || 0.4,
@@ -92,12 +88,12 @@ export class GeminiProvider extends LLMProvider {
     })
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`)
+      throw new Error(`Google API error: ${response.statusText}`)
     }
 
     const data = await response.json()
 
-    // Extract text from Gemini response format
+    // Extract text from Google response format
     const text = data.candidates[0]?.content?.parts?.[0]?.text || ''
 
     return {
@@ -113,13 +109,13 @@ export class GeminiProvider extends LLMProvider {
   }
 
   /**
-   * Converts standard LLM messages to Gemini-specific format
+   * Converts standard LLM messages to Google-specific format
    * @param messages - Array of standard LLM messages
-   * @returns Gemini-formatted message objects
+   * @returns Google-formatted message objects
    */
-  private convertToGeminiMessages(messages: LLMMessage[]): any[] {
+  private convertToGoogleMessages(messages: LLMMessage[]): any[] {
     return messages.map((message) => {
-      // Map standard roles to Gemini roles
+      // Map standard roles
       const role = message.role === 'assistant' ? 'model' : 'user'
 
       return {
