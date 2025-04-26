@@ -15,7 +15,7 @@
       :inline="false"
       position="left"
       class="status error overlay"
-      ><span class="status error overlay">✖</span>
+      ><span class="status error overlay" :data-testid="`${testId}-error`">✖</span>
     </tooltip>
     <span v-else-if="isLoading" class="status loading overlay">
       <span class="spinner"></span>
@@ -44,6 +44,10 @@ export default {
     disabled: {
       type: Boolean,
       default: false,
+    },
+    testId: {
+      type: String,
+      default: '',
     },
   },
   components: {

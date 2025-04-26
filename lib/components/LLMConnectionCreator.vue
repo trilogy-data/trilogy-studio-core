@@ -25,6 +25,7 @@
           <option value="anthropic" data-testid="llm-connection-creator-anthropic">
             Anthropic
           </option>
+          <option value="google" data-testid="llm-connection-creator-google">Google</option>
           <!-- <option value="cohere">Cohere</option> -->
           <!-- <option value="mistral">Mistral AI</option> -->
         </select>
@@ -52,7 +53,13 @@
       </div>
 
       <div class="button-row">
-        <button data-testid="llm-connection-creator-submit" type="submit">Submit</button>
+        <loading-button
+          data-testid="llm-connection-creator-submit"
+          :action="handleSubmitConnection"
+          class="submit-button"
+        >
+          Submit
+        </loading-button>
         <button type="button" @click="close()">Cancel</button>
       </div>
     </form>
@@ -103,6 +110,7 @@ option {
 <script lang="ts">
 import { defineComponent, ref, inject } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
+import LoadingButton from './LoadingButton.vue'
 // Define the expected store type
 
 export default defineComponent({
@@ -122,6 +130,9 @@ export default defineComponent({
     close() {
       this.$emit('close')
     },
+  },
+  components: {
+    LoadingButton,
   },
   setup(_, { emit }) {
     const connectionDetails = ref({
@@ -148,7 +159,7 @@ export default defineComponent({
       connectionDetails.value.type = 'openai'
       connectionDetails.value.options = {
         apiKey: '',
-        model: 'gpt-4o',
+        model: '',
         saveCredential: false,
       }
 
@@ -159,7 +170,7 @@ export default defineComponent({
     const updateDefaultModel = (providerType: string) => {
       switch (providerType) {
         case 'openai':
-          connectionDetails.value.options.model = 'gpt-3o-mini'
+          connectionDetails.value.options.model = 'gpt-4o-mini'
           break
         case 'anthropic':
           connectionDetails.value.options.model = 'claude-3-sonnet-20240229'
@@ -170,27 +181,48 @@ export default defineComponent({
         case 'mistral':
           connectionDetails.value.options.model = 'mistral-large-latest'
           break
+        case 'google':
+          connectionDetails.value.options.model = 'gemini-2.5-turbo'
+          break
         default:
           connectionDetails.value.options.model = ''
       }
     }
 
-    const submitConnectionCreation = () => {
-      if (connectionDetails.value.name && connectionDetails.value.type) {
-        // Add the new LLM connection to the store using the existing method
-        connectionStore.newConnection(
-          connectionDetails.value.name,
-          connectionDetails.value.type,
-          connectionDetails.value.options,
-        )
-        emit('close')
-      }
+    const submitConnectionCreation = async () => {
+      await handleSubmitConnection()
     }
+    const handleSubmitConnection = async () => {
+      if (!connectionDetails.value.name) {
+        throw new Error('Connection name is required')
+      }
 
+      if (!connectionDetails.value.type) {
+        throw new Error('Provider type is required')
+      }
+
+      if (!connectionDetails.value.options.apiKey) {
+        throw new Error('API key is required')
+      }
+
+      // Add the new LLM connection to the store using the existing method
+      await connectionStore.newConnection(
+        connectionDetails.value.name,
+        connectionDetails.value.type,
+        connectionDetails.value.options,
+      )
+
+      // Close the form on success
+      emit('close')
+
+      // Return success message
+      return 'Connection created successfully'
+    }
     return {
       connectionDetails,
       connections,
       createConnection,
+      handleSubmitConnection,
       submitConnectionCreation,
       updateDefaultModel,
     }

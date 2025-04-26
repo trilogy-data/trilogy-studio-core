@@ -1,12 +1,10 @@
-<!-- DashboardHeader.vue -->
 <script setup lang="ts">
 import { computed, type Ref, ref, watch } from 'vue'
 import { useConnectionStore, useLLMConnectionStore, useEditorStore } from '../stores'
-import { useFilterDebounce } from '../utility/debounce'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import Tooltip from './Tooltip.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
-import FilterAutocomplete from './DashboardFilterAutocomplete.vue' // Import the new component
+import FilterAutocomplete from './DashboardFilterAutocomplete.vue'
 import { type Import, type CompletionItem } from '../stores/resolver'
 
 const props = defineProps({
@@ -46,7 +44,17 @@ const llmStore = useLLMConnectionStore()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
-const filterInputRef = ref<HTMLInputElement | null>(props.dashboard.filter) // Reference to the filter input element
+const filterInputRef = ref<HTMLInputElement | null>(null)
+
+// We store the actual filter input value
+const filterInput = ref(props.dashboard?.filter || '')
+
+// This is only for display purposes
+const displayFilterValue = computed(() => {
+  return filterInput.value.replace(/\n/g, ' ')
+})
+
+const hasUnappliedChanges = ref(false)
 
 // Toggle share popup visibility
 function toggleSharePopup() {
@@ -56,6 +64,20 @@ function toggleSharePopup() {
 // Close share popup
 function closeSharePopup() {
   isSharePopupOpen.value = false
+}
+
+// Apply the filter changes
+function applyFilter() {
+  // Use the original filter value with newlines preserved
+  emit('filter-change', filterInput.value)
+  hasUnappliedChanges.value = false
+}
+
+// Track filter input changes
+function onFilterInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  filterInput.value = target.value
+  hasUnappliedChanges.value = true
 }
 
 const filterLLM = () => {
@@ -69,8 +91,13 @@ const filterLLM = () => {
     .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
     .then((response) => {
       if (response && response.length > 0) {
-        filterInput.value = response
-        emit('filter-change', response)
+        // Keep the original newlines in the value
+        // the response will start with a "where" which we don't want, so strip it off
+        filterInput.value = response.replace(/^\s*where\s+/i, '')
+        // Mark as having changes that need to be applied
+        hasUnappliedChanges.value = true
+        // Apply the filter
+        emit('filter-change', filterInput.value)
       }
       isLoading.value = false
     })
@@ -79,20 +106,19 @@ const filterLLM = () => {
     })
 }
 
-// Handle keyboard shortcut for LLM generation
+// Handle keyboard shortcuts
 function handleFilterKeydown(event: KeyboardEvent) {
-  // Check for Ctrl+Shift+Enter (or Command+Shift+Enter on Mac)
-  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
+  // Add Enter key as a shortcut to search
+  if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault()
+    applyFilter()
+  }
+  // Keep Ctrl+Shift+Enter for LLM generation
+  else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
     event.preventDefault()
     filterLLM()
   }
 }
-
-// Use the extracted filter debounce composable
-const { filterInput, onFilterInput } = useFilterDebounce(
-  props.dashboard?.filter || '',
-  (value: string) => emit('filter-change', value),
-)
 
 // Compute filter validation status
 const filterStatus = computed(() => {
@@ -107,11 +133,6 @@ const availableImports: Ref<Import[]> = computed(() => {
     (editor) => editor.connection === props.selectedConnection,
   )
 
-  // const modelName = connectionStore.connections[props.selectedConnection].model
-  // if (!modelName) {
-  //   return []
-  // }
-  // const imports = modelStore.models[modelName].sources || []
   return imports.map((importItem) => ({
     name: importItem.name,
     alias: importItem.name,
@@ -137,6 +158,8 @@ watch(
   (newDashboard) => {
     if (newDashboard) {
       filterInput.value = newDashboard.filter || ''
+      // Reset unapplied changes when dashboard changes
+      hasUnappliedChanges.value = false
     }
   },
 )
@@ -144,7 +167,8 @@ watch(
 // Handle completion selection
 function handleCompletionSelected(completion: { text: string; cursorPosition: number }) {
   filterInput.value = completion.text
-  emit('filter-change', completion.text)
+  // Mark as having changes
+  hasUnappliedChanges.value = true
 
   // Set cursor position and focus the input
   if (filterInputRef.value) {
@@ -165,16 +189,19 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
             id="filter"
             data-testid="filter-input"
             type="text"
-            v-model="filterInput"
-            @input="onFilterInput"
+            :value="displayFilterValue"
+            @input="
+              (e) => {
+                onFilterInput(e)
+              }
+            "
             @keydown="handleFilterKeydown"
-            placeholder="Enter filter SQL clause... (Ctrl+Shift+Enter for text to SQL with configured LLM)"
+            placeholder="Enter filter SQL clause... (Press Enter to apply, Ctrl+Shift+Enter for text to SQL)"
             :class="{ 'filter-error': filterStatus === 'error' }"
             :disabled="isLoading"
             ref="filterInputRef"
           />
 
-          <!-- Add the FilterAutocomplete component -->
           <FilterAutocomplete
             :input-value="filterInput"
             :completion-items="globalCompletion"
@@ -182,6 +209,26 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
             v-if="filterInputRef"
             @select-completion="handleCompletionSelected"
           />
+
+          <!-- Add a search button that is highlighted when there are unapplied changes -->
+          <button
+            @click="applyFilter"
+            class="search-button"
+            data-testid="filter-search-button"
+            :disabled="isLoading"
+            :class="{ 'has-changes': hasUnappliedChanges }"
+            title="Apply filter (Enter)"
+          >
+            <div class="button-content">
+              <i class="mdi mdi-magnify"></i>
+              <Tooltip
+                :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'"
+                position="top"
+              >
+                <span class="tooltip-trigger"></span>
+              </Tooltip>
+            </div>
+          </button>
 
           <button
             @click="filterLLM"
@@ -384,6 +431,43 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   height: 20px;
 }
 
+/* New search button styles */
+.search-button {
+  position: absolute;
+  right: 65px;
+  /* Position it before the sparkle button */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  width: 30px;
+  height: 30px;
+  z-index: 2;
+  transition: all 0.2s ease-in-out;
+}
+
+.search-button.has-changes {
+  color: var(--special-text);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 .sparkle-button {
   position: absolute;
   right: 35px;
@@ -438,6 +522,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -447,6 +532,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -621,6 +707,11 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   .sparkle-button {
     right: 30px;
   }
+
+  /* Adjust search button position on mobile */
+  .search-button {
+    right: 60px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -670,6 +761,11 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   .sparkle-button {
     right: 25px;
   }
+
+  /* Adjust search button position on small mobile */
+  .search-button {
+    right: 50px;
+  }
 }
 
 /* Extra small screen size handling */
@@ -689,6 +785,11 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 
   .sparkle-button {
     right: 20px;
+  }
+
+  /* Adjust search button position on very small mobile */
+  .search-button {
+    right: 45px;
   }
 }
 </style>

@@ -83,7 +83,13 @@ export default {
       // This would need to be implemented based on your provider structure
       if (model) {
         // Replace the old connection
+        console.log(model)
         llmConnectionStore.connections[connection.name].model = model
+        console.log(
+          `Updated model for ${connection.name} to ${model}`,
+          llmConnectionStore.connections[connection.name],
+        )
+        console.log(llmConnectionStore.connections[connection.name])
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
         // save our new model
@@ -293,6 +299,13 @@ export default {
     setActiveConnection(connectionName: string) {
       this.llmConnectionStore.activeConnection = connectionName
       this.llmConnectionStore.connections[connectionName].isDefault = true
+      // for all other connections, set isDefault to false
+      Object.keys(this.llmConnectionStore.connections).forEach((key) => {
+        if (key !== connectionName) {
+          this.llmConnectionStore.connections[key].isDefault = false
+        }
+      })
+      this.saveConnections()
     },
 
     deleteConnection(id: string, connectionName: string) {

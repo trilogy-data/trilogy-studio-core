@@ -84,6 +84,19 @@ class Import(BaseModel):
     alias: str | None = None
 
 
+class MultiQueryComponent(BaseModel):
+    query: str
+    extra_filters: Optional[list[str]] = None
+    parameters: Optional[dict[str, str | int | float]] = None
+
+
+class MultiQueryInSchema(BaseModel):
+    imports: List[Import]
+    full_model: ModelInSchema
+    dialect: Dialects
+    queries: List[MultiQueryComponent]
+
+
 class QueryInSchema(BaseModel):
     imports: list[Import]
     query: str

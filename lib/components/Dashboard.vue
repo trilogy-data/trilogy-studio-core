@@ -138,9 +138,13 @@ const selectedConnection = computed(() => {
   return dashboard.value.connection
 })
 
+const stripAllWhitespace = (str: string): string => {
+  return str.replace(/\s+/g, '')
+}
+
 async function handleFilterChange(newFilter: string) {
   console.log('New filter:', newFilter)
-  if (!newFilter || newFilter === '') {
+  if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
       dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
@@ -195,22 +199,32 @@ async function populateCompletion() {
 
 const validateFilter = async (filter: string) => {
   console.log('Validating filter:', filter)
+  //strip a leading WHERE off the filter
+  let filterWithoutWhere = filter.replace(/^\s*where\s+/i, '')
   if (dashboard.value && dashboard.value.id) {
-    await queryExecutionService
-      ?.validateQuery(dashboard.value.connection, {
+    let promises = await queryExecutionService?.executeQuery(
+      dashboard.value.connection,
+      {
         text: 'select 1 as test;',
         queryType: 'duckdb',
         editorType: 'trilogy',
         imports: dashboard.value.imports,
-        extraFilters: [filter],
-      })
-      .then(() => {
-        return true
-      })
-      .catch((error) => {
-        throw error
-      })
-  }
+        extraFilters: [filterWithoutWhere],
+      },
+      () => {},
+      () => {},
+      () => {},
+      () => {},
+      true,
+    )
+    if (!promises) {
+      throw new Error('No promises returned from query execution service')
+    }
+    let resultPromise = await promises.resultPromise
+    if (!resultPromise.success) {
+      throw new Error(`Validation of "select 1 as test ${filterWithoutWhere}" resulted in ${resultPromise.error}`)
+    }
+  } else throw new Error('Dashboard not found')
 }
 
 async function handleImportChange(newImports: Import[]) {

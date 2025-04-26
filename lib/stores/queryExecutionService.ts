@@ -1,12 +1,11 @@
 import { Results, ColumnType } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
-import type { Import } from '../stores/resolver'
+import type { Import, MultiQueryComponent, QueryResponse, ValidateResponse } from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
-import { type ValidateResponse, type QueryResponse } from './resolver'
 export interface QueryInput {
   text: string
   queryType: string
@@ -55,6 +54,263 @@ export default class QueryExecutionService {
     this.editorStore = editorStore
   }
 
+  async executeQueriesBatch(
+    connectionId: string,
+    queries: MultiQueryComponent[],
+    editorType: 'trilogy' | 'sql' | 'preql',
+    imports: Import[] = [],
+    extraFilters?: string[],
+    onStarted?: () => void,
+    onProgress?: (message: QueryUpdate) => void,
+    onFailure?: (message: QueryUpdate) => void,
+    onSuccess?: (message: any) => void,
+    dryRun: boolean = false,
+  ): Promise<{
+    resultPromise: Promise<any>
+    cancellation: QueryCancellation
+  }> {
+    const startTime = new Date().getTime()
+
+    // Create cancellation controller
+    const controller = new AbortController()
+    const cancellation: QueryCancellation = {
+      cancel: () => controller.abort(),
+      isActive: () => !controller.signal.aborted,
+    }
+
+    // Return the cancellation controller immediately
+    // along with a promise for the eventual result
+    return {
+      cancellation,
+      resultPromise: this.executeQueriesBatchInternal(
+        connectionId,
+        queries,
+        editorType,
+        imports,
+        extraFilters || [],
+        startTime,
+        controller,
+        onStarted,
+        onProgress,
+        onFailure,
+        onSuccess,
+        dryRun,
+      ),
+    }
+  }
+
+  private async executeQueriesBatchInternal(
+    connectionId: string,
+    queries: MultiQueryComponent[],
+    editorType: 'trilogy' | 'sql' | 'preql',
+    imports: Import[] = [],
+    extraFilters: string[],
+    startTime: number,
+    controller: AbortController,
+    onStarted?: () => void,
+    onProgress?: (message: QueryUpdate) => void,
+    onFailure?: (message: QueryUpdate) => void,
+    onSuccess?: (message: any) => void,
+    dryRun: boolean = false,
+  ): Promise<any> {
+    // Notify query started if callback provided
+    if (onStarted) onStarted()
+
+    // Check connection
+    const conn = this.connectionStore.connections[connectionId]
+    if (!conn) {
+      return {
+        success: false,
+        error: `Connection ${connectionId} not found.`,
+        executionTime: 0,
+        results: [],
+      }
+    }
+
+    if (!conn.connected && !dryRun) {
+      try {
+        if (onProgress)
+          onProgress({
+            message: 'Connection is not active... Attempting to automatically reconnect.',
+            error: true,
+          })
+        await this.connectionStore.resetConnection(connectionId)
+        if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
+      } catch (connectionError) {
+        if (onFailure) {
+          onFailure({
+            message: 'Connection failed to reconnect.',
+            error: true,
+            running: false,
+          })
+        }
+        return {
+          success: false,
+          error: 'Connection is not active.',
+          executionTime: 0,
+          results: [],
+        }
+      }
+    }
+
+    const sources: ContentInput[] =
+      conn && conn.model
+        ? this.modelStore.models[conn.model].sources.map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+        : []
+
+    try {
+      // Resolve batch queries
+      //@ts-ignore
+      const batchResponse: QueryResponse[] = await Promise.race([
+        this.trilogyResolver.resolve_queries_batch(
+          queries,
+          conn.query_type,
+          sources,
+          imports,
+          extraFilters,
+        ),
+        new Promise((_, reject) => {
+          controller.signal.addEventListener('abort', () =>
+            reject(new Error('Query batch cancelled by user')),
+          )
+        }),
+      ])
+
+      if (!batchResponse || dryRun) {
+        if (onSuccess) {
+          onSuccess({
+            success: true,
+            results: [],
+            executionTime: new Date().getTime() - startTime,
+          })
+        }
+        return {
+          success: true,
+          results: [],
+          executionTime: new Date().getTime() - startTime,
+        }
+      }
+
+      // If we have SQL queries to execute, process them
+      const results = []
+
+      // Only execute if not in dry run mode
+      if (!dryRun && batchResponse && Array.isArray(batchResponse)) {
+        for (let i = 0; i < batchResponse.length; i++) {
+          const queryResult = batchResponse[i].data
+          if (queryResult.generated_sql) {
+            // Execute each SQL query
+            try {
+              //@ts-ignore
+              const sqlResponse: Results = await Promise.race([
+                conn.query(queryResult.generated_sql, queries[i].parameters),
+                new Promise((_, reject) => {
+                  controller.signal.addEventListener('abort', () =>
+                    reject(new Error('Query execution cancelled by user')),
+                  )
+                }),
+              ])
+
+              // Handle Trilogy specific column enrichment
+              if (editorType === 'trilogy' || editorType === 'preql') {
+                this.enrichTrilogyColumns(queryResult.columns || [], sqlResponse)
+              }
+
+              // Add to results
+              results.push({
+                success: true,
+                generatedSql: queryResult.generated_sql,
+                results: sqlResponse,
+                resultSize: sqlResponse.data.length,
+                columnCount: sqlResponse.headers.size,
+              })
+
+              // Record query in history
+              useQueryHistoryService(connectionId).recordQuery({
+                query: queries[i].query,
+                generatedQuery: queryResult.generated_sql,
+                executionTime: new Date().getTime() - startTime,
+                status: 'success',
+                resultSize: sqlResponse.data.length,
+                resultColumns: sqlResponse.headers.size,
+                errorMessage: null,
+                extraFilters: extraFilters,
+              })
+            } catch (error) {
+              const errorMessage = controller.signal.aborted
+                ? 'Query execution cancelled by user'
+                : error instanceof Error
+                  ? error.message
+                  : 'Unknown error occurred during execution'
+
+              results.push({
+                success: false,
+                error: errorMessage,
+                generatedSql: queryResult.generated_sql,
+              })
+
+              // Record error in history
+              useQueryHistoryService(connectionId).recordQuery({
+                query: queries[i].query,
+                generatedQuery: queryResult.generated_sql,
+                executionTime: new Date().getTime() - startTime,
+                status: 'error',
+                resultSize: 0,
+                resultColumns: 0,
+                errorMessage: errorMessage,
+                extraFilters: extraFilters,
+              })
+            }
+          } else {
+            // No SQL was generated for this query
+            results.push({
+              success: false,
+              error: 'No SQL was generated for this query',
+              generatedSql: '',
+            })
+          }
+        }
+      }
+
+      const finalResult = {
+        success: true,
+        results: results,
+        executionTime: new Date().getTime() - startTime,
+      }
+
+      if (onSuccess) {
+        onSuccess(finalResult)
+      }
+
+      return finalResult
+    } catch (error) {
+      const errorMessage = controller.signal.aborted
+        ? 'Query batch cancelled by user'
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error occurred'
+
+      if (onFailure) {
+        onFailure({
+          message: errorMessage,
+          error: true,
+          running: false,
+        })
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        executionTime: new Date().getTime() - startTime,
+        results: [],
+      }
+    }
+  }
   async generateQuery(
     connectionId: string,
     queryInput: QueryInput,
@@ -309,6 +565,7 @@ export default class QueryExecutionService {
         resultSize: resultSize,
         resultColumns: columnCount,
         errorMessage: null,
+        extraFilters: queryInput.extraFilters,
       })
       if (onSuccess) {
         onSuccess({

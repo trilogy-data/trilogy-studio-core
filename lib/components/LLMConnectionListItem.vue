@@ -5,6 +5,7 @@
       @click="handleItemClick"
       @contextmenu.prevent="showContextMenu"
       :class="{ 'sidebar-item-selected': isSelected }"
+      :data-testid="`llm-connection-list-item-${item.id}`"
     >
       <!-- Context Menu -->
       <context-menu
@@ -60,10 +61,30 @@
         </form>
       </div>
       <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
-        <form @submit.prevent="updateModel(item.connection, modelInput)">
-          <button type="submit" class="customize-button">Update Model</button>
-          <select v-model="modelInput" id="connection-type" required class="connection-customize">
-            <option v-for="model in item.connection.models" :value="model" :key="model">
+        <form
+          @submit.prevent="updateModel(item.connection, selectedModel)"
+          :data-testid="`model-update-form-${item.connection.name}`"
+        >
+          <button
+            type="submit"
+            class="customize-button"
+            :data-testid="`update-model-${item.connection.name}`"
+          >
+            Update Model
+          </button>
+          <select
+            v-model="selectedModel"
+            id="connection-type"
+            required
+            class="connection-customize"
+            :data-testid="`model-select-${item.connection.name}`"
+          >
+            <option
+              v-for="model in item.connection.models"
+              :value="model"
+              :key="model"
+              :data-testid="`model-option-${model}`"
+            >
               {{ model }}
             </option>
           </select>
@@ -113,6 +134,7 @@
           :connection="item.connection"
           type="llm"
           :is-connected="isConnected(item.connection)"
+          :data-testid="`refresh-llm-connection-${item.connection.name}`"
         />
         <!-- Delete Button for Connection -->
         <LoadingButton
@@ -133,7 +155,7 @@
 <script lang="ts">
 import { ref, computed, defineComponent, onMounted, watch } from 'vue'
 import type { PropType } from 'vue'
-import { AnthropicProvider, OpenAIProvider, MistralProvider } from '../llm'
+import { AnthropicProvider, OpenAIProvider, MistralProvider, GoogleProvider } from '../llm'
 import LLMProviderIcon from './LLMProviderIcon.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
@@ -204,11 +226,16 @@ export default defineComponent({
   setup(props, { emit }) {
     const apiKeyInput = ref<string>('')
     const showApiKey = ref<boolean>(false)
+    const selectedModel = ref<string>('')
 
-    // Initialize with current API key on mount
+    // Initialize values on mount
     onMounted(() => {
       if (props.item.type === 'api-key' && props.item.connection?.getApiKey()) {
         apiKeyInput.value = props.item.connection.getApiKey()
+      }
+
+      if (props.item.type === 'model' && props.item.connection?.model) {
+        selectedModel.value = props.item.connection.model
       }
     })
 
@@ -223,13 +250,16 @@ export default defineComponent({
       },
     )
 
-    const modelInput = computed<string>({
-      get: () => props.item.connection?.model || '',
-      set: (value: string) => {
-        // This is only for the local UI state before submission
-        return value
+    // Watch for external model changes
+    watch(
+      () => props.item.connection?.model,
+      (newModel) => {
+        if (props.item.type === 'model' && newModel) {
+          selectedModel.value = newModel
+        }
       },
-    })
+      { immediate: true },
+    )
 
     // Context Menu
     const contextMenuVisible = ref<boolean>(false)
@@ -243,7 +273,7 @@ export default defineComponent({
         items.push(
           { id: 'set-default', label: 'Set as Default', icon: 'mdi-star-outline' },
           { id: 'refresh', label: 'Refresh Connection', icon: 'mdi-refresh' },
-          { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
+          // { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
           { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true },
         )
       }
@@ -253,7 +283,8 @@ export default defineComponent({
 
     const showContextMenu = (event: MouseEvent) => {
       // Only show context menu for connections
-      console.log('showContextMenu', props.item.type)
+      console.log(event)
+      console.log(props.item)
       if (props.item.type === 'connection') {
         contextMenuPosition.value = {
           x: event.clientX,
@@ -275,8 +306,6 @@ export default defineComponent({
           emit('refresh', props.item.id, props.item.connection?.name || '', 'connection')
           break
         case 'edit-api-key':
-          // This would normally toggle the API key input field visibility
-          // or navigate to a settings page
           toggleCollapse(props.item.id)
           break
       }
@@ -316,6 +345,8 @@ export default defineComponent({
         return 'openai'
       } else if (connection instanceof MistralProvider) {
         return 'mistral'
+      } else if (connection instanceof GoogleProvider) {
+        return 'google'
       }
       return 'unknown'
     }
@@ -327,7 +358,6 @@ export default defineComponent({
 
     // Set as active connection
     const setAsActive = (id: string) => {
-      // This could emit an event that the parent component would handle
       emit('setActive', id, props.item.connection?.name || '', 'connection')
     }
 
@@ -339,12 +369,11 @@ export default defineComponent({
     // Update API key
     const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       emit('updateApiKey', connection, apiKey)
-      // We don't clear the input here anymore to maintain the current value
     }
 
+    // Update model
     const updateModel = (connection: LLMProvider, model: string) => {
       emit('updateModel', connection, model)
-      modelInput.value = ''
     }
 
     const toggleApiKeyVisibility = () => {
@@ -353,7 +382,7 @@ export default defineComponent({
 
     return {
       apiKeyInput,
-      modelInput,
+      selectedModel,
       isExpandable,
       handleItemClick,
       handleRefreshConnectionClick,

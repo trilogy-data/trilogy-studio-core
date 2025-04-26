@@ -11,6 +11,7 @@ export interface QueryData {
   errorMessage?: string | null
   resultSize?: number
   resultColumns?: number
+  extraFilters?: string[] | undefined
 }
 
 interface QueryHistoryReturn {

@@ -77,15 +77,15 @@ def flatten_lineage(
         chain = [
             LineageItem(token=input.operator.name, depth=depth),
             LineageItem(token="(", depth=depth),
-        ]  
+        ]
         chain += flatten_array(input.arguments, depth + 1)
         chain += [LineageItem(token=")", depth=depth)]
     elif isinstance(input, WindowItem):
         chain = [
             LineageItem(token="rank", depth=depth),
             LineageItem(token="(", depth=depth),
-        ]  
-        chain += flatten_lineage(input.content, depth + 1) # type: ignore
+        ]
+        chain += flatten_lineage(input.content, depth + 1)  # type: ignore
         chain += [LineageItem(token="over", depth=depth)]
         chain += flatten_array(input.over, depth + 1)
         chain += [LineageItem(token="order by", depth=depth)]
@@ -95,7 +95,7 @@ def flatten_lineage(
         chain = [
             LineageItem(token="filter", depth=depth),
             LineageItem(token="(", depth=depth),
-        ] 
+        ]
         chain += flatten_lineage(input.content, depth + 1)
         chain += [LineageItem(token="by", depth=depth)]
         chain += flatten_array(input.where.concept_arguments, depth + 1)
