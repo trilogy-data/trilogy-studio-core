@@ -46,8 +46,14 @@ const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
 const filterInputRef = ref<HTMLInputElement | null>(null)
 
-
+// We store the actual filter input value
 const filterInput = ref(props.dashboard?.filter || '')
+
+// This is only for display purposes
+const displayFilterValue = computed(() => {
+  return filterInput.value.replace(/\n/g, ' ')
+})
+
 const hasUnappliedChanges = ref(false)
 
 // Toggle share popup visibility
@@ -62,12 +68,15 @@ function closeSharePopup() {
 
 // Apply the filter changes
 function applyFilter() {
+  // Use the original filter value with newlines preserved
   emit('filter-change', filterInput.value)
   hasUnappliedChanges.value = false
 }
 
 // Track filter input changes
-function onFilterInput() {
+function onFilterInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  filterInput.value = target.value
   hasUnappliedChanges.value = true
 }
 
@@ -82,10 +91,12 @@ const filterLLM = () => {
     .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
     .then((response) => {
       if (response && response.length > 0) {
-        filterInput.value = response
+        // Keep the original newlines in the value
+        // the response will start with a "where" which we don't want, so strip it off
+        filterInput.value = response.replace(/^\s*where\s+/i, '')
         // Mark as having changes that need to be applied
         hasUnappliedChanges.value = true
-        //apply the filter
+        // Apply the filter
         emit('filter-change', filterInput.value)
       }
       isLoading.value = false
@@ -178,8 +189,12 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
             id="filter"
             data-testid="filter-input"
             type="text"
-            v-model="filterInput"
-            @input="onFilterInput"
+            :value="displayFilterValue"
+            @input="
+              (e) => {
+                onFilterInput(e)
+              }
+            "
             @keydown="handleFilterKeydown"
             placeholder="Enter filter SQL clause... (Press Enter to apply, Ctrl+Shift+Enter for text to SQL)"
             :class="{ 'filter-error': filterStatus === 'error' }"
@@ -187,7 +202,6 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
             ref="filterInputRef"
           />
 
-          <!-- Add the FilterAutocomplete component -->
           <FilterAutocomplete
             :input-value="filterInput"
             :completion-items="globalCompletion"
@@ -420,7 +434,8 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 /* New search button styles */
 .search-button {
   position: absolute;
-  right: 65px; /* Position it before the sparkle button */
+  right: 65px;
+  /* Position it before the sparkle button */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -443,9 +458,11 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
@@ -505,6 +522,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -514,6 +532,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -688,7 +707,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   .sparkle-button {
     right: 30px;
   }
-  
+
   /* Adjust search button position on mobile */
   .search-button {
     right: 60px;
@@ -742,7 +761,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   .sparkle-button {
     right: 25px;
   }
-  
+
   /* Adjust search button position on small mobile */
   .search-button {
     right: 50px;
@@ -767,7 +786,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   .sparkle-button {
     right: 20px;
   }
-  
+
   /* Adjust search button position on very small mobile */
   .search-button {
     right: 45px;

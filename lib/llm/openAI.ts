@@ -21,7 +21,7 @@ export class OpenAIProvider extends LLMProvider {
         },
         method: 'GET',
       }).then((response) => response)
-      
+
       if (!models.ok) {
         throw new Error(`OpenAI API error. Key correct?`)
       }

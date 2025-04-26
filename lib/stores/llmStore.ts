@@ -166,7 +166,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
             // Add feedback to the prompt for next attempt
             let message = (e as Error).message
-            base += `\n\nYour response was """${extract}""", which failed validation on validation error: ${message}. Can you return a new response that fixes the error? Ensure the portion to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
+            base += `\n\n[IMPORTANT] This is your ${attempts} attempt. Your last response was """${extract}""", which failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new asnwer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
 
             // Generate new completion with updated prompt
             raw = await this.generateCompletion(connection, {
