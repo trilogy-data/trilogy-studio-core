@@ -72,7 +72,6 @@ from io_models import (
     Model,
     ValidateQueryInSchema,
     ValidateItem,
-    MultiQueryComponent,
     MultiQueryInSchema
 )
 
@@ -380,7 +379,7 @@ def generate_query_core(
         gen_time = time.time() - gen_start
         
         total_time = time.time() - start_time
-        print(
+        perf_logger.info(
             f"Query core timing - Total: {total_time:.4f}s | "
             f"Env setup: {env_time:.4f}s ({safe_percentage(env_time, total_time):.1f}%) | "
             f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
@@ -437,7 +436,7 @@ def generate_multi_query_core(
     if ENABLE_PERF_LOGGING:
         queries_time = time.time() - queries_start
         total_time = time.time() - start_time
-        print(
+        perf_logger.info(
             f"Multi-query generation - Total: {total_time:.4f}s | "
             f"Env setup: {env_time:.4f}s ({safe_percentage(env_time,total_time):.1f}%) | "
             f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
@@ -503,7 +502,7 @@ def generate_queries(queries:MultiQueryInSchema):
             output_time = time.time() - output_start
             total_time = time.time() - start_time
             
-            print(
+            perf_logger.info(
                 f"Multi-query endpoint - Total: {total_time:.4f}s | "
                 f"Dialect: {dialect_time:.4f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
                 f"Statements: {statements_time:.4f}s ({safe_percentage(statements_time,total_time):.1f}%) | "
@@ -550,7 +549,7 @@ def generate_query(query: QueryInSchema):
             total_time = time.time() - start_time
             sql_size = len(result.generated_sql) if result.generated_sql else 0
             
-            print(
+            perf_logger.info(
                 f"Query generation completed - Total: {total_time:.4f}s | "
                 f"Dialect setup: {dialect_time:.4f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
                 f"Core processing: {core_time:.4f}s ({safe_percentage(core_time,total_time):.1f}%) | "
