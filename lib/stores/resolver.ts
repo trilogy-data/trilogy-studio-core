@@ -105,6 +105,12 @@ export interface Import {
   alias: string
 }
 
+interface MultiQueryComponent {
+  query: string;
+  parameters?: Record<string, string | number>;
+}
+
+
 export default class TrilogyResolver {
   address: string
   private validateCache: LRUCache<ValidateResponse>
@@ -286,7 +292,44 @@ export default class TrilogyResolver {
     console.log('Query response:', response)
     return response
   }
+  async resolve_queries_batch(
+    queries: MultiQueryComponent[],
+    dialect: string,
+    sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
+    extraFilters: string[] | null = null
+  ): Promise<any> {
+    const requestParams = {
+      queries: queries,
+      dialect: dialect,
+      full_model: { name: '', sources: sources || [] },
+      imports: imports || [],
+      extra_filters: extraFilters || []
+    }
 
+    // Generate hash of request params
+    const cacheKey = this.createHash(requestParams)
+
+    // Check if result exists in cache
+    const cachedResult = this.queryCache.get(cacheKey)
+    if (cachedResult) {
+      return cachedResult
+    }
+
+    // Not in cache, make the API call
+    const response = await this.fetchWithErrorHandling(`${this.address}/generate_queries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestParams),
+    })
+
+    // Cache the result
+    this.queryCache.set(cacheKey, response)
+    console.log('Batch query response:', response)
+    return response
+  }
   async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {
     const requestParams = {
       name: name,
