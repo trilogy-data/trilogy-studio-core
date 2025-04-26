@@ -138,9 +138,14 @@ const selectedConnection = computed(() => {
   return dashboard.value.connection
 })
 
+const stripAllWhitespace = (str: string): string => {
+  return str.replace(/\s+/g, '');
+}
+
+
 async function handleFilterChange(newFilter: string) {
   console.log('New filter:', newFilter)
-  if (!newFilter || newFilter === '') {
+  if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
       dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
@@ -196,7 +201,7 @@ async function populateCompletion() {
 const validateFilter = async (filter: string) => {
   console.log('Validating filter:', filter)
   if (dashboard.value && dashboard.value.id) {
-    await queryExecutionService
+    let promises = await queryExecutionService
       ?.executeQuery(
         dashboard.value.connection,
         {
@@ -212,13 +217,12 @@ const validateFilter = async (filter: string) => {
         () => {},
         true,
       )
-      .then(() => {
-        return true
-      })
-      .catch((error) => {
-        throw error
-      })
+    if (!promises) {
+      throw new Error('No promises returned from query execution service')
+    }
+    await promises.resultPromise
   }
+  else throw new Error('Dashboard not found')
 }
 
 async function handleImportChange(newImports: Import[]) {
