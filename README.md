@@ -21,9 +21,15 @@ Open source, MIT licensed.
 
 This repo contains a component library for the studio frontend and a minimal FastAPI backend service to support it.
 
+## Running Locally
+
+Run main.py in pyserver. 
+
+NPM run dev to run frontend; check config in frontend to ensure it is resolving to your localhost pyserver.
+
 
 ### Inspiration
-There are lots of good IDEs out here. This one aspires only to compete in having native Trilogy integration. Takes inspiration from:
+There are lots of good IDEs out here. Trilogy Studio is probably only right if you want to use Trilogy. Takes inspiration from:
 
 - Dbeaver
 - SQL Server Management Studio
@@ -32,8 +38,14 @@ There are lots of good IDEs out here. This one aspires only to compete in having
 - [QuackDB](https://github.com/mattf96s/QuackDB)
 - [SQL Workbench](https://sql-workbench.com/)
 
-### Tech Stack
+### Tech Stack Acknowledgments
 
+Could not exist without the following:
+
+Frontend
 - Vue
 - Vega/Altair
 - Tabulator
+
+Backend
+- Lark

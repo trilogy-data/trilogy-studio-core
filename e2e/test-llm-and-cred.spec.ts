@@ -63,9 +63,10 @@ test.describe('LLM Connection Tests', () => {
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
 
     // Click the update button
+    // this will trigger a save
     await page.getByTestId('update-model-trilogy-llm-openai').click()
 
-    await page.getByRole('button', { name: 'Save' }).click()
+    // await page.getByRole('button', { name: 'Save' }).click()
 
     // Handle keyphrase input for local storage based browsers
     if (usesLocalStorage) {
