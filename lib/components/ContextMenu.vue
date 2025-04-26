@@ -1,5 +1,5 @@
 <template>
-  <div v-show="isVisible" :style="positionStyle" class="context-menu">
+  <div v-if="isVisible" :style="positionStyle" class="context-menu">
     <div
       v-for="item in items"
       :key="item.id"
@@ -44,6 +44,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    id: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['item-click', 'close'],
   setup(props, { emit }) {
@@ -67,13 +71,15 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      document.addEventListener('click', handleClickOutside)
-      document.addEventListener('contextmenu', handleClickOutside)
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside)
+        // document.addEventListener('contextmenu', handleClickOutside)
+      }, 300) // 300ms delay, adjust as needed
     })
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
-      document.removeEventListener('contextmenu', handleClickOutside)
+      // document.removeEventListener('contextmenu', handleClickOutside)
     })
 
     return {
@@ -86,28 +92,27 @@ export default defineComponent({
 
 <style scoped>
 .context-menu {
-  position: fixed;
+  /* position: fixed; */
+  position: absolute;
   background-color: var(--sidebar-bg);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   min-width: 150px;
-  padding: 4px 0;
 }
 
 .context-menu-item {
-  padding: 8px 12px;
+  padding: 4px 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   color: var(--text-color);
   transition: background-color 0.2s;
 }
 
 .context-menu-item:hover {
-  background-color: var(--primary-color-transparent);
+  background-color: var(--border-color);
 }
 
 .context-menu-item.danger {
@@ -115,6 +120,6 @@ export default defineComponent({
 }
 
 .context-menu-item.danger:hover {
-  background-color: rgba(var(--error-color-rgb), 0.1);
+  background-color: var(--border-color);
 }
 </style>

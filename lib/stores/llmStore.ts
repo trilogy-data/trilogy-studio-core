@@ -106,8 +106,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         )
       } else if (type === 'google') {
         connection = new GoogleProvider(name, options.apiKey, options.model, options.saveCredential)
-      }
-      else {
+      } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
       this.addConnection(connection)

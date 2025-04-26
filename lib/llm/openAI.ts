@@ -20,8 +20,14 @@ export class OpenAIProvider extends LLMProvider {
           Authorization: `Bearer ${this.apiKey}`,
         },
         method: 'GET',
-      }).then((response) => response.json())
-      this.models = models.data.map((model: any) => model.id).sort()
+      }).then((response) => response)
+      
+      if (!models.ok) {
+        throw new Error(`OpenAI API error. Key correct?`)
+      }
+      let modelData = await models.json()
+      console.log('Model data:', modelData)
+      this.models = modelData.data.map((model: any) => model.id).sort()
       this.connected = true
     } catch (e) {
       if (e instanceof Error) {

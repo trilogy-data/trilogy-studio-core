@@ -5,6 +5,7 @@
       @click="handleItemClick"
       @contextmenu.prevent="showContextMenu"
       :class="{ 'sidebar-item-selected': isSelected }"
+      :data-testid="`llm-connection-list-item-${item.id}`"
     >
       <!-- Context Menu -->
       <context-menu
@@ -60,10 +61,30 @@
         </form>
       </div>
       <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
-        <form @submit.prevent="updateModel(item.connection, selectedModel)">
-          <button type="submit" class="customize-button">Update Model</button>
-          <select v-model="selectedModel" id="connection-type" required class="connection-customize">
-            <option v-for="model in item.connection.models" :value="model" :key="model">
+        <form
+          @submit.prevent="updateModel(item.connection, selectedModel)"
+          :data-testid="`model-update-form-${item.connection.name}`"
+        >
+          <button
+            type="submit"
+            class="customize-button"
+            :data-testid="`update-model-${item.connection.name}`"
+          >
+            Update Model
+          </button>
+          <select
+            v-model="selectedModel"
+            id="connection-type"
+            required
+            class="connection-customize"
+            :data-testid="`model-select-${item.connection.name}`"
+          >
+            <option
+              v-for="model in item.connection.models"
+              :value="model"
+              :key="model"
+              :data-testid="`model-option-${model}`"
+            >
               {{ model }}
             </option>
           </select>
@@ -113,6 +134,7 @@
           :connection="item.connection"
           type="llm"
           :is-connected="isConnected(item.connection)"
+          :data-testid="`refresh-llm-connection-${item.connection.name}`"
         />
         <!-- Delete Button for Connection -->
         <LoadingButton
@@ -211,7 +233,7 @@ export default defineComponent({
       if (props.item.type === 'api-key' && props.item.connection?.getApiKey()) {
         apiKeyInput.value = props.item.connection.getApiKey()
       }
-      
+
       if (props.item.type === 'model' && props.item.connection?.model) {
         selectedModel.value = props.item.connection.model
       }
@@ -236,7 +258,7 @@ export default defineComponent({
           selectedModel.value = newModel
         }
       },
-      { immediate: true }
+      { immediate: true },
     )
 
     // Context Menu
@@ -251,7 +273,7 @@ export default defineComponent({
         items.push(
           { id: 'set-default', label: 'Set as Default', icon: 'mdi-star-outline' },
           { id: 'refresh', label: 'Refresh Connection', icon: 'mdi-refresh' },
-          { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
+          // { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
           { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true },
         )
       }
@@ -261,6 +283,8 @@ export default defineComponent({
 
     const showContextMenu = (event: MouseEvent) => {
       // Only show context menu for connections
+      console.log(event)
+      console.log(props.item)
       if (props.item.type === 'connection') {
         contextMenuPosition.value = {
           x: event.clientX,

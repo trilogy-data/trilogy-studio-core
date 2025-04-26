@@ -33,9 +33,7 @@ export class GoogleProvider extends LLMProvider {
       }
 
       const data = await response.json()
-      this.models = data.models
-        .map((model: { name: string }) => model.name)
-        .sort()
+      this.models = data.models.map((model: { name: string }) => model.name).sort()
 
       this.connected = true
     } catch (e) {
@@ -64,7 +62,6 @@ export class GoogleProvider extends LLMProvider {
     const messages: LLMMessage[] = history
       ? [...history, { role: 'user', content: options.prompt }]
       : [{ role: 'user', content: options.prompt }]
-
 
     const googleMessages = this.convertToGoogleMessages(messages)
 
