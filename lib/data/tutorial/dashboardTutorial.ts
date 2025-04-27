@@ -49,13 +49,13 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'You can only crossfilter if fields exist on all charts. It\'s best to define anything you want to filter on in the base datasource, and avoid aliasing base fields.',
-      'tip'
+      "You can only crossfilter if fields exist on all charts. It's best to define anything you want to filter on in the base datasource, and avoid aliasing base fields.",
+      'tip',
     ),
     new Paragraph(
       'Purpose',
       'To fix the formatting of fields, ensure they have the appropriate types and traits in the model. For example, marking a year as a year type will make line charts eligible. See the model tutorial for more details. ',
-      'tip'
+      'tip',
     ),
     new Paragraph(
       'Purpose',

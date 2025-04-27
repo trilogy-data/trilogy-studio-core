@@ -123,11 +123,7 @@ order by total_revenue desc;`,
       `We've defined all the key parts of a model - a key, some properties, and a datasource to fetch. When working with a real database, you can save time by using the 'create model from table' button when browsing tables in the connection screen. This will build a default model you can then edit off that table.`,
       'tip',
     ),
-    new Paragraph(
-      'Purpose',
-      `Review the standard library doc for always available traits.`,
-      'tip',
-    ),
+    new Paragraph('Purpose', `Review the standard library doc for always available traits.`, 'tip'),
   ],
   'Model Tutorial',
 )

@@ -73,30 +73,30 @@ export const functions = [
   'unnest',
   'upper',
   'week',
-  'year'
+  'year',
 ]
 export const datatypes = [
   // PRIMITIVES
-  "string",
-  "bool",
-  "map",
-  "list",
-  "number",
-  "float",
-  "numeric",
-  "int",
-  "bigint",
-  "date",
-  "datetime",
-  "timestamp",
-  "array",
-  "date_part",
-  "struct",
-  "null",
+  'string',
+  'bool',
+  'map',
+  'list',
+  'number',
+  'float',
+  'numeric',
+  'int',
+  'bigint',
+  'date',
+  'datetime',
+  'timestamp',
+  'array',
+  'date_part',
+  'struct',
+  'null',
   // GRANULAR
-  "unix_seconds",
+  'unix_seconds',
   // PARSING
-  "unknown"
+  'unknown',
 ]
 
 export const rulesInput = 'Rule: ' + trilogyRules.join('\nRule: ')

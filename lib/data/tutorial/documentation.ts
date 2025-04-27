@@ -2,7 +2,7 @@ import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
 import { DashboardTutorial } from './dashboardTutorial.ts'
 import { ModelTutorial } from './modelTutorial.ts'
 import { IntroTutorial } from './introTutorial.ts'
-import {llmTutorial} from './llmTutorial.ts'
+import { llmTutorial } from './llmTutorial.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
     IntroTutorial,
