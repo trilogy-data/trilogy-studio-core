@@ -2,6 +2,7 @@ from typing import List, Union, Any
 import logging
 from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
+from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.statements.author import ImportStatement
 from io_models import (
     ValidateItem,
@@ -91,13 +92,17 @@ def get_diagnostics(
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
                 continue
+            if v.namespace == DEFAULT_NAMESPACE:
+                label = v.name
+            else:
+                label = k
             completions.append(
                 CompletionItem(
-                    label=k,
+                    label=label,
                     datatype=str(v.datatype),
                     description=v.metadata.description,
                     type="concept",
-                    insertText=k,
+                    insertText=label,
                     trilogyType=TrilogyType.CONCEPT,
                     trilogySubType=v.purpose,
                 )
@@ -119,14 +124,18 @@ def get_diagnostics(
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
                 continue
+            if v.namespace == DEFAULT_NAMESPACE:
+                label = v.name
+            else:
+                label = k
             if k not in seen:
                 completions.append(
                     CompletionItem(
-                        label=k,
+                        label=label,
                         datatype=str(v.datatype),
                         description=v.metadata.description,
                         type="concept",
-                        insertText=k,
+                        insertText=label,
                         trilogyType=TrilogyType.CONCEPT,
                         trilogySubType=v.purpose,
                     )
