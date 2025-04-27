@@ -1,17 +1,17 @@
 import { Article, Paragraph } from './docTypes.ts'
 
-export const llmTutorial = new Article('LLM Connections', [
+export const llmTutorial = new Article('LLM Tutorial', [
       new Paragraph(
         'Connections',
         'LLMs can optionally be used to enhance the studio experience. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work. LLMs is not required, but we aim to make the best use of them when available.',
       ),
       new Paragraph(
         'Connections',
-        'Core LLM use cases are - dashboard filtering with natural language, query generation from natural language. More features may be added.',
+        'Core LLM use cases are - dashboard filtering with natural language, query generation from natural language. Feature requests welcome! To add an LLM, you will need an appropriate API key. Currently, we support OpenAI, Anthropic, and Google, but adding more is straightforward.',
       ),
       new Paragraph(
         'Connections',
-        'Make sure to update the model - by selecting one from the dropdown and explicitly clicking update model - after first setting up an LLM. We don\'t know what models are available until you first connect.',
+        'Make sure to update the model to your favorite! Do this by selecting one from the dropdown and explicitly clicking update model - after first setting up an LLM. We don\'t know what models are available until you first connect.',
         'tip'
       ),
       new Paragraph(
