@@ -488,7 +488,7 @@ function setCrossFilter(info: DimensionClick): void {
   let globalFields = globalCompletion.value.map((f) => f.label)
   const finalFilters = Object.entries(info.filters).reduce(
     (acc, [key, value]) => {
-      let lookup = key.includes('.') ? key : 'local.' + key
+      let lookup = key
       if (globalFields.includes(lookup)) {
         acc[key] = value
       }
