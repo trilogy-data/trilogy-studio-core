@@ -28,6 +28,28 @@ export function configureTrilogy(languages) {
 
   languages.setMonarchTokensProvider('trilogy', {
     ignoreCase: true,
+    keywords: [
+      'IMPORT', 'SELECT', 'WHERE', 'ORDER', 'ASC', 'DESC', 'LIMIT', 'DEF',
+      'TYPE',
+      'HAVING', 'DATASOURCE', 'GRAIN', 'ADDRESS', 'QUERY', 'BY', 'AS',
+      'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'IF', 'RANK', 'OVER', 'LEAD', 'LAG'
+    ],
+    functions: [
+    'current_date', 'current_datetime', 'cast', 'sum', 'max', 'avg', 
+    'count', 'min', 'length', 'round', 'coalesce', 'concat', 
+    'upper', 'lower', 'trim', 'date', 'now', 'unnest', 'union', 'alias',  
+    'cast', 'concat', 'constant', 'coalesce', 'isnull', 'bool',
+    'index_access', 'map_access', 'attr_access', 'struct', 'array',
+    'date_literal', 'datetime_literal', 'split', 'len', 'divide',
+    'multiply', 'add', 'subtract', 'mod', 'round', 'abs', 'sqrt',
+    'random', 'group', 'count', 'count_distinct', 'sum', 'max', 'min',
+    'avg', 'like', 'ilike', 'lower', 'upper', 'substring', 'strpos',
+    'contains', 'date', 'datetime', 'timestamp', 'second', 'minute',
+    'hour', 'day', 'day_of_week', 'week', 'month', 'quarter', 'year',
+    'date_part', 'date_truncate', 'date_add', 'date_sub', 'date_diff',
+    'unix_to_timestamp', 'current_date', 'current_datetime'
+    ],
+    definitions: ['AUTO', 'PROPERTY', 'KEY', 'METRIC'],
     tokenizer: {
       root: [
         // Match comments (lines starting with #)
@@ -39,14 +61,18 @@ export function configureTrilogy(languages) {
         [/\<[a-zA-Z0-9\_\.\,]+\>\./, 'property'],
         [/([a-zA-Z0-9\_\.]+)\./, { token: 'property', next: '@afterDot' }],
 
-        // Match Keywords (SELECT, WHERE, ORDER, BY)
-        [
-          /\b(IMPORT|SELECT|WHERE|ORDER|ASC|DESC|LIMIT|HAVING|DATASOURCE|GRAIN|ADDRESS|QUERY|BY|\sAS)(?=\s|$|,|;)/,
-          'keyword',
-        ],
+        // Match custom functions (starting with @)
+        [/@[a-zA-Z][a-zA-Z0-9_]*/, { token: 'function', next: '@functionCheck' }],
 
-        // Match definitions (auto, property, metric)
-        [/(^|\s)(AUTO|PROPERTY|KEY|METRIC)(\s|$)/, 'definition'],
+        // Match Keywords (SELECT, WHERE, ORDER, BY)
+        [/[a-zA-Z][a-zA-Z0-9_]*/, { 
+          cases: {
+            '@keywords': 'keyword',
+            '@functions': { token: 'function', next: '@functionCheck' },
+            '@definitions': 'definition',
+            // '@default': 'variable'
+          }
+        }],
 
         // Match types (e.g., ::type, such as ::date or ::int)
         [/::[a-zA-Z0-9_]+/, 'type'],
@@ -66,17 +92,16 @@ export function configureTrilogy(languages) {
         // Match delimiters (like commas, colons, parentheses)
         [/[(),;=]/, 'delimiter'],
 
-        // Match variable or property names (e.g., line_item, discounted_price)
-        // [/\b[a-zA-Z_][a-zA-Z0-9_]*\b/, "variable"],
-        [
-          /(^|\s)(current_date|current_datetime|cast|sum|max|avg|count|min|length|round|coalesce|concat|upper|lower|trim|date|now)(?=\()/,
-          'function',
-        ],
 
         // Additional special handling for `->` or `as` for renaming (like `sum(line_item.extended_price)-> base_price`)
-        [/\->|\bas\b/, 'operator'],
+        [/\->|\sas\s/, 'operator'],
       ],
       afterDot: [[/[a-zA-Z0-9\_]+/, { token: 'variable', next: '@pop' }]],
+      functionCheck: [
+        [/\s*\(/, { token: 'delimiter', next: '@pop' }],
+        [/\s+/, { token: 'white', next: '@pop' }],
+        [/./, { token: '@rematch', next: '@pop' }]
+      ]
     },
   })
 }
