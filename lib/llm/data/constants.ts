@@ -6,13 +6,15 @@ export const trilogyRules = [
   'If you use a where clause, place it before the select.',
   'Trilogy fields will look like struct paths - order.product.id. Use the full path.',
   'use date_add to manipulate dates, like date_add(ship_date, month, 3)',
-  'If you filter on an aggregate in the select, add a HAVING clause for that portion of logic',
+  'If you filter on an aggregate in the select, add a HAVING clause for that portion of logic. Aggregates can be used in a where clause if they are not also selected.',
   'When comparing a field against a string in your query, explicitly cast the string to ensure the comparison is safe if the field is not also a string. Use the :: operator to cast, like "2021-01-01"::date',
-  'Do not ever make up a field. Only use the fields provided. If you need a field that is not provided, you can put a comment in as a placeholder.',
+  'Do not rename fields with as unless you are transforming them. For example, if you are doing a calculation, you can rename the field with as. If you are just selecting the field, do not use as.',
+  'You can derive a new field from an existing field using sql functions in any position, and aggregates can have inline grouping - for example, sum(revenue) by state as per_state_sales, sum(revenue) by country as country_sales would be valid selects.',
+  'If you are trying to get the top x of something, use rank x by the target - ex rank customer by sum(revenue) desc as top customers.',
   'Trilogy does not have the * symbol for counting. The count function requires a field as an argument. ID fields are good options for counts.',
   'Trilogy will let you immediately reuse a field by name after defining it in the select; do not duplicate calculations if you can avoid it.',
   'Only reference selected fields by name in the HAVING clause. Anything in HAVING should have been selected and addressable in the columns - the bit after the as.',
-  'To get a max or minimum, there is no need for a subselect - just do max(field) or min(field), such as in "where field_a=max(field_b);"',
+  'To get a max or minimum in where/having clauses, there is no need for a subselect - just do max(field) or min(field), such as in "where field_a=max(field_b);"',
   'End a full statement with a semicolon.',
 ]
 

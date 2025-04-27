@@ -10,7 +10,7 @@ export function createPrompt(query: string, conceptInputs: ModelConceptInput[]) 
         `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
     )
     .join(', ')
-  return `${leadIn}. Follow these rules ${rulesInput}. Using only these fields: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes -ex """ - to make it easy for the user to copy and paste.`
+  return `${leadIn}. Follow these rules ${rulesInput}. Using these fields, derivations thereof created with valid SQL, and any extra context you have: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes -ex """ - to make it easy for the user to copy and paste.`
 }
 
 export function createFilterPrompt(query: string, conceptInputs: ModelConceptInput[]) {
@@ -20,5 +20,5 @@ export function createFilterPrompt(query: string, conceptInputs: ModelConceptInp
         `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
     )
     .join(', ')
-  return `${leadIn}. Follow these rules ${rulesInput}. Using only these fields: ${fields}, create the closest matching syntactically valid WHERE CLAUSE to filter a dashboard from this request """${query}""".  Return only the portion of a SQL query representing the where clause, excluding any ordering. Do not include comments. After you generate the code, review it carefully to make sure it is only the partial where clause of a select, starting with WHERE (imagine if you put a "select 1 ..." in front of it.) Return your generated code within triple double quotes -ex """WHERE x = 1"""`
+  return `${leadIn}. Follow these rules ${rulesInput}. Using these fields, derivations thereof created with valid SQL, and any extra context you have: ${fields}, create the closest matching syntactically valid WHERE CLAUSE to filter a dashboard from this request """${query}""".  Return only the portion of a SQL query representing the where clause, excluding any ordering. Do not include comments. After you generate the code, review it carefully to make sure it is only the partial where clause of a select, starting with WHERE (imagine if you put a "select 1 ..." in front of it.), with no semicolon at the end. Return your generated code within triple double quotes with thinking and justification before it in the form {{reasoning}} """{{ sql }}""" -example because the user asked for rainbow colors """where color in ('red', 'blue', 'violet')"""`
 }
