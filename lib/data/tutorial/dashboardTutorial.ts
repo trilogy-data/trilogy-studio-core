@@ -37,7 +37,7 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      "Models can only be built off editors you have marked as a source. There's a toggle button in the top right of the editor. This is intended to make sure you only build off editors that are intended to be reusable resources.",
+      "Models can only be built off editors you have marked as a source. There's a toggle button in the top right of any trilogy editor to mark it as an eligible. This is intended to make sure you only build off editors that are intended to be reusable resources.",
     ),
     new Paragraph(
       'Purpose',
@@ -49,7 +49,17 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Feel free to explore from here. A good place to start is clicking on the editors icon in the left nav and exploring the pre-populated demo editors, which show more functionality. Alternatively, poke more around the docs!',
+      'You can only crossfilter if fields exist on all charts. It\'s best to define anything you want to filter on in the base datasource, and avoid aliasing base fields.',
+      'tip'
+    ),
+    new Paragraph(
+      'Purpose',
+      'To fix the formatting of fields, ensure they have the appropriate types and traits in the model. For example, marking a year as a year type will make line charts eligible. See the model tutorial for more details. ',
+      'tip'
+    ),
+    new Paragraph(
+      'Purpose',
+      'For missing features [such as chart types] or issues, please open an issue on the studio git repo.',
     ),
   ],
   'Dashboard Tutorial',

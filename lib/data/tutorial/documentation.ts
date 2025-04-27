@@ -2,11 +2,13 @@ import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
 import { DashboardTutorial } from './dashboardTutorial.ts'
 import { ModelTutorial } from './modelTutorial.ts'
 import { IntroTutorial } from './introTutorial.ts'
+import {LLMTutorial} from './llmTutorial.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
     IntroTutorial,
     DashboardTutorial,
     ModelTutorial,
+    LLMTutorial,
     new Article('Functionality', [
       new Paragraph(
         'Tip',
@@ -77,17 +79,7 @@ export const documentation: DocumentationNode[] = [
         'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. You will need to provide the private key to connect after configuring your user with the public key portion. The rest of the authentication header can be derived from this. Remember to use caution of saving this key.',
       ),
     ]),
-    new Article('LLM Connections', [
-      new Paragraph(
-        'Connections',
-        'LLMs can optionally be used to enhance the studio experience, such as through query generation. The LLM screen is accessible on the left-hand nav and provides some basic validation that your LLM will work.',
-      ),
-      new Paragraph(
-        'Managing Connections',
-        'You can view current LLM connections below. Only one LLM connection can be the default at a time.',
-      ),
-      new Paragraph('LLMList', '', 'llm-connections'),
-    ]),
+
     new Article('Models', [
       new Paragraph(
         'Models',
