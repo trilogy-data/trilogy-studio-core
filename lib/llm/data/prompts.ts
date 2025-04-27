@@ -10,7 +10,7 @@ export function createPrompt(query: string, conceptInputs: ModelConceptInput[]) 
         `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
     )
     .join(', ')
-  return `${leadIn}. Follow these rules ${rulesInput}. Using these fields, derivations thereof created with valid SQL, and any extra context you have: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes -ex """ - to make it easy for the user to copy and paste.`
+  return `${leadIn}. Follow these rules ${rulesInput}. Using these fields, derivations thereof created with valid SQL, and any extra context you have: ${fields}, do your best to create a trilogy query to answer the following user input: "${query}" Return your query within triple double quotes with thinking and justification before it in the form {{reasoning}} """{{ sql }}""" -example Because the user asked for sales by year, and revenue is the best sales related field """SELECT order.year, sum(revenue) year_revenue order by order.year asc;"""`
 }
 
 export function createFilterPrompt(query: string, conceptInputs: ModelConceptInput[]) {
