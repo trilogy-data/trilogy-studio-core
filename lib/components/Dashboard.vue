@@ -222,7 +222,9 @@ const validateFilter = async (filter: string) => {
     }
     let resultPromise = await promises.resultPromise
     if (!resultPromise.success) {
-      throw new Error(`Validation of "select 1 as test ${filterWithoutWhere}" resulted in ${resultPromise.error}`)
+      throw new Error(
+        `Validation of "select 1 as test ${filterWithoutWhere}" resulted in ${resultPromise.error}`,
+      )
     }
   } else throw new Error('Dashboard not found')
 }
