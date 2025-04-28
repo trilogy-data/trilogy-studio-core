@@ -13,6 +13,7 @@ import uvicorn
 from uvicorn.config import LOGGING_CONFIG
 
 from starlette.background import BackgroundTask
+from trilogy.constants import Parsing
 from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
@@ -185,7 +186,7 @@ def get_traits(concept: Concept) -> list[str]:
 def format_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
     try:
-        _, parsed = parse_text(safe_format_query(query.query), env)
+        _, parsed = parse_text(safe_format_query(query.query), env, parse_config=Parsing(strict_name_shadow_enforcement=True))
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     renderer = Renderer()
@@ -248,7 +249,7 @@ def generate_single_query(
 
     # Parse the query
     parse_start = time.time()
-    _, parsed = parse_text(safe_format_query(query), env)
+    _, parsed = parse_text(safe_format_query(query), env, parse_config=Parsing(strict_name_shadow_enforcement=True))
     parse_time = time.time() - parse_start
 
     if not parsed:
@@ -321,8 +322,8 @@ def generate_single_query(
                 # remove the prefix
                 filter_string = filter_string.replace(v[0], v[0][1:])
             _, fparsed = parse_text(
-                f"{base}\nWHERE {filter_string} SELECT 1 as ftest;", env
-            )
+                f"{base}\nWHERE {filter_string} SELECT 1 as ftest;", env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+            
             filterQuery: SelectStatement = fparsed[-1]  # type: ignore
             if not filterQuery.where_clause:
                 continue
@@ -380,7 +381,7 @@ def generate_query_core(
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env)
+            parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
         import_time = time.time() - import_start
 
         # Time query generation
@@ -405,7 +406,7 @@ def generate_query_core(
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env)
+            parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
         return generate_single_query(
             query.query, env, dialect, query.extra_filters, query.parameters
         )
@@ -438,7 +439,7 @@ def generate_multi_query_core(
             imp_string = f"import {imp.name} as {imp.alias};"
         else:
             imp_string = f"import {imp.name};"
-        parse_text(imp_string, env)
+        parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
 
     if ENABLE_PERF_LOGGING:
         import_time = time.time() - import_start
