@@ -7,6 +7,11 @@ export const llmTutorial = new Article('LLM Tutorial', [
   ),
   new Paragraph(
     'Connections',
+    'Gemini has had some of the best results, but any lightweight fast model works well to build scaffholding quickly. You will need to QA answers.',
+    'tip',
+  ),
+  new Paragraph(
+    'Connections',
     'Core LLM use cases are - dashboard filtering with natural language, query generation from natural language. Feature requests welcome! To add an LLM, you will need an appropriate API key. Currently, we support OpenAI, Anthropic, and Google, but adding more is straightforward.',
   ),
   new Paragraph(
