@@ -16,6 +16,10 @@ export const llmTutorial = new Article('LLM Tutorial', [
   ),
   new Paragraph(
     'Connections',
+    'To improve generative query performance, improve your trilogy model definitions, as they are provided as primary context. Adding more specific types and descriptions to fields will help the model understand better. For complex calculations, consider pre-defining them so they can be easily selected by the model.',
+  ),
+  new Paragraph(
+    'Connections',
     "Make sure to update the model to your favorite! Do this by selecting one from the dropdown and explicitly clicking update model - after first setting up an LLM. We don't know what models are available until you first connect.",
     'tip',
   ),
