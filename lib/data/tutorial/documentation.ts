@@ -72,7 +72,7 @@ export const documentation: DocumentationNode[] = [
     new Article('Bigquery', [
       new Paragraph(
         'Connections',
-        'Bigquery is supported through Oauth authentication as your identity. If you wish to use a service key file, please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/33" target="_blank">bigquery service accont support</a>.',
+        'Bigquery is supported through Oauth authentication as your identity. If you wish to use a service key file, please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/33" target="_blank">BQ Service Account Support</a>.',
       ),
     ]),
     new Article('Snowflake', [
@@ -80,6 +80,11 @@ export const documentation: DocumentationNode[] = [
         'Connections',
         'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. You will need to provide the private key to connect after configuring your user with the public key portion. The rest of the authentication header can be derived from this. Remember to use caution of saving this key.',
       ),
+    ]),
+    new Article('Scheduling', [
+      new Paragraph(
+        'Scheduling',
+        'Scheduling dashboards/scripts is a future feature. Please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/75" target="_blank">Scheduling</a>.',),
     ]),
   ]),
   new DocumentationNode('Reference', [
