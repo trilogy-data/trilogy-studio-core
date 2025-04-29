@@ -80,7 +80,7 @@ export const documentation: DocumentationNode[] = [
         'Connections',
         'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. You will need to provide the private key to connect after configuring your user with the public key portion. The rest of the authentication header can be derived from this. Remember to use caution of saving this key.',
       ),
-    ])
+    ]),
   ]),
   new DocumentationNode('Reference', [
     new Article('Overview/Goals', [
