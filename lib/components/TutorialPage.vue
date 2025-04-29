@@ -30,6 +30,12 @@
           :context="paragraph.data.context || 'main-trilogy'"
           editorId="my-first-editor"
         />
+        <tutorial-function
+          v-else-if="paragraph.type === 'function' && paragraph.data.function"
+          :name="paragraph.title"
+          :description="paragraph.content"
+          :func="paragraph.data.function"
+        />
 
         <div v-else-if="paragraph.type === 'connection-validator'">
           <div
@@ -115,6 +121,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
+import TutorialFunction from './TutorialFunction.vue'
 import LoadingButton from './LoadingButton.vue'
 
 import HighlightComponent from './HighlightComponent.vue'
@@ -211,6 +218,7 @@ export default {
     CodeBlock,
     TutorialPrompt,
     Dashboard,
+    TutorialFunction,
   },
   computed: {
     demoConfig() {
