@@ -6,19 +6,44 @@ export interface TutorialPrompt {
   hints?: string[]
 }
 
+export interface Function {
+  inputTypes: string[]
+  outputType: string
+  outputPurpose: string
+  example: string
+}
+
 export class DocData {
   prompts?: TutorialPrompt[] | undefined
   context?: string | undefined
+  function?: Function | undefined
 }
 export class Paragraph {
   title: string
   content: string
   type: string | null
   data: DocData
+
   constructor(
     title: string,
     content: string,
-    type: string | null = null,
+    type:
+      | 'editors'
+      | 'code'
+      | 'tip'
+      | 'llm-connections'
+      | 'connections'
+      | 'section'
+      | 'subsection'
+      | 'conclusion'
+      | 'function'
+      | 'dashboard'
+      | 'tutorial-prompts'
+      | 'editor-validator'
+      | 'connection-validator'
+      | 'model-validator'
+      | 'community-models'
+      | null = null,
     data: object | null = null,
   ) {
     this.title = title

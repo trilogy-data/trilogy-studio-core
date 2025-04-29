@@ -3,6 +3,8 @@ import { DashboardTutorial } from './dashboardTutorial.ts'
 import { ModelTutorial } from './modelTutorial.ts'
 import { IntroTutorial } from './introTutorial.ts'
 import { llmTutorial } from './llmTutorial.ts'
+import { builtinFunctions } from './builtinFunctions.ts'
+import { modelReference } from './modelReference.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
     IntroTutorial,
@@ -78,63 +80,7 @@ export const documentation: DocumentationNode[] = [
         'Connections',
         'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. You will need to provide the private key to connect after configuring your user with the public key portion. The rest of the authentication header can be derived from this. Remember to use caution of saving this key.',
       ),
-    ]),
-
-    new Article('Models', [
-      new Paragraph(
-        'Models',
-        'Models are the Trilogy semantic layer. When you run a Trilogy command in a connection with a model associated, it will be able to reference that file as an import in any other editor on the connection. An editor is added to a model with an alias, which is how it should be referenced.',
-      ),
-      new Paragraph(
-        'Tip',
-        'Any editor can be turned into a model source. Model sources can be hidden from the navigation tree (and are by default), but there is a button at the top to toggle their visibility.',
-        'tip',
-      ),
-      new Paragraph(
-        'Model Parsing',
-        "A model contains all the processed metadata of your source trilogy files. If you haven't deleted the demo model, it will be visible below. (You can reset the demo to restore it). Models are automatically parsed on query submission but also support on-demand validation. Click the 'parse' button to parse the model. This will send the model to a backend server to be parsed and type-checked and generate metadata for visibility. You can click on an editor name to view and edit it. This can be useful to fix parse errors easily.",
-      ),
-    ]),
-    new Article('Public Models', [
-      new Paragraph(
-        'Models',
-        'The studio contains a public model store, accessible from the left hand nav. Use this to import models defined by others. You can contribute your own models to be visible in the store by submitting a PR to <a href="https://github.com/trilogy-data/trilogy-public-models">trilogy-public-models</a>.',
-      ),
-    ]),
-  ]),
-  new DocumentationNode('Demo', [
-    new Article('Overview', [
-      new Paragraph(
-        'Demo',
-        "The demo will set up a DuckDB connection to query the TPC-H dataset using publicly available parquet files as model inputs. It's the best way to dive into querying right away. Try the example_query_1 and example_query_2 queries to see how the model can be used to generate SQL. Clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state. Take care with this, as it will revert any changes you have made.",
-      ),
-      new Paragraph(
-        'Investigate Sources',
-        "You can toggle 'source' editor visibility to investigate the setup of this model. Can you find all the parquet files used as sources?",
-        'tip',
-      ),
-      new Paragraph(
-        'TPC-H',
-        "You can read more about the benchmark in the official guide <a href='https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf' target='_blank'>here</a>. Or just google it! There are lots of online examples; attempting to recreate other queries can be a great introduction to Trilogy syntax.",
-      ),
-      new Paragraph(
-        'Reset',
-        "If this is your first visit, then the demo will be set up automatically. If you make changes, clicking the reset button below will recreate the 'demo-connection' and all associated editors to default state. Take care with this, as it will revert any changes you have made.",
-        'tip',
-      ),
-    ]),
-    new Article('Things to Explore', [
-      new Paragraph(
-        'Demo',
-        'Update the model to add a calculated field for the users first name, using the split function. Find the most common first names in customers, then the first name that spent the most money.',
-      ),
-    ]),
-    new Article('Next Steps', [
-      new Paragraph(
-        'Demo',
-        'A public model repository is available, accessible from the nav bar. You can use this to browse and select models to import. This is a great way to continue exploring Trilogy and some of the rich datasets available online. After that, dive into modeling your own data!',
-      ),
-    ]),
+    ])
   ]),
   new DocumentationNode('Reference', [
     new Article('Overview/Goals', [
@@ -378,7 +324,8 @@ complete_for_clause?
         'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
       ),
     ]),
-    new Article('Functions', [
+    builtinFunctions,
+    new Article('Custom Functions', [
       new Paragraph(
         'Defining Functions',
         'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are called with the @ prefix.',
@@ -395,17 +342,7 @@ complete_for_clause?
         'code',
       ),
     ]),
-    new Article('Modeling', [
-      new Paragraph(
-        'Defining Concepts',
-        'Concepts are declared with types: key (a unique identifier), property (value associated with a key), and metric (an agregatable value). A concept can be given a description by providing a comment after the declaration.',
-      ),
-      new Paragraph(
-        'Example',
-        'key customer_id int;# comments are inline.\n\nproperty customer_id.name string; #the name of a customer property customer_id.spending float; \n\nmetric total_spent <-sum(spending);',
-        'code',
-      ),
-    ]),
+    modelReference,
     new Article('Advanced Features', [
       new Paragraph(
         'Filtering',
