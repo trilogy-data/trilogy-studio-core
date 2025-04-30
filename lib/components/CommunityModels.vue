@@ -1,7 +1,18 @@
 <template>
   <div class="model-page">
     <div class="model-content">
-      <div class="model-title">Community Models</div>
+      <div class="model-header">
+        <div class="model-title">Community Models</div>
+        <button 
+          class="refresh-button"
+          @click="refreshData"
+          :disabled="loading"
+          data-testid="refresh-models-button"
+        >
+          <span v-if="!loading">Refresh</span>
+          <span v-else>Refreshing...</span>
+        </button>
+      </div>
 
       <div class="filters my-4">
         <div class="filter-row flex gap-4 mb-2">
@@ -210,9 +221,70 @@ const filteredFiles = computed(() => {
   })
 })
 
+/**
+ * Sleep for a specified number of milliseconds
+ * @param ms Time to sleep in milliseconds
+ * @returns Promise that resolves after the specified time
+ */
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * Fetch with exponential backoff for handling rate limiting
+ * @param url URL to fetch
+ * @param options Fetch options
+ * @param maxRetries Maximum number of retries
+ * @param initialBackoff Initial backoff time in milliseconds
+ * @returns Promise with the fetch response
+ */
+const fetchWithBackoff = async (
+  url: string, 
+  options?: RequestInit, 
+  maxRetries = 5, 
+  initialBackoff = 1000
+): Promise<Response> => {
+  let retries = 0
+  let backoffTime = initialBackoff
+
+  while (true) {
+    try {
+      const response = await fetch(url, options)
+      
+      // If we get a 429 Too Many Requests response and we haven't exceeded max retries
+      if (response.status === 429 && retries < maxRetries) {
+        // Get retry-after header if available or use exponential backoff
+        const retryAfter = response.headers.get('Retry-After')
+        let waitTime = retryAfter ? parseInt(retryAfter) * 1000 : backoffTime
+        
+        console.log(`Rate limited. Retrying after ${waitTime}ms (Attempt ${retries + 1}/${maxRetries})`)
+        
+        // Wait for the specified time
+        await sleep(waitTime)
+        
+        // Increase backoff time for next attempt (exponential backoff with jitter)
+        backoffTime = backoffTime * 2 * (0.8 + Math.random() * 0.4)
+        retries++
+        continue
+      }
+      
+      return response
+    } catch (error) {
+      if (retries >= maxRetries) {
+        throw error
+      }
+      
+      console.log(`Network error, retrying after ${backoffTime}ms (Attempt ${retries + 1}/${maxRetries})`)
+      await sleep(backoffTime)
+      
+      // Increase backoff time for next attempt
+      backoffTime = backoffTime * 2 * (0.8 + Math.random() * 0.4)
+      retries++
+    }
+  }
+}
+
 const fetchBranches = async () => {
   try {
-    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/branches`)
+    const response = await fetchWithBackoff(`https://api.github.com/repos/${repoOwner}/${repoName}/branches`)
     if (response.status === 200) {
       const branchData = await response.json()
       branches.value = branchData.map((branch: { name: string }) => branch.name)
@@ -230,7 +302,7 @@ const fetchFiles = async () => {
 
   try {
     const contentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/studio?ref=${selectedBranch.value}`
-    const response = await fetch(contentsUrl)
+    const response = await fetchWithBackoff(contentsUrl)
 
     if (response.status != 200) {
       throw new Error(`Error fetching community data: ${await response.text()}`)
@@ -243,7 +315,7 @@ const fetchFiles = async () => {
       .map(async (file) => {
         // Construct raw content URL with the selected branch
         const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${selectedBranch.value}/studio/${file.name}`
-        const fileResponse = await fetch(rawUrl)
+        const fileResponse = await fetchWithBackoff(rawUrl)
 
         if (!fileResponse.ok) {
           throw new Error(`Error fetching file ${file.name}: ${fileResponse.statusText}`)
@@ -267,9 +339,15 @@ const fetchFiles = async () => {
   }
 }
 
-onMounted(async () => {
+// Add refresh function to reload the data
+const refreshData = async () => {
+  loading.value = true
   await fetchBranches()
   await fetchFiles()
+}
+
+onMounted(async () => {
+  await refreshData()
 })
 </script>
 
@@ -279,6 +357,28 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.refresh-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--button-text, white);
+  padding: 6px 12px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: var(--button-hover-bg, #1d4ed8);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .model-name {

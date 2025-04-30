@@ -1,5 +1,5 @@
 // useQueryHistory.ts
-import { ref, onMounted, watch } from 'vue'
+import { ref} from 'vue'
 import type { Ref } from 'vue'
 import QueryHistoryStorage from '../data/connectionHistoryStorage'
 import type { QueryRecord } from '../data/connectionHistoryStorage'
@@ -119,22 +119,7 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
     return result as T
   }
 
-  // Load history on initial render or when connection changes
-  onMounted(() => {
-    if (connectionName) {
-      loadHistory()
-    }
-  })
-
-  // Watch for changes to connection name
-  watch(
-    () => connectionName,
-    (newConnectionName) => {
-      if (newConnectionName) {
-        loadHistory()
-      }
-    },
-  )
+ 
 
   return {
     history: history,

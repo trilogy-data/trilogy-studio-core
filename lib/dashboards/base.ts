@@ -119,7 +119,7 @@ export class DashboardModel implements Dashboard {
   }
 
   // Add a new item to the dashboard
-  addItem(type: CellType, x = 0, y = 0, w = 4, h: number | null = null): string {
+  addItem(type: CellType, x = 0, y = 0, w = 4, h: number | null = null, content:string | null = null, name: string | null): string {
     const itemId = this.nextId.toString()
 
     // Create grid item layout with height based on type
@@ -145,6 +145,8 @@ export class DashboardModel implements Dashboard {
       defaultName = `Table ${itemId}`
     }
 
+    let finalName = name || defaultName
+
     // Default content based on type
     let defaultContent = '# Markdown Cell\nEnter your markdown content here.'
     if (type === CELL_TYPES.CHART) {
@@ -153,11 +155,13 @@ export class DashboardModel implements Dashboard {
       defaultContent = "SELECT [1,2,3,4] as value, 'example' as dim"
     }
 
+    let finalContent = content || defaultContent  
+
     // Initialize with default content
     this.gridItems[itemId] = {
       type,
-      content: defaultContent,
-      name: defaultName,
+      content: finalContent,
+      name: finalName,
       width: 0,
       height: 0,
     }

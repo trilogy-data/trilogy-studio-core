@@ -32,6 +32,9 @@ const props = defineProps<{
 // Initialize the dashboard store
 const dashboardStore = useDashboardStore()
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+if (!queryExecutionService) {
+  throw new Error('QueryExecutionService not provided')
+}
 // Add filter state and debouncing
 const filter = ref('')
 const filterInput = ref('')
@@ -69,7 +72,6 @@ const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
-  console.log('Dashboard:', dashboard)
   if (!dashboard && props.connectionId) {
     try {
       return dashboardStore.newDashboard(props.name, props.connectionId)
@@ -157,7 +159,6 @@ async function handleFilterChange(newFilter: string) {
     await queryExecutionService
       ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
-        queryType: 'duckdb',
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
@@ -176,24 +177,13 @@ async function handleFilterChange(newFilter: string) {
 }
 
 async function populateCompletion() {
-  if (dashboard.value && dashboard.value.id) {
-    await queryExecutionService
-      ?.validateQuery(dashboard.value.connection, {
-        text: 'select 1 as test;',
-        queryType: 'duckdb',
-        editorType: 'trilogy',
-        imports: dashboard.value.imports,
-      })
-      .then((results) => {
-        if (results) {
-          globalCompletion.value = results.data.completion_items
-        }
+  if (dashboard.value && dashboard.value.id && queryExecutionService) {
+    let completion = await dashboardStore.populateCompletion(dashboard.value.id, queryExecutionService)
+    if (completion) {
+      globalCompletion.value = completion
 
-        filterError.value = ''
-      })
-      .catch((error) => {
-        console.log(error)
-      })
+    }
+    filterError.value = ''
   }
 }
 
@@ -206,7 +196,6 @@ const validateFilter = async (filter: string) => {
       dashboard.value.connection,
       {
         text: 'select 1 as test;',
-        queryType: 'duckdb',
         editorType: 'trilogy',
         imports: dashboard.value.imports,
         extraFilters: [filterWithoutWhere],
@@ -557,7 +546,7 @@ onBeforeUnmount(() => {
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
         <GridLayout
-          :col-num="16"
+          :col-num="20"
           :row-height="30"
           :is-draggable="draggable"
           :is-resizable="resizable"
@@ -627,7 +616,6 @@ onBeforeUnmount(() => {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
-      <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
       <dashboard-creator-inline class="inline-creator" :visible="true"></dashboard-creator-inline>
     </template>
   </div>

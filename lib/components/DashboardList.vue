@@ -247,6 +247,7 @@ export default {
       this.dashboardToDelete = null
     },
     dashboardCreated(id: string) {
+      console.log('Dashboard created:', id)
       this.$emit('dashboard-key-selected', id)
     },
     clickAction(item: any) {

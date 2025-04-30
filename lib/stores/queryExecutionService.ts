@@ -8,7 +8,6 @@ import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 export interface QueryInput {
   text: string
-  queryType: string
   editorType: 'trilogy' | 'sql' | 'preql'
   imports: Import[]
   extraFilters?: string[]
@@ -347,14 +346,14 @@ export default class QueryExecutionService {
     sources: ContentInput[] | null = null,
   ): Promise<ValidateResponse | null> {
     // Skip validation for SQL queries
-    if (queryInput.queryType === 'sql') {
+    if (queryInput.editorType === 'sql') {
       return null
     }
 
     try {
       if (log) {
         // Log validation attempt if logging is enabled
-        console.log(`Validating ${queryInput.queryType} query`)
+        console.log(`Validating ${queryInput.editorType} query`)
       }
     } catch (error) {
       console.log(error)

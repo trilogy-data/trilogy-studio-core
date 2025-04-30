@@ -130,6 +130,7 @@ STATEMENT_LIMIT = 100_00
 
 app = FastAPI()
 
+PARSE_CONFIG = Parsing(strict_name_shadow_enforcement=True)
 
 @dataclass
 class InstanceSettings:
@@ -186,7 +187,7 @@ def get_traits(concept: Concept) -> list[str]:
 def format_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
     try:
-        _, parsed = parse_text(safe_format_query(query.query), env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+        _, parsed = parse_text(safe_format_query(query.query), env, parse_config=PARSE_CONFIG)
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     renderer = Renderer()
@@ -202,10 +203,10 @@ def validate_query(query: ValidateQueryInSchema):
     try:
         # check filters, but return main validation
         if query.extra_filters:
-            for filter_string in query.extra_filters:
+            for idx, filter_string in enumerate(query.extra_filters):
                 try:
                     base = get_diagnostics(
-                        f"WHERE {filter_string} SELECT 1 as ftest;", query.sources
+                        f"WHERE {filter_string} SELECT 1 as __ftest_{idx};", query.sources
                     )
                     if base.items:
                         filter_validation.append(
@@ -249,7 +250,7 @@ def generate_single_query(
 
     # Parse the query
     parse_start = time.time()
-    _, parsed = parse_text(safe_format_query(query), env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+    _, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
     parse_time = time.time() - parse_start
 
     if not parsed:
@@ -316,13 +317,13 @@ def generate_single_query(
         final.limit = STATEMENT_LIMIT
 
     if extra_filters:
-        for filter_string in extra_filters:
+        for idx, filter_string in enumerate(extra_filters):
             base = "" + variable_prefix
             for v in variables:
                 # remove the prefix
                 filter_string = filter_string.replace(v[0], v[0][1:])
             _, fparsed = parse_text(
-                f"{base}\nWHERE {filter_string} SELECT 1 as ftest;", env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+                f"{base}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};", env, parse_config=PARSE_CONFIG)
             
             filterQuery: SelectStatement = fparsed[-1]  # type: ignore
             if not filterQuery.where_clause:
@@ -381,7 +382,7 @@ def generate_query_core(
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
         import_time = time.time() - import_start
 
         # Time query generation
@@ -406,7 +407,7 @@ def generate_query_core(
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
         return generate_single_query(
             query.query, env, dialect, query.extra_filters, query.parameters
         )
@@ -439,7 +440,7 @@ def generate_multi_query_core(
             imp_string = f"import {imp.name} as {imp.alias};"
         else:
             imp_string = f"import {imp.name};"
-        parse_text(imp_string, env, parse_config=Parsing(strict_name_shadow_enforcement=True))
+        parse_text(imp_string, env, parse_config=PARSE_CONFIG)
 
     if ENABLE_PERF_LOGGING:
         import_time = time.time() - import_start
