@@ -22,7 +22,23 @@ export const trilogyRules = [
   'Only reference fields from the select in the HAVING clause. You can create new fields and hide them with a # comment to reference them for filtering. A -- modified field will not be selected but will be available to filter (this is a special "hide" syntax). The where clause is less restrictive, and can include anonymous calculations.',
   'To get a max or minimum in where/having clauses, there is no need for a subselect - just do max(field) or min(field), such as in "where field_a=max(field_b);"',
   'End a full statement with a semicolon.',
-]
+  `Here are full valid Trilogy query demonstrating various features: "where year between 1940 and 1950
+select
+    name,
+    state,
+    sum(births) as all_births,
+    rank name over state by all_births desc as state_rank,
+    rank name by sum(births) by name desc as all_rank
+having 
+    all_rank<11
+    and state = 'ID'
+order by all_rank asc;", "where dep_time between '2002-01-01'::datetime and '2010-01-31'::datetime
+select
+    carrier.name,
+    count(id2) as total_flights,
+    count(id2) / date_diff(min(dep_time.date), max(dep_time.date), DAY) as average_daily_flights
+order by total_flights desc;
+"`]
 
 export const functions = [
   'abs',

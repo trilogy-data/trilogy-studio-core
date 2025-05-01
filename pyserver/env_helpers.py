@@ -159,13 +159,18 @@ def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment
 
     return env
 
+def concept_to_description(concept: Concept) -> str | None:
+    base = concept.metadata.description if concept.metadata else None
+    if concept.lineage:
+        base = base + str(concept.lineage) if base else str(concept.lineage)
+    return base
 
 def concept_to_ui_concept(concept: Concept) -> UIConcept:
     return UIConcept(
         name=concept.name,
         datatype=concept.datatype,
         purpose=concept.purpose,
-        description=(concept.metadata.description if concept.metadata else None),
+        description=concept_to_description(concept),
         namespace=concept.namespace or "",
         address=concept.address,
         lineage=flatten_lineage(concept, depth=0),

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { LayoutItem, CellType } from '../dashboards/base'
 import { CELL_TYPES, DashboardModel } from '../dashboards/base'
 import type { Import } from './resolver'
-import { type PromptGridItemData, type PromptDashboard, type PromptLayoutItem, parseDashboardSpec } from '../dashboards/prompts'
+import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
@@ -71,7 +71,7 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    setDashboardState(id:string, state: 'editing' | 'published' | 'locked') {
+    setDashboardState(id: string, state: 'editing' | 'published' | 'locked') {
       if (this.dashboards[id]) {
         this.dashboards[id].state = state
       } else {
@@ -126,7 +126,7 @@ export const useDashboardStore = defineStore('dashboards', {
       w = 4,
       h: number | null = null,
       content: string | null = null,
-      name: string | null = null, 
+      name: string | null = null,
     ) {
       if (this.dashboards[dashboardId]) {
         return this.dashboards[dashboardId].addItem(type, x, y, w, h, content, name)
@@ -270,22 +270,27 @@ export const useDashboardStore = defineStore('dashboards', {
           })
           .then((results) => {
             if (results) {
-              return results.data.completion_items
+              return results.data.completion_items.map((item) => ({
+                name: item.label,
+                type: item.datatype,
+                description: item.description,
+              }))
             }
-    
+
           })
           .catch((error) => {
             console.log(error)
             throw new Error(`Error validating query: ${error.message}`)
           })
       }
-    else {
+      else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
     },
 
-    async generatePromptSpec(prompt:string, llmStore: LLMConnectionStoreType) {
-      let rawResponse = await llmStore.generateDashboardCompletion(prompt, parseDashboardSpec, )
+    async generatePromptSpec(prompt: string, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
+      let completion = await this.populateCompletion(this.activeDashboardId, queryExecutionService)
+      let rawResponse = await llmStore.generateDashboardCompletion(prompt, parseDashboardSpec, completion, 3)
       if (!rawResponse) {
         throw new Error('No response from LLM')
       }
@@ -293,22 +298,17 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
 
-    async populateFromPromptSpec(dashboardId: string, promptLayout:PromptDashboard, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
+    async populateFromPromptSpec(dashboardId: string, promptLayout: PromptDashboard, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
       let current = this.dashboards[dashboardId]
       if (!current) {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
       current.name = promptLayout.name
       current.description = promptLayout.description
-      let completionItems = await this.populateCompletion(dashboardId, queryExecutionService)
-      if (!completionItems) {
+      let concepts = await this.populateCompletion(dashboardId, queryExecutionService)
+      if (!concepts) {
         throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
       }
-      let concepts = completionItems.map((item) => ({
-        name: item.label,
-        type: item.datatype,
-        description: item.description,
-      }))
 
       const validator = async (text: string): Promise<boolean> => {
         const queryInput: QueryInput = {
@@ -326,9 +326,9 @@ export const useDashboardStore = defineStore('dashboards', {
           current.connection,
           queryInput,
           // Starter callback (empty for now)
-          () => {},
+          () => { },
           // Progress callback
-          () => {},
+          () => { },
           // Failure callback
           onError,
           // Success callback
@@ -345,18 +345,18 @@ export const useDashboardStore = defineStore('dashboards', {
         let itemData = promptLayout.gridItems[item.id];
         let content = itemData.content;
         console.log('populating item', itemData);
-        
+
         if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type)) {
           let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator);
           content = llmcontent || 'No query could be generated';
         }
-        
+
         await this.addItemToDashboard(
-          dashboardId, itemData.type, item.x, item.y, item.w, item.h,  content, itemData.name,
+          dashboardId, itemData.type, item.x, item.y, item.w, item.h, content, itemData.name,
         );
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
-        
+
       //   let itemData = promptLayout.gridItems[item.id]
       //   let content = itemData.content
       //   console.log('populating item', itemData)

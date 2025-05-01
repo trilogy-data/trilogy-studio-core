@@ -190,6 +190,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     async generateDashboardCompletion(
       inputString: string,
       validator: Function | null = null,
+      concepts: ModelConceptInput[] = [],
       maxAttempts = 3,
     ) {
       console.log('Generating dashboard completion')
@@ -198,7 +199,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return this.generateValidatedCompletion(
         createDashboardPrompt,
         inputString,
-        null,
+        concepts,
         validator,
         maxAttempts,
       )
