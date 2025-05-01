@@ -23,10 +23,7 @@ export function createFilterPrompt(query: string, conceptInputs: ModelConceptInp
   return `${leadIn}. Follow these syntax rules carefully ${rulesInput}. Using these fields, derivations thereof created with valid SQL, and any extra context you have: ${fields}, create the closest matching syntactically valid WHERE CLAUSE to filter a dashboard from this request """${query}""".  Return only the portion of a SQL query representing the where clause, excluding any ordering. Do not include comments. After you generate the code, review it carefully to make sure it is only the partial where clause of a select, starting with WHERE (imagine if you put a "select 1 ..." in front of it.), with no semicolon at the end. Return your generated code within triple double quotes with thinking and justification before it in the form Reasoning: {{reasoning}} """{{ trilogy }}""". Example: Because the user asked for rainbow colors, returning """where color in ('red', 'blue', 'violet')"""`
 }
 
-export function createDashboardPrompt(query: string, conceptInputs: ModelConceptInput[] | null = null) {
-  if (!conceptInputs) {
-    return generateDashboardPrompt(query)
-  }
+export function createDashboardPrompt(query: string, conceptInputs: ModelConceptInput[]) {
 
   const fields = conceptsToFieldPrompt(conceptInputs)
   return generateDashboardPrompt(query, fields)

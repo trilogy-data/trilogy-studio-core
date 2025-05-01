@@ -141,14 +141,17 @@ export default {
 
         // Close creator
         emit('close')
+        
 
         // Select the new dashboard
         dashboardStore.setActiveDashboard(dashboard.id)
-
+        console.log('New dashboard created:', dashboard.id)
+        emit('dashboard-created', dashboard.id)
+        
         // Process prompt if it's provided and LLM connection exists
         if (showPromptField.value && dashboardPrompt.value.trim()) {
           // Use the actual prompt from the form instead of hardcoded value
-          const promptSpec = await dashboardStore.generatePromptSpec(dashboardPrompt.value, llmStore)
+          const promptSpec = await dashboardStore.generatePromptSpec(dashboardPrompt.value, llmStore, queryExecutionService)
           console.log('Prompt spec generated:', promptSpec)
 
           if (promptSpec) {
@@ -161,7 +164,7 @@ export default {
           }
         }
 
-        emit('dashboard-selected', dashboard.id)
+        
       } catch (error) {
         console.error('Failed to create dashboard:', error)
         // Handle error (e.g., dashboard with name already exists)

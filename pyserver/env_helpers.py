@@ -8,7 +8,7 @@ from io_models import (
     ModelSource,
     ModelSourceInSchema,
 )
-
+from common import concept_to_description
 from trilogy.parsing.parse_engine import ParseError
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.authoring import (
@@ -159,11 +159,6 @@ def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment
 
     return env
 
-def concept_to_description(concept: Concept) -> str | None:
-    base = concept.metadata.description if concept.metadata else None
-    if concept.lineage:
-        base = base + str(concept.lineage) if base else str(concept.lineage)
-    return base
 
 def concept_to_ui_concept(concept: Concept) -> UIConcept:
     return UIConcept(

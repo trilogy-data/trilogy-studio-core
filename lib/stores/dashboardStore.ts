@@ -257,39 +257,46 @@ export const useDashboardStore = defineStore('dashboards', {
 
       return serialized
     },
-
     async populateCompletion(dashboardId: string, queryExecutionService: QueryExecutionService) {
       const dashboard = this.dashboards[dashboardId]
-
+      console.log('populating completion for dashboard', dashboard)
       if (dashboard) {
-        return await queryExecutionService
+        let results = await queryExecutionService
           ?.validateQuery(dashboard.connection, {
             text: 'select 1 as test;',
             editorType: 'trilogy',
             imports: dashboard.imports,
           })
-          .then((results) => {
-            if (results) {
-              return results.data.completion_items.map((item) => ({
-                name: item.label,
-                type: item.datatype,
-                description: item.description,
-              }))
-            }
+        console.log('got results', results)
+        if (results) {
+          return results.data.completion_items
+        }
+        else {
+          throw new Error('No completion items found.')
+        }
 
-          })
-          .catch((error) => {
-            console.log(error)
-            throw new Error(`Error validating query: ${error.message}`)
-          })
+
       }
       else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
     },
 
+    async populateAIConcepts(dashboardId: string, queryExecutionService: QueryExecutionService) {
+      let completions = await this.populateCompletion(dashboardId, queryExecutionService)
+      console.log('got completions', completions)
+      if (!completions) {
+        throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
+      }
+      return completions.map((item) => ({
+        name: item.label,
+        type: item.datatype,
+        description: item.description,
+      }))
+    },
+
     async generatePromptSpec(prompt: string, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
-      let completion = await this.populateCompletion(this.activeDashboardId, queryExecutionService)
+      let completion = await this.populateAIConcepts(this.activeDashboardId, queryExecutionService)
       let rawResponse = await llmStore.generateDashboardCompletion(prompt, parseDashboardSpec, completion, 3)
       if (!rawResponse) {
         throw new Error('No response from LLM')
@@ -305,7 +312,7 @@ export const useDashboardStore = defineStore('dashboards', {
       }
       current.name = promptLayout.name
       current.description = promptLayout.description
-      let concepts = await this.populateCompletion(dashboardId, queryExecutionService)
+      let concepts = await this.populateAIConcepts(dashboardId, queryExecutionService)
       if (!concepts) {
         throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
       }
@@ -345,14 +352,14 @@ export const useDashboardStore = defineStore('dashboards', {
         let itemData = promptLayout.gridItems[item.id];
         let content = itemData.content;
         console.log('populating item', itemData);
-
-        if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type)) {
+        let itemType = itemData.type.toLowerCase() as CellType
+        if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemType)) {
           let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator);
           content = llmcontent || 'No query could be generated';
         }
 
         await this.addItemToDashboard(
-          dashboardId, itemData.type, item.x, item.y, item.w, item.h, content, itemData.name,
+          dashboardId, itemType, item.x, item.y, item.w, item.h, content, itemData.name,
         );
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {

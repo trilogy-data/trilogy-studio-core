@@ -1,4 +1,4 @@
-
+import { type CellType } from "./base";
 /**
  * Parses a JSON string into a PromptDashboard object
  * @param jsonString The JSON string to parse
@@ -13,24 +13,24 @@ export function parseDashboardSpec(jsonString: string): PromptDashboard {
   } catch (error) {
     throw new Error(`Invalid JSON format: ${(error as Error).message}`);
   }
-  
+
   // Validate required top-level fields
   if (!parsedJson.name || typeof parsedJson.name !== 'string') {
     throw new Error('Dashboard must have a name property of type string');
   }
-  
+
   if (!parsedJson.description || typeof parsedJson.description !== 'string') {
     throw new Error('Dashboard must have a description property of type string');
   }
-  
+
   if (!Array.isArray(parsedJson.layout)) {
     throw new Error('Dashboard must have a layout property of type array');
   }
-  
+
   if (!parsedJson.gridItems || typeof parsedJson.gridItems !== 'object') {
     throw new Error('Dashboard must have a gridItems property of type object');
   }
-  
+
   // Validate layout items
   const layoutItemIds = new Set<string>();
   for (let i = 0; i < parsedJson.layout.length; i++) {
@@ -38,61 +38,60 @@ export function parseDashboardSpec(jsonString: string): PromptDashboard {
     if (!item.id || typeof item.id !== 'string') {
       throw new Error(`Layout item at index ${i} must have an id property of type string`);
     }
-    
+
     if (typeof item.x !== 'number') {
       throw new Error(`Layout item with id '${item.id}' must have an x property of type number`);
     }
-    
+
     if (typeof item.y !== 'number') {
       throw new Error(`Layout item with id '${item.id}' must have a y property of type number`);
     }
-    
+
     if (typeof item.w !== 'number') {
       throw new Error(`Layout item with id '${item.id}' must have a w property of type number`);
     }
-    
+
     if (typeof item.h !== 'number') {
       throw new Error(`Layout item with id '${item.id}' must have an h property of type number`);
     }
-    
+
     layoutItemIds.add(item.id);
   }
-  
+
   // Validate gridItems
-  for (const [id, gridItem] of Object.entries(parsedJson.gridItems)) {
+  // Validate gridItems
+  for (const [id, gridItem] of Object.entries<PromptGridItemData>(parsedJson.gridItems)) {
     if (!layoutItemIds.has(id)) {
       throw new Error(`Grid item with id '${id}' does not have a corresponding layout item`);
     }
-    
+
+    // Fixed type error by properly typing gridItem as PromptGridItemData
     if (!gridItem.type || typeof gridItem.type !== 'string') {
       throw new Error(`Grid item with id '${id}' must have a type property of type string`);
     }
-    
+
     if (!gridItem.content || typeof gridItem.content !== 'string') {
       throw new Error(`Grid item with id '${id}' must have a content property of type string`);
     }
-    
+
     if (!gridItem.name || typeof gridItem.name !== 'string') {
       throw new Error(`Grid item with id '${id}' must have a name property of type string`);
     }
-    
+
     // Check optional properties if they exist
     if ('width' in gridItem && typeof gridItem.width !== 'number') {
       throw new Error(`Grid item with id '${id}' has an invalid width property (must be a number)`);
     }
-    
-    if ('height' in gridItem && typeof gridItem.height !== 'number') {
-      throw new Error(`Grid item with id '${id}' has an invalid height property (must be a number)`);
-    }
+
   }
-  
+
   // Check that all layout items have corresponding grid items
   for (const id of layoutItemIds) {
     if (!(id in parsedJson.gridItems)) {
       throw new Error(`Layout item with id '${id}' does not have a corresponding grid item`);
     }
   }
-  
+
   // If all validations pass, return the typed object
   return parsedJson as PromptDashboard;
 }
@@ -126,18 +125,19 @@ export interface PromptDashboard {
 export const PROMPT = `You are a talented dashboard designer. Given this typescript template format for a dashboard config, and a list of available fields,
 generate a JSON spec that can be imported into these typescript objects that will appropriately visualize data for the provided prompt.
 
-Lean on the principles of Edward Tufte in your design. The dashboard tool will automatically support filtering/cross filtering,
-so just focus on laying out content.
+Lean on the principles of Edward Tufte in your design. Just focus on laying out content for an interactive, click based exploration; do not 
+mention filtering.
 
 Appropriately mix in description and markdown to explain the data and the visualizations.
 
 The horizontal grid components are on a 0-20 scale, which will respond to width. Rows are 30 pixels high. Markdown components should be at least 3 rows high. 
 
-Make the dashboard as long as required for the prompt. If the user asks for something detailed, it should typically be 3-5 rows (5-10 cells); otherwise 2-3 is appropriate (4-6 cells). 
+Make the dashboard comprehensive. If the user asks for something detailed, it should typically be 5-8 rows (5-10 cells); otherwise 3-6 is appropriate (4-6 cells). 
 
-For the chart and table types, in the content, write a a prompt for a SQL query that will pull appropriate data. Another analyst
-will fill in the SQL query.
-The prompt should be descriptive and precise to ensure they understand your intent.  They only have access to the same fields as you will be given below, so plan appropriately
+For the chart and table types, in the content, write a a prompt for the data you want to visualize. Another analyst
+will transform this into a real SQL query.
+The prompt should be descriptive and precise to ensure they understand your intent, but should avoid SQL syntax.  
+They only have access to the same fields as you will be given below, so plan appropriately
 and do not ask them for something they will be unable to answer with that data.
 
 For markdown, you can directly fill in the appropriate markdown syntax. Markdown cells are static and will not run/fetch data. The other
@@ -182,7 +182,7 @@ export interface PromptDashboard {
 
 `
 
-export function generateDashboardPrompt(prompt:string, fields:string): string {
+export function generateDashboardPrompt(prompt: string, fields: string): string {
   return `
   ${PROMPT}
   The prompt is: "${prompt}"

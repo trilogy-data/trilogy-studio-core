@@ -247,7 +247,7 @@ export default {
       this.dashboardToDelete = null
     },
     dashboardCreated(id: string) {
-      console.log('Dashboard created:', id)
+      console.log('Dashboard created event received:', id)
       this.$emit('dashboard-key-selected', id)
     },
     clickAction(item: any) {
@@ -303,7 +303,6 @@ export default {
 .confirmation-dialog {
   width: 300px;
   background-color: var(--bg-color);
-  border-radius: 5px;
   padding: 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }

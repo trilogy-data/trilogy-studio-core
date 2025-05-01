@@ -116,6 +116,7 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
+import { extractLastTripleQuotedText } from '../stores/llmStore'
 
 interface TestResult {
   passed: boolean
@@ -204,10 +205,12 @@ export default defineComponent({
 
     // Evaluate if the AI response meets the test criteria
     const evaluateResponse = (
-      response: string,
+      rawResponse: string,
       criteria: TestScenario['expectedResponse'],
     ): TestResult => {
       const result: TestResult = { passed: true }
+
+      let response =  extractLastTripleQuotedText(rawResponse)
 
       // Check for required phrases
       if (criteria.contains) {
