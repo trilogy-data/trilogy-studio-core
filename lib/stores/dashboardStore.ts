@@ -71,6 +71,14 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    setDashboardState(id:string, state: 'editing' | 'published' | 'locked') {
+      if (this.dashboards[id]) {
+        this.dashboards[id].state = state
+      } else {
+        throw new Error(`Dashboard with ID "${id}" not found.`)
+      }
+    },
+
     // Update dashboard name
     updateDashboardName(id: string, newName: string) {
       if (this.dashboards[id]) {

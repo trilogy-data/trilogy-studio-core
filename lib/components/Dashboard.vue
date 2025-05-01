@@ -110,11 +110,9 @@ onMounted(() => {
   }
 })
 
-const editMode = props.viewMode
-  ? ref(false)
-  : dashboard.value
-    ? ref(!dashboard.value.published)
-    : ref(true)
+const editMode = dashboard.value && dashboard.value.state == 'editing'
+  ? ref(true)
+  : ref(false)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
@@ -528,6 +526,7 @@ onBeforeUnmount(() => {
     <DashboardHeader
       :dashboard="dashboard"
       :edit-mode="editMode"
+      :edits-locked="dashboard.state === 'locked'"
       :selected-connection="selectedConnection"
       :filterError="filterError"
       :globalCompletion="globalCompletion"

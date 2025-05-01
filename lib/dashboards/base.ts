@@ -56,8 +56,8 @@ export interface Dashboard {
   filter: string | null
   imports: Import[]
   version: number
-  published: boolean
   description: string
+  state: 'editing' | 'published' | 'locked'
 }
 
 // Cell types enum
@@ -83,7 +83,7 @@ export class DashboardModel implements Dashboard {
   filter: string | null = null
   imports: Import[] = []
   version: number
-  published: boolean = false
+  state: 'editing' | 'published' | 'locked' = 'editing'
   description: string = ''
 
   constructor({
@@ -99,7 +99,7 @@ export class DashboardModel implements Dashboard {
     filter = null,
     imports = [],
     version = 1,
-    published = false,
+    state = 'editing',
     description = '',
   }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
     this.id = id
@@ -114,7 +114,7 @@ export class DashboardModel implements Dashboard {
     this.filter = filter
     this.imports = imports
     this.version = version
-    this.published = published
+    this.state = state
     this.description = description
   }
 
@@ -352,7 +352,7 @@ export class DashboardModel implements Dashboard {
       filter: this.filter,
       imports: this.imports,
       version: this.version,
-      published: this.published,
+      state: this.state,
       description: this.description,
     }
   }
