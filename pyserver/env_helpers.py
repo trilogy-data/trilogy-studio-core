@@ -13,26 +13,18 @@ from trilogy.parsing.parse_engine import ParseError
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
 from trilogy.authoring import (
     Concept,
-    DataType,
     Function,
     WindowItem,
     FilterItem,
-    Conditional,
-    Comparison,
     AggregateWrapper,
     MultiSelectStatement,
-    SelectStatement,
-    ConceptRef,
-    Parenthetical,
 )
 from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
 from trilogy.core.models.author import (
-    MultiSelectLineage,
-    RowsetItem,
     FunctionCallWrapper,
 )
-from typing import Any, List, Union
+from typing import Any, List
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
 
@@ -48,27 +40,7 @@ def flatten_array(input: Any, depth: int = 0) -> List[LineageItem]:
 
 
 def flatten_lineage(
-    input: Union[
-        ConceptRef,
-        Concept,
-        int,
-        float,
-        str,
-        DataType,
-        Function,
-        WindowItem,
-        FilterItem,
-        Conditional,
-        Comparison,
-        AggregateWrapper,
-        SelectStatement,
-        MultiSelectLineage,
-        RowsetItem,
-        FunctionCallWrapper,
-        # RowsetItem,
-        MultiSelectStatement,
-        Parenthetical,
-    ],
+    input: Any,
     depth: int = 0,
 ) -> List[LineageItem]:
     if depth == 0:

@@ -132,6 +132,7 @@ app = FastAPI()
 
 PARSE_CONFIG = Parsing(strict_name_shadow_enforcement=True)
 
+
 @dataclass
 class InstanceSettings:
     connections: Dict[str, Executor]
@@ -187,7 +188,9 @@ def get_traits(concept: Concept) -> list[str]:
 def format_query(query: QueryInSchema):
     env = parse_env_from_full_model(query.full_model.sources)
     try:
-        _, parsed = parse_text(safe_format_query(query.query), env, parse_config=PARSE_CONFIG)
+        _, parsed = parse_text(
+            safe_format_query(query.query), env, parse_config=PARSE_CONFIG
+        )
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     renderer = Renderer()
@@ -206,7 +209,8 @@ def validate_query(query: ValidateQueryInSchema):
             for idx, filter_string in enumerate(query.extra_filters):
                 try:
                     base = get_diagnostics(
-                        f"WHERE {filter_string} SELECT 1 as __ftest_{idx};", query.sources
+                        f"WHERE {filter_string} SELECT 1 as __ftest_{idx};",
+                        query.sources,
                     )
                     if base.items:
                         filter_validation.append(
@@ -323,8 +327,11 @@ def generate_single_query(
                 # remove the prefix
                 filter_string = filter_string.replace(v[0], v[0][1:])
             _, fparsed = parse_text(
-                f"{base}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};", env, parse_config=PARSE_CONFIG)
-            
+                f"{base}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};",
+                env,
+                parse_config=PARSE_CONFIG,
+            )
+
             filterQuery: SelectStatement = fparsed[-1]  # type: ignore
             if not filterQuery.where_clause:
                 continue
