@@ -116,7 +116,6 @@ async function handleFilterChange(newFilter: string) {
     await queryExecutionService
       ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
-        queryType: 'duckdb',
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,

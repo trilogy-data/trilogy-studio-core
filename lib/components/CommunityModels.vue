@@ -1,7 +1,18 @@
 <template>
   <div class="model-page">
     <div class="model-content">
-      <div class="model-title">Community Models</div>
+      <div class="model-header">
+        <div class="model-title">Community Models</div>
+        <button
+          class="refresh-button"
+          @click="refreshData"
+          :disabled="loading"
+          data-testid="refresh-models-button"
+        >
+          <span v-if="!loading">Refresh</span>
+          <span v-else>Refreshing...</span>
+        </button>
+      </div>
 
       <div class="filters my-4">
         <div class="filter-row flex gap-4 mb-2">
@@ -121,155 +132,90 @@
 import { ref, onMounted, computed, defineProps, inject } from 'vue'
 import ModelCreator from './ModelCreator.vue'
 import { type ModelConfigStoreType } from '../stores/modelStore'
+import {
+  type ModelFile,
+  fetchBranches,
+  fetchModelFiles,
+  filterModelFiles,
+  getDefaultConnection as getDefaultConnectionService,
+  getAvailableEngines,
+} from '../models/githubApiService'
+
 const props = defineProps({
   initialSearch: {
     type: String,
     default: '',
   },
 })
-interface Component {
-  url: string
-  name?: string
-  alias?: string
-  purpose?: string
-}
 
-interface FileData {
-  name: string
-  description: string
-  engine: string
-  downloadUrl: string
-  components: Component[]
-}
-
-const files = ref<FileData[]>([])
+const files = ref<ModelFile[]>([])
 const isExpanded = ref<Record<string, boolean>>({})
 const creatorIsExpanded = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
 const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref('')
-const importStatus = ref('all') // New ref for import status filter
+const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
 const loading = ref(false)
 
 // GitHub branch support
 const selectedBranch = ref('main')
 const branches = ref(['main', 'develop', 'staging'])
 
-const repoOwner = 'trilogy-data'
-const repoName = 'trilogy-public-models'
-
 const modelStore = inject<ModelConfigStoreType>('modelStore')
 if (!modelStore) {
   throw new Error('ModelConfigStore not found in context')
 }
 
-const modelExists = (name: string) => {
+const modelExists = (name: string): boolean => {
   return name in modelStore.models
 }
 
-const toggleComponents = (index: string) => {
+const toggleComponents = (index: string): void => {
   isExpanded.value[index] = !isExpanded.value[index]
 }
 
 const availableEngines = computed(() => {
-  const engines = new Set<string>()
-  files.value.forEach((file) => {
-    if (file.engine) {
-      engines.add(file.engine)
-    }
-  })
-  return Array.from(engines).sort()
+  return getAvailableEngines(files.value)
 })
 
-const getDefaultConnection = (engine: string) => {
-  switch (engine) {
-    case 'bigquery':
-      return 'new-bigquery-oauth'
-    case 'duckdb':
-      return 'new-duckdb'
-    default:
-      return `new-${engine}`
-  }
+const getDefaultConnection = (engine: string): string => {
+  return getDefaultConnectionService(engine)
 }
 
 const filteredFiles = computed(() => {
-  return files.value.filter((file) => {
-    const nameMatch = file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const engineMatch = !selectedEngine.value || file.engine === selectedEngine.value
-
-    // Handle the import status filter
-    let importMatch = true
-    if (importStatus.value !== 'all') {
-      const isImported = modelExists(file.name)
-      importMatch =
-        (importStatus.value === 'imported' && isImported) ||
-        (importStatus.value === 'not-imported' && !isImported)
-    }
-
-    return nameMatch && engineMatch && importMatch
-  })
+  return filterModelFiles(
+    files.value,
+    searchQuery.value,
+    selectedEngine.value,
+    importStatus.value,
+    modelExists,
+  )
 })
 
-const fetchBranches = async () => {
-  try {
-    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/branches`)
-    if (response.status === 200) {
-      const branchData = await response.json()
-      branches.value = branchData.map((branch: { name: string }) => branch.name)
-    }
-  } catch (err) {
-    console.error('Error fetching branches:', err)
-    // Keep default branches if we can't fetch them
-  }
-}
-
-const fetchFiles = async () => {
+const fetchFiles = async (): Promise<void> => {
   error.value = null
   loading.value = true
-  files.value = []
 
-  try {
-    const contentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/studio?ref=${selectedBranch.value}`
-    const response = await fetch(contentsUrl)
+  const result = await fetchModelFiles(selectedBranch.value)
+  files.value = result.files
+  error.value = result.error
 
-    if (response.status != 200) {
-      throw new Error(`Error fetching community data: ${await response.text()}`)
-    }
+  loading.value = false
+}
 
-    const data: { name: string; download_url: string }[] = await response.json()
+// Add refresh function to reload the data
+const refreshData = async (): Promise<void> => {
+  loading.value = true
 
-    const filePromises = data
-      .filter((file) => file.name.endsWith('.json'))
-      .map(async (file) => {
-        // Construct raw content URL with the selected branch
-        const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${selectedBranch.value}/studio/${file.name}`
-        const fileResponse = await fetch(rawUrl)
+  // Fetch branches first, then fetch files
+  const branchesResult = await fetchBranches()
+  branches.value = branchesResult
 
-        if (!fileResponse.ok) {
-          throw new Error(`Error fetching file ${file.name}: ${fileResponse.statusText}`)
-        }
-
-        const fileData: FileData = await fileResponse.json()
-        fileData.downloadUrl = rawUrl
-        return fileData
-      })
-
-    files.value = await Promise.all(filePromises)
-  } catch (rawError) {
-    if (rawError instanceof Error) {
-      error.value = rawError.message
-    } else {
-      error.value = 'Error fetching files'
-    }
-    console.error('Error fetching community data:', rawError)
-  } finally {
-    loading.value = false
-  }
+  await fetchFiles()
 }
 
 onMounted(async () => {
-  await fetchBranches()
-  await fetchFiles()
+  await refreshData()
 })
 </script>
 
@@ -279,6 +225,28 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.refresh-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--button-text, white);
+  padding: 6px 12px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: var(--button-hover-bg, #1d4ed8);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .model-name {

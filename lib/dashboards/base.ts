@@ -56,8 +56,8 @@ export interface Dashboard {
   filter: string | null
   imports: Import[]
   version: number
-  published: boolean
   description: string
+  state: 'editing' | 'published' | 'locked'
 }
 
 // Cell types enum
@@ -83,7 +83,7 @@ export class DashboardModel implements Dashboard {
   filter: string | null = null
   imports: Import[] = []
   version: number
-  published: boolean = false
+  state: 'editing' | 'published' | 'locked' = 'editing'
   description: string = ''
 
   constructor({
@@ -99,7 +99,7 @@ export class DashboardModel implements Dashboard {
     filter = null,
     imports = [],
     version = 1,
-    published = false,
+    state = 'editing',
     description = '',
   }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
     this.id = id
@@ -114,12 +114,20 @@ export class DashboardModel implements Dashboard {
     this.filter = filter
     this.imports = imports
     this.version = version
-    this.published = published
+    this.state = state
     this.description = description
   }
 
   // Add a new item to the dashboard
-  addItem(type: CellType, x = 0, y = 0, w = 4, h: number | null = null): string {
+  addItem(
+    type: CellType,
+    x = 0,
+    y = 0,
+    w = 4,
+    h: number | null = null,
+    content: string | null = null,
+    name: string | null,
+  ): string {
     const itemId = this.nextId.toString()
 
     // Create grid item layout with height based on type
@@ -145,6 +153,8 @@ export class DashboardModel implements Dashboard {
       defaultName = `Table ${itemId}`
     }
 
+    let finalName = name || defaultName
+
     // Default content based on type
     let defaultContent = '# Markdown Cell\nEnter your markdown content here.'
     if (type === CELL_TYPES.CHART) {
@@ -153,11 +163,13 @@ export class DashboardModel implements Dashboard {
       defaultContent = "SELECT [1,2,3,4] as value, 'example' as dim"
     }
 
+    let finalContent = content || defaultContent
+
     // Initialize with default content
     this.gridItems[itemId] = {
       type,
-      content: defaultContent,
-      name: defaultName,
+      content: finalContent,
+      name: finalName,
       width: 0,
       height: 0,
     }
@@ -348,7 +360,7 @@ export class DashboardModel implements Dashboard {
       filter: this.filter,
       imports: this.imports,
       version: this.version,
-      published: this.published,
+      state: this.state,
       description: this.description,
     }
   }

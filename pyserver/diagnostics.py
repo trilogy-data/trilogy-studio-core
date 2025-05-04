@@ -16,6 +16,7 @@ from io_models import (
 from env_helpers import parse_env_from_full_model
 from trilogy.parsing.parse_engine import ParseToObjects
 from logging import getLogger
+from common import concept_to_description
 
 logger = getLogger("diagnostics")
 
@@ -100,7 +101,7 @@ def get_diagnostics(
                 CompletionItem(
                     label=label,
                     datatype=str(v.datatype),
-                    description=v.metadata.description,
+                    description=concept_to_description(v),
                     type="concept",
                     insertText=label,
                     trilogyType=TrilogyType.CONCEPT,
@@ -133,7 +134,7 @@ def get_diagnostics(
                     CompletionItem(
                         label=label,
                         datatype=str(v.datatype),
-                        description=v.metadata.description,
+                        description=concept_to_description(v),
                         type="concept",
                         insertText=label,
                         trilogyType=TrilogyType.CONCEPT,

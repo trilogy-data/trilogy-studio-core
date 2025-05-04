@@ -390,7 +390,6 @@ export default defineComponent({
       const queryPartial = await this.buildQueryArgs(text)
       const queryInput: QueryInput = {
         text,
-        queryType: queryPartial.queryType,
         editorType: queryPartial.editorType,
         imports: queryPartial.imports,
       }
@@ -503,7 +502,6 @@ export default defineComponent({
             const queryInput: QueryInput = {
               // run an explain here, not the query
               text,
-              queryType: queryPartial.queryType,
               editorType: queryPartial.editorType,
               imports: queryPartial.imports,
             }

@@ -396,12 +396,11 @@ export default {
             filters: { [field]: value },
           })
         } else {
-          // If not highlighted yet, find all cells with the same value in this column and highlight them
           this.$emit('cell-click', {
             filters: { [field]: value },
             append: true,
           })
-
+          // If not highlighted yet, find all cells with the same value in this column and highlight them
           // Get all cells in this column with the same value
           const column = tab.getColumn(cell.getField())
           const cells = column.getCells()

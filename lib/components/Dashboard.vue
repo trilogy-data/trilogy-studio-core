@@ -32,6 +32,9 @@ const props = defineProps<{
 // Initialize the dashboard store
 const dashboardStore = useDashboardStore()
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+if (!queryExecutionService) {
+  throw new Error('QueryExecutionService not provided')
+}
 // Add filter state and debouncing
 const filter = ref('')
 const filterInput = ref('')
@@ -69,7 +72,6 @@ const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
-  console.log('Dashboard:', dashboard)
   if (!dashboard && props.connectionId) {
     try {
       return dashboardStore.newDashboard(props.name, props.connectionId)
@@ -108,16 +110,16 @@ onMounted(() => {
   }
 })
 
-const editMode = props.viewMode
-  ? ref(false)
-  : dashboard.value
-    ? ref(!dashboard.value.published)
-    : ref(true)
+const editMode = computed(() => {
+  return dashboard.value ? dashboard.value.state === 'editing' : false
+})
+
 const toggleEditMode = () => {
-  editMode.value = !editMode.value
+  if (!dashboard.value) return
+  dashboardStore.toggleEditMode(dashboard.value.id)
   // Update all items to be non-draggable and non-resizable in view mode
-  draggable.value = editMode.value
-  resizable.value = editMode.value
+  draggable.value = dashboard.value.state === 'editing'
+  resizable.value = dashboard.value.state === 'editing'
 
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
@@ -157,7 +159,6 @@ async function handleFilterChange(newFilter: string) {
     await queryExecutionService
       ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
-        queryType: 'duckdb',
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
@@ -176,24 +177,15 @@ async function handleFilterChange(newFilter: string) {
 }
 
 async function populateCompletion() {
-  if (dashboard.value && dashboard.value.id) {
-    await queryExecutionService
-      ?.validateQuery(dashboard.value.connection, {
-        text: 'select 1 as test;',
-        queryType: 'duckdb',
-        editorType: 'trilogy',
-        imports: dashboard.value.imports,
-      })
-      .then((results) => {
-        if (results) {
-          globalCompletion.value = results.data.completion_items
-        }
-
-        filterError.value = ''
-      })
-      .catch((error) => {
-        console.log(error)
-      })
+  if (dashboard.value && dashboard.value.id && queryExecutionService) {
+    let completion = await dashboardStore.populateCompletion(
+      dashboard.value.id,
+      queryExecutionService,
+    )
+    if (completion) {
+      globalCompletion.value = completion
+    }
+    filterError.value = ''
   }
 }
 
@@ -206,7 +198,6 @@ const validateFilter = async (filter: string) => {
       dashboard.value.connection,
       {
         text: 'select 1 as test;',
-        queryType: 'duckdb',
         editorType: 'trilogy',
         imports: dashboard.value.imports,
         extraFilters: [filterWithoutWhere],
@@ -539,6 +530,7 @@ onBeforeUnmount(() => {
     <DashboardHeader
       :dashboard="dashboard"
       :edit-mode="editMode"
+      :edits-locked="dashboard.state === 'locked'"
       :selected-connection="selectedConnection"
       :filterError="filterError"
       :globalCompletion="globalCompletion"
@@ -557,7 +549,7 @@ onBeforeUnmount(() => {
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
         <GridLayout
-          :col-num="16"
+          :col-num="20"
           :row-height="30"
           :is-draggable="draggable"
           :is-resizable="resizable"
@@ -627,7 +619,6 @@ onBeforeUnmount(() => {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
-      <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
       <dashboard-creator-inline class="inline-creator" :visible="true"></dashboard-creator-inline>
     </template>
   </div>

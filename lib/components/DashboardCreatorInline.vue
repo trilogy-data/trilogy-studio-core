@@ -26,10 +26,38 @@
         </option>
       </select>
     </div>
+    <!-- Added imports dropdown -->
+    <div v-if="selectedConnection && availableImports.length > 0" class="form-group">
+      <label for="dashboard-import">Import</label>
+      <select
+        id="dashboard-import"
+        v-model="selectedImport"
+        :data-testid="testTag ? `dashboard-creator-import-${testTag}` : 'dashboard-creator-import'"
+      >
+        <option
+          v-for="importItem in availableImports"
+          :key="importItem.name"
+          :value="importItem.name"
+        >
+          {{ importItem.name }}
+        </option>
+      </select>
+    </div>
+    <!-- Added prompt input field based on TODO -->
+    <div v-if="showPromptField" class="form-group">
+      <label for="dashboard-prompt">Dashboard Prompt</label>
+      <textarea
+        id="dashboard-prompt"
+        v-model="dashboardPrompt"
+        placeholder="Describe what you want to analyze..."
+        rows="3"
+        :data-testid="testTag ? `dashboard-creator-prompt-${testTag}` : 'dashboard-creator-prompt'"
+      ></textarea>
+    </div>
     <div class="form-actions">
       <button
         @click="createDashboard"
-        :disabled="!dashboardName || !selectedConnection"
+        :disabled="!dashboardName || !selectedConnection || !selectedImport"
         :data-testid="testTag ? `dashboard-creator-submit-${testTag}` : 'dashboard-creator-submit'"
         class="create-btn"
       >
@@ -47,9 +75,13 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, type Ref } from 'vue'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
+import QueryExecutionService from '../stores/queryExecutionService'
+import { type EditorStoreType } from '../stores/editorStore'
+import { type Import } from '../stores/resolver'
 
 export default {
   name: 'DashboardCreatorInline',
@@ -66,38 +98,111 @@ export default {
   setup(_, { emit }) {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
+    const editorStore = inject<EditorStoreType>('editorStore')
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
-    if (!dashboardStore || !connectionStore) {
+    if (
+      !dashboardStore ||
+      !connectionStore ||
+      !llmStore ||
+      !queryExecutionService ||
+      !editorStore
+    ) {
       throw new Error('Dashboard or connection store is not provided!')
     }
 
     const dashboardName = ref('')
     const selectedConnection = ref('')
+    const dashboardPrompt = ref('')
+    const selectedImport = ref('')
+
+    // Show prompt field only if there's an active default LLM connection
+    const showPromptField = computed(() => {
+      return llmStore.hasActiveDefaultConnection
+    })
 
     const connections = computed(() => {
       return Object.values(connectionStore.connections).filter((conn) => conn.model)
     })
 
+    const availableImports: Ref<Import[]> = computed(() => {
+      const imports = Object.values(editorStore.editors).filter(
+        (editor) => editor.connection === selectedConnection.value,
+      )
+
+      return imports.map((importItem) => ({
+        name: importItem.name,
+        alias: importItem.name,
+      }))
+    })
+
+    // Set default import when imports are available
+    // Watch for changes in availableImports and update selectedImport accordingly
+    computed(() => {
+      if (availableImports.value.length > 0 && !selectedImport.value) {
+        selectedImport.value = availableImports.value[0].name
+      } else if (availableImports.value.length === 0) {
+        // Reset selectedImport if no imports are available
+        selectedImport.value = ''
+      }
+      return availableImports.value
+    })
     // Set default connection when connections are available
     if (connections.value.length > 0 && !selectedConnection.value) {
       selectedConnection.value = connections.value[0].name
     }
 
-    const createDashboard = () => {
+    const createDashboard = async () => {
       if (!dashboardName.value || !selectedConnection.value) return
 
       try {
         // Create new dashboard
         const dashboard = dashboardStore.newDashboard(dashboardName.value, selectedConnection.value)
 
+        // Use the selected import instead of hardcoded 'lineitem'
+        const importToUse =
+          selectedImport.value ||
+          (availableImports.value.length > 0 ? availableImports.value[0].name : '')
+
+        dashboardStore.updateDashboardImports(dashboard.id, [
+          {
+            name: importToUse,
+            alias: '',
+          },
+        ])
+
         // Reset form
         dashboardName.value = ''
+        selectedImport.value = ''
 
         // Close creator
         emit('close')
+
         // Select the new dashboard
         dashboardStore.setActiveDashboard(dashboard.id)
-        emit('dashboard-selected', dashboard.id)
+        console.log('New dashboard created:', dashboard.id)
+        emit('dashboard-created', dashboard.id)
+
+        // Process prompt if it's provided and LLM connection exists
+        if (showPromptField.value && dashboardPrompt.value.trim()) {
+          // Use the actual prompt from the form instead of hardcoded value
+          const promptSpec = await dashboardStore.generatePromptSpec(
+            dashboardPrompt.value,
+            llmStore,
+            queryExecutionService,
+          )
+          console.log('Prompt spec generated:', promptSpec)
+
+          if (promptSpec) {
+            dashboardStore.populateFromPromptSpec(
+              dashboard.id,
+              promptSpec,
+              llmStore,
+              queryExecutionService,
+            )
+          }
+        }
       } catch (error) {
         console.error('Failed to create dashboard:', error)
         // Handle error (e.g., dashboard with name already exists)
@@ -107,13 +212,19 @@ export default {
 
     const cancel = () => {
       dashboardName.value = ''
+      dashboardPrompt.value = ''
+      selectedImport.value = ''
       emit('close')
     }
 
     return {
       dashboardName,
       selectedConnection,
+      dashboardPrompt,
+      showPromptField,
       connections,
+      availableImports,
+      selectedImport,
       createDashboard,
       cancel,
     }
@@ -126,7 +237,7 @@ export default {
   width: 90%;
   padding: 10px;
   margin-bottom: 10px;
-  background-color: var(--sidebar-selector-bg);
+  background-color: transparent;
   border: 1px solid var(--border);
 }
 
@@ -149,7 +260,8 @@ export default {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   width: 95%;
   padding: 6px;
   background-color: var(--bg-color);
@@ -157,6 +269,11 @@ export default {
   color: var(--text-color);
   border-radius: 3px;
   font-size: 12px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
 }
 
 .form-actions {

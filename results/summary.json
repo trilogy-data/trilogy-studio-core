@@ -1,0 +1,23 @@
+[
+  {
+    "provider": "OPENAI",
+    "model": "gpt-4.1-nano",
+    "passRate": 0.7,
+    "averageLatency": 3058.8,
+    "totalTests": 10
+  },
+  {
+    "provider": "ANTHROPIC",
+    "model": "claude-3-7-sonnet-20250219",
+    "passRate": 1,
+    "averageLatency": 11776.4,
+    "totalTests": 10
+  },
+  {
+    "provider": "GOOGLE",
+    "model": "gemini-2.0-flash",
+    "passRate": 0.8,
+    "averageLatency": 3448.3,
+    "totalTests": 10
+  }
+]

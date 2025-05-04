@@ -1,0 +1,88 @@
+{
+  "provider": "ANTHROPIC",
+  "model": "claude-3-7-sonnet-20250219",
+  "results": [
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere \n  names.state in ('TX', 'FL', 'GA', 'AL', 'MS', 'LA', 'SC', 'NC', 'TN', 'KY', 'AR', 'VA')\n  and names.year between 1980 and 1989\nselect\n  names.name,\n  names.gender,\n  sum(names.births) as total_births,\n  count(names.state) as states_appeared_in,\n  sum(names.births) / count(names.year) as avg_births_per_year,\n  # Calculate popularity percentile\n  rank names.name over names.gender by sum(names.births) desc as popularity_rank\norder by total_births asc, names.name asc;\n",
+      "latency": 7420
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA')\n  and names.year between 1980 and 1989\nselect\n  names.name,\n  names.gender,\n  names.state,\n  count(names.births) as occurrences,\n  sum(names.births) as total_births,\n  sum(names.births) / sum(sum(names.births)) by names.gender * 100 as percent_of_gender,\n  rank names.name over names.state by sum(names.births) desc as popularity_in_state,\n  rank names.name over names.gender by sum(names.births) desc as popularity_by_gender\nhaving\n  # Filter for either very common names (top 20 by gender) or very unique names (bottom 5% by gender)\n  popularity_by_gender <= 20 or percent_of_gender < 0.05\norder by\n  names.gender asc,\n  total_births desc,\n  names.name asc;\n",
+      "latency": 7606
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\n  and names.state in ('AL', 'AR', 'DE', 'FL', 'GA', 'KY', 'LA', 'MD', 'MS', 'NC', 'OK', 'SC', 'TN', 'TX', 'VA', 'WV')\nselect\n  names.name,\n  names.gender,\n  sum(names.births) as total_births,\n  count(names.state) as states_count,\n  sum(names.births) / sum(names.total_births) as popularity_percentage\norder by total_births desc;\n",
+      "latency": 8284
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA')\n  and names.year between 1980 and 1989\nselect\n  names.name,\n  names.gender,\n  count(names.name) as state_count,\n  sum(names.births) as total_births,\n  sum(names.births) / sum(sum(names.births)) by names.gender as percent_of_gender,\n  rank names.name over names.gender by sum(names.births) desc as popularity_rank\nhaving\n  (popularity_rank <= 10) or (total_births < 10 and state_count = 1)\norder by names.gender asc, total_births desc;\n",
+      "latency": 8565
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV')\nselect\n    names.name,\n    names.gender,\n    names.state,\n    sum(names.births) as total_births,\n    sum(names.births) / sum(sum(names.births)) by names.gender as percent_of_gender,\n    rank names.name over names.gender by total_births desc as popularity_rank\norder by names.gender asc, total_births desc;\n",
+      "latency": 8300
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere game_tall.team.color is not null\nselect\n  # Determine if color is red-dominant\n  case\n    when substring(game_tall.team.color, 1, 2) > substring(game_tall.team.color, 3, 2) \n         and substring(game_tall.team.color, 1, 2) > substring(game_tall.team.color, 5, 2) \n    then 'Red dominant'\n    else 'Other colors'\n  end as color_type,\n  \n  # Calculate win percentage\n  sum(game_tall.wins) as total_wins,\n  count(game_tall.id) as total_games,\n  sum(game_tall.wins) / count(game_tall.id) * 100 as win_percentage\n  \norder by win_percentage desc;\n",
+      "latency": 8594
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere game_tall.team.color is not null\nselect\n    case \n        when substring(game_tall.team.color, 1, 2) in ('FF', 'EE', 'DD', 'CC', 'BB') and \n             substring(game_tall.team.color, 3, 2) in ('00', '11', '22', '33') and\n             substring(game_tall.team.color, 5, 2) in ('00', '11', '22', '33')\n        then 'Red (Aggressive)'\n        when substring(game_tall.team.color, 1, 2) in ('00', '11', '22', '33') and \n             substring(game_tall.team.color, 3, 2) in ('00', '11', '22', '33') and\n             substring(game_tall.team.color, 5, 2) in ('00', '11', '22', '33')\n        then 'Black (Aggressive)'\n        else 'Other'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) / count(game_tall.id) as win_percentage\norder by win_percentage desc;\n",
+      "latency": 12190
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where game_tall.team.color is not null\nselect\n  case\n    when substring(game_tall.team.color, 2, 2) > \"C0\" and \n         substring(game_tall.team.color, 4, 2) < \"50\" and \n         substring(game_tall.team.color, 6, 2) < \"50\" \n    then 'Red (Aggressive)'\n    when substring(game_tall.team.color, 2, 2) < \"40\" and \n         substring(game_tall.team.color, 4, 2) < \"40\" and \n         substring(game_tall.team.color, 6, 2) < \"40\" \n    then 'Black (Aggressive)'\n    else 'Other Colors'\n  end as color_category,\n  count(game_tall.id) as games_played,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) / count(game_tall.id) as win_percentage\norder by win_percentage desc;\n",
+      "latency": 11012
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "select\n  game_tall.team.color,\n  count(game_tall.id) as total_games,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) / count(game_tall.id) as win_percentage\norder by win_percentage desc;\n",
+      "latency": 6262
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where game_tall.team.id is not null\nselect\n  case \n    when lower(game_tall.team.color) like '#f%' or  # Red shades\n         lower(game_tall.team.color) like '#e%' or  # Orange/Red shades\n         lower(game_tall.team.color) like '#d%' or  # Orange shades\n         lower(game_tall.team.color) like '#0%' or  # Black\n         lower(game_tall.team.color) like '#1%'     # Dark colors\n    then 'Aggressive Color'\n    else 'Non-Aggressive Color'\n  end as color_category,\n  count(game_tall.id) as total_games,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n  sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) / count(game_tall.id) as win_percentage\norder by win_percentage desc;",
+      "latency": 39531
+    }
+  ],
+  "passRate": 1,
+  "averageLatency": 11776.4
+}

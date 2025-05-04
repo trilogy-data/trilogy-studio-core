@@ -1,8 +1,8 @@
-// useQueryHistory.ts
-import { ref, onMounted, watch } from 'vue'
+import { ref } from 'vue'
 import type { Ref } from 'vue'
 import QueryHistoryStorage from '../data/connectionHistoryStorage'
 import type { QueryRecord } from '../data/connectionHistoryStorage'
+
 export interface QueryData {
   query: string
   generatedQuery?: string | null
@@ -24,8 +24,15 @@ interface QueryHistoryReturn {
   refreshHistory: () => Promise<void>
 }
 
-// Create a singleton instance of the storage
-const historyStorage = new QueryHistoryStorage()
+// Lazy singleton pattern
+let historyStorage: QueryHistoryStorage | null = null
+
+const getHistoryStorage = (): QueryHistoryStorage => {
+  if (!historyStorage) {
+    historyStorage = new QueryHistoryStorage()
+  }
+  return historyStorage
+}
 
 export default function useQueryHistory(connectionName: string): QueryHistoryReturn {
   const history = ref<QueryRecord[]>([])
@@ -36,7 +43,7 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
   const loadHistory = async (): Promise<void> => {
     isLoading.value = true
     try {
-      const queries = await historyStorage.getQueriesForConnection(connectionName)
+      const queries = await getHistoryStorage().getQueriesForConnection(connectionName)
       history.value = queries
       error.value = null
     } catch (err) {
@@ -50,7 +57,7 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
   // Record a new query
   const recordQuery = async (queryData: QueryData): Promise<void> => {
     try {
-      await historyStorage.addQuery(connectionName, queryData)
+      await getHistoryStorage().addQuery(connectionName, queryData)
       // Refresh the history after recording
       await loadHistory()
     } catch (err) {
@@ -63,7 +70,7 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
   const clearHistory = async (): Promise<void> => {
     isLoading.value = true
     try {
-      await historyStorage.clearConnectionHistory(connectionName)
+      await getHistoryStorage().clearConnectionHistory(connectionName)
       history.value = []
       error.value = null
     } catch (err) {
@@ -85,11 +92,9 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
     let resultSize = 0
     let resultColumns = 0
     let result: T | null = null
-
     try {
       // Execute the actual SQL query
       result = await sqlFn(query)
-
       // Get result metadata
       if (result && Array.isArray(result)) {
         resultSize = result.length
@@ -104,7 +109,6 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
     } finally {
       const endTime = performance.now()
       const executionTime = endTime - startTime
-
       // Record the query regardless of success/failure
       await recordQuery({
         query,
@@ -115,26 +119,11 @@ export default function useQueryHistory(connectionName: string): QueryHistoryRet
         resultColumns,
       })
     }
-
     return result as T
   }
 
-  // Load history on initial render or when connection changes
-  onMounted(() => {
-    if (connectionName) {
-      loadHistory()
-    }
-  })
-
-  // Watch for changes to connection name
-  watch(
-    () => connectionName,
-    (newConnectionName) => {
-      if (newConnectionName) {
-        loadHistory()
-      }
-    },
-  )
+  // Initialize history on first load
+  loadHistory()
 
   return {
     history: history,

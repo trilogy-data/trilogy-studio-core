@@ -84,7 +84,8 @@ export const documentation: DocumentationNode[] = [
     new Article('Scheduling', [
       new Paragraph(
         'Scheduling',
-        'Scheduling dashboards/scripts is a future feature. Please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/75" target="_blank">Scheduling</a>.',),
+        'Scheduling dashboards/scripts is a future feature. Please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/75" target="_blank">Scheduling</a>.',
+      ),
     ]),
   ]),
   new DocumentationNode('Reference', [

@@ -8,11 +8,11 @@ import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 export interface QueryInput {
   text: string
-  queryType: string
   editorType: 'trilogy' | 'sql' | 'preql'
   imports: Import[]
   extraFilters?: string[]
   parameters?: Record<string, any>
+  extraContent?: ContentInput[]
 }
 
 export interface QueryUpdate {
@@ -41,17 +41,20 @@ export default class QueryExecutionService {
   private connectionStore: ConnectionStoreType
   private modelStore: ModelConfigStoreType
   private editorStore: EditorStoreType
+  private storeHistory: boolean
 
   constructor(
     trilogyResolver: TrilogyResolver,
     connectionStore: ConnectionStoreType,
     modelStore: ModelConfigStoreType,
     editorStore: EditorStoreType,
+    storeHistory: boolean = true,
   ) {
     this.trilogyResolver = trilogyResolver
     this.connectionStore = connectionStore
     this.modelStore = modelStore
     this.editorStore = editorStore
+    this.storeHistory = storeHistory
   }
 
   async executeQueriesBatch(
@@ -112,6 +115,7 @@ export default class QueryExecutionService {
     onFailure?: (message: QueryUpdate) => void,
     onSuccess?: (message: any) => void,
     dryRun: boolean = false,
+    extraContent?: ContentInput[],
   ): Promise<any> {
     // Notify query started if callback provided
     if (onStarted) onStarted()
@@ -153,7 +157,7 @@ export default class QueryExecutionService {
       }
     }
 
-    const sources: ContentInput[] =
+    let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
             alias: source.alias,
@@ -162,7 +166,9 @@ export default class QueryExecutionService {
               : '',
           }))
         : []
-
+    if (extraContent) {
+      sources = sources.concat(extraContent)
+    }
     try {
       // Resolve batch queries
       //@ts-ignore
@@ -231,16 +237,18 @@ export default class QueryExecutionService {
               })
 
               // Record query in history
-              useQueryHistoryService(connectionId).recordQuery({
-                query: queries[i].query,
-                generatedQuery: queryResult.generated_sql,
-                executionTime: new Date().getTime() - startTime,
-                status: 'success',
-                resultSize: sqlResponse.data.length,
-                resultColumns: sqlResponse.headers.size,
-                errorMessage: null,
-                extraFilters: extraFilters,
-              })
+              if (this.storeHistory) {
+                useQueryHistoryService(connectionId).recordQuery({
+                  query: queries[i].query,
+                  generatedQuery: queryResult.generated_sql,
+                  executionTime: new Date().getTime() - startTime,
+                  status: 'success',
+                  resultSize: sqlResponse.data.length,
+                  resultColumns: sqlResponse.headers.size,
+                  errorMessage: null,
+                  extraFilters: extraFilters,
+                })
+              }
             } catch (error) {
               const errorMessage = controller.signal.aborted
                 ? 'Query execution cancelled by user'
@@ -255,16 +263,18 @@ export default class QueryExecutionService {
               })
 
               // Record error in history
-              useQueryHistoryService(connectionId).recordQuery({
-                query: queries[i].query,
-                generatedQuery: queryResult.generated_sql,
-                executionTime: new Date().getTime() - startTime,
-                status: 'error',
-                resultSize: 0,
-                resultColumns: 0,
-                errorMessage: errorMessage,
-                extraFilters: extraFilters,
-              })
+              if (this.storeHistory) {
+                useQueryHistoryService(connectionId).recordQuery({
+                  query: queries[i].query,
+                  generatedQuery: queryResult.generated_sql,
+                  executionTime: new Date().getTime() - startTime,
+                  status: 'error',
+                  resultSize: 0,
+                  resultColumns: 0,
+                  errorMessage: errorMessage,
+                  extraFilters: extraFilters,
+                })
+              }
             }
           } else {
             // No SQL was generated for this query
@@ -347,14 +357,14 @@ export default class QueryExecutionService {
     sources: ContentInput[] | null = null,
   ): Promise<ValidateResponse | null> {
     // Skip validation for SQL queries
-    if (queryInput.queryType === 'sql') {
+    if (queryInput.editorType === 'sql') {
       return null
     }
 
     try {
       if (log) {
         // Log validation attempt if logging is enabled
-        console.log(`Validating ${queryInput.queryType} query`)
+        console.log(`Validating ${queryInput.editorType} query`)
       }
     } catch (error) {
       console.log(error)
@@ -484,7 +494,7 @@ export default class QueryExecutionService {
         }
       }
     }
-    const sources: ContentInput[] =
+    let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
             alias: source.alias,
@@ -493,7 +503,9 @@ export default class QueryExecutionService {
               : '',
           }))
         : []
-
+    if (queryInput.extraContent) {
+      sources = sources.concat(queryInput.extraContent)
+    }
     let resolveResponse: QueryResponse | null = null
     try {
       // First step: Resolve query
@@ -557,16 +569,18 @@ export default class QueryExecutionService {
 
       resultSize = sqlResponse.data.length
       columnCount = sqlResponse.headers.size
-      useQueryHistoryService(connectionId).recordQuery({
-        query: queryInput.text,
-        generatedQuery: generatedSql,
-        executionTime: new Date().getTime() - startTime,
-        status: 'success',
-        resultSize: resultSize,
-        resultColumns: columnCount,
-        errorMessage: null,
-        extraFilters: queryInput.extraFilters,
-      })
+      if (this.storeHistory) {
+        useQueryHistoryService(connectionId).recordQuery({
+          query: queryInput.text,
+          generatedQuery: generatedSql,
+          executionTime: new Date().getTime() - startTime,
+          status: 'success',
+          resultSize: resultSize,
+          resultColumns: columnCount,
+          errorMessage: null,
+          extraFilters: queryInput.extraFilters,
+        })
+      }
       if (onSuccess) {
         onSuccess({
           success: true,
@@ -591,15 +605,17 @@ export default class QueryExecutionService {
         : error instanceof Error
           ? error.message
           : 'Unknown error occurred'
-      useQueryHistoryService(connectionId).recordQuery({
-        query: queryInput.text,
-        generatedQuery: generatedSql,
-        executionTime: new Date().getTime() - startTime,
-        status: 'error',
-        resultSize: resultSize,
-        resultColumns: columnCount,
-        errorMessage: errorMessage,
-      })
+      if (this.storeHistory) {
+        useQueryHistoryService(connectionId).recordQuery({
+          query: queryInput.text,
+          generatedQuery: generatedSql,
+          executionTime: new Date().getTime() - startTime,
+          status: 'error',
+          resultSize: resultSize,
+          resultColumns: columnCount,
+          errorMessage: errorMessage,
+        })
+      }
       if (onFailure) {
         onFailure({
           message: errorMessage,

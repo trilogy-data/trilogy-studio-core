@@ -24,7 +24,8 @@ dist-ssr
 *.sw?
 
 secrets.env
-
+.env
+.env.development
 .token.ts
 
 #python
@@ -32,7 +33,7 @@ __pycache__
 
 .mypy_cache
 config_backup
-.env
+
 
 #playwright
 test-results
@@ -40,3 +41,4 @@ playwright-report
 
 rsa_key.p8
 rsa_key*
+

@@ -13,6 +13,7 @@ const props = defineProps({
     required: true,
   },
   editMode: Boolean,
+  editsLocked: Boolean,
   selectedConnection: {
     type: String,
     required: true,
@@ -285,6 +286,7 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
           @click="$emit('toggle-edit-mode')"
           class="toggle-mode-button generic-button"
           data-testid="toggle-edit-mode-button"
+          :disabled="editsLocked"
         >
           {{ editMode ? 'View Mode' : 'Edit' }}
         </button>
