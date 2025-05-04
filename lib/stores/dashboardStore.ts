@@ -37,6 +37,7 @@ export const useDashboardStore = defineStore('dashboards', {
         name,
         connection,
         storage: 'local',
+        state: 'editing',
       })
 
       this.dashboards[id] = dashboard
@@ -117,13 +118,19 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    toggleEditMode(dashboardId: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].state = this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
+      }
+    },
+
     // Add item to dashboard
     addItemToDashboard(
       dashboardId: string,
       type: CellType,
       x = 0,
       y = 0,
-      w = 4,
+      w = 5,
       h: number | null = null,
       content: string | null = null,
       name: string | null = null,

@@ -110,12 +110,15 @@ onMounted(() => {
   }
 })
 
-const editMode = dashboard.value && dashboard.value.state == 'editing' ? ref(true) : ref(false)
+const editMode = computed(() => {
+  return dashboard.value ? dashboard.value.state === 'editing' : false
+})
+
 const toggleEditMode = () => {
-  editMode.value = !editMode.value
+  dashboardStore.toggleEditMode(dashboard.value.id)
   // Update all items to be non-draggable and non-resizable in view mode
-  draggable.value = editMode.value
-  resizable.value = editMode.value
+  draggable.value = dashboard.value.state === 'editing'
+  resizable.value = dashboard.value.state === 'editing'
 
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
