@@ -115,6 +115,7 @@ const editMode = computed(() => {
 })
 
 const toggleEditMode = () => {
+  if (!dashboard.value) return
   dashboardStore.toggleEditMode(dashboard.value.id)
   // Update all items to be non-draggable and non-resizable in view mode
   draggable.value = dashboard.value.state === 'editing'
