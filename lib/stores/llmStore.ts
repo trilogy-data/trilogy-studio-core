@@ -11,23 +11,30 @@ import {
   createFilterPrompt,
 } from '../llm'
 
-export const extractLastTripleQuotedText = (input: string): string | null => {
+interface ValidatedResponse {
+  success: boolean
+  content: string | null
+  attempts: number
+  error?: string | null
+}
+
+export const extractLastTripleQuotedText = (input: string): string => {
   // Strip common language identifiers after triple backticks
   // Add a capturing group to handle language identifiers with optional whitespace after them
-  const strippedInput = input.replace(/```(trilogy|sql|json)(\s|\n)/g, '```');
-  
+  const strippedInput = input.replace(/```(trilogy|sql|json)(\s|\n)/g, '```')
+
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // try with all 3 kinds of quotes (''', ```, """)
   for (const quote of ["'''", '```', '"""']) {
-    const matches = strippedInput.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'));
+    const matches = strippedInput.match(new RegExp(`${quote}([\\s\\S]*?)${quote}`, 'gs'))
     if (matches) {
-      const content = matches[matches.length - 1].slice(quote.length, -quote.length);
+      const content = matches[matches.length - 1].slice(quote.length, -quote.length)
       // Recursively extract from the content in case there are nested quotes
-      const recursiveResult = extractLastTripleQuotedText(content);
-      return recursiveResult || content; // Return the recursive result if it exists, otherwise return the content
+      const recursiveResult = extractLastTripleQuotedText(content)
+      return recursiveResult || content // Return the recursive result if it exists, otherwise return the content
     }
   }
-  return input; // Return the original input if no triple quotes were found
+  return input // Return the original input if no triple quotes were found
 }
 
 const useLLMConnectionStore = defineStore('llmConnections', {
@@ -124,8 +131,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       concepts: ModelConceptInput[],
       validator: Function | null = null,
       maxAttempts = 3,
-    ) {
-      let connection: string = this.activeConnection || ''
+      modelOverride: string | null = null,
+    ): Promise<ValidatedResponse> {
+      let connection: string = modelOverride || this.activeConnection || ''
       if (connection === '') {
         throw new Error('No active LLM connection')
       }
@@ -143,11 +151,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       // Extract the response
       extract = extractLastTripleQuotedText(raw.text)
 
+      console.log('Initial LLM response:', extract)
       // Validation loop
       if (validator) {
-        console.log('Validating llm response with:', validator)
-        console.log('extract:', extract)
-
         while (attempts < maxAttempts && !passed) {
           try {
             // Attempt validation
@@ -182,9 +188,14 @@ const useLLMConnectionStore = defineStore('llmConnections', {
           }
         }
       }
-
-      console.log('returning llm response')
-      return extract
+      console.log('Exiting validation loop with attempts:', attempts)
+      console.log('Final LLM response:', extract)
+      return {
+        success: passed,
+        content: extract,
+        attempts: attempts,
+        error: passed ? null : 'Validation failed after maximum attempts',
+      }
     },
 
     async generateDashboardCompletion(
@@ -195,22 +206,23 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     ) {
       console.log('Generating dashboard completion')
       console.log('inputString:', inputString)
-      console.log('validator:', validator)
       return this.generateValidatedCompletion(
         createDashboardPrompt,
         inputString,
         concepts,
         validator,
         maxAttempts,
-      )
+      ).then((response) => {
+        return response.content
+      })
     },
-    
 
     async generateQueryCompletion(
       inputString: string,
       concepts: ModelConceptInput[],
       validator: Function | null = null,
       maxAttempts = 3,
+      modelOverride: string | null = null,
     ) {
       return this.generateValidatedCompletion(
         createPrompt,
@@ -218,7 +230,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         concepts,
         validator,
         maxAttempts,
-      )
+        modelOverride,
+      ).then((response) => {
+        return response.content
+      })
     },
 
     async generateFilterQuery(
@@ -233,7 +248,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         concepts,
         validator,
         maxAttempts,
-      )
+      ).then((response) => {
+        return response.content
+      })
     },
 
     async generateCompletion(
@@ -270,9 +287,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         return 'disabled'
       }
     },
-    hasActiveDefaultConnection: (state) => {  
+    hasActiveDefaultConnection: (state) => {
       return Object.values(state.connections).some((conn) => conn.isDefault && conn.connected)
-    }
+    },
   },
 })
 

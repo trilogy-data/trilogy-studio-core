@@ -1,4 +1,4 @@
-import { type CellType } from "./base";
+import { type CellType } from './base'
 /**
  * Parses a JSON string into a PromptDashboard object
  * @param jsonString The JSON string to parse
@@ -7,93 +7,92 @@ import { type CellType } from "./base";
  */
 export function parseDashboardSpec(jsonString: string): PromptDashboard {
   // First, try to parse the JSON
-  let parsedJson: any;
+  let parsedJson: any
   try {
-    parsedJson = JSON.parse(jsonString);
+    parsedJson = JSON.parse(jsonString)
   } catch (error) {
-    throw new Error(`Invalid JSON format: ${(error as Error).message}`);
+    throw new Error(`Invalid JSON format: ${(error as Error).message}`)
   }
 
   // Validate required top-level fields
   if (!parsedJson.name || typeof parsedJson.name !== 'string') {
-    throw new Error('Dashboard must have a name property of type string');
+    throw new Error('Dashboard must have a name property of type string')
   }
 
   if (!parsedJson.description || typeof parsedJson.description !== 'string') {
-    throw new Error('Dashboard must have a description property of type string');
+    throw new Error('Dashboard must have a description property of type string')
   }
 
   if (!Array.isArray(parsedJson.layout)) {
-    throw new Error('Dashboard must have a layout property of type array');
+    throw new Error('Dashboard must have a layout property of type array')
   }
 
   if (!parsedJson.gridItems || typeof parsedJson.gridItems !== 'object') {
-    throw new Error('Dashboard must have a gridItems property of type object');
+    throw new Error('Dashboard must have a gridItems property of type object')
   }
 
   // Validate layout items
-  const layoutItemIds = new Set<string>();
+  const layoutItemIds = new Set<string>()
   for (let i = 0; i < parsedJson.layout.length; i++) {
-    const item = parsedJson.layout[i];
+    const item = parsedJson.layout[i]
     if (!item.id || typeof item.id !== 'string') {
-      throw new Error(`Layout item at index ${i} must have an id property of type string`);
+      throw new Error(`Layout item at index ${i} must have an id property of type string`)
     }
 
     if (typeof item.x !== 'number') {
-      throw new Error(`Layout item with id '${item.id}' must have an x property of type number`);
+      throw new Error(`Layout item with id '${item.id}' must have an x property of type number`)
     }
 
     if (typeof item.y !== 'number') {
-      throw new Error(`Layout item with id '${item.id}' must have a y property of type number`);
+      throw new Error(`Layout item with id '${item.id}' must have a y property of type number`)
     }
 
     if (typeof item.w !== 'number') {
-      throw new Error(`Layout item with id '${item.id}' must have a w property of type number`);
+      throw new Error(`Layout item with id '${item.id}' must have a w property of type number`)
     }
 
     if (typeof item.h !== 'number') {
-      throw new Error(`Layout item with id '${item.id}' must have an h property of type number`);
+      throw new Error(`Layout item with id '${item.id}' must have an h property of type number`)
     }
 
-    layoutItemIds.add(item.id);
+    layoutItemIds.add(item.id)
   }
 
   // Validate gridItems
   // Validate gridItems
   for (const [id, gridItem] of Object.entries<PromptGridItemData>(parsedJson.gridItems)) {
     if (!layoutItemIds.has(id)) {
-      throw new Error(`Grid item with id '${id}' does not have a corresponding layout item`);
+      throw new Error(`Grid item with id '${id}' does not have a corresponding layout item`)
     }
 
     // Fixed type error by properly typing gridItem as PromptGridItemData
     if (!gridItem.type || typeof gridItem.type !== 'string') {
-      throw new Error(`Grid item with id '${id}' must have a type property of type string`);
+      throw new Error(`Grid item with id '${id}' must have a type property of type string`)
     }
 
     if (!gridItem.content || typeof gridItem.content !== 'string') {
-      throw new Error(`Grid item with id '${id}' must have a content property of type string`);
+      throw new Error(`Grid item with id '${id}' must have a content property of type string`)
     }
 
     if (!gridItem.name || typeof gridItem.name !== 'string') {
-      throw new Error(`Grid item with id '${id}' must have a name property of type string`);
+      throw new Error(`Grid item with id '${id}' must have a name property of type string`)
     }
 
     // Check optional properties if they exist
     if ('width' in gridItem && typeof gridItem.width !== 'number') {
-      throw new Error(`Grid item with id '${id}' has an invalid width property (must be a number)`);
+      throw new Error(`Grid item with id '${id}' has an invalid width property (must be a number)`)
     }
-
   }
 
   // Check that all layout items have corresponding grid items
   for (const id of layoutItemIds) {
     if (!(id in parsedJson.gridItems)) {
-      throw new Error(`Layout item with id '${id}' does not have a corresponding grid item`);
+      throw new Error(`Layout item with id '${id}' does not have a corresponding grid item`)
     }
   }
 
   // If all validations pass, return the typed object
-  return parsedJson as PromptDashboard;
+  return parsedJson as PromptDashboard
 }
 
 export interface PromptLayoutItem {
@@ -105,7 +104,7 @@ export interface PromptLayoutItem {
 }
 
 // This contains details about the layout
-// the 
+// the
 export interface PromptGridItemData {
   type: CellType
   content: string

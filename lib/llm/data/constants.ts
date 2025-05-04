@@ -39,7 +39,8 @@ select
     count(id2) / date_diff(min(dep_time.date), max(dep_time.date), DAY) as average_daily_flights
 order by total_flights desc;
 "`,
-"Only ever generate a single select query at a time. Do not use subselects/CTEs, they are not required given the calculation flexibility.",]
+  'Only ever generate a single select query at a time. Do not use subselects/CTEs, they are not required given the calculation flexibility.',
+]
 
 export const functions = [
   'abs',
@@ -86,7 +87,7 @@ export const functions = [
   'sqrt',
   'strpos',
   'struct',
-  'substring',
+  'substring (1-indexed)',
   'sum',
   'timestamp',
   'trim',

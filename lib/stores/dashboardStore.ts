@@ -261,23 +261,18 @@ export const useDashboardStore = defineStore('dashboards', {
       const dashboard = this.dashboards[dashboardId]
       console.log('populating completion for dashboard', dashboard)
       if (dashboard) {
-        let results = await queryExecutionService
-          ?.validateQuery(dashboard.connection, {
-            text: 'select 1 as test;',
-            editorType: 'trilogy',
-            imports: dashboard.imports,
-          })
+        let results = await queryExecutionService?.validateQuery(dashboard.connection, {
+          text: 'select 1 as test;',
+          editorType: 'trilogy',
+          imports: dashboard.imports,
+        })
         console.log('got results', results)
         if (results) {
           return results.data.completion_items
-        }
-        else {
+        } else {
           throw new Error('No completion items found.')
         }
-
-
-      }
-      else {
+      } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
     },
@@ -295,17 +290,30 @@ export const useDashboardStore = defineStore('dashboards', {
       }))
     },
 
-    async generatePromptSpec(prompt: string, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
+    async generatePromptSpec(
+      prompt: string,
+      llmStore: LLMConnectionStoreType,
+      queryExecutionService: QueryExecutionService,
+    ) {
       let completion = await this.populateAIConcepts(this.activeDashboardId, queryExecutionService)
-      let rawResponse = await llmStore.generateDashboardCompletion(prompt, parseDashboardSpec, completion, 3)
+      let rawResponse = await llmStore.generateDashboardCompletion(
+        prompt,
+        parseDashboardSpec,
+        completion,
+        3,
+      )
       if (!rawResponse) {
         throw new Error('No response from LLM')
       }
       return parseDashboardSpec(rawResponse)
     },
 
-
-    async populateFromPromptSpec(dashboardId: string, promptLayout: PromptDashboard, llmStore: LLMConnectionStoreType, queryExecutionService: QueryExecutionService) {
+    async populateFromPromptSpec(
+      dashboardId: string,
+      promptLayout: PromptDashboard,
+      llmStore: LLMConnectionStoreType,
+      queryExecutionService: QueryExecutionService,
+    ) {
       let current = this.dashboards[dashboardId]
       if (!current) {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
@@ -333,9 +341,9 @@ export const useDashboardStore = defineStore('dashboards', {
           current.connection,
           queryInput,
           // Starter callback (empty for now)
-          () => { },
+          () => {},
           // Progress callback
-          () => { },
+          () => {},
           // Failure callback
           onError,
           // Success callback
@@ -349,18 +357,26 @@ export const useDashboardStore = defineStore('dashboards', {
         return true
       }
       for (const item of promptLayout.layout) {
-        let itemData = promptLayout.gridItems[item.id];
-        let content = itemData.content;
-        console.log('populating item', itemData);
+        let itemData = promptLayout.gridItems[item.id]
+        let content = itemData.content
+        console.log('populating item', itemData)
         let itemType = itemData.type.toLowerCase() as CellType
+        // @ts-ignore
         if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemType)) {
-          let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator);
-          content = llmcontent || 'No query could be generated';
+          let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator)
+          content = llmcontent || 'No query could be generated'
         }
 
         await this.addItemToDashboard(
-          dashboardId, itemType, item.x, item.y, item.w, item.h, content, itemData.name,
-        );
+          dashboardId,
+          itemType,
+          item.x,
+          item.y,
+          item.w,
+          item.h,
+          content,
+          itemData.name,
+        )
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
 
@@ -375,8 +391,7 @@ export const useDashboardStore = defineStore('dashboards', {
       //     dashboardId, itemData.type, item.x, item.y, item.w, item.h, itemData.name, content,
       //   )
       // }))
-
-    }
+    },
   },
 })
 

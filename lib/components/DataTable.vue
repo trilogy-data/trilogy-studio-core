@@ -396,7 +396,6 @@ export default {
             filters: { [field]: value },
           })
         } else {
-
           this.$emit('cell-click', {
             filters: { [field]: value },
             append: true,

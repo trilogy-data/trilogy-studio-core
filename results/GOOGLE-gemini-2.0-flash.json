@@ -1,0 +1,88 @@
+{
+  "provider": "GOOGLE",
+  "model": "gemini-2.0-flash",
+  "results": [
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'VA', 'WV', 'OK', 'TX')\nselect\n    names.name,\n    sum(names.births) as total_births,\n    names.name.count,\n    cast(sum(names.births) / sum(names.births) by names.name.count as float) as percent_of_total\norder by total_births desc, names.name.count asc;\n",
+      "latency": 2400
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'VA', 'WV')\nselect\n    names.name,\n    sum(names.births) as common_births\nhaving\n    common_births >= 1000\norder by common_births desc;\n\nwhere names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'VA', 'WV')\nselect\n    names.name,\n    sum(names.births) as unique_births\nhaving\n    unique_births < 10\norder by unique_births asc;\n",
+      "latency": 5209
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'VA', 'WV')\nand names.year between 1980 and 1989\nselect\n    names.name,\n    sum(names.births) as total_births,\n    rank names.name by sum(names.births) desc as popularity_rank\norder by total_births desc;\n",
+      "latency": 2321
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'VA', 'WV', 'OK', 'TX', 'MD', 'DE')\nand names.year between 1980 and 1989\nselect\n    names.name,\n    names.state,\n    names.year,\n    names.births\norder by names.births desc;\n",
+      "latency": 1754
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV')\nselect\n    names.name,\n    names.state,\n    sum(names.births) as total_births,\n    rank names.name over names.state by sum(names.births) desc as state_rank\norder by total_births desc;\n",
+      "latency": 2087
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": false,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where game_tall.team.color like '%FF%'\n   or game_tall.team.color like '%00%';\nselect\n    game_tall.team.color,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n    count(game_tall.id) as total_games,\n    (wins * 1.0) / total_games as win_rate\nhaving total_games > 0\norder by win_rate desc;\n",
+      "latency": 5791
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n    case\n        when contains('FF0000,FFA500,000000', game_tall.team.color) then 'Aggressive Color'\n        else 'All Teams'\n    end as team_color_group,\n    avg(game_tall.wins) as average_wins\norder by average_wins desc;\n",
+      "latency": 3508
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where game_tall.team.color in ('#FF0000', '#000000')\nselect\n    game_tall.team.color,\n    sum(case when game_tall.points > game_tall.opponent_points THEN 1 ELSE 0 end) as wins\norder by wins desc;",
+      "latency": 3125
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where game_tall.team.color is not null\nselect\n    game_tall.team.color,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) * 1.0 / count(game_tall.id) as win_percentage\norder by\n    win_percentage desc;\n",
+      "latency": 2024
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": false,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "Error: got status: 429 Too Many Requests. {\"error\":{\"code\":429,\"message\":\"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\",\"status\":\"RESOURCE_EXHAUSTED\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.QuotaFailure\",\"violations\":[{\"quotaMetric\":\"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\"quotaId\":\"GenerateRequestsPerMinutePerProjectPerModel-FreeTier\",\"quotaDimensions\":{\"location\":\"global\",\"model\":\"gemini-2.0-flash\"},\"quotaValue\":\"15\"}]},{\"@type\":\"type.googleapis.com/google.rpc.Help\",\"links\":[{\"description\":\"Learn more about Gemini API quotas\",\"url\":\"https://ai.google.dev/gemini-api/docs/rate-limits\"}]},{\"@type\":\"type.googleapis.com/google.rpc.RetryInfo\",\"retryDelay\":\"36s\"}]}}",
+      "latency": 6264
+    }
+  ],
+  "passRate": 0.8,
+  "averageLatency": 3448.3
+}

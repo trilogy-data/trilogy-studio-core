@@ -1,8 +1,11 @@
 import { rulesInput, functions, datatypes } from './constants'
 import type { ModelConceptInput } from './models'
-import { type PromptGridItemData, type PromptDashboard, type PromptLayoutItem, generateDashboardPrompt } from '../../dashboards/prompts'
+import { generateDashboardPrompt } from '../../dashboards/prompts'
 
-const leadIn = `You are a helpful, knowledgeable, and precise assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. A single virtual table is available with fields - to be listed later, with a name, type, and description. Even better, the where clause can reference fields that you don't select on and arbitrary aggregates and calculations. The following functions are available: ${functions}, as well as standard SQL constructs like window clauses, mathematical operators, etc. You can try a function and will be told if it doesn\t exist. Valid datatypes are ${datatypes}. `
+const leadIn = `You are a helpful, knowledgeable, and precise assistent for writing queries in a new language, Trilogy. Trilogy is like SQL, but doesn't need you to specify tables or joins. 
+A single virtual table is available with fields - to be listed later, with a name, type, and description. 
+The following functions are available: ${functions} (all of these are called as "name(...args)") in Trilogy.
+You can also use standard ANSI SQL constructs like window clauses, mathematical operators, etc. You can try a function and will be told if it doesn\t exist. Valid datatypes are ${datatypes}. `
 
 function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
@@ -24,7 +27,6 @@ export function createFilterPrompt(query: string, conceptInputs: ModelConceptInp
 }
 
 export function createDashboardPrompt(query: string, conceptInputs: ModelConceptInput[]) {
-
   const fields = conceptsToFieldPrompt(conceptInputs)
   return generateDashboardPrompt(query, fields)
 }

@@ -1,9 +1,10 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 import { GoogleGenAI } from '@google/genai'
-
+import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 export class GoogleProvider extends LLMProvider {
   private genAIClient: GoogleGenAI | null = null
+  // no api method to list
   private baseModelUrl: string = 'https://generativelanguage.googleapis.com/v1/models'
   public models: string[] = []
   public type: string = 'google'
@@ -16,8 +17,7 @@ export class GoogleProvider extends LLMProvider {
    */
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
-
-    
+    this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
   }
 
   /**
@@ -26,9 +26,7 @@ export class GoogleProvider extends LLMProvider {
    */
   async reset(): Promise<void> {
     try {
-      console.log(this.apiKey)
       this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
-      console.log('CONNECTED')
     } catch (error) {
       console.error('Error initializing Google GenAI client:', error)
       throw new Error(
@@ -70,23 +68,32 @@ export class GoogleProvider extends LLMProvider {
   ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
 
+    if (!this.genAIClient) {
+      throw new Error('Google GenAI client is not initialized')
+    }
+
     try {
       if (history && history.length > 0) {
         // Create a chat with history
         const chat = this.genAIClient.chats.create({
-          model: this.model.split('/')[1],
+          // if the model has models/ prefixed, split it
+          model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           history: this.convertToGeminiHistory(history),
+          config: {
+            maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+            temperature: options.temperature || DEFAULT_TEMPERATURE,
+          },
         })
 
         // Send the message
-        const result = await chat.sendMessage(options.prompt)
+        const result = await chat.sendMessage({ message: options.prompt })
 
         // Get token usage if available
-        const promptTokens = result.promptFeedback?.tokenCount || 0
-        const completionTokens = result.candidates?.[0]?.usageMetadata?.candidatesTokenCount || 0
+        const promptTokens = result.usageMetadata?.promptTokenCount || 0
+        const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
 
         return {
-          text: result.text,
+          text: result.text || '',
           usage: {
             promptTokens,
             completionTokens,
@@ -96,8 +103,12 @@ export class GoogleProvider extends LLMProvider {
       } else {
         // Simple completion without history
         const result = await this.genAIClient.models.generateContent({
-          model: this.model,
-          contents: options.prompt
+          model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
+          contents: options.prompt,
+          config: {
+            maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+            temperature: options.temperature || DEFAULT_TEMPERATURE,
+          },
         })
 
         // Get token usage if available
@@ -105,7 +116,7 @@ export class GoogleProvider extends LLMProvider {
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
 
         return {
-          text: result.text,
+          text: result.text || '',
           usage: {
             promptTokens,
             completionTokens,
@@ -115,7 +126,7 @@ export class GoogleProvider extends LLMProvider {
       }
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Google Gemini API error: ${error.message}`)
+        throw error
       } else {
         throw new Error('Unknown error occurred while generating completion')
       }
@@ -127,15 +138,13 @@ export class GoogleProvider extends LLMProvider {
    * @param messages - Array of standard LLM messages
    * @returns Gemini-formatted message array for chat history
    */
-  private convertToGeminiHistory(
-    messages: LLMMessage[],
-  ): Array<{ role: string; content: string }> {
+  private convertToGeminiHistory(messages: LLMMessage[]): Array<{ role: string; content: string }> {
     return messages.map((message) => {
       // Map standard roles to Gemini roles (assistant or user)
       const role = message.role === 'assistant' ? 'assistant' : 'user'
       return {
         role,
-        content: message.content
+        content: message.content,
       }
     })
   }

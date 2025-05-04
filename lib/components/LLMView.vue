@@ -210,7 +210,7 @@ export default defineComponent({
     ): TestResult => {
       const result: TestResult = { passed: true }
 
-      let response =  extractLastTripleQuotedText(rawResponse)
+      let response = extractLastTripleQuotedText(rawResponse)
 
       // Check for required phrases
       if (criteria.contains) {

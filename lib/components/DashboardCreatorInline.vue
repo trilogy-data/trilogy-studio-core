@@ -3,14 +3,24 @@
     <h4>Create New Dashboard</h4>
     <div class="form-group">
       <label for="dashboard-name">Name</label>
-      <input id="dashboard-name" v-model="dashboardName" type="text" placeholder="My Dashboard"
+      <input
+        id="dashboard-name"
+        v-model="dashboardName"
+        type="text"
+        placeholder="My Dashboard"
         @keyup.enter="createDashboard"
-        :data-testid="testTag ? `dashboard-creator-name-${testTag}` : 'dashboard-creator-name'" />
+        :data-testid="testTag ? `dashboard-creator-name-${testTag}` : 'dashboard-creator-name'"
+      />
     </div>
     <div class="form-group">
       <label for="dashboard-connection">Connection</label>
-      <select id="dashboard-connection" v-model="selectedConnection" :data-testid="testTag ? `dashboard-creator-connection-${testTag}` : 'dashboard-creator-connection'
-        ">
+      <select
+        id="dashboard-connection"
+        v-model="selectedConnection"
+        :data-testid="
+          testTag ? `dashboard-creator-connection-${testTag}` : 'dashboard-creator-connection'
+        "
+      >
         <option v-for="conn in connections" :key="conn.name" :value="conn.name">
           {{ conn.name }}
         </option>
@@ -19,9 +29,16 @@
     <!-- Added imports dropdown -->
     <div v-if="selectedConnection && availableImports.length > 0" class="form-group">
       <label for="dashboard-import">Import</label>
-      <select id="dashboard-import" v-model="selectedImport"
-        :data-testid="testTag ? `dashboard-creator-import-${testTag}` : 'dashboard-creator-import'">
-        <option v-for="importItem in availableImports" :key="importItem.name" :value="importItem.name">
+      <select
+        id="dashboard-import"
+        v-model="selectedImport"
+        :data-testid="testTag ? `dashboard-creator-import-${testTag}` : 'dashboard-creator-import'"
+      >
+        <option
+          v-for="importItem in availableImports"
+          :key="importItem.name"
+          :value="importItem.name"
+        >
           {{ importItem.name }}
         </option>
       </select>
@@ -29,16 +46,28 @@
     <!-- Added prompt input field based on TODO -->
     <div v-if="showPromptField" class="form-group">
       <label for="dashboard-prompt">Dashboard Prompt</label>
-      <textarea id="dashboard-prompt" v-model="dashboardPrompt" placeholder="Describe what you want to analyze..."
-        rows="3" :data-testid="testTag ? `dashboard-creator-prompt-${testTag}` : 'dashboard-creator-prompt'"></textarea>
+      <textarea
+        id="dashboard-prompt"
+        v-model="dashboardPrompt"
+        placeholder="Describe what you want to analyze..."
+        rows="3"
+        :data-testid="testTag ? `dashboard-creator-prompt-${testTag}` : 'dashboard-creator-prompt'"
+      ></textarea>
     </div>
     <div class="form-actions">
-      <button @click="createDashboard" :disabled="!dashboardName || !selectedConnection || !selectedImport"
-        :data-testid="testTag ? `dashboard-creator-submit-${testTag}` : 'dashboard-creator-submit'" class="create-btn">
+      <button
+        @click="createDashboard"
+        :disabled="!dashboardName || !selectedConnection || !selectedImport"
+        :data-testid="testTag ? `dashboard-creator-submit-${testTag}` : 'dashboard-creator-submit'"
+        class="create-btn"
+      >
         Create
       </button>
-      <button @click="cancel"
-        :data-testid="testTag ? `dashboard-creator-cancel-${testTag}` : 'dashboard-creator-cancel'" class="cancel-btn">
+      <button
+        @click="cancel"
+        :data-testid="testTag ? `dashboard-creator-cancel-${testTag}` : 'dashboard-creator-cancel'"
+        class="cancel-btn"
+      >
         Cancel
       </button>
     </div>
@@ -73,7 +102,13 @@ export default {
     const editorStore = inject<EditorStoreType>('editorStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 
-    if (!dashboardStore || !connectionStore || !llmStore || !queryExecutionService || !editorStore) {
+    if (
+      !dashboardStore ||
+      !connectionStore ||
+      !llmStore ||
+      !queryExecutionService ||
+      !editorStore
+    ) {
       throw new Error('Dashboard or connection store is not provided!')
     }
 
@@ -91,10 +126,9 @@ export default {
       return Object.values(connectionStore.connections).filter((conn) => conn.model)
     })
 
-
     const availableImports: Ref<Import[]> = computed(() => {
       const imports = Object.values(editorStore.editors).filter(
-        (editor) => editor.connection === selectedConnection.value
+        (editor) => editor.connection === selectedConnection.value,
       )
 
       return imports.map((importItem) => ({
@@ -119,7 +153,6 @@ export default {
       selectedConnection.value = connections.value[0].name
     }
 
-
     const createDashboard = async () => {
       if (!dashboardName.value || !selectedConnection.value) return
 
@@ -128,12 +161,16 @@ export default {
         const dashboard = dashboardStore.newDashboard(dashboardName.value, selectedConnection.value)
 
         // Use the selected import instead of hardcoded 'lineitem'
-        const importToUse = selectedImport.value || (availableImports.value.length > 0 ? availableImports.value[0].name : '')
+        const importToUse =
+          selectedImport.value ||
+          (availableImports.value.length > 0 ? availableImports.value[0].name : '')
 
-        dashboardStore.updateDashboardImports(dashboard.id, [{
-          name: importToUse,
-          alias: ''
-        }])
+        dashboardStore.updateDashboardImports(dashboard.id, [
+          {
+            name: importToUse,
+            alias: '',
+          },
+        ])
 
         // Reset form
         dashboardName.value = ''
@@ -141,17 +178,20 @@ export default {
 
         // Close creator
         emit('close')
-        
 
         // Select the new dashboard
         dashboardStore.setActiveDashboard(dashboard.id)
         console.log('New dashboard created:', dashboard.id)
         emit('dashboard-created', dashboard.id)
-        
+
         // Process prompt if it's provided and LLM connection exists
         if (showPromptField.value && dashboardPrompt.value.trim()) {
           // Use the actual prompt from the form instead of hardcoded value
-          const promptSpec = await dashboardStore.generatePromptSpec(dashboardPrompt.value, llmStore, queryExecutionService)
+          const promptSpec = await dashboardStore.generatePromptSpec(
+            dashboardPrompt.value,
+            llmStore,
+            queryExecutionService,
+          )
           console.log('Prompt spec generated:', promptSpec)
 
           if (promptSpec) {
@@ -159,12 +199,10 @@ export default {
               dashboard.id,
               promptSpec,
               llmStore,
-              queryExecutionService
+              queryExecutionService,
             )
           }
         }
-
-        
       } catch (error) {
         console.error('Failed to create dashboard:', error)
         // Handle error (e.g., dashboard with name already exists)

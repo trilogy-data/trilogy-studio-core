@@ -1,37 +1,36 @@
-import { describe, it, expect } from 'vitest';
-import { extractLastTripleQuotedText } from './llmStore';
+import { describe, it, expect } from 'vitest'
+import { extractLastTripleQuotedText } from './llmStore'
 
 describe('extractLastTripleQuotedText', () => {
   it('should handle basic triple backtick code blocks', () => {
-    const input = 'Here is some code:\n```\nconst x = 1;\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('\nconst x = 1;\n');
-  });
+    const input = 'Here is some code:\n```\nconst x = 1;\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('\nconst x = 1;\n')
+  })
 
   it('should strip trilogy language prefix', () => {
-    const input = 'Here is trilogy code:\n```trilogy\nSELECT * FROM table;\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM table;\n');
-  });
+    const input = 'Here is trilogy code:\n```trilogy\nSELECT * FROM table;\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM table;\n')
+  })
 
   it('should strip sql language prefix', () => {
-    const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n');
-  });
+    const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n')
+  })
 
   it('should strip json language prefix', () => {
-    const input = 'Here is JSON:\n```json\n{"name": "John"}\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('{"name": "John"}\n');
-  });
+    const input = 'Here is JSON:\n```json\n{"name": "John"}\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('{"name": "John"}\n')
+  })
 
   it('should handle triple single quotes', () => {
-    const input = "Here is some text:\n'''\nSample text\n'''";
-    expect(extractLastTripleQuotedText(input)).toBe('\nSample text\n');
-  });
+    const input = "Here is some text:\n'''\nSample text\n'''"
+    expect(extractLastTripleQuotedText(input)).toBe('\nSample text\n')
+  })
 
   it('should handle triple double quotes', () => {
-    const input = 'Here is some text:\n"""\nSample text\n"""';
-    expect(extractLastTripleQuotedText(input)).toBe('\nSample text\n');
-  });
-
+    const input = 'Here is some text:\n"""\nSample text\n"""'
+    expect(extractLastTripleQuotedText(input)).toBe('\nSample text\n')
+  })
 
   it('should handle a complex example with json prefix', () => {
     const input = `Here's a dashboard spec:
@@ -48,8 +47,8 @@ describe('extractLastTripleQuotedText', () => {
     }
   ]
 }
-\`\`\``;
-    
+\`\`\``
+
     expect(extractLastTripleQuotedText(input)).toBe(`{
   "name": "Dashboard",
   "layout": [
@@ -61,29 +60,29 @@ describe('extractLastTripleQuotedText', () => {
     }
   ]
 }
-`);
-  });
+`)
+  })
 
   it('should return the original input if no triple quotes are found', () => {
-    const input = 'This is plain text with no code blocks';
-    expect(extractLastTripleQuotedText(input)).toBe(input);
-  });
+    const input = 'This is plain text with no code blocks'
+    expect(extractLastTripleQuotedText(input)).toBe(input)
+  })
 
   it('should handle multiple code blocks and return the last one', () => {
-    const input = '```\nFirst block\n```\nSome text\n```\nSecond block\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('\nSecond block\n');
-  });
+    const input = '```\nFirst block\n```\nSome text\n```\nSecond block\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('\nSecond block\n')
+  })
 
   it('should handle mixed quote types and return the first one', () => {
-    const input = '```\nBacktick block\n```\nSome text\n"""\nDouble quote block\n"""';
-    expect(extractLastTripleQuotedText(input)).toBe('\nBacktick block\n');
-  });
+    const input = '```\nBacktick block\n```\nSome text\n"""\nDouble quote block\n"""'
+    expect(extractLastTripleQuotedText(input)).toBe('\nBacktick block\n')
+  })
 
   it('should handle language prefixes with whitespace', () => {
-    const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```';
-    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n');
-  });
-  
+    const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```'
+    expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n')
+  })
+
   it('should handle multiple language prefixes in one document', () => {
     const input = `
 \`\`\`sql
@@ -95,9 +94,9 @@ Here's some JSON:
 \`\`\`json
 {"data": [1, 2, 3]}
 \`\`\`
-`;
-    expect(extractLastTripleQuotedText(input)).toBe('{"data": [1, 2, 3]}\n');
-  });
+`
+    expect(extractLastTripleQuotedText(input)).toBe('{"data": [1, 2, 3]}\n')
+  })
 
   it('should handle a real-world dashboard example', () => {
     const input = `Okay, I will generate a JSON spec for the dashboard:
@@ -123,7 +122,7 @@ Here's some JSON:
     }
   }
 }
-\`\`\``;
+\`\`\``
 
     const expected = `{
   "name": "Best Selling Products Analysis",
@@ -145,8 +144,7 @@ Here's some JSON:
     }
   }
 }
-`;
-    expect(extractLastTripleQuotedText(input)).toBe(expected);
-  });
-
-});
+`
+    expect(extractLastTripleQuotedText(input)).toBe(expected)
+  })
+})

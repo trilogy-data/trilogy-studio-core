@@ -16,7 +16,8 @@
     "test": "vitest",
     "test-playwright": "playwright test",
     "test-playwright:ui": "playwright test --ui",
-    "format": "prettier --write \"./**/*.{js,ts,vue}\""
+    "format": "prettier --write \"./**/*.{js,ts,vue}\"",
+    "benchmark-llm": "npx ts-node scripts/benchmark-llm.ts"
   },
   "peerDependencies": {
     "monaco-editor": "^0.52.2",
@@ -57,9 +58,11 @@
     "@mdi/font": "^7.4.47",
     "@types/prismjs": "^1.26.5",
     "@types/webappsec-credential-management": "^0.6.9",
+    "dotenv": "^16.5.0",
     "jose": "^6.0.10",
     "luxon": "^3.5.0",
     "prismjs": "^1.29.0",
+    "ts-node": "^10.9.2",
     "vega-embed": "^7.0.2",
     "vega-lite": "^6.1.0",
     "vite-plugin-prismjs": "^0.0.11",

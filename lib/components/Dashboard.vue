@@ -110,9 +110,7 @@ onMounted(() => {
   }
 })
 
-const editMode = dashboard.value && dashboard.value.state == 'editing'
-  ? ref(true)
-  : ref(false)
+const editMode = dashboard.value && dashboard.value.state == 'editing' ? ref(true) : ref(false)
 const toggleEditMode = () => {
   editMode.value = !editMode.value
   // Update all items to be non-draggable and non-resizable in view mode
@@ -176,10 +174,12 @@ async function handleFilterChange(newFilter: string) {
 
 async function populateCompletion() {
   if (dashboard.value && dashboard.value.id && queryExecutionService) {
-    let completion = await dashboardStore.populateCompletion(dashboard.value.id, queryExecutionService)
+    let completion = await dashboardStore.populateCompletion(
+      dashboard.value.id,
+      queryExecutionService,
+    )
     if (completion) {
       globalCompletion.value = completion
-
     }
     filterError.value = ''
   }

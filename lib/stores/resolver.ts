@@ -288,7 +288,6 @@ export default class TrilogyResolver {
 
     // Cache the result
     this.queryCache.set(cacheKey, response)
-    console.log('Query response:', response)
     return response
   }
 
