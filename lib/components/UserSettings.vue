@@ -19,8 +19,12 @@
       <input v-else-if="typeof value === 'string'" type="text" :id="key" v-model="settings[key]" />
     </div>
     <div class="actions">
-      <button class="button"  @click="saveSettings" :disabled="isLoading || !hasChanges">Save</button>
-      <button class="button" @click="resetToDefaults" :disabled="isLoading">Reset to Defaults</button>
+      <button class="button" @click="saveSettings" :disabled="isLoading || !hasChanges">
+        Save
+      </button>
+      <button class="button" @click="resetToDefaults" :disabled="isLoading">
+        Reset to Defaults
+      </button>
     </div>
   </div>
 </template>

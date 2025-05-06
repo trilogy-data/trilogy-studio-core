@@ -79,6 +79,8 @@ import type { QueryResult, QueryUpdate } from '../stores/queryExecutionService'
 import SymbolsPane from './SymbolsPane.vue'
 import EditorHeader from './EditorHeader.vue'
 import CodeEditor from './EditorCode.vue'
+import { extractLastTripleQuotedText } from '../stores/llmStore.ts'
+import { Range } from 'monaco-editor'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -479,7 +481,7 @@ export default defineComponent({
           }
 
           const text = codeEditorRef.getEditorText(this.editorData.contents)
-          const range = codeEditorRef.getEditorRange()
+          let range: Range = codeEditorRef.getEditorRange()
 
           await this.validateQuery(false)
 
@@ -541,26 +543,57 @@ export default defineComponent({
                   throw new Error('Target editor not found.')
                 }
 
-                // Determine where to insert the query text
-                // If we have a range, calculate the insertion position
-                let insertionPosition = range
-                  ? range.startLineNumber
-                  : targetEditor.contents.split('\n').length
-
-                // Split the content into lines
-                let contentLines = targetEditor.contents.split('\n')
-
-                // Insert the query at the appropriate position
-                contentLines.splice(insertionPosition, 0, query)
-
-                // Update the editor contents directly
-                targetEditor.setContent(contentLines.join('\n'))
-
+                let replacementLen = 0
                 // Also update the CodeEditor with the new content
                 if (this.editorData.id === editorId && this.$refs.codeEditor) {
-                  const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-                  let op = { range: range, text: `${text}\n${query}`, forceMoveMarkers: true }
-                  codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+                  const mutation = (responseText: string | null) => {
+                    // Split the content into lines
+                    // Determine where to insert the query text
+                    // If we have a range, calculate the insertion position
+                    let insertionPosition = range
+                      ? range.startLineNumber
+                      : targetEditor.contents.split('\n').length
+                    let contentLines = targetEditor.contents.split('\n')
+
+                    // Insert the query at the appropriate position
+                    contentLines.splice(insertionPosition, replacementLen, responseText || '')
+                    // store our length so we can replace this query if user has more edits
+                    // this is the length of the split array
+
+                    // Update the editor contents directly
+                    targetEditor.setContent(contentLines.join('\n'))
+                    // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
+                    let op = {
+                      range: range,
+                      text: `${text}\n${responseText}`,
+                      forceMoveMarkers: true,
+                    }
+                    codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+                    // cache for next time
+                    replacementLen = (responseText || '').split('\n').length
+                    range = new Range(
+                      range.startLineNumber,
+                      range.startColumn,
+                      range.endLineNumber + replacementLen,
+                      range.endColumn,
+                    )
+                    return true
+                  }
+
+                  mutation(query.content)
+                  console.log('setting chatInteraction')
+                  targetEditor.setChatInteraction({
+                    messages: [
+                      { role: 'user', content: query.prompt },
+                      {
+                        role: 'assistant',
+                        content: query.message,
+                      },
+                    ],
+                    validationFn: validator,
+                    extractionFn: extractLastTripleQuotedText,
+                    mutationFn: mutation,
+                  })
                 }
               } else {
                 throw new Error('LLM could not successfully generate query.')

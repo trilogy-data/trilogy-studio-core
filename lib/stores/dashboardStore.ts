@@ -121,7 +121,8 @@ export const useDashboardStore = defineStore('dashboards', {
 
     toggleEditMode(dashboardId: string) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].state = this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
+        this.dashboards[dashboardId].state =
+          this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
       }
     },
 
@@ -285,7 +286,10 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    async populateAIConcepts(dashboardId: string, queryExecutionService: QueryExecutionService):Promise<ModelConceptInput[]> {
+    async populateAIConcepts(
+      dashboardId: string,
+      queryExecutionService: QueryExecutionService,
+    ): Promise<ModelConceptInput[]> {
       let completions = await this.populateCompletion(dashboardId, queryExecutionService)
       console.log('got completions', completions)
       if (!completions) {
@@ -373,7 +377,7 @@ export const useDashboardStore = defineStore('dashboards', {
         // @ts-ignore
         if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemType)) {
           let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator)
-          content = llmcontent || 'No query could be generated'
+          content = llmcontent.content || 'No query could be generated'
         }
 
         await this.addItemToDashboard(

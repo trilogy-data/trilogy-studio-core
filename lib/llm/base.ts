@@ -17,7 +17,7 @@ export interface LLMRequestOptions {
 }
 
 export interface LLMMessage {
-  role: string
+  role: 'user' | 'assistant'
   content: string
   modelInfo?: {
     totalTokens: number

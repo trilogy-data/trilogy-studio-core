@@ -1,7 +1,15 @@
 <template>
   <div class="results-view">
+    <LLMChatRefinement
+      :messages="editorData.chatInteraction.messages"
+      :validateFn="editorData.chatInteraction.validationFn"
+      :extractionFn="editorData.chatInteraction.extractionFn"
+      :mutationFn="editorData.chatInteraction.mutationFn"
+      :closeFn="() => editorData.setChatInteraction(null)"
+      v-if="editorData.chatInteraction"
+    />
     <loading-view
-      v-if="editorData.loading"
+      v-else-if="editorData.loading"
       :startTime="editorData.startTime"
       :cancel="editorData.cancelCallback"
     />
@@ -28,8 +36,10 @@ import ErrorMessage from './ErrorMessage.vue'
 import LoadingButton from './LoadingButton.vue'
 import ResultsContainer from './Results.vue'
 import HintComponent from './HintComponent.vue'
-import { inject } from 'vue'
+import LLMChatRefinement from './LLMChatRefinement.vue'
+import { inject, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
+import type { EditorModel } from '../main.ts'
 
 export default {
   name: 'ResultsView',
@@ -39,10 +49,11 @@ export default {
     LoadingButton,
     ResultsContainer,
     HintComponent,
+    LLMChatRefinement,
   },
   props: {
     editorData: {
-      type: Object,
+      type: Object as PropType<EditorModel>,
       required: true,
     },
     containerHeight: {

@@ -24,8 +24,8 @@ const description = ref('')
 // Template selection state
 const selectedTemplate = ref<string | null>(null)
 
-const width = 20;
-const fourth = width/4
+const width = 20
+const fourth = width / 4
 // Define dashboard template options
 const templates = [
   {
@@ -35,12 +35,12 @@ const templates = [
     icon: 'mdi-view-dashboard',
     layout: [
       { i: 'title', x: 0, y: 0, w: width, h: 3, type: CELL_TYPES.MARKDOWN },
-      { i: 'kpi1', x: 0, y: 3, w: width/4, h: 4, type: CELL_TYPES.CHART },
-      { i: 'kpi2', x: fourth, y: 3, w: width/4, h: 4, type: CELL_TYPES.CHART },
-      { i: 'kpi3', x: fourth*2, y: 3, w: width/4, h: 4, type: CELL_TYPES.CHART },
-      { i: 'kpi4', x: fourth*3, y: 3, w: width/4, h: 4, type: CELL_TYPES.CHART },
-      { i: 'trend', x: 0, y: 7, w: width/2, h: 8, type: CELL_TYPES.CHART },
-      { i: 'breakdown', x: width/2, y: 7, w: width/2, h: 8, type: CELL_TYPES.CHART },
+      { i: 'kpi1', x: 0, y: 3, w: width / 4, h: 4, type: CELL_TYPES.CHART },
+      { i: 'kpi2', x: fourth, y: 3, w: width / 4, h: 4, type: CELL_TYPES.CHART },
+      { i: 'kpi3', x: fourth * 2, y: 3, w: width / 4, h: 4, type: CELL_TYPES.CHART },
+      { i: 'kpi4', x: fourth * 3, y: 3, w: width / 4, h: 4, type: CELL_TYPES.CHART },
+      { i: 'trend', x: 0, y: 7, w: width / 2, h: 8, type: CELL_TYPES.CHART },
+      { i: 'breakdown', x: width / 2, y: 7, w: width / 2, h: 8, type: CELL_TYPES.CHART },
     ],
   },
   {
@@ -51,8 +51,8 @@ const templates = [
     layout: [
       { i: 'filters', x: 0, y: 0, w: width, h: 3, type: CELL_TYPES.MARKDOWN },
       { i: 'overview', x: 0, y: 3, w: width, h: 5, type: CELL_TYPES.CHART },
-      { i: 'detail1', x: 0, y: 8, w: width/2, h: 8, type: CELL_TYPES.CHART },
-      { i: 'detail2', x: width/2, y: 10, w: width/2, h: 8, type: CELL_TYPES.CHART },
+      { i: 'detail1', x: 0, y: 8, w: width / 2, h: 8, type: CELL_TYPES.CHART },
+      { i: 'detail2', x: width / 2, y: 10, w: width / 2, h: 8, type: CELL_TYPES.CHART },
       { i: 'datatable', x: 0, y: 20, w: width, h: 8, type: CELL_TYPES.TABLE },
     ],
   },
@@ -63,10 +63,10 @@ const templates = [
     icon: 'mdi-compare',
     layout: [
       { i: 'title', x: 0, y: 0, w: width, h: 3, type: CELL_TYPES.MARKDOWN },
-      { i: 'compare1', x: 0, y: 3, w: width/2, h: 6, type: CELL_TYPES.CHART },
-      { i: 'compare2', x: width/2, y: 3, w: width/2, h: 6, type: CELL_TYPES.CHART },
-      { i: 'compare3', x: 0, y: 9, w: width/2, h: 6, type: CELL_TYPES.CHART },
-      { i: 'compare4', x: width/2, y: 9, w: width/2, h: 6, type: CELL_TYPES.CHART },
+      { i: 'compare1', x: 0, y: 3, w: width / 2, h: 6, type: CELL_TYPES.CHART },
+      { i: 'compare2', x: width / 2, y: 3, w: width / 2, h: 6, type: CELL_TYPES.CHART },
+      { i: 'compare3', x: 0, y: 9, w: width / 2, h: 6, type: CELL_TYPES.CHART },
+      { i: 'compare4', x: width / 2, y: 9, w: width / 2, h: 6, type: CELL_TYPES.CHART },
       { i: 'summary', x: 0, y: 15, w: width, h: 5, type: CELL_TYPES.MARKDOWN },
     ],
   },
@@ -78,9 +78,9 @@ const templates = [
     layout: [
       { i: 'headline', x: 0, y: 0, w: width, h: 3, type: CELL_TYPES.MARKDOWN },
       { i: 'maintrend', x: 0, y: 3, w: width, h: 8, type: CELL_TYPES.CHART },
-      { i: 'breakdown1', x: 0, y: 11, w: width/3, h: 6, type: CELL_TYPES.CHART },
-      { i: 'breakdown2', x: width/3, y: 11, w: width/3, h: 6, type: CELL_TYPES.CHART },
-      { i: 'breakdown3', x: width/3*2, y: 11, w: width/3, h: 6, type: CELL_TYPES.CHART },
+      { i: 'breakdown1', x: 0, y: 11, w: width / 3, h: 6, type: CELL_TYPES.CHART },
+      { i: 'breakdown2', x: width / 3, y: 11, w: width / 3, h: 6, type: CELL_TYPES.CHART },
+      { i: 'breakdown3', x: (width / 3) * 2, y: 11, w: width / 3, h: 6, type: CELL_TYPES.CHART },
       { i: 'forecast', x: 0, y: 17, w: width, h: 6, type: CELL_TYPES.CHART },
     ],
   },
