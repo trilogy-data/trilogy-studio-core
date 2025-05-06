@@ -151,6 +151,7 @@ class CompletionItem(BaseModel):
     trilogyType: TrilogyType | None = None
     trilogySubType: Purpose | str | None = None
     description: str | None = None
+    calculation: str | None = None
 
 
 class ValidateResponse(BaseModel):

@@ -9,11 +9,12 @@ export const trilogyRules = [
   'Trilogy uses # for comments. For multiline comments, comment each line. A comment must have a newline after it. DO NOT use -- or /* */ for comments.',
   'If you use a where clause, place it before the select.',
   'Trilogy fields will look like struct paths - order.product.id. Use the full path.',
+  'The provided fields may include fields that are aliased calculations. You can use that alias in place of the input calculation code. For example, if a field total_revenue has a calculation of `sum(revenue)` you may use total_revenue instead in any place where you would take the sum of revenue..',
   'Use current_date and current_datetime to get current time, instead of now(). Use date_add to manipulate dates, like date_add(ship_date, month, 3). Use date_diff for date differences. It expects date_diff(<date_to_subtract>, <date_to_subtract_from>, DAY|MONTH|YEAR|SECOND|HOUR|ETC) date_diff will subtract the first date from the second date, so a early and later is positive.',
   'Avoid naming fields after SQL keywords. For example, do not name a field just "cast" or "select". Do not use quotes on fields. Prefer underscores and avoid special characters. Prefer not to alias a field in select unless it is a transformation, in which case you must always alias it.',
   'Ordering must always explicitly specify direction for each member - asc or desc. There is no default. Example: "order by birth_date asc, name asc".',
   'If you filter on an aggregate in the select, add a HAVING clause for that portion of logic. Aggregates can be used in a where clause if they are not also selected.',
-  'When comparing a field against a string in your query, if the field is not a string explicitly cast the string to ensure the comparison is safe. Use the :: operator to cast, example "2021-01-01"::date',
+  'When comparing a field against a string in your query, if the field is not a string explicitly cast the string to ensure the comparison is safe. Use the :: operator to cast, example "2021-01-01"::date. Wrap any multi-part transformations that need to be cast in parentheses before applying the cast.',
   'Any select field that is a transformation must be aliased with as. You cannot leave out the as keyword. Don\t alias fields that are not transformations. For example, "select order.year, sum(order.revenue) as total_revenue". Do NOT rename scalar fields in select. This will confuse users. Do not shadow the name of any existing fields when aliasing. ',
   'You can derive a new field from an existing field using sql functions in any position. If you need - and only if you need - an aggregate to have a different grouping than the select, you can do an inline group - ex sum(revenue) by order.year, order.customer.state as revenue_per_year_and_state. You can use this to get aggregates at different levels than the default select aggregation in the same query. ',
   'Window syntax is not like SQL. If you are trying to get the top X based on ordering by A and B (optionally within a group Z), use the syntax "rank X over Z by A desc, B desc" - ex "rank customer over state by sum(revenue) desc as top_per_state_customers". This applies to other similar window functions as well.',
@@ -21,12 +22,14 @@ export const trilogyRules = [
   'Trilogy will let you immediately reuse a field by name after defining it in the select; if you can reuse a calculation you just defined, do that rather than repeating it.',
   'Only reference fields from the select in the HAVING clause. You can create new fields and hide them with a # comment to reference them for filtering. A -- modified field will not be selected but will be available to filter (this is a special "hide" syntax). The where clause is less restrictive, and can include anonymous calculations.',
   'To get a max or minimum in where/having clauses, there is no need for a subselect - just do max(field) or min(field), such as in "where field_a=max(field_b);"',
+  'You can inline filter a field (helpful inside a sum) using the form `field ? condition`, for example max(field ? field % 2 =0) as max_even',
   'End a full statement with a semicolon.',
   `Here are two full valid Trilogy query demonstrating various features: "where year between 1940 and 1950
 select
     name,
     state,
     sum(births) as all_births,
+    sum(births ? state = 'VT') vermont_births,
     rank name over state by all_births desc as state_rank,
     rank name by sum(births) by name desc as all_rank
 having 

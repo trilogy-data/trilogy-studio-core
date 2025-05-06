@@ -9,8 +9,8 @@ export interface UserSettings {
 export const useUserSettingsStore = defineStore('userSettings', {
   state: () => ({
     settings: {
-      theme: 'dark',
-      trilogyResolver: 'https://trilogy-service.fly.dev',
+      theme: '',
+      trilogyResolver: '',
     } as UserSettings,
     defaults: {
       theme: 'dark',
@@ -39,7 +39,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
     },
 
     toggleTheme() {
-      // Remove any existing theme classes
       document.documentElement.classList.remove('dark-theme', 'light-theme')
 
       // Toggle to opposite theme

@@ -11,7 +11,7 @@ function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
     .map(
       (field) =>
-        `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''}]`,
+        `[name:${field.name} type:${field.type} ${field.description ? 'description:' + field.description : ''} ${field.calculation ? 'calculation:' + field.calculation : ''}]`,
     )
     .join(', ')
 }

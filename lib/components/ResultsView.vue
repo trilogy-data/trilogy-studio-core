@@ -17,6 +17,7 @@
       :error="editorData.error || undefined"
       @config-change="(config) => editorData.setChartConfig(config)"
     />
+    <!-- <llm-interaction></llm-interaction> -->
     <hint-component v-else />
   </div>
 </template>

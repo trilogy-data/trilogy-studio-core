@@ -9,7 +9,7 @@
 
         <code-block
           v-else-if="paragraph.type === 'code'"
-          language="sql"
+          language="trilogy"
           :content="paragraph.content"
         ></code-block>
         <connection-list

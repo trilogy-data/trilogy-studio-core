@@ -171,7 +171,7 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Select',
         `where? 
-"select"i 
+select
 select_list 
 having? 
 order_by? 
@@ -192,12 +192,12 @@ select_item: expression "->" IDENTIFIER ","?`,
         'where',
         'The where clause restricts data before the select expression. It can reference any field in the model, not just those in the select list. It cannot reference aggregates calculated in the select.',
       ),
-      new Paragraph('where', `where_clause: "where"i expression ("," expression)* ","?`, 'code'),
+      new Paragraph('where', `where_clause: where expression ("," expression)* ","?`, 'code'),
       new Paragraph(
         'having',
         'The having clause restricts data after the select expression. It can reference any field in the select list, including aggregates.',
       ),
-      new Paragraph('having', `having_clause: "where"i expression ("," expression)* ","?`, 'code'),
+      new Paragraph('having', `having_clause: where expression ("," expression)* ","?`, 'code'),
       new Paragraph(
         'Select List',
         'A multiselect statement can merge multiple select statements into a unified rowset by defining output keys to align on. This is rarely required, but can be used to produce certain outputs.',
@@ -220,8 +220,8 @@ align_clause: align_item ("," align_item)* ","?`,
       new Paragraph('datasource text', 'A datasource defines a warehouse table to pull data from'),
       new Paragraph(
         'Datasource',
-        `"datasource" IDENTIFIER 
-"(" column_assignment_list ")" 
+        `datasource IDENTIFIER 
+( column_assignment_list )
 grain_clause?
 complete_for_clause?
 (address='string' | query='''string''')
@@ -230,17 +230,17 @@ complete_for_clause?
       ),
       new Paragraph(
         'Merge',
-        'merge_statement: "merge" IDENTIFIER ("," IDENTIFIER)_ ","? comment_',
+        'merge_statement: merge IDENTIFIER (, IDENTIFIER)_ ,? comment_',
         'code',
       ),
       new Paragraph(
         'Import',
-        'import_statement: "import" (IDENTIFIER ".") * IDENTIFIER "as" IDENTIFIER',
+        'import_statement: import (IDENTIFIER .) * IDENTIFIER as IDENTIFIER',
         'code',
       ),
       new Paragraph(
         'Function Definition',
-        'function_derivation: "def" "(" (IDENTIFIER ",")* ")" -> EXPR;',
+        'function_derivation: def ( (IDENTIFIER ,)* ) -> EXPR;',
         'code',
       ),
     ]),

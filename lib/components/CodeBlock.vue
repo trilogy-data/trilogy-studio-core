@@ -1,6 +1,6 @@
 <template>
   <div class="code-container">
-    <pre><code ref="codeBlock" :class="codeClass">{{ content }}</code></pre>
+    <pre class="code-block"><code ref="codeBlock" :class="codeClass">{{ content }}</code></pre>
     <button @click="copyCode" class="copy-button" title="Copy code">
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -23,6 +23,44 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUpdated } from 'vue'
 import Prism from 'prismjs'
+
+
+// Define your extended SQL language (e.g., "MySQLExtension")
+Prism.languages.trilogy = {
+  // Inherit all properties from the SQL language definition
+  ...Prism.languages.sql,
+  
+  // Override or add new keywords
+  keyword: [
+    // Include original SQL keywords (if using an array)
+    ...(Array.isArray(Prism.languages.sql.keyword) 
+      ? Prism.languages.sql.keyword 
+      : [Prism.languages.sql.keyword]),
+    
+    // Add your custom keywords
+    /\b(?:DATASOURCE)\b/i,
+    /\b(?:GRAIN)\b/i,
+    /\b(?:ADDRESS)\b/i,
+    /\b(?:DEF)\b/i,
+    /\b(?:IMPORT)\b/i,
+    /\b(?:MERGE)\b/i,
+    // syntax expression helpers
+    /\b(?:HAVING_CLAUSE)\b/i,
+    /\b(?:WHERE_CLAUSE)\b/i,
+    /\b(?:SELECT_LIST)\b/i,
+    /\b(?:ORDER_BY)\b/i,
+    /\b(?:SELECT_STATEMENT)\b/i,
+    /\b(?:SELECT_ITEM)\b/i,
+    /\b(?:ALIGN_CLAUSE)\b/i,
+    /\b(?:ALIGN_ITEM)\b/i,
+    /\b(?:IDENTIFIER)\b/i,
+  ],
+
+
+};
+
+
+
 export default defineComponent({
   name: 'CodeBlock',
   props: {
@@ -83,6 +121,27 @@ export default defineComponent({
   position: relative;
   overflow: hidden;
   padding-bottom: 2px;
+}
+
+.language-sql {
+  text-shadow: none !important;
+  color: var(--text-color) !important;
+}
+
+
+
+
+.language-trilogy {
+  text-shadow: none !important;
+  color: var(--text-color) !important;
+}
+
+.code-block {
+  margin: 0px;
+  border-radius: 0px;
+  border: 0px;
+  background-color: var(--sidebar-bg);
+  text-shadow: none !important;
 }
 
 .code-container:hover .copy-button {

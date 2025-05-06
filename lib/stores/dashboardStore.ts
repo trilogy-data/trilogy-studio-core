@@ -6,6 +6,7 @@ import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
+import type { ModelConceptInput } from '../llm'
 
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
@@ -284,7 +285,7 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    async populateAIConcepts(dashboardId: string, queryExecutionService: QueryExecutionService) {
+    async populateAIConcepts(dashboardId: string, queryExecutionService: QueryExecutionService):Promise<ModelConceptInput[]> {
       let completions = await this.populateCompletion(dashboardId, queryExecutionService)
       console.log('got completions', completions)
       if (!completions) {
@@ -294,6 +295,7 @@ export const useDashboardStore = defineStore('dashboards', {
         name: item.label,
         type: item.datatype,
         description: item.description,
+        calculation: item.calculation,
       }))
     },
 

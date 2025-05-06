@@ -85,6 +85,7 @@ export interface CompletionItem {
   insertText: string
   trilogyType?: 'concept' | 'function' | 'type'
   trilogySubType?: 'property' | 'key' | 'metric'
+  calculation?: string
 }
 
 export interface ValidateResponse {

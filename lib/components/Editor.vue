@@ -488,6 +488,7 @@ export default defineComponent({
             name: item.label,
             type: item.datatype,
             description: item.description,
+            calculation: item.calculation,
           }))
 
           if (concepts.length === 0) {

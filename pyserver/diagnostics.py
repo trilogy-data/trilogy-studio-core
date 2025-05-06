@@ -4,6 +4,7 @@ from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
 from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.statements.author import ImportStatement
+from trilogy.authoring import DataType, Concept, Environment
 from io_models import (
     ValidateItem,
     ValidateResponse,
@@ -16,7 +17,7 @@ from io_models import (
 from env_helpers import parse_env_from_full_model
 from trilogy.parsing.parse_engine import ParseToObjects
 from logging import getLogger
-from common import concept_to_description
+from common import concept_to_description, concept_to_derivation
 
 logger = getLogger("diagnostics")
 
@@ -40,6 +41,17 @@ def truncate_to_last_semicolon(text: str):
     else:
         return text  # Return original string if no semicolon is found
 
+def concept_to_completion(label:str, concept:Concept, environment:Environment):
+    return CompletionItem(
+                    label=label,
+                    datatype=concept.datatype.value if isinstance(concept.datatype, DataType) else str(concept.datatype),
+                    description=concept_to_description(concept),
+                    type="concept",
+                    insertText=label,
+                    trilogyType=TrilogyType.CONCEPT,
+                    trilogySubType=concept.purpose,
+                    calculation = concept_to_derivation(concept, environment)
+                )
 
 def get_diagnostics(
     doctext: str, sources: List[ModelSourceInSchema]
@@ -98,15 +110,7 @@ def get_diagnostics(
             else:
                 label = k
             completions.append(
-                CompletionItem(
-                    label=label,
-                    datatype=str(v.datatype),
-                    description=concept_to_description(v),
-                    type="concept",
-                    insertText=label,
-                    trilogyType=TrilogyType.CONCEPT,
-                    trilogySubType=v.purpose,
-                )
+                concept_to_completion(label, v, env)
             )
             seen.add(k)
         try:
@@ -131,15 +135,7 @@ def get_diagnostics(
                 label = k
             if k not in seen:
                 completions.append(
-                    CompletionItem(
-                        label=label,
-                        datatype=str(v.datatype),
-                        description=concept_to_description(v),
-                        type="concept",
-                        insertText=label,
-                        trilogyType=TrilogyType.CONCEPT,
-                        trilogySubType=v.purpose,
-                    )
+                    concept_to_completion(label, v, env)
                 )
 
     except Exception:
