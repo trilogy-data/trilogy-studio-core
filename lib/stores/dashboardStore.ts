@@ -8,6 +8,12 @@ import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
 
+
+interface ContentPlaceholder {
+  type: 'markdown' | 'chart' | 'table'
+  content: string
+}
+
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
     dashboards: {} as Record<string, DashboardModel>,
@@ -136,7 +142,7 @@ export const useDashboardStore = defineStore('dashboards', {
       h: number | null = null,
       content: string | null = null,
       name: string | null = null,
-    ) {
+    ): string {
       if (this.dashboards[dashboardId]) {
         return this.dashboards[dashboardId].addItem(type, x, y, w, h, content, name)
       } else {
@@ -151,6 +157,15 @@ export const useDashboardStore = defineStore('dashboards', {
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
+    },
+
+    updateItemType(dashboardId:string, itemId:string, type: 'markdown' | 'chart' | 'table') {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemType(itemId, type)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId} not found`)
+      }
+
     },
 
     updateItemCrossFilters(
@@ -221,7 +236,7 @@ export const useDashboardStore = defineStore('dashboards', {
     // Update dashboard layout
     updateDashboardLayout(dashboardId: string, newLayout: LayoutItem[]) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].updateLayout(newLayout)
+        this.dashboards[dashboardId].ubpdateLayout(newLayout)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
@@ -369,26 +384,51 @@ export const useDashboardStore = defineStore('dashboards', {
         await results.resultPromise
         return true
       }
+      // first loop, add everything as markdown
+      // TODO: fix typehints here
+      let itemMap = new Map<string, ContentPlaceholder>()
       for (const item of promptLayout.layout) {
         let itemData = promptLayout.gridItems[item.id]
         let content = itemData.content
-        console.log('populating item', itemData)
         let itemType = itemData.type.toLowerCase() as CellType
         // @ts-ignore
         if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemType)) {
-          let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator)
-          content = llmcontent.content || 'No query could be generated'
+          content = `Placeholder, prompt: ${content}`
         }
-
-        await this.addItemToDashboard(
+        let itemId = this.addItemToDashboard(
           dashboardId,
-          itemType,
+          'markdown',
           item.x,
           item.y,
           item.w,
           item.h,
           content,
           itemData.name,
+        )
+        itemMap.set(itemId, {type: itemType, content: content})
+ 
+      }
+      // second loop, add actual items  
+      // TODO: fix this loop
+      for (const item  of itemMap) {
+        let key= item[0];
+        let data = item[1]
+        let content = data.content
+        // @ts-ignore
+        if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(data.type)) {
+          let llmcontent = await llmStore.generateQueryCompletion(data.content, concepts, validator)
+          content = llmcontent.content || 'No query could be generated'
+        }
+
+        await this.updateItemContent(
+          dashboardId,
+          key,
+          content
+        )
+        await this.updateItemType(
+          dashboardId,
+          key,
+          data.type
         )
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
