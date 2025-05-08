@@ -190,11 +190,11 @@ export class DashboardModel implements Dashboard {
     }
   }
 
-  updateItemType(itemId:string, type:'chart' | 'markdown' | 'table'): void {
+  updateItemType(itemId: string, type: 'chart' | 'markdown' | 'table'): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
-        type
+        type,
       }
       this.updatedAt = new Date()
     }

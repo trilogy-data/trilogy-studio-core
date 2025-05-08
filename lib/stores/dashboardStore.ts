@@ -8,7 +8,6 @@ import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
 
-
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
   content: string
@@ -159,13 +158,12 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    updateItemType(dashboardId:string, itemId:string, type: 'markdown' | 'chart' | 'table') {
+    updateItemType(dashboardId: string, itemId: string, type: 'markdown' | 'chart' | 'table') {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemType(itemId, type)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId} not found`)
       }
-
     },
 
     updateItemCrossFilters(
@@ -405,13 +403,12 @@ export const useDashboardStore = defineStore('dashboards', {
           content,
           itemData.name,
         )
-        itemMap.set(itemId, {type: itemType, content: content})
- 
+        itemMap.set(itemId, { type: itemType, content: content })
       }
-      // second loop, add actual items  
+      // second loop, add actual items
       // TODO: fix this loop
-      for (const item  of itemMap) {
-        let key= item[0];
+      for (const item of itemMap) {
+        let key = item[0]
         let data = item[1]
         let content = data.content
         // @ts-ignore
@@ -420,16 +417,8 @@ export const useDashboardStore = defineStore('dashboards', {
           content = llmcontent.content || 'No query could be generated'
         }
 
-        await this.updateItemContent(
-          dashboardId,
-          key,
-          content
-        )
-        await this.updateItemType(
-          dashboardId,
-          key,
-          data.type
-        )
+        await this.updateItemContent(dashboardId, key, content)
+        await this.updateItemType(dashboardId, key, data.type)
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
 

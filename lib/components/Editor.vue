@@ -192,6 +192,16 @@ export default defineComponent({
     },
   },
   methods: {
+    setContent(newContent:string) {
+    // Update the editor store
+    this.editorStore.setEditorContents(this.editorId, newContent)
+    
+    // Also update the Monaco editor directly if needed
+    const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
+    if (codeEditorRef) {
+      codeEditorRef.setValue(newContent)
+    }
+  },
     updateEditorName(newName: string): void {
       this.editorStore.updateEditorName(this.editorId, newName)
       let isSource = this.editorData.tags.includes(EditorTag.SOURCE)

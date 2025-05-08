@@ -2,17 +2,8 @@
   <div class="code-container">
     <pre class="code-block"><code ref="codeBlock" :class="codeClass">{{ content }}</code></pre>
     <button @click="copyCode" class="copy-button" title="Copy code">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
       </svg>
@@ -66,6 +57,10 @@ export default defineComponent({
       type: String,
       default: 'sql',
     },
+    copy: {
+      type: Function,
+      optional: true
+    }
   },
   emits: ['on-copy'],
   setup(props, { emit }) {
@@ -75,12 +70,17 @@ export default defineComponent({
 
     // Method to copy code to clipboard
     const copyCode = async () => {
-      if (codeBlock.value) {
-        try {
-          await navigator.clipboard.writeText(props.content)
-          emit('on-copy', props.content)
-        } catch (err) {
-          console.error('Failed to copy code: ', err)
+      if (props.copy) {
+        props.copy(props.content)
+      }
+      else {
+        if (codeBlock.value) {
+          try {
+            await navigator.clipboard.writeText(props.content)
+            emit('on-copy', props.content)
+          } catch (err) {
+            console.error('Failed to copy code: ', err)
+          }
         }
       }
     }

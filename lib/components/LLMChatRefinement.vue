@@ -311,7 +311,7 @@ export default defineComponent({
 .accept-button {
   padding: 8px 16px;
   background-color: transparent;
-  color: white;
+  
   border: none;
   border: 1px solid #4caf50;
   cursor: pointer;
@@ -320,11 +320,12 @@ export default defineComponent({
 
 .accept-button:hover:not(:disabled) {
   background-color: #3d8b40;
+  color: white;
 }
 
 .discard-button {
   padding: 8px 16px;
-  color: white;
+  
   background-color: transparent;
   border: 1px solid var(--delete-color);
 
@@ -334,6 +335,7 @@ export default defineComponent({
 
 .discard-button:hover:not(:disabled) {
   background-color: #d32f2f;
+  color: white;
 }
 
 button:disabled {
