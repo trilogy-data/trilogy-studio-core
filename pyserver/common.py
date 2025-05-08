@@ -1,4 +1,3 @@
-
 from trilogy.authoring import (
     Concept,
     ConceptRef,
@@ -8,7 +7,7 @@ from trilogy.authoring import (
     AggregateWrapper,
     MultiSelectStatement,
     DEFAULT_NAMESPACE,
-    Environment
+    Environment,
 )
 from trilogy.core.models.author import (
     FunctionCallWrapper,
@@ -19,7 +18,6 @@ from io_models import (
 )
 from typing import Any, List
 from trilogy.parsing.render import Renderer
-
 
 
 def flatten_array(input: Any, depth: int = 0) -> List[LineageItem]:
@@ -100,12 +98,30 @@ def flatten_lineage(
             chain += flatten_lineage(select, depth + 1)
         chain += [LineageItem(token=")", depth=depth)]
     elif isinstance(input, ConceptRef):
-        return [LineageItem(token=input.address if input.namespace != DEFAULT_NAMESPACE else input.name)]
+        return [
+            LineageItem(
+                token=(
+                    input.address
+                    if input.namespace != DEFAULT_NAMESPACE
+                    else input.name
+                ),
+                depth=depth,
+            )
+        ]
     elif not isinstance(input, Concept):
         return [LineageItem(token=str(input), depth=depth)]
-    
+
     else:
-        chain = [LineageItem(token=input.address if input.namespace != DEFAULT_NAMESPACE else input.name, depth=depth)]
+        chain = [
+            LineageItem(
+                token=(
+                    input.address
+                    if input.namespace != DEFAULT_NAMESPACE
+                    else input.name
+                ),
+                depth=depth,
+            )
+        ]
 
     # enrich block
     if isinstance(input, Concept) and input.lineage:
@@ -115,13 +131,17 @@ def flatten_lineage(
 
     return chain
 
-def concept_to_derivation(concept:Concept, environment:Environment) -> str | None:
+
+def concept_to_derivation(concept: Concept, environment: Environment) -> str | None:
     """Convert a concept to its derivation string."""
     if concept.lineage:
-        return  Renderer(environment).to_string(concept.lineage)
+        return Renderer(environment).to_string(concept.lineage)
     return None
 
-def concept_to_description(concept: Concept,) -> str | None:
+
+def concept_to_description(
+    concept: Concept,
+) -> str | None:
     # base = f"Derivation: {str(concept.lineage)}. " if concept.lineage else None
     base = None
     if concept.metadata and concept.metadata.description:

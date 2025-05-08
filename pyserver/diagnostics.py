@@ -41,17 +41,23 @@ def truncate_to_last_semicolon(text: str):
     else:
         return text  # Return original string if no semicolon is found
 
-def concept_to_completion(label:str, concept:Concept, environment:Environment):
+
+def concept_to_completion(label: str, concept: Concept, environment: Environment):
     return CompletionItem(
-                    label=label,
-                    datatype=concept.datatype.value if isinstance(concept.datatype, DataType) else str(concept.datatype),
-                    description=concept_to_description(concept),
-                    type="concept",
-                    insertText=label,
-                    trilogyType=TrilogyType.CONCEPT,
-                    trilogySubType=concept.purpose,
-                    calculation = concept_to_derivation(concept, environment)
-                )
+        label=label,
+        datatype=(
+            concept.datatype.value
+            if isinstance(concept.datatype, DataType)
+            else str(concept.datatype)
+        ),
+        description=concept_to_description(concept),
+        type="concept",
+        insertText=label,
+        trilogyType=TrilogyType.CONCEPT,
+        trilogySubType=concept.purpose,
+        calculation=concept_to_derivation(concept, environment),
+    )
+
 
 def get_diagnostics(
     doctext: str, sources: List[ModelSourceInSchema]
@@ -109,9 +115,7 @@ def get_diagnostics(
                 label = v.name
             else:
                 label = k
-            completions.append(
-                concept_to_completion(label, v, env)
-            )
+            completions.append(concept_to_completion(label, v, env))
             seen.add(k)
         try:
             # get a partial parse tree
@@ -134,9 +138,7 @@ def get_diagnostics(
             else:
                 label = k
             if k not in seen:
-                completions.append(
-                    concept_to_completion(label, v, env)
-                )
+                completions.append(concept_to_completion(label, v, env))
 
     except Exception:
         logging.exception("completion generation raised exception")

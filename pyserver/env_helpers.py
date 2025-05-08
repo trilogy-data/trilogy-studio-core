@@ -17,10 +17,8 @@ from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
 
 from common import flatten_lineage
+
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
-
-
-
 
 
 def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment:
