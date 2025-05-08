@@ -236,7 +236,7 @@ export const useDashboardStore = defineStore('dashboards', {
     // Update dashboard layout
     updateDashboardLayout(dashboardId: string, newLayout: LayoutItem[]) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].ubpdateLayout(newLayout)
+        this.dashboards[dashboardId].updateLayout(newLayout)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
