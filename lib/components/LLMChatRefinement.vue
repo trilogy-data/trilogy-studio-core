@@ -24,8 +24,8 @@
     <div class="input-container">
       <textarea
         v-model="userInput"
-        @keydown.enter.ctrl="sendMessage"
-        placeholder="Refine your query... (Ctrl+Enter to send)"
+        @keydown="handleKeyDown"
+        placeholder="Refine your query... (Enter to send, Ctrl+Shift+Enter to accept)"
         :disabled="isLoading"
       ></textarea>
       <button @click="sendMessage" :disabled="isLoading || !userInput.trim()">Send</button>
@@ -100,6 +100,20 @@ export default defineComponent({
       })
     }
 
+    // Handle key press events
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Enter without modifiers - send message
+      if (event.key === 'Enter' && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        sendMessage()
+      }
+      // Ctrl+Shift+Enter - accept result
+      else if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
+        event.preventDefault()
+        acceptResult()
+      }
+    }
+
     // Handle sending a new message
     const sendMessage = async () => {
       if (!userInput.value.trim() || isLoading.value) return
@@ -115,18 +129,16 @@ export default defineComponent({
       isLoading.value = true
 
       try {
-        // This would typically be an API call to your LLM service
-        // For this example, we're simulating a response
-        console.log('history is')
-        console.log(messages.value)
-        let response = await llmStore.generateCompletion(
+        let response = await llmStore.generateValidatedCompletion(
+          userPrompt,
+          props.validateFn,
+          3,
           llmStore.activeConnection,
-          { prompt: userPrompt },
           messages.value,
         )
         messages.value.push({
           role: 'assistant',
-          content: response.text,
+          content: response.message,
         })
       } catch (error) {
         // Handle errors
@@ -141,6 +153,8 @@ export default defineComponent({
 
     // Accept the current result
     const acceptResult = async () => {
+      if (isLoading.value) return
+
       // Get the latest assistant message or use the initial response if no conversation
       const latestResponse = messages.value.filter((m) => m.role === 'assistant').pop()?.content
 
@@ -148,15 +162,6 @@ export default defineComponent({
       const value = await props.extractionFn(latestResponse)
       await props.mutationFn(value)
       await props.closeFn()
-      // if (props.validateFn(latestResponse)) {
-      //   props.closeFn(latestResponse, true)
-      // } else {
-      //   // Handle validation failure (could add a message to the chat)
-      //   messages.value.push({
-      //     role: 'assistant',
-      //     content: 'The current query doesn\'t meet the required criteria. Please refine it further.'
-      //   })
-      // }
     }
 
     // Close without saving
@@ -169,6 +174,7 @@ export default defineComponent({
       userInput,
       isLoading,
       messagesContainer,
+      handleKeyDown,
       sendMessage,
       acceptResult,
       handleClose,

@@ -88,6 +88,7 @@ interface CodeEditorRef {
   getEditorText: (text: string) => string
   getEditorRange: () => any
   setValue: (text: string) => void
+  setSelection: (range: Range) => void  
   executeEdits: (source: string, edits: any[]) => void
   setModelMarkers: (model: any, owner: string, markers: any[]) => void
 }
@@ -579,6 +580,7 @@ export default defineComponent({
                       forceMoveMarkers: true,
                     }
                     codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+      
                     // cache for next time
                     replacementLen = (responseText || '').split('\n').length
                     range = new Range(
@@ -587,6 +589,7 @@ export default defineComponent({
                       range.endLineNumber + replacementLen,
                       range.endColumn,
                     )
+                    codeEditorRef.getEditorInstance().setSelection(range)
                     return true
                   }
 

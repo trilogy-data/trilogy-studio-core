@@ -7,10 +7,12 @@ export const trilogyRules = [
   'Trilogy uses the where clause to filter before a query, and the having clause to filter the output of a query. Notably, an aggregate that is output in the query can only be filtered in the having; other aggregates can be filtered in the where',
   'Some datatypes will have traits - traits are hints on semantic meaning and the value of a field, such as "this decimal is a percent" or "this string is a zipcode"',
   'Trilogy uses # for comments. For multiline comments, comment each line. A comment must have a newline after it. DO NOT use -- or /* */ for comments.',
+  'You may limit results by using the LIMIT clause at the end of the query. For example, "select order.year, sum(order.revenue) as total_revenue limit 10".',
   'If you use a where clause, place it before the select.',
   'Trilogy fields will look like struct paths - order.product.id. Use the full path.',
-  'The provided fields may include fields that are aliased calculations. You can use that alias in place of the input calculation code. For example, if a field total_revenue has a calculation of `sum(revenue)` you may use total_revenue instead in any place where you would take the sum of revenue..',
-  'Use current_date and current_datetime to get current time, instead of now(). Use date_add to manipulate dates, like date_add(ship_date, month, 3). Use date_diff for date differences. It expects date_diff(<date_to_subtract>, <date_to_subtract_from>, DAY|MONTH|YEAR|SECOND|HOUR|ETC) date_diff will subtract the first date from the second date, so a early and later is positive.',
+  'Treat a field with a calculation as a macro that will expand to the calculation. For example, if you have a field tota_revenue with a calculation of sum(order.revenue), you can use total_revenue in the select, and it will be replaced with sum(order.revenue). Use these aliases wherever possible to shorten your queries.',
+  'Your query will error if you name an output the same as any existing field. Reuse existing fields where appropriate or ensure they have unique names.',
+  'Use current_date() and current_datetime() to get current time, instead of now(). Use date_add to manipulate dates, like date_add(ship_date, month, 3). Use date_diff for date differences. It expects date_diff(<date_to_subtract>, <date_to_subtract_from>, DAY|MONTH|YEAR|SECOND|HOUR|ETC) date_diff will subtract the first date from the second date, so a early and later is positive.',
   'Avoid naming fields after SQL keywords. For example, do not name a field just "cast" or "select". Do not use quotes on fields. Prefer underscores and avoid special characters. Prefer not to alias a field in select unless it is a transformation, in which case you must always alias it.',
   'Ordering must always explicitly specify direction for each member - asc or desc. There is no default. Example: "order by birth_date asc, name asc".',
   'If you filter on an aggregate in the select, add a HAVING clause for that portion of logic. Aggregates can be used in a where clause if they are not also selected.',
@@ -35,14 +37,15 @@ select
 having 
     all_rank<11
     and state = 'ID'
-order by all_rank asc;", "where dep_time between '2002-01-01'::datetime and '2010-01-31'::datetime
+order by all_rank asc
+limit 5;", "where dep_time between '2002-01-01'::datetime and '2010-01-31'::datetime
 select
     carrier.name,
     count(id2) as total_flights,
-    count(id2) / date_diff(min(dep_time.date), max(dep_time.date), DAY) as average_daily_flights
+    total_flights / date_diff(min(dep_time.date), max(dep_time.date), DAY) as average_daily_flights
 order by total_flights desc;
 "`,
-  'Only ever generate a single select query at a time. Do not use subselects/CTEs, they are not required given the calculation flexibility.',
+  'Only ever generate a single select query at a time. Do not use subselects/CTEs, they are not required.',
 ]
 
 export const functions = [

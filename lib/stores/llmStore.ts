@@ -131,19 +131,18 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
     // Common method for generating and validating LLM responses
     async generateValidatedCompletion(
-      promptCreator: Function,
-      inputString: string,
-      concepts: ModelConceptInput[],
+      base: string,
       validator: Function | null = null,
       maxAttempts = 3,
       modelOverride: string | null = null,
+      messageHistory: LLMMessage[] | null = null,
     ): Promise<ValidatedResponse> {
       let connection: string = modelOverride || this.activeConnection || ''
       if (connection === '') {
         throw new Error('No active LLM connection')
       }
 
-      let base = promptCreator(inputString, concepts)
+
       let attempts = 0
       let passed = false
       let extract = '' as string | null
@@ -151,7 +150,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       // Initial completion generation
       let raw = await this.generateCompletion(connection, {
         prompt: base,
-      })
+      },
+        messageHistory)
 
       // Extract the response
       extract = extractLastTripleQuotedText(raw.text)
@@ -213,10 +213,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     ) {
       console.log('Generating dashboard completion')
       console.log('inputString:', inputString)
+      let base = createDashboardPrompt(inputString, concepts)
       return this.generateValidatedCompletion(
-        createDashboardPrompt,
-        inputString,
-        concepts,
+        base,
         validator,
         maxAttempts,
       ).then((response) => {
@@ -231,10 +230,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       maxAttempts = 3,
       modelOverride: string | null = null,
     ): Promise<ValidatedResponse> {
+      let base = createPrompt(inputString, concepts)
       return this.generateValidatedCompletion(
-        createPrompt,
-        inputString,
-        concepts,
+        base,
         validator,
         maxAttempts,
         modelOverride,
@@ -247,10 +245,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       validator: Function | null = null,
       maxAttempts = 3,
     ) {
+      let base = createFilterPrompt(inputString, concepts)
       return this.generateValidatedCompletion(
-        createFilterPrompt,
-        inputString,
-        concepts,
+        base,
         validator,
         maxAttempts,
       ).then((response) => {
