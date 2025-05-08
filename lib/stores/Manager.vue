@@ -78,6 +78,8 @@ export default {
     },
   },
   setup(props) {
+    // UX setup
+
     // Credential state management (upleveled from CredentialManager)
     const showCredentialPrompt = ref(false)
     const bypassMode = ref(false)

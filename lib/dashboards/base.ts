@@ -190,6 +190,16 @@ export class DashboardModel implements Dashboard {
     }
   }
 
+  updateItemType(itemId: string, type: 'chart' | 'markdown' | 'table'): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        type,
+      }
+      this.updatedAt = new Date()
+    }
+  }
+
   updateItemFilters(itemID: string) {
     const gridItem = this.gridItems[itemID]
     if (gridItem) {

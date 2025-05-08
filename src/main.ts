@@ -17,6 +17,7 @@ import { configureTrilogy } from 'trilogy-studio-core/monaco'
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css'
 import 'prismjs'
 import 'prismjs/components/prism-sql'
+import './prism.css'
 
 self.MonacoEnvironment = {
   getWorker: function (_, label) {

@@ -43,10 +43,16 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL
   : 'https://trilogy-service.fly.dev'
 
 let userSettingsStore = useUserSettingsStore()
+userSettingsStore.loadSettings()
+
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-userSettingsStore.updateSetting('trilogyResolver', apiUrl)
-userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
-userSettingsStore.toggleTheme()
+if (!userSettingsStore.settings.theme) {
+  userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
+}
+if (!userSettingsStore.settings.trilogyResolver) {
+  userSettingsStore.updateSetting('trilogyResolver', apiUrl)
+}
+
 userSettingsStore.toggleTheme()
 
 let resolver = new TrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])

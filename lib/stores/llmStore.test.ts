@@ -147,4 +147,22 @@ Here's some JSON:
 `
     expect(extractLastTripleQuotedText(input)).toBe(expected)
   })
+
+  it('should handle straight double quotes', () => {
+    const input = `getting value from  Reasoning:{{To get the ratio of returned items to quantity sold, we need to divide the count of returned items by the sum of the quantity. The quantity field represents the quantity of a part within an order. We can use a filtered count for the returned items, dividing by the sum of the quantity to get the ratio. We should filter out null quantity values for a safe division. }}
+"""
+where quantity is not null
+select
+    part.name,
+    count(id ? return_flag = 'R') / sum(quantity) as return_ratio
+order by return_ratio desc;
+"""`
+    expect(extractLastTripleQuotedText(input)).toBe(`
+where quantity is not null
+select
+    part.name,
+    count(id ? return_flag = 'R') / sum(quantity) as return_ratio
+order by return_ratio desc;
+`)
+  })
 })

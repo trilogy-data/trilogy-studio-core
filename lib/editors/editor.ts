@@ -1,5 +1,6 @@
 import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
+import type { ChatInteraction } from '../llm'
 import { type CompletionItem } from '../stores/resolver'
 // enum of tags
 export enum EditorTag {
@@ -28,6 +29,7 @@ export interface EditorInterface {
   changed: boolean
   deleted: boolean
   chartConfig?: ChartConfig
+  chatInteraction?: ChatInteraction | null
   // monaco: editor.IStandaloneCodeEditor | null;
 }
 
@@ -52,6 +54,7 @@ export default class Editor implements EditorInterface {
   deleted: boolean
   chartConfig?: ChartConfig
   completionSymbols: CompletionItem[]
+  chatInteraction?: ChatInteraction | null
   // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
@@ -136,6 +139,11 @@ export default class Editor implements EditorInterface {
   setChartConfig(chartConfig: ChartConfig) {
     this.chartConfig = chartConfig
     this.changed = true
+  }
+
+  // chat interactions don't need to persist through saves
+  setChatInteraction(chatInteraction: ChatInteraction | null) {
+    this.chatInteraction = chatInteraction
   }
 
   toJSON(preserveResults: boolean = false): object {

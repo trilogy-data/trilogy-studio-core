@@ -1,6 +1,6 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, type Part } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 export class GoogleProvider extends LLMProvider {
   private genAIClient: GoogleGenAI | null = null
@@ -72,10 +72,11 @@ export class GoogleProvider extends LLMProvider {
       throw new Error('Google GenAI client is not initialized')
     }
 
+    console.log('history', history)
     try {
       if (history && history.length > 0) {
         // Create a chat with history
-        const chat = this.genAIClient.chats.create({
+        const args = {
           // if the model has models/ prefixed, split it
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           history: this.convertToGeminiHistory(history),
@@ -83,7 +84,8 @@ export class GoogleProvider extends LLMProvider {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
           },
-        })
+        }
+        const chat = this.genAIClient.chats.create(args)
 
         // Send the message
         const result = await chat.sendMessage({ message: options.prompt })
@@ -101,6 +103,7 @@ export class GoogleProvider extends LLMProvider {
           },
         }
       } else {
+        console.log('using simple completion without history')
         // Simple completion without history
         const result = await this.genAIClient.models.generateContent({
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
@@ -133,18 +136,13 @@ export class GoogleProvider extends LLMProvider {
     }
   }
 
-  /**
-   * Converts standard LLM messages to Gemini-specific format for chat history
-   * @param messages - Array of standard LLM messages
-   * @returns Gemini-formatted message array for chat history
-   */
-  private convertToGeminiHistory(messages: LLMMessage[]): Array<{ role: string; content: string }> {
+  private convertToGeminiHistory(messages: LLMMessage[]): Array<{ role: string; parts: Part[] }> {
     return messages.map((message) => {
-      // Map standard roles to Gemini roles (assistant or user)
-      const role = message.role === 'assistant' ? 'assistant' : 'user'
+      // Map standard roles to Gemini roles (model or user)
+      const role = message.role === 'assistant' ? 'model' : 'user'
       return {
+        parts: [{ text: message.content }],
         role,
-        content: message.content,
       }
     })
   }

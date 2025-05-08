@@ -6,6 +6,12 @@ import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
+import type { ModelConceptInput } from '../llm'
+
+interface ContentPlaceholder {
+  type: 'markdown' | 'chart' | 'table'
+  content: string
+}
 
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
@@ -120,7 +126,8 @@ export const useDashboardStore = defineStore('dashboards', {
 
     toggleEditMode(dashboardId: string) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].state = this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
+        this.dashboards[dashboardId].state =
+          this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
       }
     },
 
@@ -134,7 +141,7 @@ export const useDashboardStore = defineStore('dashboards', {
       h: number | null = null,
       content: string | null = null,
       name: string | null = null,
-    ) {
+    ): string {
       if (this.dashboards[dashboardId]) {
         return this.dashboards[dashboardId].addItem(type, x, y, w, h, content, name)
       } else {
@@ -148,6 +155,14 @@ export const useDashboardStore = defineStore('dashboards', {
         this.dashboards[dashboardId].updateItemContent(itemId, content)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemType(dashboardId: string, itemId: string, type: 'markdown' | 'chart' | 'table') {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemType(itemId, type)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId} not found`)
       }
     },
 
@@ -284,7 +299,10 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    async populateAIConcepts(dashboardId: string, queryExecutionService: QueryExecutionService) {
+    async populateAIConcepts(
+      dashboardId: string,
+      queryExecutionService: QueryExecutionService,
+    ): Promise<ModelConceptInput[]> {
       let completions = await this.populateCompletion(dashboardId, queryExecutionService)
       console.log('got completions', completions)
       if (!completions) {
@@ -294,6 +312,7 @@ export const useDashboardStore = defineStore('dashboards', {
         name: item.label,
         type: item.datatype,
         description: item.description,
+        calculation: item.calculation,
       }))
     },
 
@@ -363,20 +382,20 @@ export const useDashboardStore = defineStore('dashboards', {
         await results.resultPromise
         return true
       }
+      // first loop, add everything as markdown
+      // TODO: fix typehints here
+      let itemMap = new Map<string, ContentPlaceholder>()
       for (const item of promptLayout.layout) {
         let itemData = promptLayout.gridItems[item.id]
         let content = itemData.content
-        console.log('populating item', itemData)
         let itemType = itemData.type.toLowerCase() as CellType
         // @ts-ignore
         if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemType)) {
-          let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator)
-          content = llmcontent || 'No query could be generated'
+          content = `Placeholder, prompt: ${content}`
         }
-
-        await this.addItemToDashboard(
+        let itemId = this.addItemToDashboard(
           dashboardId,
-          itemType,
+          'markdown',
           item.x,
           item.y,
           item.w,
@@ -384,6 +403,22 @@ export const useDashboardStore = defineStore('dashboards', {
           content,
           itemData.name,
         )
+        itemMap.set(itemId, { type: itemType, content: content })
+      }
+      // second loop, add actual items
+      // TODO: fix this loop
+      for (const item of itemMap) {
+        let key = item[0]
+        let data = item[1]
+        let content = data.content
+        // @ts-ignore
+        if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(data.type)) {
+          let llmcontent = await llmStore.generateQueryCompletion(data.content, concepts, validator)
+          content = llmcontent.content || 'No query could be generated'
+        }
+
+        await this.updateItemContent(dashboardId, key, content)
+        await this.updateItemType(dashboardId, key, data.type)
       }
       // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
 

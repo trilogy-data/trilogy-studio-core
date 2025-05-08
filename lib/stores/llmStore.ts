@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { LLMProvider } from '../llm'
-import type { LLMRequestOptions, LLMMessage, ModelConceptInput } from '../llm'
+import type { LLMRequestOptions, LLMMessage, ModelConceptInput, LLMResponse } from '../llm'
 import {
   AnthropicProvider,
   OpenAIProvider,
@@ -13,6 +13,8 @@ import {
 
 interface ValidatedResponse {
   success: boolean
+  prompt: string
+  message: string
   content: string | null
   attempts: number
   error?: string | null
@@ -22,6 +24,8 @@ export const extractLastTripleQuotedText = (input: string): string => {
   // Strip common language identifiers after triple backticks
   // Add a capturing group to handle language identifiers with optional whitespace after them
   const strippedInput = input.replace(/```(trilogy|sql|json)(\s|\n)/g, '```')
+
+  console.log('Stripped input:', strippedInput)
 
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // try with all 3 kinds of quotes (''', ```, """)
@@ -34,6 +38,7 @@ export const extractLastTripleQuotedText = (input: string): string => {
       return recursiveResult || content // Return the recursive result if it exists, otherwise return the content
     }
   }
+  console.log('returning original input:', input)
   return input // Return the original input if no triple quotes were found
 }
 
@@ -126,27 +131,29 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
     // Common method for generating and validating LLM responses
     async generateValidatedCompletion(
-      promptCreator: Function,
-      inputString: string,
-      concepts: ModelConceptInput[],
+      base: string,
       validator: Function | null = null,
       maxAttempts = 3,
       modelOverride: string | null = null,
+      messageHistory: LLMMessage[] | null = null,
     ): Promise<ValidatedResponse> {
       let connection: string = modelOverride || this.activeConnection || ''
       if (connection === '') {
         throw new Error('No active LLM connection')
       }
 
-      let base = promptCreator(inputString, concepts)
       let attempts = 0
       let passed = false
       let extract = '' as string | null
 
       // Initial completion generation
-      let raw = await this.generateCompletion(connection, {
-        prompt: base,
-      })
+      let raw = await this.generateCompletion(
+        connection,
+        {
+          prompt: base,
+        },
+        messageHistory,
+      )
 
       // Extract the response
       extract = extractLastTripleQuotedText(raw.text)
@@ -175,7 +182,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
             // Add feedback to the prompt for next attempt
             let message = (e as Error).message
-            base += `\n\n[IMPORTANT] This is your ${attempts} attempt. Your last response was """${extract}""", which failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new asnwer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
+            base += `\n\n[IMPORTANT] This is your ${attempts} attempt. Your last response was """${extract}""", which failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
 
             // Generate new completion with updated prompt
             raw = await this.generateCompletion(connection, {
@@ -192,6 +199,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       console.log('Final LLM response:', extract)
       return {
         success: passed,
+        prompt: base,
+        message: raw.text,
         content: extract,
         attempts: attempts,
         error: passed ? null : 'Validation failed after maximum attempts',
@@ -206,13 +215,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     ) {
       console.log('Generating dashboard completion')
       console.log('inputString:', inputString)
-      return this.generateValidatedCompletion(
-        createDashboardPrompt,
-        inputString,
-        concepts,
-        validator,
-        maxAttempts,
-      ).then((response) => {
+      let base = createDashboardPrompt(inputString, concepts)
+      return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content
       })
     },
@@ -223,17 +227,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       validator: Function | null = null,
       maxAttempts = 3,
       modelOverride: string | null = null,
-    ) {
-      return this.generateValidatedCompletion(
-        createPrompt,
-        inputString,
-        concepts,
-        validator,
-        maxAttempts,
-        modelOverride,
-      ).then((response) => {
-        return response.content
-      })
+    ): Promise<ValidatedResponse> {
+      let base = createPrompt(inputString, concepts)
+      return this.generateValidatedCompletion(base, validator, maxAttempts, modelOverride)
     },
 
     async generateFilterQuery(
@@ -242,13 +238,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       validator: Function | null = null,
       maxAttempts = 3,
     ) {
-      return this.generateValidatedCompletion(
-        createFilterPrompt,
-        inputString,
-        concepts,
-        validator,
-        maxAttempts,
-      ).then((response) => {
+      let base = createFilterPrompt(inputString, concepts)
+      return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content
       })
     },
@@ -256,12 +247,11 @@ const useLLMConnectionStore = defineStore('llmConnections', {
     async generateCompletion(
       name: string,
       options: LLMRequestOptions,
-      history: [LLMMessage] | null = null,
-    ) {
+      history: LLMMessage[] | null = null,
+    ): Promise<LLMResponse> {
       if (!this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
-
       return await this.connections[name].generateCompletion(options, history)
     },
   },

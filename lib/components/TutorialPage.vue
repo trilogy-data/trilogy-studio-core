@@ -9,7 +9,7 @@
 
         <code-block
           v-else-if="paragraph.type === 'code'"
-          language="sql"
+          language="trilogy"
           :content="paragraph.content"
         ></code-block>
         <connection-list
@@ -295,7 +295,7 @@ export default {
 }
 
 .editor {
-  height: 500px;
+  height: 700px;
   border: 1px solid var(--border-color);
 }
 
@@ -305,7 +305,7 @@ export default {
 }
 
 .editor-top {
-  height: 300px;
+  height: 500px;
 }
 
 .editor-bottom {
@@ -328,5 +328,15 @@ export default {
 .test-result.failed {
   background-color: #ffd580;
   color: hsl(210, 100%, 50%, 0.75);
+}
+
+@media screen and (max-width: 768px) {
+  .editor-top {
+    height: 700px;
+  }
+
+  .editor {
+    height: 900px;
+  }
 }
 </style>

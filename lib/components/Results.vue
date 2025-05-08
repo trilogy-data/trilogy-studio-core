@@ -29,7 +29,7 @@
       </button>
     </div>
     <div class="tab-content">
-      <div v-if="activeTab === 'visualize'" class="sql-view">
+      <div v-if="displayTab === 'visualize'" class="sql-view">
         <vega-lite-chart
           :data="results.data"
           :columns="results.headers"
@@ -38,7 +38,7 @@
           :onChartConfigChange="onChartChange"
         />
       </div>
-      <div v-else-if="activeTab === 'sql'" class="sql-view">
+      <div v-else-if="displayTab === 'sql'" class="sql-view">
         <code-block :language="'sql'" :content="generatedSql || ''" />
         <!-- <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre> -->
       </div>
@@ -120,6 +120,17 @@ export default {
     },
     onChartChange(config: any) {
       this.$emit('config-change', config)
+    },
+  },
+  computed: {
+    eligibleTabs() {
+      if (this.type === 'sql') {
+        return ['results']
+      }
+      return ['results', 'visualize', 'sql']
+    },
+    displayTab() {
+      return this.eligibleTabs.filter((tab) => this.activeTab === tab)[0]
     },
   },
   setup() {

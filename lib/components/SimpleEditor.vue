@@ -537,6 +537,7 @@ export default defineComponent({
           name: item.label,
           type: item.datatype,
           description: item.description,
+          calculation: item.calculation,
         }))
 
         // Create validator function

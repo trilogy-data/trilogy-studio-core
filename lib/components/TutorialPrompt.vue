@@ -29,7 +29,11 @@
       <div class="prompt-description" v-html="currentPrompt.description"></div>
 
       <div class="prompt-example" v-if="currentPrompt.example">
-        <code-block language="sql" :content="currentPrompt.example"></code-block>
+        <code-block
+          language="sql"
+          :content="currentPrompt.example"
+          :copy="setEditorContent"
+        ></code-block>
       </div>
     </div>
 
@@ -39,6 +43,7 @@
           :context="context"
           :editorId="editorId"
           @save-editors="saveEditorsCall"
+          ref="editorRef"
           @query-finished="validateResults"
         />
       </div>
@@ -67,7 +72,10 @@ import Editor from './Editor.vue'
 import ResultsView from './ResultsView.vue'
 import CodeBlock from './CodeBlock.vue'
 import type { TutorialPrompt } from '../data/tutorial/docTypes'
-// Define the TutorialPrompt interface
+
+interface EditorComponent {
+  setContent(content: string): void
+}
 
 export default {
   name: 'TutorialPromptComponent',
@@ -94,6 +102,7 @@ export default {
   setup(props: { prompts: TutorialPrompt[]; context: string; editorId: string }) {
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveEditors = inject<() => void>('saveEditors')
+    const editorRef = ref<EditorComponent | null>(null)
 
     if (!editorStore || !saveEditors) {
       throw new Error('Editor store or saveEditors function not provided')
@@ -152,6 +161,14 @@ export default {
       validateResults()
     }
 
+    function setEditorContent(content: string): void {
+      console.log('Setting editor content pre:', content)
+      if (editorRef.value) {
+        console.log('Setting editor content:', content)
+        editorRef.value.setContent(content)
+      }
+    }
+
     return {
       editorStore,
       currentIndex,
@@ -162,6 +179,8 @@ export default {
       prevPrompt,
       validateResults,
       saveEditorsCall,
+      setEditorContent,
+      editorRef,
     }
   },
 }
@@ -172,7 +191,6 @@ export default {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
   margin-bottom: 20px;
   background-color: var(--bg-color);
   height: 800px;
@@ -192,7 +210,6 @@ export default {
   display: flex;
   align-items: center;
   padding: 6px 12px;
-  border-radius: 4px;
   min-width: 100px;
   justify-content: center;
 }
@@ -213,7 +230,7 @@ export default {
 
 .prompt-content {
   padding: 15px;
-  overflow-y: auto;
+  overflow-y: scroll;
   max-height: 200px;
   border-bottom: 1px solid var(--border-light);
 }
@@ -233,7 +250,6 @@ export default {
 .validation-status {
   font-weight: bold;
   padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .validation-status.valid {
@@ -253,9 +269,8 @@ export default {
 
 .prompt-example {
   background-color: var(--result-window-bg);
-  padding: 10px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+  padding: 5px;
+  margin-bottom: 5px;
 }
 
 .example-label {
@@ -268,12 +283,12 @@ export default {
   display: flex;
   flex-direction: column;
   flex: 1;
-  height: 600px;
+  height: 800px;
   overflow: hidden;
 }
 
 .editor-section {
-  height: 400px;
+  height: 600px;
   overflow: hidden;
 }
 
@@ -308,7 +323,8 @@ export default {
 @media screen and (max-width: 768px) {
   .tutorial-prompt-container {
     height: auto;
-    max-height: 80vh;
+    height: 1200px;
+    max-height: 100vh;
   }
 
   .prompt-navigation {
@@ -321,11 +337,15 @@ export default {
   }
 
   .editor-section {
-    height: 250px;
+    height: 700px;
   }
 
   .results-section {
-    height: 180px;
+    height: 300px;
+  }
+
+  .editor-container {
+    height: 1000px;
   }
 }
 </style>

@@ -49,7 +49,8 @@
         </div>
         <div class="symbol-details">
           <div class="symbol-label">{{ symbol.label }}</div>
-          <div class="symbol-description">{{ symbol.description }}</div>
+          <div v-if="symbol.description" class="symbol-description">{{ symbol.description }}</div>
+          <div v-if="symbol.calculation" class="symbol-description">{{ symbol.calculation }}</div>
         </div>
       </div>
       <div v-if="filteredSymbols.length === 0" class="no-symbols">No matching symbols found</div>
