@@ -332,13 +332,11 @@ export default {
 
 @media screen and (max-width: 768px) {
   .editor-top {
-  height: 700px;
-}
+    height: 700px;
+  }
 
-.editor {
-  height: 900px;
-
-}
-
+  .editor {
+    height: 900px;
+  }
 }
 </style>

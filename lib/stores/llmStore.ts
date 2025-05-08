@@ -142,16 +142,18 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         throw new Error('No active LLM connection')
       }
 
-
       let attempts = 0
       let passed = false
       let extract = '' as string | null
 
       // Initial completion generation
-      let raw = await this.generateCompletion(connection, {
-        prompt: base,
-      },
-        messageHistory)
+      let raw = await this.generateCompletion(
+        connection,
+        {
+          prompt: base,
+        },
+        messageHistory,
+      )
 
       // Extract the response
       extract = extractLastTripleQuotedText(raw.text)
@@ -214,11 +216,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       console.log('Generating dashboard completion')
       console.log('inputString:', inputString)
       let base = createDashboardPrompt(inputString, concepts)
-      return this.generateValidatedCompletion(
-        base,
-        validator,
-        maxAttempts,
-      ).then((response) => {
+      return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content
       })
     },
@@ -231,12 +229,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       modelOverride: string | null = null,
     ): Promise<ValidatedResponse> {
       let base = createPrompt(inputString, concepts)
-      return this.generateValidatedCompletion(
-        base,
-        validator,
-        maxAttempts,
-        modelOverride,
-      )
+      return this.generateValidatedCompletion(base, validator, maxAttempts, modelOverride)
     },
 
     async generateFilterQuery(
@@ -246,11 +239,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       maxAttempts = 3,
     ) {
       let base = createFilterPrompt(inputString, concepts)
-      return this.generateValidatedCompletion(
-        base,
-        validator,
-        maxAttempts,
-      ).then((response) => {
+      return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content
       })
     },

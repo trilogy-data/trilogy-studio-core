@@ -88,7 +88,7 @@ interface CodeEditorRef {
   getEditorText: (text: string) => string
   getEditorRange: () => any
   setValue: (text: string) => void
-  setSelection: (range: Range) => void  
+  setSelection: (range: Range) => void
   executeEdits: (source: string, edits: any[]) => void
   setModelMarkers: (model: any, owner: string, markers: any[]) => void
 }
@@ -193,16 +193,16 @@ export default defineComponent({
     },
   },
   methods: {
-    setContent(newContent:string) {
-    // Update the editor store
-    this.editorStore.setEditorContents(this.editorId, newContent)
-    
-    // Also update the Monaco editor directly if needed
-    const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-    if (codeEditorRef) {
-      codeEditorRef.setValue(newContent)
-    }
-  },
+    setContent(newContent: string) {
+      // Update the editor store
+      this.editorStore.setEditorContents(this.editorId, newContent)
+
+      // Also update the Monaco editor directly if needed
+      const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
+      if (codeEditorRef) {
+        codeEditorRef.setValue(newContent)
+      }
+    },
     updateEditorName(newName: string): void {
       this.editorStore.updateEditorName(this.editorId, newName)
       let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
@@ -580,7 +580,7 @@ export default defineComponent({
                       forceMoveMarkers: true,
                     }
                     codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
-      
+
                     // cache for next time
                     replacementLen = (responseText || '').split('\n').length
                     range = new Range(

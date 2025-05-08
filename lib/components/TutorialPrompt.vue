@@ -6,8 +6,11 @@
         <span class="nav-icon">←</span> Previous
       </button>
       <div class="progress-indicator">{{ currentIndex + 1 }} / {{ prompts.length }}</div>
-      <button @click="nextPrompt" :disabled="currentIndex === prompts.length - 1 || !isCurrentPromptValid"
-        class="nav-button">
+      <button
+        @click="nextPrompt"
+        :disabled="currentIndex === prompts.length - 1 || !isCurrentPromptValid"
+        class="nav-button"
+      >
         Next <span class="nav-icon">→</span>
       </button>
     </div>
@@ -15,7 +18,10 @@
     <div class="prompt-content">
       <div class="prompt-header">
         <h3>{{ currentPrompt.title }}</h3>
-        <div v-if="hasUserAttempted" :class="['validation-status', isCurrentPromptValid ? 'valid' : 'invalid']">
+        <div
+          v-if="hasUserAttempted"
+          :class="['validation-status', isCurrentPromptValid ? 'valid' : 'invalid']"
+        >
           {{ isCurrentPromptValid ? '✓ Correct!' : '✗ Try again' }}
         </div>
       </div>
@@ -23,14 +29,23 @@
       <div class="prompt-description" v-html="currentPrompt.description"></div>
 
       <div class="prompt-example" v-if="currentPrompt.example">
-        <code-block language="sql" :content="currentPrompt.example" :copy="setEditorContent"></code-block>
+        <code-block
+          language="sql"
+          :content="currentPrompt.example"
+          :copy="setEditorContent"
+        ></code-block>
       </div>
     </div>
 
     <div class="editor-container">
       <div class="editor-section">
-        <editor :context="context" :editorId="editorId" @save-editors="saveEditorsCall" ref="editorRef"
-          @query-finished="validateResults" />
+        <editor
+          :context="context"
+          :editorId="editorId"
+          @save-editors="saveEditorsCall"
+          ref="editorRef"
+          @query-finished="validateResults"
+        />
       </div>
       <div class="results-section">
         <results-view :editorData="editorStore.editors[editorId]" :containerHeight="200" />
@@ -58,9 +73,8 @@ import ResultsView from './ResultsView.vue'
 import CodeBlock from './CodeBlock.vue'
 import type { TutorialPrompt } from '../data/tutorial/docTypes'
 
-
 interface EditorComponent {
-  setContent(content: string): void;
+  setContent(content: string): void
 }
 
 export default {
@@ -88,7 +102,7 @@ export default {
   setup(props: { prompts: TutorialPrompt[]; context: string; editorId: string }) {
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveEditors = inject<() => void>('saveEditors')
-    const editorRef = ref<EditorComponent | null>(null);
+    const editorRef = ref<EditorComponent | null>(null)
 
     if (!editorStore || !saveEditors) {
       throw new Error('Editor store or saveEditors function not provided')
@@ -333,8 +347,5 @@ export default {
   .editor-container {
     height: 1000px;
   }
-
-
-
 }
 </style>

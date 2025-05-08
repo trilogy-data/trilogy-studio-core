@@ -317,7 +317,7 @@ export default defineComponent({
 .accept-button {
   padding: 8px 16px;
   background-color: transparent;
-  
+
   border: none;
   border: 1px solid #4caf50;
   cursor: pointer;
@@ -331,7 +331,7 @@ export default defineComponent({
 
 .discard-button {
   padding: 8px 16px;
-  
+
   background-color: transparent;
   border: 1px solid var(--delete-color);
 
