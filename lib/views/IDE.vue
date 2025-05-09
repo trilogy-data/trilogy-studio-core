@@ -28,19 +28,20 @@
               context="main-trilogy"
               :editorId="activeEditor"
               @save-editors="saveEditorsCall"
+              ref="editorRef"
             />
             <editor
               v-else
               context="main-sql"
               :editorId="activeEditor"
               @save-editors="saveEditorsCall"
+              ref="editorRef"
             />
           </template>
           <template #results="{ containerHeight }" v-if="activeEditorData">
             <ResultsView
               :editorData="activeEditorData"
               :containerHeight="containerHeight"
-            
               @llm-query-accepted="runQuery"
             ></ResultsView>
           </template>
@@ -177,7 +178,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject } from 'vue'
+import { inject, ref } from 'vue'
 import useScreenNavigation from './useScreenNavigation'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -217,6 +218,8 @@ export default {
     ResultsView,
   },
   setup() {
+    // Create a ref for the editor component
+    const editorRef = ref<typeof Editor | null>(null)
     type ResolverType = typeof TrilogyResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -275,6 +278,7 @@ export default {
       setActiveEditor,
       activeDashboard,
       setActiveDashboard,
+      editorRef,
     }
   },
   methods: {
@@ -296,6 +300,12 @@ export default {
     },
     saveEditorsCall() {
       this.saveEditors()
+    },
+    runQuery() {
+      console.log('Running query')
+      if (this.editorRef) {
+        this.editorRef.runQuery()
+      }
     },
     async startDemo() {
       await setupDemo(

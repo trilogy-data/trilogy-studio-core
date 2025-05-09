@@ -138,6 +138,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       messageHistory: LLMMessage[] | null = null,
     ): Promise<ValidatedResponse> {
       let connection: string = modelOverride || this.activeConnection || ''
+      let history = messageHistory || []
       if (connection === '') {
         throw new Error('No active LLM connection')
       }
@@ -182,12 +183,17 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
             // Add feedback to the prompt for next attempt
             let message = (e as Error).message
-            base += `\n\n[IMPORTANT] This is your ${attempts} attempt. Your last response was """${extract}""", which failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
-
+            let errorResponse = `\nYou response  """${extract}""" failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
+            history.push({
+              role: 'user',
+              content: errorResponse,
+            })
             // Generate new completion with updated prompt
             raw = await this.generateCompletion(connection, {
               prompt: base,
-            })
+
+            },
+              history)
 
             // Extract the new response
             extract = extractLastTripleQuotedText(raw.text)

@@ -27,6 +27,7 @@
         @keydown="handleKeyDown"
         placeholder="Refine your query... (Enter to send, Ctrl+Shift+Enter to accept)"
         :disabled="isLoading"
+        ref="inputTextarea"
       ></textarea>
       <button @click="sendMessage" :disabled="isLoading || !userInput.trim()">Send</button>
     </div>
@@ -68,26 +69,27 @@ export default defineComponent({
       type: Function,
       default: () => {},
     },
+    autoActivate: {
+      type: Boolean,
+      default: true,
+    },
   },
 
-  setup(props) {
+  setup(props, { emit }) {
     // Chat state
     const messages = ref<LLMMessage[]>(props.messages)
     const userInput = ref('')
     const isLoading = ref(false)
     const messagesContainer = ref<HTMLElement | null>(null)
+    const inputTextarea = ref<HTMLTextAreaElement | null>(null)
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
 
     if (!llmStore) {
       throw new Error('LLMConnectionStore not found')
     }
+
     // Scroll to bottom when messages are updated
     watch(messages, () => {
-      scrollToBottom()
-    })
-
-    // Ensure the initial message is visible
-    onMounted(() => {
       scrollToBottom()
     })
 
@@ -100,12 +102,41 @@ export default defineComponent({
       })
     }
 
+    // Activate the chat by focusing on the input and initializing if needed
+    const activateChat = () => {
+      nextTick(() => {
+        // Focus on the input textarea
+        if (inputTextarea.value) {
+          inputTextarea.value.focus()
+        }
+
+        // Scroll to bottom to show the latest messages
+        scrollToBottom()
+
+        // If no messages yet and autoActivate is true, you could send an initial greeting
+        if (props.autoActivate && messages.value.length === 0) {
+          // Optional: Add an initial assistant message
+          messages.value.push({
+            role: 'assistant',
+            content: 'How would you like to refine this response?',
+          })
+        }
+      })
+    }
+
+    // Ensure the initial message is visible and activate the chat
+    onMounted(() => {
+      scrollToBottom()
+      activateChat()
+    })
+
     // Handle key press events
     const handleKeyDown = (event: KeyboardEvent) => {
       // Enter without modifiers - send message
       if (event.key === 'Enter' && !event.ctrlKey && !event.shiftKey && !event.altKey) {
         event.preventDefault()
         sendMessage()
+        activateChat()
       }
       // Ctrl+Shift+Enter - accept result
       else if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
@@ -149,6 +180,7 @@ export default defineComponent({
       } finally {
         scrollToBottom()
         isLoading.value = false
+        activateChat()
       }
     }
 
@@ -162,6 +194,7 @@ export default defineComponent({
       // Validate before accepting
       const value = await props.extractionFn(latestResponse)
       await props.mutationFn(value)
+      emit('accepted')
       await props.closeFn()
     }
 
@@ -175,10 +208,12 @@ export default defineComponent({
       userInput,
       isLoading,
       messagesContainer,
+      inputTextarea,
       handleKeyDown,
       sendMessage,
       acceptResult,
       handleClose,
+      activateChat,
     }
   },
 })

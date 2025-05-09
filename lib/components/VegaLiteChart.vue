@@ -301,6 +301,10 @@ export default defineComponent({
         const configDefaults = determineDefaultConfig(props.data, props.columns)
         internalConfig.value = { ...internalConfig.value, ...configDefaults }
       }
+      if (props.onChartConfigChange) {
+        console.log('Chart config changed:', { ...internalConfig.value })
+        props.onChartConfigChange({ ...internalConfig.value })
+      }
     }
 
     const filteredColumnsInternal = (
@@ -507,6 +511,7 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
+        console.log('Chart config changed:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }

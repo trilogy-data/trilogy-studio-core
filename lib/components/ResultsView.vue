@@ -1,14 +1,13 @@
 <template>
   <div class="results-view">
     <LLMChatRefinement
-
       :messages="editorData.chatInteraction.messages"
       :validateFn="editorData.chatInteraction.validationFn"
       :extractionFn="editorData.chatInteraction.extractionFn"
       :mutationFn="editorData.chatInteraction.mutationFn"
       :closeFn="() => editorData.setChatInteraction(null)"
-      v-if="editorData.chatInteraction"
       @accepted="llmQueryAccepted"
+      v-if="editorData.chatInteraction"
     />
     <loading-view
       v-else-if="editorData.loading"
@@ -43,7 +42,6 @@ import { inject, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import type { EditorModel } from '../main.ts'
 
-
 export default {
   name: 'ResultsView',
   components: {
@@ -77,7 +75,8 @@ export default {
   },
   methods: {
     llmQueryAccepted() {
-      this.$emit('llmQueryAccepted')
+      console.log('emitting llmQueryAccepted')
+      this.$emit('llm-query-accepted')
     },
   },
 }

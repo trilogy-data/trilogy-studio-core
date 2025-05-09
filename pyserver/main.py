@@ -42,8 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
 from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
-from trilogy import CONFIG
-from trilogy import __version__
+from trilogy import CONFIG, __version__
 
 
 # Define the path to the .env file

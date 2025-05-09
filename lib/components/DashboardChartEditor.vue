@@ -52,21 +52,22 @@ function cancel(): void {
 function handleClickOutside(event: MouseEvent): void {
   const popupElement = document.querySelector('.content-editor')
   if (!popupElement || !props.showing || !canCloseOnClickOutside.value) return
-  
+
   // Don't close if we're currently resizing
   if (isResizing.value) return
-  
+
   // Check if the click was outside the popup
   if (!popupElement.contains(event.target as Node)) {
     // Calculate distance from popup edges
     const rect = popupElement.getBoundingClientRect()
     const bufferZone = 100 // pixels buffer around the popup
-    
+
     const isCloseToLeft = event.clientX >= rect.left - bufferZone && event.clientX <= rect.left
     const isCloseToRight = event.clientX >= rect.right && event.clientX <= rect.right + bufferZone
     const isCloseToTop = event.clientY >= rect.top - bufferZone && event.clientY <= rect.top
-    const isCloseToBottom = event.clientY >= rect.bottom && event.clientY <= rect.bottom + bufferZone
-    
+    const isCloseToBottom =
+      event.clientY >= rect.bottom && event.clientY <= rect.bottom + bufferZone
+
     // Only close if the click is outside the buffer zone
     if (!(isCloseToLeft || isCloseToRight || isCloseToTop || isCloseToBottom)) {
       emit('cancel')
@@ -77,21 +78,21 @@ function handleClickOutside(event: MouseEvent): void {
 // Start resizing
 function startResize(e: MouseEvent, direction: string): void {
   if (!editorElement.value) return
-  
+
   isResizing.value = true
   resizeDirection.value = direction
   startX.value = e.clientX
   startY.value = e.clientY
   startWidth.value = editorElement.value.offsetWidth
   startHeight.value = editorElement.value.offsetHeight
-  
+
   const rect = editorElement.value.getBoundingClientRect()
   startTop.value = rect.top
   startLeft.value = rect.left
-  
+
   // Prevent click outside from triggering while resizing
   canCloseOnClickOutside.value = false
-  
+
   // Prevent text selection while resizing
   e.preventDefault()
 }
@@ -99,21 +100,21 @@ function startResize(e: MouseEvent, direction: string): void {
 // Handle resizing
 function handleResize(e: MouseEvent): void {
   if (!isResizing.value) return
-  
+
   const direction = resizeDirection.value
-  
+
   // Calculate new dimensions based on the drag direction
   if (direction.includes('e')) {
     // Right edge - adjust width
     const newWidth = startWidth.value + (e.clientX - startX.value)
     editorWidth.value = Math.max(400, newWidth)
   }
-  
+
   if (direction.includes('w')) {
     // Left edge - adjust width and position
     const deltaX = e.clientX - startX.value
     const newWidth = startWidth.value - deltaX
-    
+
     if (newWidth >= 400) {
       editorWidth.value = newWidth
       const overlay = document.querySelector('.editor-overlay') as HTMLElement
@@ -124,18 +125,18 @@ function handleResize(e: MouseEvent): void {
       }
     }
   }
-  
+
   if (direction.includes('s')) {
     // Bottom edge - adjust height
     const newHeight = startHeight.value + (e.clientY - startY.value)
     editorHeight.value = Math.max(200, newHeight)
   }
-  
+
   if (direction.includes('n')) {
     // Top edge - adjust height and position
     const deltaY = e.clientY - startY.value
     const newHeight = startHeight.value - deltaY
-    
+
     if (newHeight >= 200) {
       editorHeight.value = newHeight
     }
@@ -156,10 +157,10 @@ onMounted(() => {
     document.addEventListener('mouseup', (e) => {
       if (isResizing.value) {
         stopResize()
-        
+
         // Prevent this mouse up from triggering handleClickOutside immediately
         e.stopPropagation()
-        
+
         // Reset the click outside protection timer
         setTimeout(() => {
           canCloseOnClickOutside.value = true
@@ -178,15 +179,15 @@ onUnmounted(() => {
 
 <template>
   <div class="editor-overlay">
-    <div 
+    <div
       class="content-editor"
       ref="editorElement"
-      :style="{ 
-        width: `${editorWidth}px`, 
+      :style="{
+        width: `${editorWidth}px`,
         height: `${editorHeight}px`,
         top: `${editorTop}%`,
         left: `${editorLeft}%`,
-        transform: `translate(-50%, -50%)`
+        transform: `translate(-50%, -50%)`,
       }"
     >
       <div class="editor-body">
@@ -204,7 +205,7 @@ onUnmounted(() => {
         </button>
         <button @click="cancel" class="cancel-button">Cancel</button>
       </div>
-      
+
       <!-- Resize handles -->
       <div class="resize-handle resize-handle-n" @mousedown="(e) => startResize(e, 'n')"></div>
       <div class="resize-handle resize-handle-e" @mousedown="(e) => startResize(e, 'e')"></div>
