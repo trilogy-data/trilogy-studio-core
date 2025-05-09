@@ -7,7 +7,7 @@ export const trilogyRules = [
   'Trilogy uses the where clause to filter before a query, and the having clause to filter the output of a query. Notably, an aggregate that is output in the query can only be filtered in the having; other aggregates can be filtered in the where',
   'Some datatypes will have traits - traits are hints on semantic meaning and the value of a field, such as "this decimal is a percent" or "this string is a zipcode"',
   'Trilogy uses # for comments. For multiline comments, comment each line. A comment must have a newline after it. DO NOT use -- or /* */ for comments.',
-  'You may limit results by using the LIMIT clause at the end of the query. For example, "select order.year, sum(order.revenue) as total_revenue limit 10".',
+  'For full query generation, you should limit results by using the LIMIT clause at the end of the query to something reasonable to consume by a human. For example, "select order.product, sum(order.revenue) as total_revenue order by total_revenue desc limit 25". Generally do not limit queries on dates or other items likely to be rendered in line charts, only tabular results.',
   'If you use a where clause, place it before the select.',
   'Trilogy fields will look like struct paths - order.product.id. Use the full path.',
   'Treat a field with a calculation as a macro that will expand to the calculation. For example, if you have a field tota_revenue with a calculation of sum(order.revenue), you can use total_revenue in the select, and it will be replaced with sum(order.revenue). Use these aliases wherever possible to shorten your queries.',

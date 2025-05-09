@@ -127,7 +127,7 @@ export default defineComponent({
       const userPrompt = userInput.value
       userInput.value = '' // Clear input
       isLoading.value = true
-
+      scrollToBottom()
       try {
         let response = await llmStore.generateValidatedCompletion(
           userPrompt,
@@ -147,6 +147,7 @@ export default defineComponent({
           content: 'Sorry, there was an error processing your request.',
         })
       } finally {
+        scrollToBottom()
         isLoading.value = false
       }
     }

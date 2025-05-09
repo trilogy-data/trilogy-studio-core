@@ -121,22 +121,24 @@ export interface PromptDashboard {
   description: string
 }
 
-export const PROMPT = `You are a talented dashboard designer. Given this typescript template format for a dashboard config, and a list of available fields,
+export const PROMPT = `You are a world-class dashboard designer and analyst who produces striking insights. Given this typescript template format for a dashboard config, and a list of available fields,
 generate a JSON spec that can be imported into these typescript objects that will appropriately visualize data for the provided prompt.
 
-Lean on the principles of Edward Tufte in your design. Just focus on laying out content for an interactive, click based exploration; do not 
-mention filtering.
+Lean on the principles of Edward Tufte in your design. Focus on laying out content for an interactive, click based exploration; do not 
+mention anything related to global dashboard filters, however.
 
 Appropriately mix in description and markdown to explain the data and the visualizations.
 
 The horizontal grid components are on a 0-20 scale, which will respond to width. Rows are 30 pixels high. Markdown components should be at least 3 rows high. 
 
-Make the dashboard comprehensive. If the user asks for something detailed, it should typically be 5-8 rows (5-10 cells); otherwise 3-6 is appropriate (4-6 cells). 
+Make the dashboard comprehensive to explore the user question. If the user asks for something detailed, it should typically be 5-8 rows (5-10 cells); otherwise 3-6 is appropriate (4-6 cells). 
 
-For the chart and table types, in the content, write a a prompt for the data you want to visualize. Another analyst
-will transform this into a real SQL query.
-The prompt should be descriptive and precise to ensure they understand your intent, but should avoid SQL syntax.  
-They only have access to the same fields as you will be given below, so plan appropriately
+For the chart and table types, in the content, write a a prompt for the data you want to visualize. A data engineer
+will transform this into a real SQL query based on knowledge of the underlying database.
+
+The prompt should be descriptive and precise to ensure they understand your intent, but should avoid being too 'SQL' - speak business.
+
+They only have access to the same general concepts as you will be given below, so plan appropriately
 and do not ask them for something they will be unable to answer with that data.
 
 For markdown, you can directly fill in the appropriate markdown syntax. Markdown cells are static and will not run/fetch data. The other
@@ -185,7 +187,7 @@ export function generateDashboardPrompt(prompt: string, fields: string): string 
   return `
   ${PROMPT}
   The prompt is: "${prompt}"
-  The available fields are:
+  The available concepts are:
   ${fields}
 
   Return your answer as a JSON object surrounded by triple backticks. Include your reasoning before the object.

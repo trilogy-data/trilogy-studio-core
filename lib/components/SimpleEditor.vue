@@ -2,9 +2,6 @@
   <div class="editor-container">
     <div class="menu-bar">
       <div class="menu-actions">
-        <button v-if="editor.type !== 'sql'" class="action-item" @click="() => validateQuery()">
-          Parse
-        </button>
         <button
           class="action-item"
           @click="generateLLMQuery"
@@ -12,6 +9,9 @@
           data-testid="editor-generate-button"
         >
           Generate
+        </button>
+        <button v-if="editor.type !== 'sql'" class="action-item" @click="() => validateQuery()">
+          Parse
         </button>
         <button
           @click="editor.loading ? cancelQuery() : runQuery()"
@@ -673,7 +673,7 @@ export default defineComponent({
 .monaco-editor {
   flex: 1;
   min-height: 250px;
-  height: 300px;
+  /* height: 300px; */
 }
 
 .monaco-width-no-panel {
@@ -733,7 +733,6 @@ export default defineComponent({
 }
 
 .sidebar-panel {
-  width: 240px;
   height: 100%;
   background-color: var(--sidebar-bg, #252525);
   border-left: 1px solid var(--border-color, #444);

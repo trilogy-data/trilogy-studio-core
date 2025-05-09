@@ -40,6 +40,8 @@
             <ResultsView
               :editorData="activeEditorData"
               :containerHeight="containerHeight"
+            
+              @llm-query-accepted="runQuery"
             ></ResultsView>
           </template>
         </vertical-split-layout>

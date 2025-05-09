@@ -288,12 +288,12 @@ export default {
 }
 
 .editor-section {
-  height: 600px;
+  height: 500px;
   overflow: hidden;
 }
 
 .results-section {
-  height: 200px;
+  height: 300px;
   overflow: auto;
   border-top: 1px solid var(--border-light);
 }
@@ -337,11 +337,11 @@ export default {
   }
 
   .editor-section {
-    height: 700px;
+    height: 600px;
   }
 
   .results-section {
-    height: 300px;
+    height: 400px;
   }
 
   .editor-container {
