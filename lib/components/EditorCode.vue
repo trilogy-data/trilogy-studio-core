@@ -117,8 +117,7 @@ export default defineComponent({
           endColumn: selection.endColumn,
         }
       } else {
-        // No selection, return a range at the cursor position
-        return {
+        return editorInstance.getModel()?.getFullModelRange() || {
           startLineNumber: 1,
           startColumn: 1,
           endLineNumber: 1,

@@ -16,6 +16,7 @@
         @run="runQuery"
         @cancel="cancelQuery"
         @toggle-tag="toggleTag"
+        @generate="generateLLMQuery"
       />
       <div class="editor-content">
         <!-- Replace the original editor with our CodeEditor component -->
@@ -493,6 +494,8 @@ export default defineComponent({
 
           const text = codeEditorRef.getEditorText(this.editorData.contents)
           let range: Range = codeEditorRef.getEditorRange()
+
+          
 
           await this.validateQuery(false)
 

@@ -169,4 +169,68 @@ test.describe('LLM Connection Tests', () => {
       timeout: 5000,
     })
   })
+
+  test('can use prompt refinment', async ({ page, isMobile }) => {
+    //skip if mobile
+    if (isMobile) {
+      test.skip()
+    }
+    await setupOpenAIMocks(page, {
+      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      completionHandler: createCompletionHandler({
+        'generate query': 'This is a mocked query generation response',
+        'filter query': 'This is a mocked filter response',
+        'use order.id.count as the count':  `select
+        part.name,
+        part.manufacturer,
+        order.id.count as order_count
+    order by order_count desc
+    limit 10;`,
+        'top 10 products by orders': `select
+    part.name,
+    part.manufacturer,
+    count(order.id) as order_count
+order by order_count desc
+limit 10;`,
+      }),
+    })
+
+    await page.goto('http://localhost:5173/trilogy-studio-core/')
+
+    // Navigate to LLM testing page
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
+
+    // Set up LLM connection
+    await page.getByTestId('sidebar-link-llms').click()
+    await page.getByTestId('llm-connection-creator-add').click()
+    await page.getByTestId('llm-connection-creator-name').click()
+    await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
+    await page.getByTestId('llm-connection-creator-type').click()
+    await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })
+    await page.getByTestId('llm-connection-creator-api-key').click()
+    await page.getByTestId('llm-connection-creator-api-key').fill('bc123')
+    await page.getByTestId('llm-connection-creator-save-credential').check()
+    await page.getByTestId('llm-connection-creator-submit').click()
+    await page.getByTestId('sidebar-link-editors').click();
+    await page.getByTestId('sidebar-link-community-models').click();
+    await page.getByTestId('community-model-search').click();
+    await page.getByTestId('community-model-search').fill('demo');
+    await page.getByTestId('import-demo-model').click();
+    await page.getByTestId('model-creation-submit').click();
+    await page.getByTestId('sidebar-link-editors').click();
+    await page.getByTestId('editor-list-id-c-local-demo-model-connection').getByTestId('quick-new-editor-demo-model-connection-trilogy').click();
+    await page.getByRole('code').locator('div').filter({ hasText: 'SELECT 1 -> echo;' }).nth(3).click();
+    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a');
+    await page.getByRole('textbox', { name: 'Editor content' }).fill('import lineitem;\n\n\n# get top 10 products by orders and who made them');
+    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a');
+    await page.getByTestId('editor-generate-button').click();
+    await page.getByTestId('input-textarea').fill('use order.id.count as the count');
+    await page.getByTestId('send-button').click();
+    await page.getByTestId('accept-button').click();
+    await page.getByRole('gridcell', { name: 'CHOCOLATE CORNSILK GOLDENROD' }).click();
+    
+  })
+
 })
