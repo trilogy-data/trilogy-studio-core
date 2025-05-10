@@ -8,7 +8,13 @@
     <!-- Chat messages area -->
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
       <!-- Conversation messages -->
-      <div v-for="(message, index) in messages" :key="index" class="message" :class="message.role" :data-testid="`message-${message.role}-${index}`">
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
+        class="message"
+        :class="message.role"
+        :data-testid="`message-${message.role}-${index}`"
+      >
         <div class="message-content">
           <pre>{{ message.content }}</pre>
         </div>
@@ -30,13 +36,33 @@
         ref="inputTextarea"
         data-testid="input-textarea"
       ></textarea>
-      <button @click="sendMessage" :disabled="isLoading || !userInput.trim()" data-testid="send-button">Send</button>
+      <button
+        @click="sendMessage"
+        :disabled="isLoading || !userInput.trim()"
+        data-testid="send-button"
+      >
+        Send
+      </button>
     </div>
 
     <!-- Action buttons -->
     <div class="action-buttons">
-      <button class="accept-button" @click="acceptResult" :disabled="isLoading" data-testid="accept-button">Accept</button>
-      <button class="discard-button" @click="handleClose" :disabled="isLoading" data-testid="discard-button">Discard</button>
+      <button
+        class="accept-button"
+        @click="acceptResult"
+        :disabled="isLoading"
+        data-testid="accept-button"
+      >
+        Accept
+      </button>
+      <button
+        class="discard-button"
+        @click="handleClose"
+        :disabled="isLoading"
+        data-testid="discard-button"
+      >
+        Discard
+      </button>
     </div>
   </div>
 </template>

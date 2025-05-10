@@ -117,12 +117,14 @@ export default defineComponent({
           endColumn: selection.endColumn,
         }
       } else {
-        return editorInstance.getModel()?.getFullModelRange() || {
-          startLineNumber: 1,
-          startColumn: 1,
-          endLineNumber: 1,
-          endColumn: 1,
-        }
+        return (
+          editorInstance.getModel()?.getFullModelRange() || {
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1,
+          }
+        )
       }
     }
 

@@ -180,7 +180,7 @@ test.describe('LLM Connection Tests', () => {
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
-        'use order.id.count as the count':  `select
+        'use order.id.count as the count': `select
         part.name,
         part.manufacturer,
         order.id.count as order_count
@@ -213,24 +213,32 @@ limit 10;`,
     await page.getByTestId('llm-connection-creator-api-key').fill('bc123')
     await page.getByTestId('llm-connection-creator-save-credential').check()
     await page.getByTestId('llm-connection-creator-submit').click()
-    await page.getByTestId('sidebar-link-editors').click();
-    await page.getByTestId('sidebar-link-community-models').click();
-    await page.getByTestId('community-model-search').click();
-    await page.getByTestId('community-model-search').fill('demo');
-    await page.getByTestId('import-demo-model').click();
-    await page.getByTestId('model-creation-submit').click();
-    await page.getByTestId('sidebar-link-editors').click();
-    await page.getByTestId('editor-list-id-c-local-demo-model-connection').getByTestId('quick-new-editor-demo-model-connection-trilogy').click();
-    await page.getByRole('code').locator('div').filter({ hasText: 'SELECT 1 -> echo;' }).nth(3).click();
-    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a');
-    await page.getByRole('textbox', { name: 'Editor content' }).fill('import lineitem;\n\n\n# get top 10 products by orders and who made them');
-    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a');
-    await page.getByTestId('editor-generate-button').click();
-    await page.getByTestId('input-textarea').fill('use order.id.count as the count');
-    await page.getByTestId('send-button').click();
-    await page.getByTestId('accept-button').click();
-    await page.getByRole('gridcell', { name: 'CHOCOLATE CORNSILK GOLDENROD' }).click();
-    
+    await page.getByTestId('sidebar-link-editors').click()
+    await page.getByTestId('sidebar-link-community-models').click()
+    await page.getByTestId('community-model-search').click()
+    await page.getByTestId('community-model-search').fill('demo')
+    await page.getByTestId('import-demo-model').click()
+    await page.getByTestId('model-creation-submit').click()
+    await page.getByTestId('sidebar-link-editors').click()
+    await page
+      .getByTestId('editor-list-id-c-local-demo-model-connection')
+      .getByTestId('quick-new-editor-demo-model-connection-trilogy')
+      .click()
+    await page
+      .getByRole('code')
+      .locator('div')
+      .filter({ hasText: 'SELECT 1 -> echo;' })
+      .nth(3)
+      .click()
+    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a')
+    await page
+      .getByRole('textbox', { name: 'Editor content' })
+      .fill('import lineitem;\n\n\n# get top 10 products by orders and who made them')
+    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a')
+    await page.getByTestId('editor-generate-button').click()
+    await page.getByTestId('input-textarea').fill('use order.id.count as the count')
+    await page.getByTestId('send-button').click()
+    await page.getByTestId('accept-button').click()
+    await page.getByRole('gridcell', { name: 'CHOCOLATE CORNSILK GOLDENROD' }).click()
   })
-
 })

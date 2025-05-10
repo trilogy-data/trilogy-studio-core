@@ -495,8 +495,6 @@ export default defineComponent({
           const text = codeEditorRef.getEditorText(this.editorData.contents)
           let range: Range = codeEditorRef.getEditorRange()
 
-          
-
           await this.validateQuery(false)
 
           // Run our async call
