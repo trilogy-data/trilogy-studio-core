@@ -1,32 +1,39 @@
 # Trilogy Studio Core
 
-A publically available, minimal IDE for exploring Trilogy, an experiment in streamlined analytic SQL. 
+A open-source, web-based IDE for exploring Trilogy, an experiment in streamlined analytic SQL. 
 
-Try a hosted version [here](https://trilogydata.dev/trilogy-studio-core/).
+Try it here [here](https://trilogydata.dev/trilogy-studio-core/).
+
+Supports
+- DuckDB
+- BigQuery
+- Snowflake
 
 Read more about Trilogy [here](https://trilogydata.dev/).
 
-Makes experimenting with Trilogy simple.
-- rich semantic layer
-- streamlined reuse, sharing, and composition
-- visualization 
-- llm integration [alpha]
-- scheduling [WIP]
+### Rich Query Editing
+<p align="center">
+<img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="736" height="856" alt="Editor View">
+</p>
 
-![alt text](./readme.png)
+### Flexible Visualization
 
-Open source, MIT licensed.
+<p align="center">
+<img src="https://github.com/user-attachments/assets/699ad66a-9be3-4ab4-b236-ddc20046d9fd" width="736" height="856" alt="Dashboard View">
+</p>
 
 ## This Repo
 
-This repo contains a component library for the studio frontend and a minimal FastAPI backend service to support it.
+This repo contains the studio frontend and a minimal FastAPI language server that powers language features.
 
 ## Running Locally
 
 Run main.py in pyserver. 
 
-NPM run dev to run frontend; check config in frontend to ensure it is resolving to your localhost pyserver.
-
+```baseh
+npm run dev
+```
+To run frontend; check config in frontend to ensure it is resolving to your localhost.
 
 ### Inspiration
 There are lots of good IDEs out here. Trilogy Studio is probably only right if you want to use Trilogy. Takes inspiration from:
@@ -38,7 +45,7 @@ There are lots of good IDEs out here. Trilogy Studio is probably only right if y
 - [QuackDB](https://github.com/mattf96s/QuackDB)
 - [SQL Workbench](https://sql-workbench.com/)
 
-### Tech Stack Acknowledgments
+### Tech Stack
 
 Could not exist without the following:
 
