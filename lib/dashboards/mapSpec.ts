@@ -386,11 +386,13 @@ export const createUSAMapSpec = (
                 field: config.geoField,
                 type: 'nominal',
                 title: snakeCaseToCapitalizedWords(config.geoField),
+                format: getColumnFormat(config.geoField, columns),
               },
               {
                 field: config.colorField,
                 type: 'quantitative',
                 title: snakeCaseToCapitalizedWords(config.colorField),
+                format: getColumnFormat(config.colorField, columns),
               },
             ],
             stroke: {

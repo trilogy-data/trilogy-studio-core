@@ -10,7 +10,7 @@ function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
     .map(
       (field) =>
-        `[name:${field.name} type:${field.type} ${field.calculation ? 'use in place of (named calculation):' + field.calculation : ''} ${field.description ? 'description:' + field.description : ''} ]`,
+        `[name: ${field.name} | type:${field.type}${field.calculation ? ' | shorthand_for (named calculation):' + field.calculation : ''} ${field.description ? ' | description:' + field.description : ''} ]`,
     )
     .join(', ')
 }

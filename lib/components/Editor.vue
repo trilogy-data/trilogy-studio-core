@@ -485,6 +485,7 @@ export default defineComponent({
           this.editorData.startTime = Date.now()
           this.editorData.results = new Results(new Map(), [])
           this.editorData.setError(null)
+          this.editorData.setChatInteraction(null)
 
           // Get text and range from the CodeEditor
           const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
