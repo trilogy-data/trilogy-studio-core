@@ -368,7 +368,9 @@ export default defineComponent({
 
     async runQuery(): Promise<any> {
       this.$emit('query-started')
+      // clear existing inteaction state
       this.editorData.setError(null)
+      this.editorData.setChatInteraction(null)
       const id = this.editorId
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
 

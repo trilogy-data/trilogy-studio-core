@@ -170,7 +170,7 @@ test.describe('LLM Connection Tests', () => {
     })
   })
 
-  test('can use prompt refinment', async ({ page, isMobile }) => {
+  test('can use prompt refinement', async ({ page, isMobile }) => {
     //skip if mobile
     if (isMobile) {
       test.skip()
@@ -201,7 +201,9 @@ limit 10;`,
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
     }
-
+    const usesLocalStorage = ['firefox', 'webkit'].includes(
+      page.context()?.browser()?.browserType()?.name() || '',
+    )
     // Set up LLM connection
     await page.getByTestId('sidebar-link-llms').click()
     await page.getByTestId('llm-connection-creator-add').click()
@@ -219,6 +221,11 @@ limit 10;`,
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
     await page.getByTestId('model-creation-submit').click()
+    if (usesLocalStorage) {
+      await page.getByTestId('keyphrase-input').click()
+      await page.getByTestId('keyphrase-input').fill('test')
+      await page.getByTestId('submit-keyphrase').click()
+    }
     await page.getByTestId('sidebar-link-editors').click()
     await page
       .getByTestId('editor-list-id-c-local-demo-model-connection')
@@ -230,11 +237,9 @@ limit 10;`,
       .filter({ hasText: 'SELECT 1 -> echo;' })
       .nth(3)
       .click()
-    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a')
-    await page
-      .getByRole('textbox', { name: 'Editor content' })
-      .fill('import lineitem;\n\n\n# get top 10 products by orders and who made them')
-    await page.getByRole('textbox', { name: 'Editor content' }).press('ControlOrMeta+a')
+    await page.getByTestId('editor').click({ clickCount: 3 })
+    await page.keyboard.type('import lineitem;\n\n\n# get top 10 products by orders and who made them')
+    await page.getByTestId('editor').click({ clickCount: 3 })
     await page.getByTestId('editor-generate-button').click()
     await page.getByTestId('input-textarea').fill('use order.id.count as the count')
     await page.getByTestId('send-button').click()
