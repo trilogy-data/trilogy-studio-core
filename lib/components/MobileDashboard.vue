@@ -74,7 +74,7 @@ const showMarkdownEditor = ref(false)
 // Get the active dashboard
 const dashboard = computed(() => {
   // Try to find the dashboard by name
-  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.name === props.name)
+  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
   // If dashboard doesn't exist, try to create it with the provided connection
   if (!dashboard && props.connectionId) {
