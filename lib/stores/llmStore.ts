@@ -189,11 +189,13 @@ const useLLMConnectionStore = defineStore('llmConnections', {
               content: errorResponse,
             })
             // Generate new completion with updated prompt
-            raw = await this.generateCompletion(connection, {
-              prompt: base,
-
-            },
-              history)
+            raw = await this.generateCompletion(
+              connection,
+              {
+                prompt: base,
+              },
+              history,
+            )
 
             // Extract the new response
             extract = extractLastTripleQuotedText(raw.text)

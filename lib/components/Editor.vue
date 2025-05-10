@@ -16,6 +16,7 @@
         @run="runQuery"
         @cancel="cancelQuery"
         @toggle-tag="toggleTag"
+        @generate="generateLLMQuery"
       />
       <div class="editor-content">
         <!-- Replace the original editor with our CodeEditor component -->
@@ -367,7 +368,9 @@ export default defineComponent({
 
     async runQuery(): Promise<any> {
       this.$emit('query-started')
+      // clear existing inteaction state
       this.editorData.setError(null)
+      this.editorData.setChatInteraction(null)
       const id = this.editorId
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
 
@@ -484,6 +487,7 @@ export default defineComponent({
           this.editorData.startTime = Date.now()
           this.editorData.results = new Results(new Map(), [])
           this.editorData.setError(null)
+          this.editorData.setChatInteraction(null)
 
           // Get text and range from the CodeEditor
           const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined

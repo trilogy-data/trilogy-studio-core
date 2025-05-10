@@ -41,8 +41,16 @@
         :useDefaultStyle="false"
         class="action-item"
         :action="() => $emit('validate')"
-        >Parse</loading-button
-      >
+        >Parse
+      </loading-button>
+      <loading-button
+        v-if="editorType !== 'sql'"
+        :useDefaultStyle="false"
+        class="action-item"
+        :action="() => $emit('generate')"
+        data-testid="editor-generate-button"
+        >Generate
+      </loading-button>
       <button
         @click="() => (loading ? $emit('cancel') : $emit('run'))"
         class="action-item"
@@ -87,7 +95,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['name-update', 'save', 'validate', 'run', 'cancel', 'toggle-tag'],
+  emits: ['name-update', 'save', 'validate', 'run', 'cancel', 'toggle-tag', 'generate'],
   data() {
     return {
       isEditing: false,
