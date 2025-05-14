@@ -13,6 +13,13 @@ const TEST_CASES: BenchMarkQuery[] = [
     data: ['team'],
     expected_keywords: [],
   },
+  {
+    id: 'test-home-vs-away',
+    prompt: 'Which team has the biggest difference between win rate at home and away?',
+    imports: ['game_tall'],
+    data: ['team'],
+    expected_keywords: [],
+  },
 ]
 
 export default TEST_CASES

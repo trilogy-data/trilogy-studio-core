@@ -379,8 +379,12 @@ export const useDashboardStore = defineStore('dashboards', {
           true,
         )
         // wait on that promise
-        await results.resultPromise
-        return true
+        let output = await results.resultPromise
+        if (output.error) {
+          console.error('Error executing query:', output.error)
+          throw new Error(output.error)
+        }
+
       }
       // first loop, add everything as markdown
       // TODO: fix typehints here

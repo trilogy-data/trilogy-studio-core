@@ -139,12 +139,6 @@ const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | 
         nearest: true,
       },
     ],
-    mark: {
-      type: 'bar',
-      fill: '#4C78A8',
-      stroke: 'black',
-      cursor: 'pointer',
-    },
     config: {
       scale: {
         bandPaddingInner: 0.2,

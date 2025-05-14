@@ -24,6 +24,7 @@ from trilogy.authoring import (
     MultiSelectStatement,
     RawSQLStatement,
     DEFAULT_NAMESPACE,
+    Conditional
 )
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
@@ -48,14 +49,13 @@ from trilogy import CONFIG, __version__
 # Define the path to the .env file
 env_path = Path(__file__).parent / ".env"
 
-# Load the .env file if it exists
 if os.path.exists(env_path):
     with open(env_path, "r") as file:
         for line in file:
             line = line.strip()
-            if line and not line.startswith("#"):  # Ignore empty lines and comments
-                key, value = line.split("=", 1)  # Split at the first '='
-                os.environ[key.strip()] = value.strip()  # Set environment variable
+            if line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip()
 
 current_directory = Path(__file__).parent
 

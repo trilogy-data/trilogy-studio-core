@@ -1,45 +1,22 @@
 <template>
   <div class="main">
-    <mobile-sidebar-layout
-      @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
-      :menuOpen="mobileMenuOpen"
-      :activeScreen="activeScreen"
-    >
+    <mobile-sidebar-layout @menu-toggled="mobileMenuOpen = !mobileMenuOpen" :menuOpen="mobileMenuOpen"
+      :activeScreen="activeScreen">
       <template #sidebar>
-        <sidebar
-          @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
-          @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey"
-          @dashboard-key-selected="setActiveDashboard"
-          @toggle-mobile-menu="toggleMobileMenu"
-          @connection-key-selected="setActiveConnectionKey"
-          :active="activeScreen"
-          :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey"
-          :activeConnectionKey="activeConnectionKey"
-          :activeModelKey="activeModelKey"
-          :activeDashboardKey="activeDashboard"
-        />
+        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
+          @dashboard-key-selected="setActiveDashboard" @toggle-mobile-menu="toggleMobileMenu"
+          @connection-key-selected="setActiveConnectionKey" :active="activeScreen" :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey" :activeConnectionKey="activeConnectionKey"
+          :activeModelKey="activeModelKey" :activeDashboardKey="activeDashboard" />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
         <tabbed-layout>
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
-            <editor
-              v-if="activeEditorData.type == 'preql'"
-              context="main-trilogy"
-              :editorId="activeEditor"
-              @query-started="slotProps.onQueryStarted"
-              @save-editors="saveEditorsCall"
-            />
-            <editor
-              @query-started="slotProps.onQueryStarted"
-              v-else
-              context="main-sql"
-              :editorId="activeEditor"
-              @save-editors="saveEditorsCall"
-            />
+            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorId="activeEditor"
+              @query-started="slotProps.onQueryStarted" @save-editors="saveEditorsCall" />
+            <editor @query-started="slotProps.onQueryStarted" v-else context="main-sql" :editorId="activeEditor"
+              @save-editors="saveEditorsCall" />
           </template>
           <template #results v-if="activeEditorData">
             <ResultsView :editorData="activeEditorData"></ResultsView>
@@ -47,10 +24,7 @@
         </tabbed-layout>
       </template>
       <template v-else-if="activeScreen === 'connections'">
-        <connection-view
-          :activeConnectionKey="activeConnectionKey"
-          @save-editors="saveEditorsCall"
-        />
+        <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
       </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
@@ -174,11 +148,11 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject } from 'vue'
+import { inject, provide } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
-import useScreenNavigation from './useScreenNavigation'
+import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
 export default {
@@ -243,8 +217,9 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => {}
+      saveEditors = () => { }
     }
+    const screenNavigation = useScreenNavigation()
     const {
       activeScreen,
       activeEditor,
@@ -252,8 +227,8 @@ export default {
       setActiveScreen,
       setActiveEditor,
       setActiveDashboard,
-      mobileMenuOpen,
-    } = useScreenNavigation()
+      mobileMenuOpen
+    } = screenNavigation
     return {
       connectionStore,
       editorStore,

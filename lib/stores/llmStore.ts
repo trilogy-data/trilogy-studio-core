@@ -183,7 +183,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
             // Add feedback to the prompt for next attempt
             let message = (e as Error).message
-            let errorResponse = `\nYou response  """${extract}""" failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
+            let errorResponse = `\nYou had given a response: """${extract}""" that failed validation on this error: ${message}. Generate a new response that solves the original prompt while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
             history.push({
               role: 'user',
               content: errorResponse,
@@ -237,6 +237,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       modelOverride: string | null = null,
     ): Promise<ValidatedResponse> {
       let base = createPrompt(inputString, concepts)
+      console.log('Generating query completion')
+      console.log(validator)
       return this.generateValidatedCompletion(base, validator, maxAttempts, modelOverride)
     },
 

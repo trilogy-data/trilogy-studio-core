@@ -4,7 +4,7 @@ const { DuckDBConnection } = await import('trilogy-studio-core/connections')
 import { createProviderInstance } from './providers'
 import { loadTestData, getApiKey, saveResults, printSummary } from './utils'
 import { TestRunner } from './test-runner'
-import { ProviderConfig, ProviderResult } from './types'
+import { ProviderConfig, ProviderResult, TestResult } from './types'
 const { useLLMConnectionStore, useConnectionStore } = await import('trilogy-studio-core/stores')
 
 // Load environment variables from .env file
@@ -64,7 +64,7 @@ async function main() {
         const provider = createProviderInstance(providerName, apiKey, model)
         llmStore.addConnection(provider)
 
-        const allTestResults = []
+        const allTestResults:TestResult[] = []
 
         // Run all test cases
         for (const testCase of testCases) {

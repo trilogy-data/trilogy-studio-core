@@ -19,7 +19,7 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import DashboardCTA from './DashboardCTA.vue'
-import useScreenNavigation from '../views/useScreenNavigation'
+import useScreenNavigation from '../stores/useScreenNavigation'
 // Props definition
 const props = defineProps<{
   name: string
@@ -70,18 +70,8 @@ const globalCompletion = ref<CompletionItem[]>([])
 // Get the active dashboard
 const dashboard = computed(() => {
   // Try to find the dashboard by name
+  console.log('Finding dashboard:', props.name)
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
-
-  // If dashboard doesn't exist, try to create it with the provided connection
-  if (!dashboard && props.connectionId) {
-    try {
-      return dashboardStore.newDashboard(props.name, props.connectionId)
-    } catch (error) {
-      console.error('Failed to create dashboard:', error)
-      return null
-    }
-  }
-
   return dashboard
 })
 
@@ -203,10 +193,10 @@ const validateFilter = async (filter: string) => {
         imports: dashboard.value.imports,
         extraFilters: [filterWithoutWhere],
       },
-      () => {},
-      () => {},
-      () => {},
-      () => {},
+      () => { },
+      () => { },
+      () => { },
+      () => { },
       true,
     )
     if (!promises) {
@@ -520,7 +510,6 @@ function unSelect(itemId: string): void {
 function dashboardCreated(id: string): void {
   console.log('Dashboard created event received:', id)
   setActiveDashboard(id)
-  dashboardStore.setActiveDashboard(id)
 }
 
 // Clean up timeout on component unmount or before destruction
@@ -533,64 +522,25 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :edits-locked="dashboard.state === 'locked'"
-      :selected-connection="selectedConnection"
-      :filterError="filterError"
-      :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter"
-      @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange"
-      @import-change="handleImportChange"
-      @add-item="openAddItemModal"
-      @clear-items="clearItems"
-      @toggle-edit-mode="toggleEditMode"
-      @refresh="handleRefresh"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :edits-locked="dashboard.state === 'locked'"
+      :selected-connection="selectedConnection" :filterError="filterError" :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter" @connection-change="onConnectionChange" @filter-change="handleFilterChange"
+      @import-change="handleImportChange" @add-item="openAddItemModal" @clear-items="clearItems"
+      @toggle-edit-mode="toggleEditMode" @refresh="handleRefresh" />
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
     </div>
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
-        <GridLayout
-          :col-num="20"
-          :row-height="30"
-          :is-draggable="draggable"
-          :is-resizable="resizable"
-          :layout="layout"
-          :vertical-compact="true"
-          :use-css-transforms="true"
-          @layout-updated="onLayoutUpdated"
-        >
-          <grid-item
-            v-for="item in layout"
-            :key="item.i"
-            :static="item.static"
-            :x="item.x"
-            :y="item.y"
-            :w="item.w"
-            :h="item.h"
-            :i="item.i"
-            :data-i="item.i"
-            drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle"
-          >
-            <DashboardGridItem
-              :dashboard-id="dashboard.id"
-              :item="item"
-              :edit-mode="editMode"
-              :filter="filter"
-              :get-item-data="getItemData"
-              @dimension-click="setCrossFilter"
-              :set-item-data="setItemData"
-              @edit-content="openEditor"
-              @remove-filter="removeFilter"
-              @background-click="unSelect"
-              @update-dimensions="updateItemDimensions"
-              @remove-item="removeItem"
-            />
+        <GridLayout :col-num="20" :row-height="30" :is-draggable="draggable" :is-resizable="resizable" :layout="layout"
+          :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated">
+          <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+            :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+            drag-handle-class=".grid-item-drag-handle">
+            <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
+              :get-item-data="getItemData" @dimension-click="setCrossFilter" :set-item-data="setItemData"
+              @edit-content="openEditor" @remove-filter="removeFilter" @background-click="unSelect"
+              @update-dimensions="updateItemDimensions" @remove-item="removeItem" />
           </grid-item>
         </GridLayout>
       </div>
@@ -601,22 +551,15 @@ onBeforeUnmount(() => {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor" @save="saveContent"
+        @cancel="closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        @save="saveContent"
-        @cancel="closeEditors"
-      />
+      <MarkdownEditor :content="getItemData(editingItem.i, dashboard.id).content" @save="saveContent"
+        @cancel="closeEditors" />
     </Teleport>
   </div>
   <div v-else class="dashboard-not-found">
@@ -625,11 +568,8 @@ onBeforeUnmount(() => {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
-      <dashboard-creator-inline
-        class="inline-creator"
-        :visible="true"
-        @dashboard-created="dashboardCreated"
-      ></dashboard-creator-inline>
+      <dashboard-creator-inline class="inline-creator" :visible="true"
+        @dashboard-created="dashboardCreated"></dashboard-creator-inline>
     </template>
   </div>
 </template>

@@ -170,7 +170,7 @@ const filterCount = computed(() => {
       class="edit-button always-visible"
       :data-testid="`edit-dashboard-item-content-${item.i}`"
     >
-      Edit Content
+      Edit
     </button>
     <button
       v-if="editMode"

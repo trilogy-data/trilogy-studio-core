@@ -1,13 +1,26 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { useDashboardStore } from '../stores/dashboardStore'
-import { CELL_TYPES } from '../dashboards/base'
+import { ref, inject, computed } from 'vue'
 
+import { CELL_TYPES } from '../dashboards/base'
+import type { DashboardStoreType } from '../stores/dashboardStore'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
+import QueryExecutionService from '../stores/queryExecutionService'
+
+const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType;
+const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType;
+const queryExecutionService = inject<QueryExecutionService>('queryExecutionService') as QueryExecutionService;
+const saveDashboards = inject<CallableFunction>('saveDashboards') as CallableFunction;
+if (!dashboardStore || !llmStore || !queryExecutionService || !saveDashboards) {
+  throw new Error('DashboardStore, LLMConnectionStore, or QueryExecutionService not provided')
+}
 // Props definition
 const props = defineProps<{
   dashboardId: string
-  hasLlmConnection?: boolean
 }>()
+
+const hasLlmConnection = computed(() => {
+  return llmStore.activeConnection
+})
 
 // Emits
 const emit = defineEmits<{
@@ -15,11 +28,14 @@ const emit = defineEmits<{
   (e: 'description-updated', description: string): void
 }>()
 
-// Initialize the dashboard store
-const dashboardStore = useDashboardStore()
-
 // Dashboard description
 const description = ref('')
+// Dashboard prompt for LLM
+const dashboardPrompt = ref('')
+// LLM generation loading state
+const isGenerating = ref(false)
+// LLM generation error state
+const generationError = ref('')
 
 // Template selection state
 const selectedTemplate = ref<string | null>(null)
@@ -125,20 +141,60 @@ function updateDescription(): void {
   }
 }
 
-// Function stub for LLM-assisted dashboard creation
-function generateDashboardWithLLM(): void {
-  console.log('Generating dashboard with LLM assistance')
-  // This would be implemented to call your LLM service
-  // For now it's just a stub
+// Fully implemented LLM generation function
+async function generateDashboardWithLLM(): Promise<void> {
+  if (!dashboardPrompt.value.trim()) {
+    generationError.value = 'Please provide a prompt for the dashboard generation.'
+    return
+  }
+  
+  try {
+    isGenerating.value = true
+    generationError.value = ''
+    
+    // Generate the prompt specification based on user input
+    const promptSpec = await dashboardStore.generatePromptSpec(
+      dashboardPrompt.value,
+      llmStore,
+      queryExecutionService,
+    )
+    console.log('Prompt spec generated:', promptSpec)
+
+    if (promptSpec) {
+      // Populate the dashboard with the generated specification
+      await dashboardStore.populateFromPromptSpec(
+        props.dashboardId,
+        promptSpec,
+        llmStore,
+        queryExecutionService,
+      )
+      
+      // Update the dashboard description if not already set
+      if (!description.value && promptSpec.description) {
+        description.value = promptSpec.description
+        updateDescription()
+      }
+      
+      // Save the dashboards
+      saveDashboards()
+    } else {
+      generationError.value = 'Failed to generate dashboard specification.'
+    }
+  } catch (error) {
+    console.error('Error generating dashboard with LLM:', error)
+    generationError.value = 'An error occurred while generating the dashboard.'
+  } finally {
+    isGenerating.value = false
+  }
 }
 </script>
 
 <template>
   <div class="dashboard-setup">
     <div class="setup-header">
-      <h2 class="setup-title">Quickstart</h2>
+      <h2 class="setup-title">An Empty Dashboard</h2>
       <p class="setup-subtitle">
-        Choose a template or start from scratch by adding components in top right.
+        Choose a template or start from scratch by using the 'add item' button to add charts, tables, and more.
       </p>
     </div>
 
@@ -158,14 +214,33 @@ function generateDashboardWithLLM(): void {
         <i class="mdi mdi-content-save"></i> Save
       </button>
     </div>
+    
     <div v-if="hasLlmConnection" class="setup-section">
-      <h3 class="section-title">AI Assistance</h3>
+      <h3 class="section-title">AI Copilot</h3>
       <p class="section-desc">
         Let AI help build your dashboard based on your data and description
       </p>
-      <button @click="generateDashboardWithLLM" class="action-button llm-button">
-        <i class="mdi mdi-creation"></i> Generate with AI
-      </button>
+      <textarea
+        v-model="dashboardPrompt"
+        placeholder="Describe the dashboard you want to create. For example: 'Create a sales performance dashboard with monthly trends, regional breakdown, and top product metrics.'"
+        rows="4"
+        class="description-input"
+        data-testid="dashboard-prompt-input"
+      ></textarea>
+      <div class="action-row">
+        <button 
+          @click="generateDashboardWithLLM" 
+          class="action-button llm-button"
+          :disabled="isGenerating || !dashboardPrompt.trim()"
+          data-testid="generate-with-llm-button"
+        >
+          <i class="mdi" :class="isGenerating ? 'mdi-loading mdi-spin' : 'mdi-creation'"></i>
+          {{ isGenerating ? 'Generating...' : 'Generate with AI' }}
+        </button>
+        <div v-if="generationError" class="error-message">
+          {{ generationError }}
+        </div>
+      </div>
     </div>
 
     <div class="setup-section">
@@ -269,6 +344,18 @@ function generateDashboardWithLLM(): void {
   border-color: var(--special-text);
 }
 
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.error-message {
+  color: #e53935;
+  font-size: 0.85rem;
+}
+
 .templates-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -333,6 +420,12 @@ function generateDashboardWithLLM(): void {
 
 .action-button:hover {
   opacity: 0.9;
+}
+
+.action-button:disabled {
+  background-color: var(--border-light);
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .resource-links {

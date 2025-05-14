@@ -2,6 +2,12 @@ import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 import { GoogleGenAI, type Part } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
+
+
+const MAX_RETRIES = 3
+// retry delay by default for 429 is 30s
+const INITIAL_RETRY_DELAY_MS = 30_000 
+
 export class GoogleProvider extends LLMProvider {
   private genAIClient: GoogleGenAI | null = null
   // no api method to list
@@ -9,21 +15,13 @@ export class GoogleProvider extends LLMProvider {
   public models: string[] = []
   public type: string = 'google'
 
-  /**
-   * @param name - Display name for the provider
-   * @param apiKey - Google API key
-   * @param model - Google model to use (e.g., 'gemini-2.0-flash-001')
-   * @param saveCredential - Whether to persist the API key
-   */
+
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
     this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
   }
 
-  /**
-   * Initializes the provider by fetching available models
-   * @returns Promise resolving when initialization is complete
-   */
+
   async reset(): Promise<void> {
     try {
       this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
@@ -34,34 +32,81 @@ export class GoogleProvider extends LLMProvider {
       )
     }
     this.error = null
-    try {
-      const response = await fetch(`${this.baseModelUrl}?key=${this.apiKey}`, {
-        method: 'GET',
-      })
+    
+    // Apply retry logic to the model fetching
+    let retries = 0
+    let success = false
+    
+    while (!success && retries <= MAX_RETRIES) {
+      try {
+        const response = await fetch(`${this.baseModelUrl}?key=${this.apiKey}`, {
+          method: 'GET',
+        })
 
-      if (!response.ok) {
-        throw new Error(`Google API error: ${response.statusText}`)
-      }
+        if (response.status === 429) {
+          retries++
+          if (retries <= MAX_RETRIES) {
+            const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1) // Exponential backoff
+            console.log(`Rate limited (429). Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+            continue
+          }
+        }
 
-      const data = await response.json()
-      this.models = data.models.map((model: { name: string }) => model.name).sort()
-      this.connected = true
-    } catch (e) {
-      if (e instanceof Error) {
-        this.error = e.message
-      } else {
-        this.error = 'Unknown error'
+        if (!response.ok) {
+          throw new Error(`Google API error: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        this.models = data.models.map((model: { name: string }) => model.name).sort()
+        this.connected = true
+        success = true
+      } catch (e) {
+        if (retries >= MAX_RETRIES) {
+          if (e instanceof Error) {
+            this.error = e.message
+          } else {
+            this.error = 'Unknown error'
+          }
+          this.connected = false
+          throw new Error(`Failed to fetch models after ${MAX_RETRIES} retries: ${this.error}`)
+        }
+        retries++
+        // Exponential backoff for other errors too
+        const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1)
+        console.log(`Error fetching models. Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
       }
-      this.connected = false
     }
   }
 
-  /**
-   * Generates a completion using the Google Gemini API
-   * @param options - Request configuration options
-   * @param history - Optional conversation history
-   * @returns Promise resolving to the completion response
-   */
+
+  private async withRetry<T>(apiCall: () => Promise<T>): Promise<T> {
+    let retries = 0
+    
+    while (true) {
+      try {
+        return await apiCall()
+      } catch (error) {
+        // Check if it's a 429 error or contains 429 error message
+        const isRateLimitError = 
+          (error instanceof Error && 
+           (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) ||
+          (error instanceof Response && error.status === 429)
+        
+        if (!isRateLimitError || retries >= MAX_RETRIES) {
+          throw error
+        }
+        
+        retries++
+        const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1) // Exponential backoff
+        console.log(`Rate limited (429). Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+
+
   async generateCompletion(
     options: LLMRequestOptions,
     history: LLMMessage[] | null = null,
@@ -73,7 +118,9 @@ export class GoogleProvider extends LLMProvider {
     }
 
     console.log('history', history)
-    try {
+    
+    // Using the retry wrapper for API calls
+    return await this.withRetry(async () => {
       if (history && history.length > 0) {
         // Create a chat with history
         const args = {
@@ -85,7 +132,7 @@ export class GoogleProvider extends LLMProvider {
             temperature: options.temperature || DEFAULT_TEMPERATURE,
           },
         }
-        const chat = this.genAIClient.chats.create(args)
+        const chat = this.genAIClient!.chats.create(args)
 
         // Send the message
         const result = await chat.sendMessage({ message: options.prompt })
@@ -105,7 +152,7 @@ export class GoogleProvider extends LLMProvider {
       } else {
         console.log('using simple completion without history')
         // Simple completion without history
-        const result = await this.genAIClient.models.generateContent({
+        const result = await this.genAIClient!.models.generateContent({
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           contents: options.prompt,
           config: {
@@ -127,13 +174,7 @@ export class GoogleProvider extends LLMProvider {
           },
         }
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error
-      } else {
-        throw new Error('Unknown error occurred while generating completion')
-      }
-    }
+    })
   }
 
   private convertToGeminiHistory(messages: LLMMessage[]): Array<{ role: string; parts: Part[] }> {
