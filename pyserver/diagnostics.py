@@ -68,7 +68,7 @@ def datatype_to_display(
     elif isinstance(datatype, DataType):
         return datatype.value
     elif isinstance(datatype, NumericType):
-        return f"{datatype.value}({datatype.precision}, {datatype.scale})"
+        return f"{datatype.value}({datatype.precision},{datatype.scale})"
     elif isinstance(datatype, ListType):
         return f"Array<{datatype_to_display(datatype.type)}>"
     elif isinstance(datatype, MapType):
