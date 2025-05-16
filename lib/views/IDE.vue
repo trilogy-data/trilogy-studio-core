@@ -303,7 +303,6 @@ export default {
       this.saveEditors()
     },
     runQuery() {
-      console.log('Running query')
       if (this.editorRef) {
         this.editorRef.runQuery()
       }

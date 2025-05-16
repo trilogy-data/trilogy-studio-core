@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type Ref, ref, } from 'vue'
+import { computed, type Ref, ref } from 'vue'
 import { useConnectionStore, useEditorStore } from '../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
@@ -56,7 +56,7 @@ function closeSharePopup() {
 
 // Handle filter changes from FilterInputComponent
 function handleFilterChange(newValue: string) {
-  // This can be used for real-time validation or other tasks
+  console.log('Filter changed:', newValue)
 }
 
 // Handle filter apply from FilterInputComponent
@@ -102,7 +102,7 @@ function handleRefresh() {
         @filter-change="handleFilterChange"
         @filter-apply="handleFilterApply"
       />
-      
+
       <div class="grid-actions">
         <button
           @click="toggleSharePopup"

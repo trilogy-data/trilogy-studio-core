@@ -28,7 +28,7 @@ address \`bigquery-public-data.usa_names.usa_1910_current\`;`,
   game_tall: `import team as team;
 import std.geography;
 
-key id string; # [Game data] Unique identifier for the game
+key id string; # [Game data] Unique identifier for a game
 property <id, team.id>.season int; # [Game data] Season the game was played in
 property <id, team.id>.status string; # [Game data] Indicates the last state of Sportradar's game file
 property <id, team.id>.coverage string; # [Game data] Type of coverage provided by Sportradar
@@ -118,7 +118,7 @@ property <id, team.id>.flagrant_fouls int; # Team flagrant fouls committed
 property <id, team.id>.player_tech_fouls int; # Team technical fouls committed
 property <id, team.id>.team_tech_fouls int; # Team technical fouls committed by team
 property <id, team.id>.coach_tech_fouls int; # Team technical fouls committed by coach
-
+property <id, team.id>.win <- CASE WHEN points > opponent_points THEN 1 ELSE 0 END; # Integer flag [1 or 0] indicating if the team won the game
 # Table metadata
 property <id, team.id>.created timestamp; # [Table data] Box score data entry time
 
@@ -129,7 +129,6 @@ auto three_points_pct <- three_points_made / three_points_att * 100; # Team thre
 
 # Other metrics
 metric game_count <- count_distinct(id); # count of games
-metric wins <- sum(case when points > opponent_points then 1 else 0 end); # count of wins
 property <id, team.id>.opponent_points int; # Opponent points
 
 # Base games source with union query

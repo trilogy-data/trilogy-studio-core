@@ -5,9 +5,7 @@
       <button class="close-button" @click="handleClose" data-testid="close-header-button">×</button>
     </div>
 
-    <!-- Chat messages area -->
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
-      <!-- Conversation messages -->
       <div
         v-for="(message, index) in messages"
         :key="index"
@@ -20,18 +18,16 @@
         </div>
       </div>
 
-      <!-- Loading indicator -->
       <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
         <span>Generating response...</span>
       </div>
     </div>
 
-    <!-- Input area -->
     <div class="input-container">
       <textarea
         v-model="userInput"
         @keydown="handleKeyDown"
-        placeholder="Refine your query... (Enter to send, Ctrl+Shift+Enter to accept)"
+        placeholder="Respond to refine. (Enter to respond, Ctrl+Shift+Enter to accept and run query)"
         :disabled="isLoading"
         ref="inputTextarea"
         data-testid="input-textarea"
@@ -221,6 +217,7 @@ export default defineComponent({
       // Validate before accepting
       const value = await props.extractionFn(latestResponse)
       await props.mutationFn(value)
+      console.log('committed mutation of ', value, props.extractionFn)
       emit('accepted')
       await props.closeFn()
     }

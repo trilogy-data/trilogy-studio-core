@@ -31,6 +31,7 @@ export class Paragraph {
       | 'editors'
       | 'code'
       | 'tip'
+      | 'warning'
       | 'llm-connections'
       | 'connections'
       | 'section'

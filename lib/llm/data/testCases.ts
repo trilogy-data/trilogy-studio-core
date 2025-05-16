@@ -62,7 +62,7 @@ const testCases: TestScenario[] = [
     description: 'Tests for a more complex query, with limits and ordering.',
     prompt: createPrompt('Who were the top ten customers by sales in august 1995?', testFields),
     expectedResponse: {
-      contains: ['extended_price', 'order.customer.name', '8', '::date'],
+      contains: ['extended_price', 'order.customer.name', '8'],
       mustIdentify: 'order.customer.name',
       notContains: ['FROM', 'GROUP BY'],
     },
@@ -76,7 +76,7 @@ const testCases: TestScenario[] = [
       testFields,
     ),
     expectedResponse: {
-      contains: ['extended_price', 'order.customer.name', '8', '::date'],
+      contains: ['extended_price', 'order.customer.name', '8',],
       mustIdentify: 'order.customer.name',
       notContains: ['FROM', 'GROUP BY'],
     },

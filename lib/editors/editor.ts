@@ -28,7 +28,7 @@ export interface EditorInterface {
   cancelCallback: (() => void) | null
   changed: boolean
   deleted: boolean
-  chartConfig?: ChartConfig
+  chartConfig?: ChartConfig | null
   chatInteraction?: ChatInteraction | null
   // monaco: editor.IStandaloneCodeEditor | null;
 }
@@ -52,7 +52,7 @@ export default class Editor implements EditorInterface {
   cancelCallback: (() => void) | null
   changed: boolean
   deleted: boolean
-  chartConfig?: ChartConfig
+  chartConfig?: ChartConfig | null
   completionSymbols: CompletionItem[]
   chatInteraction?: ChatInteraction | null
   // monaco: editor.IStandaloneCodeEditor | null;
@@ -136,7 +136,7 @@ export default class Editor implements EditorInterface {
     this.changed = true
   }
 
-  setChartConfig(chartConfig: ChartConfig) {
+  setChartConfig(chartConfig: ChartConfig | null) {
     this.chartConfig = chartConfig
     this.changed = true
   }

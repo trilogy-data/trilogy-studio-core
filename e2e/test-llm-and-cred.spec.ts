@@ -238,7 +238,9 @@ limit 10;`,
       .nth(3)
       .click()
     await page.getByTestId('editor').click({ clickCount: 3 })
-    await page.keyboard.type('import lineitem;\n\n\n# get top 10 products by orders and who made them')
+    await page.keyboard.type(
+      'import lineitem;\n\n\n# get top 10 products by orders and who made them',
+    )
     await page.getByTestId('editor').click({ clickCount: 3 })
     await page.getByTestId('editor-generate-button').click()
     await page.getByTestId('input-textarea').fill('use order.id.count as the count')

@@ -88,7 +88,7 @@ export default {
       required: true,
     },
     chartConfig: {
-      type: Object as PropType<ChartConfig>,
+      type: Object as PropType<ChartConfig | null>,
       required: false,
     },
     error: {

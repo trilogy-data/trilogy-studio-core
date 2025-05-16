@@ -1,5 +1,5 @@
 // navigationStore.ts
-import { ref, reactive, type Ref } from 'vue'
+import { ref,  type Ref } from 'vue'
 import { pushHashToUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
 

@@ -24,7 +24,9 @@ from trilogy.authoring import (
     MultiSelectStatement,
     RawSQLStatement,
     DEFAULT_NAMESPACE,
-    Conditional
+    Parenthetical,
+    Conditional,
+    BooleanOperator,
 )
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
@@ -337,10 +339,12 @@ def generate_single_query(
             if not final.where_clause:
                 final.where_clause = filterQuery.where_clause
             else:
-                final.where_clause.conditional = (
-                    final.where_clause.conditional
-                    + filterQuery.where_clause.conditional
+                final.where_clause.conditional = Conditional(
+                    left=Parenthetical(content=final.where_clause.conditional),
+                    right=Parenthetical(content=filterQuery.where_clause.conditional),
+                    operator=BooleanOperator.AND,
                 )
+
     limit_filter_time = time.time() - limit_filter_start
 
     # Generate the final query

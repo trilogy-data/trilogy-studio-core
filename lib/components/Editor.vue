@@ -82,6 +82,7 @@ import EditorHeader from './EditorHeader.vue'
 import CodeEditor from './EditorCode.vue'
 import { extractLastTripleQuotedText } from '../stores/llmStore.ts'
 import { Range } from 'monaco-editor'
+import { completionToModelInput } from '../llm/utils.ts'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -371,6 +372,7 @@ export default defineComponent({
       // clear existing inteaction state
       this.editorData.setError(null)
       this.editorData.setChatInteraction(null)
+
       const id = this.editorId
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
 
@@ -424,13 +426,23 @@ export default defineComponent({
       }
 
       const onSuccess = (result: QueryResult) => {
-        console.log(`calling success callback for ${id}`)
         let editor = this.editorStore.editors[id]
         if (result.success) {
           if (result.generatedSql) {
             editor.generated_sql = result.generatedSql
           }
           if (result.results) {
+            // check if the result headers have changed
+            // and clear our cached chart config if so
+            if (this.editorData.results && this.editorData.results.headers) {
+              let identical =
+                JSON.stringify(Array.from(this.editorData.results.headers.keys())) ==
+                JSON.stringify(Array.from(result.results.headers.keys()))
+              // changed is if the map keys are different
+              if (!identical) {
+                this.editorData.setChartConfig(null)
+              }
+            }
             this.editorStore.setEditorResults(id, result.results)
           }
         } else if (result.error) {
@@ -442,10 +454,11 @@ export default defineComponent({
         editor.duration = result.executionTime
       }
 
-      const onError = (error: any) => {
-        console.error('Query execution error:', error)
+      const onError = (error: QueryUpdate) => {
+        console.error('Query execution error:', error.message)
         let editor = this.editorStore.editors[id]
         editor.setError(error.message || 'An error occurred during query execution')
+        editor.generated_sql = error.generatedSql || null
         editor.loading = false
         editor.cancelCallback = null
       }
@@ -501,12 +514,7 @@ export default defineComponent({
           await this.validateQuery(false)
 
           // Run our async call
-          let concepts = this.editorData.completionSymbols.map((item) => ({
-            name: item.label,
-            type: item.datatype,
-            description: item.description,
-            calculation: item.calculation,
-          }))
+          let concepts = completionToModelInput(this.editorData.completionSymbols)
 
           if (concepts.length === 0) {
             this.editorData.setError('There are no imported concepts for LLM generation')
@@ -515,11 +523,11 @@ export default defineComponent({
             )
           }
 
-          const validator = async (text: string): Promise<boolean> => {
+          const validator = async (testText: string): Promise<boolean> => {
             const queryPartial = await this.buildQueryArgs(text)
             const queryInput: QueryInput = {
               // run an explain here, not the query
-              text,
+              text: text + '\n' + testText,
               editorType: queryPartial.editorType,
               imports: queryPartial.imports,
             }
@@ -598,7 +606,6 @@ export default defineComponent({
                   }
 
                   mutation(query.content)
-                  console.log('setting chatInteraction')
                   targetEditor.setChatInteraction({
                     messages: [
                       { role: 'user', content: query.prompt },

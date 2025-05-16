@@ -143,7 +143,7 @@ export default defineComponent({
       required: true,
     },
     initialConfig: {
-      type: Object as PropType<ChartConfig | undefined>,
+      type: Object as PropType<ChartConfig | undefined | null>,
       default: undefined,
     },
     showControls: {

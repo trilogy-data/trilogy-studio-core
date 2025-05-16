@@ -116,8 +116,6 @@ export class GoogleProvider extends LLMProvider {
     if (!this.genAIClient) {
       throw new Error('Google GenAI client is not initialized')
     }
-
-    console.log('history', history)
     
     // Using the retry wrapper for API calls
     return await this.withRetry(async () => {
@@ -133,6 +131,7 @@ export class GoogleProvider extends LLMProvider {
           },
         }
         const chat = this.genAIClient!.chats.create(args)
+        
 
         // Send the message
         const result = await chat.sendMessage({ message: options.prompt })

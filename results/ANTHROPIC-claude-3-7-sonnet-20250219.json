@@ -4,125 +4,165 @@
   "results": [
     {
       "testId": "test-basic-query",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in\nhaving total_births > 0\norder by total_births desc, states_appeared_in asc\nlimit 50;\n",
-      "latency": 11238
-    },
-    {
-      "testId": "test-basic-query",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where names.year between 1980 and 1989\nand names.state in ('TX', 'FL', 'GA', 'AL', 'MS', 'LA', 'SC', 'NC', 'TN', 'KY', 'VA', 'AR')\nselect\n    names.name,\n    names.gender,\n    names.state,\n    names.year,\n    names.births,\n    sum(names.births) as total_births_across_years,\n    rank names.name over names.state by names.births desc as popularity_rank_in_state,\n    rank names.name by total_births_across_years desc as overall_popularity_rank\norder by overall_popularity_rank asc\nlimit 50;\n",
-      "latency": 23289
-    },
-    {
-      "testId": "test-basic-query",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where names.year between 1980 and 1989\nand names.state in ('TX', 'FL', 'GA', 'AL', 'MS', 'LA', 'SC', 'NC', 'TN', 'AR', 'KY', 'VA')\nselect\n  names.name,\n  names.gender,\n  names.state,\n  names.year,\n  names.births,\n  sum(names.births) as total_births_per_name,\n  count(names.state) as states_with_name,\n  min(names.births) as min_occurrences,\n  max(names.births) as max_occurrences,\n  total_births_per_name / sum(names.births) by names.gender, names.year as percent_of_gender_year\nhaving\n  # Find both very common (high total births) and very unique names (low occurrences in few states)\n  (total_births_per_name > 5000 or (states_with_name < 3 and max_occurrences < 50))\norder by total_births_per_name desc, states_with_name asc, names.name asc\nlimit 100;\n",
-      "latency": 14361
-    },
-    {
-      "testId": "test-basic-query",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where names.year between 1980 and 1989\n  and names.state in ('TX', 'FL', 'GA', 'AL', 'MS', 'LA', 'SC', 'NC', 'TN', 'AR', 'KY', 'VA')\nselect\n  names.name,\n  names.gender,\n  sum(names.births) as total_births,\n  count(names.state) as states_present,\n  avg(names.births) as avg_births_per_state,\n  # Calculate uniqueness score (inverse of popularity)\n  1.0 / (sum(names.births) + 1) as uniqueness_score\norder by \n  # Order by uniqueness to see rare names first\n  uniqueness_score desc, \n  # Then by popularity to see common names\n  total_births desc \nlimit 50;\n",
-      "latency": 13007
-    },
-    {
-      "testId": "test-basic-query",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where names.year between 1980 and 1989\nand names.state in ('AL', 'AR', 'DE', 'FL', 'GA', 'KY', 'LA', 'MD', 'MS', 'NC', 'OK', 'SC', 'TN', 'TX', 'VA', 'WV')\nselect\n    names.name,\n    names.gender,\n    count(names.state) as states_appeared_in,\n    sum(names.births) as total_births,\n    max(names.births) as max_births_in_state,\n    min(names.births ? names.births > 0) as min_births_in_state,\n    count_distinct(names.state) / 16.0 as state_coverage_ratio,\n    total_births / states_appeared_in as average_births_per_state\nhaving \n    total_births > 100  # Filtering out extremely rare names\norder by \n    total_births desc,\n    state_coverage_ratio asc\nlimit 50;\n",
-      "latency": 11494
-    },
-    {
-      "testId": "test-abstract-question",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where game_tall.scheduled_date is not null\nselect\n    case \n        when lower(game_tall.team.color) like '#%00%' then 'Red-dominant'\n        else 'Other colors' \n    end as color_type,\n    count(game_tall.id) as total_games,\n    sum(game_tall.wins) as total_wins,\n    sum(game_tall.wins) / count(game_tall.id) as win_percentage,\n    avg(game_tall.points_game) as avg_points_per_game,\n    avg(game_tall.opponent_points) as avg_opponent_points\norder by win_percentage desc;\n",
-      "latency": 11513
-    },
-    {
-      "testId": "test-abstract-question",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "select\n    game_tall.team.color,\n    count(game_tall.id) as total_games,\n    sum(game_tall.wins) as total_wins,\n    sum(game_tall.wins) / count(game_tall.id) as win_percentage,\n    # Flag if color is traditionally associated with aggression (red/black)\n    case \n        when lower(game_tall.team.color) like '%red%' or lower(game_tall.team.color) like '%black%' then 'Aggressive'\n        else 'Non-aggressive'\n    end as color_category\norder by win_percentage desc\nlimit 25;\n",
-      "latency": 9603
-    },
-    {
-      "testId": "test-abstract-question",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "\nwhere game_tall.team.color is not null\nselect\n    case \n        when substring(game_tall.team.color, 1, 2) in ('FF', 'EE', 'DD', 'CC', 'BB') then 'High Red (Aggressive)'\n        when substring(game_tall.team.color, 1, 2) in ('00', '11', '22', '33', '44') then 'Low Red'\n        else 'Medium Red'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.wins) as total_wins,\n    sum(game_tall.wins) / count(game_tall.id) as win_percentage\norder by win_percentage desc;\n",
-      "latency": 19119
-    },
-    {
-      "testId": "test-abstract-question",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where game_tall.scheduled_date >= '2018-01-01'::date\nselect\n    # Determine if color is predominantly red (aggressive)\n    case\n        when substring(game_tall.team.color, 2, 2) > substring(game_tall.team.color, 4, 2) and \n             substring(game_tall.team.color, 2, 2) > substring(game_tall.team.color, 6, 2) \n        then 'Red dominant (aggressive)'\n        else 'Other colors'\n    end as color_category,\n    \n    # Calculate win statistics\n    count(game_tall.id) as total_games,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) as wins,\n    sum(case when game_tall.points > game_tall.opponent_points then 1 else 0 end) / count(game_tall.id) as win_percentage,\n    \n    # Additional statistics for context\n    avg(game_tall.points) as avg_points_scored,\n    avg(game_tall.opponent_points) as avg_points_allowed,\n    avg(game_tall.points - game_tall.opponent_points) as avg_point_differential\n    \norder by win_percentage desc;\n",
-      "latency": 17773
-    },
-    {
-      "testId": "test-abstract-question",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "where game_tall.team.color is not null\nselect\n  case\n    when lower(game_tall.team.color) like '#f%0%0%' or \n         lower(game_tall.team.color) like '#e%0%0%' or \n         lower(game_tall.team.color) like '#d%0%0%' or \n         lower(game_tall.team.color) like '#c%0%0%' or\n         lower(game_tall.team.color) like '#00000%' or\n         lower(game_tall.team.color) like '#8b000%'\n    then 'Aggressive Color (Red/Black)'\n    else 'Other Colors'\n  end as color_category,\n  count(game_tall.id) as total_games,\n  sum(game_tall.wins) as total_wins,\n  sum(game_tall.wins) / count(game_tall.id) as win_percentage,\n  avg(game_tall.points_game) as avg_points_per_game,\n  avg(game_tall.opponent_points) as avg_opponent_points_per_game\norder by win_percentage desc\nlimit 10;\n",
-      "latency": 29400
-    },
-    {
-      "testId": "test-home-vs-away",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "select\n  game_tall.team.name,\n  sum(game_tall.wins ? game_tall.is_home = true) / sum(game_tall.game_count ? game_tall.is_home = true) as home_win_rate,\n  sum(game_tall.wins ? game_tall.is_home = false) / sum(game_tall.game_count ? game_tall.is_home = false) as away_win_rate,\n  abs(home_win_rate - away_win_rate) as win_rate_difference\norder by win_rate_difference desc\nlimit 10;\n",
-      "latency": 14480
-    },
-    {
-      "testId": "test-home-vs-away",
-      "passed": true,
-      "containedKeywords": [],
-      "missingKeywords": [],
-      "response": "select\n    game_tall.team_name,\n    count(game_tall.id) as total_games,\n    sum(game_tall.wins) as total_wins,\n    sum(game_tall.wins ? game_tall.is_home = true) as home_wins,\n    sum(game_tall.game_count ? game_tall.is_home = true) as home_games,\n    sum(game_tall.wins ? game_tall.is_home = false) as away_wins,\n    sum(game_tall.game_count ? game_tall.is_home = false) as away_games,\n    home_wins / home_games as home_win_rate,\n    away_wins / away_games as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\nhaving \n    home_games > 10 and away_games > 10  # Ensure we have enough games for meaningful comparison\norder by \n    win_rate_difference desc\nlimit 10;\n",
-      "latency": 13526
-    },
-    {
-      "testId": "test-home-vs-away",
       "passed": false,
       "containedKeywords": [],
       "missingKeywords": [],
-      "response": "select\n    game_tall.team_name,\n    sum(game_tall.wins ? game_tall.is_home = true) / sum(game_tall.game_count ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.wins ? game_tall.is_home = false) / sum(game_tall.game_count ? game_tall.is_home = false) as away_win_rate,\n    abs(sum(game_tall.wins ? game_tall.is_home = true) / sum(game_tall.game_count ? game_tall.is_home = true) - \n        sum(game_tall.wins ? game_tall.is_home = false) / sum(game_tall.game_count ? game_tall.is_home = false)) as win_rate_difference\nhaving \n    # Ensure we have enough games to make a meaningful comparison\n    sum(game_tall.game_count ? game_tall.is_home = true) >= 10 and\n    sum(game_tall.game_count ? game_tall.is_home = false) >= 10\norder by \n    win_rate_difference desc\nlimit 20;\n",
-      "latency": 69036
+      "response": "\nwhere names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV')\nand names.year between 1980 and 1989\nselect\n  names.name,\n  names.gender,\n  count(names.state) as states_appeared_in,\n  sum(names.births) as total_births,\n  rank names.name over names.gender by total_births desc as popularity_rank,\n  rank names.name over names.gender by total_births asc as uniqueness_rank\nhaving\n  (popularity_rank <= 20 or uniqueness_rank <= 20)\norder by\n  names.gender asc popularity_rank asc uniqueness_rank asc\nlimit 100\n",
+      "latency": 16288
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.year between 1980 and 1989\n  and names.state in ('AL', 'AR', 'DE', 'FL', 'GA', 'KY', 'LA', 'MD', 'MS', 'NC', 'OK', 'SC', 'TN', 'TX', 'VA', 'WV')\nselect\n  names.name,\n  names.gender,\n  sum(names.births) as total_births,\n  count(names.state) as states_appeared_in,\n  rank names.name by total_births desc as popularity_rank\norder by\n  total_births asc, names.name asc\nlimit 100;\n",
+      "latency": 7951
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA')\n  and names.year between 1980 and 1989\nselect\n  names.name,\n  sum(names.births) as total_births,\n  sum(names.births ? names.gender = 'M') as male_births,\n  sum(names.births ? names.gender = 'F') as female_births,\n  count(names.state) as states_appeared_in,\n  count(names.year) as years_appeared_in,\n  rank names.name by total_births desc as popularity_rank,\n  rank names.name by total_births asc as uniqueness_rank\nhaving\n  total_births > 0\norder by\n  popularity_rank asc, uniqueness_rank asc\nlimit 100\n",
+      "latency": 22494
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA')\nand names.year between 1980 and 1989\nselect\n  names.name,\n  names.gender,\n  count(names.births) as occurrence_count,\n  sum(names.births) as total_births,\n  total_births * 100 / sum(names.births) by names.gender as percent_of_gender_total,\n  rank names.name over names.gender by total_births desc as common_name_rank,\n  rank names.name over names.gender by total_births asc as unique_name_rank\norder by\n  common_name_rank asc,\n  unique_name_rank asc\nlimit 100\n",
+      "latency": 17037
+    },
+    {
+      "testId": "test-basic-query",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "where names.year between 1980 and 1989\n  and names.state in ('TX', 'LA', 'MS', 'AL', 'GA', 'FL', 'SC', 'NC', 'TN', 'KY', 'VA', 'AR')\nselect\n  names.name,\n  names.gender,\n  sum(names.births) as total_births,\n  count(names.state) as states_appeared_in,\n  count(names.year) as years_appeared_in\nhaving\n  total_births > 0\norder by\n  total_births asc, states_appeared_in asc, years_appeared_in asc\nlimit 20;",
+      "latency": 8612
+    },
+    {
+      "testId": "test-star-wars",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme', 'Finn', 'Poe')\nselect\n    names.name,\n    names.year,\n    names.gender,\n    sum(names.births) as total_births\nhaving\n    total_births > 0\norder by\n    names.name asc,\n    names.year asc\nlimit 1000\n",
+      "latency": 19374
+    },
+    {
+      "testId": "test-star-wars",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.year between 1970 and 1983\nselect\n  names.name,\n  names.gender,\n  names.year,\n  sum(names.births) as total_births,\n  sum(names.births ? names.year < 1977) as pre_star_wars_births,\n  sum(names.births ? names.year >= 1977) as post_star_wars_births,\n  (post_star_wars_births - pre_star_wars_births) / nullif(pre_star_wars_births, 0) as percent_change\nwhere\n  names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Lando', 'Vader', 'Obi', 'Ben', 'Yoda')\norder by\n  percent_change desc\nlimit 20;\n",
+      "latency": 6071
+    },
+    {
+      "testId": "test-star-wars",
+      "passed": false,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.year between 1970 and 1985\nselect\n  names.name,\n  names.year,\n  sum(names.births) as total_births\nwhere names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Lando')\norder by\n  names.name,\n  names.year\nlimit 100;\n",
+      "latency": 16009
+    },
+    {
+      "testId": "test-star-wars",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.year between 1970 and 2010\nselect\n  names.name,\n  names.year,\n  sum(names.births) as total_births,\n  sum(names.births ? names.year < 1977) as pre_star_wars_births,\n  sum(names.births ? names.year >= 1977) as post_star_wars_births,\n  (post_star_wars_births - pre_star_wars_births) / nullif(pre_star_wars_births, 0) as percent_change\nwhere\n  names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Lando', 'Kylo', 'Rey', 'Padme')\n  or names.name like '%Vader%'\n  or names.name like '%Skywalker%'\norder by\n  percent_change desc,\n  post_star_wars_births desc\nlimit 20;\n",
+      "latency": 6264
+    },
+    {
+      "testId": "test-star-wars",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nwhere names.year between 1970 and 1985\nselect\n  names.year,\n  names.name,\n  sum(names.births) as total_births,\n  sum(names.births ? names.name = 'Luke') as luke_births,\n  sum(names.births ? names.name = 'Leia') as leia_births,\n  sum(names.births ? names.name = 'Han') as han_births,\n  sum(names.births ? names.name = 'Lando') as lando_births,\n  sum(names.births ? names.name = 'Anakin') as anakin_births\nhaving\n  names.name in ('Luke', 'Leia', 'Han', 'Lando', 'Anakin')\norder by\n  names.year asc,\n  total_births desc\nlimit 100;\n",
+      "latency": 5157
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n  game_tall.team.color,\n  count(game_tall.id) as games_played,\n  sum(game_tall.win) as games_won,\n  sum(game_tall.win) / count(game_tall.id) as win_percentage\norder by\n  win_percentage desc\nlimit 20;\n",
+      "latency": 5177
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n    case \n        when lower(game_tall.team.color) like '%f00%' or \n             lower(game_tall.team.color) like '%ff0000%' or \n             lower(game_tall.team.color) like '%000%' or \n             lower(game_tall.team.color) like '%000000%' \n        then 'Aggressive (Red/Black)' \n        else 'Non-Aggressive' \n    end as color_type,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    sum(game_tall.win) / count(game_tall.id) * 100 as win_percentage\norder by\n    win_percentage desc\nlimit 10;\n",
+      "latency": 9355
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n    case \n        when game_tall.team.color like '#f%' or game_tall.team.color like '#e%' or game_tall.team.color like '#c%' then 'Red/Aggressive'\n        when game_tall.team.color like '#0%' or game_tall.team.color like '#1%' or game_tall.team.color like '#2%' then 'Dark/Aggressive'\n        else 'Other colors'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    sum(game_tall.win) / count(game_tall.id) as win_percentage\norder by\n    win_percentage desc\nlimit 10;\n",
+      "latency": 16376
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n  game_tall.team.color,\n  count(game_tall.id) as total_games,\n  sum(game_tall.win) as total_wins,\n  sum(game_tall.win) / count(game_tall.id) * 100 as win_percentage\norder by\n  win_percentage desc\nlimit 20\n",
+      "latency": 7000
+    },
+    {
+      "testId": "test-abstract-question",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n  case\n    when lower(game_tall.team.color) like '%f%0%0%' or lower(game_tall.team.color) like '%0%0%0%' then 'Aggressive (Red/Black)'\n    else 'Other'\n  end as color_category,\n  count(game_tall.id) as total_games,\n  sum(game_tall.win) as games_won,\n  sum(game_tall.win) / count(game_tall.id) as win_percentage\norder by\n  win_percentage desc\nlimit 10;\n",
+      "latency": 8789
     },
     {
       "testId": "test-home-vs-away",
       "passed": true,
       "containedKeywords": [],
       "missingKeywords": [],
-      "response": "select\n    game_tall.team.name,\n    sum(game_tall.game_count ? game_tall.is_home = true) as home_games,\n    sum(game_tall.wins ? game_tall.is_home = true) as home_wins,\n    sum(game_tall.wins ? game_tall.is_home = true) / sum(game_tall.game_count ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.game_count ? game_tall.is_home = false) as away_games,\n    sum(game_tall.wins ? game_tall.is_home = false) as away_wins,\n    sum(game_tall.wins ? game_tall.is_home = false) / sum(game_tall.game_count ? game_tall.is_home = false) as away_win_rate,\n    (sum(game_tall.wins ? game_tall.is_home = true) / sum(game_tall.game_count ? game_tall.is_home = true)) - \n    (sum(game_tall.wins ? game_tall.is_home = false) / sum(game_tall.game_count ? game_tall.is_home = false)) as win_rate_difference\nhaving \n    home_games > 10 and away_games > 10\norder by \n    win_rate_difference desc\nlimit 10;\n",
-      "latency": 16586
+      "response": "\nselect\n  game_tall.team.name,\n  sum(game_tall.win ? game_tall.is_home = true) as home_wins,\n  count(game_tall.id ? game_tall.is_home = true) as home_games,\n  sum(game_tall.win ? game_tall.is_home = false) as away_wins,\n  count(game_tall.id ? game_tall.is_home = false) as away_games,\n  home_wins / home_games as home_win_rate,\n  away_wins / away_games as away_win_rate,\n  abs(home_win_rate - away_win_rate) as win_rate_difference\nhaving\n  home_games > 10 and away_games > 10\norder by\n  win_rate_difference desc\nlimit 10\n",
+      "latency": 33837
     },
     {
       "testId": "test-home-vs-away",
       "passed": true,
       "containedKeywords": [],
       "missingKeywords": [],
-      "response": "select\n    game_tall.team.name,\n    \n    # Home games stats\n    count(game_tall.id ? game_tall.is_home = true) as home_games,\n    count(game_tall.id ? game_tall.is_home = true and game_tall.points > game_tall.opponent_points) as home_wins,\n    count(game_tall.id ? game_tall.is_home = true and game_tall.points > game_tall.opponent_points) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    \n    # Away games stats\n    count(game_tall.id ? game_tall.is_home = false) as away_games,\n    count(game_tall.id ? game_tall.is_home = false and game_tall.points > game_tall.opponent_points) as away_wins,\n    count(game_tall.id ? game_tall.is_home = false and game_tall.points > game_tall.opponent_points) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    \n    # Win rate difference\n    abs(home_win_rate - away_win_rate) as win_rate_difference\n    \nhaving \n    home_games >= 10 and away_games >= 10  # Ensure we have enough games for meaningful comparison\norder by \n    win_rate_difference desc\nlimit 20;\n",
-      "latency": 19175
+      "response": "\nselect\n  game_tall.team_name,\n  avg(game_tall.win ? game_tall.is_home = true) as home_win_rate,\n  avg(game_tall.win ? game_tall.is_home = false) as away_win_rate,\n  avg(game_tall.win ? game_tall.is_home = true) - avg(game_tall.win ? game_tall.is_home = false) as win_rate_difference,\n  count(game_tall.id ? game_tall.is_home = true) as home_games,\n  count(game_tall.id ? game_tall.is_home = false) as away_games\norder by \n  win_rate_difference desc\nlimit 10\n",
+      "latency": 23733
+    },
+    {
+      "testId": "test-home-vs-away",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nSELECT\n  game_tall.team_name,\n  avg(game_tall.win ? game_tall.is_home = true) AS home_win_rate,\n  avg(game_tall.win ? game_tall.is_home = false) AS away_win_rate,\n  abs(avg(game_tall.win ? game_tall.is_home = true) - avg(game_tall.win ? game_tall.is_home = false)) AS win_rate_difference\nORDER BY\n  win_rate_difference DESC\nLIMIT 10\n",
+      "latency": 6740
+    },
+    {
+      "testId": "test-home-vs-away",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n    game_tall.team_name,\n    avg(game_tall.win ? game_tall.is_home = true) as home_win_rate,\n    avg(game_tall.win ? game_tall.is_home = false) as away_win_rate,\n    avg(game_tall.win ? game_tall.is_home = true) - avg(game_tall.win ? game_tall.is_home = false) as win_rate_difference,\n    count(game_tall.id ? game_tall.is_home = true) as home_games,\n    count(game_tall.id ? game_tall.is_home = false) as away_games\norder by\n    win_rate_difference desc\nlimit 10\n",
+      "latency": 24075
+    },
+    {
+      "testId": "test-home-vs-away",
+      "passed": true,
+      "containedKeywords": [],
+      "missingKeywords": [],
+      "response": "\nselect\n    game_tall.team_name,\n    count(game_tall.id ? game_tall.is_home = true) as home_games,\n    count(game_tall.id ? game_tall.is_home = false) as away_games,\n    sum(game_tall.win ? game_tall.is_home = true) / home_games as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / away_games as away_win_rate,\n    home_win_rate - away_win_rate as win_rate_difference\nhaving\n    home_games >= 10 and\n    away_games >= 10\norder by\n    win_rate_difference desc\nlimit 10;\n",
+      "latency": 20993
     }
   ],
-  "passRate": 0.9333333333333333,
-  "averageLatency": 19573.333333333332
+  "passRate": 0.9,
+  "averageLatency": 14066.6
 }

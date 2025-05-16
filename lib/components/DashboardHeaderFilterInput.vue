@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useLLMConnectionStore } from '../stores'
 import Tooltip from './Tooltip.vue'
 import FilterAutocomplete from './DashboardFilterAutocomplete.vue'
@@ -22,10 +22,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits([
-  'filter-change',
-  'filter-apply',
-])
+const emit = defineEmits(['filter-change', 'filter-apply'])
 
 const llmStore = useLLMConnectionStore()
 
@@ -62,7 +59,7 @@ const filterLLM = () => {
     type: item.datatype,
     description: item.description,
   }))
-  
+
   llmStore
     .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
     .then((response) => {
@@ -125,7 +122,7 @@ watch(
       filterInput.value = newValue || ''
       hasUnappliedChanges.value = false
     }
-  }
+  },
 )
 
 // Watch for external loading state changes
@@ -133,7 +130,7 @@ watch(
   () => props.isLoading,
   (newValue) => {
     isLoading.value = newValue
-  }
+  },
 )
 </script>
 
@@ -414,11 +411,11 @@ watch(
     margin-top: 5px;
     padding-right: 10px;
   }
-  
+
   .sparkle-button {
     right: 30px;
   }
-  
+
   .search-button {
     right: 60px;
   }
@@ -434,11 +431,11 @@ watch(
     margin-right: 8px;
     white-space: nowrap;
   }
-  
+
   .sparkle-button {
     right: 25px;
   }
-  
+
   .search-button {
     right: 50px;
   }
@@ -448,7 +445,7 @@ watch(
   .sparkle-button {
     right: 20px;
   }
-  
+
   .search-button {
     right: 45px;
   }

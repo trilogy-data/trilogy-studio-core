@@ -110,35 +110,13 @@ const generateTooltipFields = (
 /**
  * Create a base chart specification
  */
-const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | null) => {
-  const intChart: Array<Partial<ChartConfig>> = chartSelection
-    ? chartSelection.map((x) => toRaw(x))
-    : []
+const createBaseSpec = (data: readonly Row[] | null) => {
 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
     width: 'container',
     height: 'container',
-    params: [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click,touchend',
-        },
-        value: intChart,
-        nearest: true,
-      },
-    ],
     config: {
       scale: {
         bandPaddingInner: 0.2,
@@ -261,13 +239,23 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns, {
+      y: createFieldEncoding(config.yField || '', columns, 
+      {
         axis: { format: getColumnFormat(config.yField, columns) },
       }),
+      
       tooltip: tooltipFields,
-      ...encoding,
     },
     params: [] as Array<any>,
+  }
+
+  if (config.colorField) {
+    if (!filtered) {
+      mainLayer.encoding = {...mainLayer.encoding, ...{detail: {field: config.colorField, color: 'lightgray'}}}
+    }
+    else {
+      mainLayer.encoding = {...mainLayer.encoding, ...{color: createColorEncoding(config.colorField, columns)}}
+    }
   }
 
   if (!filtered) {
@@ -332,6 +320,7 @@ const createBarChartSpec = (
   tooltipFields: any[],
   encoding: any,
   data: readonly Row[] | null,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   // Determine the number of unique values in the x-field
   let xValueCount = 0
@@ -350,6 +339,25 @@ const createBarChartSpec = (
   // Set the label angle based on the count
   const labelAngle = xValueCount > 7 ? -45 : 0
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: 'bar',
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
@@ -372,8 +380,28 @@ const createBarHChartSpec = (
   tooltipFields: any[],
   encoding: any,
   isMobile: boolean,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: 'bar',
     encoding: {
       y: {
@@ -416,7 +444,7 @@ const createLineChartSpec = (
     intChart,
     true,
   )
-  // if there are two fields in both, we have two ys. Layer them independently
+  // if there are two fields in both, we have two y-axes. Layer them independently.
   let layers = []
   if (base.length > 1 && filtered.length > 1) {
     layers = [{ layer: [base[0], filtered[0]] }, { layer: [base[1], filtered[1]] }]
@@ -425,7 +453,6 @@ const createLineChartSpec = (
   }
   return {
     data: undefined,
-    params: [],
     layer: layers,
   }
 }
@@ -458,8 +485,28 @@ const createPointChartSpec = (
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
   encoding: any,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: { type: 'point', filled: true },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
@@ -606,7 +653,7 @@ export const generateVegaSpec = (
     : []
 
   // Create base spec
-  let spec: any = createBaseSpec(data, chartSelection)
+  let spec: any = createBaseSpec(data)
 
   // Set up color encoding
   let encoding: any = {}
@@ -641,12 +688,12 @@ export const generateVegaSpec = (
 
   switch (config.chartType) {
     case 'bar':
-      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data)
+      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data, intChart)
 
       break
 
     case 'barh':
-      chartSpec = createBarHChartSpec(config, columns, tooltipFields, encoding, isMobile)
+      chartSpec = createBarHChartSpec(config, columns, tooltipFields, encoding, isMobile, intChart)
       break
 
     case 'line':
@@ -658,7 +705,7 @@ export const generateVegaSpec = (
       break
 
     case 'point':
-      chartSpec = createPointChartSpec(config, columns, tooltipFields, encoding)
+      chartSpec = createPointChartSpec(config, columns, tooltipFields, encoding, intChart)
       break
 
     case 'headline':

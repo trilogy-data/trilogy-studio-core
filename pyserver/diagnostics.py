@@ -4,6 +4,7 @@ from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
 from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.statements.author import ImportStatement
+from trilogy.core.models.core import TraitDataType
 from trilogy.authoring import DataType, Concept, Environment
 from io_models import (
     ValidateItem,
@@ -21,6 +22,11 @@ from common import concept_to_description, concept_to_derivation
 
 logger = getLogger("diagnostics")
 
+def address_to_display(address: str) -> str:
+    if address.startswith(DEFAULT_NAMESPACE):
+        return address.split('.',1)[1]
+    else:
+        return address
 
 def user_repr(error: Union[UnexpectedToken]):
     if isinstance(error, UnexpectedToken):
@@ -41,21 +47,26 @@ def truncate_to_last_semicolon(text: str):
     else:
         return text  # Return original string if no semicolon is found
 
+def datatype_to_display(datatype: DataType | TraitDataType) -> str:
+    if isinstance(datatype, TraitDataType):
+        traits = '::'.join(datatype.traits)
+        return f'{datatype_to_display(datatype.type)}[{traits}]'
+    elif isinstance(datatype, DataType):
+        return datatype.value
+    else:
+        return str(datatype)
 
 def concept_to_completion(label: str, concept: Concept, environment: Environment):
     return CompletionItem(
         label=label,
-        datatype=(
-            concept.datatype.value
-            if isinstance(concept.datatype, DataType)
-            else str(concept.datatype)
-        ),
+        datatype=datatype_to_display(concept.datatype),
         description=concept_to_description(concept),
         type="concept",
         insertText=label,
         trilogyType=TrilogyType.CONCEPT,
         trilogySubType=concept.purpose,
         calculation=concept_to_derivation(concept, environment),
+        keys=[address_to_display(x) for x in concept.keys] if concept.keys else None,
     )
 
 

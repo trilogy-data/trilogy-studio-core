@@ -3,4 +3,5 @@ export interface ModelConceptInput {
   type: string
   description?: string
   calculation?: string
+  keys?: string[]
 }

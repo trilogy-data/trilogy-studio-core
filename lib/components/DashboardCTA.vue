@@ -6,10 +6,12 @@ import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import QueryExecutionService from '../stores/queryExecutionService'
 
-const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType;
-const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType;
-const queryExecutionService = inject<QueryExecutionService>('queryExecutionService') as QueryExecutionService;
-const saveDashboards = inject<CallableFunction>('saveDashboards') as CallableFunction;
+const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType
+const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType
+const queryExecutionService = inject<QueryExecutionService>(
+  'queryExecutionService',
+) as QueryExecutionService
+const saveDashboards = inject<CallableFunction>('saveDashboards') as CallableFunction
 if (!dashboardStore || !llmStore || !queryExecutionService || !saveDashboards) {
   throw new Error('DashboardStore, LLMConnectionStore, or QueryExecutionService not provided')
 }
@@ -147,11 +149,11 @@ async function generateDashboardWithLLM(): Promise<void> {
     generationError.value = 'Please provide a prompt for the dashboard generation.'
     return
   }
-  
+
   try {
     isGenerating.value = true
     generationError.value = ''
-    
+
     // Generate the prompt specification based on user input
     const promptSpec = await dashboardStore.generatePromptSpec(
       dashboardPrompt.value,
@@ -168,13 +170,13 @@ async function generateDashboardWithLLM(): Promise<void> {
         llmStore,
         queryExecutionService,
       )
-      
+
       // Update the dashboard description if not already set
       if (!description.value && promptSpec.description) {
         description.value = promptSpec.description
         updateDescription()
       }
-      
+
       // Save the dashboards
       saveDashboards()
     } else {
@@ -194,7 +196,8 @@ async function generateDashboardWithLLM(): Promise<void> {
     <div class="setup-header">
       <h2 class="setup-title">An Empty Dashboard</h2>
       <p class="setup-subtitle">
-        Choose a template or start from scratch by using the 'add item' button to add charts, tables, and more.
+        Choose a template or start from scratch by using the 'add item' button to add charts,
+        tables, and more.
       </p>
     </div>
 
@@ -214,7 +217,7 @@ async function generateDashboardWithLLM(): Promise<void> {
         <i class="mdi mdi-content-save"></i> Save
       </button>
     </div>
-    
+
     <div v-if="hasLlmConnection" class="setup-section">
       <h3 class="section-title">AI Copilot</h3>
       <p class="section-desc">
@@ -228,8 +231,8 @@ async function generateDashboardWithLLM(): Promise<void> {
         data-testid="dashboard-prompt-input"
       ></textarea>
       <div class="action-row">
-        <button 
-          @click="generateDashboardWithLLM" 
+        <button
+          @click="generateDashboardWithLLM"
           class="action-button llm-button"
           :disabled="isGenerating || !dashboardPrompt.trim()"
           data-testid="generate-with-llm-button"

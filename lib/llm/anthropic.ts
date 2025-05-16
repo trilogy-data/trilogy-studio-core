@@ -1,5 +1,5 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse } from './base'
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 import { fetchWithRetry, type RetryOptions } from './utils'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
@@ -60,9 +60,9 @@ export class AnthropicProvider extends LLMProvider {
     }
   }
 
-  async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {
+  async generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null = null,): Promise<LLMResponse> {
     this.validateRequestOptions(options)
-
+    history = history || []
     try {
       const response = await fetchWithRetry(
         () =>
@@ -76,7 +76,7 @@ export class AnthropicProvider extends LLMProvider {
             },
             body: JSON.stringify({
               model: this.model,
-              messages: [{ role: 'user', content: options.prompt }],
+              messages: history.concat([{ role: 'user', content: options.prompt }]),
               max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
               temperature: options.temperature || DEFAULT_TEMPERATURE,
               top_p: options.topP || 1.0,
