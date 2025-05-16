@@ -75,7 +75,7 @@
             }}
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" >
+        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect">
           <div class="editor-top">
             <editor
               context="main-trilogy"

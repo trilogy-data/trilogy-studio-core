@@ -27,7 +27,7 @@ export const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
   backoffMultiplier: 2,
   maxDelayMs: 60000, // 1 minute
   retryStatusCodes: [429, 503, 504], // Rate limit and service unavailable errors
-  onRetry: () => { }, // No-op by default
+  onRetry: () => {}, // No-op by default
 }
 
 /**
@@ -130,7 +130,6 @@ export async function fetchWithRetry(
     return response
   }, options)
 }
-
 
 export function completionToModelInput(input: CompletionItem[]): ModelConceptInput[] {
   return input.map((item) => ({

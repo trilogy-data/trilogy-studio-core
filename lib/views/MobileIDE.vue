@@ -1,22 +1,45 @@
 <template>
   <div class="main">
-    <mobile-sidebar-layout @menu-toggled="mobileMenuOpen = !mobileMenuOpen" :menuOpen="mobileMenuOpen"
-      :activeScreen="activeScreen">
+    <mobile-sidebar-layout
+      @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      :menuOpen="mobileMenuOpen"
+      :activeScreen="activeScreen"
+    >
       <template #sidebar>
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveScreen" @save-editors="saveEditorsCall"
-          @model-key-selected="setActiveModelKey" @documentation-key-selected="setActiveDocumentationKey"
-          @dashboard-key-selected="setActiveDashboard" @toggle-mobile-menu="toggleMobileMenu"
-          @connection-key-selected="setActiveConnectionKey" :active="activeScreen" :activeEditor="activeEditor"
-          :activeDocumentationKey="activeDocumentationKey" :activeConnectionKey="activeConnectionKey"
-          :activeModelKey="activeModelKey" :activeDashboardKey="activeDashboard" />
+        <sidebar
+          @editor-selected="setActiveEditor"
+          @screen-selected="setActiveScreen"
+          @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey"
+          @documentation-key-selected="setActiveDocumentationKey"
+          @dashboard-key-selected="setActiveDashboard"
+          @toggle-mobile-menu="toggleMobileMenu"
+          @connection-key-selected="setActiveConnectionKey"
+          :active="activeScreen"
+          :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey"
+          :activeConnectionKey="activeConnectionKey"
+          :activeModelKey="activeModelKey"
+          :activeDashboardKey="activeDashboard"
+        />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
         <tabbed-layout>
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
-            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorId="activeEditor"
-              @query-started="slotProps.onQueryStarted" @save-editors="saveEditorsCall" />
-            <editor @query-started="slotProps.onQueryStarted" v-else context="main-sql" :editorId="activeEditor"
-              @save-editors="saveEditorsCall" />
+            <editor
+              v-if="activeEditorData.type == 'preql'"
+              context="main-trilogy"
+              :editorId="activeEditor"
+              @query-started="slotProps.onQueryStarted"
+              @save-editors="saveEditorsCall"
+            />
+            <editor
+              @query-started="slotProps.onQueryStarted"
+              v-else
+              context="main-sql"
+              :editorId="activeEditor"
+              @save-editors="saveEditorsCall"
+            />
           </template>
           <template #results v-if="activeEditorData">
             <ResultsView :editorData="activeEditorData"></ResultsView>
@@ -24,7 +47,10 @@
         </tabbed-layout>
       </template>
       <template v-else-if="activeScreen === 'connections'">
-        <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
+        <connection-view
+          :activeConnectionKey="activeConnectionKey"
+          @save-editors="saveEditorsCall"
+        />
       </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
@@ -217,7 +243,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => { }
+      saveEditors = () => {}
     }
     const screenNavigation = useScreenNavigation()
     const {
@@ -227,7 +253,7 @@ export default {
       setActiveScreen,
       setActiveEditor,
       setActiveDashboard,
-      mobileMenuOpen
+      mobileMenuOpen,
     } = screenNavigation
     return {
       connectionStore,

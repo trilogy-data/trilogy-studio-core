@@ -78,9 +78,7 @@ export default {
       console.log('emitting llmQueryAccepted')
       this.$emit('llm-query-accepted')
     },
-    
   },
-  
 }
 </script>
 

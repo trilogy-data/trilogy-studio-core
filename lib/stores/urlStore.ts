@@ -1,7 +1,6 @@
+export function getDefaultValueFromHash(key: string, fallback: string): string
 
-export function getDefaultValueFromHash(key: string, fallback: string): string;
-
-export function getDefaultValueFromHash(key: string, fallback?: null): string | null;
+export function getDefaultValueFromHash(key: string, fallback?: null): string | null
 
 export function getDefaultValueFromHash(
   key: string,

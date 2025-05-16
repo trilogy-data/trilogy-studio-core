@@ -377,7 +377,6 @@ export const useDashboardStore = defineStore('dashboards', {
         // wait on that promise
         await results.resultPromise
         return true
-
       }
       // first loop, add everything as markdown
       // TODO: fix typehints here

@@ -76,7 +76,7 @@ const testCases: TestScenario[] = [
       testFields,
     ),
     expectedResponse: {
-      contains: ['extended_price', 'order.customer.name', '8',],
+      contains: ['extended_price', 'order.customer.name', '8'],
       mustIdentify: 'order.customer.name',
       notContains: ['FROM', 'GROUP BY'],
     },

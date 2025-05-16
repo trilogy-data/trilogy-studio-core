@@ -38,13 +38,7 @@ export const rulesInput = `- No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNI
     total_flights desc;
   "`
 
-export const aggFunctions = [
-  'avg',
-  'count',
-  'max',
-  'min',
-  'sum',
-]
+export const aggFunctions = ['avg', 'count', 'max', 'min', 'sum']
 
 export const functions = [
   'abs',
@@ -120,5 +114,3 @@ export const datatypes = [
   // PARSING
   'unknown',
 ]
-
-

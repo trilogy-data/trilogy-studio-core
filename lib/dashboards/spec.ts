@@ -111,7 +111,6 @@ const generateTooltipFields = (
  * Create a base chart specification
  */
 const createBaseSpec = (data: readonly Row[] | null) => {
-
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
@@ -239,11 +238,10 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns, 
-      {
+      y: createFieldEncoding(config.yField || '', columns, {
         axis: { format: getColumnFormat(config.yField, columns) },
       }),
-      
+
       tooltip: tooltipFields,
     },
     params: [] as Array<any>,
@@ -251,10 +249,15 @@ const createInteractiveLayer = (
 
   if (config.colorField) {
     if (!filtered) {
-      mainLayer.encoding = {...mainLayer.encoding, ...{detail: {field: config.colorField, color: 'lightgray'}}}
-    }
-    else {
-      mainLayer.encoding = {...mainLayer.encoding, ...{color: createColorEncoding(config.colorField, columns)}}
+      mainLayer.encoding = {
+        ...mainLayer.encoding,
+        ...{ detail: { field: config.colorField, color: 'lightgray' } },
+      }
+    } else {
+      mainLayer.encoding = {
+        ...mainLayer.encoding,
+        ...{ color: createColorEncoding(config.colorField, columns) },
+      }
     }
   }
 

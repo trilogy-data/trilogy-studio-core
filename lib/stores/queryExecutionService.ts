@@ -550,7 +550,7 @@ export default class QueryExecutionService {
       }
 
       generatedSql = resolveResponse.data.generated_sql
-      
+
       const headers = resolveResponse.data.columns
 
       // Second step: Execute query
@@ -623,7 +623,7 @@ export default class QueryExecutionService {
           message: errorMessage,
           error: true,
           running: false,
-          generatedSql
+          generatedSql,
         })
       }
       return {

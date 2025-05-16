@@ -48,7 +48,11 @@
         />
       </div>
       <div class="results-section">
-        <results-view :editorData="editorStore.editors[editorId]" :containerHeight="500" @llm-query-accepted="runQuery"/>
+        <results-view
+          :editorData="editorStore.editors[editorId]"
+          :containerHeight="500"
+          @llm-query-accepted="runQuery"
+        />
       </div>
     </div>
 

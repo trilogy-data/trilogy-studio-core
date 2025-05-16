@@ -28,13 +28,12 @@ export const extractLastTripleQuotedText = (input: string): string => {
   const strippedInput = normalizedInput.replace(/```(trilogy|sql|json)(\s|\n)/g, '```')
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // sometimes we might end up with double backticks, start with that first
-  for (const quote of ['```\\s*```', '```' ]) {
+  for (const quote of ['```\\s*```', '```']) {
     const match = strippedInput.match(new RegExp(`${quote}([\\s\\S]*)${quote}`, 's'))
-    
+
     if (match) {
-      return match[match.length -1 ]
+      return match[match.length - 1]
     }
-    
   }
   return input // Return the original input if no triple quotes were found
 }
@@ -154,29 +153,30 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       )
       // add input to our history
       history.push({
-        role: 'user', 
+        role: 'user',
         content: base,
       })
 
       // Add the response message to the history
       history.push({
         role: 'assistant',
-        content: raw.text
+        content: raw.text,
       })
 
       // Extract the response
       console.log('Initial LLM response:', raw.text)
       extract = extractLastTripleQuotedText(raw.text)
 
-      
       // Validation loop
       if (validator) {
         while (attempts < maxAttempts && !passed) {
           try {
             // Attempt validation
             // if extact is null, throw an error
-            if (!extract || extract.trim() == "") {
-              throw new Error('Attempt to extract contents of triple backticks returned null or empty string')
+            if (!extract || extract.trim() == '') {
+              throw new Error(
+                'Attempt to extract contents of triple backticks returned null or empty string',
+              )
             }
             passed = await validator(extract)
             console.log('LLM response validation passed')
@@ -194,12 +194,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
               break
             }
 
-
             // Add feedback to the prompt for next attempt
             let message = (e as Error).message
             let errorResponse = `\nYou had given a response: """${extract}""" that failed validation on this error: ${message}. Generate a new response that solves the original request while fixing the error. Ensure the new answer to validate is still enclosed within triple double quotes with no extra content. Put your reasoning on the fix before the quotes.`
-            
- 
+
             // Generate new completion with updated prompt
             raw = await this.generateCompletion(
               connection,
@@ -215,7 +213,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
             history.push({
               role: 'assistant',
-              content: raw.text
+              content: raw.text,
             })
 
             // Extract the new response

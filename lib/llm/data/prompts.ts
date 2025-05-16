@@ -18,7 +18,6 @@ Valid types:
 
 `
 
-
 function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
     .map(

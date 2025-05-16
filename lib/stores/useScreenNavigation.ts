@@ -1,28 +1,28 @@
 // navigationStore.ts
-import { ref,  type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { pushHashToUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
 
 // Define types for the store
 interface NavigationState {
-  activeScreen: Ref<string>;
-  activeEditor: Ref<string>;
-  activeDashboard: Ref<string>;
-  mobileMenuOpen: Ref<boolean>;
+  activeScreen: Ref<string>
+  activeEditor: Ref<string>
+  activeDashboard: Ref<string>
+  mobileMenuOpen: Ref<boolean>
 }
 
 interface NavigationStore {
   // Properties (implemented as getters that return refs)
-  readonly activeScreen: Ref<string>;
-  readonly activeEditor: Ref<string>;
-  readonly activeDashboard: Ref<string>;
-  readonly mobileMenuOpen: Ref<boolean>;
-  
+  readonly activeScreen: Ref<string>
+  readonly activeEditor: Ref<string>
+  readonly activeDashboard: Ref<string>
+  readonly mobileMenuOpen: Ref<boolean>
+
   // Methods
-  setActiveScreen(screen: string): void;
-  setActiveEditor(editor: string): void;
-  setActiveDashboard(dashboard: string): void;
-  toggleMobileMenu(): void;
+  setActiveScreen(screen: string): void
+  setActiveEditor(editor: string): void
+  setActiveDashboard(dashboard: string): void
+  toggleMobileMenu(): void
 }
 
 // Create a single store instance that will be shared across components
@@ -32,8 +32,8 @@ const createNavigationStore = (): NavigationStore => {
     activeScreen: ref(getDefaultValueFromHash('screen', '')),
     activeEditor: ref(getDefaultValueFromHash('editor', '')),
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
-    mobileMenuOpen: ref(false)
-  };
+    mobileMenuOpen: ref(false),
+  }
 
   // Define methods that modify the state
   const setActiveScreen = (screen: string): void => {
@@ -67,16 +67,24 @@ const createNavigationStore = (): NavigationStore => {
 
   return {
     // Expose state as properties that return refs
-    get activeScreen() { return state.activeScreen },
-    get activeEditor() { return state.activeEditor },
-    get activeDashboard() { return state.activeDashboard },
-    get mobileMenuOpen() { return state.mobileMenuOpen },
-    
+    get activeScreen() {
+      return state.activeScreen
+    },
+    get activeEditor() {
+      return state.activeEditor
+    },
+    get activeDashboard() {
+      return state.activeDashboard
+    },
+    get mobileMenuOpen() {
+      return state.mobileMenuOpen
+    },
+
     // Expose methods
     setActiveScreen,
     setActiveEditor,
     setActiveDashboard,
-    toggleMobileMenu
+    toggleMobileMenu,
   }
 }
 
@@ -87,4 +95,3 @@ const navigationStore = createNavigationStore()
 export default function useScreenNavigation(): NavigationStore {
   return navigationStore
 }
-

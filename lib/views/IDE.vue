@@ -337,7 +337,7 @@ export default {
     activeDashboardComputed() {
       console.log('activeDashboardComputed', this.activeDashboard)
       return this.activeDashboard
-    }
+    },
   },
 }
 </script>

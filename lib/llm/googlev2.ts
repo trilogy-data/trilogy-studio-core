@@ -3,10 +3,9 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 import { GoogleGenAI, type Part } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
-
 const MAX_RETRIES = 3
 // retry delay by default for 429 is 30s
-const INITIAL_RETRY_DELAY_MS = 30_000 
+const INITIAL_RETRY_DELAY_MS = 30_000
 
 export class GoogleProvider extends LLMProvider {
   private genAIClient: GoogleGenAI | null = null
@@ -15,12 +14,10 @@ export class GoogleProvider extends LLMProvider {
   public models: string[] = []
   public type: string = 'google'
 
-
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
     this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
   }
-
 
   async reset(): Promise<void> {
     try {
@@ -32,11 +29,11 @@ export class GoogleProvider extends LLMProvider {
       )
     }
     this.error = null
-    
+
     // Apply retry logic to the model fetching
     let retries = 0
     let success = false
-    
+
     while (!success && retries <= MAX_RETRIES) {
       try {
         const response = await fetch(`${this.baseModelUrl}?key=${this.apiKey}`, {
@@ -48,7 +45,7 @@ export class GoogleProvider extends LLMProvider {
           if (retries <= MAX_RETRIES) {
             const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1) // Exponential backoff
             console.log(`Rate limited (429). Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
-            await new Promise(resolve => setTimeout(resolve, delayMs))
+            await new Promise((resolve) => setTimeout(resolve, delayMs))
             continue
           }
         }
@@ -75,37 +72,36 @@ export class GoogleProvider extends LLMProvider {
         // Exponential backoff for other errors too
         const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1)
         console.log(`Error fetching models. Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
-        await new Promise(resolve => setTimeout(resolve, delayMs))
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
       }
     }
   }
 
-
   private async withRetry<T>(apiCall: () => Promise<T>): Promise<T> {
     let retries = 0
-    
+
     while (true) {
       try {
         return await apiCall()
       } catch (error) {
         // Check if it's a 429 error or contains 429 error message
-        const isRateLimitError = 
-          (error instanceof Error && 
-           (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) ||
+        const isRateLimitError =
+          (error instanceof Error &&
+            (error.message.includes('429') ||
+              error.message.toLowerCase().includes('rate limit'))) ||
           (error instanceof Response && error.status === 429)
-        
+
         if (!isRateLimitError || retries >= MAX_RETRIES) {
           throw error
         }
-        
+
         retries++
         const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1) // Exponential backoff
         console.log(`Rate limited (429). Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
-        await new Promise(resolve => setTimeout(resolve, delayMs))
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
       }
     }
   }
-
 
   async generateCompletion(
     options: LLMRequestOptions,
@@ -116,7 +112,7 @@ export class GoogleProvider extends LLMProvider {
     if (!this.genAIClient) {
       throw new Error('Google GenAI client is not initialized')
     }
-    
+
     // Using the retry wrapper for API calls
     return await this.withRetry(async () => {
       if (history && history.length > 0) {
@@ -131,7 +127,6 @@ export class GoogleProvider extends LLMProvider {
           },
         }
         const chat = this.genAIClient!.chats.create(args)
-        
 
         // Send the message
         const result = await chat.sendMessage({ message: options.prompt })

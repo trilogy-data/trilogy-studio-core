@@ -101,11 +101,12 @@ export default class DuckDBConnection extends BaseConnection {
     let processedRow: Record<string, any> = {}
     Object.keys(row).forEach((key) => {
       const column = headers.get(key)
-      
+
       if (column) {
         switch (column.type) {
           case ColumnType.INTEGER:
-            processedRow[key] = (row[key] !== null && row[key] !== undefined) ? Number(row[key]) : null
+            processedRow[key] =
+              row[key] !== null && row[key] !== undefined ? Number(row[key]) : null
             break
           case ColumnType.FLOAT:
             const scale = column.scale || 0
@@ -140,8 +141,7 @@ export default class DuckDBConnection extends BaseConnection {
             processedRow[key] = row[key]
             break
         }
-      }
-      else {
+      } else {
         console.warn(`Column ${key} not found in headers`)
       }
     })

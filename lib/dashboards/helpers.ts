@@ -189,7 +189,6 @@ export const determineDefaultConfig = (
   } else if (temporalColumns.length > 0 && numericColumns.length > 0) {
     // Time series data - use line chart
     defaults.chartType = 'line'
-    
   } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
     // Categorical vs numeric - check category count for bar orientation
     const firstCatField = categoricalColumns[0].name

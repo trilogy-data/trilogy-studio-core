@@ -68,7 +68,6 @@ describe('extractLastTripleQuotedText', () => {
     expect(extractLastTripleQuotedText(input)).toBe(input)
   })
 
-
   it('should handle language prefixes with whitespace', () => {
     const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```'
     expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n')
@@ -150,7 +149,7 @@ order by return_ratio desc;
 `)
   })
 
-  it ('should handle this response', () => {
+  it('should handle this response', () => {
     const input = `Reasoning:The user is asking "what states have the most people?". From the provided data, \`state.population\` represents the population of each state. Thus, we need to select the state and its population, and order by population descending to find the states with the most people. Also, based on the description of the \`state.population\` field, it has grain \`state\`.
 
 \`\`\`trilogy
@@ -163,13 +162,12 @@ limit 10;
 """
 \`\`\``
 
-expect(extractLastTripleQuotedText(input)).toBe(`select
+    expect(extractLastTripleQuotedText(input)).toBe(`select
     state,
     state.population
 order by
     state.population desc
 limit 10;
 `)
-
   })
 })

@@ -60,7 +60,10 @@ export class AnthropicProvider extends LLMProvider {
     }
   }
 
-  async generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null = null,): Promise<LLMResponse> {
+  async generateCompletion(
+    options: LLMRequestOptions,
+    history: LLMMessage[] | null = null,
+  ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
     history = history || []
     try {
