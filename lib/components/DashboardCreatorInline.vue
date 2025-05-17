@@ -101,13 +101,15 @@ export default {
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const saveDashboards = inject<CallableFunction>('saveDashboards')
 
     if (
       !dashboardStore ||
       !connectionStore ||
       !llmStore ||
       !queryExecutionService ||
-      !editorStore
+      !editorStore ||
+      !saveDashboards
     ) {
       throw new Error('Dashboard or connection store is not provided!')
     }
@@ -175,6 +177,8 @@ export default {
         // Reset form
         dashboardName.value = ''
         selectedImport.value = ''
+
+        saveDashboards()
 
         // Close creator
         emit('close')

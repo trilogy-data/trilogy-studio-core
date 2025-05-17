@@ -19,7 +19,7 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import DashboardCTA from './DashboardCTA.vue'
-import useScreenNavigation from '../views/useScreenNavigation'
+import useScreenNavigation from '../stores/useScreenNavigation'
 // Props definition
 const props = defineProps<{
   name: string
@@ -70,18 +70,8 @@ const globalCompletion = ref<CompletionItem[]>([])
 // Get the active dashboard
 const dashboard = computed(() => {
   // Try to find the dashboard by name
+  console.log('Finding dashboard:', props.name)
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
-
-  // If dashboard doesn't exist, try to create it with the provided connection
-  if (!dashboard && props.connectionId) {
-    try {
-      return dashboardStore.newDashboard(props.name, props.connectionId)
-    } catch (error) {
-      console.error('Failed to create dashboard:', error)
-      return null
-    }
-  }
-
   return dashboard
 })
 
@@ -520,7 +510,6 @@ function unSelect(itemId: string): void {
 function dashboardCreated(id: string): void {
   console.log('Dashboard created event received:', id)
   setActiveDashboard(id)
-  dashboardStore.setActiveDashboard(id)
 }
 
 // Clean up timeout on component unmount or before destruction

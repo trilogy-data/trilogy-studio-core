@@ -4,7 +4,15 @@ from lark import UnexpectedToken
 from trilogy.parsing.parse_engine import PARSER
 from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.statements.author import ImportStatement
-from trilogy.authoring import DataType, Concept, Environment
+from trilogy.core.models.core import TraitDataType, NumericType
+from trilogy.authoring import (
+    DataType,
+    Concept,
+    Environment,
+    StructType,
+    ListType,
+    MapType,
+)
 from io_models import (
     ValidateItem,
     ValidateResponse,
@@ -22,7 +30,14 @@ from common import concept_to_description, concept_to_derivation
 logger = getLogger("diagnostics")
 
 
-def user_repr(error: Union[UnexpectedToken]):
+def address_to_display(address: str) -> str:
+    if address.startswith(DEFAULT_NAMESPACE):
+        return address.split(".", 1)[1]
+    else:
+        return address
+
+
+def user_repr(error: Union[UnexpectedToken, Exception]) -> str:
     if isinstance(error, UnexpectedToken):
         expected = ", ".join(error.accepts or error.expected)
         return (
@@ -32,7 +47,7 @@ def user_repr(error: Union[UnexpectedToken]):
         return str(error)
 
 
-def truncate_to_last_semicolon(text: str):
+def truncate_to_last_semicolon(text: str) -> str:
     last_semicolon_index = text.rfind(";")
     if last_semicolon_index + 1 == len(text):
         return truncate_to_last_semicolon(text[: last_semicolon_index - 1])
@@ -42,20 +57,39 @@ def truncate_to_last_semicolon(text: str):
         return text  # Return original string if no semicolon is found
 
 
+def datatype_to_display(
+    datatype: (
+        DataType | TraitDataType | NumericType | ListType | MapType | StructType | Any
+    ),
+) -> str:
+    if isinstance(datatype, TraitDataType):
+        traits = "::".join(datatype.traits)
+        return f"{datatype_to_display(datatype.type)}[{traits}]"
+    elif isinstance(datatype, DataType):
+        return datatype.value
+    elif isinstance(datatype, NumericType):
+        return f"{datatype.value}({datatype.precision},{datatype.scale})"
+    elif isinstance(datatype, ListType):
+        return f"Array<{datatype_to_display(datatype.type)}>"
+    elif isinstance(datatype, MapType):
+        return f"Map<{datatype_to_display(datatype.key_type)}, {datatype_to_display(datatype.value_type)}>"
+    elif isinstance(datatype, StructType):
+        return f'Struct<{", ".join([f"{k}: {datatype_to_display(v)}" for k, v in datatype.fields_map.items()])}>'
+    else:
+        return str(datatype)
+
+
 def concept_to_completion(label: str, concept: Concept, environment: Environment):
     return CompletionItem(
         label=label,
-        datatype=(
-            concept.datatype.value
-            if isinstance(concept.datatype, DataType)
-            else str(concept.datatype)
-        ),
+        datatype=datatype_to_display(concept.datatype),
         description=concept_to_description(concept),
         type="concept",
         insertText=label,
         trilogyType=TrilogyType.CONCEPT,
         trilogySubType=concept.purpose,
         calculation=concept_to_derivation(concept, environment),
+        keys=[address_to_display(x) for x in concept.keys] if concept.keys else None,
     )
 
 
@@ -107,7 +141,7 @@ def get_diagnostics(
         return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
         env = parse_env_from_full_model(sources)
-        seen = set()
+        seen: set[str] = set()
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
                 continue

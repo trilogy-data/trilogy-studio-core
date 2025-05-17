@@ -47,7 +47,31 @@
         </div>
 
         <div v-if="expandedItems[item.id]" class="query-history-item-details">
-          <code-block class="query-history-item-query" :content="item.query" language="sql" />
+          <div class="query-tabs" v-if="item.generatedQuery">
+            <button
+              class="tab-btn"
+              :class="{ active: !showGeneratedQuery[item.id] }"
+              @click="toggleGeneratedQuery(item.id, false)"
+            >
+              Executed Query
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ active: showGeneratedQuery[item.id] }"
+              @click="toggleGeneratedQuery(item.id, true)"
+            >
+              Generated Query
+            </button>
+          </div>
+
+          <code-block
+            class="query-history-item-query"
+            :content="
+              showGeneratedQuery[item.id] && item.generatedQuery ? item.generatedQuery : item.query
+            "
+            language="sql"
+          />
+
           <div class="query-history-item-details-meta">
             <div>Executed at: {{ formatDate(item.timestamp) }}</div>
             <div>Time: {{ formatExecutionTime(item.executionTime) }}</div>
@@ -84,6 +108,9 @@ const historyStore = ref(useQueryHistory(currentConnectionName.value))
 // Track expanded state for history items
 const expandedItems = ref<Record<number, boolean>>({})
 
+// Track which view of the query to show (executed or generated)
+const showGeneratedQuery = ref<Record<number, boolean>>({})
+
 // Computed properties to access store state
 const history = computed(() => historyStore.value.history)
 const isLoading = computed(() => historyStore.value.isLoading)
@@ -92,6 +119,13 @@ const error = computed(() => historyStore.value.error)
 // Toggle expanded state for a history item
 const toggleExpand = (id: number): void => {
   expandedItems.value[id] = !expandedItems.value[id]
+}
+
+// Toggle between executed query and generated query text
+const toggleGeneratedQuery = (id: number, showGenerated: boolean): void => {
+  // Stop event propagation to prevent toggling the expanded state
+  event?.stopPropagation()
+  showGeneratedQuery.value[id] = showGenerated
 }
 
 // Format date in a readable way
@@ -137,6 +171,8 @@ watch(
   (newConnectionName) => {
     // Reset expanded items when connection changes
     expandedItems.value = {}
+    // Reset generated query view state
+    showGeneratedQuery.value = {}
 
     // Create a new store instance with the new connection name
     historyStore.value = useQueryHistory(newConnectionName)
@@ -196,7 +232,7 @@ onMounted(() => {
 
 .query-history-actions button {
   background-color: var(--bg-color);
-  border: 1px solid var(--border);
+  /* border: 1px solid var(--border); */
   border-radius: 4px;
   padding: 4px 8px;
   cursor: pointer;
@@ -311,10 +347,38 @@ onMounted(() => {
   background-color: var(--bg-color);
 }
 
+/* Query tabs navigation */
+.query-tabs {
+  display: flex;
+  margin-top: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.tab-btn.active {
+  color: #2196f3;
+  border-bottom-color: #2196f3;
+  font-weight: 500;
+}
+
 .query-history-item-query {
   font-family: monospace;
   border-radius: 4px;
-  padding: 12px;
+  /* padding: 12px; */
   margin: 12px 0;
   overflow-x: auto;
   white-space: pre-wrap;

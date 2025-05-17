@@ -134,7 +134,7 @@ import ModelCreator from './ModelCreator.vue'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import {
   type ModelFile,
-  fetchBranches,
+  // fetchBranches,
   fetchModelFiles,
   filterModelFiles,
   getDefaultConnection as getDefaultConnectionService,
@@ -156,10 +156,6 @@ const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref('')
 const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
 const loading = ref(false)
-
-// GitHub branch support
-const selectedBranch = ref('main')
-const branches = ref(['main', 'develop', 'staging'])
 
 const modelStore = inject<ModelConfigStoreType>('modelStore')
 if (!modelStore) {
@@ -196,7 +192,7 @@ const fetchFiles = async (): Promise<void> => {
   error.value = null
   loading.value = true
 
-  const result = await fetchModelFiles(selectedBranch.value)
+  const result = await fetchModelFiles()
   files.value = result.files
   error.value = result.error
 
@@ -208,8 +204,8 @@ const refreshData = async (): Promise<void> => {
   loading.value = true
 
   // Fetch branches first, then fetch files
-  const branchesResult = await fetchBranches()
-  branches.value = branchesResult
+  // const branchesResult = await fetchBranches()
+  // branches.value = branchesResult
 
   await fetchFiles()
 }

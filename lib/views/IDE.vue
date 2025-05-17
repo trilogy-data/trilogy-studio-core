@@ -66,7 +66,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard :name="activeDashboard" />
+        <dashboard :name="activeDashboardComputed" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
@@ -179,7 +179,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject, ref } from 'vue'
-import useScreenNavigation from './useScreenNavigation'
+import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -254,6 +254,7 @@ export default {
     if (editor) {
       editorStore.activeEditorId = editor
     }
+    const screenNavigation = useScreenNavigation()
     const {
       activeScreen,
       activeEditor,
@@ -261,7 +262,7 @@ export default {
       setActiveScreen,
       setActiveEditor,
       setActiveDashboard,
-    } = useScreenNavigation()
+    } = screenNavigation
     return {
       connectionStore,
       editorStore,
@@ -302,7 +303,6 @@ export default {
       this.saveEditors()
     },
     runQuery() {
-      console.log('Running query')
       if (this.editorRef) {
         this.editorRef.runQuery()
       }
@@ -333,6 +333,10 @@ export default {
     },
     editors() {
       return this.editorStore.editors
+    },
+    activeDashboardComputed() {
+      console.log('activeDashboardComputed', this.activeDashboard)
+      return this.activeDashboard
     },
   },
 }

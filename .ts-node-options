@@ -1,0 +1,3 @@
+--esm
+--experimental-specifier-resolution=node
+--transpile-only

@@ -178,7 +178,7 @@ import { inject } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
-import useScreenNavigation from './useScreenNavigation'
+import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
 export default {
@@ -245,6 +245,7 @@ export default {
     if (!saveEditors) {
       saveEditors = () => {}
     }
+    const screenNavigation = useScreenNavigation()
     const {
       activeScreen,
       activeEditor,
@@ -253,7 +254,7 @@ export default {
       setActiveEditor,
       setActiveDashboard,
       mobileMenuOpen,
-    } = useScreenNavigation()
+    } = screenNavigation
     return {
       connectionStore,
       editorStore,

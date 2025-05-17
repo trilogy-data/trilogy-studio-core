@@ -7,6 +7,7 @@ import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
+import { completionToModelInput } from '../llm/utils'
 
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
@@ -308,12 +309,7 @@ export const useDashboardStore = defineStore('dashboards', {
       if (!completions) {
         throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
       }
-      return completions.map((item) => ({
-        name: item.label,
-        type: item.datatype,
-        description: item.description,
-        calculation: item.calculation,
-      }))
+      return completionToModelInput(completions)
     },
 
     async generatePromptSpec(

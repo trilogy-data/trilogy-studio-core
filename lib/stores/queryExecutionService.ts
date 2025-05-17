@@ -19,6 +19,7 @@ export interface QueryUpdate {
   message: string
   error?: boolean
   running?: boolean
+  generatedSql?: string
 }
 
 export interface QueryResult {
@@ -549,6 +550,7 @@ export default class QueryExecutionService {
       }
 
       generatedSql = resolveResponse.data.generated_sql
+
       const headers = resolveResponse.data.columns
 
       // Second step: Execute query
@@ -621,6 +623,7 @@ export default class QueryExecutionService {
           message: errorMessage,
           error: true,
           running: false,
+          generatedSql,
         })
       }
       return {

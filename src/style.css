@@ -2,6 +2,7 @@
   font-family: ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  border-radius: 0px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -172,9 +173,9 @@ button {
   /* flex: 1; */
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.tacticle-button:hover {
+  transform: scaleX(1.1); /* Enlarges button by 10% */
+  /* box-shadow: 0 505x 15px rgba(0, 0, 0, 0.2); */
 }
 
 .card {

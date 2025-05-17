@@ -104,11 +104,24 @@
         title="Query History"
         @click.stop="toggleMobileMenu"
       ></i>
-      <editor-creator-icon :connection="item.connection.name" type="sql" title="New SQL Editor" />
-      <editor-creator-icon :connection="item.connection.name" title="New Trilogy Editor" />
-      <connection-refresh :connection="item.connection" :is-connected="item.connection.connected" />
+      <editor-creator-icon
+        class="tacticle-button"
+        :connection="item.connection.name"
+        type="sql"
+        title="New SQL Editor"
+      />
+      <editor-creator-icon
+        class="tacticle-button"
+        :connection="item.connection.name"
+        title="New Trilogy Editor"
+      />
+      <connection-refresh
+        class="tacticle-button"
+        :connection="item.connection"
+        :is-connected="item.connection.connected"
+      />
       <connection-status-icon :connection="item.connection" />
-      <tooltip content="Delete Connection" position="left">
+      <tooltip class="tacticle-button" content="Delete Connection" position="left">
         <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
           <i class="mdi mdi-trash-can"></i>
         </span>

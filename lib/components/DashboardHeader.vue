@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, type Ref, ref, watch } from 'vue'
-import { useConnectionStore, useLLMConnectionStore, useEditorStore } from '../stores'
+import { computed, type Ref, ref } from 'vue'
+import { useConnectionStore, useEditorStore } from '../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
-import Tooltip from './Tooltip.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
-import FilterAutocomplete from './DashboardFilterAutocomplete.vue'
+import FilterInputComponent from './DashboardHeaderFilterInput.vue'
 import { type Import, type CompletionItem } from '../stores/resolver'
 
 const props = defineProps({
@@ -41,21 +40,9 @@ const emit = defineEmits([
 
 const connectionStore = useConnectionStore()
 const editorStore = useEditorStore()
-const llmStore = useLLMConnectionStore()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
-const filterInputRef = ref<HTMLInputElement | null>(null)
-
-// We store the actual filter input value
-const filterInput = ref(props.dashboard?.filter || '')
-
-// This is only for display purposes
-const displayFilterValue = computed(() => {
-  return filterInput.value.replace(/\n/g, ' ')
-})
-
-const hasUnappliedChanges = ref(false)
 
 // Toggle share popup visibility
 function toggleSharePopup() {
@@ -67,67 +54,15 @@ function closeSharePopup() {
   isSharePopupOpen.value = false
 }
 
-// Apply the filter changes
-function applyFilter() {
-  // Use the original filter value with newlines preserved
-  emit('filter-change', filterInput.value)
-  hasUnappliedChanges.value = false
+// Handle filter changes from FilterInputComponent
+function handleFilterChange(newValue: string) {
+  console.log('Filter changed:', newValue)
 }
 
-// Track filter input changes
-function onFilterInput(e: Event) {
-  const target = e.target as HTMLInputElement
-  filterInput.value = target.value
-  hasUnappliedChanges.value = true
+// Handle filter apply from FilterInputComponent
+function handleFilterApply(newValue: string) {
+  emit('filter-change', newValue)
 }
-
-const filterLLM = () => {
-  isLoading.value = true
-  let concepts = props.globalCompletion.map((item) => ({
-    name: item.label,
-    type: item.datatype,
-    description: item.description,
-  }))
-  llmStore
-    .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
-    .then((response) => {
-      if (response && response.length > 0) {
-        // Keep the original newlines in the value
-        // the response will start with a "where" which we don't want, so strip it off
-        filterInput.value = response.replace(/^\s*where\s+/i, '')
-        // Mark as having changes that need to be applied
-        hasUnappliedChanges.value = true
-        // Apply the filter
-        emit('filter-change', filterInput.value)
-      }
-      isLoading.value = false
-    })
-    .catch(() => {
-      isLoading.value = false
-    })
-}
-
-// Handle keyboard shortcuts
-function handleFilterKeydown(event: KeyboardEvent) {
-  // Add Enter key as a shortcut to search
-  if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey) {
-    event.preventDefault()
-    applyFilter()
-  }
-  // Keep Ctrl+Shift+Enter for LLM generation
-  else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
-    event.preventDefault()
-    filterLLM()
-  }
-}
-
-// Compute filter validation status
-const filterStatus = computed(() => {
-  if ((props.filterError || '').length > 0) {
-    return 'error'
-  }
-  return filterInput.value ? 'valid' : 'neutral'
-})
 
 const availableImports: Ref<Import[]> = computed(() => {
   const imports = Object.values(editorStore.editors).filter(
@@ -152,128 +87,22 @@ function handleImportsChange(newImports: Import[]) {
 function handleRefresh() {
   emit('refresh')
 }
-
-// watch for dashboard change
-watch(
-  () => props.dashboard,
-  (newDashboard) => {
-    if (newDashboard) {
-      filterInput.value = newDashboard.filter || ''
-      // Reset unapplied changes when dashboard changes
-      hasUnappliedChanges.value = false
-    }
-  },
-)
-
-// Handle completion selection
-function handleCompletionSelected(completion: { text: string; cursorPosition: number }) {
-  filterInput.value = completion.text
-  // Mark as having changes
-  hasUnappliedChanges.value = true
-
-  // Set cursor position and focus the input
-  if (filterInputRef.value) {
-    filterInputRef.value.focus()
-    filterInputRef.value.setSelectionRange(completion.cursorPosition, completion.cursorPosition)
-  }
-}
 </script>
 
 <template>
   <div class="dashboard-controls" data-testid="dashboard-controls">
-    <!-- Filter row - now shown at the top on mobile -->
+    <!-- Filter row - now showing the extracted FilterInputComponent -->
     <div class="controls-row filter-row">
-      <div class="filter-container">
-        <label for="filter">Where</label>
-        <div class="filter-input-wrapper">
-          <input
-            id="filter"
-            data-testid="filter-input"
-            type="text"
-            :value="displayFilterValue"
-            @input="
-              (e) => {
-                onFilterInput(e)
-              }
-            "
-            @keydown="handleFilterKeydown"
-            placeholder="Enter filter SQL clause... (Press Enter to apply, Ctrl+Shift+Enter for text to SQL)"
-            :class="{ 'filter-error': filterStatus === 'error' }"
-            :disabled="isLoading"
-            ref="filterInputRef"
-          />
+      <FilterInputComponent
+        :filter-value="dashboard?.filter || ''"
+        :filter-error="filterError"
+        :is-loading="isLoading"
+        :global-completion="globalCompletion"
+        :validate-filter="validateFilter"
+        @filter-change="handleFilterChange"
+        @filter-apply="handleFilterApply"
+      />
 
-          <FilterAutocomplete
-            :input-value="filterInput"
-            :completion-items="globalCompletion"
-            :input-element="filterInputRef"
-            v-if="filterInputRef"
-            @select-completion="handleCompletionSelected"
-          />
-
-          <!-- Add a search button that is highlighted when there are unapplied changes -->
-          <button
-            @click="applyFilter"
-            class="search-button"
-            data-testid="filter-search-button"
-            :disabled="isLoading"
-            :class="{ 'has-changes': hasUnappliedChanges }"
-            title="Apply filter (Enter)"
-          >
-            <div class="button-content">
-              <i class="mdi mdi-magnify"></i>
-              <Tooltip
-                :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'"
-                position="top"
-              >
-                <span class="tooltip-trigger"></span>
-              </Tooltip>
-            </div>
-          </button>
-
-          <button
-            @click="filterLLM"
-            class="sparkle-button"
-            data-testid="filter-llm-button"
-            :disabled="isLoading"
-            title="Transform text to filter if you have a configured LLM connection"
-          >
-            <div class="button-content">
-              <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
-              <div v-if="isLoading" class="loader-container">
-                <div class="loader"></div>
-              </div>
-              <Tooltip
-                :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'"
-                position="top"
-              >
-                <span class="tooltip-trigger"></span>
-              </Tooltip>
-            </div>
-          </button>
-          <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
-            <div
-              v-if="filterStatus === 'error'"
-              class="filter-icon error"
-              data-testid="filter-error-icon"
-            >
-              <span class="icon-x">✕</span>
-              <Tooltip :content="filterError || 'Unknown Error'" position="bottom">
-                <span class="tooltip-trigger" data-testid="filter-error-tooltip-trigger"></span>
-              </Tooltip>
-            </div>
-            <div
-              v-else-if="filterStatus === 'valid'"
-              class="filter-icon valid"
-              data-testid="filter-valid-icon"
-            >
-              <Tooltip content="This is a syntactically correct filter." position="top">
-                <span class="icon-check" data-testid="filter-valid-tooltip-trigger">✓</span>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-      </div>
       <div class="grid-actions">
         <button
           @click="toggleSharePopup"
@@ -359,7 +188,6 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 .dashboard-controls {
   display: flex;
   flex-direction: column;
-  /* background-color: var(--query-window-bg); */
   border-bottom: 1px solid var(--border);
 }
 
@@ -400,195 +228,9 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   background-color: var(--bg-color);
 }
 
-.filter-container {
-  display: flex;
+.filter-row {
+  justify-content: space-between;
   align-items: center;
-  width: 100%;
-}
-
-.filter-container label {
-  margin-right: 10px;
-  font-weight: 400;
-  color: var(--text-color);
-  white-space: nowrap;
-  font-size: 18px;
-}
-
-.filter-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  margin-top: 5px;
-  background-color: var(--bg-color);
-}
-
-.filter-container input {
-  padding: 4px;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
-  background-color: var(--bg-color);
-  width: 100%;
-  font-size: var(--font-size);
-  height: 20px;
-}
-
-/* New search button styles */
-.search-button {
-  position: absolute;
-  right: 65px;
-  /* Position it before the sparkle button */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  width: 30px;
-  height: 30px;
-  z-index: 2;
-  transition: all 0.2s ease-in-out;
-}
-
-.search-button.has-changes {
-  color: var(--special-text);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.1);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-.sparkle-button {
-  position: absolute;
-  right: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  width: 30px;
-  height: 30px;
-  z-index: 2;
-}
-
-.button-content {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mdi {
-  font-size: 16px;
-}
-
-.hidden {
-  display: none;
-}
-
-/* Improved loader animation */
-.loader-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.loader {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top: 2px solid var(--special-text);
-  width: 16px;
-  height: 16px;
-  animation: loader-spin 1s linear infinite;
-}
-
-@keyframes loader-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.spinning {
-  animation: spin 1.5s linear infinite;
-}
-
-.filter-error {
-  border-color: #ff3b30 !important;
-}
-
-.filter-validation-icon {
-  position: absolute;
-  right: 10px;
-  display: flex;
-  align-items: center;
-}
-
-.filter-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.filter-icon.error {
-  color: #ff3b30;
-}
-
-.filter-icon.valid {
-  color: #4cd964;
-}
-
-.icon-x {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.icon-check {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.tooltip-trigger {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  cursor: help;
 }
 
 .grid-actions button {
@@ -651,24 +293,6 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 }
 
 @media (max-width: 768px) {
-  /* Adjust the filter row to accommodate the toggle button */
-  .filter-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .filter-container {
-    flex: 1;
-    margin-top: 5px;
-    padding-right: 10px;
-  }
-
-  /* Hide the top row by default on mobile, it will be toggled */
-  .mobile-hidden {
-    display: none;
-  }
-
   .controls-row {
     flex-wrap: wrap;
   }
@@ -688,31 +312,21 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 
   .grid-actions {
     flex-wrap: nowrap;
-    /* Keep buttons in one row */
     justify-content: space-between;
     width: 100%;
   }
 
   .grid-actions button {
     padding: 3px 4px;
-    /* Reduced padding */
     font-size: calc(var(--button-font-size) - 1px);
     text-align: center;
     flex: 1;
-    /* Equal width buttons */
     min-width: 0;
-    /* Remove min-width to allow buttons to shrink */
     white-space: nowrap;
-    /* Prevent text wrapping */
   }
 
-  .sparkle-button {
-    right: 30px;
-  }
-
-  /* Adjust search button position on mobile */
-  .search-button {
-    right: 60px;
+  .mobile-hidden {
+    display: none;
   }
 }
 
@@ -733,40 +347,16 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
     min-width: unset;
   }
 
-  .filter-container {
-    flex-direction: row;
-    /* Keep horizontal for filter on mobile */
-    align-items: center;
-  }
-
-  .filter-container label {
-    margin-right: 8px;
-    white-space: nowrap;
-  }
-
   .grid-actions {
     gap: 4px;
-    /* Reduced gap between buttons */
   }
 
   .grid-actions button {
     min-width: 0;
-    /* Remove min-width completely */
     font-size: calc(var(--button-font-size) - 2px);
     padding: 6px 4px;
-    /* Further reduced padding */
     overflow: hidden;
     text-overflow: ellipsis;
-    /* Add ellipsis for text overflow */
-  }
-
-  .sparkle-button {
-    right: 25px;
-  }
-
-  /* Adjust search button position on small mobile */
-  .search-button {
-    right: 50px;
   }
 }
 
@@ -774,24 +364,13 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
 @media (max-width: 360px) {
   .grid-actions button {
     font-size: calc(var(--button-font-size) - 3px);
-    /* Even smaller font */
     padding: 5px 3px;
-    /* Minimal padding */
   }
 
   /* For the refresh button, just show the icon on very small screens */
   button[data-testid='refresh-button'] {
     padding: 5px;
     width: auto;
-  }
-
-  .sparkle-button {
-    right: 20px;
-  }
-
-  /* Adjust search button position on very small mobile */
-  .search-button {
-    right: 45px;
   }
 }
 </style>

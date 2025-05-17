@@ -1,4 +1,5 @@
-// src/utils/retry.ts
+import { type CompletionItem } from '../stores/resolver'
+import { type ModelConceptInput } from './data/models'
 /**
  * Configuration options for retry operations
  */
@@ -128,4 +129,14 @@ export async function fetchWithRetry(
 
     return response
   }, options)
+}
+
+export function completionToModelInput(input: CompletionItem[]): ModelConceptInput[] {
+  return input.map((item) => ({
+    name: item.label,
+    type: item.datatype,
+    description: item.description,
+    calculation: item.calculation,
+    keys: item.keys,
+  }))
 }

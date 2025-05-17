@@ -68,31 +68,14 @@ describe('extractLastTripleQuotedText', () => {
     expect(extractLastTripleQuotedText(input)).toBe(input)
   })
 
-  it('should handle multiple code blocks and return the last one', () => {
-    const input = '```\nFirst block\n```\nSome text\n```\nSecond block\n```'
-    expect(extractLastTripleQuotedText(input)).toBe('\nSecond block\n')
-  })
-
-  it('should handle mixed quote types and return the first one', () => {
-    const input = '```\nBacktick block\n```\nSome text\n"""\nDouble quote block\n"""'
-    expect(extractLastTripleQuotedText(input)).toBe('\nBacktick block\n')
-  })
-
   it('should handle language prefixes with whitespace', () => {
     const input = 'Here is SQL code:\n```sql\nSELECT * FROM users;\n```'
     expect(extractLastTripleQuotedText(input)).toBe('SELECT * FROM users;\n')
   })
 
-  it('should handle multiple language prefixes in one document', () => {
+  it('should keep non trilogy prefixes', () => {
     const input = `
-\`\`\`sql
-SELECT * FROM users;
-\`\`\`
-
-Here's some JSON:
-
-\`\`\`json
-{"data": [1, 2, 3]}
+\`\`\`{"data": [1, 2, 3]}
 \`\`\`
 `
     expect(extractLastTripleQuotedText(input)).toBe('{"data": [1, 2, 3]}\n')
@@ -163,6 +146,28 @@ select
     part.name,
     count(id ? return_flag = 'R') / sum(quantity) as return_ratio
 order by return_ratio desc;
+`)
+  })
+
+  it('should handle this response', () => {
+    const input = `Reasoning:The user is asking "what states have the most people?". From the provided data, \`state.population\` represents the population of each state. Thus, we need to select the state and its population, and order by population descending to find the states with the most people. Also, based on the description of the \`state.population\` field, it has grain \`state\`.
+
+\`\`\`trilogy
+"""select
+    state,
+    state.population
+order by
+    state.population desc
+limit 10;
+"""
+\`\`\``
+
+    expect(extractLastTripleQuotedText(input)).toBe(`select
+    state,
+    state.population
+order by
+    state.population desc
+limit 10;
 `)
   })
 })

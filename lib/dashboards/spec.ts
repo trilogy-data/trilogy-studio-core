@@ -110,41 +110,12 @@ const generateTooltipFields = (
 /**
  * Create a base chart specification
  */
-const createBaseSpec = (data: readonly Row[] | null, chartSelection: Object[] | null) => {
-  const intChart: Array<Partial<ChartConfig>> = chartSelection
-    ? chartSelection.map((x) => toRaw(x))
-    : []
-
+const createBaseSpec = (data: readonly Row[] | null) => {
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
     width: 'container',
     height: 'container',
-    params: [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click,touchend',
-        },
-        value: intChart,
-        nearest: true,
-      },
-    ],
-    mark: {
-      type: 'bar',
-      fill: '#4C78A8',
-      stroke: 'black',
-      cursor: 'pointer',
-    },
     config: {
       scale: {
         bandPaddingInner: 0.2,
@@ -270,10 +241,24 @@ const createInteractiveLayer = (
       y: createFieldEncoding(config.yField || '', columns, {
         axis: { format: getColumnFormat(config.yField, columns) },
       }),
+
       tooltip: tooltipFields,
-      ...encoding,
     },
     params: [] as Array<any>,
+  }
+
+  if (config.colorField) {
+    if (!filtered) {
+      mainLayer.encoding = {
+        ...mainLayer.encoding,
+        ...{ detail: { field: config.colorField, color: 'lightgray' } },
+      }
+    } else {
+      mainLayer.encoding = {
+        ...mainLayer.encoding,
+        ...{ color: createColorEncoding(config.colorField, columns) },
+      }
+    }
   }
 
   if (!filtered) {
@@ -338,6 +323,7 @@ const createBarChartSpec = (
   tooltipFields: any[],
   encoding: any,
   data: readonly Row[] | null,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   // Determine the number of unique values in the x-field
   let xValueCount = 0
@@ -356,6 +342,25 @@ const createBarChartSpec = (
   // Set the label angle based on the count
   const labelAngle = xValueCount > 7 ? -45 : 0
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: 'bar',
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
@@ -378,8 +383,28 @@ const createBarHChartSpec = (
   tooltipFields: any[],
   encoding: any,
   isMobile: boolean,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: 'bar',
     encoding: {
       y: {
@@ -422,7 +447,7 @@ const createLineChartSpec = (
     intChart,
     true,
   )
-  // if there are two fields in both, we have two ys. Layer them independently
+  // if there are two fields in both, we have two y-axes. Layer them independently.
   let layers = []
   if (base.length > 1 && filtered.length > 1) {
     layers = [{ layer: [base[0], filtered[0]] }, { layer: [base[1], filtered[1]] }]
@@ -431,7 +456,6 @@ const createLineChartSpec = (
   }
   return {
     data: undefined,
-    params: [],
     layer: layers,
   }
 }
@@ -464,8 +488,28 @@ const createPointChartSpec = (
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
   encoding: any,
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: { type: 'point', filled: true },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
@@ -484,12 +528,77 @@ const createPointChartSpec = (
 /**
  * Create chart specification for headline display
  */
-const createHeadlineSpec = (
-  data: readonly Row[] | null,
-  config: ChartConfig,
+
+const createHeadlineLayer = (
+  column: string,
+  index: number,
+  total: number,
   columns: Map<string, ResultColumn>,
   currentTheme: string,
 ) => {
+  // Calculate horizontal distribution based on index and total
+  const xOffset =
+    total > 1
+      ? ((index / (total - 1)) * 0.7 + 0.15) * 100 - 50 // This gives values from -35% to +35% of width
+      : 0 // Center if only one value
+
+  // Scale font size based on number of metrics to avoid collision
+  const fontSizeFormula = `min(30, max(width, 200)/${Math.max(4, total * 2)})`
+
+  return [
+    {
+      mark: {
+        type: 'text',
+        fontSize: { expr: fontSizeFormula },
+        fontWeight: 'bold',
+        align: 'center',
+        baseline: 'middle',
+        dx: { expr: `(${xOffset} / 100) * width` }, // Convert percentage to pixels
+        dy: -20,
+      },
+      encoding: {
+        text: {
+          field: column,
+          type: 'quantitative',
+          format: getColumnFormat(column, columns),
+        },
+        color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
+      },
+    },
+    {
+      mark: {
+        type: 'text',
+        fontSize: { expr: `min(14, max(width, 200)/${Math.max(6, total * 3)})` }, // Scale label size too
+        fontWeight: 'normal',
+        align: 'center',
+        baseline: 'top',
+        dx: { expr: `(${xOffset} / 100) * width` }, // Same offset as the value
+        dy: 10,
+      },
+      encoding: {
+        text: { value: snakeCaseToCapitalizedWords(column) },
+        color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
+      },
+    },
+  ]
+}
+
+const createHeadlineSpec = (
+  data: readonly Row[] | null,
+  columns: Map<string, ResultColumn>,
+  currentTheme: string,
+) => {
+  // get all columns that are isNumericColumn using isNumericColumn
+  let numericColumns = Array.from(columns.values()).filter((column) => isNumericColumn(column))
+
+  // Map each column to its visualization layers with proper index
+  let numericLayers = numericColumns.map((column, index) => {
+    return createHeadlineLayer(column.name, index, numericColumns.length, columns, currentTheme)
+  })
+
+  // flatten array of arrays to a single array
+  let flatLayers = numericLayers.reduce((acc, val) => acc.concat(val), [])
+
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     description: 'A simple headline metric display',
@@ -498,48 +607,11 @@ const createHeadlineSpec = (
     data: {
       values: data ? data[0] : [],
     },
-    layer: [
-      {
-        mark: {
-          type: 'text',
-          fontSize: { expr: 'min(30, width/8)' },
-          fontWeight: 'bold',
-          align: 'center',
-          baseline: 'middle',
-          dx: 0,
-          dy: -20,
-        },
-        encoding: {
-          text: {
-            field: config.xField,
-            type: 'quantitative',
-            format: getColumnFormat(config.xField, columns),
-          },
-          // color: { value: currentTheme === 'light'? '#333333': '#ffffff'},
-          color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
-        },
-      },
-      {
-        mark: {
-          type: 'text',
-          fontSize: 14,
-          fontWeight: 'normal',
-          align: 'center',
-          baseline: 'top',
-          dx: 0,
-          dy: 10,
-        },
-        encoding: {
-          text: { value: snakeCaseToCapitalizedWords(config.xField) },
-          color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
-          // color: { value: '#666666' },
-        },
-      },
-    ],
     config: {
       view: { stroke: null },
       axis: { grid: false, domain: false },
     },
+    layer: flatLayers,
   }
 }
 
@@ -612,7 +684,7 @@ export const generateVegaSpec = (
     : []
 
   // Create base spec
-  let spec: any = createBaseSpec(data, chartSelection)
+  let spec: any = createBaseSpec(data)
 
   // Set up color encoding
   let encoding: any = {}
@@ -647,12 +719,12 @@ export const generateVegaSpec = (
 
   switch (config.chartType) {
     case 'bar':
-      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data)
+      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data, intChart)
 
       break
 
     case 'barh':
-      chartSpec = createBarHChartSpec(config, columns, tooltipFields, encoding, isMobile)
+      chartSpec = createBarHChartSpec(config, columns, tooltipFields, encoding, isMobile, intChart)
       break
 
     case 'line':
@@ -664,11 +736,11 @@ export const generateVegaSpec = (
       break
 
     case 'point':
-      chartSpec = createPointChartSpec(config, columns, tooltipFields, encoding)
+      chartSpec = createPointChartSpec(config, columns, tooltipFields, encoding, intChart)
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(data, config, columns, currentTheme)
+      chartSpec = createHeadlineSpec(data, columns, currentTheme)
       break
 
     case 'heatmap':

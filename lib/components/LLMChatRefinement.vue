@@ -5,9 +5,7 @@
       <button class="close-button" @click="handleClose" data-testid="close-header-button">×</button>
     </div>
 
-    <!-- Chat messages area -->
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
-      <!-- Conversation messages -->
       <div
         v-for="(message, index) in messages"
         :key="index"
@@ -16,22 +14,35 @@
         :data-testid="`message-${message.role}-${index}`"
       >
         <div class="message-content">
-          <pre>{{ message.content }}</pre>
+          <!-- Special rendering for assistant messages that contain extracted content -->
+          <template v-if="message.role === 'assistant' && containsExtractedContent(message)">
+            <!-- Display the message with extracted content replaced by placeholder -->
+            <div v-html="formatMessageWithPlaceholder(message)"></div>
+
+            <!-- Display the extracted content in a code block -->
+            <div class="extracted-content">
+              <div class="extracted-label">Generated Query:</div>
+              <code-block
+                language="trilogy"
+                :content="getExtractedContent(message) || ''"
+              ></code-block>
+            </div>
+          </template>
+          <!-- Regular message rendering for other messages -->
+          <pre v-else>{{ message.content }}</pre>
         </div>
       </div>
 
-      <!-- Loading indicator -->
       <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
         <span>Generating response...</span>
       </div>
     </div>
 
-    <!-- Input area -->
     <div class="input-container">
       <textarea
         v-model="userInput"
         @keydown="handleKeyDown"
-        placeholder="Refine your query... (Enter to send, Ctrl+Shift+Enter to accept)"
+        placeholder="Respond to refine. (Enter to respond, Ctrl+Shift+Enter to accept and run query)"
         :disabled="isLoading"
         ref="inputTextarea"
         data-testid="input-textarea"
@@ -69,12 +80,14 @@
 
 <script lang="ts">
 import { defineComponent, ref, nextTick, watch, onMounted, inject, type PropType } from 'vue'
-import { type LLMConnectionStoreType } from '../stores/llmStore'
+import { type LLMConnectionStoreType, replaceTripleQuotedText } from '../stores/llmStore'
 import { type LLMMessage } from '../llm'
-
+import CodeBlock from './CodeBlock.vue'
 export default defineComponent({
   name: 'LLMChatRefinementComponent',
-
+  components: {
+    CodeBlock,
+  },
   props: {
     messages: {
       type: Array as PropType<LLMMessage[]>,
@@ -110,14 +123,54 @@ export default defineComponent({
     const messagesContainer = ref<HTMLElement | null>(null)
     const inputTextarea = ref<HTMLTextAreaElement | null>(null)
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
+    // Track extracted content per message using a Map
+    const extractedContentMap = ref(new Map<string, string>())
 
     if (!llmStore) {
       throw new Error('LLMConnectionStore not found')
     }
 
+    // Try to extract content from all assistant messages
+    const updateExtractedContent = async () => {
+      // Process all assistant messages
+      for (const message of messages.value.filter((m) => m.role === 'assistant')) {
+        // Skip if we've already processed this message content
+        const messageId = `${message.role}-${message.content}`
+        if (extractedContentMap.value.has(messageId)) continue
+
+        try {
+          const value = await props.extractionFn(message.content)
+          if (value) {
+            extractedContentMap.value.set(
+              messageId,
+              typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+            )
+          }
+        } catch (error) {
+          console.error('Error extracting content:', error)
+        }
+      }
+    }
+
+    // Get extracted content for a specific message
+    const getExtractedContent = (message: LLMMessage) => {
+      const messageId = `${message.role}-${message.content}`
+      return extractedContentMap.value.get(messageId) || null
+    }
+
+    const containsExtractedContent = (message: LLMMessage) => {
+      const extracted = getExtractedContent(message)
+      return extracted !== null && message.content.includes(extracted)
+    }
+
+    const formatMessageWithPlaceholder = (message: LLMMessage) => {
+      return replaceTripleQuotedText(message.content, '<query>')
+    }
+
     // Scroll to bottom when messages are updated
     watch(messages, () => {
       scrollToBottom()
+      updateExtractedContent()
     })
 
     // Helper to scroll to bottom of chat
@@ -155,6 +208,7 @@ export default defineComponent({
     onMounted(() => {
       scrollToBottom()
       activateChat()
+      updateExtractedContent()
     })
 
     // Handle key press events
@@ -208,17 +262,14 @@ export default defineComponent({
         scrollToBottom()
         isLoading.value = false
         activateChat()
+        updateExtractedContent()
       }
     }
 
-    // Accept the current result
     const acceptResult = async () => {
       if (isLoading.value) return
-
-      // Get the latest assistant message or use the initial response if no conversation
       const latestResponse = messages.value.filter((m) => m.role === 'assistant').pop()?.content
 
-      // Validate before accepting
       const value = await props.extractionFn(latestResponse)
       await props.mutationFn(value)
       emit('accepted')
@@ -236,6 +287,9 @@ export default defineComponent({
       isLoading,
       messagesContainer,
       inputTextarea,
+      getExtractedContent,
+      containsExtractedContent,
+      formatMessageWithPlaceholder,
       handleKeyDown,
       sendMessage,
       acceptResult,
@@ -380,7 +434,6 @@ export default defineComponent({
 .accept-button {
   padding: 8px 16px;
   background-color: transparent;
-
   border: none;
   border: 1px solid #4caf50;
   cursor: pointer;
@@ -394,10 +447,8 @@ export default defineComponent({
 
 .discard-button {
   padding: 8px 16px;
-
   background-color: transparent;
   border: 1px solid var(--delete-color);
-
   cursor: pointer;
   font-size: var(--button-font-size);
 }
@@ -410,6 +461,38 @@ export default defineComponent({
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* New styles for extracted content display */
+.extracted-content {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
+.extracted-label {
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.code-block {
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: var(--font-size);
+}
+
+.query-placeholder {
+  background-color: rgba(255, 255, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+  color: var(--text-highlight);
 }
 
 @media screen and (max-width: 768px) {

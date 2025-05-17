@@ -198,7 +198,7 @@ export default defineComponent({
       required: true,
     },
     initialConfig: {
-      type: Object as PropType<ChartConfig | undefined>,
+      type: Object as PropType<ChartConfig | undefined | null>,
       default: undefined,
     },
     showControls: {
@@ -396,20 +396,20 @@ export default defineComponent({
             chart: { [internalConfig.value.geoField]: item.datum[internalConfig.value.geoField] },
             append,
           })
-        } else if (internalConfig.value.colorField) {
-          let colorField = props.columns.get(internalConfig.value.colorField)
-          let colorConcept = colorField?.address
-          if (!colorConcept || !colorField) {
-            return
-          }
-          emit('dimension-click', {
-            filters: { [colorConcept]: item.datum[internalConfig.value.colorField] },
-            chart: {
-              [internalConfig.value.colorField]: item.datum[internalConfig.value.colorField],
-            },
-            append,
-          })
         } else {
+          let baseFilters = {}
+          let baseChart = {}
+          if (internalConfig.value.colorField) {
+            let colorField = props.columns.get(internalConfig.value.colorField)
+            let colorConcept = colorField?.address
+            if (!colorConcept || !colorField) {
+              return
+            }
+            baseFilters = { [colorConcept]: item.datum[internalConfig.value.colorField] }
+            baseChart = {
+              [internalConfig.value.colorField]: item.datum[internalConfig.value.colorField],
+            }
+          }
           // Original handling for other chart types
           let xFieldRaw = internalConfig.value.xField
           let yFieldRaw = internalConfig.value.yField
@@ -425,21 +425,23 @@ export default defineComponent({
           // eligible are categorical and temporal fields
           let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
           eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+
           if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-            emit('dimension-click', {
-              filters: { [xField]: item.datum[xFieldRaw] },
-              chart: { [xFieldRaw]: item.datum[xFieldRaw] },
-              append,
-            })
+            // add to baseFilters and chart
+            baseFilters = { ...baseFilters, [xField]: item.datum[xFieldRaw] }
+            baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
           }
           // todo: figure out if we want to support both?
           else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-            emit('dimension-click', {
-              filters: { [yField]: item.datum[yFieldRaw] },
-              chart: { [yFieldRaw]: item.datum[yFieldRaw] },
-              append,
-            })
+            // add to baseFilters and chart
+            baseFilters = { ...baseFilters, [yField]: item.datum[yFieldRaw] }
+            baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
           }
+          emit('dimension-click', {
+            filters: baseFilters,
+            chart: baseChart,
+            append,
+          })
           emit('point-click', item.datum)
         }
       } else {
@@ -452,6 +454,7 @@ export default defineComponent({
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
+      console.log(spec)
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
       if (lastSpec.value === currentSpecString && !force) {

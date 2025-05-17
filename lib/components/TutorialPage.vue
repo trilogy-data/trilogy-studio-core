@@ -6,7 +6,9 @@
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
         >
-
+        <highlight-component v-else-if="paragraph.type === 'warning'" type="warning">
+          {{ paragraph.content }}</highlight-component
+        >
         <code-block
           v-else-if="paragraph.type === 'code'"
           language="trilogy"
@@ -16,7 +18,7 @@
           v-else-if="paragraph.type === 'connections'"
           :connections="connectionStore.connections"
         />
-        <div v-else-if="paragraph.type === 'llm-connections'" class="editor-top">
+        <div v-else-if="paragraph.type === 'llm-connections'" class="llm-connections">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
         <editor-list
@@ -73,7 +75,7 @@
             }}
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect" class="editor">
+        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect">
           <div class="editor-top">
             <editor
               context="main-trilogy"
@@ -84,7 +86,7 @@
           <div class="editor-bottom">
             <results-view
               :editorData="editorStore.editors['my-first-editor']"
-              :containerHeight="200"
+              :containerHeight="500"
             />
           </div>
         </div>
@@ -295,7 +297,6 @@ export default {
 }
 
 .editor {
-  height: 700px;
   border: 1px solid var(--border-color);
 }
 
@@ -308,8 +309,12 @@ export default {
   height: 500px;
 }
 
+.llm-connections {
+  height: 150px;
+}
+
 .editor-bottom {
-  height: 200px;
+  height: 800px;
 }
 
 .test-result {

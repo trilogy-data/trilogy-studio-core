@@ -48,7 +48,11 @@
         />
       </div>
       <div class="results-section">
-        <results-view :editorData="editorStore.editors[editorId]" :containerHeight="200" />
+        <results-view
+          :editorData="editorStore.editors[editorId]"
+          :containerHeight="500"
+          @llm-query-accepted="runQuery"
+        />
       </div>
     </div>
 
@@ -75,6 +79,7 @@ import type { TutorialPrompt } from '../data/tutorial/docTypes'
 
 interface EditorComponent {
   setContent(content: string): void
+  runQuery(): void
 }
 
 export default {
@@ -168,9 +173,14 @@ export default {
         editorRef.value.setContent(content)
       }
     }
-
+    function runQuery() {
+      if (editorRef.value) {
+        editorRef.value.runQuery()
+      }
+    }
     return {
       editorStore,
+      runQuery,
       currentIndex,
       currentPrompt,
       hasUserAttempted,
@@ -193,7 +203,7 @@ export default {
   border: 1px solid var(--border-color);
   margin-bottom: 20px;
   background-color: var(--bg-color);
-  height: 800px;
+  /* height: 800px; */
   overflow: hidden;
 }
 
@@ -283,17 +293,17 @@ export default {
   display: flex;
   flex-direction: column;
   flex: 1;
-  height: 800px;
+  /* height: 800px; */
   overflow: hidden;
 }
 
 .editor-section {
-  height: 500px;
+  height: 300px;
   overflow: hidden;
 }
 
 .results-section {
-  height: 300px;
+  height: 500px;
   overflow: auto;
   border-top: 1px solid var(--border-light);
 }

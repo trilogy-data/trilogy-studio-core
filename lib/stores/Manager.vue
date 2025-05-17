@@ -24,6 +24,7 @@ import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
 import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
+import useScreenNavigation from './useScreenNavigation'
 // Import credential manager
 import { CredentialManager as CredentialService } from '../data/credentialService'
 // Import credential constants or define them here
@@ -304,6 +305,10 @@ export default {
     provide('userSettingsStore', props.userSettingsStore)
     provide('llmConnectionStore', props.llmConnectionStore)
     provide('dashboardStore', props.dashboardStore)
+    const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
+    provide('setActiveScreen', setActiveScreen)
+    provide('setActiveEditor', setActiveEditor)
+    provide('setActiveDashboard', setActiveDashboard)
     provide(
       'queryExecutionService',
       new QueryExecutionService(

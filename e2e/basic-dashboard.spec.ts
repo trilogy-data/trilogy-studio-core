@@ -101,7 +101,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   // Test the dashboard template functionality
   // Check if quickstart section is visible
-  await expect(page.getByText('Quickstart')).toBeVisible()
+  await expect(page.getByText('An Empty Dashboard')).toBeVisible()
 
   // Add description for the dashboard
   await page.getByPlaceholder('What is this dashboard for?').fill('FAA Flight Dashboard Analysis')

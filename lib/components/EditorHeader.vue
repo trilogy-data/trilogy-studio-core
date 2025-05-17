@@ -226,7 +226,7 @@ export default defineComponent({
 
 .tag-inactive {
   font-size: 8px;
-  border-radius: 3px;
+  border-radius: var(--border-radius);
   padding: 2px;
   color: var(--tag-font);
   line-height: 10px;

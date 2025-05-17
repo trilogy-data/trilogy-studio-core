@@ -152,6 +152,7 @@ class CompletionItem(BaseModel):
     trilogySubType: Purpose | str | None = None
     description: str | None = None
     calculation: str | None = None
+    keys: List[str] | None = None
 
 
 class ValidateResponse(BaseModel):

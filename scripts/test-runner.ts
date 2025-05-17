@@ -83,9 +83,7 @@ export class TestRunner {
 
         // Generate completion
         const response = await this.llmStore.generateValidatedCompletion(
-          createPrompt,
-          testCase.prompt,
-          modelConceptInput,
+          createPrompt(testCase.prompt, modelConceptInput),
           validator,
           3, // maxAttempts
           provider.model, // modelOverride
