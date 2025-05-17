@@ -6,8 +6,13 @@
     </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
-      <div v-for="(message, index) in messages" :key="index" class="message" :class="message.role"
-        :data-testid="`message-${message.role}-${index}`">
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
+        class="message"
+        :class="message.role"
+        :data-testid="`message-${message.role}-${index}`"
+      >
         <div class="message-content">
           <!-- Special rendering for assistant messages that contain extracted content -->
           <template v-if="message.role === 'assistant' && containsExtractedContent(message)">
@@ -17,7 +22,10 @@
             <!-- Display the extracted content in a code block -->
             <div class="extracted-content">
               <div class="extracted-label">Generated Query:</div>
-              <code-block language="trilogy" :content="getExtractedContent(message) || ''"></code-block>
+              <code-block
+                language="trilogy"
+                :content="getExtractedContent(message) || ''"
+              ></code-block>
             </div>
           </template>
           <!-- Regular message rendering for other messages -->
@@ -31,20 +39,39 @@
     </div>
 
     <div class="input-container">
-      <textarea v-model="userInput" @keydown="handleKeyDown"
+      <textarea
+        v-model="userInput"
+        @keydown="handleKeyDown"
         placeholder="Respond to refine. (Enter to respond, Ctrl+Shift+Enter to accept and run query)"
-        :disabled="isLoading" ref="inputTextarea" data-testid="input-textarea"></textarea>
-      <button @click="sendMessage" :disabled="isLoading || !userInput.trim()" data-testid="send-button">
+        :disabled="isLoading"
+        ref="inputTextarea"
+        data-testid="input-textarea"
+      ></textarea>
+      <button
+        @click="sendMessage"
+        :disabled="isLoading || !userInput.trim()"
+        data-testid="send-button"
+      >
         Send
       </button>
     </div>
 
     <!-- Action buttons -->
     <div class="action-buttons">
-      <button class="accept-button" @click="acceptResult" :disabled="isLoading" data-testid="accept-button">
+      <button
+        class="accept-button"
+        @click="acceptResult"
+        :disabled="isLoading"
+        data-testid="accept-button"
+      >
         Accept
       </button>
-      <button class="discard-button" @click="handleClose" :disabled="isLoading" data-testid="discard-button">
+      <button
+        class="discard-button"
+        @click="handleClose"
+        :disabled="isLoading"
+        data-testid="discard-button"
+      >
         Discard
       </button>
     </div>
@@ -80,7 +107,7 @@ export default defineComponent({
     },
     closeFn: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
     autoActivate: {
       type: Boolean,
@@ -106,7 +133,7 @@ export default defineComponent({
     // Try to extract content from all assistant messages
     const updateExtractedContent = async () => {
       // Process all assistant messages
-      for (const message of messages.value.filter(m => m.role === 'assistant')) {
+      for (const message of messages.value.filter((m) => m.role === 'assistant')) {
         // Skip if we've already processed this message content
         const messageId = `${message.role}-${message.content}`
         if (extractedContentMap.value.has(messageId)) continue
@@ -116,7 +143,7 @@ export default defineComponent({
           if (value) {
             extractedContentMap.value.set(
               messageId,
-              typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+              typeof value === 'string' ? value : JSON.stringify(value, null, 2),
             )
           }
         } catch (error) {

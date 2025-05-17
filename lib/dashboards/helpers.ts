@@ -211,11 +211,9 @@ export const determineDefaultConfig = (
     // Multiple numeric columns - use scatter plot
     if (data.length === 1) {
       defaults.chartType = 'headline'
-    }
-    else {
+    } else {
       defaults.chartType = 'point'
     }
-
   } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
     // Two categorical dimensions and a numeric - use heatmap
     defaults.chartType = 'heatmap'

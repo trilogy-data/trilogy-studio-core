@@ -23,10 +23,10 @@ interface ValidatedResponse {
 export const replaceTripleQuotedText = (input: string, placeholder: string): string => {
   // Normalize all triple quotes to backticks
   let normalizedInput = input.replace(/'''/g, '```').replace(/"""/g, '```')
-  
+
   // Strip common language identifiers after triple backticks
   const strippedInput = normalizedInput.replace(/```(trilogy|sql|json)(\s|\n)/g, '```')
-  
+
   // Use the 's' flag (dotAll) to make the dot match newlines as well
   // Sometimes we might end up with double backticks, start with that first
   for (const quote of ['```\\s*```', '```']) {
@@ -35,7 +35,7 @@ export const replaceTripleQuotedText = (input: string, placeholder: string): str
       return strippedInput.replace(regex, `${placeholder}`)
     }
   }
-  
+
   // Return the original input if no triple quotes were found
   return input
 }

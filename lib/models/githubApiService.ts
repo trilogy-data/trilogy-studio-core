@@ -127,9 +127,7 @@ export const fetchBranches = async (): Promise<string[]> => {
   }
 }
 
-
-export const fetchModelFiles = async (
-): Promise<{
+export const fetchModelFiles = async (): Promise<{
   files: ModelFile[]
   error: string | null
 }> => {
