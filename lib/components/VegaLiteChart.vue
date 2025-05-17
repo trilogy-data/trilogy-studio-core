@@ -454,6 +454,7 @@ export default defineComponent({
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
+      console.log(spec)
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
       if (lastSpec.value === currentSpecString && !force) {

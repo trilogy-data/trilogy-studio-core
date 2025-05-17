@@ -134,20 +134,20 @@ const createColorEncoding = (
 ) => {
   const legendConfig = isMobile
     ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
-      }
+      legend: {
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
     : {
-        condition: [
-          {
-            param: 'highlight',
-            empty: false,
-            value: HIGHLIGHT_COLOR,
-          },
-        ],
-      }
+      condition: [
+        {
+          param: 'highlight',
+          empty: false,
+          value: HIGHLIGHT_COLOR,
+        },
+      ],
+    }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -298,15 +298,15 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+      ]
       : [],
   }
 
@@ -528,12 +528,83 @@ const createPointChartSpec = (
 /**
  * Create chart specification for headline display
  */
+
+const createHeadlineLayer = (
+  column: string,
+  index: number,
+  total: number,
+  columns: Map<string, ResultColumn>,
+  currentTheme: string,
+) => {
+  // Calculate horizontal distribution based on index and total
+  const xOffset = total > 1 
+    ? ((index / (total - 1)) * 0.7 + 0.15) * 100 - 50 // This gives values from -35% to +35% of width
+    : 0; // Center if only one value
+
+  // Scale font size based on number of metrics to avoid collision
+  const fontSizeFormula = `min(30, max(width, 200)/${Math.max(4, total * 2)})`;
+  
+  return [{
+    mark: {
+      type: 'text',
+      fontSize: { expr: fontSizeFormula },
+      fontWeight: 'bold',
+      align: 'center',
+      baseline: 'middle',
+      dx: { expr: `(${xOffset} / 100) * width` }, // Convert percentage to pixels
+      dy: -20,
+    },
+    encoding: {
+      text: {
+        field: column,
+        type: 'quantitative',
+        format: getColumnFormat(column, columns),
+      },
+      color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
+    },
+  },
+  {
+    mark: {
+      type: 'text',
+      fontSize: { expr: `min(14, max(width, 200)/${Math.max(6, total * 3)})` }, // Scale label size too
+      fontWeight: 'normal',
+      align: 'center',
+      baseline: 'top',
+      dx: { expr: `(${xOffset} / 100) * width` }, // Same offset as the value
+      dy: 10,
+    },
+    encoding: {
+      text: { value: snakeCaseToCapitalizedWords(column) },
+      color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
+    },
+  }];
+};
+
 const createHeadlineSpec = (
   data: readonly Row[] | null,
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
   currentTheme: string,
 ) => {
+  // get all columns that are isNumericColumn using isNumericColumn
+  let numericColumns = Array.from(columns.values()).filter((column) =>
+    isNumericColumn(column)
+  );
+  
+  // Map each column to its visualization layers with proper index
+  let numericLayers = numericColumns.map((column, index) => {
+    return createHeadlineLayer(
+      column.name, 
+      index, 
+      numericColumns.length, 
+      columns, 
+      currentTheme
+    );
+  });
+ 
+  // flatten array of arrays to a single array
+  let flatLayers = numericLayers.reduce((acc, val) => acc.concat(val), []);
+ 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     description: 'A simple headline metric display',
@@ -542,50 +613,13 @@ const createHeadlineSpec = (
     data: {
       values: data ? data[0] : [],
     },
-    layer: [
-      {
-        mark: {
-          type: 'text',
-          fontSize: { expr: 'min(30, width/8)' },
-          fontWeight: 'bold',
-          align: 'center',
-          baseline: 'middle',
-          dx: 0,
-          dy: -20,
-        },
-        encoding: {
-          text: {
-            field: config.xField,
-            type: 'quantitative',
-            format: getColumnFormat(config.xField, columns),
-          },
-          // color: { value: currentTheme === 'light'? '#333333': '#ffffff'},
-          color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
-        },
-      },
-      {
-        mark: {
-          type: 'text',
-          fontSize: 14,
-          fontWeight: 'normal',
-          align: 'center',
-          baseline: 'top',
-          dx: 0,
-          dy: 10,
-        },
-        encoding: {
-          text: { value: snakeCaseToCapitalizedWords(config.xField) },
-          color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
-          // color: { value: '#666666' },
-        },
-      },
-    ],
     config: {
       view: { stroke: null },
       axis: { grid: false, domain: false },
     },
-  }
-}
+    layer: flatLayers
+  };
+};
 
 /**
  * Create chart specification for heatmap
