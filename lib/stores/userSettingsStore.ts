@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
+import { useAnalyticsStore } from './analyticsStore'
 
 export interface UserSettings {
   theme: string
   trilogyResolver: string
-  [key: string]: string | boolean | number | undefined
+  telemetryEnabled: boolean | null
+  [key: string]: string | boolean | number | null | undefined
 }
 
 export const useUserSettingsStore = defineStore('userSettings', {
@@ -11,13 +13,16 @@ export const useUserSettingsStore = defineStore('userSettings', {
     settings: {
       theme: '',
       trilogyResolver: '',
+      telemetryEnabled: null,
     } as UserSettings,
     defaults: {
       theme: 'dark',
       trilogyResolver: 'https://trilogy-service.fly.dev',
+      telemetryEnabled: true,
     } as UserSettings,
     isLoading: false,
     hasChanges: false,
+    hasLoaded: false
   }),
 
   getters: {
@@ -35,6 +40,10 @@ export const useUserSettingsStore = defineStore('userSettings', {
       if (key === 'theme') {
         this.toggleTheme()
       }
+      else if (key === 'telemetryEnabled') {
+        const analyticsStore = useAnalyticsStore()
+        analyticsStore.setEnabled(value === true)
+      }
       this.hasChanges = true
     },
 
@@ -51,25 +60,20 @@ export const useUserSettingsStore = defineStore('userSettings', {
       }
     },
 
-    /**
-     * Update multiple settings at once
-     */
+    setHasChanges(value: boolean) {
+      this.hasChanges = value
+    },
+
     updateSettings(newSettings: Partial<UserSettings>) {
       this.settings = { ...this.settings, ...newSettings }
       this.hasChanges = true
     },
 
-    /**
-     * Reset settings to defaults
-     */
     resetToDefaults() {
       this.settings = { ...this.defaults }
       this.hasChanges = true
     },
 
-    /**
-     * Save settings (e.g. to localStorage or API)
-     */
     async saveSettings() {
       this.isLoading = true
 
@@ -92,15 +96,22 @@ export const useUserSettingsStore = defineStore('userSettings', {
     loadSettings() {
       this.isLoading = true
 
+
       try {
         const savedSettings = localStorage.getItem('userSettings')
         if (savedSettings) {
           this.settings = JSON.parse(savedSettings)
+          // set telemetry
+          const analyticsStore = useAnalyticsStore()
+          if (this.settings.telemetryEnabled === false) {
+            analyticsStore.setEnabled(this.settings.telemetryEnabled)
+          }
         }
       } catch (error) {
         console.error('Failed to load settings:', error)
       } finally {
         this.isLoading = false
+        this.hasLoaded = true
       }
     },
   },

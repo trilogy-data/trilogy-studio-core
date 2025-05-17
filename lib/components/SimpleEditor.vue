@@ -2,53 +2,32 @@
   <div class="editor-container">
     <div class="menu-bar">
       <div class="menu-actions">
-        <button
-          class="action-item"
-          @click="generateLLMQuery"
-          title="Generate query using AI"
-          data-testid="editor-generate-button"
-        >
+        <button class="action-item" @click="generateLLMQuery" title="Generate query using AI"
+          data-testid="editor-generate-button">
           Generate
         </button>
         <button v-if="editor.type !== 'sql'" class="action-item" @click="() => validateQuery()">
           Parse
         </button>
-        <button
-          @click="editor.loading ? cancelQuery() : runQuery()"
-          class="action-item"
-          :class="{ 'button-cancel': editor.loading }"
-          data-testid="editor-run-button"
-        >
+        <button @click="editor.loading ? cancelQuery() : runQuery()" class="action-item"
+          :class="{ 'button-cancel': editor.loading }" data-testid="editor-run-button">
           {{ editor.loading ? 'Cancel' : 'Test' }}
         </button>
       </div>
     </div>
     <div class="editor-content">
-      <div
-        ref="editorElement"
-        class="monaco-editor"
-        :class="{
-          'monaco-width-with-panel': isPanelVisible,
-          'monaco-width-no-panel': !isPanelVisible,
-        }"
-        data-testid="simple-editor-content"
-      ></div>
+      <div ref="editorElement" class="monaco-editor" :class="{
+        'monaco-width-with-panel': isPanelVisible,
+        'monaco-width-no-panel': !isPanelVisible,
+      }" data-testid="simple-editor-content"></div>
       <div class="sidebar-panel" v-show="isPanelVisible">
-        <SymbolsPane
-          :symbols="editor.completionSymbols || []"
-          @select-symbol="insertSymbol"
-          ref="symbolsPane"
-        />
+        <SymbolsPane :symbols="editor.completionSymbols || []" @select-symbol="insertSymbol" ref="symbolsPane" />
       </div>
       <div class="be-sidebar-container">
         <!-- Icon panel (always visible) -->
         <div class="be-sidebar-icons">
-          <button
-            class="sidebar-icon-button"
-            :class="{ active: isPanelVisible }"
-            @click="togglePanel('symbols')"
-            title="Symbols"
-          >
+          <button class="sidebar-icon-button" :class="{ active: isPanelVisible }" @click="togglePanel('symbols')"
+            title="Symbols">
             <i class="mdi mdi-tag-search-outline"></i>
           </button>
           <!-- Add more icons for other panels here if needed -->
@@ -56,12 +35,7 @@
       </div>
     </div>
     <div class="result-wrapper">
-      <loading-view
-        class="loading-view"
-        v-if="editor.loading"
-        :text="`Loading...`"
-        :startTime="editor.startTime"
-      />
+      <loading-view class="loading-view" v-if="editor.loading" :text="`Loading...`" :startTime="editor.startTime" />
       <div v-else-if="editor.error" class="error-message">{{ editor.error }}</div>
       <div v-else-if="lastOperation" class="results-summary" data-testid="simple-editor-results">
         <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
@@ -82,7 +56,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent, type PropType, inject } from 'vue'
 import * as monaco from 'monaco-editor'
 import {
   configureEditorTheme,
@@ -98,7 +72,7 @@ import { type QueryUpdate } from '../stores/queryExecutionService'
 import type { Import, CompletionItem } from '../stores/resolver'
 import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
-
+import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
 interface OperationState {
   success: boolean
   duration: number
@@ -140,15 +114,6 @@ export default defineComponent({
     },
   },
 
-  inject: [
-    'queryExecutionService',
-    'connectionStore',
-    'modelStore',
-    'editorStore',
-    'isMobile',
-    'llmConnectionStore',
-  ],
-
   data() {
     return {
       lastOperation: null as OperationState | null,
@@ -165,7 +130,22 @@ export default defineComponent({
       isPanelVisible: false,
     }
   },
+  setup() {
+    // Access injected properties
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const isMobile = inject('isMobile')
+    const llmConnectionStore = inject('llmConnectionStore')
+    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
+    return {
+      queryExecutionService,
+      connectionStore,
+      isMobile,
+      llmConnectionStore,
+      analyticsStore,
+    }
+  },
   created() {
     // Set initial panel visibility based on mobile status
     // Panel will be collapsed by default on mobile
@@ -279,7 +259,7 @@ export default defineComponent({
     focusSymbolSearch(): void {
       const symbolsPane = this.$refs.symbolsPane as typeof SymbolsPane | undefined
       if (symbolsPane && 'focusSearch' in symbolsPane) {
-        ;(symbolsPane as any).focusSearch()
+        ; (symbolsPane as any).focusSearch()
       }
     },
 
@@ -377,18 +357,8 @@ export default defineComponent({
       }
 
       try {
-        // Analytics tracking (unchanged)
-        try {
-          // @ts-ignore
-          window.goatcounter &&
-            // @ts-ignore
-            window.goatcounter.count({
-              path: 'studio-query-execution',
-              title: this.editor.type,
-              event: true,
-            })
-        } catch (error) {
-          console.log(error)
+        if (this.analyticsStore) {
+          this.analyticsStore.log('studio-query-execution', this.editor.type, true,)
         }
 
         // Set component to loading state
@@ -420,7 +390,7 @@ export default defineComponent({
           this.editor.connection,
           queryInput,
           // Progress callback for connection issues
-          () => {},
+          () => { },
           (message: QueryUpdate) => {
             if (!queryDone && message.error) {
               this.editor.loading = false
@@ -501,18 +471,8 @@ export default defineComponent({
       }
 
       try {
-        // Analytics tracking
-        try {
-          // @ts-ignore
-          window.goatcounter &&
-            // @ts-ignore
-            window.goatcounter.count({
-              path: 'studio-llm-generation',
-              title: this.editor.type,
-              event: true,
-            })
-        } catch (error) {
-          console.log(error)
+        if (this.analyticsStore) {
+          this.analyticsStore.log('studio-llm-generation', this.editor.type, true,)
         }
 
         // Set loading state
@@ -554,8 +514,8 @@ export default defineComponent({
             const { resultPromise } = await queryExecutionService.executeQuery(
               this.editor.connection,
               queryInput,
-              () => {},
-              () => {},
+              () => { },
+              () => { },
               (error) => {
                 throw error
               },
@@ -916,7 +876,8 @@ export default defineComponent({
 
   .action-item {
     flex-grow: 1;
-    width: calc(33% - 0.3rem); /* Adjust for 3 buttons instead of 2 */
+    width: calc(33% - 0.3rem);
+    /* Adjust for 3 buttons instead of 2 */
     height: 36px;
     font-size: 0.9rem;
   }

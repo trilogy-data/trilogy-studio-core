@@ -28,6 +28,7 @@
               context="main-trilogy"
               :editorId="activeEditor"
               @save-editors="saveEditorsCall"
+              @save-models="saveModelsCall"
               ref="editorRef"
             />
             <editor
@@ -185,6 +186,7 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 
+
 export default {
   name: 'IDEComponent',
   data() {
@@ -231,6 +233,7 @@ export default {
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
     let saveDashboards = inject<Function>('saveDashboards')
+    let saveAll = inject<Function>('saveAll')
 
     if (
       !editorStore ||
@@ -241,7 +244,8 @@ export default {
       !saveConnections ||
       !saveDashboards ||
       !saveEditors ||
-      !saveModels
+      !saveModels ||
+      !saveAll
     ) {
       throw new Error(
         'Requires injection of connection store, editor store, model store, editors, connections, and models saving.',
@@ -272,6 +276,7 @@ export default {
       saveConnections,
       saveModels,
       saveDashboards,
+      saveAll,
       modelStore,
       activeScreen,
       setActiveScreen,
@@ -300,7 +305,10 @@ export default {
       this.activeConnectionKey = connectionKey
     },
     saveEditorsCall() {
-      this.saveEditors()
+      this.saveAll()
+    },
+    saveModelsCall() {
+      this.saveModels()
     },
     runQuery() {
       if (this.editorRef) {
@@ -335,7 +343,6 @@ export default {
       return this.editorStore.editors
     },
     activeDashboardComputed() {
-      console.log('activeDashboardComputed', this.activeDashboard)
       return this.activeDashboard
     },
   },

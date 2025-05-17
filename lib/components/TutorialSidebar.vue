@@ -6,6 +6,7 @@
         class="sidebar-content"
         @click="handleClick(node.id)"
         :class="{ 'sidebar-item-selected': isActiveNode(node.id) }"
+        :data-testid="node.id"
       >
         <!-- Indentation -->
         <div

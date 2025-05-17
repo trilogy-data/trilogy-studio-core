@@ -29,7 +29,7 @@ import useScreenNavigation from './useScreenNavigation'
 import { CredentialManager as CredentialService } from '../data/credentialService'
 // Import credential constants or define them here
 import { CREDENTIAL_PREFIX as credentialPrefix } from '../data/credentialHelpers'
-
+import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
 import { provide, computed, ref } from 'vue'
 import type { PropType } from 'vue'
@@ -309,6 +309,8 @@ export default {
     provide('setActiveScreen', setActiveScreen)
     provide('setActiveEditor', setActiveEditor)
     provide('setActiveDashboard', setActiveDashboard)
+    let store =  useAnalyticsStore()
+    provide('analyticsStore', store)
     provide(
       'queryExecutionService',
       new QueryExecutionService(

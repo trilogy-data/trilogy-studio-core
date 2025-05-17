@@ -42,7 +42,7 @@ export const ModelTutorial = new Article(
         {
           title: 'Typing',
           description:
-            "Trilogy has a core type system and a metadata based trait system. Let's check it out with the below statement. List and String are core types, while us_state_short is a trait. Any number of traits can modify a base type. Traits can be consumed by other systems; for example, here, if you click visualize, you will have a default state map.",
+            "Trilogy has a core type system and a metadata based trait system. Let's try it. In the below definition, `list` and `string` are core types, while us_state_short is a `trait`. Any number of traits can modify a base type. Traits are metadata signals that can be used for typechecking of custom functions or by other systems; for example, here, if you click visualize, you will have a default state map as the studio can make intelligent default choices based on standard lib traits.",
           example: `import std.geography; 
 auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
 
@@ -118,12 +118,102 @@ order by total_revenue desc;`,
         // More prompts...
       ],
     }),
+
+    new Paragraph('Purpose', `Review the standard library doc for always available traits.`, 'tip'),
     new Paragraph(
       'Purpose',
-      `We've defined all the key parts of a model - a key, some properties, and a datasource to fetch. When working with a real database, you can save time by using the 'create model from table' button when browsing tables in the connection screen. This will build a default model you can then edit off that table.`,
-      'tip',
+      `We've defined all the key parts of a model - a key, some properties, and a datasource to fetch. In a real database, you'll usually be working off an actual table. Let's try that out. Follow these steps:
+      <ul>
+      <li>1. Create a new duckdb connection called 'iris-data' using the connection list below.</li>
+      <li>2. Copy the SQL command to create the table.</li>
+      <li>3. Click the black doc icon to create a new SQL editor. This will take you to the editor!</li>
+      <li>4. Paste in the code and run it.</li>
+      <li>5. Click 'set editor as startup script' in the top right.</li>
+      <li>6. Come back here by using the 'documentation' on the left.</li>
+      </ul>
+     `,
     ),
-    new Paragraph('Purpose', `Review the standard library doc for always available traits.`, 'tip'),
+    new Paragraph('Purpose', `It's important to not miss step 5 - that way every time you connect, the table will be automatically populated!.`, 'tip'),
+    new Paragraph(
+      'Purpose',
+      `CREATE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`,
+      'code'
+    ),
+    new Paragraph(
+      'Purpose',
+      '',
+      'connections'
+    ),
+
+    new Paragraph(
+      'Purpose',
+      `Now we're ready to create a new model. The steps below will again take you out of this tutorial, but you can always come back here by clicking the 'documentation' icon on the left.
+      <ul>
+      <li>1. Click on the connection you have, and expand the memory database.</li>
+      <li>2. Hit refresh if needed. On the row with the iris table, click the database icon to generate a new raw datasource file.</li>
+      <li>3. In the open file, change pk to be a "key" instead of "property" and replace the placeholder tags with pk. (example: property pk.species string;)</li>
+      <li>4. In the open file, add a grain clause below the field mapping - grain(pk)</li>
+      <li>5. Click the 'set as source' in top right to make this importable by other files.</li>
+      <li>6. Rename the file to 'iris'.</li>
+      </ul>
+     `,
+    ),
+    new Paragraph(
+      'Purpose',
+      `The grain clause defines the primary key of your datasource. In this case, we've added a surrogate key called pk. Grains are used to understand when information needs to be grouped, and by what. The property tag is used similarly. A datasource can have no grain, in which case it is a heap and most operations on it will require an extra group to deduplicate.
+     `,
+      'tip'
+    ),
+    new Paragraph(
+      'Purpose',
+      `
+key pk int; # surrogate primary key for the dataset
+property pk.sepal_length float;
+property pk.sepal_width float;
+property pk.petal_length float;
+property pk.petal_width float;
+property pk.species string;
+
+datasource iris_data (
+	sepal_length:sepal_length,
+	sepal_width:sepal_width,
+	petal_length:petal_length,
+	petal_width:petal_width,
+	species:species,
+	pk:pk,
+)
+grain (pk)
+address iris_data;
+     `,
+      'code'
+    ),
+    new Paragraph(
+      'Purpose',
+      `Make sure your file looks like the above. Now create a new trilogy editor by clicking the orange document icon by your connection. Copy the below code and run it! 
+     `,
+    ),
+    new Paragraph(
+      'Purpose',
+      `import iris;
+select
+	species,
+	avg(petal_length) as avg_petal_length,
+	avg(petal_width) as avg_petal_width
+;
+     `,
+      'code'
+    ),
+    new Paragraph(
+      'Purpose',
+      `If you get any errors, double check names and that you have set the iris file as a source. If you get a "no such table" error, make sure you have run the startup script to create the table. 
+     `,
+      'tip'
+    ),
+    new Paragraph(
+      'Purpose',
+      `Make sure your file looks like the above. Now create a new trilogy editor by clicking the orange document icon by your connection. Copy the below code and run it! 
+     `,
+    ),
   ],
   'Model Tutorial',
 )

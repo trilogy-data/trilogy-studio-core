@@ -3,7 +3,6 @@ import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } fr
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
-// Add this new import
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import { useDashboardStore } from '../stores/dashboardStore'
 import {
@@ -20,11 +19,10 @@ import type { Import, CompletionItem } from '../stores/resolver'
 import QueryExecutionService from '../stores/queryExecutionService'
 import DashboardCTA from './DashboardCTA.vue'
 import useScreenNavigation from '../stores/useScreenNavigation'
-// Props definition
+
 const props = defineProps<{
   name: string
   connectionId?: string
-  // Add max-width configuration prop with default value
   maxWidth?: number
   viewMode?: boolean
 }>()
@@ -69,8 +67,6 @@ const globalCompletion = ref<CompletionItem[]>([])
 
 // Get the active dashboard
 const dashboard = computed(() => {
-  // Try to find the dashboard by name
-  console.log('Finding dashboard:', props.name)
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
   return dashboard
 })
@@ -136,7 +132,6 @@ const stripAllWhitespace = (str: string): string => {
 }
 
 async function handleFilterChange(newFilter: string) {
-  console.log('New filter:', newFilter)
   if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {

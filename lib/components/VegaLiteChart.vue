@@ -2,16 +2,9 @@
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Toggle button always visible -->
     <div class="controls-toggle" v-if="showControls">
-      <button
-        @click="toggleControls"
-        class="toggle-controls-btn"
-        :class="{ active: showingControls }"
-        data-testid="toggle-chart-controls-btn"
-      >
-        <i
-          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
-          class="icon"
-        ></i>
+      <button @click="toggleControls" class="toggle-controls-btn" :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn">
+        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
         <span>{{ showingControls ? 'View Chart' : 'Edit Chart' }}</span>
       </button>
     </div>
@@ -19,27 +12,17 @@
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
-      <div
-        v-show="!showingControls"
-        ref="vegaContainer"
-        class="vega-container"
-        data-testid="vega-chart-container"
-      ></div>
+      <div v-show="!showingControls" ref="vegaContainer" class="vega-container" data-testid="vega-chart-container">
+      </div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="inner-padding">
           <div class="control-section">
             <div class="chart-type-icons">
-              <button
-                v-for="type in charts"
-                :key="type.value"
-                @click="updateConfig('chartType', type.value)"
-                class="chart-icon"
-                :class="{ selected: internalConfig.chartType === type.value }"
-                :title="type.label"
-                :data-testid="`chart-type-${type.value}`"
-              >
+              <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
+                class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label"
+                :data-testid="`chart-type-${type.value}`">
                 <div class="icon-container">
                   <i :class="type.icon" class="icon"></i>
                 </div>
@@ -50,24 +33,15 @@
           <!-- Group axes controls  -->
           <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
             <label class="control-section-label">Axes</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -75,29 +49,17 @@
           </div>
 
           <!-- Group appearance controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'appearance')">
             <label class="control-section-label">Appearance</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -105,46 +67,29 @@
           </div>
 
           <!-- Group advanced controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') || true">
             <label class="control-section-label">Advanced</label>
             <!-- Debug mode toggle -->
             <div class="control-group no-drag">
               <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
               <div class="toggle-switch-container">
                 <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    id="debug-mode-toggle"
-                    :checked="internalConfig.showDebug"
-                    @change="toggleDebugMode"
-                    data-testid="debug-mode-toggle"
-                  />
+                  <input type="checkbox" id="debug-mode-toggle" :checked="internalConfig.showDebug"
+                    @change="toggleDebugMode" data-testid="debug-mode-toggle" />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
             </div>
             <!-- Existing trellis field control -->
-            <div
-              v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -185,6 +130,9 @@ import { generateVegaSpec } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 
 import type { ScenegraphEvent, SignalValue } from 'vega'
+
+const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP];
+
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -209,11 +157,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => {},
+      default: () => { },
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => {},
+      default: () => { },
     },
     chartTitle: {
       type: String,
@@ -225,6 +173,10 @@ export default defineComponent({
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
     const lastSpec = ref<string | null>(null)
+    const lastBrushClearTime = ref(0);
+    const lastClickTime = ref(0);
+    const pendingBackgroundClick = ref(false);
+    const COORDINATION_TIMEOUT = 750; // ms to wait before processing a brush clear as background click
 
     // event hookups
     //@ts-ignore
@@ -333,6 +285,7 @@ export default defineComponent({
       )
     }
     const handleBrush = debounce((_: string, item: SignalValue) => {
+      console.log('Brush event:', item)
       if (item && ['line', 'area'].includes(internalConfig.value.chartType)) {
         if (!internalConfig.value.xField) {
           return
@@ -343,7 +296,7 @@ export default defineComponent({
         }
         let dateLookup = internalConfig.value.xField
         if (
-          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
+          DATETIME_COLS.includes(timeField?.type)
         ) {
           dateLookup = 'yearmonthdate_' + internalConfig.value.xField
         }
@@ -351,8 +304,18 @@ export default defineComponent({
         const values = item[dateLookup as keyof typeof item] ?? []
         // Check if values exists and has elements in a single condition
         if (!values || !Array.isArray(values) || values.length === 0) {
-          emit('background-click')
-          return
+          // Brush is being cleared - record the time and schedule a background click
+          lastBrushClearTime.value = Date.now();
+          // if the last click time was within the coordination timeout, cancel the background click
+          if (Date.now() - lastClickTime.value < COORDINATION_TIMEOUT) {
+            console.log('Cancelling background click due to recent point click' )
+            pendingBackgroundClick.value = false;
+            return;
+          } 
+          console.log('Scheduling background click due to brush clear, elapsed since last point click:', Date.now() - lastClickTime.value)
+          emit('background-click');
+
+          return;
         }
         let start = values[0]
         let end = values[values.length - 1]
@@ -361,7 +324,7 @@ export default defineComponent({
           return
         }
         if (
-          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
+          DATETIME_COLS.includes(timeField?.type)
         ) {
           emit('dimension-click', {
             filters: {
@@ -383,6 +346,10 @@ export default defineComponent({
     }, 500)
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
+      const currentTime = Date.now();
+      lastClickTime.value = currentTime;  
+
+
       let append = event.shiftKey
       if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
@@ -424,17 +391,29 @@ export default defineComponent({
           }
           // eligible are categorical and temporal fields
           let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
-          eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+          if (internalConfig.value.chartType !== 'area') {
+            eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+          }
 
           if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
             // add to baseFilters and chart
-            baseFilters = { ...baseFilters, [xField]: item.datum[xFieldRaw] }
+            let xFilterValue = item.datum[xFieldRaw]
+            // @ts-ignore
+            if (DATETIME_COLS.includes(props.columns.get(xFieldRaw)?.type)) {
+              xFilterValue = convertTimestampToISODate(item.datum[xFieldRaw])
+            }
+            baseFilters = { ...baseFilters, [xField]: xFilterValue }
             baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
           }
           // todo: figure out if we want to support both?
           else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
             // add to baseFilters and chart
-            baseFilters = { ...baseFilters, [yField]: item.datum[yFieldRaw] }
+            let yFilterValue = item.datum[yFieldRaw]
+            // @ts-ignore
+            if (DATETIME_COLS.includes(props.columns.get(yFieldRaw)?.type)) {
+              yFilterValue = convertTimestampToISODate(item.datum[yFieldRaw])
+            }
+            baseFilters = { ...baseFilters, [yField]: yFilterValue }
             baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
           }
           emit('dimension-click', {
@@ -454,7 +433,6 @@ export default defineComponent({
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
-      console.log(spec)
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
       if (lastSpec.value === currentSpecString && !force) {
@@ -806,11 +784,11 @@ export default defineComponent({
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: var(--special-text);
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(16px);
 }
 

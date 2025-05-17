@@ -52,6 +52,7 @@ import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
 import { type GridItemData, type DimensionClick } from '../dashboards/base'
+import type { AnalyticsStoreType } from '../stores/analyticsStore'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -145,6 +146,7 @@ export default defineComponent({
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
@@ -162,16 +164,8 @@ export default defineComponent({
       error.value = null
 
       try {
-        // Analytics tracking (optional, include if needed)
-        try {
-          // @ts-ignore
-          window.goatcounter.count({
-            path: 'dashboard-chart-execution',
-            title: 'CHART',
-            event: true,
-          })
-        } catch (err) {
-          console.log(err)
+        if (analyticsStore) {
+          analyticsStore.log('dashboard-chart-execution','CHART',true,)
         }
 
         // Prepare query input

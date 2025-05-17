@@ -48,6 +48,7 @@ import ErrorMessage from './ErrorMessage.vue'
 import DataTable from './DataTable.vue'
 import LoadingView from './LoadingView.vue'
 import { type GridItemData, type DimensionClick } from '../dashboards/base'
+import { type AnalyticsStoreType } from '../stores/analyticsStore'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -131,6 +132,7 @@ export default defineComponent({
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
@@ -146,16 +148,8 @@ export default defineComponent({
       error.value = null
 
       try {
-        // Analytics tracking (optional, include if needed)
-        try {
-          // @ts-ignore
-          window.goatcounter.count({
-            path: 'dashboard-table-execution',
-            title: 'TABLE',
-            event: true,
-          })
-        } catch (err) {
-          console.log(err)
+         if (analyticsStore) {
+          analyticsStore.log('dashboard-table-execution','TABLE',true,)
         }
 
         // Prepare query input

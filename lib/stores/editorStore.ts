@@ -59,7 +59,7 @@ const useEditorStore = defineStore('editors', {
       if (this.editors[id]) {
         delete this.editors[id]
       } else {
-        throw new Error(`Editor with id "${id}" not found.`)
+        return false
       }
     },
     setEditorContents(id: string, contents: string) {
@@ -80,7 +80,13 @@ const useEditorStore = defineStore('editors', {
       }
     },
     getCurrentEditorAutocomplete(word: string) {
+      if (!this.activeEditorId) {
+        return []
+      }
       let activeEditor = this.editors[this.activeEditorId]
+      if (!word) {
+        return []
+      }
       return activeEditor.getAutocomplete(word)
     },
   },

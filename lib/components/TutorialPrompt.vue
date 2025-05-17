@@ -239,9 +239,9 @@ export default {
 }
 
 .prompt-content {
-  padding: 15px;
+  padding: 10px;
   overflow-y: scroll;
-  max-height: 200px;
+  max-height: 300px;
   border-bottom: 1px solid var(--border-light);
 }
 
