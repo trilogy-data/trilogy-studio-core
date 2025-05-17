@@ -152,7 +152,7 @@ export const fetchModelFiles = async (
       .filter((file) => file.name.endsWith('.json'))
       .map(async (file) => {
         // Construct raw content URL with the selected branch
-        const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/studio/${file.name}`
+        const rawUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/${file.name}`
         const fileResponse = await fetchWithBackoff(rawUrl)
 
         if (!fileResponse.ok) {

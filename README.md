@@ -1,6 +1,6 @@
 # Trilogy Studio Core
 
-A open-source, web-based IDE for exploring Trilogy, an experiment in streamlined analytic SQL. 
+A open-source, web-based IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
 
 Try it here [here](https://trilogydata.dev/trilogy-studio-core/).
 
@@ -28,12 +28,16 @@ This repo contains the studio frontend and a minimal FastAPI language server tha
 
 ## Running Locally
 
-Run main.py in pyserver. 
 
-```baseh
-npm run dev
-```
-To run frontend; check config in frontend to ensure it is resolving to your localhost.
+> [!TIP]
+> Quick Setup: Run `npm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `npm run local` to start a local instace.
+
+This will run the frontend with Vite as well as the backend language server.
+
+You can confirm in settings that your local UI is resolving to localhost.
+
+There will be a more polished local option in the future.
+
 
 ### Inspiration
 There are lots of good IDEs out here. Trilogy Studio is probably only right if you want to use Trilogy. Takes inspiration from:
