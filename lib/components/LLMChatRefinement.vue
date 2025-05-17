@@ -207,17 +207,13 @@ export default defineComponent({
       }
     }
 
-    // Accept the current result
+
     const acceptResult = async () => {
       if (isLoading.value) return
-
-      // Get the latest assistant message or use the initial response if no conversation
       const latestResponse = messages.value.filter((m) => m.role === 'assistant').pop()?.content
 
-      // Validate before accepting
       const value = await props.extractionFn(latestResponse)
       await props.mutationFn(value)
-      console.log('committed mutation of ', value, props.extractionFn)
       emit('accepted')
       await props.closeFn()
     }

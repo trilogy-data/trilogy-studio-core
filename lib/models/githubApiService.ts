@@ -20,9 +20,14 @@ export interface GithubBranch {
   name: string
 }
 
+export interface GithubIndex {
+  count: number
+  files: GithubContentsItem[]
+}
+
 export interface GithubContentsItem {
   name: string
-  download_url: string
+  filename: string
 }
 
 // Config for GitHub repository
@@ -122,13 +127,8 @@ export const fetchBranches = async (): Promise<string[]> => {
   }
 }
 
-/**
- * Fetch model files from a specific branch
- * @param branch The branch to fetch from
- * @returns Array of ModelFile objects and any error that occurred
- */
+
 export const fetchModelFiles = async (
-  branch: string,
 ): Promise<{
   files: ModelFile[]
   error: string | null
@@ -137,8 +137,7 @@ export const fetchModelFiles = async (
   let files: ModelFile[] = []
 
   try {
-    const { repoOwner, repoName } = GITHUB_CONFIG
-    const contentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/studio?ref=${branch}`
+    const contentsUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/index.json`
 
     const response = await fetchWithBackoff(contentsUrl)
 
@@ -146,17 +145,17 @@ export const fetchModelFiles = async (
       throw new Error(`Error fetching community data: ${await response.text()}`)
     }
 
-    const data: GithubContentsItem[] = await response.json()
+    const data: GithubIndex = await response.json()
 
-    const filePromises = data
-      .filter((file) => file.name.endsWith('.json'))
+    const filePromises = data.files
+      .filter((file) => file.filename.endsWith('.json'))
       .map(async (file) => {
         // Construct raw content URL with the selected branch
-        const rawUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/${file.name}`
+        const rawUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/${file.filename}`
         const fileResponse = await fetchWithBackoff(rawUrl)
 
         if (!fileResponse.ok) {
-          throw new Error(`Error fetching file ${file.name}: ${fileResponse.statusText}`)
+          throw new Error(`Error fetching file ${file.filename}: ${fileResponse.statusText}`)
         }
 
         const fileData: ModelFile = await fileResponse.json()
