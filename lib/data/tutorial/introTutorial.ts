@@ -50,7 +50,7 @@ export const IntroTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. Local represents local storage in your browser. You should see some auto-created editors below from importing your model Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
+      'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. `Local` represents local storage in your browser. [Other storage, like Github, will be available in the future] Your imported model will have populated some default editors, but let\s start with a new one. Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
     ),
     new Paragraph('Purpose', '', 'editors'),
     new Paragraph('Purpose', '', 'editor-validator'),

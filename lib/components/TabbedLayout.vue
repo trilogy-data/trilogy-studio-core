@@ -13,6 +13,7 @@
         class="tab-button"
         :class="{ active: activeTab === 'results' }"
         @click="activeTab = 'results'"
+        data-testid="results-tab"
       >
         Results
       </button>

@@ -3,14 +3,24 @@
     <h2>Settings</h2>
     <div class="setting" v-for="[key, value] in Object.entries(settings)" :key="key">
       <label :for="key">{{ formatLabel(key) }}</label>
-      <input v-if="typeof value === 'boolean'" type="checkbox" :id="key" v-model="settings[key]"
-        @change="() => userSettingsStore.updateSetting(key, settings[key])" />
+      <input
+        v-if="typeof value === 'boolean'"
+        type="checkbox"
+        :id="key"
+        v-model="settings[key]"
+        @change="() => userSettingsStore.updateSetting(key, settings[key])"
+      />
       <select v-else-if="key === 'theme'" v-model="settings[key]" @change="onThemeChange">
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
-      <input v-else-if="typeof value === 'string'" type="text" :id="key" v-model="settings[key]"
-        @input="onSettingChange" />
+      <input
+        v-else-if="typeof value === 'string'"
+        type="text"
+        :id="key"
+        v-model="settings[key]"
+        @input="onSettingChange"
+      />
     </div>
     <div class="actions">
       <button class="button" @click="saveSettings" :disabled="isLoading || !hasChanges">

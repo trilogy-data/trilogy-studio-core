@@ -2,32 +2,53 @@
   <div class="editor-container">
     <div class="menu-bar">
       <div class="menu-actions">
-        <button class="action-item" @click="generateLLMQuery" title="Generate query using AI"
-          data-testid="editor-generate-button">
+        <button
+          class="action-item"
+          @click="generateLLMQuery"
+          title="Generate query using AI"
+          data-testid="editor-generate-button"
+        >
           Generate
         </button>
         <button v-if="editor.type !== 'sql'" class="action-item" @click="() => validateQuery()">
           Parse
         </button>
-        <button @click="editor.loading ? cancelQuery() : runQuery()" class="action-item"
-          :class="{ 'button-cancel': editor.loading }" data-testid="editor-run-button">
+        <button
+          @click="editor.loading ? cancelQuery() : runQuery()"
+          class="action-item"
+          :class="{ 'button-cancel': editor.loading }"
+          data-testid="editor-run-button"
+        >
           {{ editor.loading ? 'Cancel' : 'Test' }}
         </button>
       </div>
     </div>
     <div class="editor-content">
-      <div ref="editorElement" class="monaco-editor" :class="{
-        'monaco-width-with-panel': isPanelVisible,
-        'monaco-width-no-panel': !isPanelVisible,
-      }" data-testid="simple-editor-content"></div>
+      <div
+        ref="editorElement"
+        class="monaco-editor"
+        :class="{
+          'monaco-width-with-panel': isPanelVisible,
+          'monaco-width-no-panel': !isPanelVisible,
+        }"
+        data-testid="simple-editor-content"
+      ></div>
       <div class="sidebar-panel" v-show="isPanelVisible">
-        <SymbolsPane :symbols="editor.completionSymbols || []" @select-symbol="insertSymbol" ref="symbolsPane" />
+        <SymbolsPane
+          :symbols="editor.completionSymbols || []"
+          @select-symbol="insertSymbol"
+          ref="symbolsPane"
+        />
       </div>
       <div class="be-sidebar-container">
         <!-- Icon panel (always visible) -->
         <div class="be-sidebar-icons">
-          <button class="sidebar-icon-button" :class="{ active: isPanelVisible }" @click="togglePanel('symbols')"
-            title="Symbols">
+          <button
+            class="sidebar-icon-button"
+            :class="{ active: isPanelVisible }"
+            @click="togglePanel('symbols')"
+            title="Symbols"
+          >
             <i class="mdi mdi-tag-search-outline"></i>
           </button>
           <!-- Add more icons for other panels here if needed -->
@@ -35,7 +56,12 @@
       </div>
     </div>
     <div class="result-wrapper">
-      <loading-view class="loading-view" v-if="editor.loading" :text="`Loading...`" :startTime="editor.startTime" />
+      <loading-view
+        class="loading-view"
+        v-if="editor.loading"
+        :text="`Loading...`"
+        :startTime="editor.startTime"
+      />
       <div v-else-if="editor.error" class="error-message">{{ editor.error }}</div>
       <div v-else-if="lastOperation" class="results-summary" data-testid="simple-editor-results">
         <div :class="['status-badge', lastOperation.success ? 'success' : 'error']">
@@ -259,7 +285,7 @@ export default defineComponent({
     focusSymbolSearch(): void {
       const symbolsPane = this.$refs.symbolsPane as typeof SymbolsPane | undefined
       if (symbolsPane && 'focusSearch' in symbolsPane) {
-        ; (symbolsPane as any).focusSearch()
+        ;(symbolsPane as any).focusSearch()
       }
     },
 
@@ -358,7 +384,7 @@ export default defineComponent({
 
       try {
         if (this.analyticsStore) {
-          this.analyticsStore.log('studio-query-execution', this.editor.type, true,)
+          this.analyticsStore.log('studio-query-execution', this.editor.type, true)
         }
 
         // Set component to loading state
@@ -390,7 +416,7 @@ export default defineComponent({
           this.editor.connection,
           queryInput,
           // Progress callback for connection issues
-          () => { },
+          () => {},
           (message: QueryUpdate) => {
             if (!queryDone && message.error) {
               this.editor.loading = false
@@ -472,7 +498,7 @@ export default defineComponent({
 
       try {
         if (this.analyticsStore) {
-          this.analyticsStore.log('studio-llm-generation', this.editor.type, true,)
+          this.analyticsStore.log('studio-llm-generation', this.editor.type, true)
         }
 
         // Set loading state
@@ -514,8 +540,8 @@ export default defineComponent({
             const { resultPromise } = await queryExecutionService.executeQuery(
               this.editor.connection,
               queryInput,
-              () => { },
-              () => { },
+              () => {},
+              () => {},
               (error) => {
                 throw error
               },

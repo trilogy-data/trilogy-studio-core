@@ -148,8 +148,8 @@ export default defineComponent({
       error.value = null
 
       try {
-         if (analyticsStore) {
-          analyticsStore.log('dashboard-table-execution','TABLE',true,)
+        if (analyticsStore) {
+          analyticsStore.log('dashboard-table-execution', 'TABLE', true)
         }
 
         // Prepare query input

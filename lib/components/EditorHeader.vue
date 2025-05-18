@@ -4,11 +4,12 @@
       <div class="menu-title" @click="startEditing">
         <span v-if="!isEditing" class="editable-text">
           {{ name }}
-          <span class="edit-indicator">✎</span>
+          <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
         </span>
         <input
           v-else
           ref="nameInput"
+          data-testid="editor-name-input"
           v-model="editableName"
           @blur="finishEditing"
           @keyup.enter="finishEditing"
@@ -24,6 +25,7 @@
         class="toggle-button tag-inactive action-item"
         :class="{ tag: tags.includes(EditorTag.STARTUP_SCRIPT) }"
         @click="$emit('toggle-tag', EditorTag.STARTUP_SCRIPT)"
+        data-testid="editor-set-startup-script"
       >
         {{ tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup Script
       </button>
@@ -32,6 +34,7 @@
         class="toggle-button tag-inactive action-item"
         :class="{ tag: tags.includes(EditorTag.SOURCE) }"
         :action="() => $emit('toggle-tag', EditorTag.SOURCE)"
+        data-testid="editor-set-source"
       >
         {{ tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
       </loading-button>

@@ -309,7 +309,7 @@ export default {
     provide('setActiveScreen', setActiveScreen)
     provide('setActiveEditor', setActiveEditor)
     provide('setActiveDashboard', setActiveDashboard)
-    let store =  useAnalyticsStore()
+    let store = useAnalyticsStore()
     provide('analyticsStore', store)
     provide(
       'queryExecutionService',

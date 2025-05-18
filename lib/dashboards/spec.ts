@@ -134,21 +134,21 @@ const createColorEncoding = (
 ) => {
   const legendConfig = isMobile
     ? {
-      legend: {
-        orient: 'bottom',
-        direction: 'horizontal',
-      },
-    }
-    : {
-      condition: [
-        {
-          param: 'highlight',
-          empty: false,
-          value: HIGHLIGHT_COLOR,
+        legend: {
+          orient: 'bottom',
+          direction: 'horizontal',
         },
-        { param: 'select', empty: false, value: HIGHLIGHT_COLOR, },
-      ],
-    }
+      }
+    : {
+        condition: [
+          {
+            param: 'highlight',
+            empty: false,
+            value: HIGHLIGHT_COLOR,
+          },
+          { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
+        ],
+      }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -207,12 +207,14 @@ const createInteractionEncodings = () => {
 const createBrushParam = (intChart: Array<Partial<ChartConfig>>, config: ChartConfig) => {
   return {
     name: 'brush',
-    select: { type: 'interval', encodings: ['x'], 
-      // value: intChart 
+    select: {
+      type: 'interval',
+      encodings: ['x'],
+      // value: intChart
     },
     value:
       intChart.length > 0 && config.xField
-        ? [{ 'x': intChart[0][config.xField as keyof typeof config] }]
+        ? [{ x: intChart[0][config.xField as keyof typeof config] }]
         : [],
   }
 }
@@ -263,9 +265,7 @@ const createInteractiveLayer = (
       }
     }
   }
-  mainLayer.params = [
-
-  ]
+  mainLayer.params = []
   if (!filtered) {
     mainLayer.params = [
       {
@@ -285,11 +285,15 @@ const createInteractiveLayer = (
           encodings: ['y'],
         },
         // @ts-ignore
-        value: intChart.filter(obj => !(config.xField in obj)) ? intChart : [],
-        
+        value: intChart.filter((obj) => !(config.xField in obj)) ? intChart : [],
       },
       // @ts-ignore
-      createBrushParam(intChart.filter(obj => config.xField in obj).length>0 ? intChart.filter(obj => config.xField in obj)  : [], config),
+      createBrushParam(
+        intChart.filter((obj) => config.xField in obj).length > 0
+          ? intChart.filter((obj) => config.xField in obj)
+          : [],
+        config,
+      ),
     ]
   }
 
@@ -316,25 +320,25 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-        {
-          name: 'highlight2',
-          select: {
-            type: 'point',
-            on: 'mouseover',
-            clear: 'mouseout',
+          {
+            name: 'highlight2',
+            select: {
+              type: 'point',
+              on: 'mouseover',
+              clear: 'mouseout',
+            },
           },
-        },
-        // {
-        //   name: 'select2',
-        //   select: {
-        //     type: 'point',
-        //     on: 'click,touchend',
-        //     clear: 'dragleave,dblclick'
-        //   },
-        //   value: intChart,
-          
-        // },
-      ]
+          // {
+          //   name: 'select2',
+          //   select: {
+          //     type: 'point',
+          //     on: 'click,touchend',
+          //     clear: 'dragleave,dblclick'
+          //   },
+          //   value: intChart,
+
+          // },
+        ]
       : [],
   }
 

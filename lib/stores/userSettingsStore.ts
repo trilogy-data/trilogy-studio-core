@@ -22,7 +22,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
     } as UserSettings,
     isLoading: false,
     hasChanges: false,
-    hasLoaded: false
+    hasLoaded: false,
   }),
 
   getters: {
@@ -39,8 +39,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.settings[key] = value
       if (key === 'theme') {
         this.toggleTheme()
-      }
-      else if (key === 'telemetryEnabled') {
+      } else if (key === 'telemetryEnabled') {
         const analyticsStore = useAnalyticsStore()
         analyticsStore.setEnabled(value === true)
       }
@@ -95,7 +94,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
      */
     loadSettings() {
       this.isLoading = true
-
 
       try {
         const savedSettings = localStorage.getItem('userSettings')

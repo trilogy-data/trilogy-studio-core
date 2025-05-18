@@ -26,7 +26,7 @@ export const ModelTutorial = new Article(
     new Paragraph('Purpose', '', 'editor-validator'),
 
     new Paragraph('Tutorial Queries', 'bsb', 'tutorial-prompts', {
-      context: 'sql-tutorial',
+      context: 'model-tutorial',
       editorId: 'sql-basic-editor',
       prompts: [
         {
@@ -133,17 +133,22 @@ order by total_revenue desc;`,
       </ul>
      `,
     ),
-    new Paragraph('Purpose', `It's important to not miss step 5 - that way every time you connect, the table will be automatically populated!.`, 'tip'),
+    new Paragraph(
+      'Purpose',
+      `It's important to not miss step 5 - that way every time you connect, the table will be automatically populated!.`,
+      'tip',
+    ),
+    new Paragraph(
+      'Purpose',
+      `DuckDB WASM CSV import of this file don't appear to work properly on Firefox or Safari as of early 2025. On those browsers, consider download the csv directly and importing it into duckdb using the drag box rather than using the read_csv SQL below.`,
+      'warning',
+    ),
     new Paragraph(
       'Purpose',
       `CREATE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`,
-      'code'
+      'code',
     ),
-    new Paragraph(
-      'Purpose',
-      '',
-      'connections'
-    ),
+    new Paragraph('Purpose', '', 'connections'),
 
     new Paragraph(
       'Purpose',
@@ -162,7 +167,7 @@ order by total_revenue desc;`,
       'Purpose',
       `The grain clause defines the primary key of your datasource. In this case, we've added a surrogate key called pk. Grains are used to understand when information needs to be grouped, and by what. The property tag is used similarly. A datasource can have no grain, in which case it is a heap and most operations on it will require an extra group to deduplicate.
      `,
-      'tip'
+      'tip',
     ),
     new Paragraph(
       'Purpose',
@@ -185,7 +190,7 @@ datasource iris_data (
 grain (pk)
 address iris_data;
      `,
-      'code'
+      'code',
     ),
     new Paragraph(
       'Purpose',
@@ -201,13 +206,13 @@ select
 	avg(petal_width) as avg_petal_width
 ;
      `,
-      'code'
+      'code',
     ),
     new Paragraph(
       'Purpose',
       `If you get any errors, double check names and that you have set the iris file as a source. If you get a "no such table" error, make sure you have run the startup script to create the table. 
      `,
-      'tip'
+      'tip',
     ),
     new Paragraph(
       'Purpose',

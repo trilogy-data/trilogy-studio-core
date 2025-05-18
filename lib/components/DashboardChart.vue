@@ -165,7 +165,7 @@ export default defineComponent({
 
       try {
         if (analyticsStore) {
-          analyticsStore.log('dashboard-chart-execution','CHART',true,)
+          analyticsStore.log('dashboard-chart-execution', 'CHART', true)
         }
 
         // Prepare query input

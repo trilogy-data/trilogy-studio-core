@@ -38,7 +38,7 @@ export default defineConfig({
   ],
   define: {
     global: 'window',
-    '__IS_VITE__': true
+    __IS_VITE__: true,
   },
   resolve: {
     alias: {

@@ -180,8 +180,7 @@ const useConnectionStore = defineStore('connections', {
       }
       if (options.model) {
         this.connections[name].model = options.model
-      }
-      else {
+      } else {
         const modelStore = useModelConfigStore()
         this.connections[name].model = modelStore.newModelConfig(name).name
       }

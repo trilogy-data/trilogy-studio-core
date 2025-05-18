@@ -38,13 +38,12 @@ Tabulator.registerModule([
   InteractionModule,
 ])
 
-
 let defaultResolver = 'https://trilogy-service.fly.dev'
 let userSettingsStore = useUserSettingsStore()
 userSettingsStore.loadSettings()
 //@ts-ignore
 if (typeof __IS_VITE__ !== 'undefined') {
-  console.log('Running in vite, assuming local environment');
+  console.log('Running in vite, assuming local environment')
   defaultResolver = 'http://127.0.0.1:5678'
   // default telemetry to off for local
   if (userSettingsStore.settings.telemetryEnabled === null) {
@@ -55,8 +54,6 @@ if (typeof __IS_VITE__ !== 'undefined') {
 const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
   : defaultResolver
-
-
 
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 if (!userSettingsStore.settings.theme) {
@@ -151,9 +148,16 @@ languages.registerCompletionItemProvider('trilogy', {
 
 <template>
   <div class="main">
-    <Manager :connectionStore="connections" :editorStore="store" :trilogyResolver="resolver" :modelStore="models"
-      :storageSources="contentSources" :userSettingsStore="userSettingsStore" :dashboardStore="dashboards"
-      :llmConnectionStore="llms">
+    <Manager
+      :connectionStore="connections"
+      :editorStore="store"
+      :trilogyResolver="resolver"
+      :modelStore="models"
+      :storageSources="contentSources"
+      :userSettingsStore="userSettingsStore"
+      :dashboardStore="dashboards"
+      :llmConnectionStore="llms"
+    >
     </Manager>
   </div>
 </template>

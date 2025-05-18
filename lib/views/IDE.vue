@@ -186,7 +186,6 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 
-
 export default {
   name: 'IDEComponent',
   data() {
