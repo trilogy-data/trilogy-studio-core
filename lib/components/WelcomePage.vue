@@ -12,9 +12,9 @@
           the docs.
         </p>
         <div class="buttons">
-          <button @click="startDemo()" class="btn btn-secondary">
+          <!-- <button @click="startDemo()" class="btn btn-secondary">
             <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>
-          </button>
+          </button> -->
           <button @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
 
           <button @click="tutorial()" class="btn btn-tertiary">Docs and Tutorial</button>

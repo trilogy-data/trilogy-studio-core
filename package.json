@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@motherduck/wasm-client": "^0.6.6",
-    "@playwright/test": "^1.51.0",
+    "@playwright/test": "^1.52.0",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.4.2",
     "@types/node": "^22.12.0",

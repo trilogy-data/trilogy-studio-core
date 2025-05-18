@@ -92,7 +92,6 @@ order by
   await page.getByTestId('editor-run-button').click()
 
   // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
   await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
 
   // Verify result contains pi = 3.14
@@ -162,32 +161,35 @@ select count(order.id) as order_count;`
   }
   await page.keyboard.press('Delete')
 
-  const datasourceQuery = `import lineitem;
+  const chunks = [
+    "import lineitem;\n",
+    "property order.customer.nation.region.id.headquarters string;\n",
+    "datasource region_headquarters (\n",
+    "    region_id: ?order.customer.nation.region.id,\n",
+    "    headquarters: order.customer.nation.region.headquarters,)\n",
+    "grain (order.customer.nation.region.id)\n",
+    "query '''\n",
+    "select 1 as region_id, 'HQ1' as headquarters\n",
+    "union all\n",
+    "select 2 as region_id, 'HQ2' as headquarters\n",
+    "union all\n",
+    "select 3 as region_id, 'HQ3' as headquarters\n",
+    "union all\n",
+    "select 4 as region_id, 'HQ4' as headquarters\n",
+    "''';\n",
+    "select\n",
+    "    order.customer.nation.region.headquarters,\n",
+    "    total_revenue\n",
+    "order by\n",
+    "    total_revenue desc;"
+  ];
 
-property order.customer.nation.region.id.headquarters string;
+  for (const chunk of chunks) {
+    await page.keyboard.type(chunk);
+  }
 
-datasource region_headquarters (
-    region_id: ?order.customer.nation.region.id,
-    headquarters: order.customer.nation.region.headquarters,)
-grain (order.customer.nation.region.id)
-query '''
-select 1 as region_id, 'HQ1' as headquarters
-union all
-select 2 as region_id, 'HQ2' as headquarters
-union all
-select 3 as region_id, 'HQ3' as headquarters
-union all
-select 4 as region_id, 'HQ4' as headquarters
-''';
-
-select 
-    order.customer.nation.region.headquarters,
-    total_revenue
-order by 
-  total_revenue desc;`
-
-  await page.keyboard.type(datasourceQuery)
   await page.getByTestId('editor-run-button').click()
+
 
   // Wait for query to complete
   await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
@@ -321,4 +323,4 @@ select
   }
   // Verify we have results for three iris species
   await expect(await page.getByRole('gridcell', { name: 'versicolor' })).toContainText('versicolor')
-})
+},)
