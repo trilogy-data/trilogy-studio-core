@@ -282,14 +282,12 @@ export const useDashboardStore = defineStore('dashboards', {
     },
     async populateCompletion(dashboardId: string, queryExecutionService: QueryExecutionService) {
       const dashboard = this.dashboards[dashboardId]
-      console.log('populating completion for dashboard', dashboard)
       if (dashboard) {
         let results = await queryExecutionService?.validateQuery(dashboard.connection, {
           text: 'select 1 as test;',
           editorType: 'trilogy',
           imports: dashboard.imports,
         })
-        console.log('got results', results)
         if (results) {
           return results.data.completion_items
         } else {

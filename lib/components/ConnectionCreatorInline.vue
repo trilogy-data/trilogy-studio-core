@@ -184,7 +184,8 @@ export default defineComponent({
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveConnections = inject<CallableFunction>('saveConnections')
-    if (!connectionStore || !saveConnections) {
+    const saveAll = inject<CallableFunction>('saveAll')
+    if (!connectionStore || !saveConnections || !saveAll) {
       throw new Error('must inject connectionStore to ConnectionCreator')
     }
 
@@ -210,7 +211,8 @@ export default defineComponent({
           connectionDetails.value.type,
           connectionDetails.value.options,
         )
-        await saveConnections()
+        // we may have created a model, so save that too
+        await saveAll()
 
         emit('close')
       }

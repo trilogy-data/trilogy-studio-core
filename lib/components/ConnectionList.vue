@@ -24,6 +24,7 @@
       :is-collapsed="collapsed[item.id]"
       :isSelected="item.id === activeConnectionKey"
       :isMobile="isMobile"
+      :testTag="testTag"
       @toggle="toggleCollapse"
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"

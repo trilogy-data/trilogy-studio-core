@@ -19,7 +19,6 @@
         @generate="generateLLMQuery"
       />
       <div class="editor-content">
-        <!-- Replace the original editor with our CodeEditor component -->
         <code-editor
           ref="codeEditor"
           :editor-id="editorId"
@@ -83,6 +82,7 @@ import CodeEditor from './EditorCode.vue'
 import { extractLastTripleQuotedText } from '../stores/llmStore.ts'
 import { Range } from 'monaco-editor'
 import { completionToModelInput } from '../llm/utils.ts'
+import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -145,6 +145,11 @@ export default defineComponent({
     const isMobile = inject<boolean>('isMobile', false)
     const setActiveEditor = inject<Function>('setActiveEditor')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
+    if (!analyticsStore) {
+      throw new Error('Analytics store is required')
+    }
+    analyticsStore.log('studio-editor-open', 'editor', true)
 
     if (
       !editorStore ||
@@ -169,6 +174,7 @@ export default defineComponent({
       userSettingsStore,
       setActiveEditor,
       queryExecutionService,
+      analyticsStore,
     }
   },
   computed: {
@@ -218,16 +224,18 @@ export default defineComponent({
     },
 
     toggleTag(tag: EditorTag): void {
-      let isSource = this.editorData.tags.includes(tag)
+      if (tag === EditorTag.SOURCE) {
+        let isSource = this.editorData.tags.includes(tag)
 
-      if (!isSource) {
-        let model = this.connectionStore.connections[this.editorData.connection].model
-        if (model) {
-          this.modelStore.models[model].addModelSourceSimple(
-            this.editorData.id,
-            this.editorData.name,
-          )
-          this.$emit('save-models')
+        if (!isSource) {
+          let model = this.connectionStore.connections[this.editorData.connection].model
+          if (model) {
+            this.modelStore.models[model].addModelSourceSimple(
+              this.editorData.id,
+              this.editorData.name,
+            )
+            this.$emit('save-models')
+          }
         }
       }
       this.editorData.tags = this.editorData.tags.includes(tag)
@@ -252,12 +260,9 @@ export default defineComponent({
 
       try {
         if (log) {
-          // @ts-ignore
-          window.goatcounter.count({
-            path: 'studio-query-validate',
-            title: this.editorData.type,
-            event: true,
-          })
+          if (this.analyticsStore) {
+            this.analyticsStore.log('studio-query-validate', this.editorData.type, true)
+          }
         }
       } catch (error) {
         console.log(error)
@@ -272,7 +277,7 @@ export default defineComponent({
 
       if (!sources) {
         sources = conn.model
-          ? this.modelStore.models[conn.model].sources.map((source) => ({
+          ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
               alias: source.alias,
               contents: this.editorStore.editors[source.editor]
                 ? this.editorStore.editors[source.editor].contents
@@ -338,7 +343,7 @@ export default defineComponent({
       const conn = this.connectionStore.connections[this.editorData.connection]
       const sources: ContentInput[] =
         conn && conn.model
-          ? this.modelStore.models[conn.model].sources.map((source) => ({
+          ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
               alias: source.alias,
               contents: this.editorStore.editors[source.editor]
                 ? this.editorStore.editors[source.editor].contents
@@ -381,13 +386,9 @@ export default defineComponent({
       }
 
       try {
-        // Analytics tracking (unchanged)
-        // @ts-ignore
-        window.goatcounter.count({
-          path: 'studio-query-execution',
-          title: this.editorData.type,
-          event: true,
-        })
+        if (this.analyticsStore) {
+          this.analyticsStore.log('studio-query-execution', this.editorData.type, true)
+        }
       } catch (error) {
         console.log(error)
       }

@@ -217,24 +217,28 @@ export default defineComponent({
         }
 
         keywordDebounceTimer = window.setTimeout(() => {
-          // Get the changes from the event
-          const changes = event.changes
-          let newContent = ''
+          try {
+            // Get the changes from the event
+            const changes = event.changes
+            let newContent = ''
 
-          // Extract only the new text that was added
-          changes.forEach((change) => {
-            if (change.text) {
-              newContent += change.text
+            // Extract only the new text that was added
+            changes.forEach((change) => {
+              if (change.text) {
+                newContent += change.text
+              }
+            })
+
+            // Check if new content contains any of the keywords
+            const containsKeyword = keywordsToWatch.some((keyword) =>
+              newContent.toLowerCase().includes(keyword.toLowerCase()),
+            )
+
+            if (containsKeyword) {
+              console.log('Keyword detected')
             }
-          })
-
-          // Check if new content contains any of the keywords
-          const containsKeyword = keywordsToWatch.some((keyword) =>
-            newContent.toLowerCase().includes(keyword.toLowerCase()),
-          )
-
-          if (containsKeyword) {
-            console.log('Keyword detected')
+          } catch (error) {
+            console.error('Error checking keywords:', error)
           }
         }, keywordDebounceDelay)
       })

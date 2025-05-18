@@ -26,7 +26,6 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.0",
     "@motherduck/wasm-client": "^0.6.6",
     "@playwright/test": "^1.51.0",
     "@types/gapi": "^0.0.47",
@@ -55,6 +54,7 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.0",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@google/genai": "^0.12.0",

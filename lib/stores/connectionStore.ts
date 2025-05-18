@@ -8,6 +8,7 @@ import {
 } from '../connections'
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
+import useModelConfigStore from './modelStore'
 
 // Track in-progress operations
 const pendingOperations = new Map()
@@ -176,6 +177,12 @@ const useConnectionStore = defineStore('connections', {
       // }
       else {
         throw new Error(`Connection type "${type}" not found.`)
+      }
+      if (options.model) {
+        this.connections[name].model = options.model
+      } else {
+        const modelStore = useModelConfigStore()
+        this.connections[name].model = modelStore.newModelConfig(name).name
       }
     },
   },

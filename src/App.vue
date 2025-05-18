@@ -38,12 +38,22 @@ Tabulator.registerModule([
   InteractionModule,
 ])
 
-const apiUrl = import.meta.env.VITE_RESOLVER_URL
-  ? import.meta.env.VITE_RESOLVER_URL
-  : 'https://trilogy-service.fly.dev'
-
+let defaultResolver = 'https://trilogy-service.fly.dev'
 let userSettingsStore = useUserSettingsStore()
 userSettingsStore.loadSettings()
+//@ts-ignore
+if (typeof __IS_VITE__ !== 'undefined') {
+  console.log('Running in vite, assuming local environment')
+  defaultResolver = 'http://127.0.0.1:5678'
+  // default telemetry to off for local
+  if (userSettingsStore.settings.telemetryEnabled === null) {
+    userSettingsStore.updateSetting('telemetryEnabled', false)
+  }
+}
+
+const apiUrl = import.meta.env.VITE_RESOLVER_URL
+  ? import.meta.env.VITE_RESOLVER_URL
+  : defaultResolver
 
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 if (!userSettingsStore.settings.theme) {

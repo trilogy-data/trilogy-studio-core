@@ -185,6 +185,9 @@ import { generateVegaSpec } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 
 import type { ScenegraphEvent, SignalValue } from 'vega'
+
+const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
+
 export default defineComponent({
   name: 'VegaLiteChart',
   components: { Tooltip },
@@ -225,6 +228,10 @@ export default defineComponent({
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
     const lastSpec = ref<string | null>(null)
+    const lastBrushClearTime = ref(0)
+    const lastClickTime = ref(0)
+    const pendingBackgroundClick = ref(false)
+    const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
 
     // event hookups
     //@ts-ignore
@@ -333,6 +340,7 @@ export default defineComponent({
       )
     }
     const handleBrush = debounce((_: string, item: SignalValue) => {
+      console.log('Brush event:', item)
       if (item && ['line', 'area'].includes(internalConfig.value.chartType)) {
         if (!internalConfig.value.xField) {
           return
@@ -342,16 +350,27 @@ export default defineComponent({
           return
         }
         let dateLookup = internalConfig.value.xField
-        if (
-          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
-        ) {
+        if (DATETIME_COLS.includes(timeField?.type)) {
           dateLookup = 'yearmonthdate_' + internalConfig.value.xField
         }
 
         const values = item[dateLookup as keyof typeof item] ?? []
         // Check if values exists and has elements in a single condition
         if (!values || !Array.isArray(values) || values.length === 0) {
+          // Brush is being cleared - record the time and schedule a background click
+          lastBrushClearTime.value = Date.now()
+          // if the last click time was within the coordination timeout, cancel the background click
+          if (Date.now() - lastClickTime.value < COORDINATION_TIMEOUT) {
+            console.log('Cancelling background click due to recent point click')
+            pendingBackgroundClick.value = false
+            return
+          }
+          console.log(
+            'Scheduling background click due to brush clear, elapsed since last point click:',
+            Date.now() - lastClickTime.value,
+          )
           emit('background-click')
+
           return
         }
         let start = values[0]
@@ -360,9 +379,7 @@ export default defineComponent({
         if (!timeField || !timeAddress) {
           return
         }
-        if (
-          [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(timeField?.type)
-        ) {
+        if (DATETIME_COLS.includes(timeField?.type)) {
           emit('dimension-click', {
             filters: {
               [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
@@ -383,6 +400,9 @@ export default defineComponent({
     }, 500)
     // @ts-ignore
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
+      const currentTime = Date.now()
+      lastClickTime.value = currentTime
+
       let append = event.shiftKey
       if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
@@ -424,17 +444,29 @@ export default defineComponent({
           }
           // eligible are categorical and temporal fields
           let eligible = filteredColumnsInternal('categorical').map((x) => x.name)
-          eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+          if (internalConfig.value.chartType !== 'area') {
+            eligible = eligible.concat(filteredColumnsInternal('temporal').map((x) => x.name))
+          }
 
           if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
             // add to baseFilters and chart
-            baseFilters = { ...baseFilters, [xField]: item.datum[xFieldRaw] }
+            let xFilterValue = item.datum[xFieldRaw]
+            // @ts-ignore
+            if (DATETIME_COLS.includes(props.columns.get(xFieldRaw)?.type)) {
+              xFilterValue = convertTimestampToISODate(item.datum[xFieldRaw])
+            }
+            baseFilters = { ...baseFilters, [xField]: xFilterValue }
             baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
           }
           // todo: figure out if we want to support both?
           else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
             // add to baseFilters and chart
-            baseFilters = { ...baseFilters, [yField]: item.datum[yFieldRaw] }
+            let yFilterValue = item.datum[yFieldRaw]
+            // @ts-ignore
+            if (DATETIME_COLS.includes(props.columns.get(yFieldRaw)?.type)) {
+              yFilterValue = convertTimestampToISODate(item.datum[yFieldRaw])
+            }
+            baseFilters = { ...baseFilters, [yField]: yFilterValue }
             baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
           }
           emit('dimension-click', {
@@ -454,7 +486,6 @@ export default defineComponent({
       if (!vegaContainer.value || showingControls.value) return
 
       const spec = generateVegaSpecInternal()
-      console.log(spec)
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
       if (lastSpec.value === currentSpecString && !force) {

@@ -17,6 +17,7 @@
         <connection-list
           v-else-if="paragraph.type === 'connections'"
           :connections="connectionStore.connections"
+          testTag="tutorial"
         />
         <div v-else-if="paragraph.type === 'llm-connections'" class="llm-connections">
           <LLMConnectionList :connections="llmConnectionStore.connections" />

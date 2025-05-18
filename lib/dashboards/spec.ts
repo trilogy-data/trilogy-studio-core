@@ -134,20 +134,21 @@ const createColorEncoding = (
 ) => {
   const legendConfig = isMobile
     ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
-      }
+      legend: {
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
     : {
-        condition: [
-          {
-            param: 'highlight',
-            empty: false,
-            value: HIGHLIGHT_COLOR,
-          },
-        ],
-      }
+      condition: [
+        {
+          param: 'highlight',
+          empty: false,
+          value: HIGHLIGHT_COLOR,
+        },
+        { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
+      ],
+    }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -162,6 +163,7 @@ const createColorEncoding = (
           empty: false,
           value: HIGHLIGHT_COLOR,
         },
+        { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
 
       ...getFormatHint(colorField, columns),
@@ -205,12 +207,15 @@ const createInteractionEncodings = () => {
 const createBrushParam = (intChart: Array<Partial<ChartConfig>>, config: ChartConfig) => {
   return {
     name: 'brush',
-    select: { type: 'interval', encodings: ['x'], value: intChart },
-    //@ts-ignore
+    select: {
+      type: 'interval',
+      encodings: ['x'],
+      // value: intChart
+    },
     value:
       intChart.length > 0 && config.xField
-        ? { x: intChart[0][config.xField as keyof typeof config] }
-        : undefined,
+        ? [{ x: intChart[0][config.xField as keyof typeof config] }]
+        : [],
   }
 }
 
@@ -260,7 +265,7 @@ const createInteractiveLayer = (
       }
     }
   }
-
+  mainLayer.params = []
   if (!filtered) {
     mainLayer.params = [
       {
@@ -271,7 +276,26 @@ const createInteractiveLayer = (
           clear: 'mouseout',
         },
       },
-      createBrushParam(intChart, config),
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click',
+          clear: 'dragleave,dblclick',
+          encodings: ['y'],
+        },
+        // @ts-ignore
+        value: intChart.filter((obj) => !(config.xField in obj)) ? intChart : [],
+      },
+
+      createBrushParam(
+        // @ts-ignore
+        intChart.filter((obj) => config.xField in obj).length > 0
+          // @ts-ignore
+          ? intChart.filter((obj) => config.xField in obj)
+          : [],
+        config,
+      ),
     ]
   }
 
@@ -298,15 +322,25 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+        // {
+        //   name: 'select2',
+        //   select: {
+        //     type: 'point',
+        //     on: 'click,touchend',
+        //     clear: 'dragleave,dblclick'
+        //   },
+        //   value: intChart,
+
+        // },
+      ]
       : [],
   }
 
@@ -543,7 +577,7 @@ const createHeadlineLayer = (
       : 0 // Center if only one value
 
   // Scale font size based on number of metrics to avoid collision
-  const fontSizeFormula = `min(30, max(width, 200)/${Math.max(4, total * 2)})`
+  const fontSizeFormula = `min(30, max(width, 150)/${Math.max(8, total * 2)})`
 
   return [
     {

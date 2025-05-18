@@ -82,7 +82,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent, type PropType, inject } from 'vue'
 import * as monaco from 'monaco-editor'
 import {
   configureEditorTheme,
@@ -98,7 +98,7 @@ import { type QueryUpdate } from '../stores/queryExecutionService'
 import type { Import, CompletionItem } from '../stores/resolver'
 import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
-
+import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
 interface OperationState {
   success: boolean
   duration: number
@@ -140,15 +140,6 @@ export default defineComponent({
     },
   },
 
-  inject: [
-    'queryExecutionService',
-    'connectionStore',
-    'modelStore',
-    'editorStore',
-    'isMobile',
-    'llmConnectionStore',
-  ],
-
   data() {
     return {
       lastOperation: null as OperationState | null,
@@ -165,7 +156,22 @@ export default defineComponent({
       isPanelVisible: false,
     }
   },
+  setup() {
+    // Access injected properties
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const isMobile = inject('isMobile')
+    const llmConnectionStore = inject('llmConnectionStore')
+    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
+    return {
+      queryExecutionService,
+      connectionStore,
+      isMobile,
+      llmConnectionStore,
+      analyticsStore,
+    }
+  },
   created() {
     // Set initial panel visibility based on mobile status
     // Panel will be collapsed by default on mobile
@@ -377,18 +383,8 @@ export default defineComponent({
       }
 
       try {
-        // Analytics tracking (unchanged)
-        try {
-          // @ts-ignore
-          window.goatcounter &&
-            // @ts-ignore
-            window.goatcounter.count({
-              path: 'studio-query-execution',
-              title: this.editor.type,
-              event: true,
-            })
-        } catch (error) {
-          console.log(error)
+        if (this.analyticsStore) {
+          this.analyticsStore.log('studio-query-execution', this.editor.type, true)
         }
 
         // Set component to loading state
@@ -501,18 +497,8 @@ export default defineComponent({
       }
 
       try {
-        // Analytics tracking
-        try {
-          // @ts-ignore
-          window.goatcounter &&
-            // @ts-ignore
-            window.goatcounter.count({
-              path: 'studio-llm-generation',
-              title: this.editor.type,
-              event: true,
-            })
-        } catch (error) {
-          console.log(error)
+        if (this.analyticsStore) {
+          this.analyticsStore.log('studio-llm-generation', this.editor.type, true)
         }
 
         // Set loading state
@@ -916,7 +902,8 @@ export default defineComponent({
 
   .action-item {
     flex-grow: 1;
-    width: calc(33% - 0.3rem); /* Adjust for 3 buttons instead of 2 */
+    width: calc(33% - 0.3rem);
+    /* Adjust for 3 buttons instead of 2 */
     height: 36px;
     font-size: 0.9rem;
   }

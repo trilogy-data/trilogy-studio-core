@@ -10,6 +10,7 @@
         @click="nextPrompt"
         :disabled="currentIndex === prompts.length - 1 || !isCurrentPromptValid"
         class="nav-button"
+        data-testid="next-prompt"
       >
         Next <span class="nav-icon">→</span>
       </button>
@@ -239,9 +240,9 @@ export default {
 }
 
 .prompt-content {
-  padding: 15px;
+  padding: 10px;
   overflow-y: scroll;
-  max-height: 200px;
+  max-height: 300px;
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -333,8 +334,7 @@ export default {
 @media screen and (max-width: 768px) {
   .tutorial-prompt-container {
     height: auto;
-    height: 1200px;
-    max-height: 100vh;
+    max-height: 125vh;
   }
 
   .prompt-navigation {
@@ -352,10 +352,6 @@ export default {
 
   .results-section {
     height: 400px;
-  }
-
-  .editor-container {
-    height: 1000px;
   }
 }
 </style>

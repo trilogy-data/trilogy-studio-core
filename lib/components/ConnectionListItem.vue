@@ -12,12 +12,20 @@
     <connection-icon
       v-if="item.type === 'connection'"
       :connection-type="item.connection?.type"
-      :data-testid="`connection-${item.connection.name}`"
+      :data-testid="
+        testTag
+          ? `connection-${item.connection.name}-${testTag}`
+          : `connection-${item.connection.name}`
+      "
     />
     <i
       v-else-if="item.type === 'database'"
       class="mdi mdi-database"
-      :data-testid="`database-${item.connection.name}-${item.name}`"
+      :data-testid="
+        testTag
+          ? `database-${item.connection.name}-${item.name}-${testTag}`
+          : `database-${item.connection.name}-${item.name}`
+      "
     ></i>
     <i v-else-if="item.type === 'table'" class="mdi mdi-table"></i>
     <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
@@ -109,11 +117,21 @@
         :connection="item.connection.name"
         type="sql"
         title="New SQL Editor"
+        :data-testid="
+          testTag
+            ? `new-sql-editor-${item.connection.name}-${testTag}`
+            : `new-sql-editor-${item.connection.name}`
+        "
       />
       <editor-creator-icon
         class="tacticle-button"
         :connection="item.connection.name"
         title="New Trilogy Editor"
+        :data-testid="
+          testTag
+            ? `new-trilogy-editor-${item.connection.name}-${testTag}`
+            : `new-trilogy-editor-${item.connection.name}`
+        "
       />
       <connection-refresh
         class="tacticle-button"
@@ -134,6 +152,7 @@
         title="Create Datasource From Table"
         :content="() => createTableDatasource(item.object)"
         icon="mdi-database-plus-outline"
+        :data-testid="`create-datasource-${item.object.name}`"
       />
     </div>
   </div>
@@ -166,9 +185,11 @@ interface ConnectionListItemProps {
     connection: any
     object?: any
   }
+
   isCollapsed?: boolean
   isSelected?: boolean
   isMobile?: boolean
+  testTag?: string
   deleteConnection: (connection: any) => void
 }
 

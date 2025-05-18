@@ -20,7 +20,7 @@ async function getRelativePixelColor(page, relX, relY) {
 async function getPixelColor(page, x, y) {
   return page.evaluate(
     ({ x, y }) => {
-      const canvas = document.querySelector('.vega-container canvas')
+      const canvas = document.querySelector('.vega-container canvas') as HTMLCanvasElement
       if (!canvas) return null
 
       // Get the canvas's CSS dimensions (how it appears on screen)
@@ -40,6 +40,7 @@ async function getPixelColor(page, x, y) {
 
       // Now use the converted coordinates
       const context = canvas.getContext('2d')
+      if (!context) return null
       const pixelData = context.getImageData(canvasX, canvasY, 1, 1).data
 
       return {
