@@ -8,13 +8,13 @@
       <p>We're glad you're here!</p>
       <template v-if="!showCreator">
         <p>
-          To get started: drop right into a demo, create a blank editor, or take a guided tour in
-          the docs.
+          To get started: open a demo editor to immediately run a query, create a blank editor, or take a guided tour in
+          the docs. [We recommend the tour if you're new to the app.]
         </p>
         <div class="buttons">
-          <!-- <button @click="startDemo()" class="btn btn-secondary">
+          <button @click="startDemo()" class="btn btn-secondary">
             <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>
-          </button> -->
+          </button>
           <button @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
 
           <button @click="tutorial()" class="btn btn-tertiary">Docs and Tutorial</button>
@@ -42,7 +42,7 @@ const startDemo = () => {
   emit('demo-started')
   setTimeout(() => {
     demoLoading.value = false
-  }, 1000)
+  }, 30000)
 }
 
 const tutorial = () => {
