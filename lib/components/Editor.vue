@@ -19,7 +19,6 @@
         @generate="generateLLMQuery"
       />
       <div class="editor-content">
-        <!-- Replace the original editor with our CodeEditor component -->
         <code-editor
           ref="codeEditor"
           :editor-id="editorId"
