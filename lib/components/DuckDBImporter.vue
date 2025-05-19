@@ -1,6 +1,6 @@
 <template>
   <div
-    class="csv-upload-container"
+    class="file-upload-container"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
     @drop.prevent="handleDrop"
@@ -14,12 +14,12 @@
       </div>
       <div v-else-if="!isLoading">
         <div>
-          Drag CSV file or
+          Drag CSV or Parquet file or
           <label class="file-input-label">
             upload
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.parquet"
               @change="handleFileInput"
               ref="fileInput"
               class="hidden-input"
@@ -44,7 +44,7 @@ import * as arrow from 'apache-arrow'
 import BaseConnection from '../connections/base'
 
 export default defineComponent({
-  name: 'CsvUpload',
+  name: 'FileUpload',
   props: {
     db: {
       type: Object as () => duckdb.AsyncDuckDB,
@@ -58,7 +58,7 @@ export default defineComponent({
   setup(props) {
     const isDragging = ref(false)
     const isLoading = ref(false)
-    const loadingMessage = ref('Processing CSV...')
+    const loadingMessage = ref('Processing file...')
     const lastImportedTable = ref('')
     const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -82,21 +82,39 @@ export default defineComponent({
 
       if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
         const file = event.dataTransfer.files[0]
-        if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        if (isValidFileType(file)) {
           await processFile(file)
         } else {
-          alert('Please drop a CSV file')
+          alert('Please drop a CSV or Parquet file')
         }
+      }
+    }
+
+    const isValidFileType = (file: File): boolean => {
+      return (
+        file.type === 'text/csv' ||
+        file.name.endsWith('.csv') ||
+        file.type === 'application/octet-stream' ||
+        file.name.endsWith('.parquet')
+      )
+    }
+
+    const getFileType = (file: File): 'csv' | 'parquet' => {
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        return 'csv'
+      } else {
+        return 'parquet'
       }
     }
 
     const processFile = async (file: File) => {
       try {
         isLoading.value = true
-        loadingMessage.value = 'Processing CSV...'
+        loadingMessage.value = `Processing ${file.name}...`
 
         // Generate table name from file name
-        const fileName = file.name.replace('.csv', '')
+        const fileType = getFileType(file)
+        const fileName = file.name.replace(`.${fileType}`, '')
         const tableName = sanitizeTableName(fileName)
 
         loadingMessage.value = `Creating table ${tableName}...`
@@ -113,50 +131,18 @@ export default defineComponent({
         const connection = await props.db.connect()
 
         try {
-          loadingMessage.value = `Analyzing CSV structure...`
-
-          // First, peek at the file to determine headers and types
-          const sampleQuery = await connection.query(`
-              SELECT * FROM read_csv_auto('${file.name}', AUTO_DETECT=TRUE, SAMPLE_SIZE=1000) LIMIT 5
-            `)
-
-          // Get column names and types from the sample
-          const columnInfo = sampleQuery.schema.fields.map((field) => ({
-            name: field.name,
-            type: mapArrowTypeToDuckDB(field.type),
-          }))
-
-          if (columnInfo.length === 0) {
-            throw new Error('CSV file has no columns')
+          if (fileType === 'csv') {
+            await processCSV(connection, file, tableName)
+          } else {
+            await processParquet(connection, file, tableName)
           }
-
-          // Create the table with the detected schema
-          const columns = columnInfo
-            .map((col) => `"${col.name.replace(/[^a-zA-Z0-9_]/g, '_')}" ${col.type}`)
-            .join(', ')
-
-          await connection.query(`CREATE TABLE ${tableName} (${columns})`)
-
-          // Insert the data using DuckDB's native CSV reader
-          loadingMessage.value = `Importing data...`
-
-          await connection.query(`
-              INSERT INTO ${tableName} 
-              SELECT * FROM read_csv_auto('${file.name}', 
-                AUTO_DETECT=TRUE, 
-                HEADER=TRUE,
-                SAMPLE_SIZE=-1)
-            `)
 
           // Update state and notify parent
           lastImportedTable.value = tableName
-          // props.onTableCreated(tableName);
-
           isLoading.value = false
-
           props.connection.refreshDatabase('memory')
 
-          // set a timeout to clear the lastIMportedTable
+          // set a timeout to clear the lastImportedTable
           setTimeout(() => {
             lastImportedTable.value = ''
           }, 5000)
@@ -166,11 +152,66 @@ export default defineComponent({
         }
       } catch (error) {
         isLoading.value = false
-        console.error('Error processing CSV file:', error)
+        console.error(`Error processing ${file.name}:`, error)
         alert(
-          `Error processing CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          `Error processing ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         )
       }
+    }
+
+    const processCSV = async (
+      connection: duckdb.AsyncDuckDBConnection,
+      file: File,
+      tableName: string,
+    ) => {
+      loadingMessage.value = `Analyzing CSV structure...`
+
+      // First, peek at the file to determine headers and types
+      const sampleQuery = await connection.query(`
+        SELECT * FROM read_csv_auto('${file.name}', AUTO_DETECT=TRUE, SAMPLE_SIZE=1000) LIMIT 5
+      `)
+
+      // Get column names and types from the sample
+      const columnInfo = sampleQuery.schema.fields.map((field) => ({
+        name: field.name,
+        type: mapArrowTypeToDuckDB(field.type),
+      }))
+
+      if (columnInfo.length === 0) {
+        throw new Error('CSV file has no columns')
+      }
+
+      // Create the table with the detected schema
+      const columns = columnInfo
+        .map((col) => `"${col.name.replace(/[^a-zA-Z0-9_]/g, '_')}" ${col.type}`)
+        .join(', ')
+
+      await connection.query(`CREATE TABLE ${tableName} (${columns})`)
+
+      // Insert the data using DuckDB's native CSV reader
+      loadingMessage.value = `Importing CSV data...`
+
+      await connection.query(`
+        INSERT INTO ${tableName} 
+        SELECT * FROM read_csv_auto('${file.name}', 
+          AUTO_DETECT=TRUE, 
+          HEADER=TRUE,
+          SAMPLE_SIZE=-1)
+      `)
+    }
+
+    const processParquet = async (
+      connection: duckdb.AsyncDuckDBConnection,
+      file: File,
+      tableName: string,
+    ) => {
+      loadingMessage.value = `Analyzing Parquet structure...`
+
+      // For Parquet, we can directly create a table from the file
+      await connection.query(`
+        CREATE TABLE ${tableName} AS 
+        SELECT * FROM read_parquet('${file.name}')
+      `)
     }
 
     // Helper function to map Arrow types to DuckDB types
@@ -204,6 +245,7 @@ export default defineComponent({
           return 'VARCHAR'
       }
     }
+
     const sanitizeTableName = (name: string): string => {
       // Replace non-alphanumeric characters with underscores
       const sanitized = name.replace(/[^a-zA-Z0-9]/g, '_')
@@ -228,7 +270,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.csv-upload-container {
+.file-upload-container {
   border: 2px dashed #ccc;
   text-align: center;
   transition: all 0.3s ease;

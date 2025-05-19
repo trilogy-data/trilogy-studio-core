@@ -41,15 +41,17 @@ Tabulator.registerModule([
 let defaultResolver = 'https://trilogy-service.fly.dev'
 let userSettingsStore = useUserSettingsStore()
 userSettingsStore.loadSettings()
-//@ts-ignore
-// if (typeof __IS_VITE__ !== 'undefined') {
-//   console.log('Running in vite, assuming local environment')
-//   defaultResolver = 'http://127.0.0.1:5678'
-//   // default telemetry to off for local
-//   if (userSettingsStore.settings.telemetryEnabled === null) {
-//     userSettingsStore.updateSetting('telemetryEnabled', false)
-//   }
-// }
+
+console.log(import.meta.env.DEV)
+if (import.meta.env.DEV) {
+  console.log('Running in development mode, defaulting to local resolver and telemetry off')
+  defaultResolver = 'http://127.0.0.1:5678'
+  // default telemetry to off for local
+  if (userSettingsStore.settings.telemetryEnabled === null) {
+    userSettingsStore.updateSetting('telemetryEnabled', false)
+    userSettingsStore.updateSetting('trilogyResolver', defaultResolver)
+  }
+}
 
 const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
@@ -59,13 +61,13 @@ const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matc
 if (!userSettingsStore.settings.theme) {
   userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')
 }
-if (!userSettingsStore.settings.trilogyResolver) {
+if (userSettingsStore.settings.trilogyResolver === '') {
   userSettingsStore.updateSetting('trilogyResolver', apiUrl)
 }
 
 userSettingsStore.toggleTheme()
 
-let resolver = new TrilogyResolver(userSettingsStore.getSettings['trilogyResolver'])
+let resolver = new TrilogyResolver(userSettingsStore)
 
 let localStorage = new LocalStorage()
 

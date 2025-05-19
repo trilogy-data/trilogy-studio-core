@@ -67,6 +67,7 @@
           class="sidebar-icon"
           :class="{ selected: active == 'settings', 'sidebar-icon-margin': !isMobile }"
           @click="selectItem('settings')"
+          data-testid="sidebar-icon-settings"
         >
           <template v-if="!isMobile">
             <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
@@ -79,6 +80,7 @@
         <div
           class="sidebar-icon"
           :class="{ selected: active == 'profile', 'sidebar-icon-margin': !isMobile }"
+          data-testid="sidebar-icon-profile"
           @click="selectItem('profile')"
         >
           <template v-if="!isMobile">

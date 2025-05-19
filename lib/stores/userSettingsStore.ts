@@ -69,7 +69,9 @@ export const useUserSettingsStore = defineStore('userSettings', {
     },
 
     resetToDefaults() {
+      const currentTheme = this.settings.theme
       this.settings = { ...this.defaults }
+      this.settings.theme = currentTheme // Keep the current theme
       this.hasChanges = true
     },
 

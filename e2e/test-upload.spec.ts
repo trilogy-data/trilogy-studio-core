@@ -86,7 +86,7 @@ test.describe('CSV Upload Component', () => {
         })
 
         // Get the drop target and dispatch event
-        const dropTarget = document.querySelector('.csv-upload-container')
+        const dropTarget = document.querySelector('.file-upload-container')
         if (!dropTarget) {
           throw new Error('Drop target not found')
         }

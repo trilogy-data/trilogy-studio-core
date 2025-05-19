@@ -19,6 +19,7 @@
         type="text"
         :id="key"
         v-model="settings[key]"
+        :data-testid="`settings-${key}`"
         @input="onSettingChange"
       />
     </div>
