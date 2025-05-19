@@ -92,9 +92,9 @@ export default defineComponent({
 
     const isValidFileType = (file: File): boolean => {
       return (
-        file.type === 'text/csv' || 
-        file.name.endsWith('.csv') || 
-        file.type === 'application/octet-stream' || 
+        file.type === 'text/csv' ||
+        file.name.endsWith('.csv') ||
+        file.type === 'application/octet-stream' ||
         file.name.endsWith('.parquet')
       )
     }
@@ -160,9 +160,9 @@ export default defineComponent({
     }
 
     const processCSV = async (
-      connection: duckdb.AsyncDuckDBConnection, 
-      file: File, 
-      tableName: string
+      connection: duckdb.AsyncDuckDBConnection,
+      file: File,
+      tableName: string,
     ) => {
       loadingMessage.value = `Analyzing CSV structure...`
 
@@ -201,9 +201,9 @@ export default defineComponent({
     }
 
     const processParquet = async (
-      connection: duckdb.AsyncDuckDBConnection, 
-      file: File, 
-      tableName: string
+      connection: duckdb.AsyncDuckDBConnection,
+      file: File,
+      tableName: string,
     ) => {
       loadingMessage.value = `Analyzing Parquet structure...`
 
@@ -245,7 +245,7 @@ export default defineComponent({
           return 'VARCHAR'
       }
     }
-    
+
     const sanitizeTableName = (name: string): string => {
       // Replace non-alphanumeric characters with underscores
       const sanitized = name.replace(/[^a-zA-Z0-9]/g, '_')

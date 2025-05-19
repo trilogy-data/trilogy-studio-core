@@ -1,5 +1,6 @@
 import { ModelConfig } from '../models'
 import crypto from 'crypto'
+import { type UserSettingsStoreType } from './userSettingsStore'
 
 // Define a generic LRU Cache
 class LRUCache<T> {
@@ -113,14 +114,14 @@ export interface MultiQueryComponent {
 }
 
 export default class TrilogyResolver {
-  address: string
+  settingStore: UserSettingsStoreType
   private validateCache: LRUCache<ValidateResponse>
   private formatCache: LRUCache<FormatQueryResponse>
   private queryCache: LRUCache<QueryResponse>
   private modelCache: LRUCache<ModelConfig>
 
-  constructor(address: string, cacheSize: number = 100) {
-    this.address = address
+  constructor(settingStore: UserSettingsStoreType, cacheSize: number = 100) {
+    this.settingStore = settingStore
     this.validateCache = new LRUCache<ValidateResponse>(cacheSize)
     this.formatCache = new LRUCache<FormatQueryResponse>(cacheSize)
     this.queryCache = new LRUCache<QueryResponse>(cacheSize)
@@ -186,13 +187,16 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(`${this.address}/validate_query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/validate_query`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
       },
-      body: JSON.stringify(requestParams),
-    })
+    )
 
     // Cache the result
     this.validateCache.set(cacheKey, response)
@@ -233,13 +237,16 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(`${this.address}/format_query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/format_query`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
       },
-      body: JSON.stringify(requestParams),
-    })
+    )
 
     // Cache the result
     this.formatCache.set(cacheKey, response)
@@ -280,13 +287,16 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(`${this.address}/generate_query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/generate_query`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
       },
-      body: JSON.stringify(requestParams),
-    })
+    )
 
     // Cache the result
     this.queryCache.set(cacheKey, response)
@@ -318,13 +328,16 @@ export default class TrilogyResolver {
     // }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(`${this.address}/generate_queries`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/generate_queries`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
       },
-      body: JSON.stringify(requestParams),
-    })
+    )
 
     // Cache the result
     // this.queryCache.set(cacheKey, response)
@@ -347,13 +360,16 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(`${this.address}/parse_model`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/parse_model`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
       },
-      body: JSON.stringify(requestParams),
-    })
+    )
 
     const modelConfig = ModelConfig.fromJSON(response.data)
 

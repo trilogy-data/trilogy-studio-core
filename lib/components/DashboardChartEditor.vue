@@ -357,8 +357,7 @@ onUnmounted(() => {
 }
 @media screen and (max-width: 768px) {
   .content-editor {
-    max-width:100vw;
+    max-width: 100vw;
   }
-
 }
 </style>
