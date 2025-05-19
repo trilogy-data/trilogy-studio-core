@@ -13,13 +13,13 @@ Read more about Trilogy [here](https://trilogydata.dev/).
 
 ### Rich Query Editing
 <p align="center">
-<img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="736" height="856" alt="Editor View">
+<img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="515" height="559" alt="Editor View">
 </p>
 
 ### Flexible Visualization
 
 <p align="center">
-<img src="https://github.com/user-attachments/assets/699ad66a-9be3-4ab4-b236-ddc20046d9fd" width="736" height="856" alt="Dashboard View">
+<img src="https://github.com/user-attachments/assets/699ad66a-9be3-4ab4-b236-ddc20046d9fd" width="515" height="599" alt="Dashboard View">
 </p>
 
 ## This Repo
@@ -28,15 +28,22 @@ This repo contains the studio frontend and a minimal FastAPI language server tha
 
 ## Running Locally
 
-
 > [!TIP]
-> Quick Setup: Run `npm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `npm run local` to start a local instace.
+> Quick Setup: Run `npm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `npm run local` to start a local instance.
 
 This will run the frontend with Vite as well as the backend language server.
 
 You can confirm in settings that your local UI is resolving to localhost.
 
 There will be a more polished local option in the future.
+
+## Deploying As Service
+
+You can build a production copy and serve as a static website. Github Pages is an easy hosting option for frontend and there is an existing actions pipeline to use as a model.
+
+## Developing
+
+Contributions welcome. See contributing guide for details.
 
 
 ### Inspiration
