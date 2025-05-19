@@ -33,6 +33,9 @@ test('user settings', async ({ page, isMobile }) => {
   })
   await page.goto('/')
   await expect(page).toHaveTitle(/Trilogy Studio/)
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
   await page.getByTestId('sidebar-icon-settings').click()
   await page.locator('.sidebar-bottom-icons > div').first().click()
   expect(page.getByTestId('settings-trilogyResolver')).toHaveValue('http://127.0.0.1:5678')
