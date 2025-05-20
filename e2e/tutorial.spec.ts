@@ -246,6 +246,7 @@ select count(order.id) as order_count;`
 
   // Generate datasource from iris_data table
   await page.getByTestId('database-iris-data-memory-tutorial').click()
+  await page.getByTestId('schema-iris-data-main-tutorial').click()
   await page.getByTestId('create-datasource-iris_data').click()
 
   // Modify the generated datasource file
