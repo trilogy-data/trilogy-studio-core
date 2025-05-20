@@ -1,15 +1,16 @@
 <template>
   <div class="database-display">
-    <h2 class="header">
-      <span>{{ connectionName }}</span>
-      <span class="separator">/</span>
-      <span class="database-name">{{ database.name }}</span>
-    </h2>
+    <div class="database-display-body">
+      <h2 class="header">
+        <span>{{ connectionName }}</span>
+        <span class="separator">/</span>
+        <span class="database-name">{{ database.name }}</span>
+      </h2>
 
-    <div class="metadata-section">
-      <div class="section-header">
-        <h3>Database Overview</h3>
-        <!-- <button 
+      <div class="metadata-section">
+        <div class="section-header">
+          <h3>Database Overview</h3>
+          <!-- <button 
           class="refresh-button" 
           @click="refreshDatabase" 
           :disabled="isRefreshing"
@@ -17,35 +18,41 @@
           <span v-if="isRefreshing">Refreshing...</span>
           <span v-else>Refresh</span>
         </button> -->
+        </div>
+
+        <div class="metadata-grid">
+          <div class="metadata-item">
+            <span class="metadata-label">Name:</span>
+            <span class="metadata-value">{{ database.name }}</span>
+          </div>
+          <div class="metadata-item">
+            <span class="metadata-label">Schemas:</span>
+            <span class="metadata-value">{{ database.schemas.length }}</span>
+          </div>
+        </div>
       </div>
 
-      <div class="metadata-grid">
-        <div class="metadata-item">
-          <span class="metadata-label">Name:</span>
-          <span class="metadata-value">{{ database.name }}</span>
-        </div>
-        <div class="metadata-item">
-          <span class="metadata-label">Schemas:</span>
-          <span class="metadata-value">{{ database.schemas.length }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="schemas-section">
-      <h3>Schemas</h3>
-      <div class="schemas-list">
-        <div
-          v-for="schema in database.schemas"
-          :key="schema.name"
-          class="schema-item"
-          @click="selectSchema(schema.name)"
-        >
-          <div class="schema-name">{{ schema.name }}</div>
-          <div class="schema-details">
-            <span class="table-count">{{ schema.tables.length }} tables</span>
-            <span class="schema-description" v-if="schema.description">{{
-              schema.description
-            }}</span>
+      <div class="schemas-section">
+        <h3>Schemas</h3>
+        <div class="schemas-list">
+          <div
+            v-for="schema in database.schemas"
+            :key="schema.name"
+            class="schema-item"
+            @click="selectSchema(schema.name)"
+          >
+            <div class="schema-name">{{ schema.name }}</div>
+            <div class="schema-details">
+              <span class="table-count"
+                >{{ schema.tables.length }} tables
+                <LoadingButton class="refresh-class" :action="() => refreshSchema(schema.name)"
+                  >Refresh</LoadingButton
+                ></span
+              >
+              <span class="schema-description" v-if="schema.description">{{
+                schema.description
+              }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -55,8 +62,11 @@
 
 <style scoped>
 .database-display {
-  padding: 1rem;
   width: 100%;
+}
+
+.database-display-body {
+  padding: 1rem;
 }
 
 .header {
@@ -186,8 +196,10 @@
 </style>
 
 <script lang="ts">
-import { defineComponent, type PropType, ref } from 'vue'
+import { defineComponent, type PropType, ref, inject } from 'vue'
 import type { Database } from '../connections'
+import type { ConnectionStoreType } from '../stores/connectionStore'
+import LoadingButton from './LoadingButton.vue'
 
 export default defineComponent({
   name: 'ConnectionDatabases',
@@ -201,9 +213,17 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['schema-selected', 'refresh-database'],
+  components: {
+    LoadingButton,
+  },
+  emits: ['schema-selected', 'refresh-database', 'refresh-schema'],
   setup(props, { emit }) {
     const isRefreshing = ref(false)
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const refreshMap = ref<Map<string, boolean>>(new Map())
+    if (!connectionStore) {
+      throw new Error('Connection store not found')
+    }
 
     const refreshDatabase = async () => {
       isRefreshing.value = true
@@ -215,6 +235,18 @@ export default defineComponent({
       }
     }
 
+    const refreshSchema = async (schema: string) => {
+      refreshMap.value.set(schema, true)
+      try {
+        await connectionStore.connections[props.connectionName].refreshSchema(
+          props.database.name,
+          schema,
+        )
+      } finally {
+        refreshMap.value.set(schema, false)
+      }
+    }
+
     const selectSchema = (schemaName: string) => {
       emit('schema-selected', props.database.name, schemaName)
     }
@@ -222,6 +254,8 @@ export default defineComponent({
     return {
       isRefreshing,
       refreshDatabase,
+      refreshMap,
+      refreshSchema,
       selectSchema,
     }
   },

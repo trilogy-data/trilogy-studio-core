@@ -397,7 +397,7 @@ describe('DuckDBConnection', () => {
           table_name: 'view1',
           TABLE_COMMENT: 'Comment 2',
           table_type: 'VIEW',
-        }
+        },
       ]
 
       const mockResult = createMockQueryResult([], mockData)
@@ -411,7 +411,7 @@ describe('DuckDBConnection', () => {
       const tables = await connection.getTables('db1', 'main')
       //@ts-ignore
       expect(connection.connection.query).toHaveBeenCalledWith(
-        'SELECT * FROM information_schema.tables where table_catalog=\'db1\' and table_schema=\'main\'',
+        "SELECT * FROM information_schema.tables where table_catalog='db1' and table_schema='main'",
       )
       expect(tables.length).toBe(2)
       expect(tables[0].name).toBe('table1')

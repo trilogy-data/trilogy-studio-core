@@ -18,11 +18,9 @@
       />
     </div>
     <div v-else>
-      {{ selectedType }}
-      {{ selectedConnection }}
-      {{ selectedDatabase }}
-      {{ selectedSchema }}
-      {{ selectedTable }}
+      <div class="no-selection">
+        <h2>Select a connection, database, schema, or table to view details.</h2>
+      </div>
     </div>
   </div>
 </template>
@@ -31,7 +29,6 @@
 .view-container {
   height: 100%;
   width: 100%;
-  overflow-y: scroll;
   background-color: var(--query-window-bg);
 }
 </style>

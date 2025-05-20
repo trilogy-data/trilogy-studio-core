@@ -137,8 +137,19 @@ export function configureTrilogy(languages) {
       'current_datetime',
     ],
     typeKeywords: [
-    'bool', 'string', 'int', 'float', 'string', 'double', 'decimal', 'percent', 'datetime', 'date', 'timestamp', 'numeric'
-  ],
+      'bool',
+      'string',
+      'int',
+      'float',
+      'string',
+      'double',
+      'decimal',
+      'percent',
+      'datetime',
+      'date',
+      'timestamp',
+      'numeric',
+    ],
     definitions: ['AUTO', 'PROPERTY', 'KEY', 'METRIC'],
     tokenizer: {
       root: [

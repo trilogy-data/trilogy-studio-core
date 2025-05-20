@@ -201,13 +201,7 @@ export default {
         if (type === 'schema') {
           let dbid = id.split(KeySeparator)[1]
           let schemaid = id.split(KeySeparator)[2]
-          let schema = connectionStore.connections[connection].databases
-            ?.find((db) => db.name === dbid)
-            ?.schemas.find((schema) => schema.name === schemaid)
-          if (schema) {
-            let nTables = await connectionStore.connections[connection].getTables(dbid, schemaid)
-            schema.tables = nTables
-          }
+          await connectionStore.connections[connection].refreshSchema(dbid, schemaid)
         }
         if (type === 'table') {
           let dbid = id.split(KeySeparator)[1]
