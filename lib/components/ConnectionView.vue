@@ -19,7 +19,7 @@
     </div>
     <div v-else>
       <div class="no-selection">
-        <h2>Select a connection, database, schema, or table to view details.</h2>
+        <h2>Use menu navigation to select a connection, database, schema, or table.</h2>
       </div>
     </div>
   </div>
@@ -30,6 +30,13 @@
   height: 100%;
   width: 100%;
   background-color: var(--query-window-bg);
+}
+.no-selection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
 }
 </style>
 
