@@ -398,12 +398,6 @@ describe('DuckDBConnection', () => {
           TABLE_COMMENT: 'Comment 2',
           table_type: 'VIEW',
         },
-        {
-          table_catalog: 'db2',
-          table_name: 'table2',
-          TABLE_COMMENT: 'Comment 3',
-          table_type: 'BASE TABLE',
-        },
       ]
 
       const mockResult = createMockQueryResult([], mockData)
@@ -414,10 +408,10 @@ describe('DuckDBConnection', () => {
         query: vi.fn().mockResolvedValue(mockResult),
       }
       //@ts-ignore
-      const tables = await connection.getTables('db1')
+      const tables = await connection.getTables('db1', 'main')
       //@ts-ignore
       expect(connection.connection.query).toHaveBeenCalledWith(
-        'SELECT * FROM information_schema.tables',
+        "SELECT * FROM information_schema.tables where table_catalog='db1' and table_schema='main'",
       )
       expect(tables.length).toBe(2)
       expect(tables[0].name).toBe('table1')
@@ -458,9 +452,9 @@ describe('DuckDBConnection', () => {
         query: vi.fn().mockResolvedValue(mockResult),
       }
       //@ts-ignore
-      const columns = await connection.getColumns('test_db', 'test_table')
+      const columns = await connection.getColumns('test_db', 'main', 'test_table')
       //@ts-ignore
-      expect(connection.connection.query).toHaveBeenCalledWith('DESCRIBE test_db.test_table')
+      expect(connection.connection.query).toHaveBeenCalledWith('DESCRIBE test_db.main.test_table')
       expect(columns.length).toBe(2)
       expect(columns[0].name).toBe('id')
       expect(columns[0].type).toBe('BIGINT')

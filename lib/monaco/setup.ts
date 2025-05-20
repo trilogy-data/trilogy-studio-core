@@ -136,6 +136,20 @@ export function configureTrilogy(languages) {
       'current_date',
       'current_datetime',
     ],
+    typeKeywords: [
+      'bool',
+      'string',
+      'int',
+      'float',
+      'string',
+      'double',
+      'decimal',
+      'percent',
+      'datetime',
+      'date',
+      'timestamp',
+      'numeric',
+    ],
     definitions: ['AUTO', 'PROPERTY', 'KEY', 'METRIC'],
     tokenizer: {
       root: [
@@ -156,6 +170,7 @@ export function configureTrilogy(languages) {
           /[a-zA-Z][a-zA-Z0-9_]*/,
           {
             cases: {
+              '@typeKeywords': 'keyword',
               '@keywords': 'keyword',
               '@functions': { token: 'function', next: '@functionCheck' },
               '@definitions': 'definition',

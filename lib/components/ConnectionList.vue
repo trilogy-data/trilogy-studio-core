@@ -1,6 +1,8 @@
 <template>
   <sidebar-list title="Connections">
     <template #actions>
+      <!-- Add search box at the top -->
+
       <div class="button-container">
         <button
           @click="creatorVisible = !creatorVisible"
@@ -16,9 +18,26 @@
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
       />
+      <div class="search-container">
+        <input
+          type="text"
+          v-model="searchTerm"
+          placeholder="Filter list..."
+          class="search-input"
+          :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'"
+        />
+        <button
+          v-if="searchTerm"
+          @click="clearSearch"
+          class="clear-search-btn"
+          :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'"
+        >
+          ✕
+        </button>
+      </div>
     </template>
     <connection-list-item
-      v-for="item in contentList"
+      v-for="item in filteredContentList"
       :key="item.id"
       :item="item"
       :is-collapsed="collapsed[item.id]"
@@ -29,6 +48,7 @@
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
+      @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
       @update-snowflake-private-key="updateSnowflakePrivateKey"
       @toggle-save-credential="toggleSaveCredential"
       @toggle-mobile-menu="toggleMobileMenu"
@@ -68,7 +88,7 @@ import type {
 import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
-import { buildConnectionTree } from '../connections'
+import { buildConnectionTree, filterConnectionTree } from '../connections'
 
 export default {
   name: 'ConnectionList',
@@ -102,6 +122,13 @@ export default {
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
+    // Add search term ref
+    const searchTerm = ref('')
+
+    // Function to clear search
+    const clearSearch = () => {
+      searchTerm.value = ''
+    }
 
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       if (connection.type === 'motherduck') {
@@ -118,13 +145,23 @@ export default {
       }
     }
 
-    const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {
+    const updateBigqueryProject = async (connection: BigQueryOauthConnection, project: string) => {
       if (connection.type === 'bigquery-oauth') {
         connection.projectId = project
+        await saveConnections()
         connectionStore.resetConnection(connection.name)
       }
     }
-
+    const updateBigqueryBrowsingProject = async (
+      connection: BigQueryOauthConnection,
+      project: string,
+    ) => {
+      if (connection.type === 'bigquery-oauth') {
+        connection.browsingProjectId = project
+        console.log('updating browsing project', project)
+        await saveConnections()
+      }
+    }
     const toggleSaveCredential = (connection: any) => {
       connection.saveCredential = !connection.saveCredential
       connectionStore.resetConnection(connection.name)
@@ -152,7 +189,7 @@ export default {
           }
         }
         if (type === 'database') {
-          console.log('getting tables')
+          console.log('getting schemas')
           let dbid = id.split(KeySeparator)[1]
           connectionStore.connections[connection].refreshDatabase(dbid)
           // we don't expand tables in the sidebar anymore
@@ -162,38 +199,24 @@ export default {
           // }
         }
         if (type === 'schema') {
-          // pass, always get at database level
+          let dbid = id.split(KeySeparator)[1]
+          let schemaid = id.split(KeySeparator)[2]
+          await connectionStore.connections[connection].refreshSchema(dbid, schemaid)
         }
         if (type === 'table') {
-          let separatorCount = id.split(KeySeparator).length
           let dbid = id.split(KeySeparator)[1]
-          let tableid = id.split(KeySeparator)[2]
-          let schema = null
-          if (separatorCount === 4) {
-            // if we have a schema, we need to find the table by schema
-            tableid = id.split(KeySeparator)[3]
-            schema = id.split(KeySeparator)[2]
-            dbid = id.split(KeySeparator)[1]
-          } else if (separatorCount === 3) {
-            // no schema, just a table
-            dbid = id.split(KeySeparator)[1]
-          }
+          let schemaid = id.split(KeySeparator)[2]
+          let tableid = id.split(KeySeparator)[3]
 
           let cTable = connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
-            ?.tables?.find((table) => table.name === tableid)
-          if (schema) {
-            // if we have a schema, find the table by schema
-            cTable = connectionStore.connections[connection].databases
-              ?.find((db) => db.name === dbid)
-              ?.tables?.find((table) => table.schema === schema && table.name === tableid)
-          }
-
+            ?.schemas.find((schema) => schema.name === schemaid)
+            ?.tables.find((table) => table.name === tableid)
           if (cTable) {
             let nTable = await connectionStore.connections[connection].getColumns(
               dbid,
+              schemaid,
               tableid,
-              cTable.schema,
             )
             cTable.columns = nTable
           }
@@ -212,7 +235,7 @@ export default {
     }
     const toggleCollapse = async (id: string, connection: string, type: string) => {
       // if we are expanding a connection, get the databases
-      if (['connection', 'database', 'table'].includes(type)) {
+      if (['connection', 'database', 'schema', 'table'].includes(type)) {
         emit('connection-key-selected', id)
       }
 
@@ -233,35 +256,36 @@ export default {
         collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
         let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
-        if (db && db.tables?.length === 0) {
+        if (db && db.schemas?.length === 0) {
+          await refreshId(id, connection, type)
+        }
+      } else if (type === 'schema' && collapsed.value[id] !== false) {
+        // open now see the refresh
+        collapsed.value[id] = false
+        let dbid = id.split(KeySeparator)[1]
+        let schemaid = id.split(KeySeparator)[2]
+        let schema = connectionStore.connections[connection].databases
+          ?.find((db) => db.name === dbid)
+          ?.schemas?.find((schema) => schema.name === schemaid)
+        if (schema && schema.tables?.length === 0) {
           await refreshId(id, connection, type)
         }
       }
       // keep this to refresh, but we won't actually add them to the display
       else if (type === 'table' && collapsed.value[id] !== false) {
-        let separatorCount = id.split(KeySeparator).length
         let dbid = id.split(KeySeparator)[1]
-        let tableid = id.split(KeySeparator)[2]
-        let schema = null
-        if (separatorCount === 4) {
-          schema = id.split(KeySeparator)[2]
-          tableid = id.split(KeySeparator)[3]
-        }
-        if (schema) {
+        let tableid = id.split(KeySeparator)[3]
+        let schemaid = id.split(KeySeparator)[2]
+        if (schemaid) {
           // if we have a schema, we need to find the table by schema
           let nTable = await connectionStore.connections[connection].databases
             ?.find((db) => db.name === dbid)
-            ?.tables?.find((table) => table.schema === schema && table.name === tableid)
+            ?.schemas?.find((schema) => schema.name === schemaid)
+            ?.tables?.find((table) => table.name === tableid)
           if (nTable && nTable.columns.length === 0) {
             await refreshId(id, connection, type)
             return
           }
-        }
-        let nTable = await connectionStore.connections[connection].databases
-          ?.find((db) => db.name === dbid)
-          ?.tables?.find((table) => table.name === tableid)
-        if (nTable && nTable.columns.length === 0) {
-          await refreshId(id, connection, type)
         }
       }
       // expand first, so we can see the loading view
@@ -279,15 +303,11 @@ export default {
       item.databases?.forEach((db) => {
         let dbKey = `${connectionKey}${KeySeparator}${db.name}`
         collapsed.value[dbKey] = true
-        db.tables.forEach((table) => {
-          // if a database uses schemas inside databases, we have one more layer
-          if (table.schema) {
-            let schemaKey = `${dbKey}${KeySeparator}${table.schema}`
-            collapsed.value[schemaKey] = true
+        db.schemas.forEach((schema) => {
+          let schemaKey = `${dbKey}${KeySeparator}${schema.name}`
+          collapsed.value[schemaKey] = true
+          for (let table of schema.tables) {
             let tableKey = `${dbKey}${KeySeparator}${table.schema}${KeySeparator}${table.name}`
-            collapsed.value[tableKey] = true
-          } else {
-            let tableKey = `${dbKey}${KeySeparator}${table.name}`
             collapsed.value[tableKey] = true
           }
         })
@@ -303,6 +323,11 @@ export default {
       )
     })
 
+    // Add filtered content list computed property
+    const filteredContentList = computed(() => {
+      return filterConnectionTree(contentList.value, searchTerm.value)
+    })
+
     const rightSplit = (str: string) => {
       const index = str.lastIndexOf(KeySeparator)
       return index !== -1 ? str.substring(0, index) : str
@@ -311,6 +336,7 @@ export default {
       connectionStore,
       editorStore,
       contentList,
+      filteredContentList, // Use the filtered list instead of the original
       toggleCollapse,
       toggleMobileMenu,
       collapsed,
@@ -322,10 +348,13 @@ export default {
       toggleSaveCredential,
       motherduckIcon,
       updateBigqueryProject,
+      updateBigqueryBrowsingProject,
       refreshId,
       rightSplit,
       creatorVisible,
       isMobile,
+      searchTerm, // Expose search term to template
+      clearSearch, // Expose clear search function
     }
   },
   components: {
@@ -416,5 +445,45 @@ export default {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+}
+
+/* Add styles for the search box */
+.search-container {
+  position: relative;
+  margin-top: 5px;
+}
+
+.search-input {
+  width: 100%;
+  border-radius: 0px;
+  border: 1px solid var(--sidebar-border-color, #ccc);
+  background-color: transparent;
+  color: var(--sidebar-text-color, #333);
+  line-height: var(--sidebar-list-item-height);
+  font-size: var(--sidebar-font-size, 14px);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--sidebar-active-border-color, #66afe9);
+  box-shadow: 0 0 0 2px rgba(102, 175, 233, 0.25);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sidebar-text-color, #999);
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+
+.clear-search-btn:hover {
+  color: var(--sidebar-active-text-color, #666);
 }
 </style>

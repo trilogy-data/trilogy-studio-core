@@ -1,8 +1,9 @@
 import BaseConnection from './base'
-import { Database, Table, Column } from './base'
+import { Database, Schema, Table, Column } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
+import { AssetType } from './base'
 
 declare var google: any
 
@@ -23,13 +24,15 @@ export default class BigQueryOauthConnection extends BaseConnection {
   // @ts-ignore
   private accessToken: string
   public projectId: string
+  public browsingProjectId: string
 
   // Store active query jobs for potential cancellation
   private activeJobs: Map<string, string> = new Map() // Maps identifier to jobId
 
-  constructor(name: string, projectId: string, model?: string) {
-    super(name, 'bigquery-oauth', false), model
+  constructor(name: string, projectId: string, model?: string, browsingProjectId?: string) {
+    super(name, 'bigquery-oauth', false, model)
     this.projectId = projectId
+    this.browsingProjectId = browsingProjectId ? browsingProjectId : projectId
     this.query_type = 'bigquery'
   }
 
@@ -39,18 +42,22 @@ export default class BigQueryOauthConnection extends BaseConnection {
       type: this.type,
       model: this.model,
       projectId: this.projectId,
+      browsingProjectId: this.browsingProjectId,
     }
   }
 
   static fromJSON(fields: {
     name: string
     projectId: string
-    model: string | null
+    model: string | undefined
+    browsingProjectId: string | undefined
   }): BigQueryOauthConnection {
-    let base = new BigQueryOauthConnection(fields.name, fields.projectId)
-    if (fields.model) {
-      base.model = fields.model
-    }
+    let base = new BigQueryOauthConnection(
+      fields.name,
+      fields.projectId,
+      fields.model,
+      fields.browsingProjectId,
+    )
     return base
   }
   async connect(): Promise<boolean> {
@@ -81,10 +88,15 @@ export default class BigQueryOauthConnection extends BaseConnection {
   }
 
   async fetchEndpoint(endpoint: string, args: any, method: string): Promise<any> {
+    let projectId = this.projectId
+    if (endpoint.startsWith('datasets')) {
+      // If the endpoint is for datasets, use the browsing project ID
+      projectId = this.browsingProjectId
+    }
     let response = null
     if (method == 'GET') {
       response = await fetch(
-        `https://bigquery.googleapis.com/bigquery/v2/projects/${this.projectId}/${endpoint}`,
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/${endpoint}`,
         {
           method: method,
           headers: {
@@ -95,7 +107,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
       )
     } else if (method == 'POST') {
       response = await fetch(
-        `https://bigquery.googleapis.com/bigquery/v2/projects/${this.projectId}/${endpoint}`,
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/${endpoint}`,
         {
           method: method,
           headers: {
@@ -120,16 +132,9 @@ export default class BigQueryOauthConnection extends BaseConnection {
   }
 
   async getDatabases(): Promise<Database[]> {
+    // TODO: support multiple BQ projects
     try {
-      const data = await this.fetchEndpoint('datasets', {}, 'GET')
-      const databases: Database[] = []
-
-      for (const dataset of data.datasets || []) {
-        const datasetId = dataset.datasetReference.datasetId
-        // const tables = await this.getTables(datasetId);
-        const tables: Table[] = []
-        databases.push(new Database(datasetId, tables))
-      }
+      const databases: Database[] = [new Database(this.browsingProjectId, [])]
 
       return databases
     } catch (error) {
@@ -138,17 +143,55 @@ export default class BigQueryOauthConnection extends BaseConnection {
     }
   }
 
-  async getTables(database: string): Promise<Table[]> {
+  async getSchemas(database: string): Promise<Schema[]> {
     try {
-      const data = await this.fetchEndpoint(`datasets/${database}/tables`, {}, 'GET')
-
-      const tables: Table[] = []
-
-      for (const table of data.tables || []) {
-        const tableId = table.tableReference.tableId
-        const columns: Column[] = []
-        tables.push(new Table(tableId, columns))
+      const data = await this.fetchEndpoint(`datasets`, {}, 'GET')
+      const schemas: Schema[] = []
+      for (const schema of data.datasets || []) {
+        const schemaId = schema.datasetReference.datasetId
+        const tables: Table[] = []
+        schemas.push(new Schema(schemaId, tables, this.browsingProjectId))
       }
+      return schemas
+    } catch (error) {
+      console.error(`Error fetching schemas for database ${database}:`, error)
+      throw error
+    }
+  }
+
+  async getTables(database: string, schema: string): Promise<Table[]> {
+    try {
+      const tables: Table[] = []
+      let pageToken: string | undefined = undefined
+
+      // Continue fetching tables until there are no more pages
+      do {
+        // Add pageToken to the endpoint if available
+        const endpoint = pageToken
+          ? `datasets/${schema}/tables?pageToken=${pageToken}`
+          : `datasets/${schema}/tables`
+
+        const data = await this.fetchEndpoint(endpoint, {}, 'GET')
+
+        // Process tables from current page
+        for (const table of data.tables || []) {
+          const tableId = table.tableReference.tableId
+          const columns: Column[] = []
+          tables.push(
+            new Table(
+              tableId,
+              schema,
+              database,
+              columns,
+              '',
+              table.type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE,
+            ),
+          )
+        }
+
+        // Update pageToken for next iteration
+        pageToken = data.nextPageToken
+      } while (pageToken)
 
       return tables
     } catch (error) {
@@ -157,52 +200,57 @@ export default class BigQueryOauthConnection extends BaseConnection {
     }
   }
 
-  async getTableSample(database: string, table: string, limit: number = 100) {
-    const sql = `SELECT * FROM \`${database}.${table}\` LIMIT ${limit}`
+  async getTableSample(database: string, schema: string, table: string, limit: number = 100) {
+    const sql = `SELECT * FROM \`${database}.${schema}.${table}\` LIMIT ${limit}`
     return this.query(sql, {}, `sample_${database}_${table}`)
   }
 
-  async getTable(database: string, table: string): Promise<Table> {
+  async getTable(database: string, schema: string, table: string): Promise<Table> {
     try {
-      const columns = await this.getColumns(database, table)
-      return new Table(table, columns)
+      return await this.getTableData(database, schema, table)
     } catch (error) {
-      console.error(`Error fetching table ${database}.${table}:`, error)
+      console.error(`Error fetching table ${database}.${schema}.${table}:`, error)
       throw error
     }
   }
 
-  async getColumns(database: string, table: string): Promise<Column[]> {
-    try {
-      const tableData = await this.fetchEndpoint(`datasets/${database}/tables/${table}`, {}, 'GET')
-
-      if (!tableData.schema || !tableData.schema.fields) {
-        return []
-      }
-
-      return tableData.schema.fields.map((field: any) => {
-        // Mapping BigQuery schema fields to Column objects
-        const isPrimary =
-          field.mode === 'REQUIRED' &&
-          (field.name.toLowerCase() === 'id' || field.name.toLowerCase().endsWith('_id'))
-
-        const isUnique = isPrimary // Assuming primary keys are unique
-
-        return new Column(
-          field.name,
-          field.type,
-          this.mapBigQueryTypeToColumnType(field.type, field.mode),
-          field.mode !== 'REQUIRED', // nullable if not REQUIRED
-          isPrimary,
-          isUnique,
-          null, // BigQuery doesn't expose default values through this API
-          false, // BigQuery doesn't have autoincrement in the same way as SQL databases
-        )
-      })
-    } catch (error) {
-      console.error(`Error fetching columns for ${database}.${table}:`, error)
-      throw error
+  private tableToColumns(tableData: any): Column[] {
+    if (!tableData.schema || !tableData.schema.fields) {
+      return []
     }
+    return tableData.schema.fields.map((field: any) => {
+      // Mapping BigQuery schema fields to Column objects
+      const isPrimary =
+        field.mode === 'REQUIRED' &&
+        (field.name.toLowerCase() === 'id' || field.name.toLowerCase().endsWith('_id'))
+
+      const isUnique = isPrimary // Assuming primary keys are unique
+
+      return new Column(
+        field.name,
+        field.type,
+        this.mapBigQueryTypeToColumnType(field.type, field.mode),
+        field.mode !== 'REQUIRED', // nullable if not REQUIRED
+        isPrimary,
+        isUnique,
+        null, // BigQuery doesn't expose default values through this API
+        false, // BigQuery doesn't have autoincrement in the same way as SQL databases
+        field.description || '', // Assuming description is available in the schema
+      )
+    })
+  }
+
+  private async getTableData(database: string, schema: string, table: string): Promise<Table> {
+    const tableData = await this.fetchEndpoint(`datasets/${schema}/tables/${table}`, {}, 'GET')
+    const columns = this.tableToColumns(tableData)
+    const assetType = tableData.type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE
+    return new Table(table, schema, database, columns, tableData.description, assetType)
+  }
+
+  async getColumns(database: string, schema: string, table: string): Promise<Column[]> {
+    return this.getTable(database, schema, table).then((t) => {
+      return t.columns
+    })
   }
 
   fieldToResultColumn(field: any, modeOverride: string | null = null): ResultColumn {
@@ -212,6 +260,8 @@ export default class BigQueryOauthConnection extends BaseConnection {
       let rval = {
         name: field.name,
         type: ColumnType.ARRAY,
+        scale: field.scale ? Number.parseInt(field.scale) : undefined,
+        precision: field.precision ? Number.parseInt(field.precision) : undefined,
         children: new Map([
           ['v', this.fieldToResultColumn(field, 'NOT_REPEATED')] as [string, ResultColumn],
         ]),
@@ -258,6 +308,9 @@ export default class BigQueryOauthConnection extends BaseConnection {
           case ColumnType.DATETIME:
             processedRow[label] = value ? parseTimestamp(value) : null
             break
+          case ColumnType.TIMESTAMP:
+            processedRow[label] = value ? parseTimestamp(value) : null
+            break
           case ColumnType.ARRAY:
             const newv = value.map((item: any) => {
               // l i sthe constant returned by duckdb for the array
@@ -296,8 +349,6 @@ export default class BigQueryOauthConnection extends BaseConnection {
         `Polling job ${jobId} - poll #${++pollCount}, waited ${currentPollingIntervalMs}ms`,
       )
 
-      // FIXED: Use the correct endpoint for getting query results
-      // Adding query parameters for timeoutMs to optimize waiting time
       let endpoint = `queries/${jobId}?timeoutMs=10000`
       if (location && location !== 'US') {
         endpoint += `&location=${location}`
@@ -489,6 +540,10 @@ export default class BigQueryOauthConnection extends BaseConnection {
         return ColumnType.DATE
       case 'time':
         return ColumnType.TIME
+      case 'numeric':
+      case 'decimal':
+      case 'bignumeric':
+        return ColumnType.NUMERIC
       default:
         return ColumnType.UNKNOWN
     }

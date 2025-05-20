@@ -27,6 +27,15 @@
           : `database-${item.connection.name}-${item.name}`
       "
     ></i>
+    <i
+      v-else-if="item.type === 'schema'"
+      class="mdi mdi-folder-outline"
+      :data-testid="
+        testTag
+          ? `schema-${item.connection.name}-${item.name}-${testTag}`
+          : `schema-${item.connection.name}-${item.name}`
+      "
+    ></i>
     <i v-else-if="item.type === 'table'" class="mdi mdi-table"></i>
     <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
     <i v-else-if="item.type === 'loading'" class="mdi mdi-loading mdi-spin"></i>
@@ -45,22 +54,56 @@
     >
       {{ item.name }}
     </div>
+    <div
+      class="refresh title-pad-left truncate-text sidebar-sub-item"
+      v-else-if="item.type === 'refresh-schema'"
+      @click="handleRefreshSchemaClick"
+    >
+      {{ item.name }}
+    </div>
     <DuckDBImporter
       v-else-if="item.type === 'duckdb-upload'"
       :db="item.connection.db"
       :connection="item.connection"
     />
-    <model-selector v-else-if="item.type === 'model'" :connection="item.connection" />
-    <div v-else-if="item.type === 'bigquery-project'" class="md-token-container" @click.stop>
-      <form @submit.prevent="updateBigqueryProject(item.connection, bigqueryProject)">
-        <button type="submit" class="customize-button">Update</button>
+    <div v-else-if="item.type === 'model'" class="bq-project-container">
+      <label class="input-label">Model</label><model-selector :connection="item.connection" />
+    </div>
+    <div v-else-if="item.type === 'bigquery-project'" class="bq-project-container" @click.stop>
+      <label class="input-label">Billing</label>
+
+      <span>
+        <transition name="fade">
+          <i v-if="showBillingSuccess" class="mdi mdi-check-circle success-icon"></i>
+        </transition>
         <input
           type="text"
           v-model="bigqueryProject"
           placeholder="Billing Project"
-          class="connection-customize"
+          class="bq-project-input"
+          @input="debouncedUpdateBigqueryProject"
         />
-      </form>
+      </span>
+    </div>
+
+    <div
+      v-else-if="item.type === 'bigquery-browsing-project'"
+      class="bq-project-container"
+      @click.stop
+    >
+      <label class="input-label">Browsing</label>
+      <span>
+        <transition name="fade">
+          <i v-if="showBrowsingSuccess" class="mdi mdi-check-circle success-icon"></i>
+        </transition>
+        <input
+          type="text"
+          v-model="bigqueryBrowsingProject"
+          placeholder="Browsing Project"
+          class="bq-project-input"
+          @input="debouncedUpdateBigqueryBrowsingProject"
+        />
+      </span>
     </div>
     <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
       <form @submit.prevent="updateMotherDuckToken(item.connection, mdToken)">
@@ -102,6 +145,15 @@
     >
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
+      <span v-if="item.type === 'connection'" @click.stop="handleRefreshConnectionClick"
+        ><i class="mdi mdi-refresh"></i
+      ></span>
+      <span v-if="item.type === 'database'" @click.stop="handleRefreshDatabaseClick"
+        ><i class="mdi mdi-refresh"></i
+      ></span>
+      <span v-if="item.type === 'schema'" @click.stop="handleRefreshSchemaClick"
+        ><i class="mdi mdi-refresh"></i
+      ></span>
     </span>
 
     <div class="connection-actions" v-if="item.type === 'connection'">
@@ -150,7 +202,7 @@
         :connection="item.connection.name"
         type="trilogy"
         title="Create Datasource From Table"
-        :content="() => createTableDatasource(item.object)"
+        :content="() => createTableDatasource(item.connection, item.object)"
         icon="mdi-database-plus-outline"
         :data-testid="`create-datasource-${item.object.name}`"
       />
@@ -159,12 +211,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import ConnectionIcon from './ConnectionIcon.vue'
 import ModelSelector from './ModelSelector.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import {
+  Connection,
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
@@ -174,6 +227,7 @@ import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 import { Table } from '../connections'
 import DuckDBImporter from './DuckDBImporter.vue'
+
 // Define prop types
 interface ConnectionListItemProps {
   item: {
@@ -201,6 +255,7 @@ const emit = defineEmits<{
   (e: 'toggle', id: string, connection: string, type: string): void
   (e: 'refresh', id: string, connection: string, type: string): void
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
+  (e: 'updateBigqueryBrowsingProject', connection: BigQueryOauthConnection, project: string): void
   (e: 'updateSnowflakePrivateKey', connection: SnowflakeJwtConnection, token: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
   (e: 'toggleSaveCredential', connection: any): void
@@ -211,7 +266,7 @@ const emit = defineEmits<{
 const isExpandable = computed(() => ['connection', 'database', 'schema'].includes(props.item.type))
 
 const isFetchable = computed(() =>
-  ['connection', 'database', 'table', 'schema'].includes(props.item.type),
+  ['connection', 'database', 'schema', 'table', 'schema'].includes(props.item.type),
 )
 
 // Click handler for item expansion/toggling
@@ -237,15 +292,57 @@ const handleRefreshDatabaseClick = () => {
     'database',
   )
 }
+const handleRefreshSchemaClick = () => {
+  emit('refresh', props.item.id, props.item.connection?.name || '', 'schema')
+}
 
-//config vairables
+//config variables
 const bigqueryProject = ref<string>(
   props.item.connection.projectId ? props.item.connection.projectId : '',
+)
+const bigqueryBrowsingProject = ref<string>(
+  props.item.connection.browsingProjectId ? props.item.connection.browsingProjectId : '',
 )
 const mdToken = ref<string>(props.item.connection.mdToken ? props.item.connection.mdToken : '')
 const privateKey = ref<string>(
   props.item.connection?.config?.privateKey ? props.item.connection.config.privateKey : '',
 )
+
+// Success indicator states
+const showBillingSuccess = ref<boolean>(false)
+const showBrowsingSuccess = ref<boolean>(false)
+
+// Function to show and hide success indicator
+const showSuccessIndicator = (indicator: Ref<boolean>) => {
+  indicator.value = true
+  setTimeout(() => {
+    indicator.value = false
+  }, 2000) // Show check mark for 2 seconds then fade out
+}
+
+// Debounce function to prevent too many updates
+const debounce = (fn: Function, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout>
+  return function (...args: any[]) {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => fn(...args), delay)
+  }
+}
+
+// Debounced update functions that will auto-save after typing stops
+const updateBigqueryProjectInternal = () => {
+  emit('updateBigqueryProject', props.item.connection, bigqueryProject.value)
+  showSuccessIndicator(showBillingSuccess)
+}
+
+const updateBigqueryBrowsingProjectInternal = () => {
+  emit('updateBigqueryBrowsingProject', props.item.connection, bigqueryBrowsingProject.value)
+  showSuccessIndicator(showBrowsingSuccess)
+}
+
+const debouncedUpdateBigqueryProject = debounce(updateBigqueryProjectInternal, 500)
+const debouncedUpdateBigqueryBrowsingProject = debounce(updateBigqueryBrowsingProjectInternal, 500)
+
 const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
   emit('updateMotherDuckToken', connection, token)
 }
@@ -254,15 +351,11 @@ const updateSnowflakePrivateKey = (connection: SnowflakeJwtConnection, key: stri
   emit('updateSnowflakePrivateKey', connection, key)
 }
 
-const updateBigqueryProject = (connection: BigQueryOauthConnection, project: string) => {
-  emit('updateBigqueryProject', connection, project)
-}
-
 const toggleSaveCredential = (connection: any) => {
   emit('toggleSaveCredential', connection)
 }
 
-const createTableDatasource = (datasource: Table) => {
+const createTableDatasource = (connection: Connection, datasource: Table) => {
   // Get all column definitions in format name:type
   const primaryKeyFields = datasource.columns
     .filter((column) => column.primary)
@@ -270,11 +363,12 @@ const createTableDatasource = (datasource: Table) => {
 
   const keyPrefix = primaryKeyFields.length > 0 ? `${primaryKeyFields.join('.')}` : 'PLACEHOLDER'
   const propertyDeclarations = datasource.columns
-    .map((column) =>
-      column.primary
-        ? `key ${column.name} ${column.trilogyType};`
-        : `property <${keyPrefix}>.${column.name} ${column.trilogyType};`,
-    )
+    .map((column) => {
+      let description = column.description ? ` #${column.description}` : ''
+      return column.primary
+        ? `key ${column.name} ${column.trilogyType}; ${description}`
+        : `property <${keyPrefix}>.${column.name} ${column.trilogyType}; ${description}`
+    })
     .join('\n')
   const columnDefinitions = datasource.columns
     .map((column) => `\t${column.name}:${column.name},`)
@@ -283,7 +377,11 @@ const createTableDatasource = (datasource: Table) => {
   const grainDeclaration =
     primaryKeyFields.length > 0 ? `grain (${primaryKeyFields.join(', ')})` : ''
   // Create the formatted string
-  return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${datasource.name};`
+  let address = datasource.name
+  if (connection.type === 'bigquery-oauth') {
+    address = `\`${datasource.database}.${datasource.schema}.${datasource.name}\``
+  }
+  return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${address};`
 }
 </script>
 
@@ -370,5 +468,49 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   font-size: 12px;
   overflow: hidden;
   white-space: nowrap;
+}
+
+.input-with-label {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+}
+
+.input-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.label-with-status {
+  display: flex;
+  align-items: center;
+}
+
+.success-icon {
+  color: #4caf50;
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+/* Fade transition for the success check mark */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.bq-project-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.bq-project-input {
+  background: transparent;
 }
 </style>

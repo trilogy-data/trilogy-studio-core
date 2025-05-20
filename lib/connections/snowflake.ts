@@ -1,5 +1,5 @@
 import BaseConnection from './base'
-import { Database, Table, Column, AssetType } from './base'
+import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
@@ -327,7 +327,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     })
   }
 
-  async getTable(database: string, table: string): Promise<Table> {
+  async getTable(database: string, schema: string, table: string): Promise<Table> {
     const sql = `DESCRIBE TABLE ${database}.${table}`
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
@@ -336,11 +336,11 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
           new Column(column.name, column.type, column.type, false, false, false, null, false),
         )
       })
-      return new Table(table, columns, null, AssetType.TABLE, null, database)
+      return new Table(table, schema, database, columns, null, AssetType.TABLE)
     })
   }
 
-  async getTables(database: string): Promise<Table[]> {
+  async getTables(database: string, schema: string): Promise<Table[]> {
     const sql = `SHOW TABLES IN DATABASE ${database}`
     return this.query_core(sql).then((results) => {
       const tables: Table[] = []
@@ -348,19 +348,28 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
         tables.push(
           new Table(
             row.name || row['name'],
+            row.schema_name,
+            database,
             [],
             row.comment,
             AssetType.TABLE,
-            row.schema_name,
-            database,
           ),
         )
       })
-      return tables
+      return tables.filter((t) => t.schema === schema)
     })
   }
-
-  async getColumns(database: string, table: string, schema: string | null): Promise<Column[]> {
+  async getSchemas(database: string): Promise<Schema[]> {
+    const sql = `SHOW SCHEMAS IN DATABASE ${database}`
+    return this.query_core(sql).then((results) => {
+      const schemas: Schema[] = []
+      results.data.forEach((row: any) => {
+        schemas.push(new Schema(row.name || row['name'], [], database))
+      })
+      return schemas
+    })
+  }
+  async getColumns(database: string, schema: string, table: string): Promise<Column[]> {
     schema = schema || 'PUBLIC'
     const sql = `DESCRIBE TABLE ${database}.${schema}.${table}`
 
@@ -699,295 +708,3 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
     this.auth = {}
   }
 }
-
-// Interface for Snowflake V1 API authentication
-// interface SnowflakeBasicAuth extends SnowflakeAuthBase {
-//   sessionToken?: string
-//   masterToken?: string
-// }
-
-// Basic Auth Connection (v1 API)
-// export class SnowflakeBasicAuthConnection extends SnowflakeConnectionBase {
-//   private config: SnowflakeBasicConfig
-//   private auth: SnowflakeBasicAuth = {}
-
-//   // Singleton cache for basic auth tokens
-//   private static authCache: Record<string, SnowflakeBasicAuth> = {}
-
-//   constructor(
-//     name: string,
-//     config: SnowflakeBasicConfig,
-//     model?: string,
-//     saveCredential: boolean = false,
-//   ) {
-//     super(name, 'snowflake-basic', config.account, model, saveCredential)
-//     this.config = config
-//   }
-
-//   static fromJSON(fields: {
-//     name: string
-//     model: string | null
-//     saveCredential: boolean
-//     account: string
-//     username: string
-//     password: string
-//     warehouse: string
-//     role?: string
-//     database?: string
-//     schema?: string
-//   }): SnowflakeBasicAuthConnection {
-//     let conn = new SnowflakeBasicAuthConnection(
-//       fields.name,
-//       {
-//         account: fields.account,
-//         username: fields.username,
-//         password: fields.password,
-//         warehouse: fields.warehouse,
-//         role: fields.role,
-//         database: fields.database,
-//         schema: fields.schema,
-//       },
-//       fields.model ? fields.model : undefined,
-//       fields.saveCredential,
-//     )
-
-//     if (fields.model) {
-//       conn.model = fields.model
-//     }
-//     return conn
-//   }
-
-//   toJSON(): object {
-//     return {
-//       name: this.name,
-//       type: this.type,
-//       model: this.model,
-//       account: this.config.account,
-//       username: this.config.username,
-//       warehouse: this.config.warehouse,
-//       role: this.config.role,
-//       database: this.config.database,
-//       schema: this.config.schema,
-//       saveCredential: this.saveCredential,
-//       password: this.saveCredential ? this.config.password : '',
-//     }
-//   }
-
-//   setPassword(password: string): void {
-//     this.config.password = password
-//   }
-
-//   /**
-//    * Authenticate with Snowflake using username and password
-//    */
-//   private async authenticate(): Promise<SnowflakeBasicAuth> {
-//     try {
-//       // Create basic auth credentials
-//       const credentials = `${this.config.username}:${this.config.password}`
-//       const encodedCredentials = btoa(credentials)
-
-//       // Set up headers
-//       const headers = {
-//         Authorization: `Basic ${encodedCredentials}`,
-//         'Content-Type': 'application/json',
-//         Accept: 'application/json',
-//         'User-Agent': 'TrilogyStudio',
-//         'X-Requested-With': null,
-//       }
-
-//       // Create login request payload
-//       const data = {
-//         data: {
-//           ACCOUNT_NAME: this.config.account,
-//           LOGIN_NAME: this.config.username,
-//           PASSWORD: this.config.password,
-//         },
-//       }
-
-//       // Make the authentication request
-//       const response = await fetch(`${this.baseUrl}/session/v1/login-request`, {
-//         method: 'POST',
-//         // @ts-ignore
-//         headers: headers,
-//         body: JSON.stringify(data),
-//       })
-
-//       if (!response.ok) {
-//         const errorText = await response.text()
-//         throw new Error(`Authentication failed: ${response.status} - ${errorText}`)
-//       }
-
-//       // Extract session token and master token from response
-//       const responseData = await response.json()
-//       const sessionToken = responseData.data?.token
-//       const masterToken = responseData.data?.masterToken
-
-//       if (!sessionToken || !masterToken) {
-//         throw new Error('Failed to get valid tokens from authentication response')
-//       }
-
-//       return {
-//         sessionToken,
-//         masterToken,
-//         expiresAt: Date.now() + 3600 * 1000 - 60000, // 1 hour minus 1 minute buffer
-//       }
-//     } catch (error) {
-//       throw error
-//     }
-//   }
-
-//   // @ts-ignore
-//   cancelQuery(identifier: string): Promise<boolean> {
-//     throw new Error('Method not implemented.')
-//   }
-
-//   async connect(): Promise<boolean> {
-//     try {
-//       // Check cache for valid token
-//       const cacheKey = `${this.config.account}:${this.config.username}`
-//       if (
-//         SnowflakeBasicAuthConnection.authCache[cacheKey] &&
-//         SnowflakeBasicAuthConnection.authCache[cacheKey].expiresAt &&
-//         SnowflakeBasicAuthConnection.authCache[cacheKey].expiresAt > Date.now() &&
-//         SnowflakeBasicAuthConnection.authCache[cacheKey].sessionToken
-//       ) {
-//         this.auth = SnowflakeBasicAuthConnection.authCache[cacheKey]
-//         return true
-//       }
-
-//       // Authenticate and get tokens
-//       this.auth = await this.authenticate()
-
-//       // Verify token with test query
-//       try {
-//         await this.query_core('SELECT 1', null, true)
-//         // Cache the token if successful
-//         SnowflakeBasicAuthConnection.authCache[cacheKey] = this.auth
-//         return true
-//       } catch (error) {
-//         this.auth = {}
-//         throw new Error(`Authentication verification failed: ${error}`)
-//       }
-//     } catch (error) {
-//       throw error
-//     }
-//   }
-
-//   protected getAuthHeaders(): Record<string, string> {
-//     return {
-//       Authorization: `Snowflake Token="${this.auth.sessionToken}"`,
-//       'Content-Type': 'application/json',
-//       Accept: 'application/json',
-//       'User-Agent': 'TypescriptRestExample/1.0',
-//     }
-//   }
-
-//   protected async executeQuery(sql: string): Promise<any> {
-//     // Generate a UUID for the request
-//     const generateUUID = () => {
-//       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-//         const r = (Math.random() * 16) | 0,
-//           v = c === 'x' ? r : (r & 0x3) | 0x8
-//         return v.toString(16)
-//       })
-//     }
-
-//     // Create query request payload (v1 API)
-//     const payload = {
-//       sqlText: sql,
-//       asyncExec: true,
-//       sequenceId: 1,
-//       querySubmissionTime: Math.floor(Date.now() / 1000),
-//       bindings: {},
-//     }
-
-//     // Execute the query
-//     const queryUrl = `${this.baseUrl}/queries/v1/query-request?requestId=${generateUUID()}`
-
-//     const response = await fetch(queryUrl, {
-//       method: 'POST',
-//       headers: this.getAuthHeaders(),
-//       body: JSON.stringify(payload),
-//     })
-
-//     if (!response.ok) {
-//       const errorData = await response.text()
-//       throw new Error(`Query execution failed: ${errorData || response.statusText}`)
-//     }
-
-//     const responseData = await response.json()
-
-//     if (!responseData.data?.queryId || !responseData.data?.getResultUrl) {
-//       throw new Error('Invalid query response: missing queryId or result URL')
-//     }
-
-//     // Poll for query completion
-//     await this.pollForResults(responseData.data.queryId)
-
-//     // Get results when query is completed
-//     return this.getResults(responseData.data.getResultUrl)
-//   }
-
-//   private async pollForResults(queryId: string): Promise<void> {
-//     const maxAttempts = 10
-//     let attempt = 0
-
-//     while (attempt < maxAttempts) {
-//       const response = await fetch(`${this.baseUrl}/monitoring/queries/${queryId}`, {
-//         method: 'GET',
-//         headers: this.getAuthHeaders(),
-//       })
-
-//       if (!response.ok) {
-//         const errorText = await response.text()
-//         throw new Error(`Error polling for results: ${response.status} - ${errorText}`)
-//       }
-
-//       const status = await response.json()
-
-//       // Check if query is complete
-//       if (status.status === 'success') {
-//         return
-//       } else if (status.status === 'failed') {
-//         throw new Error(`Query execution failed: ${status.message || 'Unknown error'}`)
-//       }
-
-//       // Still processing, wait and retry
-//       attempt++
-//       await new Promise((resolve) => setTimeout(resolve, this.pollingInterval))
-//     }
-
-//     throw new Error('Max polling attempts reached, query results not available')
-//   }
-
-//   private async getResults(resultUrl: string): Promise<any> {
-//     const response = await fetch(`${this.baseUrl}${resultUrl}`, {
-//       method: 'GET',
-//       headers: this.getAuthHeaders(),
-//     })
-
-//     if (!response.ok) {
-//       const errorText = await response.text()
-//       throw new Error(`Error getting results: ${response.status} - ${errorText}`)
-//     }
-
-//     return await response.json()
-//   }
-
-//   protected extractMetadata(resultData: any): any[] {
-//     return resultData.data?.rowtype || []
-//   }
-
-//   protected extractRows(resultData: any): any[][] {
-//     return resultData.data?.rowset || []
-//   }
-
-//   protected getSchema(): string | undefined {
-//     return this.config.schema
-//   }
-
-//   async close(): Promise<void> {
-//     // Clear auth data
-//     this.auth = {}
-//   }
-// }
