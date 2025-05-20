@@ -8,6 +8,22 @@
         :connectionName="selectedConnection"
       />
     </div>
+    <div v-else-if="selectedType === 'schema' && selectedSchemaDetails">
+      <ConnectionSchema :schema="selectedSchemaDetails" :connectionName="selectedConnection" />
+    </div>
+    <div v-else-if="selectedType === 'database' && selectedDatabaseDetails">
+      <ConnectionDatabase
+        :database="selectedDatabaseDetails"
+        :connectionName="selectedConnection"
+      />
+    </div>
+    <div v-else>
+      {{ selectedType }}
+      {{ selectedConnection }}
+      {{ selectedDatabase }}
+      {{ selectedSchema }}
+      {{ selectedTable }}
+    </div>
   </div>
 </template>
 
@@ -25,6 +41,8 @@ import { defineComponent, inject, ref } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import ConnectionTable from './ConnectionTable.vue'
+import ConnectionDatabase from './ConnectionDatabase.vue'
+import ConnectionSchema from './ConnectionSchema.vue'
 import { KeySeparator } from '../data/constants'
 import ConnectionHistory from './ConnectionHistory.vue'
 export default defineComponent({
@@ -55,6 +73,8 @@ export default defineComponent({
   components: {
     ConnectionTable,
     ConnectionHistory,
+    ConnectionDatabase,
+    ConnectionSchema,
   },
   computed: {
     selectedType() {
@@ -63,7 +83,7 @@ export default defineComponent({
       } else if (this.separatorCount === 2) {
         return 'database'
       } else if (this.separatorCount === 3) {
-        return 'table'
+        return 'schema'
       } else if (this.separatorCount === 4) {
         return 'table'
       }
@@ -76,10 +96,10 @@ export default defineComponent({
       return this.activeConnectionKey.split(KeySeparator).slice(1)
     },
     selectedTable() {
-      if (this.separatorCount === 4) {
-        return this.activeConnectionKey.split(KeySeparator)[3]
-      }
-      return this.activeConnectionKey.split(KeySeparator)[2] // For cases where it's a database
+      return this.activeConnectionKey.split(KeySeparator)[3]
+    },
+    selectedSchema() {
+      return this.activeConnectionKey.split(KeySeparator)[2]
     },
     selectedConnection() {
       return this.activeConnectionKey.split(KeySeparator)[0]
@@ -87,9 +107,20 @@ export default defineComponent({
     selectedDatabase() {
       return this.activeConnectionKey.split(KeySeparator)[1]
     },
+    selectedDatabaseDetails() {
+      return this.connectionStore.connections[this.selectedConnection]?.databases?.find(
+        (db) => db.name === this.selectedDatabase,
+      )
+    },
+    selectedSchemaDetails() {
+      return this.selectedDatabaseDetails?.schemas?.find(
+        (schema) => schema.name === this.selectedSchema,
+      )
+    },
     selectedTableDetails() {
       return this.connectionStore.connections[this.selectedConnection].getLocalTable(
         this.selectedDatabase,
+        this.selectedSchema,
         this.selectedTable,
       )
     },

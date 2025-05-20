@@ -196,7 +196,7 @@ function typeToFormatter(col: ResultColumn) {
       }
     case ColumnType.TIMESTAMP:
       return {
-        formatter: 'plaintext',
+        formatter: 'datetime',
         formatterParams: {
           outputFormat: 'yyyy-MM-dd HH:mm:ss Z',
           invalidPlaceholder: '(invalid timestamp)',
@@ -214,6 +214,16 @@ function typeToFormatter(col: ResultColumn) {
         },
       }
     case ColumnType.TIME:
+      return {
+        formatter: 'datetime',
+        formatterParams: {
+          inputFormat: 'HH:mm:ss',
+          outputFormat: 'HH:mm',
+          invalidPlaceholder: '(invalid time)',
+          timezone: tz,
+        },
+      }
+    case ColumnType.TIMESTAMP:
       return {
         formatter: 'datetime',
         formatterParams: {

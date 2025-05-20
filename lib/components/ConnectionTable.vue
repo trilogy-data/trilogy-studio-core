@@ -1,4 +1,3 @@
-// TableViewer.vue
 <template>
   <div class="table-viewer">
     <div class="table-header">
@@ -169,17 +168,15 @@ export default defineComponent({
       error.value = null
 
       try {
-        // This assumes your connection store has a method to execute queries
-        // Adjust according to your actual implementation
         if (!connectionStore) {
           throw new Error('Connection store not found')
         }
 
         const result = await connectionStore.connections[props.connectionName].getTableSample(
-          props.database,
+          props.table.database,
+          props.table.schema,
           props.table.name,
           50,
-          props.table.schema,
         )
 
         sampleData.value[props.table.name] = result || new Results(new Map(), [])

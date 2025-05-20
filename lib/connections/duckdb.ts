@@ -1,6 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm'
 import BaseConnection from './base'
-import { Database, Table, Column, AssetType } from './base'
+import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
@@ -248,17 +248,36 @@ export default class DuckDBConnection extends BaseConnection {
     })
   }
 
-  async getTables(database: string): Promise<Table[]> {
-    return await this.connection.query('SELECT * FROM information_schema.tables').then((result) => {
-      return this.mapShowTablesResult(
-        result.toArray().map((row) => row.toJSON()),
-        database,
-      )
-    })
+  async getSchemas(database: string): Promise<Schema[]> {
+    return await this.connection
+      .query('SELECT * FROM information_schema.schemata')
+      .then((result) => {
+        return this.mapShowSchemaResult(
+          result.toArray().map((row) => row.toJSON()),
+          database,
+        )
+      })
   }
 
-  async getColumns(database: string, table: string): Promise<Column[]> {
-    return await this.connection.query(`DESCRIBE ${database}.${table}`).then((result) => {
+  async getTables(database: string, schema: string): Promise<Table[]> {
+    console.log(
+      `SELECT * FROM information_schema.tables where table_catalog='${database}' and table_schema='${schema}'`,
+    )
+    return await this.connection
+      .query(
+        `SELECT * FROM information_schema.tables where table_catalog='${database}' and table_schema='${schema}'`,
+      )
+      .then((result) => {
+        return this.mapShowTablesResult(
+          result.toArray().map((row) => row.toJSON()),
+          database,
+          schema,
+        )
+      })
+  }
+
+  async getColumns(database: string, schema: string, table: string): Promise<Column[]> {
+    return await this.connection.query(`DESCRIBE ${database}.${schema}.${table}`).then((result) => {
       return this.mapDescribeResult(result.toArray().map((row) => row.toJSON()))
     })
   }
@@ -284,28 +303,33 @@ export default class DuckDBConnection extends BaseConnection {
       )
     })
   }
-
-  mapShowTablesResult(showTablesResult: any[], database: string): Table[] {
-    let columns: Column[] = []
-
-    //desc.TABLE_COMMENT, desc.table_type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE)
-    return showTablesResult
-      .filter((row) => row.table_catalog === database)
+  mapShowSchemaResult(showSchemaResult: any[], database: string): Schema[] {
+    let tables: Table[] = []
+    return showSchemaResult
+      .filter((row) => row.catalog_name === database)
       .map((row) => {
-        return new Table(
-          row.table_name,
-          columns,
-          row.TABLE_COMMENT,
-          row.table_type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE,
-        )
+        return new Schema(row.schema_name, tables, database)
       })
+  }
+  mapShowTablesResult(showTablesResult: any[], database: string, schema: string): Table[] {
+    let columns: Column[] = []
+    return showTablesResult.map((row) => {
+      return new Table(
+        row.table_name,
+        schema,
+        database,
+        columns,
+        row.TABLE_COMMENT,
+        row.table_type === 'VIEW' ? AssetType.VIEW : AssetType.TABLE,
+      )
+    })
   }
 
   mapShowDatabasesResult(showDatabaseResult: any[]): Database[] {
     // Convert map to Database[] array
-    let tables: Table[] = []
+    let schemas: Schema[] = []
     return showDatabaseResult.map((row) => {
-      return new Database(row.database_name, tables)
+      return new Database(row.database_name, schemas)
     })
   }
 }

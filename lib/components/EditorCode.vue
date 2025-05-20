@@ -169,6 +169,7 @@ export default defineComponent({
         autoClosingQuotes: 'always',
         acceptSuggestionOnEnter: 'off',
         tabCompletion: 'on',
+        wordWrap: 'on',
       })
 
       // Set theme

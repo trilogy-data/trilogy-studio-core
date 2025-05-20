@@ -44,7 +44,9 @@ userSettingsStore.loadSettings()
 
 console.log(import.meta.env.DEV)
 if (import.meta.env.DEV) {
-  console.log('Running in development mode, defaulting to local resolver and telemetry off')
+  console.log(
+    'Running in development mode, defaults are local resolver and telemetry off (unless otherwise set)',
+  )
   defaultResolver = 'http://127.0.0.1:5678'
   // default telemetry to off for local
   if (userSettingsStore.settings.telemetryEnabled === null) {

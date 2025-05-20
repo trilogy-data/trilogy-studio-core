@@ -16,6 +16,7 @@ export class Column {
   unique: boolean
   default: string | null
   autoincrement: boolean
+  description: string | null = null
 
   constructor(
     name: string,
@@ -26,6 +27,7 @@ export class Column {
     unique: boolean,
     default_: string | null,
     autoincrement: boolean,
+    description: string | null = null,
   ) {
     this.name = name
     this.type = type
@@ -35,24 +37,24 @@ export class Column {
     this.unique = unique
     this.default = default_
     this.autoincrement = autoincrement
+    this.description = description
   }
 }
 export class Table {
   name: string
+  schema: string
+  database: string
   columns: Column[]
   description: string | null = null
   assetType: AssetType = AssetType.TABLE
-  schema: string | null = null
-  database: string | null = null
 
   constructor(
     name: string,
+    schema: string,
+    database: string,
     columns: Column[],
     description: string | null = null,
     assetType: AssetType = AssetType.TABLE,
-    // Optional parameters for schema and database
-    schema: string | null = null, // e.g., 'public' for PostgreSQL
-    database: string | null = null, // e.g., 'my_database' for SQL databases
   ) {
     this.name = name
     this.columns = columns
@@ -63,12 +65,25 @@ export class Table {
   }
 }
 
-export class Database {
+export class Schema {
   name: string
   tables: Table[]
-  constructor(name: string, tables: Table[]) {
+  database: string
+  description: string | null = null
+
+  constructor(name: string, tables: Table[], database: string, description: string | null = null) {
     this.name = name
     this.tables = tables
+    this.database = database
+    this.description = description
+  }
+}
+export class Database {
+  name: string
+  schemas: Schema[]
+  constructor(name: string, schemas: Schema[]) {
+    this.name = name
+    this.schemas = schemas
   }
 }
 
@@ -123,8 +138,9 @@ export default abstract class BaseConnection {
   }
 
   abstract getDatabases(): Promise<Database[]>
-  abstract getTables(database: string): Promise<Table[]>
-  abstract getColumns(database: string, table: string, schema: string | null): Promise<Column[]>
+  abstract getSchemas(database: string): Promise<Schema[]>
+  abstract getTables(database: string, schema: string | null): Promise<Table[]>
+  abstract getColumns(database: string, schema: string, table: string): Promise<Column[]>
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
   getSecret(): string | null {
@@ -149,37 +165,55 @@ export default abstract class BaseConnection {
   async refreshDatabase(database: string): Promise<Database | null> {
     let db = this.databases?.find((db) => db.name === database)
 
-    let tables = await this.getTables(database)
+    let schemas = await this.getSchemas(database)
     if (db) {
-      db.tables = tables
+      db.schemas = schemas
       return db
+    }
+    return null
+  }
+
+  async refreshSchema(database: string, schema: string): Promise<Schema | null> {
+    let db = this.databases?.find((db) => db.name === database)
+    if (!db) {
+      db = new Database(database, [])
+      this.databases?.push(db)
+    }
+    let schemas = await this.getSchemas(database)
+    let schemaObj = schemas.find((s) => s.name === schema)
+    if (!schemaObj) {
+      schemaObj = new Schema(schema, [], database)
+      schemas.push(schemaObj)
+    }
+    let tables = await this.getTables(database, schema)
+    if (db) {
+      db.schemas = schemas
+      schemaObj.tables = tables.filter((t) => t.schema === schema)
+      return schemaObj
     }
     return null
   }
 
   async getTableSample(
     database: string,
+    schema: string,
     table: string,
     limit: number = 100,
-    schema: string | null = null,
   ): Promise<Results> {
-    let sql = `SELECT * FROM ${database}.${table} LIMIT ${limit}`
-    if (schema) {
-      sql = `SELECT * FROM ${database}.${schema}.${table} LIMIT ${limit}`
-    }
+    let sql = `SELECT * FROM ${database}.${schema}.${table} LIMIT ${limit}`
 
     return this.query(sql)
   }
 
-  getLocalTable(database: string, table: string) {
+  getLocalTable(database: string, schema: string, table: string): Table | null {
     if (!this.databases) {
       return null
     }
     const db = this.databases.find((d) => d.name === database)
-    if (!db) {
+    if (!db || !db.schemas) {
       return null
     }
-    return db.tables.find((t) => t.name === table)
+    return db.schemas.find((t) => t.name === schema)?.tables.find((t) => t.name === table) || null
   }
 
   async query(
