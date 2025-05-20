@@ -13,12 +13,12 @@ To get an overview of the project, read the README.md file. Here are some resour
 
 ## Getting started
 
-To navigate our codebase with confidence, familiarize yourself with:
+To navigate our codebase with confidence, it's helpful to read up on these:
 - Vue.js (for frontend development)
 - Vega/Altair (for visualization)
 - Tabulator (for data tables)
-- Lark (for parsing in the backend)
 - FastAPI (for the language server)
+- PyTrilogy (for language parsing)
 
 ### Issues
 
@@ -43,11 +43,11 @@ Scan through our existing issues to find one that interests you. You can narrow 
      - Fork the repo so that you can make your changes without affecting the original project until you're ready to merge them.
 
 2. Set up the development environment:
-   - Install or update to the required Node.js version
+   - Configure your preferred Node and Python environments. We recommend a virtual env with Python 3.12+ and Node 22+
    - Run `npm install` in the root directory
    - Run `pip install -r requirements.txt` in the pyserver subfolder
 
-3. Create a working branch and start with your changes!
+3. Create a working branch and start with your changes! Run npm run local to spin up the backend and dev server.
 
 ### Commit your update
 
@@ -86,7 +86,8 @@ The language server is built with FastAPI and lightly wraps [pytrilogy](github.c
 ### Testing
 Run the test suite before submitting your PR:
 ```
-npm run test
+npm run test 
+npm run test-playwright:ui
 ```
 
 For the Python backend:
