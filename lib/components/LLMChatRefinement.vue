@@ -241,17 +241,14 @@ export default defineComponent({
       isLoading.value = true
       scrollToBottom()
       try {
-        let response = await llmStore.generateValidatedCompletion(
+        await llmStore.generateValidatedCompletion(
           userPrompt,
           props.validateFn,
           3,
           llmStore.activeConnection,
           messages.value,
+          false // don't add user message again
         )
-        messages.value.push({
-          role: 'assistant',
-          content: response.message,
-        })
       } catch (error) {
         // Handle errors
         messages.value.push({

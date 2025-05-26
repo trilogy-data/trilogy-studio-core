@@ -116,17 +116,52 @@
         />
       </form>
     </div>
-    <div v-else-if="item.type === 'snowflake-private-key'" class="md-token-container" @click.stop>
-      <form @submit.prevent="updateSnowflakePrivateKey(item.connection, privateKey)">
-        <button type="submit" class="customize-button">Update Private Key</button>
-        <input
-          type="password"
-          v-model="privateKey"
-          placeholder="privateKey"
-          class="connection-customize"
-        />
-      </form>
-    </div>
+<div v-else-if="item.type === 'snowflake-private-key'" class="bq-project-container" @click.stop>
+  <label class="input-label">Private Key</label>
+  <span>
+    <transition name="fade">
+      <i v-if="showPrivateKeySuccess" class="mdi mdi-check-circle success-icon"></i>
+    </transition>
+    <input
+      type="password"
+      v-model="snowflakePrivateKey"
+      placeholder="Private Key"
+      class="bq-project-input"
+      @input="debouncedUpdateSnowflakePrivateKey"
+    />
+  </span>
+</div>
+<div v-else-if="item.type === 'snowflake-account'" class="bq-project-container" @click.stop>
+  <label class="input-label">Account</label>
+  <span>
+    <transition name="fade">
+      <i v-if="showAccountSuccess" class="mdi mdi-check-circle success-icon"></i>
+    </transition>
+    <input
+      type="text"
+      v-model="snowflakeAccount"
+      placeholder="Account"
+      class="bq-project-input"
+      @input="debouncedUpdateSnowflakeAccount"
+    />
+  </span>
+</div>
+
+<div v-else-if="item.type === 'snowflake-username'" class="bq-project-container" @click.stop>
+  <label class="input-label">Username</label>
+  <span>
+    <transition name="fade">
+      <i v-if="showUsernameSuccess" class="mdi mdi-check-circle success-icon"></i>
+    </transition>
+    <input
+      type="text"
+      v-model="snowflakeUsername"
+      placeholder="Username"
+      class="bq-project-input"
+      @input="debouncedUpdateSnowflakeUsername"
+    />
+  </span>
+</div>
     <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
       <label class="save-credential-toggle">
         <input
@@ -257,11 +292,12 @@ const emit = defineEmits<{
   (e: 'updateBigqueryProject', connection: BigQueryOauthConnection, project: string): void
   (e: 'updateBigqueryBrowsingProject', connection: BigQueryOauthConnection, project: string): void
   (e: 'updateSnowflakePrivateKey', connection: SnowflakeJwtConnection, token: string): void
+  (e: 'updateSnowflakeAccount', connection: SnowflakeJwtConnection, account: string): void
+  (e: 'updateSnowflakeUsername', connection: SnowflakeJwtConnection, username: string): void
   (e: 'updateMotherDuckToken', connection: MotherDuckConnection, token: string): void
   (e: 'toggleSaveCredential', connection: any): void
   (e: 'toggleMobileMenu'): void
 }>()
-
 // Computed properties for rendering logic
 const isExpandable = computed(() => ['connection', 'database', 'schema'].includes(props.item.type))
 
@@ -304,14 +340,21 @@ const bigqueryBrowsingProject = ref<string>(
   props.item.connection.browsingProjectId ? props.item.connection.browsingProjectId : '',
 )
 const mdToken = ref<string>(props.item.connection.mdToken ? props.item.connection.mdToken : '')
-const privateKey = ref<string>(
+const snowflakePrivateKey = ref<string>(
   props.item.connection?.config?.privateKey ? props.item.connection.config.privateKey : '',
 )
-
+const snowflakeAccount = ref<string>(
+  props.item.connection?.config?.account ? props.item.connection.config.account : '',
+)
+const snowflakeUsername = ref<string>(
+  props.item.connection?.config?.username ? props.item.connection.config.username : '',
+)
 // Success indicator states
 const showBillingSuccess = ref<boolean>(false)
 const showBrowsingSuccess = ref<boolean>(false)
-
+const showPrivateKeySuccess = ref<boolean>(false)
+const showAccountSuccess = ref<boolean>(false)
+const showUsernameSuccess = ref<boolean>(false)
 // Function to show and hide success indicator
 const showSuccessIndicator = (indicator: Ref<boolean>) => {
   indicator.value = true
@@ -339,16 +382,29 @@ const updateBigqueryBrowsingProjectInternal = () => {
   emit('updateBigqueryBrowsingProject', props.item.connection, bigqueryBrowsingProject.value)
   showSuccessIndicator(showBrowsingSuccess)
 }
+const updateSnowflakePrivateKeyInternal = () => {
+  emit('updateSnowflakePrivateKey', props.item.connection, snowflakePrivateKey.value)
+  showSuccessIndicator(showPrivateKeySuccess)
+}
+
+const updateSnowflakeAccountInternal = () => {
+  emit('updateSnowflakeAccount', props.item.connection, snowflakeAccount.value)
+  showSuccessIndicator(showAccountSuccess)
+}
+
+const updateSnowflakeUsernameInternal = () => {
+  emit('updateSnowflakeUsername', props.item.connection, snowflakeUsername.value)
+  showSuccessIndicator(showUsernameSuccess)
+}
 
 const debouncedUpdateBigqueryProject = debounce(updateBigqueryProjectInternal, 500)
 const debouncedUpdateBigqueryBrowsingProject = debounce(updateBigqueryBrowsingProjectInternal, 500)
+const debouncedUpdateSnowflakePrivateKey = debounce(updateSnowflakePrivateKeyInternal, 500)
+const debouncedUpdateSnowflakeAccount = debounce(updateSnowflakeAccountInternal, 500)
+const debouncedUpdateSnowflakeUsername = debounce(updateSnowflakeUsernameInternal, 500)
 
 const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
   emit('updateMotherDuckToken', connection, token)
-}
-
-const updateSnowflakePrivateKey = (connection: SnowflakeJwtConnection, key: string) => {
-  emit('updateSnowflakePrivateKey', connection, key)
 }
 
 const toggleSaveCredential = (connection: any) => {

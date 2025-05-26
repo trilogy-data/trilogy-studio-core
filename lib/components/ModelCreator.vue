@@ -32,7 +32,8 @@
             <option value="new-duckdb">New DuckDB</option>
             <option value="new-motherduck">New MotherDuck</option>
             <option value="new-bigquery-oauth">New Bigquery Oauth</option>
-            <option value="new-bigquery">New Bigquery Oauth</option>
+            <option value="new-snowflake">New Snowflake</option>
+            <!-- <option value="new-bigquery">New Bigquery Oauth</option> -->
           </select>
         </div>
         <div v-if="modelDetails.connection === 'new-motherduck'" class="form-row">

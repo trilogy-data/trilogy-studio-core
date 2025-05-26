@@ -50,6 +50,8 @@
       @updateBigqueryProject="updateBigqueryProject"
       @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
       @update-snowflake-private-key="updateSnowflakePrivateKey"
+      @update-snowflake-account="updateSnowflakeAccount"
+      @update-snowflake-username="updateSnowflakeUsername"
       @toggle-save-credential="toggleSaveCredential"
       @toggle-mobile-menu="toggleMobileMenu"
       :delete-connection="deleteConnection"
@@ -142,6 +144,23 @@ export default {
         connection.setPrivateKey(token)
         await saveConnections()
         await connectionStore.resetConnection(connection.name)
+      }
+    }
+
+    const updateSnowflakeAccount = async (connection: SnowflakeJwtConnection, account: string) => {
+      if (connection.type === 'snowflake') {
+        connection.config.account = account
+        console.log(connection.config)
+        await saveConnections()
+        connectionStore.resetConnection(connection.name)
+      }
+    }
+
+    const updateSnowflakeUsername = async (connection: SnowflakeJwtConnection, username: string) => {
+      if (connection.type === 'snowflake') {
+        connection.config.username = username
+        await saveConnections()
+        connectionStore.resetConnection(connection.name)
       }
     }
 
@@ -345,6 +364,8 @@ export default {
       connectionModelVisible,
       updateMotherDuckToken,
       updateSnowflakePrivateKey,
+      updateSnowflakeAccount,
+      updateSnowflakeUsername,
       toggleSaveCredential,
       motherduckIcon,
       updateBigqueryProject,

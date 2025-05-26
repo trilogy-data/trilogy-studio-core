@@ -1,14 +1,7 @@
 <template>
-  <CredentialManager
-    :showPrompt="showCredentialPrompt"
-    :bypassMode="bypassMode"
-    :error="credentialError"
-    :storedCredentialLabels="storedCredentialLabels"
-    @submit-keyphrase="handleKeyphraseSubmit"
-    @show-bypass-warning="showBypassWarning"
-    @confirm-bypass="confirmBypass"
-    @cancel-bypass="cancelBypass"
-  />
+  <CredentialManager :showPrompt="showCredentialPrompt" :bypassMode="bypassMode" :error="credentialError"
+    :storedCredentialLabels="storedCredentialLabels" @submit-keyphrase="handleKeyphraseSubmit"
+    @show-bypass-warning="showBypassWarning" @confirm-bypass="confirmBypass" @cancel-bypass="cancelBypass" />
   <template v-if="loaded">
     <IDE v-if="!isMobile" />
     <MobileIDE v-else />
@@ -28,7 +21,7 @@ import useScreenNavigation from './useScreenNavigation'
 // Import credential manager
 import { CredentialManager as CredentialService } from '../data/credentialService'
 // Import credential constants or define them here
-import { CREDENTIAL_PREFIX as credentialPrefix } from '../data/credentialHelpers'
+import { CREDENTIAL_PREFIX as credentialPrefix, type CredentialType } from '../data/credentialHelpers'
 import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
 import { provide, computed, ref } from 'vue'
@@ -109,10 +102,14 @@ export default {
     }
 
     // Check for credentials and update stored labels
-    const checkForCredentials = async () => {
+    const checkForCredentials = async (label: string | null = null) => {
       try {
         const credentials = await credentialService.listCredentials()
         storedCredentialLabels.value = credentials.map((cred) => cred.label)
+        if (label) {
+          // If a specific label is provided, check if it exists
+          return storedCredentialLabels.value.includes(label)
+        }
         return credentials.length > 0
       } catch (err) {
         console.error('Error checking for credentials:', err)
@@ -212,6 +209,21 @@ export default {
 
     const cancelBypass = () => {
       bypassMode.value = false
+    }
+
+    const storeCredentials = async (credentials: Array<{ label: string; type: CredentialType; value: string }>) => {
+      if (!activeKeyphrase.value && !skipKeyPhrase.value) {
+        throw new Error('No keyphrase set for storing credentials')
+      }
+
+      try {
+        const result = await credentialService.storeCredentials(credentials, activeKeyphrase.value || '')
+        await checkForCredentials() // Refresh the list
+        return !!result
+      } catch (error) {
+        console.error('Error saving credentials:', error)
+        return false
+      }
     }
 
     const storeCredential = async (
@@ -413,20 +425,31 @@ export default {
       }
 
       // Then save credentials for each connection if they have a secret
-      const savePromises = Object.values(props.connectionStore.connections).map(
-        async (connection) => {
+      //map this 
+      const credentialsToSave = await Promise.all(
+        Object.values(props.connectionStore.connections).map(async (connection) => {
           if (connection.getSecret() && connection.saveCredential) {
-            // Store the API key in the credential manager
-            let secret = connection.getSecret()
+            const secret = connection.getSecret();
             if (secret) {
-              return await storeCredential(connection.getSecretName(), 'connection', secret)
+              return {
+                label: connection.getSecretName(),
+                type: 'connection' as CredentialType,
+                value: secret
+              };
             }
           }
-          console.log('Connections saved')
-          return true
-        },
-      )
-      await Promise.all(savePromises)
+          return null;
+        })
+      );
+
+      // Filter out null values (connections without secrets)
+      const validCredentials = credentialsToSave.filter(credential => credential !== null);
+
+      // Save all credentials at once
+      if (validCredentials.length > 0) {
+        await storeCredentials(validCredentials);
+        console.log('Connections saved');
+      }
     }
     const saveModels = async () => {
       for (let source of props.storageSources) {
