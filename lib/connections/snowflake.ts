@@ -313,8 +313,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
       return ColumnType.STRUCT
     } else if (typeName.includes('VARIANT') || typeName.includes('JSON')) {
       return ColumnType.STRUCT // Treat VARIANT/JSON as STRUCT for flexibility
-    }
-    else {
+    } else {
       console.log('Unknown Snowflake type:', typeName)
       return ColumnType.UNKNOWN
     }

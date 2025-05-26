@@ -380,8 +380,7 @@ const createTableDatasource = (connection: Connection, datasource: Table) => {
   let address = datasource.name
   if (connection.type === 'bigquery-oauth') {
     address = `\`${datasource.database}.${datasource.schema}.${datasource.name}\``
-  }
-  else if (connection.type == 'snowflake') {
+  } else if (connection.type == 'snowflake') {
     address = `${datasource.database}.${datasource.schema}.${datasource.name}`
   }
   return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${address};`
