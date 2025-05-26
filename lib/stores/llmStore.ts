@@ -152,6 +152,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       maxAttempts = 3,
       modelOverride: string | null = null,
       messageHistory: LLMMessage[] | null = null,
+      addUserMessage: boolean = true
     ): Promise<ValidatedResponse> {
       let connection: string = modelOverride || this.activeConnection || ''
       let history = messageHistory || []
@@ -172,10 +173,12 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         messageHistory,
       )
       // add input to our history
-      history.push({
-        role: 'user',
-        content: base,
-      })
+      if (addUserMessage) {
+        history.push({
+          role: 'user',
+          content: base,
+        })
+      }
 
       // Add the response message to the history
       history.push({

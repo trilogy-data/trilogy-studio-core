@@ -62,7 +62,7 @@ interface SnowflakeQueryResult {
 
 // Base Snowflake connection class
 export abstract class SnowflakeConnectionBase extends BaseConnection {
-  protected baseUrl: string
+  config: SnowflakeConfigBase
   protected pollingInterval: number = 500 // ms
 
   constructor(
@@ -74,12 +74,22 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
   ) {
     super(name, type, false, model, saveCredential)
     this.query_type = 'snowflake'
-    this.baseUrl = `https://${account}.snowflakecomputing.com`
+    this.config = {
+      account: account,
+      username: '',
+      warehouse: '',
+      role: '',
+    }
   }
 
   // Abstract methods to be implemented by subclasses
   abstract connect(): Promise<boolean>
   protected abstract getAuthHeaders(): Record<string, string>
+
+  baseURL(): string {
+    // Return the base URL for the Snowflake API
+    return `https://${this.config.account}.snowflakecomputing.com`
+  }
 
   objectToType(obj: any) {
     // Determine the type of the object for mapping to ColumnType
@@ -288,6 +298,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     ) {
       return ColumnType.STRING
     } else if (
+      typeName.includes('NUMBER') ||
       typeName.includes('INT') ||
       (typeName === 'NUMBER' && (!snowflakeType.scale || snowflakeType.scale === 0))
     ) {
@@ -310,6 +321,8 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
       return ColumnType.ARRAY
     } else if (typeName == 'OBJECT') {
       return ColumnType.STRUCT
+    } else if (typeName.includes('VARIANT') || typeName.includes('JSON')) {
+      return ColumnType.STRUCT // Treat VARIANT/JSON as STRUCT for flexibility
     } else {
       console.log('Unknown Snowflake type:', typeName)
       return ColumnType.UNKNOWN
@@ -376,17 +389,18 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
       results.data.forEach((row: any) => {
-        let type = row.kind || row['kind']
+        console.log('Row:', row)
+        let type = row.type
         columns.push(
           new Column(
-            row.name || row['name'],
-            row.kind || row['kind'],
+            row.name,
+            row.type,
             type ? this.mapSnowflakeTypeToColumnType({ type: type }) : ColumnType.UNKNOWN,
-            (row.null || row['null']) === 'Y',
-            (row.primary_key || row['primary_key']) === 'Y',
-            (row.unique_key || row['unique_key']) === 'Y',
-            row.default || row['default'],
-            (row.autoincrement || row['autoincrement']) === 'Y',
+            row.null === 'Y',
+            row.primary_key === 'Y',
+            row.unique_key === 'Y',
+            row.default,
+            row.autoincrement === 'Y',
           ),
         )
       })
@@ -403,7 +417,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
 
 // JWT-based Connection (v2 API)
 export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
-  private config: SnowflakeJwtConfig
+  config: SnowflakeJwtConfig
   private auth: SnowflakeJwtAuth = {}
 
   // Singleton cache for JWT auth tokens
@@ -483,6 +497,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
   getSecret(): string | null {
     return this.config.privateKey
   }
+  
   setSecret(secret: string): void {
     this.config.privateKey = secret
   }
@@ -595,7 +610,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
   protected async fetchQueryResults(statementHandle: string): Promise<SnowflakeQueryResult> {
     // Fetch the results of the query using the statement handle
-    const response = await fetch(`${this.baseUrl}/api/v2/statements/${statementHandle}`, {
+    const response = await fetch(`${this.baseURL()}/api/v2/statements/${statementHandle}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -610,7 +625,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
   protected async executeQuery(sql: string): Promise<any> {
     // Submit the SQL statement (v2 API)
-    const submitResponse = await fetch(`${this.baseUrl}/api/v2/statements/`, {
+    const submitResponse = await fetch(`${this.baseURL()}/api/v2/statements/`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({
@@ -649,7 +664,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
       pollCount++
       lastTimePolled = Date.now()
       try {
-        const statusResponse = await fetch(`${this.baseUrl}/api/v2/statements/${statementHandle}`, {
+        const statusResponse = await fetch(`${this.baseURL()}/api/v2/statements/${statementHandle}`, {
           method: 'GET',
           headers: this.getAuthHeaders(),
         })

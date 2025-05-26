@@ -102,6 +102,24 @@ export function buildConnectionTree(
       }
       if (connection.type === 'snowflake') {
         list.push({
+          id: `${connection.name}-account`,
+          name: 'Account',
+          indent: 1,
+          count: 0,
+          type: 'snowflake-account',
+          searchPath: connection.name,
+          connection,
+        })
+        list.push({
+          id: `${connection.name}-username`,
+          name: 'Username',
+          indent: 1,
+          count: 0,
+          type: 'snowflake-username',
+          searchPath: connection.name,
+          connection,
+        })
+        list.push({
           id: `${connection.name}-private-key`,
           name: 'Private Key',
           indent: 1,

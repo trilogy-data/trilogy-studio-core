@@ -3,9 +3,9 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 
-const temporalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
+const temporalTraits = ['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'day_of_week']
 
-const categoricalTraits = ['year', 'month', 'day', 'hour', 'minute', 'second']
+const categoricalTraits = [...temporalTraits]
 
 export function convertTimestampToISODate(timestamp: number): Date {
   const date = new Date(timestamp)
