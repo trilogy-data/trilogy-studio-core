@@ -288,6 +288,7 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     ) {
       return ColumnType.STRING
     } else if (
+      typeName.includes('NUMBER') ||
       typeName.includes('INT') ||
       (typeName === 'NUMBER' && (!snowflakeType.scale || snowflakeType.scale === 0))
     ) {
@@ -310,7 +311,10 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
       return ColumnType.ARRAY
     } else if (typeName == 'OBJECT') {
       return ColumnType.STRUCT
-    } else {
+    } else if (typeName.includes('VARIANT') || typeName.includes('JSON')) {
+      return ColumnType.STRUCT // Treat VARIANT/JSON as STRUCT for flexibility
+    }
+    else {
       console.log('Unknown Snowflake type:', typeName)
       return ColumnType.UNKNOWN
     }
@@ -376,17 +380,18 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     return this.query_core(sql).then((results) => {
       const columns: Column[] = []
       results.data.forEach((row: any) => {
-        let type = row.kind || row['kind']
+        console.log('Row:', row)
+        let type = row.type
         columns.push(
           new Column(
-            row.name || row['name'],
-            row.kind || row['kind'],
+            row.name,
+            row.type,
             type ? this.mapSnowflakeTypeToColumnType({ type: type }) : ColumnType.UNKNOWN,
-            (row.null || row['null']) === 'Y',
-            (row.primary_key || row['primary_key']) === 'Y',
-            (row.unique_key || row['unique_key']) === 'Y',
-            row.default || row['default'],
-            (row.autoincrement || row['autoincrement']) === 'Y',
+            row.null === 'Y',
+            row.primary_key === 'Y',
+            row.unique_key === 'Y',
+            row.default,
+            row.autoincrement === 'Y',
           ),
         )
       })

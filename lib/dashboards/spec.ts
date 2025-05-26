@@ -547,12 +547,7 @@ const createPointChartSpec = (
     mark: { type: 'point', filled: true },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: {
-        field: config.yField,
-        type: getVegaFieldType(config.yField || '', columns),
-        title: columns.get(config.yField || '')?.description || config.yField,
-        ...getFormatHint(config.yField || '', columns),
-      },
+      y: createFieldEncoding(config.yField || '', columns),
       tooltip: tooltipFields,
       ...encoding,
     },
