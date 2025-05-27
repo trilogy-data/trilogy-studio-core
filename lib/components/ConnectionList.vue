@@ -156,7 +156,10 @@ export default {
       }
     }
 
-    const updateSnowflakeUsername = async (connection: SnowflakeJwtConnection, username: string) => {
+    const updateSnowflakeUsername = async (
+      connection: SnowflakeJwtConnection,
+      username: string,
+    ) => {
       if (connection.type === 'snowflake') {
         connection.config.username = username
         await saveConnections()
