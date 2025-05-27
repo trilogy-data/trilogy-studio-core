@@ -19,7 +19,7 @@
           <p>We're glad you're back!</p>
         </template>
         <div class="buttons">
-          <button @click="startDemo()" class="btn btn-secondary">
+          <button @click="startDemo()" class="btn btn-secondary" data-testid="demo-editor-button">
             <span v-if="demoLoading">Loading <span class="spinner"></span></span
             ><span v-else>Demo Editor</span>
           </button>
@@ -27,7 +27,7 @@
             New Editor
           </button>
 
-          <button @click="tutorial()" class="btn btn-tertiary">Docs/Tutorial</button>
+          <button @click="tutorial()" class="btn btn-tertiary" data-testid="tutorial-button">Docs/Tutorial</button>
         </div>
       </template>
       <div v-else>

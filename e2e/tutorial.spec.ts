@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('test', async ({ page, isMobile }) => {
   await page.goto('http://localhost:5173/trilogy-studio-core/')
-  await page.getByRole('button', { name: 'Docs and Tutorial' }).click()
+  await page.getByTestId('tutorial-button').click()
   await page.getByTestId('community-model-search').click()
   await page.getByRole('textbox', { name: 'Search by model name...' }).fill('demo-model')
   await page.getByRole('button', { name: 'Import' }).click()

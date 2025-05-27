@@ -157,7 +157,19 @@ address tbl_stores;
         'Explore the rest of the reference documentation for more details on how Trilogy works and explore these concepts in more detail.',
       ),
     ]),
-
+    new Article('Code', [
+          new Paragraph(
+        'How Trilogy Works',
+        `Studio and dependent code is open-source under the MIT license. The code is available on GitHub at the following locations:
+        <li><a href='https://github.com/trilogy-data/trilogy-studio-core' target='_blank'>trilogy-studio-core</a> - the core code for the studio, including the language server and query editor.</li>
+        <li><a href='https://github.com/trilogy-data/pytrilogy' target='_blank'>pytrilogy</a> - reference implementation of Trilogy language parsing/execution.</li>`,
+      ),
+        new Paragraph(
+        'How Trilogy Works',
+        `Stars appreciated, contributions welcome! If you find a bug, please file an issue on the relevant repository.
+        `,
+      ),
+    ]),
     new Article('Querying Data', [
       new Paragraph(
         'SELECT Without FROM, JOIN, or GROUP BY',
@@ -499,7 +511,7 @@ complete_for_clause?
         'tip',
       ),
     ]),
-    new Article('Google Account Details', [
+    new Article('Google', [
       new Paragraph(
         'Google Account',
         'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery connection. Trilogy Studio uses a token provided by Google to authenticate your account through the interactive sign-in flow. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This token is only used to communicate directly with BigQuery with the standard google javascript client library.',
