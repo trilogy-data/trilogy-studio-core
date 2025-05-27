@@ -257,7 +257,6 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { KeySeparator, rsplit } from '../data/constants'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 import { Table } from '../connections'
