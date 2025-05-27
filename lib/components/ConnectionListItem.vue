@@ -323,7 +323,7 @@ const handleRefreshConnectionClick = () => {
 const handleRefreshDatabaseClick = () => {
   emit(
     'refresh',
-    rsplit(props.item.id, KeySeparator)[0],
+    props.item.id,
     props.item.connection?.name || '',
     'database',
   )
