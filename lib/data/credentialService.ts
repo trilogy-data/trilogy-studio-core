@@ -248,7 +248,6 @@ export class CredentialManager {
     }>,
     password: string | null = null,
   ) {
-
     try {
       if (this.useCredentialApi) {
         console.log('Storing multiple credentials using Credential Management API.')
@@ -260,7 +259,9 @@ export class CredentialManager {
         for (const credential of credentials) {
           const blobKey = this.getCredentialBlobKey(credential.label, credential.type)
           blob[blobKey] = credential.value
-          console.log(`Adding/updating credential '${credential.label}' (${credential.type}) in blob.`)
+          console.log(
+            `Adding/updating credential '${credential.label}' (${credential.type}) in blob.`,
+          )
         }
         // Store the updated blob
         const success = await this.storeCredentialBlob(blob)
@@ -282,14 +283,15 @@ export class CredentialManager {
           const encryptedData = await this.encryptValue(credential.value, password)
           const storePayload = JSON.stringify(encryptedData)
 
-          console.log(`Storing credential '${credential.label}' (${credential.type}) in localStorage.`)
+          console.log(
+            `Storing credential '${credential.label}' (${credential.type}) in localStorage.`,
+          )
           localStorage.setItem(storageKey, storePayload)
         }
         console.log('Stored multiple credentials in localStorage.')
         return true
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Error storing multiple credentials:', error)
       throw new CredentialError('Failed to store multiple credentials', error)
     }

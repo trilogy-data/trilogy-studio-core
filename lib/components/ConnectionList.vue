@@ -156,7 +156,10 @@ export default {
       }
     }
 
-    const updateSnowflakeUsername = async (connection: SnowflakeJwtConnection, username: string) => {
+    const updateSnowflakeUsername = async (
+      connection: SnowflakeJwtConnection,
+      username: string,
+    ) => {
       if (connection.type === 'snowflake') {
         connection.config.username = username
         await saveConnections()
@@ -193,6 +196,7 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
+      console.log('refreshing', id, connection, type)
       try {
         isLoading.value[id] = true
         if (!connectionStore.connections[connection]?.connected) {
@@ -210,7 +214,7 @@ export default {
         if (type === 'database') {
           console.log('getting schemas')
           let dbid = id.split(KeySeparator)[1]
-          connectionStore.connections[connection].refreshDatabase(dbid)
+          await connectionStore.connections[connection].refreshDatabase(dbid)
           // we don't expand tables in the sidebar anymore
           // for (let table of tables) {
           //   collapsed.value[`${connection}${KeySeparator}${dbid}${KeySeparator}${table.name}`] =
@@ -275,6 +279,7 @@ export default {
         collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
         let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
+
         if (db && db.schemas?.length === 0) {
           await refreshId(id, connection, type)
         }

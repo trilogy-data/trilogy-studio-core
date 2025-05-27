@@ -173,7 +173,7 @@ export function buildConnectionTree(
         })
       }
       databases.forEach((db) => {
-        let dbId = `${connection.name}${KeySeparator}${db.name}`
+        const dbId = `${connection.name}${KeySeparator}${db.name}`
         list.push({
           id: dbId,
           name: db.name,
@@ -185,18 +185,9 @@ export function buildConnectionTree(
         })
 
         if (!collapsed[dbId]) {
-          // list.push({
-          //   id: `${dbId}${KeySeparator}refresh`,
-          //   name: 'Refresh Schemas',
-          //   indent: 1,
-          //   count: 0,
-          //   type: 'refresh-database',
-          //   searchPath: `${db.name}`,
-          //   connection,
-          // })
           if (isLoading[dbId]) {
             list.push({
-              id: `${connection.name}-loading`,
+              id: `${dbId}-loading`,
               name: 'Loading...',
               indent: 1,
               count: 0,
@@ -221,15 +212,6 @@ export function buildConnectionTree(
 
             // If this schema is not collapsed, add all its tables
             if (!collapsed[schemaId]) {
-              // list.push({
-              //   id: `${schemaId}${KeySeparator}refresh`,
-              //   name: 'Refresh Tables',
-              //   indent: 2,
-              //   count: 0,
-              //   type: 'refresh-schema',
-              //   searchPath: `${db.name}.${schema.name}}`,
-              //   connection,
-              // })
               if (isLoading[schemaId]) {
                 list.push({
                   id: `${schemaId}-loading`,

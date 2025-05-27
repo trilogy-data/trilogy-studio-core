@@ -497,7 +497,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
   getSecret(): string | null {
     return this.config.privateKey
   }
-  
+
   setSecret(secret: string): void {
     this.config.privateKey = secret
   }
@@ -664,10 +664,13 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
       pollCount++
       lastTimePolled = Date.now()
       try {
-        const statusResponse = await fetch(`${this.baseURL()}/api/v2/statements/${statementHandle}`, {
-          method: 'GET',
-          headers: this.getAuthHeaders(),
-        })
+        const statusResponse = await fetch(
+          `${this.baseURL()}/api/v2/statements/${statementHandle}`,
+          {
+            method: 'GET',
+            headers: this.getAuthHeaders(),
+          },
+        )
         // if the response isn't okay, we just poll again, with some sanity
         if (statusResponse.ok) {
           errorCount = 0

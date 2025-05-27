@@ -289,7 +289,7 @@ export default {
 .tutorial-container {
   padding: 1rem;
   color: var(--text-color);
-  overflow-y: scroll;
+  overflow-y: auto;
   max-width: 800px;
 }
 

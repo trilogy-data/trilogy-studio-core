@@ -116,52 +116,52 @@
         />
       </form>
     </div>
-<div v-else-if="item.type === 'snowflake-private-key'" class="bq-project-container" @click.stop>
-  <label class="input-label">Private Key</label>
-  <span>
-    <transition name="fade">
-      <i v-if="showPrivateKeySuccess" class="mdi mdi-check-circle success-icon"></i>
-    </transition>
-    <input
-      type="password"
-      v-model="snowflakePrivateKey"
-      placeholder="Private Key"
-      class="bq-project-input"
-      @input="debouncedUpdateSnowflakePrivateKey"
-    />
-  </span>
-</div>
-<div v-else-if="item.type === 'snowflake-account'" class="bq-project-container" @click.stop>
-  <label class="input-label">Account</label>
-  <span>
-    <transition name="fade">
-      <i v-if="showAccountSuccess" class="mdi mdi-check-circle success-icon"></i>
-    </transition>
-    <input
-      type="text"
-      v-model="snowflakeAccount"
-      placeholder="Account"
-      class="bq-project-input"
-      @input="debouncedUpdateSnowflakeAccount"
-    />
-  </span>
-</div>
+    <div v-else-if="item.type === 'snowflake-private-key'" class="bq-project-container" @click.stop>
+      <label class="input-label">Private Key</label>
+      <span>
+        <transition name="fade">
+          <i v-if="showPrivateKeySuccess" class="mdi mdi-check-circle success-icon"></i>
+        </transition>
+        <input
+          type="password"
+          v-model="snowflakePrivateKey"
+          placeholder="Private Key"
+          class="bq-project-input"
+          @input="debouncedUpdateSnowflakePrivateKey"
+        />
+      </span>
+    </div>
+    <div v-else-if="item.type === 'snowflake-account'" class="bq-project-container" @click.stop>
+      <label class="input-label">Account</label>
+      <span>
+        <transition name="fade">
+          <i v-if="showAccountSuccess" class="mdi mdi-check-circle success-icon"></i>
+        </transition>
+        <input
+          type="text"
+          v-model="snowflakeAccount"
+          placeholder="Account"
+          class="bq-project-input"
+          @input="debouncedUpdateSnowflakeAccount"
+        />
+      </span>
+    </div>
 
-<div v-else-if="item.type === 'snowflake-username'" class="bq-project-container" @click.stop>
-  <label class="input-label">Username</label>
-  <span>
-    <transition name="fade">
-      <i v-if="showUsernameSuccess" class="mdi mdi-check-circle success-icon"></i>
-    </transition>
-    <input
-      type="text"
-      v-model="snowflakeUsername"
-      placeholder="Username"
-      class="bq-project-input"
-      @input="debouncedUpdateSnowflakeUsername"
-    />
-  </span>
-</div>
+    <div v-else-if="item.type === 'snowflake-username'" class="bq-project-container" @click.stop>
+      <label class="input-label">Username</label>
+      <span>
+        <transition name="fade">
+          <i v-if="showUsernameSuccess" class="mdi mdi-check-circle success-icon"></i>
+        </transition>
+        <input
+          type="text"
+          v-model="snowflakeUsername"
+          placeholder="Username"
+          class="bq-project-input"
+          @input="debouncedUpdateSnowflakeUsername"
+        />
+      </span>
+    </div>
     <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
       <label class="save-credential-toggle">
         <input
@@ -257,7 +257,6 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { KeySeparator, rsplit } from '../data/constants'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 import { Table } from '../connections'
@@ -321,12 +320,7 @@ const handleRefreshConnectionClick = () => {
 }
 
 const handleRefreshDatabaseClick = () => {
-  emit(
-    'refresh',
-    rsplit(props.item.id, KeySeparator)[0],
-    props.item.connection?.name || '',
-    'database',
-  )
+  emit('refresh', props.item.id, props.item.connection?.name || '', 'database')
 }
 const handleRefreshSchemaClick = () => {
   emit('refresh', props.item.id, props.item.connection?.name || '', 'schema')

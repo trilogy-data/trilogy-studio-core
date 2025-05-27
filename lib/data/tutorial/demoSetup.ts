@@ -17,11 +17,10 @@ export default async function setupDemo(
 ) {
   let connName = 'demo-connection'
   let modelName = 'demo-model'
-  let importAddress =
-    'https://raw.githubusercontent.com/trilogy-data/trilogy-public-models/main/studio/demo-model.json'
+  let importAddress = 'https://trilogy-data.github.io/trilogy-public-models/studio/demo-model.json'
   let connection = new DuckDBConnection(connName, modelName)
   connectionStore.addConnection(connection)
-  await connection.connect()
+
   //force create
   modelStore.newModelConfig(modelName, true)
   const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -31,4 +30,8 @@ export default async function setupDemo(
   saveConnections(Object.values(connectionStore.connections))
   saveModels(Object.values(modelStore.models))
   saveDashboards(Object.values(dashboardStore.dashboards))
+  //@ts-ignore
+  return Object.values(editorStore.editors).find(
+    (editor) => editor.name === 'tutorial_one_basic' && editor.connection === connName,
+  ).id
 }
