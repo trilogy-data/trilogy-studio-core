@@ -27,7 +27,9 @@
             New Editor
           </button>
 
-          <button @click="tutorial()" class="btn btn-tertiary" data-testid="tutorial-button">Docs/Tutorial</button>
+          <button @click="tutorial()" class="btn btn-tertiary" data-testid="tutorial-button">
+            Docs/Tutorial
+          </button>
         </div>
       </template>
       <div v-else>

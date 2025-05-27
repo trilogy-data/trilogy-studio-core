@@ -10,7 +10,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByRole('button', { name: '󱘖' }).click()
 
   // Make sure the connection is active
-  // on non-mobile, the sidebar will also have this, so filter tot he visible one
+  // on non-mobile, the sidebar will also have this testid, so filter to the visible one
   await page
     .getByTestId('refresh-connection-demo-model-connection')
     .filter({ visible: true })

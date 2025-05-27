@@ -158,13 +158,13 @@ address tbl_stores;
       ),
     ]),
     new Article('Code', [
-          new Paragraph(
+      new Paragraph(
         'How Trilogy Works',
         `Studio and dependent code is open-source under the MIT license. The code is available on GitHub at the following locations:
         <li><a href='https://github.com/trilogy-data/trilogy-studio-core' target='_blank'>trilogy-studio-core</a> - the core code for the studio, including the language server and query editor.</li>
         <li><a href='https://github.com/trilogy-data/pytrilogy' target='_blank'>pytrilogy</a> - reference implementation of Trilogy language parsing/execution.</li>`,
       ),
-        new Paragraph(
+      new Paragraph(
         'How Trilogy Works',
         `Stars appreciated, contributions welcome! If you find a bug, please file an issue on the relevant repository.
         `,
