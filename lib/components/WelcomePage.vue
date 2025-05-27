@@ -5,19 +5,28 @@
         <img :src="trilogyIcon" alt="Logo" class="logo-image" />
       </div>
       <h1>Welcome to Trilogy Studio</h1>
-      <p>We're glad you're here!</p>
       <template v-if="!showCreator">
-        <p>
-          To get started: open a demo editor to immediately run a query, create a blank editor, or
-          take a guided tour in the docs. [We recommend the tour if you're new to the app.]
-        </p>
+        <template v-if="!hasConnections">
+          <p>
+            To get started: open a <span class="text-bold">demo editor</span> to immediately query or
+            take a guided tour in the <span class="text-bold">documentation</span>.
+          </p>
+          <p class='text-faint'>
+            We recommend the documentation if you haven't used Trilogy before.
+          </p>
+        </template>
+        <template v-if="hasConnections">
+          <p>
+            We're glad you're back!
+          </p>
+        </template>
         <div class="buttons">
           <button @click="startDemo()" class="btn btn-secondary">
-            <span v-if="demoLoading" class="spinner"></span> <span v-else>Demo Editor</span>
+            <span v-if="demoLoading">Loading <span class="spinner"></span></span><span v-else>Demo Editor</span>
           </button>
-          <button @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
+          <button v-if="hasConnections" @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
 
-          <button @click="tutorial()" class="btn btn-tertiary">Docs and Tutorial</button>
+          <button @click="tutorial()" class="btn btn-tertiary">Docs/Tutorial</button>
         </div>
       </template>
       <div v-else>
@@ -29,10 +38,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject, computed } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreatorInline from './EditorCreatorInline.vue'
-
+import type { ConnectionStoreType } from '../stores/connectionStore'
+const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const demoLoading = ref(false)
 const showCreator = ref(false)
 const emit = defineEmits(['demo-started', 'screen-selected', 'documentation-key-selected'])
@@ -44,6 +54,11 @@ const startDemo = () => {
     demoLoading.value = false
   }, 30000)
 }
+
+const hasConnections = computed(() => {
+  // return false
+  return connectionStore && Object.keys(connectionStore.connections).length > 0
+})
 
 const tutorial = () => {
   emit('screen-selected', 'tutorial')
@@ -124,6 +139,7 @@ h1 {
 .btn-secondary {
   border: 2px solid #28a745;
   background-color: transparent;
+  white-space: nowrap;
 }
 
 .btn-secondary:hover {

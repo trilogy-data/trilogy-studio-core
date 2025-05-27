@@ -100,11 +100,11 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Iterative SQL Development',
-        'To capture the iterative SQL development loop, Trilogy includes a lightweight definition language directly in the language, allowing you to query and evolve the semantic layer in the same tool - and even in the same query session. This definition language (semantic layer, ERD, etc.) provides static typing/enforcement, and handles joins [1-1, 1-many, many-to-1], aggregations, filtering, and nulls automatically.',
+        'To capture the iterative SQL development loop, Trilogy directly embeds a lightweight metadata definition syntax, allowing you to query and evolve the semantic layer in the same tool - and even in the same query session. This definition language (semantic layer, ERD, etc.) provides static typing/enforcement, and handles joins [1-1, 1-many, many-to-1], aggregations, filtering, and nulls automatically.',
       ),
       new Paragraph(
         'Trilogy Query Structure',
-        'Trilogy looks like a SQL SELECT, without the FROM or GROUP BY clauses.',
+        'Let\'s take a look. Standard Trilogy reads like SQL SELECT, without the FROM or GROUP BY clauses.',
       ),
       new Paragraph(
         'Trilogy Query Example',
@@ -113,20 +113,40 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'How Trilogy Differs from SQL',
-        'Trilogy removes the need for joins - and even tables - via imported models. The information about how to join tables is encoded once and reused automatically.',
+        'Those aren\'t the only clauses to be gone - Trilogy removes the need for joins - and even tables - via the metadata layer. Information about how to join tables is encoded once and used automatically if required. Definitions look like creating a SQL table, but columns are bound to an additionally abstracted concept label, not raw datatypes. This enables Trilogy to dynamically traverse joins when needed.',
+      ),
+      new Paragraph(
+        'How Trilogy Differs from SQL',
+        `key order_id int;
+key store_id int;
+property store_id.store_name string;
+
+datasource orders (
+  order_id: order_id,
+  store_id: store_id
+)
+grain (order_id)
+address tbl_orders;
+
+datasource stores (
+  store_id: store_id
+  store_name: store_name
+)
+grain (store_id)
+address tbl_stores;
+`
+
+        ,
+        'code',
+      ),
+
+      new Paragraph(
+        'The Value of Trilogy',
+        'But writing out that datasource is work - a table can be queried quickly because someone else set it up. Trilogy provides the same experience through model imports. It\'s expected that datasources will be written once, and reused many times. Trilogy can be shared and imported through .preql files using a python-like import syntax.',
       ),
       new Paragraph(
         'The Value of Trilogy',
-        'Trilogy is not the first concept in this space. Many projects have aimed to improve SQL. Trilogy asserts that most of the value of a SQL query is in transformations and SELECT; joins and GROUP BY add little value to the expressiveness of the language.',
-      ),
-      new Paragraph(
-        'Better SQL',
-        'Trilogy improves on SQL by moving critical information such as keys, nullability, and query logic into the semantic layer. This allows automation of the hard parts of SQL queries.',
-      ),
-      new Paragraph(
-        'Trilogy vs SQL Example',
-        'USE AdventureWorks;\nSELECT \n    t.Name, \n    SUM(s.SubTotal) AS [Sub Total],\n    STR(Sum([TaxAmt])) AS [Total Taxes],\n    STR(Sum([TotalDue])) AS [Total Sales]\nFROM Sales.SalesOrderHeader AS s\n    INNER JOIN Sales.SalesTerritory AS t ON s.TerritoryID = t.TerritoryID\nGROUP BY \n    t.Name\nORDER BY \n    t.Name;',
-        'code',
+        'Complex models spanning dozens of tables can be imported with a single line.'
       ),
       new Paragraph(
         'Trilogy Equivalent',
@@ -135,26 +155,50 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'How Trilogy Works',
-        'Trilogy requires some up-front binding to the database before the first query can be run. The cost to model the data is incurred infrequently, and then the savings are amortized over every user and query.',
+        'Explore the rest of the reference documentation for more details on how Trilogy works and explore these concepts in more detail.',
       ),
-      new Paragraph(
-        'Usage',
-        'Trilogy is designed to be easy to learn and use, and to be incrementally adopted. Trilogy can be used outside of Trilogy studio as a CLI or build tool.',
-      ),
+
     ]),
 
     new Article('Querying Data', [
       new Paragraph(
         'SELECT Without FROM, JOIN, or GROUP BY',
-        'In Trilogy, you can write queries without explicitly specifying tables, joins, or grouping. The semantic layer handles these details.',
+        'In Trilogy, you write queries without explicitly specifying tables, joins, or grouping.',
       ),
       new Paragraph(
         'Example Query',
         "SELECT\n    product_line,\n    revenue,\n    revenue_from_top_customers,\n    revenue_from_top_customers / revenue AS revenue_from_top_customers_pct\nWHERE\n    product_line IN ('widgets', 'doodads');",
         'code',
       ),
+      new Paragraph(
+        'SELECT Without FROM, JOIN, or GROUP BY',
+        'Queries begin with a SELECT, and can include WHERE, HAVING, ORDER BY, and LIMIT clauses. Trilogy automatically handles joins and grouping based on the defined model.',
+      ),
+      new Paragraph(
+        'SELECT Without FROM, JOIN, or GROUP BY',
+        'Like SQL, the where clause filters results *before* the selection, and the having *after*. The order by clause sorts the results, and the limit clause restricts the number of rows returned.',
+      ),
+      new Paragraph(
+        'SELECT Without FROM, JOIN, or GROUP BY',
+        'This query would restrict data to red products in Massachsusetts, then select the product name and aggregate total sales within the filter state, further filter to only those with total sales greater than 1000, ordering by total sales in descending order, and limiting the results to 10 rows.',
+      ),
+      new Paragraph(
+        'Example Query',
+        `WHERE product_name like '%red%' and sales.state = 'MA' 
+SELECT 
+  product_name, 
+  sum(sales) AS total_sales 
+HAVING total_sales > 1000 
+ORDER BY 
+  total_sales DESC 
+LIMIT 10;`,
+        'code',
+      ),
+      new Paragraph(
+        'SELECT Without FROM, JOIN, or GROUP BY',
+        'All concepts and outputs must be explicitly named, using AS to bind any transformation. The having clause and order clause can only reference fields in the select list, while the where clause can reference any field in the model.',),
     ]),
-    new Article('Statements', [
+    new Article('Syntax', [
       new Paragraph(
         'Basic SELECT Statement',
         'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause. A basic select could look like this:',
@@ -307,18 +351,22 @@ complete_for_clause?
       ),
       new Paragraph(
         'Example',
-        'datasource sales (\n     order_id: orders.id,\n cu_id:~customers.id,\n revenue: orders.revenue\n)\ngrain (orders.id)\naddress warehouse.sales;\n\ndatasource customers (\n    customer_id: customers.id,\n    name: customers.name\n)\ngrain (customers.id)\naddress warehouse.customers;',
+        `datasource sales (
+  order_id: orders.id,
+  cu_id: ~customers.id,
+  revenue: orders.revenue
+)\ngrain (orders.id)\naddress warehouse.sales;\n\ndatasource customers (\n    customer_id: customers.id,\n    name: customers.name\n)\ngrain (customers.id)\naddress warehouse.customers;`,
         'code',
       ),
       new Paragraph(
         'Partial Keys',
-        'The above two tables could be used to resolve sum(orders.revenue), customer.name via a join through customer.id, with the order table being on the right side of the join.',
+        'A query of the form `SELECT sum(orders.revenue), customer.name` would mean "get all customer names, and their total revenue". This would be resolved via a join through customer.id, with the order table being on the right side of the join, to ensure that all customers were returned regardless of if they placed an order.',
       ),
     ]),
     new Article('Grains and Aggregation', [
       new Paragraph(
         'What Is a Grain?',
-        'A grain represents the unique combination of keys. Tables and aggregations both have grains, which determine the minimum keys required on a row of data. For example, finding the total sales by customer might be an aggregation to the grain of a customer id. Properties of a key are implicitly dropped from any grain that includes that key, though a grain without the key associated with a property will include that property in the grain.',
+        'A grain represents the unique combination of keys. Tables and aggregations both have grains, which determine the minimum keys required to uniquely identify a row of data. For example, finding the total sales by customer id, anme, and address would be an aggregation to the grain of a customer id, no matter how many other customer properties are included. Properties of a key are implicitly dropped from any grain that includes that key, though a grain without the key associated with a property will include that property in the grain.',
       ),
       new Paragraph(
         'Example',
@@ -327,122 +375,86 @@ complete_for_clause?
       ),
       new Paragraph(
         'What Is a Grain?',
-        'This query would aggregate revenue to the grain of order_date, assuming that year is a property of order.',
+        'This query would aggregate revenue to the grain of order_date, as order year is a property of order date.',
       ),
     ]),
     builtinFunctions,
     new Article('Custom Functions', [
       new Paragraph(
         'Defining Functions',
-        'Functions are reusable snippets of code. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well. The below function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Functions are called with the @ prefix.',
+        'Custom functions can be used to extend the language with reusable code macros. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well.',
+      ),
+            new Paragraph(
+        'Defining Functions',
+        'This function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Note the @ - custom functions references require the @ prefix.',
       ),
       new Paragraph(
         'Example',
-        `const scale_factor<-2;\ndef square_scale(x) -> x * x *scale_factor;\n\nSELECT\n    number,\n    @square_scale(number) AS squared;`,
+        `const scale_factor<-2;\ndef square_scale(x) -> x * x *scale_factor;\n\nSELECT
+  number,
+  @square_scale(number) AS squared
+;`,
         'code',
       ),
-      new Paragraph('Defining Functions', 'Functions may have optional defaults'),
+      new Paragraph('Defining Functions', 'Functions may have optional defaults by adding an `= value` after the argument name.'),
       new Paragraph(
         'Example',
-        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\nconst number<-.4555;\n\nSELECT\n    number,\n  @pretty_percent(number) AS percent\n  @pretty_percent(number,3) AS three_percent;`,
+        `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\n\nconst number<-.4555;\n\nSELECT
+  number,
+  @pretty_percent(number) AS percent,
+  @pretty_percent(number, 3) AS three_percent
+;`,
         'code',
       ),
     ]),
     modelReference,
-    new Article('Advanced Features', [
-      new Paragraph(
-        'Filtering',
-        'Filtering can happen in two locations; the having clause or the where clause. Where clause filtering happens first, and reduces the space of potential results by the filtering criteria. This is applied prior to any aggregation happening in a query, and can reference any field that can be associated in the model. Having clause filtering is used to reduce the final result set, and is restricted to only filter on fields in the output projection.',
-      ),
-      new Paragraph(
-        'Example',
-        'WHERE\n sales.year = 2000 \nSELECT\n    product_name,\n    sum(revenue) as total_revenue HAVING total_revenue>1000;',
-        'code',
-      ),
-      new Paragraph('Functions', 'Functions allow reusable expressions.'),
-      new Paragraph(
-        'Example',
-        'def square(x) -> x * x;\n\nSELECT\n    number,\n    @square(number) AS squared;',
-        'code',
-      ),
-    ]),
   ]),
   new DocumentationNode('Privacy And Data', [
     new Article('Privacy Policy', [
       new Paragraph('Last Updated', 'February 22, 2025'),
       new Paragraph(
         'Introduction',
-        'This Privacy Policy explains how our browser-based Integrated Development Environment ("IDE") handles your information. While most processing occurs in your browser, we utilize some external services to enhance your development experience.',
+        'This Privacy Policy explains how Trilogy Studio handles your information. While most processing occurs in your browser, we utilize some external services to enhance your development experience.',
         'section',
       ),
       new Paragraph(
         'Information We Collect',
-        'Essential Telemetry: We collect screen resolution and viewport size, feature usage counts and patterns, browser type and version, and error rates and types.',
+        'Telemetry: We collect feature usage counts and patterns and coarse browser/geographic information to inform product decision and system performance using GoatTrack. This data is anonymous and does not include any personally identifiable information. Telemetry can be disabled in settings.',
         'section',
       ),
       new Paragraph(
         'Query Processing',
-        'We process Trilogy queries to transform them to SQL based on your model inputs.',
-        'subsection',
-      ),
-      new Paragraph(
-        'How We Use Your Information',
-        'Telemetry Processing: We send anonymous usage data to GoatTrack for analytics. This helps us improve IDE performance and features. Data is aggregated and cannot identify individual users.',
-        'section',
-      ),
-      new Paragraph(
-        'Query Services',
-        'Queries are sent to our formatting and code generation service. Results are returned to your browser for execution. No actual database connections or credentials are transmitted.',
+        'We process Trilogy queries to transform them to SQL based on your model inputs if you use the default query service. Results are returned to your browser for execution. No actual database connections or credentials are transmitted.',
         'subsection',
       ),
       new Paragraph(
         "What We Don't Collect",
-        'We deliberately avoid collecting database credentials, database contents, query results, personal information, full source code, or authentication tokens.',
+        'We do not collect database credentials, database contents, query results, personal information, full source code, or authentication tokens, or any other personal information. Please report any issues with this to the github repository.',
         'section',
       ),
       new Paragraph(
         'Data Processing',
-        'Local Processing: All code execution occurs in your browser. Database connections are direct from browser to database. Query results never pass through our servers.',
+        'Query Execution: All database execution happens between your browser and remote service. Query results never pass through our servers.',
         'section',
-      ),
-      new Paragraph(
-        'Remote Processing',
-        'Query formatting and optimization occurs on stateless servers. The full content of your editors is sent. All remote processing is temporary with no data retention.',
-        'subsection',
-      ),
-      new Paragraph(
-        'Third-Party Services',
-        'GoatTrack processes anonymous usage statistics.',
-        'section',
-      ),
-      new Paragraph(
-        'Query Processing Service',
-        'Temporary processing for formatting and generation, no data retention, HTTPS transmission.',
-        'subsection',
       ),
       new Paragraph(
         'Security Measures',
-        'All communications use TLS encryption. Telemetry data is anonymized before transmission.',
-        'section',
-      ),
-      new Paragraph(
-        'User Controls',
-        'You can control local storage preferences and browser data retention.',
+        'Any saved local credentials will be encrypted in storage using a passphrase or Chrome credential storage. See Stored Info for more details.',
         'section',
       ),
       new Paragraph(
         "Children's Privacy",
-        'Our IDE is intended for adults and is not designed for users under 13 years of age.',
+        'Trilogy Studio is intended for adult data professionals.',
         'section',
       ),
       new Paragraph(
         'International Data',
-        'Telemetry data may cross borders. Query processing occurs in the jurisdiction of your backend. SQL compilation happens in the US primarily. We comply with international data protection laws.',
+        'Telemetry data may cross borders. SQL compilation happens in the US with default query service (fly.io).',
         'section',
       ),
       new Paragraph(
         'Changes to Privacy Policy',
-        'We may update this policy to reflect new features or services, changed functionality, legal requirements, and security improvements. Changes will be communicated through the IDE interface.',
+        'We may update this policy to reflect new features or services, changed functionality, legal requirements, and security improvements.',
         'section',
       ),
       new Paragraph(
@@ -466,9 +478,12 @@ complete_for_clause?
       ),
     ]),
     new Article('Stored Info', [
+        new Paragraph(
+        'Local Data',
+        'Trilogy Studio uses browser local storage for your editors and models. These do not leave your browser (except when a model is sent in to generate a query).' ),
       new Paragraph(
         'Secret Storage',
-        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
+        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally also store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
       ),
       new Paragraph(
         'Secret Storage',
@@ -481,13 +496,18 @@ complete_for_clause?
         'tip',
       ),
     ]),
-    new Article('Google Account', [
+    new Article('Google Account Details', [
       new Paragraph(
         'Google Account',
-        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery Oauth connection. Trilogy Studio uses a token provided by Google to authenticate your account. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This oken is only used to communicate directly with BigQuery with the standard google javascript client library.',
+        'Trilogy Studio uses Google OAuth to authenticate users when using a Google Bigquery connection. Trilogy Studio uses a token provided by Google to authenticate your account through the interactive sign-in flow. Trilogy Studio only requests scopes required for Bigquery read/write access, and the token never leaves your browser. This token is only used to communicate directly with BigQuery with the standard google javascript client library.',
       ),
     ]),
-    new Article('Telemetry', [
+    new Article('Snowflake', [
+      new Paragraph(
+        'Google Account',
+        'Trilogy Studio supports private key authentication for Snowflake. You will need to provide the private key to connect after configuring your user with the public key portion in Snowflake directly. The rest of the authentication header can be derived from this.',),
+    ]),
+    new Article('Telemetry Details', [
       new Paragraph(
         'Telemetry',
         `<a href="https://www.goatcounter.com/">GoatCounter</a> is used to collect anonymized
@@ -500,7 +520,7 @@ complete_for_clause?
       new Paragraph('Last Updated', 'February 22, 2025'),
       new Paragraph(
         'Service Description',
-        'The Trilogy Studio Integrated Development Environment (referred to as "IDE" henceforth) enables users to interact with their own databases. The IDE communicates with non-user services only to do basic telemetry and preprocessing of Trilogy code using the default language server (if a local one is not configured). The primary purpose of this preprocessing is to generate SQL to be returned to the browser for execution.',
+        'Trilogy Studio (referred to as "IDE" henceforth) enables users to interact with their own databases. The IDE communicates with non-user services only to do basic telemetry and preprocessing of Trilogy code using the default language server (if a local one is not configured). The primary purpose of this preprocessing is to generate SQL to be returned to the browser for execution.',
         'section',
       ),
       new Paragraph(
@@ -555,12 +575,12 @@ complete_for_clause?
       ),
       new Paragraph(
         'Modifications',
-        'We reserve the right to modify the IDE functionality, these Terms of Service, and supported features and libraries. Changes will be communicated through the IDE interface.',
+        'We reserve the right to modify the IDE functionality, these Terms of Service, and supported features and libraries.',
         'section',
       ),
       new Paragraph(
         'Termination',
-        'You may stop using the IDE at any time. We may terminate access if you violate these terms.',
+        'You may stop using the IDE at any time.',
         'section',
       ),
       new Paragraph(

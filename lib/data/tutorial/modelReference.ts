@@ -6,7 +6,7 @@ export const modelReference = new Article(
     // --- Introduction to Models ---
     new Paragraph(
       'What is a Model?', // Section Title
-      'Models are the heart of Trilogy\'s semantic layer. They provide a structured, logical representation of your data, abstracting away the complexities of the underlying physical storage (databases, files, APIs). A model is essentially a collection of Trilogy editors that have been designated as "sources". These sources define the concepts, properties, and data retrieval logic for your domain.',
+      'Models are the heart of Trilogy\'s semantic layer. They provide a structured, logical representation of data that can evolve independently of the underlying physical model. A model ist just a collection of Trilogy .preql files available for import. In Trilogy Studio, these are editors that have been marked as `sources`. These sources define the concepts, properties, and data retrieval logic for your domain.',
     ),
     new Paragraph(
       'Purpose and Benefits', // title
@@ -26,17 +26,17 @@ export const modelReference = new Article(
     // --- Core Components of a Model ---
     new Paragraph(
       'Core Components',
-      'Models are primarily built from three interconnected components: Concepts, Properties, and Datasources. These are defined within Trilogy editors marked as model sources.',
+      'Models have two core components: Concepts and Datasources. These are defined within Trilogy editors marked as model sources.',
       'section', // Using 'section' type for structure
     ),
     new Paragraph(
       'Concepts', // Subsection Title
-      `Concepts represent the core entities or logical groupings in your data model (e.g., \`customer\`, \`product\`, \`order\`). Each concept typically has a unique key that identifies individual instances (like \`customer.id\`). Concepts form the nouns of your data language. They are defined implicitly through properties and datasources associated with them.`,
+      `Concepts keys represent the core entities or logical keys in your data model (e.g., \`customer.id\`, \`product.sku\`, \`order.id\`). Each concept typically has a unique key that identifies individual instances (like \`customer.id\`). Concepts form the nouns of your data language. They are defined implicitly through properties and datasources associated with them.`,
       'subsection', // Using 'subsection' type
     ),
     new Paragraph(
       'Properties', // Subsection Title
-      `Properties are the attributes or characteristics associated with a concept (e.g., \`customer.name\`, \`order.order_date\`, \`product.price\`). They define the specific pieces of information available.
+      `Concept properties are dependent concepts or characteristics associated with a key (e.g., \`customer.name\`, \`order.order_date\`, \`product.price\`). They define context/attributes of keys.
       Properties have defined data types (like \`string\`, \`number\`, \`datetime\`) and can be further annotated with metadata traits (like \`::usd\` or \`::us_state_short\`).
       New properties can be added to existing concepts using the \`property\` keyword:`,
       'subsection', // Using 'subsection' type
@@ -45,12 +45,17 @@ export const modelReference = new Article(
       'Properties Example', // Title for the code block (can be descriptive)
       `property order.customer.nation.region.id.headquarters string;
 // This adds a 'headquarters' property of type string
-// under the order -> customer -> nation -> region -> id concept path.`,
+// under the key \`order.customer.nation.region.id.\`
+property <order.customer.nation.region.id>.headquarters string;
+// this does the same, but with explicit syntax
+// that can be useful when you have a property of multiple keys
+property <order.customer.nation.region.id,date.year>.point_in_time_hq string;
+`,
       'code', // type = 'code'
     ),
     new Paragraph(
       'Types and Traits', // Subsection Title
-      `Trilogy has a core type system (e.g., \`string\`, \`number\`, \`list<T>\`, \`struct<...>\`) for data integrity and operations.
+      `Trilogy has a core type system (e.g., \`string\`, \`number\`, \`list<T>\`, \`struct<...>\`) that maps to database types.
       Additionally, a metadata-based trait system allows for richer semantic meaning. Traits are appended using \`::\`.
       Example: \`auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;\` defines a list where each element is a string representing a US state abbreviation. Traits can influence validation, default visualizations (like maps for geo traits), or downstream system behavior.`,
       'subsection',
@@ -70,9 +75,9 @@ auto item_price <- 19.99::number::usd;`,
     ),
     new Paragraph(
       'Datasources', // Subsection Title
-      `Datasources are the bridge between the logical model (concepts, properties) and the physical data storage. They define *how* and *where* to fetch the data for specific properties.
-      A datasource maps logical properties to physical columns or calculations and specifies the source (database table, API endpoint, inline query, file).
-      Crucially, they define the \`grain\` - the level of detail or the set of keys that uniquely identify a row returned by the datasource.`,
+      `Datasources are the bridge between the logical model of concept keys and properties and database tables. They define *how* and *where* to fetch the data for specific properties.
+      A datasource maps logical properties to physical columns or calculations and specifies the source.
+      Crucially, they also define the \`grain\` - the level of detail or the set of keys that uniquely identify a row returned by the datasource.`,
       'subsection',
       null,
     ),
@@ -89,25 +94,14 @@ datasource region_headquarters (
     headquarters: order.customer.nation.region.headquarters, // Map logical property to source column
 )
 grain (order.customer.nation.region.id) // Define the unique key for this data
-query ''' // SQL query to fetch the physical data
-select
-    r_regionkey as region_id, -- Aliased to match mapping
-    case r_name
-        when 'AFRICA' then 'HQ_AF'
-        when 'AMERICA' then 'HQ_AM'
-        when 'ASIA' then 'HQ_AS'
-        when 'EUROPE' then 'HQ_EU'
-        when 'MIDDLE EAST' then 'HQ_ME'
-        else 'HQ_Unknown'
-    end as headquarters -- Aliased to match mapping
-from regions -- Assume 'regions' is a physical table/view in the connection
+address tbl_headquarters;
 ''';`,
       'code',
       null,
     ),
     new Paragraph(
       'Datasource (Inline Example Description)', // Description for the inline example
-      `Datasources can also use inline data definitions, useful for constants, mappings, or small datasets directly within the model definition.`,
+      `Datasources can also use raw queries as a source, useful for constants, mappings, or small datasets directly within the model definition.`,
       null, // Use null type for the description part
       null,
     ),
@@ -207,12 +201,6 @@ select pi * 2 as circumference_ratio;`,
       'Tip: Standard Library',
       'Review the documentation for the standard library (`std`) to discover always-available functions and traits you can use in your models and queries.',
       'tip', // Use 'tip' type
-      null,
-    ),
-    new Paragraph(
-      'Conclusion',
-      'Models are fundamental to leveraging Trilogy effectively, providing a robust semantic layer for consistent, maintainable, and reusable data definitions and logic.',
-      'conclusion', // Use 'conclusion' type
       null,
     ),
   ],

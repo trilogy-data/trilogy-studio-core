@@ -315,7 +315,7 @@ export default {
       }
     },
     async startDemo() {
-      await setupDemo(
+      let editor = await setupDemo(
         this.editorStore,
         this.connectionStore,
         this.modelStore,
@@ -326,7 +326,7 @@ export default {
         this.saveDashboards,
       )
       this.setActiveScreen('editors')
-      this.setActiveEditor('tutorial_one_basic_1')
+      this.setActiveEditor(editor)
     },
   },
   computed: {

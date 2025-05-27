@@ -5,11 +5,11 @@ export const IntroTutorial = new Article(
   [
     new Paragraph(
       'Purpose',
-      'Trilogy Studio is intended as an accessible demonstration of the features of the Trilogy language, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
+      'Trilogy is a semantic-powered SQL - familiar SQL syntax that operates on a typed semantic layer, instead of tables. It should feel like SQL, but faster and more expressive. You can read more about the language in the Trilogy reference section.',
     ),
     new Paragraph(
       'Purpose',
-      'Trilogy is SQL with a built in semantic layer; it should feel like SQL, but faster and more expressive. The boilerplate of SQL is delegated to the semantic engine, while the expressiveness of SQL is still fully available. You can read more about the language in the Trilogy reference section.',
+      'Trilogy Studio is intended as an accessible demonstration of core language features, which would otherwise have a high barrier to experimentation. It is open source and feature requests and contributions are welcome.',
     ),
     new Paragraph(
       'Purpose',
