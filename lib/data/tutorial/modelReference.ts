@@ -6,7 +6,7 @@ export const modelReference = new Article(
     // --- Introduction to Models ---
     new Paragraph(
       'What is a Model?', // Section Title
-      'Models are the heart of Trilogy\'s semantic layer. They provide a structured, logical representation of data that can evolve independently of the underlying physical model. A model ist just a collection of Trilogy .preql files available for import. In Trilogy Studio, these are editors that have been marked as `sources`. These sources define the concepts, properties, and data retrieval logic for your domain.',
+      "Models are the heart of Trilogy's semantic layer. They provide a structured, logical representation of data that can evolve independently of the underlying physical model. A model ist just a collection of Trilogy .preql files available for import. In Trilogy Studio, these are editors that have been marked as `sources`. These sources define the concepts, properties, and data retrieval logic for your domain.",
     ),
     new Paragraph(
       'Purpose and Benefits', // title

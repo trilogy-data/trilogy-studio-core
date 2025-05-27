@@ -247,7 +247,7 @@ export default defineComponent({
           3,
           llmStore.activeConnection,
           messages.value,
-          false // don't add user message again
+          false, // don't add user message again
         )
       } catch (error) {
         // Handle errors

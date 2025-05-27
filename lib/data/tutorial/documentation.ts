@@ -104,7 +104,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Trilogy Query Structure',
-        'Let\'s take a look. Standard Trilogy reads like SQL SELECT, without the FROM or GROUP BY clauses.',
+        "Let's take a look. Standard Trilogy reads like SQL SELECT, without the FROM or GROUP BY clauses.",
       ),
       new Paragraph(
         'Trilogy Query Example',
@@ -113,7 +113,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'How Trilogy Differs from SQL',
-        'Those aren\'t the only clauses to be gone - Trilogy removes the need for joins - and even tables - via the metadata layer. Information about how to join tables is encoded once and used automatically if required. Definitions look like creating a SQL table, but columns are bound to an additionally abstracted concept label, not raw datatypes. This enables Trilogy to dynamically traverse joins when needed.',
+        "Those aren't the only clauses to be gone - Trilogy removes the need for joins - and even tables - via the metadata layer. Information about how to join tables is encoded once and used automatically if required. Definitions look like creating a SQL table, but columns are bound to an additionally abstracted concept label, not raw datatypes. This enables Trilogy to dynamically traverse joins when needed.",
       ),
       new Paragraph(
         'How Trilogy Differs from SQL',
@@ -134,19 +134,18 @@ datasource stores (
 )
 grain (store_id)
 address tbl_stores;
-`
+`,
 
-        ,
         'code',
       ),
 
       new Paragraph(
         'The Value of Trilogy',
-        'But writing out that datasource is work - a table can be queried quickly because someone else set it up. Trilogy provides the same experience through model imports. It\'s expected that datasources will be written once, and reused many times. Trilogy can be shared and imported through .preql files using a python-like import syntax.',
+        "But writing out that datasource is work - a table can be queried quickly because someone else set it up. Trilogy provides the same experience through model imports. It's expected that datasources will be written once, and reused many times. Trilogy can be shared and imported through .preql files using a python-like import syntax.",
       ),
       new Paragraph(
         'The Value of Trilogy',
-        'Complex models spanning dozens of tables can be imported with a single line.'
+        'Complex models spanning dozens of tables can be imported with a single line.',
       ),
       new Paragraph(
         'Trilogy Equivalent',
@@ -157,7 +156,6 @@ address tbl_stores;
         'How Trilogy Works',
         'Explore the rest of the reference documentation for more details on how Trilogy works and explore these concepts in more detail.',
       ),
-
     ]),
 
     new Article('Querying Data', [
@@ -196,7 +194,8 @@ LIMIT 10;`,
       ),
       new Paragraph(
         'SELECT Without FROM, JOIN, or GROUP BY',
-        'All concepts and outputs must be explicitly named, using AS to bind any transformation. The having clause and order clause can only reference fields in the select list, while the where clause can reference any field in the model.',),
+        'All concepts and outputs must be explicitly named, using AS to bind any transformation. The having clause and order clause can only reference fields in the select list, while the where clause can reference any field in the model.',
+      ),
     ]),
     new Article('Syntax', [
       new Paragraph(
@@ -384,7 +383,7 @@ complete_for_clause?
         'Defining Functions',
         'Custom functions can be used to extend the language with reusable code macros. Functions are defined using the def keyword and have a list of arguments and are mapped to an expression. Any argument alias will be locally scoped within the function, but external concepts can be referenced as well.',
       ),
-            new Paragraph(
+      new Paragraph(
         'Defining Functions',
         'This function will multiple the input concept by itself and then by whatever the value of the global scale_factor is. Note the @ - custom functions references require the @ prefix.',
       ),
@@ -396,7 +395,10 @@ complete_for_clause?
 ;`,
         'code',
       ),
-      new Paragraph('Defining Functions', 'Functions may have optional defaults by adding an `= value` after the argument name.'),
+      new Paragraph(
+        'Defining Functions',
+        'Functions may have optional defaults by adding an `= value` after the argument name.',
+      ),
       new Paragraph(
         'Example',
         `def pretty_percent(x, digits=2) ->  round(x*100, digits)::string || '%';\n\nconst number<-.4555;\n\nSELECT
@@ -478,9 +480,10 @@ complete_for_clause?
       ),
     ]),
     new Article('Stored Info', [
-        new Paragraph(
+      new Paragraph(
         'Local Data',
-        'Trilogy Studio uses browser local storage for your editors and models. These do not leave your browser (except when a model is sent in to generate a query).' ),
+        'Trilogy Studio uses browser local storage for your editors and models. These do not leave your browser (except when a model is sent in to generate a query).',
+      ),
       new Paragraph(
         'Secret Storage',
         'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally also store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
@@ -505,7 +508,8 @@ complete_for_clause?
     new Article('Snowflake', [
       new Paragraph(
         'Google Account',
-        'Trilogy Studio supports private key authentication for Snowflake. You will need to provide the private key to connect after configuring your user with the public key portion in Snowflake directly. The rest of the authentication header can be derived from this.',),
+        'Trilogy Studio supports private key authentication for Snowflake. You will need to provide the private key to connect after configuring your user with the public key portion in Snowflake directly. The rest of the authentication header can be derived from this.',
+      ),
     ]),
     new Article('Telemetry Details', [
       new Paragraph(
@@ -578,11 +582,7 @@ complete_for_clause?
         'We reserve the right to modify the IDE functionality, these Terms of Service, and supported features and libraries.',
         'section',
       ),
-      new Paragraph(
-        'Termination',
-        'You may stop using the IDE at any time.',
-        'section',
-      ),
+      new Paragraph('Termination', 'You may stop using the IDE at any time.', 'section'),
       new Paragraph(
         'Contact',
         "For questions about these terms, please create an issue on the github repository <a href='https://github.com/trilogy-data/trilogy-studio-core'>here</a>.",

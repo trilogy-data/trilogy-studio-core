@@ -152,7 +152,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       maxAttempts = 3,
       modelOverride: string | null = null,
       messageHistory: LLMMessage[] | null = null,
-      addUserMessage: boolean = true
+      addUserMessage: boolean = true,
     ): Promise<ValidatedResponse> {
       let connection: string = modelOverride || this.activeConnection || ''
       let history = messageHistory || []

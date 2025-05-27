@@ -8,23 +8,24 @@
       <template v-if="!showCreator">
         <template v-if="!hasConnections">
           <p>
-            To get started: open a <span class="text-bold">demo editor</span> to immediately query or
-            take a guided tour in the <span class="text-bold">documentation</span>.
+            To get started: open a <span class="text-bold">demo editor</span> to immediately query
+            or take a guided tour in the <span class="text-bold">documentation</span>.
           </p>
-          <p class='text-faint'>
+          <p class="text-faint">
             We recommend the documentation if you haven't used Trilogy before.
           </p>
         </template>
         <template v-if="hasConnections">
-          <p>
-            We're glad you're back!
-          </p>
+          <p>We're glad you're back!</p>
         </template>
         <div class="buttons">
           <button @click="startDemo()" class="btn btn-secondary">
-            <span v-if="demoLoading">Loading <span class="spinner"></span></span><span v-else>Demo Editor</span>
+            <span v-if="demoLoading">Loading <span class="spinner"></span></span
+            ><span v-else>Demo Editor</span>
           </button>
-          <button v-if="hasConnections" @click="showCreator = !showCreator" class="btn btn-primary">New Editor</button>
+          <button v-if="hasConnections" @click="showCreator = !showCreator" class="btn btn-primary">
+            New Editor
+          </button>
 
           <button @click="tutorial()" class="btn btn-tertiary">Docs/Tutorial</button>
         </div>
