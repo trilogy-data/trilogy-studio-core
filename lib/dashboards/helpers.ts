@@ -268,7 +268,8 @@ export const determineDefaultConfig = (
       nonTemporalNumericColumns.length > 0
         ? nonTemporalNumericColumns[0].name
         : numericColumns[0].name
-
+    defaults.yField2 =
+      nonTemporalNumericColumns.length > 1 ? nonTemporalNumericColumns[1].name : undefined
     // If we have a categorical column, use it for color
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
