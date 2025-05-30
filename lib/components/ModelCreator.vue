@@ -59,6 +59,41 @@
             @input="validateForm"
           />
         </div>
+        <template v-if="modelDetails.connection === 'new-snowflake'">
+          <div class="form-row">
+            <label for="snowflake-username">Username</label>
+            <input
+              type="text"
+              v-model.trim="modelDetails.options.username"
+              id="snowflake-username"
+              placeholder="Snowflake Username"
+              required
+              @input="validateForm"
+            />
+          </div>
+          <div class="form-row">
+            <label for="snowflake-account">Account</label>
+            <input
+              type="text"
+              v-model.trim="modelDetails.options.account"
+              id="snowflake-account"
+              placeholder="Snowflake Account"
+              required
+              @input="validateForm"
+            />
+          </div>
+          <div class="form-row">
+            <label for="snowflake-ssh-private-key">Private Key</label>
+            <input
+              type="text"
+              v-model.trim="modelDetails.options.sshPrivateKey"
+              id="snowflake-ssh-private-key"
+              placeholder="Private Key"
+              required
+              @input="validateForm"
+            />
+          </div>
+        </template>
         <div class="form-row">
           <label for="model-import">Import From Address</label>
           <input
@@ -186,7 +221,14 @@ export default defineComponent({
       name: props.formDefaults.name || '',
       importAddress: props.formDefaults.importAddress,
       connection: props.formDefaults.connection || '',
-      options: { mdToken: '', projectId: '', username: '', password: '' },
+      options: {
+        mdToken: '',
+        projectId: '',
+        username: '',
+        password: '',
+        account: '',
+        sshPrivateKey: '',
+      },
     })
 
     // Get required services
@@ -230,6 +272,16 @@ export default defineComponent({
         return
       }
 
+      if (
+        modelDetails.value.connection === 'new-snowflake' &&
+        (!modelDetails.value.options.username ||
+          !modelDetails.value.options.account ||
+          !modelDetails.value.options.sshPrivateKey)
+      ) {
+        isFormValid.value = false
+        return
+      }
+
       // If we made it here, the form is valid
       isFormValid.value = true
     }
@@ -242,7 +294,14 @@ export default defineComponent({
       modelDetails.value.name = props.formDefaults.name || ''
       modelDetails.value.importAddress = props.formDefaults.importAddress
       modelDetails.value.connection = props.formDefaults.connection || ''
-      modelDetails.value.options = { mdToken: '', projectId: '', username: '', password: '' } // Reset options
+      modelDetails.value.options = {
+        mdToken: '',
+        projectId: '',
+        username: '',
+        password: '',
+        account: '',
+        sshPrivateKey: '',
+      } // Reset options
     }
 
     // Function to submit the editor details
@@ -268,6 +327,8 @@ export default defineComponent({
             projectId: modelDetails.value.options.projectId,
             username: modelDetails.value.options.username,
             password: modelDetails.value.options.password,
+            account: modelDetails.value.options.account,
+            privateKey: modelDetails.value.options.sshPrivateKey,
           })
         }
       }

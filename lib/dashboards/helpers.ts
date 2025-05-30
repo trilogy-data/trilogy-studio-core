@@ -5,6 +5,8 @@ import { Charts } from './constants'
 
 const temporalTraits = ['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'day_of_week']
 
+const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
+
 const categoricalTraits = [...temporalTraits]
 
 export function convertTimestampToISODate(timestamp: number): Date {
@@ -103,6 +105,13 @@ export const isCategoricalColumn = (column: ResultColumn): boolean => {
     return true
   }
   if (column.traits && categoricalTraits.some((trait) => column.traits?.includes(trait))) {
+    return true
+  }
+  return false
+}
+
+export const isGeographicColumn = (column: ResultColumn): boolean => {
+  if (column.traits && geoTraits.some((trait) => column.traits?.includes(trait))) {
     return true
   }
   return false
@@ -268,7 +277,8 @@ export const determineDefaultConfig = (
       nonTemporalNumericColumns.length > 0
         ? nonTemporalNumericColumns[0].name
         : numericColumns[0].name
-
+    defaults.yField2 =
+      nonTemporalNumericColumns.length > 1 ? nonTemporalNumericColumns[1].name : undefined
     // If we have a categorical column, use it for color
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,

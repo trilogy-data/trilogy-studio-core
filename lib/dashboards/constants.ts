@@ -87,7 +87,7 @@ export const Controls: ChartControl[] = [
     id: 'color-field',
     label: 'Color Scale',
     field: 'colorField',
-    columnFilter: 'numeric',
+    columnFilter: 'all',
     allowEmpty: true,
     visibleFor: ['heatmap', 'usa-map'],
     filterGroup: 'appearance',

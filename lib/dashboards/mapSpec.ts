@@ -1,7 +1,8 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnHasTrait, getColumnFormat } from './helpers'
+import { getColumnHasTrait, getColumnFormat, isCategoricalColumn } from './helpers'
+import { computeMercatorProjectionFactors } from './d3utility'
 
 /**
  * Map of US state FIPS IDs to their two-letter abbreviations
@@ -73,6 +74,18 @@ const createUSBaseLayer = () => ({
   mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
 })
 
+const createWorldBaseLayer = () => {
+  return {
+    data: {
+      // https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json
+      // url: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json',
+      url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2/data/world-110m.json',
+      format: { type: 'topojson', feature: 'countries' },
+    },
+    mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
+  }
+}
+
 /**
  * Creates standard tooltip configuration
  */
@@ -88,12 +101,28 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
 /**
  * Creates standard color encoding configuration
  */
-const createColorEncoding = (field: string, isMobile: boolean) => {
-  const colorConfig = {
+const createColorEncoding = (
+  field: string,
+  isMobile: boolean,
+  columns: Map<string, ResultColumn>,
+) => {
+  let full = columns.get(field)
+  if (!full) {
+    throw new Error(`Column ${field} not found in provided columns map`)
+  }
+  let colorConfig = {
     field,
     type: 'quantitative',
     title: snakeCaseToCapitalizedWords(field),
     scale: { scheme: 'viridis' },
+  }
+  if (isCategoricalColumn(full)) {
+    return {
+      field,
+      type: 'nominal',
+      title: snakeCaseToCapitalizedWords(field),
+      scale: { scheme: 'category20' },
+    }
   }
 
   if (isMobile) {
@@ -185,11 +214,12 @@ const createUSScatterMapSpec = (
     projection: {
       type: 'albersUsa',
     },
-    params: createInteractionParams(intChart),
+
     layer: [
       createUSBaseLayer(),
       {
         mark: { type: 'circle', tooltip: true },
+        params: createInteractionParams(intChart),
         encoding: {
           longitude: { field: config.xField, type: 'quantitative' },
           latitude: { field: config.yField, type: 'quantitative' },
@@ -202,7 +232,79 @@ const createUSScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config.colorField, isMobile)
+            ? createColorEncoding(config.colorField, isMobile, columns)
+            : { value: 'steelblue' },
+          tooltip: tooltipFields,
+        },
+      },
+    ],
+  }
+}
+
+const createWorldScatterMapSpec = (
+  config: ChartConfig,
+  columns: Map<string, ResultColumn>,
+  isMobile: boolean,
+  intChart: Array<Partial<ChartConfig>>,
+  data: readonly Row[],
+) => {
+  const tooltipFields = []
+
+  if (config.xField) {
+    tooltipFields.push(createTooltipField(config.xField, 'quantitative', columns))
+  }
+
+  if (config.yField) {
+    tooltipFields.push(createTooltipField(config.yField, 'quantitative', columns))
+  }
+
+  if (config.sizeField) {
+    tooltipFields.push(createTooltipField(config.sizeField, 'quantitative', columns))
+  }
+
+  const { scaleFactor } = computeMercatorProjectionFactors(data, config.xField, config.yField)
+  if (!(config.xField && config.yField)) {
+    throw new Error('Both xField and yField must be provided for scatter map')
+  }
+  let lons: number[] = []
+  let lats: number[] = []
+  if (config.xField) {
+    // @ts-ignore
+    lons = data.map((d) => d[config.xField])
+  }
+  if (config.yField) {
+    // @ts-ignore
+    lats = data.map((d) => d[config.yField])
+  }
+  const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2
+
+  return {
+    projection: {
+      type: 'mercator',
+      scale: { expr: `min(width, height) * ${scaleFactor}` },
+      // translate: { "expr": `[width * ${translateXFactor}, height * ${translateYFactor}]` },
+      center: [centerLon, centerLat], // This is crucial for proper centering
+    },
+
+    layer: [
+      createWorldBaseLayer(),
+      {
+        mark: { type: 'circle', tooltip: true },
+        params: createInteractionParams(intChart),
+        encoding: {
+          longitude: { field: config.xField, type: 'quantitative' },
+          latitude: { field: config.yField, type: 'quantitative' },
+          size: config.sizeField
+            ? {
+                field: config.sizeField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.sizeField),
+                scale: { type: 'quantize', nice: true },
+              }
+            : undefined,
+          color: config.colorField
+            ? createColorEncoding(config.colorField, isMobile, columns)
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -242,6 +344,8 @@ const createUSChoroplethMapSpec = (
             legend: {
               title: snakeCaseToCapitalizedWords(config.colorField),
               format: getColumnFormat(config.colorField, columns),
+              orient: 'right',
+              anchor: 'middle',
             },
           },
           opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
@@ -284,9 +388,9 @@ const createUSChoroplethMapSpec = (
 /**
  * Main function to create USA map specification
  */
-export const createUSAMapSpec = (
+export const createMapSpec = (
   config: ChartConfig,
-  data: readonly Row[] | null,
+  data: readonly Row[],
   columns: Map<string, ResultColumn>,
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
@@ -297,6 +401,7 @@ export const createUSAMapSpec = (
     if (isDataMostlyInUS(data, config.yField, config.xField)) {
       return createUSScatterMapSpec(config, columns, isMobile, intChart)
     }
+    return createWorldScatterMapSpec(config, columns, isMobile, intChart, data)
   }
 
   // Handle choropleth case
