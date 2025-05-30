@@ -5,7 +5,7 @@ import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat } from './helpers'
 import { createTreemapSpec } from './treeSpec'
-import { createUSAMapSpec } from './mapSpec'
+import { createMapSpec } from './mapSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -777,7 +777,7 @@ export const generateVegaSpec = (
       break
 
     case 'usa-map':
-      chartSpec = createUSAMapSpec(config, data, columns, isMobile, intChart)
+      chartSpec = createMapSpec(config, data || [], columns, isMobile, intChart)
       break
 
     case 'boxplot':
