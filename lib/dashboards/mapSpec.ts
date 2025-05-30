@@ -225,11 +225,11 @@ const createUSScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-                field: config.sizeField,
-                type: 'quantitative',
-                title: snakeCaseToCapitalizedWords(config.sizeField),
-                scale: { type: 'quantize', nice: true },
-              }
+              field: config.sizeField,
+              type: 'quantitative',
+              title: snakeCaseToCapitalizedWords(config.sizeField),
+              scale: { type: 'quantize', nice: true },
+            }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns)
@@ -297,11 +297,11 @@ const createWorldScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-                field: config.sizeField,
-                type: 'quantitative',
-                title: snakeCaseToCapitalizedWords(config.sizeField),
-                scale: { type: 'quantize', nice: true },
-              }
+              field: config.sizeField,
+              type: 'quantitative',
+              title: snakeCaseToCapitalizedWords(config.sizeField),
+              scale: { type: 'quantize', nice: true },
+            }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns)
