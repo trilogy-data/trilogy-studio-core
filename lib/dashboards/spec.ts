@@ -24,10 +24,6 @@ const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): a
     return { format: '.1%' }
   }
   switch (column.type) {
-    case ColumnType.MONEY:
-      return { format: '$,.2f' }
-    case ColumnType.PERCENT:
-      return { format: '.1%' }
     case ColumnType.DATE:
       return { timeUnit: 'yearmonthdate' }
     case ColumnType.TIME:
@@ -38,6 +34,23 @@ const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): a
       return {}
     default:
       return {}
+  }
+}
+
+const getSortOrder = (fieldName: string, columns: Map<string, ResultColumn>): any => {
+  if (!fieldName || !columns.get(fieldName)) return {}
+  const column = columns.get(fieldName)
+  if (!column) return {}
+  // if it has a week_day trait, sort by week days explicitly
+  if (getColumnHasTrait(fieldName, columns, 'day_of_week_name')) {
+    return {    sort: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] }
+  }
+  if (isTemporalColumn(column)) {
+    return { sort: { field: fieldName, order: 'ascending' } }
+  } else if (isNumericColumn(column)) {
+    return { sort: { field: fieldName, order: 'descending' } }
+  } else {
+    return { sort: { field: fieldName, order: 'ascending' } }
   }
 }
 
@@ -77,6 +90,8 @@ const createFieldEncoding = (
     title: snakeCaseToCapitalizedWords(columns.get(fieldName)?.description || fieldName),
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
+    ...getSortOrder(fieldName, columns),
+    
   }
 }
 

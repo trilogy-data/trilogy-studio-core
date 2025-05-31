@@ -65,7 +65,7 @@ export function configureTrilogy(languages) {
       'avg',
       'count',
       'min',
-      'length',
+      'len',
       'round',
       'coalesce',
       'concat',
