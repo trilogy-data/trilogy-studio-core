@@ -45,7 +45,7 @@
   max-height: 100%;
   min-width: 350px;
   z-index: 1;
-  overflow: scroll;
+  overflow: auto;
 }
 </style>
 <script lang="ts">
