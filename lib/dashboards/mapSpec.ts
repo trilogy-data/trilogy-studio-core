@@ -115,6 +115,10 @@ const createColorEncoding = (
     type: 'quantitative',
     title: snakeCaseToCapitalizedWords(field),
     scale: { scheme: 'viridis' },
+    legend: {
+      title: snakeCaseToCapitalizedWords(field),
+      format: getColumnFormat(field, columns),
+    },
   }
   if (isCategoricalColumn(full)) {
     return {
@@ -323,7 +327,12 @@ const createUSChoroplethMapSpec = (
   intChart: Array<Partial<ChartConfig>>,
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
-
+  let colorConfig = {}
+  if (config.colorField) {
+    colorConfig = createColorEncoding(config.colorField, false, columns)
+  } else {
+    colorConfig = { value: 'steelblue' }
+  }
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     width: 'container',
@@ -336,18 +345,7 @@ const createUSChoroplethMapSpec = (
         mark: { type: 'geoshape' },
         params: createInteractionParams(intChart),
         encoding: {
-          color: {
-            field: config.colorField,
-
-            type: 'quantitative',
-            scale: { type: 'quantize', nice: true, zero: true },
-            legend: {
-              title: snakeCaseToCapitalizedWords(config.colorField),
-              format: getColumnFormat(config.colorField, columns),
-              orient: 'right',
-              anchor: 'middle',
-            },
-          },
+          color: { ...colorConfig },
           opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
           stroke: {
             condition: { param: 'highlight', empty: false, value: 'black' },
@@ -421,7 +419,10 @@ export const createMapSpec = (
         return null
       }
     }
-
+    let colorEncoding = {}
+    if (config.colorField) {
+      colorEncoding = createColorEncoding(config.colorField, isMobile, columns)
+    }
     return {
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
       width: 'container',
@@ -477,13 +478,7 @@ export const createMapSpec = (
           projection: { type: 'mercator' },
           encoding: {
             color: {
-              field: config.colorField,
-              type: 'quantitative',
-              scale: { type: 'quantize', nice: true },
-              legend: {
-                title: config.colorField,
-                format: getColumnFormat(config.colorField, columns),
-              },
+              ...colorEncoding,
             },
             opacity: { condition: { param: 'select', value: 1 }, value: 0.3 },
             tooltip: [
@@ -514,5 +509,8 @@ export const createMapSpec = (
       config: { view: { stroke: null } },
     }
   }
+  throw new Error(
+    'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
+  )
   return {}
 }

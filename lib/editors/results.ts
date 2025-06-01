@@ -30,7 +30,6 @@ export enum ColumnType {
   STRUCT = 'struct',
   ARRAY = 'array',
   MAP = 'map',
-
 }
 
 export type Row = Readonly<Record<string, any>> // Represents a row, with column names as keys

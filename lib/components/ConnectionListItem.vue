@@ -560,9 +560,11 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   justify-content: space-between;
   width: 100%;
   align-items: center;
+  color: var(--text-color);
 }
 
 .bq-project-input {
   background: transparent;
+  color: var(--text-color);
 }
 </style>

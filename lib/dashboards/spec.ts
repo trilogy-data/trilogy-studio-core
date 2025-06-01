@@ -43,7 +43,7 @@ const getSortOrder = (fieldName: string, columns: Map<string, ResultColumn>): an
   if (!column) return {}
   // if it has a week_day trait, sort by week days explicitly
   if (getColumnHasTrait(fieldName, columns, 'day_of_week_name')) {
-    return {    sort: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] }
+    return { sort: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] }
   }
   if (isTemporalColumn(column)) {
     return { sort: { field: fieldName, order: 'ascending' } }
@@ -91,7 +91,6 @@ const createFieldEncoding = (
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
     ...getSortOrder(fieldName, columns),
-    
   }
 }
 
@@ -125,7 +124,7 @@ const generateTooltipFields = (
 /**
  * Create a base chart specification
  */
-const createBaseSpec = (data: readonly Row[] | null) => {
+export const createBaseSpec = (data: readonly Row[] | null) => {
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
     data: { values: data },
@@ -146,6 +145,7 @@ const createColorEncoding = (
   colorField: string | undefined,
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
+  currentTheme: string = 'light',
 ) => {
   const legendConfig = isMobile
     ? {
@@ -171,7 +171,10 @@ const createColorEncoding = (
       field: colorField,
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
-      scale: fieldType === 'quantitative' ? { scheme: 'viridis' } : { scheme: 'category20c' },
+      scale:
+        fieldType === 'quantitative'
+          ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
+          : { scheme: 'category20c' },
       condition: [
         {
           param: 'highlight',
@@ -187,6 +190,16 @@ const createColorEncoding = (
   }
 
   return { ...legendConfig }
+}
+
+const createSizeEncoding = (
+  sizeField: string | undefined,
+  columns: Map<string, ResultColumn>,
+): any => {
+  if (sizeField && columns.get(sizeField)) {
+    return { scale: { type: 'continuous' }, field: sizeField }
+  }
+  return {}
 }
 
 /**
@@ -245,9 +258,10 @@ const createInteractiveLayer = (
   encoding: any,
   intChart: Array<Partial<ChartConfig>> = [],
   filtered: boolean = false,
-  markColor: string = 'steelblue',
+  currentTheme: string = 'light',
 ) => {
   // Create the main layer for the primary y-axis
+  const markColor = currentTheme === 'light' ? 'steelblue' : '#4FC3F7'
   const mainLayer = {
     ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
     mark: {
@@ -276,7 +290,7 @@ const createInteractiveLayer = (
     } else {
       mainLayer.encoding = {
         ...mainLayer.encoding,
-        ...{ color: createColorEncoding(config.colorField, columns) },
+        ...{ color: createColorEncoding(config.colorField, columns, false, currentTheme) },
       }
     }
   }
@@ -412,7 +426,10 @@ const createBarChartSpec = (
     ],
     mark: 'bar',
     encoding: {
-      x: createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
+      x: {
+        ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
+        sort: '-y',
+      },
       y: createFieldEncoding(config.yField || '', columns, {
         axis: { format: getColumnFormat(config.yField, columns) },
       }),
@@ -519,12 +536,31 @@ const createAreaChartSpec = (
   tooltipFields: any[],
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
   return {
     data: undefined,
     layer: [
-      ...createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart),
-      ...createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, true),
+      ...createInteractiveLayer(
+        config,
+        data,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        false,
+        currentTheme,
+      ),
+      ...createInteractiveLayer(
+        config,
+        data,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        true,
+        currentTheme,
+      ),
     ],
   }
 }
@@ -538,7 +574,9 @@ const createPointChartSpec = (
   tooltipFields: any[],
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
+  const color = currentTheme === 'light' ? '#4FC3F7' : '#FF7043'
   return {
     params: [
       {
@@ -559,10 +597,16 @@ const createPointChartSpec = (
         nearest: true,
       },
     ],
-    mark: { type: 'point', filled: true },
+    mark: {
+      type: 'point',
+      filled: true,
+      color: color,
+    },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
       y: createFieldEncoding(config.yField || '', columns),
+      color: createColorEncoding(config.colorField, columns, false, currentTheme),
+      size: createSizeEncoding(config.sizeField, columns),
       tooltip: tooltipFields,
       ...encoding,
     },
@@ -736,6 +780,7 @@ export const generateVegaSpec = (
     !['heatmap'].includes(config.chartType) ? config.colorField : undefined,
     columns,
     isMobile,
+    currentTheme,
   )
 
   // Handle trellis (facet) layout if specified
@@ -776,11 +821,26 @@ export const generateVegaSpec = (
       break
 
     case 'area':
-      chartSpec = createAreaChartSpec(config, data, columns, tooltipFields, encoding, intChart)
+      chartSpec = createAreaChartSpec(
+        config,
+        data,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        currentTheme,
+      )
       break
 
     case 'point':
-      chartSpec = createPointChartSpec(config, columns, tooltipFields, encoding, intChart)
+      chartSpec = createPointChartSpec(
+        config,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        currentTheme,
+      )
       break
 
     case 'headline':

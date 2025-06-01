@@ -1,4 +1,4 @@
-import { Results, ColumnType } from '../editors/results'
+import { Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
 import type { Import, MultiQueryComponent, QueryResponse, ValidateResponse } from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
@@ -645,15 +645,6 @@ export default class QueryExecutionService {
         column.traits = header.traits || []
         column.address = header.name
         column.purpose = header.purpose
-        sqlResponse.headers.set(column.name, column)
-      }
-
-      if (column && (header.datatype?.traits || []).includes('money')) {
-        column.type = ColumnType.MONEY
-
-        sqlResponse.headers.set(column.name, column)
-      } else if (column && (header.datatype?.traits || []).includes('percent')) {
-        column.type = ColumnType.PERCENT
         sqlResponse.headers.set(column.name, column)
       }
     }

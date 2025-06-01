@@ -321,7 +321,6 @@ onMounted(() => {
 
 .query-history-item-preview {
   font-family: monospace;
-  color: #444;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -330,7 +329,7 @@ onMounted(() => {
 
 .query-history-item-meta {
   font-size: 12px;
-  color: #666;
+  color: var(--text-faint);
   display: flex;
   gap: 12px;
 }
@@ -361,7 +360,7 @@ onMounted(() => {
   border-bottom: 2px solid transparent;
   cursor: pointer;
   font-size: 13px;
-  color: #666;
+  color: var(--text-color);
   transition: all 0.2s ease;
 }
 
@@ -393,7 +392,7 @@ onMounted(() => {
   gap: 8px;
   margin-bottom: 16px;
   font-size: 13px;
-  color: #666;
+  color: var(--text-faint);
 }
 
 .query-history-item-error {

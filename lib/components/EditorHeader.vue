@@ -203,6 +203,7 @@ export default defineComponent({
   font-weight: 500;
   width: auto;
   min-width: 200px;
+  color: var(--text-color);
 }
 
 .name-input:focus {
