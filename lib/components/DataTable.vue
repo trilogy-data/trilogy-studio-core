@@ -169,6 +169,8 @@ function typeToFormatter(col: ResultColumn) {
         },
       }
 
+
+
     case ColumnType.DATETIME:
       return {
         formatter: 'datetime',
@@ -253,11 +255,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     backgroundClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     prettyPrint: {
       type: Boolean,
