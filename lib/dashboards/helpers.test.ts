@@ -25,8 +25,8 @@ describe('Chart Utils', () => {
     // Numeric columns
     testColumns.set('revenue', {
       name: 'revenue',
-      type: ColumnType.MONEY,
-      traits: [],
+      type: ColumnType.FLOAT,
+      traits: ['usd'],
     })
 
     testColumns.set('quantity', {
@@ -37,8 +37,8 @@ describe('Chart Utils', () => {
 
     testColumns.set('profit_margin', {
       name: 'profit_margin',
-      type: ColumnType.PERCENT,
-      traits: [],
+      type: ColumnType.FLOAT,
+      traits: ['percent'],
     })
 
     // Categorical columns

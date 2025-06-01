@@ -4,6 +4,7 @@ import { ModelTutorial } from './modelTutorial.ts'
 import { IntroTutorial } from './introTutorial.ts'
 import { llmTutorial } from './llmTutorial.ts'
 import { builtinFunctions } from './builtinFunctions.ts'
+import { windowFunctions } from './windowFunctionsReference.ts'
 import { modelReference } from './modelReference.ts'
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
@@ -390,6 +391,7 @@ complete_for_clause?
       ),
     ]),
     builtinFunctions,
+    windowFunctions,
     new Article('Custom Functions', [
       new Paragraph(
         'Defining Functions',

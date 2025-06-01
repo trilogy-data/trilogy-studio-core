@@ -127,6 +127,10 @@ export default {
       if (this.type === 'sql') {
         return ['results']
       }
+      if (this.error) {
+        // results page is what displays the error
+        return ['results', 'sql']
+      }
       return ['results', 'visualize', 'sql']
     },
     displayTab() {

@@ -30,13 +30,6 @@ export enum ColumnType {
   STRUCT = 'struct',
   ARRAY = 'array',
   MAP = 'map',
-
-  // CUSTOM TYPES
-  MONEY = 'money',
-  PERCENT = 'percent',
-  URL = 'url',
-  EMAIL = 'email',
-  PHONE = 'phone',
 }
 
 export type Row = Readonly<Record<string, any>> // Represents a row, with column names as keys

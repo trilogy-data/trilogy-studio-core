@@ -168,21 +168,8 @@ function typeToFormatter(col: ResultColumn) {
           precision: col.scale && col.scale >= 0 ? col.scale : false,
         },
       }
-    case ColumnType.MONEY:
-      return {
-        formatter: 'money',
-        formatterParams: {
-          symbol: '$',
-          precision: 4,
-        },
-      }
-    case ColumnType.PERCENT:
-      return {
-        //@ts-ignore
-        formatter: (cell) => {
-          return (cell.getValue() * 100).toFixed(2) + '%'
-        },
-      }
+
+
 
     case ColumnType.DATETIME:
       return {
@@ -268,11 +255,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     backgroundClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     prettyPrint: {
       type: Boolean,

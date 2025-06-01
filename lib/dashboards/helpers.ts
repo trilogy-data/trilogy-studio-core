@@ -39,13 +39,7 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
     return false
   }
   return (
-    [
-      ColumnType.NUMBER,
-      ColumnType.INTEGER,
-      ColumnType.FLOAT,
-      ColumnType.MONEY,
-      ColumnType.PERCENT,
-    ].includes(column.type) &&
+    [ColumnType.NUMBER, ColumnType.INTEGER, ColumnType.FLOAT].includes(column.type) &&
     !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
   )
 }
@@ -91,13 +85,7 @@ export const isTemporalColumn = (column: ResultColumn): boolean => {
 }
 
 export const isCategoricalColumn = (column: ResultColumn): boolean => {
-  let base = [
-    ColumnType.STRING,
-    ColumnType.BOOLEAN,
-    ColumnType.URL,
-    ColumnType.EMAIL,
-    ColumnType.PHONE,
-  ].includes(column.type)
+  let base = [ColumnType.STRING, ColumnType.BOOLEAN].includes(column.type)
   if (base) {
     return true
   }
@@ -240,6 +228,9 @@ export const determineDefaultConfig = (
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
     }
+    if (numericColumns.length > 1 && !defaults.colorField) {
+      defaults.colorField = numericColumns[1].name
+    }
   } else if (defaults.chartType === 'point') {
     defaults.xField = numericColumns[0].name
     defaults.yField = numericColumns[1].name
@@ -250,6 +241,17 @@ export const determineDefaultConfig = (
     )
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
+    }
+    // if we have another numeric column, use it for size
+    const nonAssignedNumeric = numericColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
+    )
+    if (nonAssignedNumeric.length > 0) {
+      defaults.sizeField = nonAssignedNumeric[0].name
+    }
+    // if we still don't have a color field and we have another numeric column, use it
+    if (!defaults.colorField && nonAssignedNumeric.length > 1) {
+      defaults.colorField = nonAssignedNumeric[1].name
     }
   } else if (defaults.chartType === 'heatmap') {
     defaults.xField = categoricalColumns[0].name
@@ -263,6 +265,9 @@ export const determineDefaultConfig = (
     )
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
+    }
+    if (numericColumns.length > 1 && !defaults.colorField) {
+      defaults.colorField = numericColumns[1].name
     }
   } else if (defaults.chartType === 'headline') {
     defaults.xField = numericColumns[0].name
