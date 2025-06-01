@@ -15,7 +15,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   /* flex: 1 1 100%; */
-  height: 100%;
+  height: 99.9%;
   background-color: var(--main-bg-color);
 }
 

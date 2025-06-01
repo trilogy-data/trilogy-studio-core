@@ -329,7 +329,8 @@ const createInteractiveLayer = (
   }
 
   // If no secondary y field is defined, return just the main layer
-  if (!config.yField2) {
+  // no secondary field for area charts
+  if (!config.yField2 || config.chartType === 'area') {
     return [mainLayer]
   }
 
