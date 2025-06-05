@@ -18,7 +18,7 @@ export default defineConfig({
     vue(),
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
-    nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
+    // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
     prism({
       languages: ['sql'],
       plugins: ['line-numbers'],
@@ -36,10 +36,6 @@ export default defineConfig({
       },
     },
   ],
-  define: {
-    global: 'window',
-    __IS_VITE__: true,
-  },
   resolve: {
     alias: {
       buffer: 'buffer/', // buffer requires /

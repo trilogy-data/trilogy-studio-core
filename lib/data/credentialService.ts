@@ -324,7 +324,6 @@ export class CredentialManager {
         // Add or update this credential in the blob
         const blobKey = this.getCredentialBlobKey(label, type)
         blob[blobKey] = value
-        console.log(blob)
         // Store the updated blob
         const success = await this.storeCredentialBlob(blob)
         if (!success) {
