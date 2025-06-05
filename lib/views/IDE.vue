@@ -159,32 +159,40 @@ aside {
 
 <script lang="ts">
 import SidebarLayout from '../components/SidebarLayout.vue'
-import Sidebar from '../components/Sidebar.vue'
-import Editor from '../components/Editor.vue'
-import DataTable from '../components/DataTable.vue'
+// import Editor from '../components/Editor.vue'
+// import DataTable from '../components/DataTable.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-import TutorialPage from '../components/TutorialPage.vue'
+// import TutorialPage from '../components/TutorialPage.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
-import WelcomePage from '../components/WelcomePage.vue'
-import Dashboard from '../components/Dashboard.vue'
+// import WelcomePage from '../components/WelcomePage.vue'
+// import Dashboard from '../components/Dashboard.vue'
 import CommunityModels from '../components/CommunityModels.vue'
-import LLMView from '../components/LLMView.vue'
+// import LLMView from '../components/LLMView.vue'
 import ConnectionView from '../components/ConnectionView.vue'
-import ResultsView from '../components/ResultsView.vue'
+// import ResultsView from '../components/ResultsView.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject, ref } from 'vue'
+import { inject, ref, defineAsyncComponent } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
+
+const TutorialPage = defineAsyncComponent(() => import('../components/TutorialPage.vue'))
+const Sidebar = defineAsyncComponent(() => import('../components/Sidebar.vue'))
+const Editor = defineAsyncComponent(() => import('../components/Editor.vue'))
+const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
+const WelcomePage = defineAsyncComponent(() => import('../components/WelcomePage.vue'))
+const Dashboard = defineAsyncComponent(() => import('../components/Dashboard.vue'))
+const ResultsView = defineAsyncComponent(() => import('../components/ResultsView.vue'))
+const LLMView = defineAsyncComponent(() => import('../components/LLMView.vue'))
 
 export default {
   name: 'IDEComponent',

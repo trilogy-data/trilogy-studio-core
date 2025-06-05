@@ -1,18 +1,9 @@
-// import { Buffer } from 'buffer'
-
-// window.Buffer = Buffer
-// polyfill for SQL Server Driver
-// @ts-ignore
-// Error.captureStackTrace = (targetObject: object, constructorOpt?: Function) => {}
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
 import '@mdi/font/css/materialdesignicons.css'
 import './style.css'
 import './tabulator-style.css'
-import { languages } from 'monaco-editor'
-import monacoEditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import { configureTrilogy } from 'trilogy-studio-core/monaco'
 
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css'
 import 'prismjs'
@@ -20,15 +11,21 @@ import 'prismjs/components/prism-sql'
 import './prism.css'
 
 self.MonacoEnvironment = {
-  getWorker: function (_, label) {
+  getWorker: async function (_, label) {
     switch (label) {
       default:
-        return new monacoEditorWorker()
+        const monacoEditorWorker = await import('monaco-editor/esm/vs/editor/editor.worker?worker')
+        return new monacoEditorWorker.default()
     }
   },
 }
 
-configureTrilogy(languages)
+async function initializeTrilogy() {
+  const { configureTrilogy } = await import('trilogy-studio-core/monaco')
+  configureTrilogy()
+}
+// Start loading trilogy configuration in the background
+initializeTrilogy().catch(console.error)
 
 const Pinia = createPinia()
 

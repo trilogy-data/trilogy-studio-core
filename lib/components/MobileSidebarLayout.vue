@@ -32,7 +32,7 @@
   left: 0;
   right: 0;
   z-index: 100;
-  background-color: var(--background, #fff);
+  background-color: var(--bg-color);
 }
 .icon-container {
   position: absolute;
