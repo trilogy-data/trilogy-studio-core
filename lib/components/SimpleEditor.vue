@@ -26,7 +26,7 @@
     <div class="editor-content">
       <div
         ref="editorElement"
-        class="monaco-editor"
+        class="editor-obj"
         :class="{
           'monaco-width-with-panel': isPanelVisible,
           'monaco-width-no-panel': !isPanelVisible,
@@ -83,7 +83,8 @@
 
 <script lang="ts">
 import { defineComponent, type PropType, inject } from 'vue'
-import * as monaco from 'monaco-editor'
+import { KeyMod, KeyCode, Range } from 'monaco-editor'
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 import {
   configureEditorTheme,
   createMonacoEditor,
@@ -106,7 +107,7 @@ interface OperationState {
   type: string
 }
 
-let globalEditor: monaco.editor.IStandaloneCodeEditor | null = null
+let globalEditor: editor.IStandaloneCodeEditor | null = null
 
 export default defineComponent({
   name: 'EnhancedEditor',
@@ -256,17 +257,14 @@ export default defineComponent({
       })
 
       // Add symbol insertion shortcut
-      globalEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
+      globalEditor.addCommand(KeyMod.CtrlCmd | KeyCode.Space, () => {
         this.togglePanel('symbols')
       })
 
       // Add LLM generate shortcut (ctrl-shift-enter)
-      globalEditor.addCommand(
-        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-        () => {
-          this.generateLLMQuery()
-        },
-      )
+      globalEditor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
+        this.generateLLMQuery()
+      })
     },
 
     handleKeyboardShortcuts(event: KeyboardEvent): void {
@@ -296,7 +294,7 @@ export default defineComponent({
       if (position && symbol.insertText) {
         globalEditor.executeEdits('', [
           {
-            range: new monaco.Range(
+            range: new Range(
               position.lineNumber,
               position.column,
               position.lineNumber,
@@ -341,7 +339,7 @@ export default defineComponent({
         if (annotations && showMarkers) {
           const model = globalEditor.getModel()
           if (model) {
-            monaco.editor.setModelMarkers(model, 'owner', annotations.data.items || [])
+            editor.setModelMarkers(model, 'owner', annotations.data.items || [])
           }
           if (annotations.data.completion_items) {
             this.editor.completionSymbols = annotations.data.completion_items
@@ -656,7 +654,7 @@ export default defineComponent({
   /* Subtract menu-bar and results-summary heights */
 }
 
-.monaco-editor {
+.editor-obj {
   flex: 1;
   min-height: 250px;
   /* height: 300px; */
@@ -914,7 +912,7 @@ export default defineComponent({
     min-height: 200px;
   }
 
-  .monaco-editor {
+  .editor-obj {
     min-height: 200px;
   }
 

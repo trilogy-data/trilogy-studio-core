@@ -30,7 +30,6 @@ export interface EditorInterface {
   deleted: boolean
   chartConfig?: ChartConfig | null
   chatInteraction?: ChatInteraction | null
-  // monaco: editor.IStandaloneCodeEditor | null;
 }
 
 export default class Editor implements EditorInterface {
@@ -55,7 +54,6 @@ export default class Editor implements EditorInterface {
   chartConfig?: ChartConfig | null
   completionSymbols: CompletionItem[]
   chatInteraction?: ChatInteraction | null
-  // monaco: editor.IStandaloneCodeEditor | null;
 
   defaultContents(type: string) {
     switch (type) {
@@ -94,7 +92,6 @@ export default class Editor implements EditorInterface {
     this.loading = false
     this.error = null
     this.duration = null
-    // this.monaco = null;
     this.status_code = 200
     this.generated_sql = null
     this.storage = storage

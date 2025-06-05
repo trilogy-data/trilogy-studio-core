@@ -3,7 +3,17 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 
-const temporalTraits = ['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'day_of_week', 'quarter']
+const temporalTraits = [
+  'year',
+  'month',
+  'week',
+  'day',
+  'hour',
+  'minute',
+  'second',
+  'day_of_week',
+  'quarter',
+]
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
 

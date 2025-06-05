@@ -11,7 +11,7 @@
   />
   <template v-if="loaded">
     <IDE v-if="!isMobile" />
-    <MobileIDE v-else />
+    <MobileIDE v-if="isMobile" />
   </template>
 </template>
 
@@ -34,10 +34,12 @@ import {
 } from '../data/credentialHelpers'
 import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
-import { provide, computed, ref } from 'vue'
+import { provide, computed, ref, defineAsyncComponent } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
-import { IDE, MobileIDE } from '../views'
+
+const IDE = defineAsyncComponent(() => import('../views/IDE.vue'))
+const MobileIDE = defineAsyncComponent(() => import('../views/MobileIDE.vue'))
 
 export default {
   name: 'ContextManager',
@@ -534,7 +536,7 @@ export default {
     provide('saveLLMConnections', saveLLMConnections)
     provide('saveDashboards', saveDashboards)
     provide('saveAll', saveAll)
-    const isMobile = computed(() => windowWidth.value <= 768)
+    const isMobile = computed(() => loaded && windowWidth.value <= 768)
     const handleResize = () => {
       windowWidth.value = window.innerWidth
     }

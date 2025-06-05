@@ -1,12 +1,12 @@
-import * as monaco from 'monaco-editor'
-import { KeyMod, KeyCode } from 'monaco-editor'
+import { KeyMod, KeyCode, type IRange } from 'monaco-editor'
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 
 /**
  * Configure Monaco editor themes
  */
 export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
   // Define the Trilogy theme
-  monaco.editor.defineTheme('trilogyStudio', {
+  editor.defineTheme('trilogyStudio', {
     base: theme === 'light' ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [
@@ -26,7 +26,7 @@ export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
   })
 
   // Set the active theme
-  monaco.editor.setTheme('trilogyStudio')
+  editor.setTheme('trilogyStudio')
 }
 
 interface EditorCallbacks {
@@ -37,14 +37,11 @@ interface EditorCallbacks {
   onGenerateLLM?: (content: string) => void
 }
 
-/**
- * Create a Monaco editor instance
- */
 export function createMonacoEditor(
   domElement: HTMLElement,
-  editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {},
-): monaco.editor.IStandaloneCodeEditor {
-  const defaultOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
+  editorOptions: editor.IStandaloneEditorConstructionOptions = {},
+): editor.IStandaloneCodeEditor {
+  const defaultOptions: editor.IStandaloneEditorConstructionOptions = {
     automaticLayout: true,
     autoClosingBrackets: 'always',
     autoClosingOvertype: 'always',
@@ -58,14 +55,14 @@ export function createMonacoEditor(
   const options = { ...defaultOptions, ...editorOptions }
 
   // Create the editor instance
-  return monaco.editor.create(domElement, options)
+  return editor.create(domElement, options)
 }
 
 /**
  * Get text from the editor, either selected text or all text
  */
 export function getEditorText(
-  editor: monaco.editor.IStandaloneCodeEditor | undefined,
+  editor: editor.IStandaloneCodeEditor | undefined,
   fallback: string = '',
 ): string {
   if (!editor) return fallback
@@ -91,7 +88,7 @@ export function getEditorText(
 /**
  * Get the current selection range in the editor
  */
-export function getEditorRange(editor: monaco.editor.IStandaloneCodeEditor): monaco.IRange {
+export function getEditorRange(editor: editor.IStandaloneCodeEditor): IRange {
   const selection = editor.getSelection()
 
   // Check if there's a valid selection (not just a cursor position)
@@ -124,7 +121,7 @@ export function getEditorRange(editor: monaco.editor.IStandaloneCodeEditor): mon
  * Setup common keyboard shortcuts for the editor
  */
 export function setupEditorKeybindings(
-  editor: monaco.editor.IStandaloneCodeEditor,
+  editor: editor.IStandaloneCodeEditor,
   callbacks: EditorCallbacks = {},
 ): void {
   const { onValidate, onRun, onSave } = callbacks
@@ -170,25 +167,9 @@ export function setupEditorKeybindings(
 }
 
 /**
- * Set validation markers on editor
- */
-export function setEditorMarkers(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  markers: monaco.editor.IMarkerData[] = [],
-): void {
-  const model = editor.getModel()
-  if (model) {
-    monaco.editor.setModelMarkers(model, 'owner', markers)
-  }
-}
-
-/**
  * Update editor contents preserving cursor position
  */
-export function updateEditorContent(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  content: string,
-): void {
+export function updateEditorContent(editor: editor.IStandaloneCodeEditor, content: string): void {
   // Remember cursor position
   const position = editor.getPosition()
 
