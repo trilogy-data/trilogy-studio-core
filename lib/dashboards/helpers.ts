@@ -229,7 +229,6 @@ export const determineDefaultConfig = (
     defaults.chartType = 'headline'
   }
 
-
   // now set defaults for each chart type
   if (defaults.chartType === 'barh') {
     defaults.yField = categoricalColumns[0].name
