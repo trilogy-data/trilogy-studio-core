@@ -229,7 +229,6 @@ def test_parse_error():
     assert ":param1" not in generated_sql, generated_sql
 
 
-
 MAP_DEBUG = {
     "query": """    const num_map <- {1: 10, 2: 21};
 
@@ -239,8 +238,7 @@ MAP_DEBUG = {
     "dialect": "duckdb",
     "full_model": {
         "name": "",
-        "sources": [
-        ],
+        "sources": [],
     },
     "imports": [],
     "extra_filters": [],
@@ -252,4 +250,4 @@ def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
     final, columns = generate_query_core(query, dialect)
-    assert columns[0].datatype.value == 'int'
+    assert columns[0].datatype.value == "int"
