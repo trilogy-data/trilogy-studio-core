@@ -48,6 +48,7 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
   if (column.purpose === 'key') {
     return false
   }
+  console.log(column)
   return (
     [ColumnType.NUMBER, ColumnType.INTEGER, ColumnType.FLOAT].includes(column.type) &&
     !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
@@ -227,6 +228,7 @@ export const determineDefaultConfig = (
   } else if (numericColumns.length > 0 && categoricalColumns.length == 0) {
     defaults.chartType = 'headline'
   }
+
 
   // now set defaults for each chart type
   if (defaults.chartType === 'barh') {
