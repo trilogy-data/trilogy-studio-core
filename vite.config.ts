@@ -6,6 +6,8 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import prism from 'vite-plugin-prismjs'
 
 import { resolve } from 'node:path'
+import { visualizer } from 'rollup-plugin-visualizer'
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
@@ -16,9 +18,15 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    visualizer({
+      filename: 'dist/stats.html',
+      open: true,
+      gzipSize: true,
+    }),
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
-    nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
+    // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
+    nodePolyfills({ include: ['crypto', 'stream'] }),
     prism({
       languages: ['sql'],
       plugins: ['line-numbers'],
@@ -36,10 +44,6 @@ export default defineConfig({
       },
     },
   ],
-  define: {
-    global: 'window',
-    __IS_VITE__: true,
-  },
   resolve: {
     alias: {
       buffer: 'buffer/', // buffer requires /
@@ -58,6 +62,16 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      // treeshake: {
+      //   //@ts-ignore
+      //   moduleSideEffects: (id) => {
+      //     if (id.includes('monaco-editor')) {
+      //       console.log('Monaco module:', id)
+      //       return false // Force no side effects
+      //     }
+      //     return 'no-external'
+      //   },
+      // },
       // external: ['vue'],
     },
   },

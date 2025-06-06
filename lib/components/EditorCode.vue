@@ -4,8 +4,8 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, onUnmounted, ref, watch } from 'vue'
-import { editor, KeyMod, KeyCode } from 'monaco-editor'
-import type { IRange } from 'monaco-editor'
+import { KeyMod, KeyCode, type IRange } from 'monaco-editor'
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 
 // Maps to track editor instances
 const editorMap = new Map<string, editor.IStandaloneCodeEditor>()

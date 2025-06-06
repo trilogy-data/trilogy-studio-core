@@ -50,7 +50,18 @@
 </style>
 
 <script lang="ts">
-import { Tabulator } from 'tabulator-tables'
+import {
+  Tabulator,
+  ResizeColumnsModule,
+  DownloadModule,
+  FormatModule,
+  FilterModule,
+  SortModule,
+  EditModule,
+  ExportModule,
+  PageModule,
+  InteractionModule,
+} from 'tabulator-tables'
 import { DateTime } from 'luxon'
 import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
@@ -59,6 +70,18 @@ import type { PropType, ShallowRef } from 'vue'
 import { shallowRef, computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import { snakeCaseToCapitalizedWords } from '../dashboards/formatting.ts'
+
+Tabulator.registerModule([
+  ResizeColumnsModule,
+  DownloadModule,
+  FormatModule,
+  FilterModule,
+  SortModule,
+  EditModule,
+  ExportModule,
+  PageModule,
+  InteractionModule,
+])
 
 function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   if (!data) {
@@ -169,8 +192,6 @@ function typeToFormatter(col: ResultColumn) {
         },
       }
 
-
-
     case ColumnType.DATETIME:
       return {
         formatter: 'datetime',
@@ -255,11 +276,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
     backgroundClick: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
     prettyPrint: {
       type: Boolean,

@@ -94,4 +94,4 @@ def test_scale_parallel(num_requests=50, max_workers=10):
             future.result() for future in concurrent.futures.as_completed(futures)
         ]
 
-    return results
+    assert len(results) == num_requests
