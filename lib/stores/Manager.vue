@@ -1,30 +1,30 @@
 <template>
   <div>
-  <CredentialManager
-    :showPrompt="showCredentialPrompt"
-    :bypassMode="bypassMode"
-    :error="credentialError"
-    :storedCredentialLabels="storedCredentialLabels"
-    @submit-keyphrase="handleKeyphraseSubmit"
-    @show-bypass-warning="showBypassWarning"
-    @confirm-bypass="confirmBypass"
-    @cancel-bypass="cancelBypass"
-  />
-  <Suspense>
-    <template #default>
-      <div>
-      <IDE v-if="!isMobile" />
-      <MobileIDE v-if="isMobile" />
-      </div>
-    </template>
-    <template #fallback>
-      <div>
-      <IDEPlaceholder v-if="!isMobile" />
-      <MobileIDEPlaceholder v-if="isMobile" />
-      </div>
-    </template>
-  </Suspense>
-</div>
+    <CredentialManager
+      :showPrompt="showCredentialPrompt"
+      :bypassMode="bypassMode"
+      :error="credentialError"
+      :storedCredentialLabels="storedCredentialLabels"
+      @submit-keyphrase="handleKeyphraseSubmit"
+      @show-bypass-warning="showBypassWarning"
+      @confirm-bypass="confirmBypass"
+      @cancel-bypass="cancelBypass"
+    />
+    <Suspense>
+      <template #default>
+        <div>
+          <IDE v-if="!isMobile" />
+          <MobileIDE v-if="isMobile" />
+        </div>
+      </template>
+      <template #fallback>
+        <div>
+          <IDEPlaceholder v-if="!isMobile" />
+          <MobileIDEPlaceholder v-if="isMobile" />
+        </div>
+      </template>
+    </Suspense>
+  </div>
 </template>
 
 <script lang="ts">
