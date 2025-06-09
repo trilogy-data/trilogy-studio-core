@@ -180,7 +180,6 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
-
 const TutorialPage = defineAsyncComponent(() => import('../components/TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/Sidebar.vue'))
 const Editor = defineAsyncComponent(() => import('../components/Editor.vue'))
