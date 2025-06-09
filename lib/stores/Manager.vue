@@ -1,18 +1,30 @@
 <template>
-  <CredentialManager
-    :showPrompt="showCredentialPrompt"
-    :bypassMode="bypassMode"
-    :error="credentialError"
-    :storedCredentialLabels="storedCredentialLabels"
-    @submit-keyphrase="handleKeyphraseSubmit"
-    @show-bypass-warning="showBypassWarning"
-    @confirm-bypass="confirmBypass"
-    @cancel-bypass="cancelBypass"
-  />
-  <template v-if="loaded">
-    <IDE v-if="!isMobile" />
-    <MobileIDE v-if="isMobile" />
-  </template>
+  <div>
+    <CredentialManager
+      :showPrompt="showCredentialPrompt"
+      :bypassMode="bypassMode"
+      :error="credentialError"
+      :storedCredentialLabels="storedCredentialLabels"
+      @submit-keyphrase="handleKeyphraseSubmit"
+      @show-bypass-warning="showBypassWarning"
+      @confirm-bypass="confirmBypass"
+      @cancel-bypass="cancelBypass"
+    />
+    <Suspense>
+      <template #default>
+        <div>
+          <IDE v-if="!isMobile" />
+          <MobileIDE v-if="isMobile" />
+        </div>
+      </template>
+      <template #fallback>
+        <div>
+          <IDEPlaceholder v-if="!isMobile" />
+          <MobileIDEPlaceholder v-if="isMobile" />
+        </div>
+      </template>
+    </Suspense>
+  </div>
 </template>
 
 <script lang="ts">
@@ -38,6 +50,9 @@ import { provide, computed, ref, defineAsyncComponent } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 
+import IDEPlaceholder from '../views/IDEPlaceholder.vue'
+import MobileIDEPlaceholder from '../views/MobileIDEPlaceholder.vue'
+
 const IDE = defineAsyncComponent(() => import('../views/IDE.vue'))
 const MobileIDE = defineAsyncComponent(() => import('../views/MobileIDE.vue'))
 
@@ -46,6 +61,8 @@ export default {
   components: {
     IDE,
     MobileIDE,
+    MobileIDEPlaceholder,
+    IDEPlaceholder,
     CredentialManager,
   },
   props: {

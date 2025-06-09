@@ -152,14 +152,12 @@ aside {
 </style>
 
 <script lang="ts">
-import SidebarLayout from '../components/SidebarLayout.vue'
 import MobileSidebarLayout from '../components/MobileSidebarLayout.vue'
 // import Sidebar from '../components/Sidebar.vue'
 // import Editor from '../components/Editor.vue'
 // import DataTable from '../components/DataTable.vue'
 import CommunityModels from '../components/CommunityModels.vue'
 import ConnectionView from '../components/ConnectionView.vue'
-import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
@@ -171,8 +169,6 @@ import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
 // import WelcomePage from '../components/WelcomePage.vue'
 // import MobileDashboard from '../components/MobileDashboard.vue'
-import ResultsContainer from '../components/Results.vue'
-
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
@@ -183,6 +179,7 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
+
 const TutorialPage = defineAsyncComponent(() => import('../components/TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/Sidebar.vue'))
 const Editor = defineAsyncComponent(() => import('../components/Editor.vue'))
@@ -209,8 +206,6 @@ export default {
     Sidebar,
     Editor,
     DataTable,
-    SidebarLayout,
-    VerticalSplitLayout,
     ErrorMessage,
     TutorialPage,
     ModelView,
@@ -220,7 +215,6 @@ export default {
     HintComponent,
     WelcomePage,
     MobileDashboard,
-    ResultsContainer,
     LoadingButton,
     TabbedLayout,
     MobileSidebarLayout,
