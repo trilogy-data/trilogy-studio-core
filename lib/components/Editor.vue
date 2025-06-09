@@ -179,7 +179,10 @@ export default defineComponent({
   },
   computed: {
     connectionHasModel(): boolean {
-      return this.connectionStore.connections[this.editorData.connection].model !== null
+      if (!this.editorData || !this.editorData.connection) {
+        return false
+      }
+      return this.connectionStore.connections[this.editorData.connection]?.model !== null
     },
     editorData() {
       return this.editorStore.editors[this.editorId]
