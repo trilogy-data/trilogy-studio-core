@@ -99,45 +99,48 @@ export default class DuckDBConnection extends BaseConnection {
 
   parseUint32ArrayToBigInt(arr: Uint32Array): bigint {
     if (arr.length !== 4) {
-      throw new Error('Expected Uint32Array of length 4');
+      throw new Error('Expected Uint32Array of length 4')
     }
 
     // Convert each 32-bit chunk to BigInt and combine
     // arr[0] is least significant, arr[3] is most significant
-    const chunk0 = BigInt(arr[0]);
-    const chunk1 = BigInt(arr[1]) << 32n;
-    const chunk2 = BigInt(arr[2]) << 64n;
-    const chunk3 = BigInt(arr[3]) << 96n;
+    const chunk0 = BigInt(arr[0])
+    const chunk1 = BigInt(arr[1]) << 32n
+    const chunk2 = BigInt(arr[2]) << 64n
+    const chunk3 = BigInt(arr[3]) << 96n
 
-    return chunk0 + chunk1 + chunk2 + chunk3;
+    return chunk0 + chunk1 + chunk2 + chunk3
   }
 
   handleNumber(value: any): number | bigint {
     // Check if it's a Uint32Array from DuckDB
     if (value instanceof Uint32Array && value.length === 4) {
-      const bigIntValue = this.parseUint32ArrayToBigInt(value);
+      const bigIntValue = this.parseUint32ArrayToBigInt(value)
 
       // If it fits in JavaScript's safe integer range, return as number
-      if (bigIntValue <= BigInt(Number.MAX_SAFE_INTEGER) && bigIntValue >= BigInt(Number.MIN_SAFE_INTEGER)) {
-        return Number(bigIntValue);
+      if (
+        bigIntValue <= BigInt(Number.MAX_SAFE_INTEGER) &&
+        bigIntValue >= BigInt(Number.MIN_SAFE_INTEGER)
+      ) {
+        return Number(bigIntValue)
       }
 
       // Otherwise return as BigInt
-      return bigIntValue;
+      return bigIntValue
     }
 
     // Handle other types normally
     if (typeof value === 'number' || typeof value === 'bigint') {
-      return value;
+      return value
     }
 
     // Try to parse as number
-    const numValue = Number(value);
+    const numValue = Number(value)
     if (Number.isFinite(numValue)) {
-      return numValue;
+      return numValue
     }
 
-    throw new Error(`Cannot parse value: ${value}`);
+    throw new Error(`Cannot parse value: ${value}`)
   }
   processRow(row: any, headers: Map<string, ResultColumn>): any {
     let processedRow: Record<string, any> = {}

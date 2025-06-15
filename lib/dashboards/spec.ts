@@ -146,22 +146,20 @@ const createColorEncoding = (
   isMobile: boolean = false,
   currentTheme: string = 'light',
 ) => {
-  let legendConfig = {
-  }
+  let legendConfig = {}
   if (isMobile) {
     legendConfig = {
-      ...legendConfig, ...{
+      ...legendConfig,
+      ...{
         orient: 'bottom',
         direction: 'horizontal',
-
-      }
+      },
     }
   }
 
-
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
-    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns), }
+    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns) }
     let rval = {
       field: colorField,
       type: fieldType,
@@ -181,7 +179,7 @@ const createColorEncoding = (
       ...getFormatHint(colorField, columns),
       legend: {
         ...legendConfig,
-      }
+      },
     }
     return rval
   }
@@ -189,7 +187,7 @@ const createColorEncoding = (
   return {
     legend: {
       ...legendConfig,
-    }
+    },
   }
 }
 
@@ -322,7 +320,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-          intChart.filter((obj) => config.xField in obj)
+            intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -353,25 +351,25 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-        {
-          name: 'highlight2',
-          select: {
-            type: 'point',
-            on: 'mouseover',
-            clear: 'mouseout',
+          {
+            name: 'highlight2',
+            select: {
+              type: 'point',
+              on: 'mouseover',
+              clear: 'mouseout',
+            },
           },
-        },
-        // {
-        //   name: 'select2',
-        //   select: {
-        //     type: 'point',
-        //     on: 'click,touchend',
-        //     clear: 'dragleave,dblclick'
-        //   },
-        //   value: intChart,
+          // {
+          //   name: 'select2',
+          //   select: {
+          //     type: 'point',
+          //     on: 'click,touchend',
+          //     clear: 'dragleave,dblclick'
+          //   },
+          //   value: intChart,
 
-        // },
-      ]
+          // },
+        ]
       : [],
   }
 

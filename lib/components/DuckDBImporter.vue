@@ -28,7 +28,8 @@
               ref="fileInput"
               class="hidden-input"
             />
-          </label> local CSV/Parquet File or DuckDB DB
+          </label>
+          local CSV/Parquet File or DuckDB DB
         </div>
       </div>
 
