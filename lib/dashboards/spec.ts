@@ -160,10 +160,8 @@ const createColorEncoding = (
 
 
   if (colorField && columns.get(colorField)) {
-    console.log('colorField', colorField, columns.get(colorField))
     const fieldType = getVegaFieldType(colorField, columns)
     legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns), }
-    console.log('legendConfig', legendConfig)
     let rval = {
       field: colorField,
       type: fieldType,
@@ -185,7 +183,6 @@ const createColorEncoding = (
         ...legendConfig,
       }
     }
-    console.log('color encoding', rval)
     return rval
   }
 
