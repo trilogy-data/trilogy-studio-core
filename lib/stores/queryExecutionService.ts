@@ -641,9 +641,6 @@ export default class QueryExecutionService {
       let header = headers[i]
       // sql responses should transform . into _
       let column = sqlResponse.headers.get(header.name.replace('local.', '').replaceAll('.', '_'))
-      console.log('debug')
-      console.log(sqlResponse.headers)
-      console.log(column)
       if (column) {
         column.traits = header.traits || []
         column.address = header.name
