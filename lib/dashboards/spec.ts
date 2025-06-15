@@ -117,7 +117,6 @@ const generateTooltipFields = (
   if (colorField && columns.get(colorField)) {
     fields.push(createFieldEncoding(colorField, columns))
   }
-
   return fields
 }
 
@@ -147,27 +146,25 @@ const createColorEncoding = (
   isMobile: boolean = false,
   currentTheme: string = 'light',
 ) => {
-  const legendConfig = isMobile
-    ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
+  let legendConfig = {
+  }
+  if (isMobile) {
+    legendConfig = {
+      ...legendConfig, ...{
+        orient: 'bottom',
+        direction: 'horizontal',
+
       }
-    : {
-        condition: [
-          {
-            param: 'highlight',
-            empty: false,
-            value: HIGHLIGHT_COLOR,
-          },
-          { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
-        ],
-      }
+    }
+  }
+
 
   if (colorField && columns.get(colorField)) {
+    console.log('colorField', colorField, columns.get(colorField))
     const fieldType = getVegaFieldType(colorField, columns)
-    return {
+    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns), }
+    console.log('legendConfig', legendConfig)
+    let rval = {
       field: colorField,
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
@@ -183,13 +180,20 @@ const createColorEncoding = (
         },
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
-
       ...getFormatHint(colorField, columns),
+      legend: {
+        ...legendConfig,
+      }
+    }
+    console.log('color encoding', rval)
+    return rval
+  }
+
+  return {
+    legend: {
       ...legendConfig,
     }
   }
-
-  return { ...legendConfig }
 }
 
 const createSizeEncoding = (
@@ -321,7 +325,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-            intChart.filter((obj) => config.xField in obj)
+          intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -352,25 +356,25 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-          // {
-          //   name: 'select2',
-          //   select: {
-          //     type: 'point',
-          //     on: 'click,touchend',
-          //     clear: 'dragleave,dblclick'
-          //   },
-          //   value: intChart,
+        },
+        // {
+        //   name: 'select2',
+        //   select: {
+        //     type: 'point',
+        //     on: 'click,touchend',
+        //     clear: 'dragleave,dblclick'
+        //   },
+        //   value: intChart,
 
-          // },
-        ]
+        // },
+      ]
       : [],
   }
 
