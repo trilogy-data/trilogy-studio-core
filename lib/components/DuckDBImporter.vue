@@ -12,20 +12,24 @@
           >Successfully imported <strong>{{ lastImportedTable }}</strong></span
         >
       </div>
+      <div v-else-if="lastAttachedDatabase && !isLoading" class="success-message">
+        <span
+          >Successfully attached database <strong>{{ lastAttachedDatabase }}</strong></span
+        >
+      </div>
       <div v-else-if="!isLoading">
         <div>
-          Drag CSV or Parquet file or
-          <label class="file-input-label">
-            upload
+          Drag or<label class="file-input-label">
+            select
             <input
               type="file"
-              accept=".csv,.parquet"
+              accept=".csv,.parquet,.db"
               @change="handleFileInput"
               ref="fileInput"
               class="hidden-input"
             />
           </label>
-          as table
+          local CSV/Parquet File or DuckDB DB
         </div>
       </div>
 
@@ -60,6 +64,7 @@ export default defineComponent({
     const isLoading = ref(false)
     const loadingMessage = ref('Processing file...')
     const lastImportedTable = ref('')
+    const lastAttachedDatabase = ref('')
     const fileInput = ref<HTMLInputElement | null>(null)
 
     const handleDragOver = () => {
@@ -85,7 +90,7 @@ export default defineComponent({
         if (isValidFileType(file)) {
           await processFile(file)
         } else {
-          alert('Please drop a CSV or Parquet file')
+          alert('Please drop a CSV, Parquet, or DuckDB file')
         }
       }
     }
@@ -95,15 +100,18 @@ export default defineComponent({
         file.type === 'text/csv' ||
         file.name.endsWith('.csv') ||
         file.type === 'application/octet-stream' ||
-        file.name.endsWith('.parquet')
+        file.name.endsWith('.parquet') ||
+        file.name.endsWith('.db')
       )
     }
 
-    const getFileType = (file: File): 'csv' | 'parquet' => {
+    const getFileType = (file: File): 'csv' | 'parquet' | 'db' => {
       if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
         return 'csv'
-      } else {
+      } else if (file.name.endsWith('.parquet')) {
         return 'parquet'
+      } else {
+        return 'db'
       }
     }
 
@@ -112,12 +120,66 @@ export default defineComponent({
         isLoading.value = true
         loadingMessage.value = `Processing ${file.name}...`
 
-        // Generate table name from file name
         const fileType = getFileType(file)
-        const fileName = file.name.replace(`.${fileType}`, '')
-        const tableName = sanitizeTableName(fileName)
 
-        loadingMessage.value = `Creating table ${tableName}...`
+        if (fileType === 'db') {
+          await processDuckDBFile(file)
+        } else {
+          // Generate table name from file name
+          const fileName = file.name.replace(`.${fileType}`, '')
+          const tableName = sanitizeTableName(fileName)
+
+          loadingMessage.value = `Creating table ${tableName}...`
+
+          // Register the file in DuckDB's virtual file system
+          await props.db.registerFileHandle(
+            file.name,
+            file,
+            duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
+            true,
+          )
+
+          // Create a connection
+          const connection = await props.db.connect()
+
+          try {
+            if (fileType === 'csv') {
+              await processCSV(connection, file, tableName)
+            } else {
+              await processParquet(connection, file, tableName)
+            }
+
+            // Update state and notify parent
+            lastImportedTable.value = tableName
+            lastAttachedDatabase.value = ''
+            isLoading.value = false
+            props.connection.refreshDatabase('memory')
+
+            // set a timeout to clear the lastImportedTable
+            setTimeout(() => {
+              lastImportedTable.value = ''
+            }, 5000)
+          } finally {
+            // Always close the connection
+            connection.close()
+          }
+        }
+      } catch (error) {
+        isLoading.value = false
+        console.error(`Error processing ${file.name}:`, error)
+        alert(
+          `Error processing ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+      }
+    }
+
+    const processDuckDBFile = async (file: File) => {
+      try {
+        loadingMessage.value = `Attaching database ${file.name}...`
+
+        // Generate database alias from file name
+        const fileName = file.name.replace('.db', '')
+        const dbAlias = sanitizeTableName(fileName)
 
         // Register the file in DuckDB's virtual file system
         await props.db.registerFileHandle(
@@ -131,20 +193,19 @@ export default defineComponent({
         const connection = await props.db.connect()
 
         try {
-          if (fileType === 'csv') {
-            await processCSV(connection, file, tableName)
-          } else {
-            await processParquet(connection, file, tableName)
-          }
+          // Attach the database
+          await connection.query(`ATTACH '${file.name}' AS ${dbAlias}`)
 
           // Update state and notify parent
-          lastImportedTable.value = tableName
+          lastAttachedDatabase.value = dbAlias
+          lastImportedTable.value = ''
           isLoading.value = false
-          props.connection.refreshDatabase('memory')
+          await props.connection.getDatabases()
+          props.connection.refreshDatabase(dbAlias)
 
-          // set a timeout to clear the lastImportedTable
+          // set a timeout to clear the lastAttachedDatabase
           setTimeout(() => {
-            lastImportedTable.value = ''
+            lastAttachedDatabase.value = ''
           }, 5000)
         } finally {
           // Always close the connection
@@ -152,9 +213,9 @@ export default defineComponent({
         }
       } catch (error) {
         isLoading.value = false
-        console.error(`Error processing ${file.name}:`, error)
+        console.error(`Error attaching database ${file.name}:`, error)
         alert(
-          `Error processing ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          `Error attaching database ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         )
       }
     }
@@ -259,6 +320,7 @@ export default defineComponent({
       isLoading,
       loadingMessage,
       lastImportedTable,
+      lastAttachedDatabase,
       fileInput,
       handleDragOver,
       handleDragLeave,

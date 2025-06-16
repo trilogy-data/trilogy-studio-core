@@ -117,7 +117,6 @@ const generateTooltipFields = (
   if (colorField && columns.get(colorField)) {
     fields.push(createFieldEncoding(colorField, columns))
   }
-
   return fields
 }
 
@@ -147,27 +146,21 @@ const createColorEncoding = (
   isMobile: boolean = false,
   currentTheme: string = 'light',
 ) => {
-  const legendConfig = isMobile
-    ? {
-        legend: {
-          orient: 'bottom',
-          direction: 'horizontal',
-        },
-      }
-    : {
-        condition: [
-          {
-            param: 'highlight',
-            empty: false,
-            value: HIGHLIGHT_COLOR,
-          },
-          { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
-        ],
-      }
+  let legendConfig = {}
+  if (isMobile) {
+    legendConfig = {
+      ...legendConfig,
+      ...{
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
+  }
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
-    return {
+    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns) }
+    let rval = {
       field: colorField,
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
@@ -183,13 +176,19 @@ const createColorEncoding = (
         },
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
-
       ...getFormatHint(colorField, columns),
-      ...legendConfig,
+      legend: {
+        ...legendConfig,
+      },
     }
+    return rval
   }
 
-  return { ...legendConfig }
+  return {
+    legend: {
+      ...legendConfig,
+    },
+  }
 }
 
 const createSizeEncoding = (

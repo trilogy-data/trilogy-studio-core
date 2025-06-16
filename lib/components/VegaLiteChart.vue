@@ -383,7 +383,6 @@ export default defineComponent({
       )
     }
     const handleBrush = debounce((_: string, item: SignalValue) => {
-      console.log('Brush event:', item)
       if (item && ['line', 'area'].includes(internalConfig.value.chartType)) {
         if (!internalConfig.value.xField) {
           return
@@ -445,7 +444,6 @@ export default defineComponent({
     const handlePointClick = (event: ScenegraphEvent, item: any) => {
       const currentTime = Date.now()
       lastClickTime.value = currentTime
-      console.log('Point click event:', event, item)
       let append = event.shiftKey
       if (item && item.datum) {
         if (internalConfig.value.geoField && internalConfig.value.geoField) {
@@ -517,7 +515,6 @@ export default defineComponent({
             baseFilters = { ...baseFilters, [yField]: yFilterValue }
             baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
           }
-          console.log('Base filters:', baseFilters)
           emit('dimension-click', {
             filters: baseFilters,
             chart: baseChart,
@@ -597,7 +594,6 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
-        console.log('Chart config changed:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }

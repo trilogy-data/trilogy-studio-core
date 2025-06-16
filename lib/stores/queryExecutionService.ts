@@ -6,6 +6,10 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
+
+// BigInt.prototype.toJSON = function() {
+//   return this.toString();
+// };
 export interface QueryInput {
   text: string
   editorType: 'trilogy' | 'sql' | 'preql'
@@ -641,9 +645,6 @@ export default class QueryExecutionService {
       let header = headers[i]
       // sql responses should transform . into _
       let column = sqlResponse.headers.get(header.name.replace('local.', '').replaceAll('.', '_'))
-      console.log('debug')
-      console.log(sqlResponse.headers)
-      console.log(column)
       if (column) {
         column.traits = header.traits || []
         column.address = header.name

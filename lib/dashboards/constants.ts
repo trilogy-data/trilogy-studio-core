@@ -53,7 +53,7 @@ export const Controls: ChartControl[] = [
     field: 'xField',
     columnFilter: 'all',
     allowEmpty: false,
-    visibleFor: ['bar', 'line', 'point', 'area'],
+    visibleFor: ['bar', 'line', 'point', 'area', 'heatmap'],
     filterGroup: 'axes',
   },
   {
