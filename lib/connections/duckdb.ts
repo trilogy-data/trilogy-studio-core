@@ -112,7 +112,7 @@ export default class DuckDBConnection extends BaseConnection {
     return chunk0 + chunk1 + chunk2 + chunk3
   }
 
-  handleNumber(value: any): number | bigint {
+  handleNumber(value: any): number {
     // Check if it's a Uint32Array from DuckDB
     if (value instanceof Uint32Array && value.length === 4) {
       const bigIntValue = this.parseUint32ArrayToBigInt(value)
@@ -126,12 +126,12 @@ export default class DuckDBConnection extends BaseConnection {
       }
 
       // Otherwise return as BigInt
-      return bigIntValue
+      return Number(bigIntValue)
     }
 
     // Handle other types normally
     if (typeof value === 'number' || typeof value === 'bigint') {
-      return value
+      return Number(value)
     }
 
     // Try to parse as number
@@ -159,11 +159,7 @@ export default class DuckDBConnection extends BaseConnection {
             if (row[key] !== null && row[key] !== undefined) {
               const top = this.handleNumber(row[key])
               // if it's a bigint, convert scaleFactor to bigint
-              if (typeof top === 'bigint') {
-                processedRow[key] = top / BigInt(Math.pow(10, scale))
-              } else {
-                processedRow[key] = top / Math.pow(10, scale)
-              }
+              processedRow[key] = top / Math.pow(10, scale)
             }
             // else is only for null/undefined
             break

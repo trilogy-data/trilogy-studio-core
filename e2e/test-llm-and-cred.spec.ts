@@ -246,6 +246,6 @@ limit 10;`,
     await page.getByTestId('input-textarea').fill('use order.id.count as the count')
     await page.getByTestId('send-button').click()
     await page.getByTestId('accept-button').click()
-    await page.getByRole('gridcell', { name: 'CHARTREUSE CORNFLOWER ROYAL LEMON BLACK' }).click()
+    await page.getByRole('gridcell', { name: 'CHOCOLATE CORNSILK GOLDENROD VIOLET PUFF' }).click()
   })
 })

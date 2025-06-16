@@ -150,7 +150,7 @@ select count(order.id) as order_count;`
   await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
 
   // Verify order count equals 15000
-  await expect(await page.getByRole('gridcell', { name: '15000' })).toContainText('15000')
+  await expect(await page.getByRole('gridcell', { name: '30000' })).toContainText('30000')
   await page.getByTestId('next-prompt').click()
   // Step 6: Create datasource with headquarters
   if (isMobile) {

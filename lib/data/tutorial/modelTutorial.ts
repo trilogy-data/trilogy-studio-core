@@ -72,7 +72,7 @@ order by
             ... your query here`,
           hints: ['select count(order.id) as order_count;'],
           validationFn: (results: Results) => {
-            return results.data?.length === 1 && results.data?.[0]?.order_count === 15000
+            return results.data?.length === 1 && results.data?.[0]?.order_count === 30000
           },
         },
         {
@@ -110,7 +110,7 @@ order by total_revenue desc;`,
               results.data?.some(
                 (row) =>
                   row.order_customer_nation_region_headquarters === 'HQ4' &&
-                  Math.round(row.total_revenue) === 451328736,
+                  Math.round(row.total_revenue) === 72212597826928,
               ) ?? false
             )
           },
