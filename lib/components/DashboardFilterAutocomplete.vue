@@ -13,7 +13,7 @@ const props = defineProps({
     required: true,
   },
   inputElement: {
-    type: Object as () => HTMLInputElement | null,
+    type: Object as () => HTMLInputElement | HTMLTextAreaElement | null,
     default: null,
   },
 })
@@ -36,7 +36,7 @@ const dropdownStyle = computed(() => {
   const rect = props.inputElement.getBoundingClientRect()
 
   return {
-    top: `${rect.bottom}px`,
+    top: `${rect.bottom+50}px`,
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     maxHeight: '200px',
@@ -246,7 +246,6 @@ updateCurrentWord()
   position: fixed;
   background-color: var(--query-window-bg, #1e1e1e);
   border: 1px solid var(--border, #444);
-  border-radius: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
   z-index: 1000;
