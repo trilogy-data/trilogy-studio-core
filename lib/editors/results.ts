@@ -71,6 +71,8 @@ export interface ChartConfig {
   groupField?: string
   trellisField?: string
   geoField?: string
+  annotationField?: string
+  hideLegend?: boolean
   showDebug?: boolean
 }
 

@@ -105,6 +105,7 @@ const createColorEncoding = (
   field: string,
   isMobile: boolean,
   columns: Map<string, ResultColumn>,
+  hideLegend: boolean = false,
 ) => {
   let full = columns.get(field)
   if (!full) {
@@ -115,10 +116,12 @@ const createColorEncoding = (
     type: 'quantitative',
     title: snakeCaseToCapitalizedWords(field),
     scale: { scheme: 'viridis' },
-    legend: {
-      title: snakeCaseToCapitalizedWords(field),
-      format: getColumnFormat(field, columns),
-    },
+    legend: hideLegend
+      ? null
+      : {
+          title: snakeCaseToCapitalizedWords(field),
+          format: getColumnFormat(field, columns),
+        },
   }
   if (isCategoricalColumn(full)) {
     return {
@@ -214,6 +217,14 @@ const createUSScatterMapSpec = (
     tooltipFields.push(createTooltipField(config.sizeField, 'quantitative', columns))
   }
 
+  if (config.colorField) {
+    tooltipFields.push(createTooltipField(config.colorField, 'nominal', columns))
+  }
+
+  if (config.annotationField) {
+    tooltipFields.push(createTooltipField(config.annotationField, 'nominal', columns))
+  }
+
   return {
     projection: {
       type: 'albersUsa',
@@ -232,11 +243,11 @@ const createUSScatterMapSpec = (
                 field: config.sizeField,
                 type: 'quantitative',
                 title: snakeCaseToCapitalizedWords(config.sizeField),
-                scale: { type: 'quantize', nice: true },
+                scale: { type: 'sqrt' },
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config.colorField, isMobile, columns)
+            ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -308,7 +319,7 @@ const createWorldScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config.colorField, isMobile, columns)
+            ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -329,7 +340,7 @@ const createUSChoroplethMapSpec = (
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
   if (config.colorField) {
-    colorConfig = createColorEncoding(config.colorField, false, columns)
+    colorConfig = createColorEncoding(config.colorField, false, columns, config.hideLegend)
   } else {
     colorConfig = { value: 'steelblue' }
   }
@@ -421,7 +432,7 @@ export const createMapSpec = (
     }
     let colorEncoding = {}
     if (config.colorField) {
-      colorEncoding = createColorEncoding(config.colorField, isMobile, columns)
+      colorEncoding = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
     }
     return {
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

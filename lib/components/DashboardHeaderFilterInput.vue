@@ -22,7 +22,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['filter-change', 'filter-apply'])
+const emit = defineEmits(['filter-change', 'filter-apply', 'clear-filter'])
 
 const llmStore = useLLMConnectionStore()
 
@@ -44,6 +44,21 @@ function applyFilter() {
   emit('filter-apply', filterInput.value)
   hasUnappliedChanges.value = false
   closeDropdown()
+}
+
+// Clear the filter
+function clearFilter() {
+  filterInput.value = ''
+  hasUnappliedChanges.value = true
+  emit('filter-change', '')
+  emit('filter-apply', '')
+  emit('clear-filter', '')
+  // Focus the textarea after clearing
+  setTimeout(() => {
+    if (filterTextareaRef.value) {
+      filterTextareaRef.value.focus()
+    }
+  }, 0)
 }
 
 // Track filter input changes
@@ -78,7 +93,7 @@ function handleClickOutside(event: Event) {
   const target = event.target as HTMLElement
   const dropdown = document.querySelector('.filter-dropdown')
   const input = filterInputRef.value
-  
+
   if (dropdown && !dropdown.contains(target) && target !== input) {
     closeDropdown()
   }
@@ -241,13 +256,13 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
           :disabled="isLoading"
           rows="4"
         ></textarea>
-        
+
         <!-- Error message in dropdown -->
         <div v-if="filterError" class="dropdown-error-message" data-testid="dropdown-error-message">
           <i class="mdi mdi-alert-circle"></i>
           <span>{{ filterError }}</span>
         </div>
-        
+
         <div class="dropdown-actions">
           <button
             @click="applyFilter"
@@ -271,6 +286,15 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
             </div>
             Text to Filter
           </button>
+          <button
+            @click="clearFilter"
+            class="clear-button"
+            :disabled="isLoading"
+            title="Clear filter"
+          >
+            <i class="mdi mdi-close-circle-outline"></i>
+            Clear
+          </button>
         </div>
       </div>
 
@@ -278,7 +302,7 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
         :input-value="filterInput"
         :completion-items="globalCompletion"
         :input-element="isDropdownOpen ? filterTextareaRef : filterInputRef"
-        v-if="(isDropdownOpen ? filterTextareaRef : filterInputRef)"
+        v-if="isDropdownOpen ? filterTextareaRef : filterInputRef"
         @select-completion="handleCompletionSelected"
       />
 
@@ -475,7 +499,9 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
   justify-content: flex-end;
 }
 
-.apply-button, .llm-button {
+.apply-button,
+.llm-button,
+.clear-button {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -488,7 +514,9 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
   transition: all 0.2s ease;
 }
 
-.apply-button:hover, .llm-button:hover {
+.apply-button:hover,
+.llm-button:hover,
+.clear-button:hover {
   background: var(--border);
 }
 
@@ -498,7 +526,15 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
   border-color: var(--special-text);
 }
 
-.apply-button:disabled, .llm-button:disabled {
+.clear-button:hover {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
+}
+
+.apply-button:disabled,
+.llm-button:disabled,
+.clear-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -681,12 +717,14 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
   .search-button {
     right: 50px;
   }
-  
+
   .dropdown-actions {
     flex-direction: column;
   }
-  
-  .apply-button, .llm-button {
+
+  .apply-button,
+  .llm-button,
+  .clear-button {
     width: 100%;
     justify-content: center;
   }

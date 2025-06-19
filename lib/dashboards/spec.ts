@@ -710,8 +710,28 @@ const createHeatmapSpec = (
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
+  intChart: Array<Partial<ChartConfig>>,
 ) => {
   return {
+    params: [
+      {
+        name: 'highlight',
+        select: {
+          type: 'point',
+          on: 'mouseover',
+          clear: 'mouseout',
+        },
+      },
+      {
+        name: 'select',
+        select: {
+          type: 'point',
+          on: 'click,touchend',
+        },
+        value: intChart,
+        nearest: true,
+      },
+    ],
     mark: 'rect',
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
@@ -848,7 +868,7 @@ export const generateVegaSpec = (
       break
 
     case 'heatmap':
-      chartSpec = createHeatmapSpec(config, columns, tooltipFields)
+      chartSpec = createHeatmapSpec(config, columns, tooltipFields, intChart)
       break
 
     case 'usa-map':

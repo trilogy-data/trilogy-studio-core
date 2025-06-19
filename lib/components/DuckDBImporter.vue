@@ -201,7 +201,7 @@ export default defineComponent({
           lastImportedTable.value = ''
           isLoading.value = false
           await props.connection.getDatabases()
-          props.connection.refreshDatabase(dbAlias)
+          await props.connection.refreshDatabase(dbAlias)
 
           // set a timeout to clear the lastAttachedDatabase
           setTimeout(() => {

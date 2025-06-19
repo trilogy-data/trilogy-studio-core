@@ -34,6 +34,7 @@ const emit = defineEmits([
   'import-change',
   'add-item',
   'clear-items',
+  'clear-filter',
   'toggle-edit-mode',
   'refresh',
 ])
@@ -101,6 +102,7 @@ function handleRefresh() {
         :validate-filter="validateFilter"
         @filter-change="handleFilterChange"
         @filter-apply="handleFilterApply"
+        @clear-filter="$emit('clear-filter', '')"
       />
 
       <div class="grid-actions">

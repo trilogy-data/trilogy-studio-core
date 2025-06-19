@@ -36,7 +36,7 @@ const dropdownStyle = computed(() => {
   const rect = props.inputElement.getBoundingClientRect()
 
   return {
-    top: `${rect.bottom+50}px`,
+    top: `${rect.bottom + 50}px`,
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     maxHeight: '200px',
