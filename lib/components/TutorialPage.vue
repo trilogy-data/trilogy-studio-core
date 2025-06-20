@@ -60,7 +60,7 @@
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
-                : `Almost there! "my-first-editor" not found under ${demoConnectionName}`
+                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. The Welcome and Query Tutorial will show you how to create it.`
             }}
           </div>
         </div>
