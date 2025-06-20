@@ -29,7 +29,8 @@ export const llmTutorial = new Article('LLM Tutorial', [
   ),
   new Paragraph('LLMList', '', 'llm-connections'),
   new Paragraph('LLMList', 'The LLM experience is not tested on mobile.', 'warning'),
-  new Paragraph('Tutorial Queries', 'bsb', 'tutorial-prompts', {
+  new Paragraph('Purpose', '', 'editor-validator'),
+  new Paragraph('Tutorial Queries', 'There should be an edito here! Make sure you\'ve completed the first tutorial!', 'tutorial-prompts', {
     context: 'sql-tutorial',
     editorId: 'sql-basic-editor',
     prompts: [
