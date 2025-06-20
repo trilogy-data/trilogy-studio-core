@@ -23,7 +23,6 @@
         <i class="mdi mdi-view-dashboard"></i>
       </tooltip>
     </template>
-
     <span class="truncate-text">
       {{ item.label }}
       <span class="text-light" v-if="item.type === 'connection'">
@@ -37,27 +36,36 @@
         </span>
         <status-icon :status="connectionStatus" />
       </template>
-
-      <tooltip v-if="item.type === 'dashboard'" content="Delete Dashboard" position="left">
-        <span
-          class="remove-btn"
-          @click.stop="handleDelete"
-          :data-testid="`delete-dashboard-${item.label}`"
-        >
-          <i class="mdi mdi-trash-can"></i>
-        </span>
-      </tooltip>
+      <template v-if="item.type === 'dashboard'">
+        <tooltip content="Clone Dashboard" position="left">
+          <span
+            class="clone-btn"
+            @click.stop="handleClone"
+            :data-testid="`clone-dashboard-${item.label}`"
+          >
+            <i class="mdi mdi-content-copy"></i>
+          </span>
+        </tooltip>
+        <tooltip content="Delete Dashboard" position="left">
+          <span
+            class="remove-btn"
+            @click.stop="handleDelete"
+            :data-testid="`delete-dashboard-${item.label}`"
+          >
+            <i class="mdi mdi-trash-can"></i>
+          </span>
+        </tooltip>
+      </template>
     </div>
   </div>
 </template>
-
 <script lang="ts">
 import { computed, inject } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
+import type { DashboardStoreType } from '../stores/dashboardStore'
 import DashboardCreatorIcon from './DashboardCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
 import StatusIcon from './StatusIcon.vue'
-
 export default {
   name: 'DashboardListItem',
   props: {
@@ -74,22 +82,20 @@ export default {
       default: false,
     },
   },
-  emits: ['click', 'delete'],
+  emits: ['click', 'delete', 'clone'],
   setup(props) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const isMobile = inject<boolean>('isMobile', false)
-
-    if (!connectionStore) {
-      throw new Error('Connection store is not provided!')
+    if (!connectionStore || !dashboardStore) {
+      throw new Error('Connection/Dashboard stores is not provided!')
     }
-
     const connectionInfo = computed(() => {
       if (props.item.type === 'connection') {
         return connectionStore.connections[props.item.label] || null
       }
       return null
     })
-
     const connectionStatus = computed(() => {
       const connection = connectionInfo.value
       if (!connection) {
@@ -103,9 +109,9 @@ export default {
         return 'disabled'
       }
     })
-
     return {
       isMobile,
+      dashboardStore,
       connectionInfo,
       connectionStatus,
     }
@@ -117,6 +123,9 @@ export default {
     handleDelete() {
       this.$emit('delete', this.item.dashboard)
     },
+    handleClone() {
+      this.dashboardStore.cloneDashboard(this.item.id)
+    },
   },
   components: {
     DashboardCreatorIcon,
@@ -125,29 +134,29 @@ export default {
   },
 }
 </script>
-
 <style scoped>
 .icon-display {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-
+.clone-btn,
 .remove-btn {
-  margin-left: auto;
+  margin-left: 8px;
   cursor: pointer;
   flex: 1;
 }
-
+.clone-btn:hover,
+.remove-btn:hover {
+  opacity: 0.7;
+}
 .tag-container {
   margin-left: auto;
   display: flex;
 }
-
 .text-light {
   color: var(--text-faint);
 }
-
 .dashboard-actions {
   display: flex;
   align-items: center;

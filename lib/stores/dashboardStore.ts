@@ -51,6 +51,61 @@ export const useDashboardStore = defineStore('dashboards', {
       return dashboard
     },
 
+    cloneDashboard(id: string) {
+      const existingDashboard = this.dashboards[id]
+      if (!existingDashboard) {
+        throw new Error(`Dashboard with ID "${id}" not found.`)
+      }
+      // while we don't have a match, add (copy) to the name
+
+      let newId = `${existingDashboard.name} (copy)`
+      let counter = 1
+      while (Object.values(this.dashboards).some((d) => d.name === newId)) {
+        newId = `${existingDashboard.name} (copy ${counter})`
+        counter++
+      }
+      const newDashboard = new DashboardModel({
+        id: newId,
+        name: newId,
+        connection: existingDashboard.connection,
+        storage: existingDashboard.storage,
+        state: 'editing',
+      })
+      //iterate over Record<string, GridItem>
+      newDashboard.gridItems = Object.fromEntries(
+        Object.entries(existingDashboard.gridItems).map(([key, item]) => [
+          key,
+          {
+            ...item,
+            chartFilters: [],
+            conceptFilters: [],
+            filters: [],
+          },
+        ]),
+      )
+      // Copy items from the existing dashboard
+      // Copy layout from the existing dashboard
+      newDashboard.layout = existingDashboard.layout.map((item) => ({
+        ...item,
+      }))
+      // Copy imports from the existing dashboard
+      newDashboard.imports = existingDashboard.imports.map((importItem) => ({
+        ...importItem,
+      }))
+      // Copy filter from the existing dashboard
+      newDashboard.filter = existingDashboard.filter
+      // Copy description from the existing dashboard
+      newDashboard.description = existingDashboard.description
+      // Copy updatedAt from the existing dashboard
+      newDashboard.updatedAt = new Date()
+      newDashboard.nextId = existingDashboard.nextId
+      // Add the new dashboard to the store
+      this.addDashboard(newDashboard)
+      // Set the new dashboard as active
+      this.activeDashboardId = newId
+      return newDashboard
+    },
+
     // Add an existing dashboard
     addDashboard(dashboard: DashboardModel) {
       this.dashboards[dashboard.id] = dashboard
@@ -61,6 +116,14 @@ export const useDashboardStore = defineStore('dashboards', {
       Object.entries(serializedDashboards).forEach(([id, data]) => {
         this.dashboards[id] = DashboardModel.fromSerialized(data)
       })
+    },
+
+    removeAllFilters(dashboardId: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].removeAllFilters()
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
     },
 
     // Get dashboards by connection

@@ -245,6 +245,19 @@ export class DashboardModel implements Dashboard {
       }
     }
   }
+
+  removeAllFilters() {
+    // remove the filter from all items in the dashboard
+    for (const id in this.gridItems) {
+      const gridItem = this.gridItems[id]
+      gridItem.conceptFilters = []
+      gridItem.chartFilters = []
+      gridItem.filters = []
+      gridItem.parameters = {}
+    }
+    this.updatedAt = new Date()
+  }
+
   updateItemCrossFilters(
     itemId: string,
     conceptMap: Record<string, string>,

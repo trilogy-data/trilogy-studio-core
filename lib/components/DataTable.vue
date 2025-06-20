@@ -286,6 +286,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    fitParent: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     // Inject the store that has been provided elsewhere in the app
@@ -360,6 +364,8 @@ export default {
   methods: {
     create() {
       let target = this.$refs.tabulator as HTMLElement
+      let layout: 'fitColumns' | 'fitData' = this.fitParent ? 'fitColumns' : 'fitData' // Use fitDataFill if fitParent is true, otherwise fitData
+
       let tab = new Tabulator(target, {
         // data: this.tableData, //link data to table
         pagination: this.tableData.length > 1000, //enable pagination
@@ -385,6 +391,7 @@ export default {
           columnHeaders: true,
         },
         resizableColumns: true,
+        layout: layout,
         dependencies: {
           DateTime: DateTime,
         },

@@ -205,7 +205,6 @@ export default {
         if (type === 'connection') {
           console.log('getting databases')
           let databases = await connectionStore.connections[connection].getDatabases()
-          connectionStore.connections[connection].databases = databases
           for (let db of databases) {
             let dbid = `${connection}${KeySeparator}${db.name}`
             collapsed.value[dbid] = true

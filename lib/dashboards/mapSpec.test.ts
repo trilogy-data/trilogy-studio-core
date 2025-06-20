@@ -694,12 +694,13 @@ describe('createMapSpec', () => {
 
       const scatterLayer = spec.layer[1]
       expect(scatterLayer.encoding.tooltip).toBeDefined()
-      expect(scatterLayer.encoding.tooltip.length).toBe(3) // longitude, latitude, population
+      expect(scatterLayer.encoding.tooltip.length).toBe(4) // longitude, latitude, population, category
 
       const fields = scatterLayer.encoding.tooltip.map((t: any) => t.field)
       expect(fields).toContain('longitude')
       expect(fields).toContain('latitude')
       expect(fields).toContain('population')
+      expect(fields).toContain('category')
     })
 
     it('should apply proper formatting to tooltip fields', () => {

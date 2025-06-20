@@ -96,7 +96,23 @@
               class="control-group no-drag"
             >
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
+
+              <input
+                v-if="control.field === 'hideLegend'"
+                type="checkbox"
+                :id="control.id"
+                :checked="internalConfig[control.field]"
+                @change="
+                  updateConfig(
+                    control.field,
+                    ($event.target as HTMLInputElement).checked ? 'true' : 'false',
+                  )
+                "
+                data-testid="toggle-legend"
+              />
+
               <select
+                v-else
                 :id="control.id"
                 :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"

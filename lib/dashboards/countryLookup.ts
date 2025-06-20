@@ -244,6 +244,7 @@ const CountryLookup: Country[] = [
     'alpha-3': 'GBR',
     'country-code': '826',
   },
+  { name: 'United States', 'alpha-3': 'USA', 'country-code': '840' },
   { name: 'United States of America', 'alpha-3': 'USA', 'country-code': '840' },
   { name: 'United States Minor Outlying Islands', 'alpha-3': 'UMI', 'country-code': '581' },
   { name: 'Uruguay', 'alpha-3': 'URY', 'country-code': '858' },

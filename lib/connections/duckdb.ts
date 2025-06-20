@@ -288,9 +288,11 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async getDatabases(): Promise<Database[]> {
-    return await this.connection.query('SHOW DATABASES').then((result) => {
+    const results = await this.connection.query('SHOW DATABASES').then((result) => {
       return this.mapShowDatabasesResult(result.toArray().map((row) => row.toJSON()))
     })
+    this.databases = results
+    return results
   }
 
   async getSchemas(database: string): Promise<Schema[]> {

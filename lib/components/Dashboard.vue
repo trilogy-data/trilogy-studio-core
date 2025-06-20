@@ -131,6 +131,15 @@ const stripAllWhitespace = (str: string): string => {
   return str.replace(/\s+/g, '')
 }
 
+async function handleFilterClear() {
+  if (dashboard.value && dashboard.value.id) {
+    filter.value = ''
+    filterInput.value = ''
+    filterError.value = ''
+    dashboardStore.removeAllFilters(dashboard.value.id)
+  }
+}
+
 async function handleFilterChange(newFilter: string) {
   if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
@@ -532,6 +541,7 @@ onBeforeUnmount(() => {
       @clear-items="clearItems"
       @toggle-edit-mode="toggleEditMode"
       @refresh="handleRefresh"
+      @clear-filter="handleFilterClear"
     />
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
