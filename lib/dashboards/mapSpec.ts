@@ -276,7 +276,14 @@ const createWorldScatterMapSpec = (
   if (config.sizeField) {
     tooltipFields.push(createTooltipField(config.sizeField, 'quantitative', columns))
   }
-
+  if (data.length === 0) {
+    return {
+      $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+      width: 'container',
+      height: 'container',
+      layer: [createWorldBaseLayer()],
+    }
+  }
   const { scaleFactor } = computeMercatorProjectionFactors(data, config.xField, config.yField)
   if (!(config.xField && config.yField)) {
     throw new Error('Both xField and yField must be provided for scatter map')
