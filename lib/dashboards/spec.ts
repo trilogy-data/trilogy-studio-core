@@ -6,7 +6,7 @@ import { snakeCaseToCapitalizedWords } from './formatting'
 import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat } from './helpers'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
-import {createHeadlineSpec} from './headlineSpec' 
+import { createHeadlineSpec } from './headlineSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -507,7 +507,17 @@ const createLineChartSpec = (
   currentTheme: string = 'light',
   isMobile: boolean = false,
 ) => {
-  let base = createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart, false, currentTheme, isMobile)
+  let base = createInteractiveLayer(
+    config,
+    data,
+    columns,
+    tooltipFields,
+    encoding,
+    intChart,
+    false,
+    currentTheme,
+    isMobile,
+  )
   let filtered = createInteractiveLayer(
     config,
     data,
@@ -621,7 +631,6 @@ const createPointChartSpec = (
     },
   }
 }
-
 
 /**
  * Create chart specification for heatmap
@@ -757,7 +766,16 @@ export const generateVegaSpec = (
       break
 
     case 'line':
-      chartSpec = createLineChartSpec(config, data, columns, tooltipFields, encoding, intChart, currentTheme, isMobile)
+      chartSpec = createLineChartSpec(
+        config,
+        data,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        currentTheme,
+        isMobile,
+      )
       break
 
     case 'area':

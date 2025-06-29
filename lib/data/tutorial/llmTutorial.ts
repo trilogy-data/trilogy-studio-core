@@ -30,33 +30,37 @@ export const llmTutorial = new Article('LLM Tutorial', [
   new Paragraph('LLMList', '', 'llm-connections'),
   new Paragraph('LLMList', 'The LLM experience is not tested on mobile.', 'warning'),
   new Paragraph('Purpose', '', 'editor-validator'),
-  new Paragraph('Tutorial Queries', 'There should be an edito here! Make sure you\'ve completed the first tutorial!', 'tutorial-prompts', {
-    context: 'sql-tutorial',
-    editorId: 'sql-basic-editor',
-    prompts: [
-      {
-        title: 'Try it out!',
-        description:
-          'Copy the below input, and hit generate [ctrl-shift-enter]. You can either refine the query or hit [ctrl-shift-enter] again to accept and run.',
-        example: `import std.geography; 
+  new Paragraph(
+    'Tutorial Queries',
+    "There should be an edito here! Make sure you've completed the first tutorial!",
+    'tutorial-prompts',
+    {
+      context: 'sql-tutorial',
+      editorId: 'sql-basic-editor',
+      prompts: [
+        {
+          title: 'Try it out!',
+          description:
+            'Copy the below input, and hit generate [ctrl-shift-enter]. You can either refine the query or hit [ctrl-shift-enter] again to accept and run.',
+          example: `import std.geography; 
 auto state_source <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
 auto state <- unnest(state_source);
 auto state.population <- random(state)*10000;
   
 # what states have the most people?`,
-        hints: [
-          "Don\'t forget the import statement. Importing without a name puts all values in the base namespace.",
-          "Make sure the state output is named state and you've ordered properly.",
-        ],
-        validationFn: (results: Results) => {
-          return results.data != null
+          hints: [
+            "Don\'t forget the import statement. Importing without a name puts all values in the base namespace.",
+            "Make sure the state output is named state and you've ordered properly.",
+          ],
+          validationFn: (results: Results) => {
+            return results.data != null
+          },
         },
-      },
-      {
-        title: 'Typing',
-        description:
-          "LLMs will have access to all imports and the selected context at submission time. If you define new context in the editor, make sure it's selected and syntactically valid. Copy in the below and click the generate button without any selection; if you try with just the comment selected the LLM will not be aware of the new concept you defined.",
-        example: `import lineitem;
+        {
+          title: 'Typing',
+          description:
+            "LLMs will have access to all imports and the selected context at submission time. If you define new context in the editor, make sure it's selected and syntactically valid. Copy in the below and click the generate button without any selection; if you try with just the comment selected the LLM will not be aware of the new concept you defined.",
+          example: `import lineitem;
 
   property order.customer.nation.region.id.headquarters string;
   
@@ -78,26 +82,27 @@ auto state.population <- random(state)*10000;
 
   # what is the total revenue for each headquarter?
   `,
-        hints: [
-          `select 
+          hints: [
+            `select 
       order.customer.nation.region.headquarters,
       total_revenue
   order by total_revenue desc;`,
-        ],
-        validationFn: (results: Results) => {
-          // at least one row has order_customer_nation_region_headquarters == HQ4 and total_revenue == 451328736.4183
-          return (
-            results.data?.some(
-              (row) =>
-                row.order_customer_nation_region_headquarters === 'HQ4' &&
-                Math.round(row.total_revenue) === 451328736,
-            ) ?? false
-          )
+          ],
+          validationFn: (results: Results) => {
+            // at least one row has order_customer_nation_region_headquarters == HQ4 and total_revenue == 451328736.4183
+            return (
+              results.data?.some(
+                (row) =>
+                  row.order_customer_nation_region_headquarters === 'HQ4' &&
+                  Math.round(row.total_revenue) === 451328736,
+              ) ?? false
+            )
+          },
         },
-      },
-      // More prompts...
-    ],
-  }),
+        // More prompts...
+      ],
+    },
+  ),
   new Paragraph(
     'Connections',
     'LLMs operate on the imported concept context. Make sure you have a datasource selected on a dashboard, or add imports to an editor before typing your comment. Ctrl-shift-enter is the default LLM activation shortcut; typically you will highlight text and then run this.',
