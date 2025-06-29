@@ -437,7 +437,7 @@ const createBarChartSpec = (
       }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
-      order: {field: config.yField, sort: "descending"},
+      order: { field: config.yField, sort: 'descending' },
       ...encoding,
     },
   }

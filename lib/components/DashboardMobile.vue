@@ -1,4 +1,3 @@
-
 <script lang="ts" setup>
 import { ref, computed, nextTick } from 'vue'
 import DashboardHeader from './DashboardHeader.vue'
@@ -11,7 +10,7 @@ import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
 import { CELL_TYPES } from '../dashboards/base'
 
-const props = defineProps<{
+defineProps<{
   name: string
   connectionId?: string
   viewMode?: boolean
@@ -142,11 +141,11 @@ function handleToggleEditMode() {
       @refresh="dashboardBase?.handleRefresh"
       @clear-filter="dashboardBase?.handleFilterClear"
     />
-    
+
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
     </div>
-    
+
     <div v-else class="mobile-container">
       <!-- Mobile layout - vertically stacked grid items -->
       <div
@@ -174,10 +173,10 @@ function handleToggleEditMode() {
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal 
-      :show="showAddItemModal" 
-      @add="dashboardBase?.addItem" 
-      @close="dashboardBase?.closeAddModal" 
+    <DashboardAddItemModal
+      :show="showAddItemModal"
+      @add="dashboardBase?.addItem"
+      @close="dashboardBase?.closeAddModal"
     />
 
     <!-- Content Editors -->
@@ -200,7 +199,7 @@ function handleToggleEditMode() {
       />
     </Teleport>
   </div>
-  
+
   <div v-else class="dashboard-not-found">
     <template v-if="name">
       <h2>Dashboard Not Found</h2>
@@ -208,8 +207,8 @@ function handleToggleEditMode() {
     </template>
     <template v-else>
       <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
-      <dashboard-creator-inline 
-        class="inline-creator" 
+      <dashboard-creator-inline
+        class="inline-creator"
         :visible="true"
         @dashboard-created="dashboardBase?.dashboardCreated"
       ></dashboard-creator-inline>

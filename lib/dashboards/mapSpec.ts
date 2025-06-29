@@ -111,17 +111,19 @@ const createColorEncoding = (
   if (!full) {
     throw new Error(`Column ${field} not found in provided columns map`)
   }
-  let legend = hideLegend ? null : {
-    title: snakeCaseToCapitalizedWords(field),
-    format: getColumnFormat(field, columns),
-  }
+  let legend = hideLegend
+    ? null
+    : {
+        title: snakeCaseToCapitalizedWords(field),
+        format: getColumnFormat(field, columns),
+      }
 
   let colorConfig = {
     field,
     type: 'quantitative',
     title: snakeCaseToCapitalizedWords(field),
     scale: { scheme: 'viridis' },
-    legend: legend
+    legend: legend,
   }
   if (isCategoricalColumn(full)) {
     return {
@@ -242,11 +244,11 @@ const createUSScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-              field: config.sizeField,
-              type: 'quantitative',
-              title: snakeCaseToCapitalizedWords(config.sizeField),
-              scale: { type: 'sqrt' },
-            }
+                field: config.sizeField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.sizeField),
+                scale: { type: 'sqrt' },
+              }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
@@ -321,11 +323,11 @@ const createWorldScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-              field: config.sizeField,
-              type: 'quantitative',
-              title: snakeCaseToCapitalizedWords(config.sizeField),
-              scale: { type: 'quantize', nice: true },
-            }
+                field: config.sizeField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.sizeField),
+                scale: { type: 'quantize', nice: true },
+              }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)

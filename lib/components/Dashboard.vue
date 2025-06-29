@@ -10,7 +10,7 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
 
-const props = defineProps<{
+defineProps<{
   name: string
   connectionId?: string
   maxWidth?: number
@@ -80,7 +80,7 @@ function triggerResize(): void {
 // Handle layout updates with draggable/resizable state management
 function onLayoutUpdated(newLayout: any) {
   dashboardBase.value?.onLayoutUpdated(newLayout)
-  
+
   // Trigger resize on layout changes
   nextTick(() => {
     triggerResize()
@@ -90,7 +90,7 @@ function onLayoutUpdated(newLayout: any) {
 // Update draggable/resizable when edit mode changes
 function handleToggleEditMode() {
   dashboardBase.value?.toggleEditMode()
-  
+
   if (dashboard.value) {
     draggable.value = dashboard.value.state === 'editing'
     resizable.value = dashboard.value.state === 'editing'
@@ -135,11 +135,11 @@ function handleToggleEditMode() {
       @refresh="dashboardBase?.handleRefresh"
       @clear-filter="dashboardBase?.handleFilterClear"
     />
-    
+
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
     </div>
-    
+
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
         <GridLayout
@@ -185,10 +185,10 @@ function handleToggleEditMode() {
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal 
-      :show="showAddItemModal" 
-      @add="dashboardBase?.addItem" 
-      @close="dashboardBase?.closeAddModal" 
+    <DashboardAddItemModal
+      :show="showAddItemModal"
+      @add="dashboardBase?.addItem"
+      @close="dashboardBase?.closeAddModal"
     />
 
     <!-- Content Editors -->
@@ -211,7 +211,7 @@ function handleToggleEditMode() {
       />
     </Teleport>
   </div>
-  
+
   <div v-else class="dashboard-not-found">
     <template v-if="name">
       <h2>Dashboard Not Found</h2>
