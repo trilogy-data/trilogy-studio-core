@@ -102,11 +102,6 @@ function handleClickOutside(event: Event) {
 // Generate filter using LLM
 const filterLLM = () => {
   isLoading.value = true
-  console.log('Generating filter using LLM:', filterInput.value
-
-  )
-  console.log('Global completion items:', props.globalCompletion)
-  console.log('Validate filter function:', props.validateFilter)
   let concepts = props.globalCompletion.map((item) => ({
     name: item.label,
     type: item.datatype,
@@ -225,42 +220,25 @@ watch(isDropdownOpen, (isOpen) => {
 
 <template>
   <div class="filter-container">
-    <label for="filter">Where</label>
+    <!-- <label for="filter">Where</label> -->
     <div class="filter-input-wrapper">
-      <input
-        id="filter"
-        data-testid="filter-input"
-        type="text"
-        :value="displayFilterValue"
-        @input="onFilterInput"
-        @keydown="handleFilterKeydown"
-        @focus="openDropdown"
-        placeholder="Enter filter SQL clause... (Click to expand)"
-        :class="{ 'filter-error': filterStatus === 'error' }"
-        :disabled="isLoading"
-        ref="filterInputRef"
-      />
+      <input id="filter" data-testid="filter-input" type="text" :value="displayFilterValue" @input="onFilterInput"
+        @keydown="handleFilterKeydown" @focus="openDropdown" placeholder="Add a global filter..."
+        :class="{ 'filter-error': filterStatus === 'error' }" :disabled="isLoading" ref="filterInputRef" />
 
       <!-- Multi-line dropdown -->
       <div v-if="isDropdownOpen" class="filter-dropdown">
         <div class="dropdown-header">
-          <span>Filter Clause</span>
+          <span>Global Filters</span>
           <button @click="closeDropdown" class="close-button" title="Close (Esc)">
             <i class="mdi mdi-close"></i>
           </button>
         </div>
-        <textarea
-          ref="filterTextareaRef"
-          class="filter-textarea"
-          :value="filterInput"
-          @input="onFilterInput"
-          @keydown="handleTextareaKeydown"
-          placeholder="Enter multi-line filter SQL clause...
-Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
-          :class="{ 'filter-error': filterStatus === 'error' }"
-          :disabled="isLoading"
-          rows="4"
-        ></textarea>
+        <textarea ref="filterTextareaRef" class="filter-textarea" :value="filterInput" @input="onFilterInput"
+          @keydown="handleTextareaKeydown" :placeholder="llmStore.hasActiveDefaultConnection ? `Use a SQL condition (ex color='blue' or color='red') or text to filter.
+Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL` : `Use a SQL condition (ex color='blue') to filter.
+Use Ctrl+Enter to apply`" :class="{ 'filter-error': filterStatus === 'error' }" :disabled="isLoading"
+          rows="4"></textarea>
 
         <!-- Error message in dropdown -->
         <div v-if="filterError" class="dropdown-error-message" data-testid="dropdown-error-message">
@@ -269,85 +247,50 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
         </div>
 
         <div class="dropdown-actions">
-          <button
-            @click="applyFilter"
-            class="apply-button"
-            :disabled="isLoading"
-            :class="{ 'has-changes': hasUnappliedChanges }"
-            title="Apply filter (Ctrl+Enter)"
-          >
+          <button @click="applyFilter" class="apply-button" :disabled="isLoading"
+            :class="{ 'has-changes': hasUnappliedChanges }" title="Apply filter (Ctrl+Enter)">
             <i class="mdi mdi-check"></i>
             Apply
           </button>
-          <button
-            @click="filterLLM"
-            class="llm-button"
-            :disabled="isLoading"
-            title="Text to filter (Ctrl+Shift+Enter)"
-          >
+          <button v-if="llmStore.hasActiveDefaultConnection" @click="filterLLM" class="llm-button" :disabled="isLoading"
+            title="Text to filter (Ctrl+Shift+Enter)">
             <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
             <div v-if="isLoading" class="loader-container">
               <div class="loader"></div>
             </div>
             Text to Filter
           </button>
-          <button
-            @click="clearFilter"
-            class="clear-button"
-            :disabled="isLoading"
-            title="Clear filter"
-          >
+          <button @click="clearFilter" class="clear-button" :disabled="isLoading" title="Clear filter">
             <i class="mdi mdi-close-circle-outline"></i>
             Clear
           </button>
         </div>
       </div>
 
-      <FilterAutocomplete
-        :input-value="filterInput"
-        :completion-items="globalCompletion"
+      <FilterAutocomplete :input-value="filterInput" :completion-items="globalCompletion"
         :input-element="isDropdownOpen ? filterTextareaRef : filterInputRef"
-        v-if="isDropdownOpen ? filterTextareaRef : filterInputRef"
-        @select-completion="handleCompletionSelected"
-      />
+        v-if="isDropdownOpen ? filterTextareaRef : filterInputRef" @select-completion="handleCompletionSelected" />
 
       <!-- Search button -->
-      <button
-        @click="applyFilter"
-        class="search-button"
-        data-testid="filter-search-button"
-        :disabled="isLoading"
-        :class="{ 'has-changes': hasUnappliedChanges }"
-        title="Apply filter (Enter)"
-      >
+      <button @click="applyFilter" class="search-button" data-testid="filter-search-button" :disabled="isLoading"
+        :class="{ 'has-changes': hasUnappliedChanges }" title="Apply filter (Enter)">
         <div class="button-content">
           <i class="mdi mdi-magnify"></i>
-          <Tooltip
-            :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'"
-            position="top"
-          >
+          <Tooltip :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'" position="top">
             <span class="tooltip-trigger"></span>
           </Tooltip>
         </div>
       </button>
 
       <!-- LLM button -->
-      <button
-        @click="filterLLM"
-        class="sparkle-button"
-        data-testid="filter-llm-button"
-        :disabled="isLoading"
-        title="Transform text to filter if you have a configured LLM connection"
-      >
+      <button @click="filterLLM" class="sparkle-button" data-testid="filter-llm-button" :disabled="isLoading" v-if="llmStore.hasActiveDefaultConnection"
+        title="Transform text to filter if you have a configured LLM connection">
         <div class="button-content">
           <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
           <div v-if="isLoading" class="loader-container">
             <div class="loader"></div>
           </div>
-          <Tooltip
-            :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'"
-            position="top"
-          >
+          <Tooltip :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'" position="top">
             <span class="tooltip-trigger"></span>
           </Tooltip>
         </div>
@@ -355,21 +298,13 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
 
       <!-- Validation indicator -->
       <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
-        <div
-          v-if="filterStatus === 'error'"
-          class="filter-icon error"
-          data-testid="filter-error-icon"
-        >
+        <div v-if="filterStatus === 'error'" class="filter-icon error" data-testid="filter-error-icon">
           <span class="icon-x">✕</span>
           <Tooltip :content="filterError || 'Unknown Error'" position="bottom">
             <span class="tooltip-trigger" data-testid="filter-error-tooltip-trigger"></span>
           </Tooltip>
         </div>
-        <div
-          v-else-if="filterStatus === 'valid'"
-          class="filter-icon valid"
-          data-testid="filter-valid-icon"
-        >
+        <div v-else-if="filterStatus === 'valid'" class="filter-icon valid" data-testid="filter-valid-icon">
           <Tooltip content="This is a syntactically correct filter." position="top">
             <span class="icon-check" data-testid="filter-valid-tooltip-trigger">✓</span>
           </Tooltip>
@@ -383,6 +318,7 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
 .filter-textarea {
   box-sizing: border-box;
 }
+
 .filter-container {
   display: flex;
   align-items: center;
