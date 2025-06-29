@@ -102,6 +102,11 @@ function handleClickOutside(event: Event) {
 // Generate filter using LLM
 const filterLLM = () => {
   isLoading.value = true
+  console.log('Generating filter using LLM:', filterInput.value
+
+  )
+  console.log('Global completion items:', props.globalCompletion)
+  console.log('Validate filter function:', props.validateFilter)
   let concepts = props.globalCompletion.map((item) => ({
     name: item.label,
     type: item.datatype,

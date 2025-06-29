@@ -185,7 +185,7 @@ const Sidebar = defineAsyncComponent(() => import('../components/Sidebar.vue'))
 const Editor = defineAsyncComponent(() => import('../components/Editor.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 const WelcomePage = defineAsyncComponent(() => import('../components/WelcomePage.vue'))
-const MobileDashboard = defineAsyncComponent(() => import('../components/MobileDashboard.vue'))
+const MobileDashboard = defineAsyncComponent(() => import('../components/DashboardMobile.vue'))
 const ResultsView = defineAsyncComponent(() => import('../components/ResultsView.vue'))
 const LLMView = defineAsyncComponent(() => import('../components/LLMView.vue'))
 
