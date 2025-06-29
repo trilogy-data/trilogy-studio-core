@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ref, computed, nextTick } from 'vue'
-import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
@@ -9,24 +8,20 @@ import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
+import { CELL_TYPES } from '../dashboards/base'
 
 defineProps<{
   name: string
   connectionId?: string
-  maxWidth?: number
   viewMode?: boolean
 }>()
 
 // Use the base dashboard logic
 const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 
-// Desktop-specific reactive state
-const draggable = ref(true)
-const resizable = ref(true)
-
 // Computed properties from base with proper fallbacks
 const dashboard = computed(() => dashboardBase.value?.dashboard)
-const layout = computed(() => dashboardBase.value?.layout || [])
+const sortedLayout = computed(() => dashboardBase.value?.sortedLayout || [])
 const editMode = computed(() => dashboardBase.value?.editMode || false)
 const selectedConnection = computed(() => dashboardBase.value?.selectedConnection || '')
 const filter = computed(() => dashboardBase.value?.filter || '')
@@ -36,7 +31,6 @@ const showAddItemModal = computed(() => dashboardBase.value?.showAddItemModal ||
 const showQueryEditor = computed(() => dashboardBase.value?.showQueryEditor || false)
 const showMarkdownEditor = computed(() => dashboardBase.value?.showMarkdownEditor || false)
 const editingItem = computed(() => dashboardBase.value?.editingItem)
-const dashboardMaxWidth = computed(() => dashboardBase.value?.dashboardMaxWidth || 1500)
 
 // Function wrappers that ensure base is available
 const getItemData = (itemId: string, dashboardId: string) => {
@@ -51,11 +45,11 @@ const validateFilter = async (filter: string) => {
   return dashboardBase.value!.validateFilter(filter)
 }
 
-// Desktop-specific methods
+// Mobile-specific methods
 function updateItemDimensions(itemId: string): void {
   if (!dashboard.value) return
 
-  const container = document.querySelector(`.vue-grid-item[data-i="${itemId}"] .grid-item-content`)
+  const container = document.querySelector(`.mobile-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
     const headerHeight = 36 // Approximate height of the header
@@ -72,29 +66,43 @@ function updateItemDimensions(itemId: string): void {
 function triggerResize(): void {
   if (!dashboard.value) return
 
-  layout.value.forEach((item) => {
+  sortedLayout.value.forEach((item) => {
     updateItemDimensions(item.i)
   })
 }
 
-// Handle layout updates with draggable/resizable state management
-function onLayoutUpdated(newLayout: any) {
-  dashboardBase.value?.onLayoutUpdated(newLayout)
+// Calculate approximate height for mobile items based on original proportions
+function calculateMobileHeight(item: any): number | string {
+  if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
+    return 300 // Default height if we can't calculate
+  }
 
-  // Trigger resize on layout changes
-  nextTick(() => {
-    triggerResize()
-  })
+  if (getItemData(item.i, dashboard.value.id).type === CELL_TYPES.MARKDOWN) {
+    return '100%' // Full height for markdown items
+  }
+
+  const gridItem = dashboard.value.gridItems[item.i]
+
+  // If we have stored width and height, use that to calculate ratio
+  if (gridItem.width && gridItem.height) {
+    const aspectRatio = gridItem.height / gridItem.width
+    const viewportWidth = window.innerWidth - 30 // Adjust for padding
+
+    // Calculate new height based on aspect ratio and full width
+    // With min and max constraints for usability
+    const calculatedHeight = viewportWidth * aspectRatio
+    return Math.max(Math.min(calculatedHeight, 400), 400)
+  }
+
+  // If no stored dimensions, use the grid layout's width and height
+  const aspectRatio = item.h / item.w
+  // Target height based on aspect ratio, with reasonable constraints
+  return Math.max(Math.min(aspectRatio * 12 * 30, 600), 400)
 }
 
-// Update draggable/resizable when edit mode changes
+// Handle edit mode toggle for mobile
 function handleToggleEditMode() {
   dashboardBase.value?.toggleEditMode()
-
-  if (dashboard.value) {
-    draggable.value = dashboard.value.state === 'editing'
-    resizable.value = dashboard.value.state === 'editing'
-  }
 
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
@@ -109,15 +117,13 @@ function handleToggleEditMode() {
     :key="name"
     :name="name"
     :connection-id="connectionId"
-    :max-width="maxWidth"
     :view-mode="viewMode"
-    :is-mobile="false"
-    @layout-updated="onLayoutUpdated"
+    :is-mobile="true"
     @dimensions-update="updateItemDimensions"
     @trigger-resize="triggerResize"
   />
 
-  <div class="dashboard-container" v-if="dashboard">
+  <div class="dashboard-mobile-container" v-if="dashboard">
     <DashboardHeader
       :dashboard="dashboard"
       :edit-mode="editMode"
@@ -136,51 +142,33 @@ function handleToggleEditMode() {
       @clear-filter="dashboardBase?.handleFilterClear"
     />
 
-    <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
+    <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
     </div>
 
-    <div v-else class="grid-container">
-      <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
-        <GridLayout
-          :col-num="20"
-          :row-height="30"
-          :is-draggable="draggable"
-          :is-resizable="resizable"
-          :layout="layout"
-          :vertical-compact="true"
-          :use-css-transforms="true"
-          @layout-updated="onLayoutUpdated"
-        >
-          <grid-item
-            v-for="item in layout"
-            :key="item.i"
-            :static="item.static"
-            :x="item.x"
-            :y="item.y"
-            :w="item.w"
-            :h="item.h"
-            :i="item.i"
-            :data-i="item.i"
-            drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle"
-          >
-            <DashboardGridItem
-              :dashboard-id="dashboard.id"
-              :item="item"
-              :edit-mode="editMode"
-              :filter="filter"
-              :get-item-data="getItemData"
-              @dimension-click="dashboardBase?.setCrossFilter"
-              :set-item-data="setItemData"
-              @edit-content="dashboardBase?.openEditor"
-              @remove-filter="dashboardBase?.removeFilter"
-              @background-click="dashboardBase?.unSelect"
-              @update-dimensions="updateItemDimensions"
-              @remove-item="dashboardBase?.removeItem"
-            />
-          </grid-item>
-        </GridLayout>
+    <div v-else class="mobile-container">
+      <!-- Mobile layout - vertically stacked grid items -->
+      <div
+        v-for="item in sortedLayout"
+        :key="item.i"
+        :data-i="item.i"
+        class="mobile-item"
+        :style="{ height: `${calculateMobileHeight(item)}px` }"
+      >
+        <DashboardGridItem
+          :dashboard-id="dashboard.id"
+          :item="item"
+          :edit-mode="editMode"
+          :filter="filter"
+          :get-item-data="getItemData"
+          @dimension-click="dashboardBase?.setCrossFilter"
+          :set-item-data="setItemData"
+          @edit-content="dashboardBase?.openEditor"
+          @remove-filter="dashboardBase?.removeFilter"
+          @background-click="dashboardBase?.unSelect"
+          @update-dimensions="updateItemDimensions"
+          @remove-item="dashboardBase?.removeItem"
+        />
       </div>
     </div>
 
@@ -218,6 +206,7 @@ function handleToggleEditMode() {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
+      <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
       <dashboard-creator-inline
         class="inline-creator"
         :visible="true"
@@ -228,94 +217,32 @@ function handleToggleEditMode() {
 </template>
 
 <style scoped>
-.inline-creator {
-  max-width: 400px;
-}
-
-.dashboard-container {
+.dashboard-mobile-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   font-size: var(--font-size);
   color: var(--text-color);
   background-color: var(--bg-color);
+  overflow: hidden;
 }
 
-.toggle-mode-button {
-  background-color: var(--button-bg) !important;
-  color: var(--text-color) !important;
-}
-
-.grid-container {
+.mobile-container {
   flex: 1;
-  overflow: auto;
-  padding: 15px;
+  overflow-y: auto;
+  padding: 5px 10px;
   background-color: var(--bg-color);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
+  padding-bottom: 80px;
 }
 
-.grid-content {
+.mobile-item {
   width: 100%;
-  height: 100%;
-}
-
-.vue-grid-layout {
-  background: var(--bg-color);
-  height: 100%;
-}
-
-.vue-grid-item:not(.vue-grid-placeholder) {
   background: var(--result-window-bg);
-}
-
-.vue-grid-item .resizing {
-  opacity: 0.9;
-}
-
-.vue-grid-item .static {
-  background: var(--sidebar-selector-bg);
-}
-
-.editor-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.editor-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.editor-actions button {
-  padding: 8px 16px;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: var(--button-font-size);
-}
-
-.add-button,
-.editor-actions button:first-child {
-  background-color: var(--special-text);
-  color: white;
-}
-
-.clear-button,
-.cancel-button,
-.editor-actions button:last-child {
-  background-color: var(--delete-color);
-  color: white;
+  position: relative;
 }
 
 .dashboard-not-found {
@@ -327,11 +254,16 @@ function handleToggleEditMode() {
   width: 100%;
   color: var(--text-color);
   background-color: var(--bg-color);
+  padding: 2rem;
   text-align: center;
 }
 
 .dashboard-not-found h2 {
   margin-bottom: 1rem;
+}
+
+.inline-creator {
+  max-width: 100%;
 }
 
 .empty-dashboard-wrapper {

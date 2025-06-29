@@ -220,7 +220,7 @@ watch(isDropdownOpen, (isOpen) => {
 
 <template>
   <div class="filter-container">
-    <label for="filter">Where</label>
+    <!-- <label for="filter">Where</label> -->
     <div class="filter-input-wrapper">
       <input
         id="filter"
@@ -230,7 +230,7 @@ watch(isDropdownOpen, (isOpen) => {
         @input="onFilterInput"
         @keydown="handleFilterKeydown"
         @focus="openDropdown"
-        placeholder="Enter filter SQL clause... (Click to expand)"
+        placeholder="Add a global filter..."
         :class="{ 'filter-error': filterStatus === 'error' }"
         :disabled="isLoading"
         ref="filterInputRef"
@@ -239,7 +239,7 @@ watch(isDropdownOpen, (isOpen) => {
       <!-- Multi-line dropdown -->
       <div v-if="isDropdownOpen" class="filter-dropdown">
         <div class="dropdown-header">
-          <span>Filter Clause</span>
+          <span>Global Filters</span>
           <button @click="closeDropdown" class="close-button" title="Close (Esc)">
             <i class="mdi mdi-close"></i>
           </button>
@@ -250,8 +250,13 @@ watch(isDropdownOpen, (isOpen) => {
           :value="filterInput"
           @input="onFilterInput"
           @keydown="handleTextareaKeydown"
-          placeholder="Enter multi-line filter SQL clause...
-Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
+          :placeholder="
+            llmStore.hasActiveDefaultConnection
+              ? `Use a SQL condition (ex color='blue' or color='red') or text to filter.
+Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL`
+              : `Use a SQL condition (ex color='blue') to filter.
+Use Ctrl+Enter to apply`
+          "
           :class="{ 'filter-error': filterStatus === 'error' }"
           :disabled="isLoading"
           rows="4"
@@ -275,6 +280,7 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
             Apply
           </button>
           <button
+            v-if="llmStore.hasActiveDefaultConnection"
             @click="filterLLM"
             class="llm-button"
             :disabled="isLoading"
@@ -332,6 +338,7 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
         class="sparkle-button"
         data-testid="filter-llm-button"
         :disabled="isLoading"
+        v-if="llmStore.hasActiveDefaultConnection"
         title="Transform text to filter if you have a configured LLM connection"
       >
         <div class="button-content">
@@ -378,6 +385,7 @@ Use Ctrl+Enter to apply, Ctrl+Shift+Enter for text to SQL"
 .filter-textarea {
   box-sizing: border-box;
 }
+
 .filter-container {
   display: flex;
   align-items: center;

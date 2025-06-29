@@ -111,17 +111,19 @@ const createColorEncoding = (
   if (!full) {
     throw new Error(`Column ${field} not found in provided columns map`)
   }
+  let legend = hideLegend
+    ? null
+    : {
+        title: snakeCaseToCapitalizedWords(field),
+        format: getColumnFormat(field, columns),
+      }
+
   let colorConfig = {
     field,
     type: 'quantitative',
     title: snakeCaseToCapitalizedWords(field),
     scale: { scheme: 'viridis' },
-    legend: hideLegend
-      ? null
-      : {
-          title: snakeCaseToCapitalizedWords(field),
-          format: getColumnFormat(field, columns),
-        },
+    legend: legend,
   }
   if (isCategoricalColumn(full)) {
     return {
@@ -129,6 +131,7 @@ const createColorEncoding = (
       type: 'nominal',
       title: snakeCaseToCapitalizedWords(field),
       scale: { scheme: 'category20' },
+      legend: legend,
     }
   }
 
@@ -136,6 +139,7 @@ const createColorEncoding = (
     return {
       ...colorConfig,
       legend: {
+        ...legend,
         orient: 'bottom',
         direction: 'horizontal',
       },
@@ -343,11 +347,12 @@ const createUSChoroplethMapSpec = (
   data: readonly Row[] | null,
   columns: Map<string, ResultColumn>,
   intChart: Array<Partial<ChartConfig>>,
+  isMobile: boolean = false,
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
   if (config.colorField) {
-    colorConfig = createColorEncoding(config.colorField, false, columns, config.hideLegend)
+    colorConfig = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
   } else {
     colorConfig = { value: 'steelblue' }
   }
@@ -422,7 +427,7 @@ export const createMapSpec = (
 
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart)
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile)
   }
 
   // Handle country map case

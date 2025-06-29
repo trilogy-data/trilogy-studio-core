@@ -6,6 +6,7 @@ import { snakeCaseToCapitalizedWords } from './formatting'
 import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat } from './helpers'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
+import { createHeadlineSpec } from './headlineSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -258,6 +259,7 @@ const createInteractiveLayer = (
   intChart: Array<Partial<ChartConfig>> = [],
   filtered: boolean = false,
   currentTheme: string = 'light',
+  isMobile: boolean = false,
 ) => {
   // Create the main layer for the primary y-axis
   const markColor = currentTheme === 'light' ? 'steelblue' : '#4FC3F7'
@@ -289,7 +291,7 @@ const createInteractiveLayer = (
     } else {
       mainLayer.encoding = {
         ...mainLayer.encoding,
-        ...{ color: createColorEncoding(config.colorField, columns, false, currentTheme) },
+        ...{ color: createColorEncoding(config.colorField, columns, isMobile, currentTheme) },
       }
     }
   }
@@ -435,6 +437,7 @@ const createBarChartSpec = (
       }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
+      order: { field: config.yField, sort: 'descending' },
       ...encoding,
     },
   }
@@ -502,8 +505,20 @@ const createLineChartSpec = (
   tooltipFields: any[],
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
+  isMobile: boolean = false,
 ) => {
-  let base = createInteractiveLayer(config, data, columns, tooltipFields, encoding, intChart)
+  let base = createInteractiveLayer(
+    config,
+    data,
+    columns,
+    tooltipFields,
+    encoding,
+    intChart,
+    false,
+    currentTheme,
+    isMobile,
+  )
   let filtered = createInteractiveLayer(
     config,
     data,
@@ -512,6 +527,8 @@ const createLineChartSpec = (
     encoding,
     intChart,
     true,
+    currentTheme,
+    isMobile,
   )
   // if there are two fields in both, we have two y-axes. Layer them independently.
   let layers = []
@@ -535,6 +552,7 @@ const createAreaChartSpec = (
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
   encoding: any,
+  isMobile: boolean = false,
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
 ) => {
@@ -550,6 +568,7 @@ const createAreaChartSpec = (
         intChart,
         false,
         currentTheme,
+        isMobile,
       ),
       ...createInteractiveLayer(
         config,
@@ -560,6 +579,7 @@ const createAreaChartSpec = (
         intChart,
         true,
         currentTheme,
+        isMobile,
       ),
     ],
   }
@@ -610,96 +630,6 @@ const createPointChartSpec = (
       tooltip: tooltipFields,
       ...encoding,
     },
-  }
-}
-
-/**
- * Create chart specification for headline display
- */
-
-const createHeadlineLayer = (
-  column: string,
-  index: number,
-  total: number,
-  columns: Map<string, ResultColumn>,
-  currentTheme: string,
-) => {
-  // Calculate horizontal distribution based on index and total
-  const xOffset =
-    total > 1
-      ? ((index / (total - 1)) * 0.7 + 0.15) * 100 - 50 // This gives values from -35% to +35% of width
-      : 0 // Center if only one value
-
-  // Scale font size based on number of metrics to avoid collision
-  const fontSizeFormula = `min(30, max(width, 150)/${Math.max(8, total * 2)})`
-
-  return [
-    {
-      mark: {
-        type: 'text',
-        fontSize: { expr: fontSizeFormula },
-        fontWeight: 'bold',
-        align: 'center',
-        baseline: 'middle',
-        dx: { expr: `(${xOffset} / 100) * width` }, // Convert percentage to pixels
-        dy: -20,
-      },
-      encoding: {
-        text: {
-          field: column,
-          type: 'quantitative',
-          format: getColumnFormat(column, columns),
-        },
-        color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
-      },
-    },
-    {
-      mark: {
-        type: 'text',
-        fontSize: { expr: `min(14, max(width, 200)/${Math.max(6, total * 3)})` }, // Scale label size too
-        fontWeight: 'normal',
-        align: 'center',
-        baseline: 'top',
-        dx: { expr: `(${xOffset} / 100) * width` }, // Same offset as the value
-        dy: 10,
-      },
-      encoding: {
-        text: { value: snakeCaseToCapitalizedWords(column) },
-        color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
-      },
-    },
-  ]
-}
-
-const createHeadlineSpec = (
-  data: readonly Row[] | null,
-  columns: Map<string, ResultColumn>,
-  currentTheme: string,
-) => {
-  // get all columns that are isNumericColumn using isNumericColumn
-  let numericColumns = Array.from(columns.values()).filter((column) => isNumericColumn(column))
-
-  // Map each column to its visualization layers with proper index
-  let numericLayers = numericColumns.map((column, index) => {
-    return createHeadlineLayer(column.name, index, numericColumns.length, columns, currentTheme)
-  })
-
-  // flatten array of arrays to a single array
-  let flatLayers = numericLayers.reduce((acc, val) => acc.concat(val), [])
-
-  return {
-    $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
-    description: 'A simple headline metric display',
-    width: 'container',
-    height: 'container',
-    data: {
-      values: data ? data[0] : [],
-    },
-    config: {
-      view: { stroke: null },
-      axis: { grid: false, domain: false },
-    },
-    layer: flatLayers,
   }
 }
 
@@ -837,7 +767,16 @@ export const generateVegaSpec = (
       break
 
     case 'line':
-      chartSpec = createLineChartSpec(config, data, columns, tooltipFields, encoding, intChart)
+      chartSpec = createLineChartSpec(
+        config,
+        data,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        currentTheme,
+        isMobile,
+      )
       break
 
     case 'area':
@@ -847,6 +786,7 @@ export const generateVegaSpec = (
         columns,
         tooltipFields,
         encoding,
+        isMobile,
         intChart,
         currentTheme,
       )
@@ -864,7 +804,7 @@ export const generateVegaSpec = (
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(data, columns, currentTheme)
+      chartSpec = createHeadlineSpec(data, columns, currentTheme, isMobile)
       break
 
     case 'heatmap':
