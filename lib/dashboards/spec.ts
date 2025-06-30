@@ -82,6 +82,7 @@ const createFieldEncoding = (
   fieldName: string,
   columns: Map<string, ResultColumn>,
   axisOptions = {},
+  sort: boolean = true
 ): any => {
   if (!fieldName) return {}
 
@@ -91,7 +92,7 @@ const createFieldEncoding = (
     title: snakeCaseToCapitalizedWords(columns.get(fieldName)?.description || fieldName),
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
-    ...getSortOrder(fieldName, columns),
+    ...(sort? getSortOrder(fieldName, columns) : {}),
   }
 }
 
@@ -104,19 +105,23 @@ const generateTooltipFields = (
   yField: string,
   columns: Map<string, ResultColumn>,
   colorField?: string,
+  sizeField?: string,
 ): any[] => {
   const fields: any[] = []
 
   if (xField && columns.get(xField)) {
-    fields.push(createFieldEncoding(xField, columns))
+    fields.push(createFieldEncoding(xField, columns, {}, false))
   }
 
   if (yField && columns.get(yField)) {
-    fields.push(createFieldEncoding(yField, columns))
+    fields.push(createFieldEncoding(yField, columns, {}, false))
   }
 
   if (colorField && columns.get(colorField)) {
-    fields.push(createFieldEncoding(colorField, columns))
+    fields.push(createFieldEncoding(colorField, columns, {}, false))
+  }
+  if (sizeField && columns.get(sizeField)) {
+    fields.push(createFieldEncoding(sizeField, columns, {}, false))
   }
   return fields
 }
@@ -197,7 +202,7 @@ const createSizeEncoding = (
   columns: Map<string, ResultColumn>,
 ): any => {
   if (sizeField && columns.get(sizeField)) {
-    return { scale: { type: 'continuous' }, field: sizeField }
+    return { scale: { type: 'sqrt' }, field: sizeField }
   }
   return {}
 }
@@ -361,16 +366,6 @@ const createInteractiveLayer = (
               clear: 'mouseout',
             },
           },
-          // {
-          //   name: 'select2',
-          //   select: {
-          //     type: 'point',
-          //     on: 'click,touchend',
-          //     clear: 'dragleave,dblclick'
-          //   },
-          //   value: intChart,
-
-          // },
         ]
       : [],
   }
@@ -751,6 +746,7 @@ export const generateVegaSpec = (
     config.yField || '',
     columns,
     config.colorField,
+    config.sizeField
   )
 
   // Generate chart specification based on chart type
