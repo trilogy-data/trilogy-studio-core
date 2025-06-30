@@ -69,6 +69,9 @@
       <template v-else-if="activeScreen === 'dashboard'">
         <dashboard :name="activeDashboardComputed" />
       </template>
+      <template v-else-if="activeScreen === 'dashboard-import'">
+        <dashboard-auto-importer @import-complete="handleImportComplete" />
+      </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
       </template>
@@ -174,11 +177,12 @@ import CommunityModels from '../components/CommunityModels.vue'
 // import LLMView from '../components/LLMView.vue'
 import ConnectionView from '../components/ConnectionView.vue'
 // import ResultsView from '../components/ResultsView.vue'
+import DashboardAutoImporter from '../components/DashboardAutoImporter.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject, ref, defineAsyncComponent } from 'vue'
+import { inject, ref, defineAsyncComponent, onMounted } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -225,6 +229,7 @@ export default {
     LLMView,
     ConnectionView,
     ResultsView,
+    DashboardAutoImporter,
   },
   setup() {
     // Create a ref for the editor component
@@ -274,6 +279,18 @@ export default {
       setActiveEditor,
       setActiveDashboard,
     } = screenNavigation
+
+    // Check for auto-import parameters on mount
+    onMounted(() => {
+      const importUrl = getDefaultValueFromHash('import', '')
+      const connectionType = getDefaultValueFromHash('connection', '')
+      
+      // If we have import parameters, trigger auto-import mode
+      if (importUrl && connectionType) {
+        setActiveScreen('dashboard-import')
+      }
+    })
+
     return {
       connectionStore,
       editorStore,
@@ -335,6 +352,11 @@ export default {
       )
       this.setActiveScreen('editors')
       this.setActiveEditor(editor)
+    },
+    handleImportComplete(dashboardId: string) {
+      // The auto-importer will handle the navigation, but we can add
+      // additional logic here if needed (analytics, notifications, etc.)
+      console.log(`Dashboard import completed: ${dashboardId}`)
     },
   },
   computed: {
