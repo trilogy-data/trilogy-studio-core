@@ -168,6 +168,33 @@ const createInteractionParams = (intChart: Array<Partial<ChartConfig>>) => [
   },
 ]
 
+function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): boolean {
+  const US_BOUNDS = {
+    top: 49.3457868, // north lat
+    left: -124.7844079, // west long
+    right: -66.9513812, // east long
+    bottom: 24.7433195, // south lat
+  }
+
+  let insideCount = 0
+
+  for (const row of rows) {
+    const lat = Number(row[latField])
+    const lng = Number(row[longField])
+
+    if (
+      US_BOUNDS.bottom <= lat &&
+      lat <= US_BOUNDS.top &&
+      US_BOUNDS.left <= lng &&
+      lng <= US_BOUNDS.right
+    ) {
+      insideCount++
+    }
+  }
+
+  return (insideCount / rows.length) * 100 > 80
+}
+
 
 // Constants for US total geographic span (approximate)
 const US_TOTAL_LON_SPAN = 57.83; // Approx -124.78 to -66.95
@@ -176,8 +203,8 @@ const US_TOTAL_LAT_SPAN = 24.6;  // Approx 24.74 to 49.34
 // Thresholds for deciding if data is "sufficiently scattered" for albersUsa
 // These percentages are heuristic and might need tuning based on desired behavior.
 // E.g., if data spans more than 30% of US longitude AND 30% of US latitude, use albersUsa.
-const ALBERS_LON_SPREAD_THRESHOLD_PERCENT = 0.3;
-const ALBERS_LAT_SPREAD_THRESHOLD_PERCENT = 0.3;
+const ALBERS_LON_SPREAD_THRESHOLD_PERCENT = 0.2;
+const ALBERS_LAT_SPREAD_THRESHOLD_PERCENT = 0.1;
 
 const ALBERS_MIN_LON_SPAN_DEG = US_TOTAL_LON_SPAN * ALBERS_LON_SPREAD_THRESHOLD_PERCENT;
 const ALBERS_MIN_LAT_SPAN_DEG = US_TOTAL_LAT_SPAN * ALBERS_LAT_SPREAD_THRESHOLD_PERCENT;
@@ -440,7 +467,7 @@ export const createMapSpec = (
   // Handle scatter plot case
   if (config.xField && config.yField) {
     //@ts-ignore
-    if (isDataSufficientlySpreadForAlbers(data, config.yField, config.xField)) {
+    if (isDataMostlyInUS(data, config.yField, config.xField) && isDataSufficientlySpreadForAlbers(data, config.yField, config.xField)) {
       return createUSScatterMapSpec(config, columns, isMobile, intChart)
     }
     return createWorldScatterMapSpec(config, columns, isMobile, intChart, data)
