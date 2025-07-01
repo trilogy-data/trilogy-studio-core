@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import { pushHashToUrl, getDefaultValueFromHash } from './urlStore'
+import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
 
 // Define valid screen types in one place to reduce duplication
@@ -29,7 +29,8 @@ interface NavigationStore {
   readonly mobileMenuOpen: Ref<boolean>
   setActiveScreen(screen: ScreenType): void
   setActiveEditor(editor: string): void
-  setActiveDashboard(dashboard: string): void
+  setActiveDashboard(dashboard: string | null): void
+  setActiveModel(model: string | null): void
   toggleMobileMenu(): void
 }
 
@@ -58,6 +59,15 @@ const createNavigationStore = (): NavigationStore => {
       state.mobileMenuOpen.value = false
     }
   }
+  const setActiveModel = (model: string | null): void => {
+    if (model === null) {
+      removeHashFromUrl('model')
+      return
+    }
+    pushHashToUrl('model', model)
+
+    state.mobileMenuOpen.value = false
+  }
 
   const setActiveEditor = (editor: string): void => {
     pushHashToUrl('editor', editor)
@@ -67,7 +77,12 @@ const createNavigationStore = (): NavigationStore => {
     state.mobileMenuOpen.value = false
   }
 
-  const setActiveDashboard = (dashboard: string): void => {
+  const setActiveDashboard = (dashboard: string | null): void => {
+    if (dashboard === null) {
+      removeHashFromUrl('dashboard')
+      state.activeDashboard.value = ''
+      return
+    }
     pushHashToUrl('dashboard', dashboard)
     console.log(state.activeDashboard)
     state.activeDashboard.value = dashboard
@@ -97,6 +112,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveEditor,
     setActiveDashboard,
     toggleMobileMenu,
+    setActiveModel,
   }
 }
 

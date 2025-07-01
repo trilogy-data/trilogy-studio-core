@@ -138,6 +138,8 @@ export class ModelImportService {
                   dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
               )
 
+              console.log('Importing dashboard:', dashboardObj.name)
+
               if (existingDashboard) {
                 // Reuse the existing dashboard's ID
                 dashboardObj.id = existingDashboard.id
@@ -147,7 +149,8 @@ export class ModelImportService {
               } else {
                 // No existing dashboard found, generate a new ID
                 dashboardObj.id = Math.random().toString(36).substring(2, 15)
-
+                //default import dashboards to published
+                dashboardObj.state = 'published'
                 // Add it to dashboard store
                 this.dashboardStore.addDashboard(dashboardObj)
               }
@@ -212,7 +215,7 @@ export class ModelImportService {
       this.modelStore.models[modelName].changed = true
     } catch (error) {
       console.error('Error importing model:', error)
-      throw new Error('Failed to import model definition')
+      throw new Error(`Failed to import model definition: ${error}` )
     }
   }
 }
