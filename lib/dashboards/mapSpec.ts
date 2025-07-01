@@ -168,7 +168,7 @@ const createInteractionParams = (intChart: Array<Partial<ChartConfig>>) => [
   },
 ]
 
-function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): boolean {
+function isDataMostlyInUS<T>(rows: readonly T[], latField: keyof T, longField: keyof T): boolean {
   const US_BOUNDS = {
     top: 49.3457868, // north lat
     left: -124.7844079, // west long
@@ -213,7 +213,7 @@ const ALBERS_MIN_LAT_SPAN_DEG = US_TOTAL_LAT_SPAN * ALBERS_LAT_SPREAD_THRESHOLD_
  * This is meant to distinguish between data spread across multiple states/regions vs. clustered in one area.
  */
 function isDataSufficientlySpreadForAlbers<T>(
-  rows: T[],
+  rows: readonly T[],
   lonField: keyof T,
   latField: keyof T,
 ): boolean {
