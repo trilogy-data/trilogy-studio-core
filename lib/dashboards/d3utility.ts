@@ -1,4 +1,5 @@
 import type { Row } from '../editors/results'
+
 interface ProjectionFactors {
   scaleFactor: number
   //   translateXFactor: number;
@@ -32,8 +33,13 @@ export function computeMercatorProjectionFactors(
 
   const dx = xMax - xMin
   const dy = yMax - yMin
-  //   const centerX = (xMax + xMin) / 2;
-  //   const centerY = (yMax + yMin) / 2;
+
+  // Handle single point case - use a reasonable default scale
+  if (dx === 0 && dy === 0) {
+    return {
+      scaleFactor: 1000, // Reasonable zoom level for a single point
+    }
+  }
 
   // Use the smaller dimension to ensure the map fits within bounds
   // Add padding factor (0.9) to leave some margin

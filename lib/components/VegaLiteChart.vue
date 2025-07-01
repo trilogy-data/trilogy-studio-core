@@ -550,6 +550,7 @@ export default defineComponent({
       const spec = generateVegaSpecInternal()
       if (!spec) return
       const currentSpecString = JSON.stringify(spec)
+
       if (lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return

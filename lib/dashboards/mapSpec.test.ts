@@ -416,7 +416,7 @@ describe('createMapSpec', () => {
 
       // Check world base layer
       const baseLayer = spec.layer[0]
-      expect(baseLayer.data.url).toContain('world-110m.json')
+      expect(baseLayer.data.url).toContain('countries-50m.json')
       expect(baseLayer.mark.type).toBe('geoshape')
 
       // Check scatter layer

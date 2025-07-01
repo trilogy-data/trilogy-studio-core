@@ -31,3 +31,17 @@ export function pushHashToUrl(key: string, value: string): void {
   // Update the URL hash
   window.location.hash = `#${hashParams.toString()}`
 }
+
+export function removeHashFromUrl(key: string): void {
+  // Get the current hash from the URL
+  const hash = window.location.hash
+
+  // Parse the hash into key-value pairs
+  const hashParams = new URLSearchParams(hash.slice(1)) // Remove the `#`
+
+  // Remove the specified key
+  hashParams.delete(key)
+
+  // Update the URL hash
+  window.location.hash = `#${hashParams.toString()}`
+}

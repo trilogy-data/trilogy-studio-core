@@ -44,6 +44,7 @@ export default defineConfig({
       },
     },
   ],
+
   resolve: {
     alias: {
       buffer: 'buffer/', // buffer requires /

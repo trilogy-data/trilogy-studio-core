@@ -1,47 +1,72 @@
-// navigationStore.ts
 import { ref, type Ref } from 'vue'
-import { pushHashToUrl, getDefaultValueFromHash } from './urlStore'
+import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
 
-// Define types for the store
+// Define valid screen types in one place to reduce duplication
+type ScreenType =
+  | 'editors'
+  | 'tutorial'
+  | 'llms'
+  | 'dashboard'
+  | 'dashboard-import'
+  | 'community-models'
+  | 'welcome'
+  | 'profile'
+  | 'settings'
+  | ''
+
 interface NavigationState {
-  activeScreen: Ref<string>
+  activeScreen: Ref<ScreenType>
   activeEditor: Ref<string>
   activeDashboard: Ref<string>
   mobileMenuOpen: Ref<boolean>
 }
 
 interface NavigationStore {
-  // Properties (implemented as getters that return refs)
   readonly activeScreen: Ref<string>
   readonly activeEditor: Ref<string>
   readonly activeDashboard: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
-
-  // Methods
-  setActiveScreen(screen: string): void
+  setActiveScreen(screen: ScreenType): void
   setActiveEditor(editor: string): void
-  setActiveDashboard(dashboard: string): void
+  setActiveDashboard(dashboard: string | null): void
+  setActiveModel(model: string | null): void
   toggleMobileMenu(): void
 }
 
-// Create a single store instance that will be shared across components
 const createNavigationStore = (): NavigationStore => {
-  // Create reactive state
   const state: NavigationState = {
-    activeScreen: ref(getDefaultValueFromHash('screen', '')),
+    activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
     activeEditor: ref(getDefaultValueFromHash('editor', '')),
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
     mobileMenuOpen: ref(false),
   }
 
-  // Define methods that modify the state
-  const setActiveScreen = (screen: string): void => {
+  // Screens that should close mobile menu when activated
+  const mobileMenuClosingScreens: ScreenType[] = [
+    'community-models',
+    'welcome',
+    'profile',
+    'settings',
+    'dashboard-import',
+  ]
+
+  const setActiveScreen = (screen: ScreenType): void => {
     pushHashToUrl('screen', screen)
     state.activeScreen.value = screen
-    if (['community-models', 'welcome', 'profile', 'settings'].includes(screen)) {
+
+    if (mobileMenuClosingScreens.includes(screen)) {
       state.mobileMenuOpen.value = false
     }
+  }
+  const setActiveModel = (model: string | null): void => {
+    if (model === null) {
+      removeHashFromUrl('model')
+      return
+    }
+    pushHashToUrl('model', model)
+
+    state.mobileMenuOpen.value = false
   }
 
   const setActiveEditor = (editor: string): void => {
@@ -52,7 +77,12 @@ const createNavigationStore = (): NavigationStore => {
     state.mobileMenuOpen.value = false
   }
 
-  const setActiveDashboard = (dashboard: string): void => {
+  const setActiveDashboard = (dashboard: string | null): void => {
+    if (dashboard === null) {
+      removeHashFromUrl('dashboard')
+      state.activeDashboard.value = ''
+      return
+    }
     pushHashToUrl('dashboard', dashboard)
     console.log(state.activeDashboard)
     state.activeDashboard.value = dashboard
@@ -66,7 +96,6 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   return {
-    // Expose state as properties that return refs
     get activeScreen() {
       return state.activeScreen
     },
@@ -79,19 +108,18 @@ const createNavigationStore = (): NavigationStore => {
     get mobileMenuOpen() {
       return state.mobileMenuOpen
     },
-
-    // Expose methods
     setActiveScreen,
     setActiveEditor,
     setActiveDashboard,
     toggleMobileMenu,
+    setActiveModel,
   }
 }
 
-// Create a single instance
 const navigationStore = createNavigationStore()
 
-// Export a function that always returns the same instance
 export default function useScreenNavigation(): NavigationStore {
   return navigationStore
 }
+
+export type { ScreenType }

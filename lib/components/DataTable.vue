@@ -14,6 +14,9 @@
   flex: 1 1 100%;
   flex-wrap: nowrap;
   width: 100%;
+  /* align to left */
+  justify-content: flex-start;
+  margin-right: auto;
   height: 100%;
   background-color: var(--result-window-bg);
 }
@@ -34,7 +37,7 @@
 .tabulator-row {
   /* background: transparent; */
   width: min-content;
-  min-width: 100%;
+  /* min-width: 100%; */
 }
 
 .tabulator {
@@ -364,7 +367,7 @@ export default {
   methods: {
     create() {
       let target = this.$refs.tabulator as HTMLElement
-      let layout: 'fitColumns' | 'fitData' = this.fitParent ? 'fitColumns' : 'fitData' // Use fitDataFill if fitParent is true, otherwise fitData
+      let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData' // Use fitDataFill if fitParent is true, otherwise fitData
 
       let tab = new Tabulator(target, {
         // data: this.tableData, //link data to table

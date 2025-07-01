@@ -17,8 +17,9 @@ const emit = defineEmits<{
 const dashboardStore = inject<DashboardStoreType>('dashboardStore')
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const saveDashboards = inject<Function>('saveDashboards')
-if (!dashboardStore || !connectionStore || !saveDashboards) {
-  throw new Error('DashboardStore or ConnectionStore not provided')
+const saveAll = inject<Function>('saveAll')
+if (!dashboardStore || !connectionStore || !saveDashboards || !saveAll) {
+  throw new Error('Required stores not provided')
 }
 
 // Add dashboard content ref for the textarea
@@ -31,6 +32,51 @@ const isLoading = ref<boolean>(false)
 const dashboardUrl = ref<string>('')
 const importMode = ref<'paste' | 'url'>('paste')
 const urlError = ref<string | null>(null)
+
+// New connection options
+const connectionOptions = ref({
+  mdToken: '',
+  projectId: '',
+  username: '',
+  password: '',
+  account: '',
+  sshPrivateKey: '',
+})
+
+// Form validation state
+const isFormValid = ref(true)
+
+// Function to validate the form
+function validateForm() {
+  if (!selectedConnection.value) {
+    isFormValid.value = false
+    return
+  }
+
+  // Check for required fields based on connection type
+  if (selectedConnection.value === 'new-motherduck' && !connectionOptions.value.mdToken) {
+    isFormValid.value = false
+    return
+  }
+
+  if (selectedConnection.value === 'new-bigquery-oauth' && !connectionOptions.value.projectId) {
+    isFormValid.value = false
+    return
+  }
+
+  if (
+    selectedConnection.value === 'new-snowflake' &&
+    (!connectionOptions.value.username ||
+      !connectionOptions.value.account ||
+      !connectionOptions.value.sshPrivateKey)
+  ) {
+    isFormValid.value = false
+    return
+  }
+
+  // If we made it here, the form is valid
+  isFormValid.value = true
+}
 
 // Function to fetch dashboard from URL
 const fetchDashboardFromUrl = async () => {
@@ -63,7 +109,7 @@ const fetchDashboardFromUrl = async () => {
   }
 }
 
-const importDashboard = () => {
+const importDashboard = async () => {
   try {
     // Parse string to object
     const dashboardObj = DashboardModel.fromSerialized(JSON.parse(dashboardJson.value))
@@ -71,8 +117,27 @@ const importDashboard = () => {
     // Set storage to "local"
     dashboardObj.storage = 'local'
 
-    // Set connection to the selected connection
-    dashboardObj.connection = selectedConnection.value
+    // Create or use existing connection
+    let connectionName = selectedConnection.value
+
+    if (connectionName.startsWith('new-')) {
+      let typeName = connectionName.replace('new-', '')
+      connectionName = `dashboard-${dashboardObj.name || 'imported'}-connection`
+
+      if (!connectionStore.connections[connectionName]) {
+        connectionStore.newConnection(connectionName, typeName, {
+          mdToken: connectionOptions.value.mdToken,
+          projectId: connectionOptions.value.projectId,
+          username: connectionOptions.value.username,
+          password: connectionOptions.value.password,
+          account: connectionOptions.value.account,
+          privateKey: connectionOptions.value.sshPrivateKey,
+        })
+      }
+    }
+
+    // Set connection to the selected/created connection
+    dashboardObj.connection = connectionName
 
     // Set id to a random string
     dashboardObj.id = Math.random().toString(36).substring(2, 15)
@@ -86,8 +151,17 @@ const importDashboard = () => {
     // Reset form
     dashboardJson.value = ''
     dashboardUrl.value = ''
+    connectionOptions.value = {
+      mdToken: '',
+      projectId: '',
+      username: '',
+      password: '',
+      account: '',
+      sshPrivateKey: '',
+    }
 
-    saveDashboards()
+    // Save all changes
+    await saveAll()
 
     // Close popup after a short delay
     setTimeout(() => {
@@ -112,6 +186,9 @@ const handleClickOutside = (event: MouseEvent): void => {
     emit('close')
   }
 }
+
+// Initial validation
+validateForm()
 </script>
 <template>
   <div v-if="isOpen" class="popup-overlay" @click="handleClickOutside">
@@ -191,24 +268,92 @@ const handleClickOutside = (event: MouseEvent): void => {
         </div>
       </div>
 
-      <!-- Implemented connection selector -->
+      <!-- Enhanced connection selector with new connection options -->
       <div class="connection-selector">
-        <label for="connection-select">Select Connection</label>
-        <select
-          id="connection-select"
-          v-model="selectedConnection"
-          class="connection-dropdown"
-          data-testid="connection-select"
-        >
-          <option value="" disabled>-- Select Connection --</option>
-          <option
-            v-for="connection in connectionStore.connections"
-            :key="connection.name"
-            :value="connection.name"
+        <div class="form-row">
+          <label for="connection-select">Assign To Connection</label>
+          <select
+            id="connection-select"
+            v-model="selectedConnection"
+            class="connection-dropdown"
+            data-testid="connection-select"
+            @change="validateForm"
           >
-            {{ connection.name }}
-          </option>
-        </select>
+            <option value="" disabled>-- Select Connection --</option>
+            <option
+              v-for="connection in connectionStore.connections"
+              :key="connection.name"
+              :value="connection.name"
+            >
+              {{ connection.name }}
+            </option>
+            <option value="new-duckdb">New DuckDB</option>
+            <option value="new-motherduck">New MotherDuck</option>
+            <option value="new-bigquery-oauth">New Bigquery Oauth</option>
+            <option value="new-snowflake">New Snowflake</option>
+          </select>
+        </div>
+
+        <!-- New connection specific fields -->
+        <div v-if="selectedConnection === 'new-motherduck'" class="form-row">
+          <label for="md-token">MotherDuck Token</label>
+          <input
+            type="text"
+            v-model.trim="connectionOptions.mdToken"
+            id="md-token"
+            placeholder="MotherDuck Token"
+            class="connection-input"
+            @input="validateForm"
+          />
+        </div>
+
+        <div v-if="selectedConnection === 'new-bigquery-oauth'" class="form-row">
+          <label for="project-id">BigQuery Project ID</label>
+          <input
+            type="text"
+            v-model.trim="connectionOptions.projectId"
+            id="project-id"
+            placeholder="Billing Project ID"
+            class="connection-input"
+            @input="validateForm"
+          />
+        </div>
+
+        <template v-if="selectedConnection === 'new-snowflake'">
+          <div class="form-row">
+            <label for="snowflake-username">Username</label>
+            <input
+              type="text"
+              v-model.trim="connectionOptions.username"
+              id="snowflake-username"
+              placeholder="Snowflake Username"
+              class="connection-input"
+              @input="validateForm"
+            />
+          </div>
+          <div class="form-row">
+            <label for="snowflake-account">Account</label>
+            <input
+              type="text"
+              v-model.trim="connectionOptions.account"
+              id="snowflake-account"
+              placeholder="Snowflake Account"
+              class="connection-input"
+              @input="validateForm"
+            />
+          </div>
+          <div class="form-row">
+            <label for="snowflake-ssh-private-key">Private Key</label>
+            <input
+              type="text"
+              v-model.trim="connectionOptions.sshPrivateKey"
+              id="snowflake-ssh-private-key"
+              placeholder="Private Key"
+              class="connection-input"
+              @input="validateForm"
+            />
+          </div>
+        </template>
       </div>
 
       <div class="popup-footer">
@@ -216,7 +361,7 @@ const handleClickOutside = (event: MouseEvent): void => {
           @click="importDashboard"
           class="copy-button"
           data-testid="import-dashboard-button"
-          :disabled="!dashboardJson || !selectedConnection || isLoading"
+          :disabled="!dashboardJson || !selectedConnection || isLoading || !isFormValid"
         >
           {{ importSuccess ? 'Imported!' : 'Import' }}
         </button>
@@ -426,6 +571,38 @@ const handleClickOutside = (event: MouseEvent): void => {
   color: var(--sidebar-selector-font);
 }
 
+/* Form row styling similar to ModelCreator */
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  flex: 0 0 150px;
+  font-size: var(--small-font-size, 14px);
+  margin-right: 10px;
+  color: var(--text-color);
+}
+
+.form-row select,
+.connection-input {
+  flex: 1;
+  font-size: var(--small-font-size, 14px);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  height: var(--sidebar-sub-item-height, 32px);
+  padding: 0 8px;
+  background-color: var(--sidebar-selector-bg);
+  color: var(--sidebar-selector-font);
+}
+
+.form-row select:focus,
+.connection-input:focus {
+  border-color: var(--special-text);
+  outline: none;
+}
+
 /* Media queries for responsiveness */
 @media (max-width: 768px) {
   .popup-content {
@@ -438,6 +615,16 @@ const handleClickOutside = (event: MouseEvent): void => {
 
   .json-preview {
     max-height: 150px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-row label {
+    flex: none;
+    margin-bottom: 5px;
   }
 }
 
