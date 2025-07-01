@@ -67,7 +67,7 @@
       <template v-else-if="activeScreen === 'dashboard'">
         <mobile-dashboard :name="activeDashboard" />
       </template>
-            <template v-else-if="activeScreen === 'dashboard-import'">
+      <template v-else-if="activeScreen === 'dashboard-import'">
         <dashboard-auto-importer @import-complete="handleImportComplete" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
@@ -316,7 +316,7 @@ export default {
       this.setActiveScreen('editors')
       this.setActiveEditor(editorId)
     },
-        handleImportComplete(dashboardId: string) {
+    handleImportComplete(dashboardId: string) {
       console.log(`Dashboard import completed: ${dashboardId}`)
     },
   },

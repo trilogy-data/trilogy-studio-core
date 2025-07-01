@@ -150,7 +150,7 @@ export class ModelImportService {
                 // No existing dashboard found, generate a new ID
                 dashboardObj.id = Math.random().toString(36).substring(2, 15)
                 //default import dashboards to published
-                
+
                 // Add it to dashboard store
                 this.dashboardStore.addDashboard(dashboardObj)
               }
