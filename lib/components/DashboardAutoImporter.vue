@@ -111,8 +111,6 @@ const performImport = async () => {
         privateKey: connectionOptions.value.sshPrivateKey,
       })
     }
-    // Ensure connection is valid
-    await connectionStore.resetConnection(connectionName)
 
     // Initialize ModelImportService
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -145,6 +143,8 @@ const performImport = async () => {
 
     // Show success
     importSuccess.value = true
+    // Ensure connection is valid
+    await connectionStore.resetConnection(connectionName)
 
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
@@ -257,7 +257,7 @@ const switchToManualImport = () => {
       <p>
         Model "{{ modelName }}" and dashboard "{{ dashboardName }}" have been imported successfully.
       </p>
-      <p class="redirect-message">Redirecting to dashboard...</p>
+      <p class="redirect-message">Initiating connection, then redirecting to dashboard...</p>
     </div>
 
     <!-- Connection Setup Required -->
