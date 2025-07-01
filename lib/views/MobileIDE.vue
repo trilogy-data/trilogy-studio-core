@@ -67,6 +67,9 @@
       <template v-else-if="activeScreen === 'dashboard'">
         <mobile-dashboard :name="activeDashboard" />
       </template>
+      <template v-else-if="activeScreen === 'dashboard-import'">
+        <dashboard-auto-importer @import-complete="handleImportComplete" />
+      </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />
       </template>
@@ -153,22 +156,17 @@ aside {
 
 <script lang="ts">
 import MobileSidebarLayout from '../components/MobileSidebarLayout.vue'
-// import Sidebar from '../components/Sidebar.vue'
-// import Editor from '../components/Editor.vue'
-// import DataTable from '../components/DataTable.vue'
 import CommunityModels from '../components/CommunityModels.vue'
 import ConnectionView from '../components/ConnectionView.vue'
+import DashboardAutoImporter from '../components/DashboardAutoImporter.vue'
 import TabbedLayout from '../components/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
-// import ResultsView from '../components/ResultsView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
-// import WelcomePage from '../components/WelcomePage.vue'
-// import MobileDashboard from '../components/MobileDashboard.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
@@ -215,6 +213,7 @@ export default {
     HintComponent,
     WelcomePage,
     MobileDashboard,
+    DashboardAutoImporter,
     LoadingButton,
     TabbedLayout,
     MobileSidebarLayout,
@@ -316,6 +315,9 @@ export default {
       )
       this.setActiveScreen('editors')
       this.setActiveEditor(editorId)
+    },
+    handleImportComplete(dashboardId: string) {
+      console.log(`Dashboard import completed: ${dashboardId}`)
     },
   },
   computed: {

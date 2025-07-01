@@ -162,21 +162,14 @@ aside {
 
 <script lang="ts">
 import SidebarLayout from '../components/SidebarLayout.vue'
-// import Editor from '../components/Editor.vue'
-// import DataTable from '../components/DataTable.vue'
 import VerticalSplitLayout from '../components/VerticalSplitLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-// import TutorialPage from '../components/TutorialPage.vue'
 import ModelView from '../components/ModelView.vue'
 import UserSettings from '../components/UserSettings.vue'
 import UserProfile from '../components/UserProfile.vue'
-// import WelcomePage from '../components/WelcomePage.vue'
-// import Dashboard from '../components/Dashboard.vue'
 import CommunityModels from '../components/CommunityModels.vue'
-// import LLMView from '../components/LLMView.vue'
 import ConnectionView from '../components/ConnectionView.vue'
-// import ResultsView from '../components/ResultsView.vue'
 import DashboardAutoImporter from '../components/DashboardAutoImporter.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -354,8 +347,6 @@ export default {
       this.setActiveEditor(editor)
     },
     handleImportComplete(dashboardId: string) {
-      // The auto-importer will handle the navigation, but we can add
-      // additional logic here if needed (analytics, notifications, etc.)
       console.log(`Dashboard import completed: ${dashboardId}`)
     },
   },

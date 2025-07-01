@@ -71,7 +71,6 @@ export const getColumnFormat = (
   field: string | undefined,
   columns: Map<string, ResultColumn>,
 ): string | null => {
-  console.log('getColumnFormat', field, columns)
   if (!field || !columns.get(field)) return null
   if (getColumnHasTrait(field, columns, 'usd')) {
     return '$,.2f'
@@ -182,7 +181,6 @@ export const determineDefaultConfig = (
   const geoColumns = filteredColumns('geographic', columns)
 
   if (numericColumns.length === 0) {
-    console.log('No numeric columns found')
     return defaults
   }
 

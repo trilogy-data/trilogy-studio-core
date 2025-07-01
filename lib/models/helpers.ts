@@ -137,8 +137,8 @@ export class ModelImportService {
                 (dashboard) =>
                   dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
               )
-
-              console.log('Importing dashboard:', dashboardObj.name)
+              dashboardObj.state = 'published'
+              console.log('Importing dashboard:', dashboardObj)
 
               if (existingDashboard) {
                 // Reuse the existing dashboard's ID
@@ -150,7 +150,7 @@ export class ModelImportService {
                 // No existing dashboard found, generate a new ID
                 dashboardObj.id = Math.random().toString(36).substring(2, 15)
                 //default import dashboards to published
-                dashboardObj.state = 'published'
+
                 // Add it to dashboard store
                 this.dashboardStore.addDashboard(dashboardObj)
               }
