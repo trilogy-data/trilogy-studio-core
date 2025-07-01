@@ -84,7 +84,6 @@ const createNavigationStore = (): NavigationStore => {
       return
     }
     pushHashToUrl('dashboard', dashboard)
-    console.log(state.activeDashboard)
     state.activeDashboard.value = dashboard
     const dashboardStore = useDashboardStore()
     dashboardStore.activeDashboardId = dashboard
