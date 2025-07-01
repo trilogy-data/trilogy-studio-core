@@ -82,7 +82,7 @@ const createFieldEncoding = (
   fieldName: string,
   columns: Map<string, ResultColumn>,
   axisOptions = {},
-  sort: boolean = true
+  sort: boolean = true,
 ): any => {
   if (!fieldName) return {}
 
@@ -92,7 +92,7 @@ const createFieldEncoding = (
     title: snakeCaseToCapitalizedWords(columns.get(fieldName)?.description || fieldName),
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
-    ...(sort? getSortOrder(fieldName, columns) : {}),
+    ...(sort ? getSortOrder(fieldName, columns) : {}),
   }
 }
 
@@ -746,7 +746,7 @@ export const generateVegaSpec = (
     config.yField || '',
     columns,
     config.colorField,
-    config.sizeField
+    config.sizeField,
   )
 
   // Generate chart specification based on chart type

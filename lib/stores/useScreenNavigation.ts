@@ -3,16 +3,16 @@ import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './url
 import { useEditorStore, useDashboardStore } from '.'
 
 // Define valid screen types in one place to reduce duplication
-type ScreenType = 
-  | 'editors' 
-  | 'tutorial' 
-  | 'llms' 
-  | 'dashboard' 
+type ScreenType =
+  | 'editors'
+  | 'tutorial'
+  | 'llms'
+  | 'dashboard'
   | 'dashboard-import'
-  | 'community-models' 
-  | 'welcome' 
-  | 'profile' 
-  | 'settings' 
+  | 'community-models'
+  | 'welcome'
+  | 'profile'
+  | 'settings'
   | ''
 
 interface NavigationState {
@@ -44,17 +44,17 @@ const createNavigationStore = (): NavigationStore => {
 
   // Screens that should close mobile menu when activated
   const mobileMenuClosingScreens: ScreenType[] = [
-    'community-models', 
-    'welcome', 
-    'profile', 
+    'community-models',
+    'welcome',
+    'profile',
     'settings',
-    'dashboard-import'
+    'dashboard-import',
   ]
 
   const setActiveScreen = (screen: ScreenType): void => {
     pushHashToUrl('screen', screen)
     state.activeScreen.value = screen
-    
+
     if (mobileMenuClosingScreens.includes(screen)) {
       state.mobileMenuOpen.value = false
     }

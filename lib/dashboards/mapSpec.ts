@@ -79,7 +79,7 @@ const createWorldBaseLayer = () => {
     data: {
       // https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json
       // url: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json',
-      url: "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json",
+      url: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json',
       format: { type: 'topojson', feature: 'countries' },
     },
     mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
@@ -195,47 +195,50 @@ function isDataMostlyInUS<T>(rows: T[], latField: keyof T, longField: keyof T): 
   return (insideCount / rows.length) * 100 > 80
 }
 
-
 // Constants for US total geographic span (approximate)
-const US_TOTAL_LON_SPAN = 57.83; // Approx -124.78 to -66.95
-const US_TOTAL_LAT_SPAN = 24.6;  // Approx 24.74 to 49.34
+const US_TOTAL_LON_SPAN = 57.83 // Approx -124.78 to -66.95
+const US_TOTAL_LAT_SPAN = 24.6 // Approx 24.74 to 49.34
 
 // Thresholds for deciding if data is "sufficiently scattered" for albersUsa
 // These percentages are heuristic and might need tuning based on desired behavior.
 // E.g., if data spans more than 30% of US longitude AND 30% of US latitude, use albersUsa.
-const ALBERS_LON_SPREAD_THRESHOLD_PERCENT = 0.2;
-const ALBERS_LAT_SPREAD_THRESHOLD_PERCENT = 0.1;
+const ALBERS_LON_SPREAD_THRESHOLD_PERCENT = 0.2
+const ALBERS_LAT_SPREAD_THRESHOLD_PERCENT = 0.1
 
-const ALBERS_MIN_LON_SPAN_DEG = US_TOTAL_LON_SPAN * ALBERS_LON_SPREAD_THRESHOLD_PERCENT;
-const ALBERS_MIN_LAT_SPAN_DEG = US_TOTAL_LAT_SPAN * ALBERS_LAT_SPREAD_THRESHOLD_PERCENT;
+const ALBERS_MIN_LON_SPAN_DEG = US_TOTAL_LON_SPAN * ALBERS_LON_SPREAD_THRESHOLD_PERCENT
+const ALBERS_MIN_LAT_SPAN_DEG = US_TOTAL_LAT_SPAN * ALBERS_LAT_SPREAD_THRESHOLD_PERCENT
 
 /**
  * Determines if the geographic spread of data points is wide enough to warrant albersUsa projection.
  * This is meant to distinguish between data spread across multiple states/regions vs. clustered in one area.
  */
-function isDataSufficientlySpreadForAlbers<T>(rows: T[], lonField: keyof T, latField: keyof T): boolean {
-  if (!rows.length) return false;
+function isDataSufficientlySpreadForAlbers<T>(
+  rows: T[],
+  lonField: keyof T,
+  latField: keyof T,
+): boolean {
+  if (!rows.length) return false
 
-  let minLon = Infinity;
-  let maxLon = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
+  let minLon = Infinity
+  let maxLon = -Infinity
+  let minLat = Infinity
+  let maxLat = -Infinity
 
   for (const row of rows) {
-    const lon = Number(row[lonField]);
-    const lat = Number(row[latField]);
+    const lon = Number(row[lonField])
+    const lat = Number(row[latField])
 
-    minLon = Math.min(minLon, lon);
-    maxLon = Math.max(maxLon, lon);
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
+    minLon = Math.min(minLon, lon)
+    maxLon = Math.max(maxLon, lon)
+    minLat = Math.min(minLat, lat)
+    maxLat = Math.max(maxLat, lat)
   }
 
-  const dataLonSpan = maxLon - minLon;
-  const dataLatSpan = maxLat - minLat;
+  const dataLonSpan = maxLon - minLon
+  const dataLatSpan = maxLat - minLat
 
   // Check if both longitude and latitude spans exceed their respective thresholds
-  return dataLonSpan >= ALBERS_MIN_LON_SPAN_DEG && dataLatSpan >= ALBERS_MIN_LAT_SPAN_DEG;
+  return dataLonSpan >= ALBERS_MIN_LON_SPAN_DEG && dataLatSpan >= ALBERS_MIN_LAT_SPAN_DEG
 }
 
 /**
@@ -374,7 +377,7 @@ const createWorldScatterMapSpec = (
                 field: config.sizeField,
                 type: 'quantitative',
                 title: snakeCaseToCapitalizedWords(config.sizeField),
-                scale: { type: 'sqrt',  },
+                scale: { type: 'sqrt' },
               }
             : undefined,
           color: config.colorField
@@ -467,7 +470,10 @@ export const createMapSpec = (
   // Handle scatter plot case
   if (config.xField && config.yField) {
     //@ts-ignore
-    if (isDataMostlyInUS(data, config.yField, config.xField) && isDataSufficientlySpreadForAlbers(data, config.yField, config.xField)) {
+    if (
+      isDataMostlyInUS(data, config.yField, config.xField) &&
+      isDataSufficientlySpreadForAlbers(data, config.yField, config.xField)
+    ) {
       return createUSScatterMapSpec(config, columns, isMobile, intChart)
     }
     return createWorldScatterMapSpec(config, columns, isMobile, intChart, data)

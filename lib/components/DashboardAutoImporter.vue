@@ -20,7 +20,14 @@ const saveDashboards = inject<Function>('saveDashboards')
 const saveAll = inject<Function>('saveAll')
 const screenNavigation = useScreenNavigation()
 
-if (!dashboardStore || !connectionStore || !editorStore || !modelStore || !saveDashboards || !saveAll) {
+if (
+  !dashboardStore ||
+  !connectionStore ||
+  !editorStore ||
+  !modelStore ||
+  !saveDashboards ||
+  !saveAll
+) {
   throw new Error('Required stores not provided')
 }
 
@@ -49,10 +56,10 @@ const isFormValid = ref(true)
 
 // Connection requirements mapping
 const connectionRequirements = {
-  'duckdb': { fields: [], autoImport: true },
-  'motherduck': { fields: ['mdToken'], autoImport: false },
-  'bigquery': { fields: ['projectId'], autoImport: false },
-  'snowflake': { fields: ['username', 'account', 'sshPrivateKey'], autoImport: false }
+  duckdb: { fields: [], autoImport: true },
+  motherduck: { fields: ['mdToken'], autoImport: false },
+  bigquery: { fields: ['projectId'], autoImport: false },
+  snowflake: { fields: ['username', 'account', 'sshPrivateKey'], autoImport: false },
 }
 
 // Computed properties
@@ -91,7 +98,6 @@ const performImport = async () => {
       throw new Error('Missing required import parameters')
     }
 
-
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
 
@@ -108,13 +114,8 @@ const performImport = async () => {
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
 
-
     // Initialize ModelImportService
-    const modelImportService = new ModelImportService(
-      editorStore,
-      modelStore,
-      dashboardStore
-    )
+    const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
     if (!modelStore.models[modelName.value]) {
       modelStore.newModelConfig(modelName.value)
     }
@@ -123,14 +124,18 @@ const performImport = async () => {
     connectionStore.connections[connectionName].setModel(modelName.value)
     // Find the imported dashboard by name and connection
     const importedDashboard = Object.values(dashboardStore.dashboards).find(
-      (dashboard) => dashboard.name === dashboardName.value && dashboard.connection === connectionName
+      (dashboard) =>
+        dashboard.name === dashboardName.value && dashboard.connection === connectionName,
     )
 
     if (!importedDashboard) {
-      let connectionDashboards = Object.values(dashboardStore.dashboards).filter(
-        (dashboard) => dashboard.connection === connectionName
-      ).map(d => d.name).join(', ')
-      throw new Error(`Dashboard "${dashboardName.value}" was not found in the imported model, have ${connectionDashboards}`)
+      let connectionDashboards = Object.values(dashboardStore.dashboards)
+        .filter((dashboard) => dashboard.connection === connectionName)
+        .map((d) => d.name)
+        .join(', ')
+      throw new Error(
+        `Dashboard "${dashboardName.value}" was not found in the imported model, have ${connectionDashboards}`,
+      )
     }
 
     importedDashboardId.value = importedDashboard.id
@@ -150,7 +155,6 @@ const performImport = async () => {
       screenNavigation.setActiveDashboard(importedDashboard.id)
       screenNavigation.setActiveScreen('dashboard')
     }, 500)
-
   } catch (err) {
     console.error('Import failed:', err)
     error.value = err instanceof Error ? err.message : 'Import failed'
@@ -200,7 +204,6 @@ onMounted(async () => {
       // Validate form for required fields
       validateForm()
     }
-
   } catch (err) {
     console.error('Auto-import initialization failed:', err)
     error.value = err instanceof Error ? err.message : 'Failed to initialize import'
@@ -222,7 +225,6 @@ const switchToManualImport = () => {
 }
 //http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/usa_names.json&dashboard=USA%20Names&modelName=top-names-usa-dashboard&connection=bigquery
 //http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/tpc_h.json&dashboard=example-dashboard&modelName=tpc-h-demo&connection=duckdb
-
 </script>
 
 <template>
@@ -252,7 +254,9 @@ const switchToManualImport = () => {
     <div v-else-if="importSuccess" class="import-state success-state">
       <div class="success-icon">✅</div>
       <h2>Import Successful!</h2>
-      <p>Model "{{ modelName }}" and dashboard "{{ dashboardName }}" have been imported successfully.</p>
+      <p>
+        Model "{{ modelName }}" and dashboard "{{ dashboardName }}" have been imported successfully.
+      </p>
       <p class="redirect-message">Redirecting to dashboard...</p>
     </div>
 
@@ -268,41 +272,74 @@ const switchToManualImport = () => {
       </div>
 
       <div class="connection-setup">
-        <h3>{{ connectionType.charAt(0).toUpperCase() + connectionType.slice(1) }} Connection Setup</h3>
+        <h3>
+          {{ connectionType.charAt(0).toUpperCase() + connectionType.slice(1) }} Connection Setup
+        </h3>
         <p class="setup-description">
-          This model requires a {{ connectionType }} connection. Please provide the required configuration:
+          This model requires a {{ connectionType }} connection. Please provide the required
+          configuration:
         </p>
 
         <!-- MotherDuck Fields -->
         <div v-if="connectionType === 'motherduck'" class="form-group">
           <label for="md-token">MotherDuck Token</label>
-          <input type="text" v-model.trim="connectionOptions.mdToken" id="md-token"
-            placeholder="Enter your MotherDuck token" class="connection-input" @input="validateForm" />
+          <input
+            type="text"
+            v-model.trim="connectionOptions.mdToken"
+            id="md-token"
+            placeholder="Enter your MotherDuck token"
+            class="connection-input"
+            @input="validateForm"
+          />
         </div>
 
         <!-- BigQuery Fields -->
         <div v-if="connectionType === 'bigquery'" class="form-group">
           <label for="project-id">BigQuery Project ID</label>
-          <input type="text" v-model.trim="connectionOptions.projectId" id="project-id"
-            placeholder="Enter your billing project ID" class="connection-input" @input="validateForm" />
+          <input
+            type="text"
+            v-model.trim="connectionOptions.projectId"
+            id="project-id"
+            placeholder="Enter your billing project ID"
+            class="connection-input"
+            @input="validateForm"
+          />
         </div>
 
         <!-- Snowflake Fields -->
         <template v-if="connectionType === 'snowflake'">
           <div class="form-group">
             <label for="snowflake-username">Username</label>
-            <input type="text" v-model.trim="connectionOptions.username" id="snowflake-username"
-              placeholder="Snowflake username" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.username"
+              id="snowflake-username"
+              placeholder="Snowflake username"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
           <div class="form-group">
             <label for="snowflake-account">Account</label>
-            <input type="text" v-model.trim="connectionOptions.account" id="snowflake-account"
-              placeholder="Snowflake account identifier" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.account"
+              id="snowflake-account"
+              placeholder="Snowflake account identifier"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
           <div class="form-group">
             <label for="snowflake-key">Private Key</label>
-            <input type="text" v-model.trim="connectionOptions.sshPrivateKey" id="snowflake-key"
-              placeholder="Private key for authentication" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.sshPrivateKey"
+              id="snowflake-key"
+              placeholder="Private key for authentication"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
         </template>
       </div>
@@ -311,9 +348,7 @@ const switchToManualImport = () => {
         <button @click="handleManualImport" class="import-button" :disabled="!isFormValid">
           Import Model & Dashboard
         </button>
-        <button @click="switchToManualImport" class="cancel-button">
-          Cancel
-        </button>
+        <button @click="switchToManualImport" class="cancel-button">Cancel</button>
       </div>
     </div>
   </div>

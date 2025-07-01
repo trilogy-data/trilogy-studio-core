@@ -284,7 +284,7 @@ export default {
     onMounted(() => {
       const importUrl = getDefaultValueFromHash('import', '')
       const connectionType = getDefaultValueFromHash('connection', '')
-      
+
       // If we have import parameters, trigger auto-import mode
       if (importUrl && connectionType) {
         setActiveScreen('dashboard-import')

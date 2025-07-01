@@ -123,7 +123,7 @@ const importDashboard = async () => {
     if (connectionName.startsWith('new-')) {
       let typeName = connectionName.replace('new-', '')
       connectionName = `dashboard-${dashboardObj.name || 'imported'}-connection`
-      
+
       if (!connectionStore.connections[connectionName]) {
         connectionStore.newConnection(connectionName, typeName, {
           mdToken: connectionOptions.value.mdToken,
