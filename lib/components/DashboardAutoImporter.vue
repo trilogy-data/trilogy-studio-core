@@ -118,15 +118,23 @@ const performImport = async () => {
       modelStore.newModelConfig(modelName.value)
     }
     // Import model (this will also import any dashboards included in the model)
-    await modelImportService.importModel(modelName.value, modelUrl.value, connectionName)
+    let imports = await modelImportService.importModel(modelName.value, modelUrl.value, connectionName)
     connectionStore.connections[connectionName].setModel(modelName.value)
     // Find the imported dashboard by name and connection
+
+    let lookup = dashboardName.value
+    let matched = imports?.dashboards.get(dashboardName.value)
+    if (matched) {
+      lookup = matched
+    }
     const importedDashboard = Object.values(dashboardStore.dashboards).find(
       (dashboard) =>
-        dashboard.name === dashboardName.value && dashboard.connection === connectionName,
+        dashboard.name === lookup && dashboard.connection === connectionName,
     )
 
     if (!importedDashboard) {
+      // look by file name
+
       let connectionDashboards = Object.values(dashboardStore.dashboards)
         .filter((dashboard) => dashboard.connection === connectionName)
         .map((d) => d.name)
@@ -225,6 +233,8 @@ const switchToManualImport = () => {
 }
 //http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/usa_names.json&dashboard=USA%20Names&modelName=top-names-usa-dashboard&connection=bigquery
 //http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/tpc_h.json&dashboard=example-dashboard&modelName=tpc-h-demo&connection=duckdb
+//https://trilogydata.dev/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/usa_names.json&dashboard=USA%20Names&modelName=top-names-usa-dashboard&connection=bigquery
+//https://trilogydata.dev/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/tpc_h.json&dashboard=example-dashboard&modelName=tpc-h-demo&connection=duckdb
 </script>
 
 <template>
@@ -283,63 +293,33 @@ const switchToManualImport = () => {
         <!-- MotherDuck Fields -->
         <div v-if="connectionType === 'motherduck'" class="form-group">
           <label for="md-token">MotherDuck Token</label>
-          <input
-            type="text"
-            v-model.trim="connectionOptions.mdToken"
-            id="md-token"
-            placeholder="Enter your MotherDuck token"
-            class="connection-input"
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="connectionOptions.mdToken" id="md-token"
+            placeholder="Enter your MotherDuck token" class="connection-input" @input="validateForm" />
         </div>
 
         <!-- BigQuery Fields -->
         <div v-if="connectionType === 'bigquery'" class="form-group">
           <label for="project-id">BigQuery Project ID</label>
-          <input
-            type="text"
-            v-model.trim="connectionOptions.projectId"
-            id="project-id"
-            placeholder="Enter your billing project ID"
-            class="connection-input"
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="connectionOptions.projectId" id="project-id"
+            placeholder="Enter your billing project ID" class="connection-input" @input="validateForm" />
         </div>
 
         <!-- Snowflake Fields -->
         <template v-if="connectionType === 'snowflake'">
           <div class="form-group">
             <label for="snowflake-username">Username</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.username"
-              id="snowflake-username"
-              placeholder="Snowflake username"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.username" id="snowflake-username"
+              placeholder="Snowflake username" class="connection-input" @input="validateForm" />
           </div>
           <div class="form-group">
             <label for="snowflake-account">Account</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.account"
-              id="snowflake-account"
-              placeholder="Snowflake account identifier"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.account" id="snowflake-account"
+              placeholder="Snowflake account identifier" class="connection-input" @input="validateForm" />
           </div>
           <div class="form-group">
             <label for="snowflake-key">Private Key</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.sshPrivateKey"
-              id="snowflake-key"
-              placeholder="Private key for authentication"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.sshPrivateKey" id="snowflake-key"
+              placeholder="Private key for authentication" class="connection-input" @input="validateForm" />
           </div>
         </template>
       </div>

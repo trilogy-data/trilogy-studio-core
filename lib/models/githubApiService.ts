@@ -6,6 +6,7 @@ export interface Component {
   name?: string
   alias?: string
   purpose?: string
+  type: 'sql' | 'dashboard' | 'trilogy'
 }
 
 export interface ModelFile {

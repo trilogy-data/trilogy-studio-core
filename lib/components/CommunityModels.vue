@@ -64,20 +64,7 @@
               v-if="modelExists(file.name)"
               :data-testid="`imported-${file.name}`"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="check-icon"
-              >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+              <i class="mdi mdi-check check-icon"></i>
             </span>
             {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
           </div>
@@ -105,16 +92,29 @@
             <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
           </div>
           <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
-            {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{
+            {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Content ({{
               file.components.length
             }})
           </div>
           <ul class="mt-2 space-y-1" v-if="isExpanded[file.downloadUrl]">
-            <div v-for="component in file.components" :key="component.url">
-              <a :href="component.url" target="_blank">{{
-                component.name || 'Unnamed Component'
-              }}</a>
-              <span v-if="component.purpose"> ({{ component.purpose }})</span>
+            <div v-for="component in file.components" :key="component.url" class="component-item">
+              <div class="component-main">
+                <i :class="getComponentIcon(component.type)" class="component-icon"></i>
+                <a :href="component.url" target="_blank" class="component-link">
+                  {{ component.name || 'Unnamed Component' }}
+                </a>
+                <span v-if="component.purpose" class="component-purpose">({{ component.purpose }})</span>
+              </div>
+              <div v-if="component.type === 'dashboard'" class="dashboard-actions">
+                <button 
+                  @click="copyDashboardImportLink(component, file)"
+                  class="copy-import-button"
+                  :title="'Copy import link for ' + component.name"
+                >
+                  <i class="mdi mdi-content-copy"></i>
+                  Copy Share Link
+                </button>
+              </div>
             </div>
           </ul>
         </div>
@@ -176,6 +176,42 @@ const availableEngines = computed(() => {
 
 const getDefaultConnection = (engine: string): string => {
   return getDefaultConnectionService(engine)
+}
+
+const getComponentIcon = (type: string): string => {
+  switch (type) {
+    case 'dashboard':
+      return 'mdi mdi-view-dashboard'
+    case 'trilogy':
+      return 'mdi mdi-database'
+    case 'sql':
+      return 'mdi mdi-code-tags'
+    default:
+      return 'mdi mdi-file'
+  }
+}
+
+const copyDashboardImportLink = async (component: any, file: any): Promise<void> => {
+  // Get current base URL
+  const currentBase = window.location.origin + window.location.pathname
+  
+  // Construct the import link
+  const importLink = `${currentBase}#screen=dashboard-import&model=${encodeURIComponent(file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(file.name)}&connection=${encodeURIComponent(file.engine)}`
+  
+  try {
+    await navigator.clipboard.writeText(importLink)
+    // You might want to show a toast notification here
+    console.log('Dashboard import link copied to clipboard:', importLink)
+  } catch (err) {
+    console.error('Failed to copy dashboard import link:', err)
+    // Fallback: create a temporary textarea and copy from it
+    const textArea = document.createElement('textarea')
+    textArea.value = importLink
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+  }
 }
 
 const filteredFiles = computed(() => {
@@ -333,7 +369,7 @@ onMounted(async () => {
   background-color: var(--button-hover-bg);
 }
 
-/* New styles for the imported model indicator */
+/* Updated styles for the imported model indicator using MDI */
 .imported-indicator {
   display: inline-flex;
   align-items: center;
@@ -342,7 +378,73 @@ onMounted(async () => {
 
 .check-icon {
   color: #22c55e; /* Green color for the checkmark */
-  stroke-width: 3;
+  font-size: 16px;
+}
+
+/* New styles for component items */
+.component-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.1));
+}
+
+.component-item:last-child {
+  border-bottom: none;
+}
+
+.component-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-icon {
+  font-size: 16px;
+  color: var(--text-faint);
+  min-width: 20px;
+}
+
+.component-link {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.component-link:hover {
+  text-decoration: underline;
+}
+
+.component-purpose {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.dashboard-actions {
+  margin-left: 28px; /* Align with the component name */
+}
+
+.copy-import-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--button-text, white);
+  border: none;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.copy-import-button:hover {
+  background-color: var(--button-hover-bg, #1d4ed8);
+}
+
+.copy-import-button i {
+  font-size: 14px;
 }
 
 /* Make filter row more responsive */
@@ -356,6 +458,14 @@ onMounted(async () => {
   .filter-row > div {
     flex: 1 0 100%;
     margin-bottom: 8px;
+  }
+  
+  .component-main {
+    flex-wrap: wrap;
+  }
+  
+  .dashboard-actions {
+    margin-left: 0;
   }
 }
 </style>
