@@ -21,16 +21,15 @@ function cancel(): void {
 function insertMarkdown(prefix: string, suffix: string = ''): void {
   const textarea = document.querySelector('.markdown-editor') as HTMLTextAreaElement
   if (!textarea) return
-
+  
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = markdownText.value.substring(start, end)
-
   const before = markdownText.value.substring(0, start)
   const after = markdownText.value.substring(end)
-
+  
   markdownText.value = before + prefix + selectedText + suffix + after
-
+  
   // Restore focus and selection
   setTimeout(() => {
     textarea.focus()
@@ -98,13 +97,16 @@ function addLink(): void {
 }
 
 .content-editor {
-  width: 80%;
-  max-width: 800px;
+  width: 75vw;
+  height: 75vh;
+  max-width: none;
   background-color: var(--query-window-bg);
   color: var(--query-window-font);
   padding: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 .content-editor h3 {
@@ -113,12 +115,14 @@ function addLink(): void {
   border-bottom: 1px solid var(--border-light);
   padding-bottom: 10px;
   color: var(--text-color);
+  flex-shrink: 0;
 }
 
 .markdown-toolbar {
   display: flex;
   gap: 5px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .markdown-toolbar button {
@@ -140,11 +144,11 @@ function addLink(): void {
 
 .markdown-editor {
   width: 100%;
-  height: 250px;
+  flex: 1;
   padding: 10px;
   border: 1px solid var(--border);
   font-family: monospace;
-  resize: vertical;
+  resize: none;
   margin-bottom: 15px;
   background-color: var(--query-window-bg);
   color: var(--query-window-font);
@@ -155,6 +159,7 @@ function addLink(): void {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .save-button,
@@ -174,5 +179,14 @@ function addLink(): void {
 .cancel-button {
   background-color: var(--delete-color);
   color: white;
+}
+
+/* Mobile handling - keep existing mobile behavior */
+@media (max-width: 768px) {
+  .content-editor {
+    width: 90%;
+    height: 80%;
+    max-width: none;
+  }
 }
 </style>

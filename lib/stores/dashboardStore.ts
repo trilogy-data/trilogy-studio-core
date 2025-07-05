@@ -366,7 +366,7 @@ export const useDashboardStore = defineStore('dashboards', {
       queryExecutionService: QueryExecutionService,
     ): Promise<ModelConceptInput[]> {
       let completions = await this.populateCompletion(dashboardId, queryExecutionService)
-      console.log('got completions', completions)
+
       if (!completions) {
         throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
       }
@@ -477,19 +477,7 @@ export const useDashboardStore = defineStore('dashboards', {
         await this.updateItemContent(dashboardId, key, content)
         await this.updateItemType(dashboardId, key, data.type)
       }
-      // await Promise.all(promptLayout.layout.map(async (item: PromptLayoutItem) => {
 
-      //   let itemData = promptLayout.gridItems[item.id]
-      //   let content = itemData.content
-      //   console.log('populating item', itemData)
-      //   if ([CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type)) {
-      //     let llmcontent = await llmStore.generateQueryCompletion(content, concepts, validator)
-      //     content = llmcontent || 'No query could be generated'
-      //   }
-      //   this.addItemToDashboard(
-      //     dashboardId, itemData.type, item.x, item.y, item.w, item.h, itemData.name, content,
-      //   )
-      // }))
     },
   },
 })

@@ -39,6 +39,7 @@
   --result-window-font: #CCCCCC;
 
   --border: #898989;
+  --dashboard-border: transparent;
   --border-color: var(--border);
   --border-light: #4b4b4b;
   --button-bg: #4D4D4D;
@@ -76,6 +77,7 @@
   --result-window-font: #3C3C3C;
 
   --border: #7171715e;
+  --dashboard-border: var(--border);
   --border-light: #E5E5E5;
   --button-bg: #dfdfdff0;
   --button-mouseover: #cfcfcf;
@@ -126,6 +128,10 @@
   }
 }
 
+.grid-item-drag-handle {
+  color: var(--text-color) !important;
+  stroke: var(--text-color) !important;
+}
 
 a {
   font-weight: 500;

@@ -45,7 +45,6 @@ export class OpenAIProvider extends LLMProvider {
       )
 
       const modelData = await response.json()
-      console.log('Model data:', modelData)
       this.models = modelData.data.map((model: any) => model.id).sort()
       this.connected = true
     } catch (e) {

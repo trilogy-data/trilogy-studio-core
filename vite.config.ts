@@ -12,7 +12,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 export default defineConfig({
   server: {
     headers: {
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     },
   },
@@ -37,7 +37,7 @@ export default defineConfig({
       name: 'configure-response-headers',
       configureServer: (server) => {
         server.middlewares.use((_req, res, next) => {
-          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
+          res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none')
           res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
           next()
         })
