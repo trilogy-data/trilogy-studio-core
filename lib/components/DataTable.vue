@@ -175,6 +175,29 @@ function typeToFormatter(col: ResultColumn) {
         return (cell.getValue() * 100).toFixed(2) + '%'
       },
     }
+  } 
+  // else if (col.traits?.includes('url')) {
+  //   return {
+  //     formatter: (cell) => {
+  //       const url = cell.getValue()
+  //       return `<a href="${url}" target="_blank">${url}</a>`
+  //     },
+  //   }
+  // } else
+  else if (col.traits?.includes('url')) {
+    return {
+      formatter: (cell) => {
+        const url = cell.getValue()
+        return `<img src="${url}" alt="Image" style="max-width: 100%; max-height: 100%;">`
+      },
+    }
+  } else if (col.traits?.includes('url_pdf')) {
+    return {
+      formatter: (cell) => {
+        const url = cell.getValue()
+        return `<a href="${url}" target="_blank">PDF</a>`
+      },
+    }
   }
   switch (col.type) {
     case ColumnType.ARRAY:

@@ -2,7 +2,7 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
-
+import { snakeCaseToCapitalizedWords } from './formatting'
 const temporalTraits = [
   'year',
   'month',
@@ -53,6 +53,14 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
     !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
   )
 }
+
+export const isImageColumn = (column: ResultColumn): boolean => {
+  return (
+    [ColumnType.STRING].includes(column.type) &&
+    column.traits?.some((trait) => trait.endsWith('url')) ? true : false
+  )
+}
+
 
 export const getGeoTraitType = (column: ResultColumn): string => {
   if (getColumnHasTraitInternal(column, 'us_state')) {
@@ -181,6 +189,7 @@ export const determineDefaultConfig = (
   const geoColumns = filteredColumns('geographic', columns)
 
   if (numericColumns.length === 0) {
+    defaults.chartType = 'headline'
     return defaults
   }
 
@@ -268,7 +277,10 @@ export const determineDefaultConfig = (
     defaults.colorField = numericColumns[0].name
   } else if (defaults.chartType === 'bar') {
     defaults.xField = categoricalColumns[0].name
-    defaults.yField = numericColumns[0].name
+    let nonDateNumeric = numericColumns.filter(
+      (col) => !isTemporalColumn(col) && col.name !== defaults.xField,
+    )
+    defaults.yField = nonDateNumeric? nonDateNumeric[0].name : numericColumns[0].name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -349,7 +361,7 @@ export const determineEligibleChartTypes = (
 
   // If no numeric columns, very limited chart options
   if (numericColumns.length === 0) {
-    return eligibleCharts
+    return ['headline']
   }
 
   // Time series data - line chart
@@ -393,4 +405,127 @@ export const determineEligibleChartTypes = (
   }
   // Ensure all chart types are from the predefined list
   return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
+}
+
+
+/**
+ * Get formatting hints for a field based on its column type
+ */
+export const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): any => {
+  if (!fieldName || !columns.get(fieldName)) return {}
+
+  const column = columns.get(fieldName)
+  if (!column) return {}
+  if (getColumnHasTrait(fieldName, columns, 'usd')) {
+    return { format: '$,.2f' }
+  }
+  if (getColumnHasTrait(fieldName, columns, 'percent')) {
+    return { format: '.1%' }
+  }
+  switch (column.type) {
+    case ColumnType.DATE:
+      return { timeUnit: 'yearmonthdate' }
+    case ColumnType.TIME:
+      return { timeUnit: 'hoursminutesseconds' }
+    case ColumnType.DATETIME:
+      return { timeUnit: 'yearmonthdate-hours' }
+    case ColumnType.INTEGER:
+      return {}
+    default:
+      return {}
+  }
+}
+
+export const getSortOrder = (fieldName: string, columns: Map<string, ResultColumn>, valueColumn: string | null = null): any => {
+  if (!fieldName || !columns.get(fieldName)) return {}
+  const column = columns.get(fieldName)
+  if (!column) return {}
+  // if it has a week_day trait, sort by week days explicitly
+  if (getColumnHasTrait(fieldName, columns, 'day_of_week_name')) {
+    return { sort: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] }
+  }
+  if (isTemporalColumn(column)) {
+    return { sort: { field: fieldName, order: 'ascending' } }
+  } else if (isNumericColumn(column)) {
+    if (valueColumn) {
+      return {
+        sort: { field: valueColumn, order: 'descending' }
+      }
+    }
+    return { sort: { field: fieldName, order: 'descending' } }
+  } else {
+    if (valueColumn) {
+      return {
+        sort: { field: valueColumn, order: 'descending' }
+      }
+    }
+    return { sort: { field: fieldName, order: 'ascending' } }
+  }
+}
+
+/**
+ * Get Vega field type based on column type
+ */
+export const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>): string => {
+  if (!fieldName || !columns.get(fieldName)) return 'nominal'
+
+  const column = columns.get(fieldName)
+  if (!column) return 'nominal'
+  if (isTemporalColumn(column)) {
+    if ([ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(column.type)) {
+      return 'temporal'
+    }
+    return 'ordinal'
+  } else if (isNumericColumn(column)) {
+    return 'quantitative'
+  } else {
+    return 'nominal'
+  }
+}
+
+
+export const createFieldEncoding = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+  axisOptions = {},
+  sort: boolean = true,
+): any => {
+  if (!fieldName) return {}
+
+  return {
+    field: fieldName,
+    type: getVegaFieldType(fieldName, columns),
+    title: snakeCaseToCapitalizedWords(columns.get(fieldName)?.description || fieldName),
+    ...getFormatHint(fieldName, columns),
+    ...axisOptions,
+    ...(sort ? getSortOrder(fieldName, columns) : {}),
+  }
+}
+
+
+/**
+ * Create standard opacity and stroke width encoding for interaction
+ */
+export const createInteractionEncodings = () => {
+  return {
+    fillOpacity: {
+      condition: { param: 'select', value: 1 },
+      value: 0.3,
+    },
+    strokeWidth: {
+      condition: [
+        {
+          param: 'select',
+          empty: false,
+          value: 2,
+        },
+        {
+          param: 'highlight',
+          empty: false,
+          value: 1,
+        },
+      ],
+      value: 0,
+    },
+  }
 }
