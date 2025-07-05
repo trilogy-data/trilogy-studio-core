@@ -1,12 +1,6 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { ColumnType } from '../editors/results'
-import { toRaw } from 'vue'
-import { snakeCaseToCapitalizedWords } from './formatting'
-import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat, createFieldEncoding, createInteractionEncodings, getSortOrder } from './helpers'
-import { createTreemapSpec } from './treeSpec'
-import { createMapSpec } from './mapSpec'
-import { createHeadlineSpec } from './headlineSpec'
+import { getColumnFormat, createFieldEncoding, createInteractionEncodings, getSortOrder } from './helpers'
 
 
 

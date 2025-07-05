@@ -105,14 +105,14 @@ export const createHeadlineSpec = (
   isMobile: boolean = false,
 ) => {
   // get all columns that are isNumericColumn using isNumericColumn
-  let numericColumns = Array.from(columns.values()).filter((column) => true)
+  let columnsArray = Array.from(columns.values())
 
   // Map each column to its visualization layers with proper index
-  let numericLayers = numericColumns.map((column, index) => {
+  let columnLayers = columnsArray.map((column, index) => {
     return createHeadlineLayer(
       column.name,
       index,
-      numericColumns.length,
+      columnsArray.length,
       columns,
       currentTheme,
       isMobile,
@@ -120,7 +120,7 @@ export const createHeadlineSpec = (
   })
 
   // flatten array of arrays to a single array
-  let flatLayers = numericLayers.reduce((acc, val) => acc.concat(val), [])
+  let flatLayers = columnLayers.reduce((acc, val) => acc.concat(val), [])
 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

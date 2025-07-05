@@ -176,29 +176,15 @@ function typeToFormatter(col: ResultColumn) {
       },
     }
   } 
-  // else if (col.traits?.includes('url')) {
-  //   return {
-  //     formatter: (cell) => {
-  //       const url = cell.getValue()
-  //       return `<a href="${url}" target="_blank">${url}</a>`
-  //     },
-  //   }
-  // } else
-  else if (col.traits?.includes('url')) {
+  else if (col.traits?.includes('url_image')) {
     return {
+      //@ts-ignore
       formatter: (cell) => {
         const url = cell.getValue()
-        return `<img src="${url}" alt="Image" style="max-width: 100%; max-height: 100%;">`
+        return `<img src="${url}" alt="${url}" style="max-width: 100%; max-height: 100%;">`
       },
     }
-  } else if (col.traits?.includes('url_pdf')) {
-    return {
-      formatter: (cell) => {
-        const url = cell.getValue()
-        return `<a href="${url}" target="_blank">PDF</a>`
-      },
-    }
-  }
+  } 
   switch (col.type) {
     case ColumnType.ARRAY:
       return {
