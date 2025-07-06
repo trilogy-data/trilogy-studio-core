@@ -135,8 +135,9 @@ export default class BigQueryOauthConnection extends BaseConnection {
     // TODO: support multiple BQ projects
     try {
       const databases: Database[] = [new Database(this.browsingProjectId, [])]
-
-      return databases
+      this.databases = databases // Store in the connection instance
+      console.log('Fetched databases:', databases)
+      return new Promise((resolve) => resolve(databases))
     } catch (error) {
       console.error('Error fetching databases:', error)
       throw error

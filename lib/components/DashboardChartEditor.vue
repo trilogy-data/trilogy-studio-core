@@ -31,8 +31,27 @@ const startWidth = ref(0)
 const startHeight = ref(0)
 const startTop = ref(0)
 const startLeft = ref(0)
-const editorWidth = ref(props.initialWidth || 800)
-const editorHeight = ref(props.initialHeight || 400)
+
+// Calculate default dimensions - 75% of viewport on desktop
+const getDefaultDimensions = () => {
+  const isDesktop = window.innerWidth > 768
+  if (isDesktop) {
+    return {
+      width: Math.floor(window.innerWidth * 0.75),
+      height: Math.floor(window.innerHeight * 0.75),
+    }
+  } else {
+    // Mobile defaults remain unchanged
+    return {
+      width: 800,
+      height: 400,
+    }
+  }
+}
+
+const defaultDimensions = getDefaultDimensions()
+const editorWidth = ref(props.initialWidth || defaultDimensions.width)
+const editorHeight = ref(props.initialHeight || defaultDimensions.height)
 const editorTop = ref(50) // % from top
 const editorLeft = ref(50) // % from left
 const editorElement = ref<HTMLElement | null>(null)
@@ -355,6 +374,7 @@ onUnmounted(() => {
   height: 15px;
   cursor: sw-resize;
 }
+
 @media screen and (max-width: 768px) {
   .content-editor {
     max-width: 100vw;

@@ -264,8 +264,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       concepts: ModelConceptInput[] = [],
       maxAttempts = 3,
     ) {
-      console.log('Generating dashboard completion')
-      console.log('inputString:', inputString)
       let base = createDashboardPrompt(inputString, concepts)
       return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content

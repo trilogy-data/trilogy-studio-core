@@ -1,6 +1,6 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isNumericColumn, getColumnFormat } from './helpers'
+import { isImageColumn, getColumnFormat, getVegaFieldType } from './helpers'
 
 const createHeadlineLayer = (
   column: string,
@@ -35,9 +35,28 @@ const createHeadlineLayer = (
   const labelFontSizeFormula = isMobile
     ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
-
-  return [
-    {
+  let topMark = {}
+  if (isImageColumn(columns.get(column) as ResultColumn)) {
+    topMark = {
+      mark: {
+        type: 'image',
+        width: { expr: `min(100, max(width, 100)/${Math.min(6, total * 2)})` },
+        height: { expr: `min(100, max(height, 100)/${Math.min(6, total * 2)})` },
+        align: 'center',
+        baseline: 'middle',
+        x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+        y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : { expr: `height/2 -20` }, // Vertical offset for mobile, fixed for desktop
+      },
+      encoding: {
+        url: {
+          field: column,
+          type: getVegaFieldType(column, columns),
+          format: getColumnFormat(column, columns),
+        },
+      },
+    }
+  } else {
+    topMark = {
       mark: {
         type: 'text',
         fontSize: { expr: fontSizeFormula },
@@ -50,12 +69,15 @@ const createHeadlineLayer = (
       encoding: {
         text: {
           field: column,
-          type: 'quantitative',
+          type: getVegaFieldType(column, columns),
           format: getColumnFormat(column, columns),
         },
         color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
       },
-    },
+    }
+  }
+  return [
+    topMark,
     {
       mark: {
         type: 'text',
@@ -81,14 +103,14 @@ export const createHeadlineSpec = (
   isMobile: boolean = false,
 ) => {
   // get all columns that are isNumericColumn using isNumericColumn
-  let numericColumns = Array.from(columns.values()).filter((column) => isNumericColumn(column))
+  let columnsArray = Array.from(columns.values())
 
   // Map each column to its visualization layers with proper index
-  let numericLayers = numericColumns.map((column, index) => {
+  let columnLayers = columnsArray.map((column, index) => {
     return createHeadlineLayer(
       column.name,
       index,
-      numericColumns.length,
+      columnsArray.length,
       columns,
       currentTheme,
       isMobile,
@@ -96,7 +118,7 @@ export const createHeadlineSpec = (
   })
 
   // flatten array of arrays to a single array
-  let flatLayers = numericLayers.reduce((acc, val) => acc.concat(val), [])
+  let flatLayers = columnLayers.reduce((acc, val) => acc.concat(val), [])
 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

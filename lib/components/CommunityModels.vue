@@ -58,37 +58,48 @@
 
       <div v-if="filteredFiles.length">
         <div v-for="file in filteredFiles" :key="file.name" class="model-item">
-          <div class="font-semibold flex items-center">
-            <span
-              class="imported-indicator mr-2"
-              v-if="modelExists(file.name)"
-              :data-testid="`imported-${file.name}`"
+          <div class="model-item-header">
+            <div class="model-info">
+              <div class="font-semibold flex items-center">
+                <span
+                  class="imported-indicator mr-2"
+                  v-if="modelExists(file.name)"
+                  :data-testid="`imported-${file.name}`"
+                >
+                  <i class="mdi mdi-check check-icon"></i>
+                </span>
+                {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
+              </div>
+              <div class="model-actions">
+                <button
+                  @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+                  :data-testid="`import-${file.name}`"
+                  class="action-button"
+                >
+                  {{
+                    creatorIsExpanded[file.name]
+                      ? 'Hide'
+                      : modelExists(file.name)
+                        ? 'Reload'
+                        : 'Import'
+                  }}
+                </button>
+              </div>
+            </div>
+            <button
+              class="expand-button"
+              @click="toggleComponents(file.downloadUrl)"
+              :class="{ expanded: isExpanded[file.downloadUrl] }"
+              :title="isExpanded[file.downloadUrl] ? 'Hide Content' : 'Show Content'"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="check-icon"
+              <i class="mdi mdi-chevron-down expand-icon"></i>
+              <span class="expand-text"
+                >{{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }}
+                {{ file.components.length }}</span
               >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </span>
-            {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
+            </button>
           </div>
-          <button
-            @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
-            :data-testid="`import-${file.name}`"
-          >
-            {{
-              creatorIsExpanded[file.name] ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import'
-            }}
-          </button>
+
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
             <model-creator
               :formDefaults="{
@@ -101,22 +112,41 @@
               @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
             />
           </div>
-          <div>
+
+          <div class="model-description">
             <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
           </div>
-          <div class="toggle-concepts" @click="toggleComponents(file.downloadUrl)">
-            {{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }} Files ({{
-              file.components.length
-            }})
-          </div>
-          <ul class="mt-2 space-y-1" v-if="isExpanded[file.downloadUrl]">
-            <div v-for="component in file.components" :key="component.url">
-              <a :href="component.url" target="_blank">{{
-                component.name || 'Unnamed Component'
-              }}</a>
-              <span v-if="component.purpose"> ({{ component.purpose }})</span>
+
+          <div class="model-content-expanded" v-if="isExpanded[file.downloadUrl]">
+            <div class="content-header">
+              <h4>Model Components</h4>
             </div>
-          </ul>
+            <div class="components-grid">
+              <div v-for="component in file.components" :key="component.url" class="component-item">
+                <div class="component-main">
+                  <i :class="getComponentIcon(component.type)" class="component-icon"></i>
+                  <div class="component-info">
+                    <a :href="component.url" target="_blank" class="component-link">
+                      {{ component.name || 'Unnamed Component' }}
+                    </a>
+                    <span v-if="component.purpose" class="component-purpose">{{
+                      component.purpose
+                    }}</span>
+                  </div>
+                </div>
+                <div v-if="component.type === 'dashboard'" class="dashboard-actions">
+                  <button
+                    @click="copyDashboardImportLink(component, file)"
+                    class="copy-import-button"
+                    :title="'Copy import link for ' + component.name"
+                  >
+                    <i class="mdi mdi-content-copy"></i>
+                    Copy Share Link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <p v-if="error" class="text-error">{{ error }}</p>
@@ -178,6 +208,42 @@ const getDefaultConnection = (engine: string): string => {
   return getDefaultConnectionService(engine)
 }
 
+const getComponentIcon = (type: string): string => {
+  switch (type) {
+    case 'dashboard':
+      return 'mdi mdi-view-dashboard'
+    case 'trilogy':
+      return 'mdi mdi-database'
+    case 'sql':
+      return 'mdi mdi-code-tags'
+    default:
+      return 'mdi mdi-file'
+  }
+}
+
+const copyDashboardImportLink = async (component: any, file: any): Promise<void> => {
+  // Get current base URL
+  const currentBase = window.location.origin + window.location.pathname
+
+  // Construct the import link
+  const importLink = `${currentBase}#screen=dashboard-import&model=${encodeURIComponent(file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(file.name)}&connection=${encodeURIComponent(file.engine)}`
+
+  try {
+    await navigator.clipboard.writeText(importLink)
+    // You might want to show a toast notification here
+    console.log('Dashboard import link copied to clipboard:', importLink)
+  } catch (err) {
+    console.error('Failed to copy dashboard import link:', err)
+    // Fallback: create a temporary textarea and copy from it
+    const textArea = document.createElement('textarea')
+    textArea.value = importLink
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+  }
+}
+
 const filteredFiles = computed(() => {
   return filterModelFiles(
     files.value,
@@ -225,7 +291,7 @@ onMounted(async () => {
 
 .refresh-button {
   background-color: var(--button-bg, #2563eb);
-  color: var(--button-text, white);
+  color: var(--text-color);
   padding: 6px 12px;
   border: none;
   font-size: 14px;
@@ -258,6 +324,7 @@ onMounted(async () => {
   background-color: var(--accent-color-faint);
   color: var(--accent-color);
 }
+
 .font-semibold {
   font-weight: 500;
   font-size: var(--big-font-size);
@@ -276,6 +343,7 @@ onMounted(async () => {
 .model-content {
   padding: 10px;
 }
+
 .model-item {
   border: 1px solid var(--border);
   padding: 16px;
@@ -283,10 +351,111 @@ onMounted(async () => {
   transition: box-shadow 0.2s ease;
   background-color: var(--card-bg-color, rgba(255, 255, 255, 0.03));
 }
-
-.model-item:hover {
+sty .model-item:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* New layout for model item header */
+.model-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.model-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--text-color);
+  padding: 6px 12px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover {
+  background-color: var(--button-hover-bg, #1d4ed8);
+}
+
+/* Enhanced expand button */
+.expand-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.05));
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  min-width: 60px;
+  justify-content: center;
+}
+
+.expand-button:hover {
+  background-color: var(--button-hover-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-color);
+}
+
+.expand-button.expanded {
+  background-color: var(--accent-color-faint, rgba(59, 130, 246, 0.1));
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.expand-icon {
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.expand-button.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+.expand-text {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.model-description {
+  margin-bottom: 12px;
+}
+
+.model-content-expanded {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.content-header {
+  margin-bottom: 12px;
+}
+
+.content-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--heading-color);
+}
+
+.components-grid {
+  display: grid;
+  gap: 12px;
+}
+
 .text-loading {
   color: var(--text-faint);
   font-size: 24px;
@@ -299,17 +468,9 @@ onMounted(async () => {
 .model-title {
   font-weight: 500;
   cursor: pointer;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   font-size: 24px;
-}
-
-.toggle-concepts {
-  cursor: pointer;
-  color: var(--link-color);
-  margin-top: 8px;
-  margin-bottom: 8px;
 }
 
 .filters {
@@ -333,7 +494,7 @@ onMounted(async () => {
   background-color: var(--button-hover-bg);
 }
 
-/* New styles for the imported model indicator */
+/* Updated styles for the imported model indicator using MDI */
 .imported-indicator {
   display: inline-flex;
   align-items: center;
@@ -342,7 +503,82 @@ onMounted(async () => {
 
 .check-icon {
   color: #22c55e; /* Green color for the checkmark */
-  stroke-width: 3;
+  font-size: 16px;
+}
+
+/* Updated styles for component items */
+.component-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.02));
+  transition: background-color 0.2s ease;
+}
+
+.component-item:hover {
+  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.05));
+}
+
+.component-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.component-icon {
+  font-size: 18px;
+  color: var(--text-faint);
+  min-width: 24px;
+}
+
+.component-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.component-link {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.component-link:hover {
+  text-decoration: underline;
+}
+
+.component-purpose {
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.dashboard-actions {
+  flex-shrink: 0;
+}
+
+.copy-import-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--button-text, white);
+  border: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.copy-import-button:hover {
+  background-color: var(--button-hover-bg, #1d4ed8);
+}
+
+.copy-import-button i {
+  font-size: 14px;
 }
 
 /* Make filter row more responsive */
@@ -356,6 +592,25 @@ onMounted(async () => {
   .filter-row > div {
     flex: 1 0 100%;
     margin-bottom: 8px;
+  }
+
+  .model-item-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .expand-button {
+    align-self: flex-start;
+  }
+
+  .component-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .dashboard-actions {
+    align-self: flex-start;
   }
 }
 </style>

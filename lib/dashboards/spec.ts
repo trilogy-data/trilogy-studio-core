@@ -1,100 +1,24 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { ColumnType } from '../editors/results'
 import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isTemporalColumn, isNumericColumn, getColumnHasTrait, getColumnFormat } from './helpers'
+import {
+  getColumnFormat,
+  createFieldEncoding,
+  getFormatHint,
+  getVegaFieldType,
+  createInteractionEncodings,
+} from './helpers'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
 import { createHeadlineSpec } from './headlineSpec'
+import { createBarChartSpec } from './barChartSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
 /**
- * Get formatting hints for a field based on its column type
- */
-const getFormatHint = (fieldName: string, columns: Map<string, ResultColumn>): any => {
-  if (!fieldName || !columns.get(fieldName)) return {}
-
-  const column = columns.get(fieldName)
-  if (!column) return {}
-  if (getColumnHasTrait(fieldName, columns, 'usd')) {
-    return { format: '$,.2f' }
-  }
-  if (getColumnHasTrait(fieldName, columns, 'percent')) {
-    return { format: '.1%' }
-  }
-  switch (column.type) {
-    case ColumnType.DATE:
-      return { timeUnit: 'yearmonthdate' }
-    case ColumnType.TIME:
-      return { timeUnit: 'hoursminutesseconds' }
-    case ColumnType.DATETIME:
-      return { timeUnit: 'yearmonthdate-hours' }
-    case ColumnType.INTEGER:
-      return {}
-    default:
-      return {}
-  }
-}
-
-const getSortOrder = (fieldName: string, columns: Map<string, ResultColumn>): any => {
-  if (!fieldName || !columns.get(fieldName)) return {}
-  const column = columns.get(fieldName)
-  if (!column) return {}
-  // if it has a week_day trait, sort by week days explicitly
-  if (getColumnHasTrait(fieldName, columns, 'day_of_week_name')) {
-    return { sort: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] }
-  }
-  if (isTemporalColumn(column)) {
-    return { sort: { field: fieldName, order: 'ascending' } }
-  } else if (isNumericColumn(column)) {
-    return { sort: { field: fieldName, order: 'descending' } }
-  } else {
-    return { sort: { field: fieldName, order: 'ascending' } }
-  }
-}
-
-/**
- * Get Vega field type based on column type
- */
-const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>): string => {
-  if (!fieldName || !columns.get(fieldName)) return 'nominal'
-
-  const column = columns.get(fieldName)
-  if (!column) return 'nominal'
-  if (isTemporalColumn(column)) {
-    if ([ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP].includes(column.type)) {
-      return 'temporal'
-    }
-    return 'ordinal'
-  } else if (isNumericColumn(column)) {
-    return 'quantitative'
-  } else {
-    return 'nominal'
-  }
-}
-
-/**
  * Create a field encoding for Vega-Lite
  */
-const createFieldEncoding = (
-  fieldName: string,
-  columns: Map<string, ResultColumn>,
-  axisOptions = {},
-  sort: boolean = true,
-): any => {
-  if (!fieldName) return {}
-
-  return {
-    field: fieldName,
-    type: getVegaFieldType(fieldName, columns),
-    title: snakeCaseToCapitalizedWords(columns.get(fieldName)?.description || fieldName),
-    ...getFormatHint(fieldName, columns),
-    ...axisOptions,
-    ...(sort ? getSortOrder(fieldName, columns) : {}),
-  }
-}
 
 /**
  * Generate tooltip fields with proper formatting
@@ -151,6 +75,7 @@ const createColorEncoding = (
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
   currentTheme: string = 'light',
+  hideLegend: boolean = false,
 ) => {
   let legendConfig = {}
   if (isMobile) {
@@ -183,17 +108,21 @@ const createColorEncoding = (
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
       ...getFormatHint(colorField, columns),
-      legend: {
-        ...legendConfig,
-      },
+      legend: hideLegend
+        ? null
+        : {
+            ...legendConfig,
+          },
     }
     return rval
   }
 
   return {
-    legend: {
-      ...legendConfig,
-    },
+    legend: hideLegend
+      ? null
+      : {
+          ...legendConfig,
+        },
   }
 }
 
@@ -205,33 +134,6 @@ const createSizeEncoding = (
     return { scale: { type: 'sqrt' }, field: sizeField }
   }
   return {}
-}
-
-/**
- * Create standard opacity and stroke width encoding for interaction
- */
-const createInteractionEncodings = () => {
-  return {
-    fillOpacity: {
-      condition: { param: 'select', value: 1 },
-      value: 0.3,
-    },
-    strokeWidth: {
-      condition: [
-        {
-          param: 'select',
-          empty: false,
-          value: 2,
-        },
-        {
-          param: 'highlight',
-          empty: false,
-          value: 1,
-        },
-      ],
-      value: 0,
-    },
-  }
 }
 
 /**
@@ -372,70 +274,6 @@ const createInteractiveLayer = (
 
   // Return an array containing both layers
   return [mainLayer, secondaryLayer]
-}
-
-/**
- * Create chart specification for bar chart
- */
-const createBarChartSpec = (
-  config: ChartConfig,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  data: readonly Row[] | null,
-  intChart: Array<Partial<ChartConfig>>,
-) => {
-  // Determine the number of unique values in the x-field
-  let xValueCount = 0
-  if (data && config.xField) {
-    // Create a Set to count unique values
-    const uniqueValues = new Set()
-    let lookup = config.xField
-    data.forEach((row) => {
-      if (row[lookup]) {
-        uniqueValues.add(row[lookup])
-      }
-    })
-    xValueCount = uniqueValues.size
-  }
-
-  // Set the label angle based on the count
-  const labelAngle = xValueCount > 7 ? -45 : 0
-  return {
-    params: [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click,touchend',
-        },
-        value: intChart,
-        nearest: true,
-      },
-    ],
-    mark: 'bar',
-    encoding: {
-      x: {
-        ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-        sort: '-y',
-      },
-      y: createFieldEncoding(config.yField || '', columns, {
-        axis: { format: getColumnFormat(config.yField, columns) },
-      }),
-      ...createInteractionEncodings(),
-      tooltip: tooltipFields,
-      order: { field: config.yField, sort: 'descending' },
-      ...encoding,
-    },
-  }
 }
 
 /**
@@ -726,6 +564,7 @@ export const generateVegaSpec = (
     columns,
     isMobile,
     currentTheme,
+    config.hideLegend,
   )
 
   // Handle trellis (facet) layout if specified
@@ -854,6 +693,12 @@ export const generateVegaSpec = (
       scale: {
         y: 'independent',
       },
+    }
+  }
+  if (currentTheme === 'dark') {
+    spec.config = {
+      // TODO - figure how to get this from css
+      background: '#262626',
     }
   }
   return spec

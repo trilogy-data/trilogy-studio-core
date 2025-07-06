@@ -157,7 +157,7 @@ export default {
 
 <style scoped>
 .sql {
-  color: #000000;
+  color: var(--text-color);
   font-style: bold;
   font-size: 8px;
   margin-right: 5px;

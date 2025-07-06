@@ -198,6 +198,7 @@ const filterCount = computed(() => {
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
+          class="drag-handle-svg"
         >
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -326,7 +327,7 @@ const filterCount = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
-  border: 1px solid var(--border);
+  border: 1px solid var(--dashboard-border);
   position: relative;
   /* Important for positioning the overlay header */
   overflow-y: hidden;
@@ -489,6 +490,10 @@ const filterCount = computed(() => {
   opacity: 0.5;
 }
 
+.vue-resizable-handle {
+  color: white !important;
+}
+
 .grid-item-header:hover .drag-handle-icon {
   opacity: 0.8;
 }
@@ -507,7 +512,8 @@ const filterCount = computed(() => {
 .filter-tag {
   display: flex;
   align-items: center;
-  /* background-color: var(--sidebar-selector-bg); */
+  /* background-color: 'black';  
+  border-radius: 0px; */
   /* border: 1px solid var(--border); */
   padding: 0px 3px 0px 3px;
   font-size: calc(var(--small-font-size) - 5px);
@@ -581,10 +587,9 @@ const filterCount = computed(() => {
 .filter-details {
   display: flex;
   flex-wrap: wrap;
-  padding: 2px;
-  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.7);
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /* padding: 2px; */
+  background-color: rgba(var(--sidebar-bg), 0.7);
+  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
   animation: fadeIn 0.2s ease;
 }
 

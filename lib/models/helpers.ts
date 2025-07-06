@@ -5,6 +5,12 @@ import { type EditorStoreType } from '../stores/editorStore'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
+
+export interface ImportOutput {
+  dashboards: Map<string, string>
+  sql: Map<string, string>
+  trilogy: Map<string, string>
+}
 export class ModelImportService {
   private editorStore: EditorStoreType
   private modelStore: ModelConfigStoreType
@@ -107,11 +113,13 @@ export class ModelImportService {
     modelName: string,
     importAddress: string,
     connectionName: string,
-  ): Promise<void> {
+  ): Promise<ImportOutput | null> {
     if (!importAddress) {
-      return
+      return new Promise<ImportOutput>(() => null)
     }
-
+    let dashboards = new Map<string, string>()
+    let sql = new Map<string, string>()
+    let trilogy = new Map<string, string>()
     try {
       const modelImportBase = await this.fetchModelImportBase(importAddress)
       const data = await this.fetchModelImports(modelImportBase)
@@ -138,8 +146,7 @@ export class ModelImportService {
                   dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
               )
               dashboardObj.state = 'published'
-              console.log('Importing dashboard:', dashboardObj)
-
+              dashboards.set(response.name, dashboardObj.name)
               if (existingDashboard) {
                 // Reuse the existing dashboard's ID
                 dashboardObj.id = existingDashboard.id
@@ -213,6 +220,11 @@ export class ModelImportService {
 
       // Mark changes
       this.modelStore.models[modelName].changed = true
+      return {
+        dashboards: dashboards,
+        sql: sql,
+        trilogy: trilogy,
+      }
     } catch (error) {
       console.error('Error importing model:', error)
       throw new Error(`Failed to import model definition: ${error}`)
