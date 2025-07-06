@@ -118,7 +118,11 @@ const performImport = async () => {
       modelStore.newModelConfig(modelName.value)
     }
     // Import model (this will also import any dashboards included in the model)
-    let imports = await modelImportService.importModel(modelName.value, modelUrl.value, connectionName)
+    let imports = await modelImportService.importModel(
+      modelName.value,
+      modelUrl.value,
+      connectionName,
+    )
     connectionStore.connections[connectionName].setModel(modelName.value)
     // Find the imported dashboard by name and connection
 
@@ -128,8 +132,7 @@ const performImport = async () => {
       lookup = matched
     }
     const importedDashboard = Object.values(dashboardStore.dashboards).find(
-      (dashboard) =>
-        dashboard.name === lookup && dashboard.connection === connectionName,
+      (dashboard) => dashboard.name === lookup && dashboard.connection === connectionName,
     )
 
     if (!importedDashboard) {
@@ -293,33 +296,63 @@ const switchToManualImport = () => {
         <!-- MotherDuck Fields -->
         <div v-if="connectionType === 'motherduck'" class="form-group">
           <label for="md-token">MotherDuck Token</label>
-          <input type="text" v-model.trim="connectionOptions.mdToken" id="md-token"
-            placeholder="Enter your MotherDuck token" class="connection-input" @input="validateForm" />
+          <input
+            type="text"
+            v-model.trim="connectionOptions.mdToken"
+            id="md-token"
+            placeholder="Enter your MotherDuck token"
+            class="connection-input"
+            @input="validateForm"
+          />
         </div>
 
         <!-- BigQuery Fields -->
         <div v-if="connectionType === 'bigquery'" class="form-group">
           <label for="project-id">BigQuery Project ID</label>
-          <input type="text" v-model.trim="connectionOptions.projectId" id="project-id"
-            placeholder="Enter your billing project ID" class="connection-input" @input="validateForm" />
+          <input
+            type="text"
+            v-model.trim="connectionOptions.projectId"
+            id="project-id"
+            placeholder="Enter your billing project ID"
+            class="connection-input"
+            @input="validateForm"
+          />
         </div>
 
         <!-- Snowflake Fields -->
         <template v-if="connectionType === 'snowflake'">
           <div class="form-group">
             <label for="snowflake-username">Username</label>
-            <input type="text" v-model.trim="connectionOptions.username" id="snowflake-username"
-              placeholder="Snowflake username" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.username"
+              id="snowflake-username"
+              placeholder="Snowflake username"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
           <div class="form-group">
             <label for="snowflake-account">Account</label>
-            <input type="text" v-model.trim="connectionOptions.account" id="snowflake-account"
-              placeholder="Snowflake account identifier" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.account"
+              id="snowflake-account"
+              placeholder="Snowflake account identifier"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
           <div class="form-group">
             <label for="snowflake-key">Private Key</label>
-            <input type="text" v-model.trim="connectionOptions.sshPrivateKey" id="snowflake-key"
-              placeholder="Private key for authentication" class="connection-input" @input="validateForm" />
+            <input
+              type="text"
+              v-model.trim="connectionOptions.sshPrivateKey"
+              id="snowflake-key"
+              placeholder="Private key for authentication"
+              class="connection-input"
+              @input="validateForm"
+            />
           </div>
         </template>
       </div>

@@ -21,15 +21,15 @@ function cancel(): void {
 function insertMarkdown(prefix: string, suffix: string = ''): void {
   const textarea = document.querySelector('.markdown-editor') as HTMLTextAreaElement
   if (!textarea) return
-  
+
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = markdownText.value.substring(start, end)
   const before = markdownText.value.substring(0, start)
   const after = markdownText.value.substring(end)
-  
+
   markdownText.value = before + prefix + selectedText + suffix + after
-  
+
   // Restore focus and selection
   setTimeout(() => {
     textarea.focus()

@@ -507,7 +507,6 @@ const filterCount = computed(() => {
   /* border-bottom: 1px solid var(--border); */
   /*background-color: var(--sidebar-bg);*/
   min-height: 24px;
-  
 }
 
 .filter-tag {
@@ -518,7 +517,6 @@ const filterCount = computed(() => {
   /* border: 1px solid var(--border); */
   padding: 0px 3px 0px 3px;
   font-size: calc(var(--small-font-size) - 5px);
-
 }
 
 .filter-content {
@@ -530,7 +528,6 @@ const filterCount = computed(() => {
 .filter-source {
   font-weight: 600;
   color: var(--special-text);
-
 }
 
 .filter-value {

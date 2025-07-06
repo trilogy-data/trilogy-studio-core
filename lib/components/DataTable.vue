@@ -175,8 +175,7 @@ function typeToFormatter(col: ResultColumn) {
         return (cell.getValue() * 100).toFixed(2) + '%'
       },
     }
-  } 
-  else if (col.traits?.includes('url_image')) {
+  } else if (col.traits?.includes('url_image')) {
     return {
       //@ts-ignore
       formatter: (cell) => {
@@ -184,7 +183,7 @@ function typeToFormatter(col: ResultColumn) {
         return `<img src="${url}" alt="${url}" style="max-width: 100%; max-height: 100%;">`
       },
     }
-  } 
+  }
   switch (col.type) {
     case ColumnType.ARRAY:
       return {

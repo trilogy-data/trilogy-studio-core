@@ -7,9 +7,9 @@ import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
 
 export interface ImportOutput {
-  dashboards: Map<string, string>,
-  sql: Map<string, string>,
-  trilogy: Map<string, string>,
+  dashboards: Map<string, string>
+  sql: Map<string, string>
+  trilogy: Map<string, string>
 }
 export class ModelImportService {
   private editorStore: EditorStoreType
@@ -115,8 +115,7 @@ export class ModelImportService {
     connectionName: string,
   ): Promise<ImportOutput | null> {
     if (!importAddress) {
-      return new Promise<ImportOutput>(() => null
-    )
+      return new Promise<ImportOutput>(() => null)
     }
     let dashboards = new Map<string, string>()
     let sql = new Map<string, string>()
@@ -161,7 +160,6 @@ export class ModelImportService {
 
                 // Add it to dashboard store
                 this.dashboardStore.addDashboard(dashboardObj)
-                
               }
 
               // Return null as we don't need to create a model source for dashboards

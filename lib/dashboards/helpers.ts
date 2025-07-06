@@ -55,12 +55,11 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
 }
 
 export const isImageColumn = (column: ResultColumn): boolean => {
-  return (
-    [ColumnType.STRING].includes(column.type) &&
-    column.traits?.some((trait) => trait.endsWith('url')) ? true : false
-  )
+  return [ColumnType.STRING].includes(column.type) &&
+    column.traits?.some((trait) => trait.endsWith('url'))
+    ? true
+    : false
 }
-
 
 export const getGeoTraitType = (column: ResultColumn): string => {
   if (getColumnHasTraitInternal(column, 'us_state')) {
@@ -280,7 +279,7 @@ export const determineDefaultConfig = (
     let nonDateNumeric = numericColumns.filter(
       (col) => !isTemporalColumn(col) && col.name !== defaults.xField,
     )
-    defaults.yField = nonDateNumeric? nonDateNumeric[0].name : numericColumns[0].name
+    defaults.yField = nonDateNumeric ? nonDateNumeric[0].name : numericColumns[0].name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -407,7 +406,6 @@ export const determineEligibleChartTypes = (
   return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
 }
 
-
 /**
  * Get formatting hints for a field based on its column type
  */
@@ -436,7 +434,11 @@ export const getFormatHint = (fieldName: string, columns: Map<string, ResultColu
   }
 }
 
-export const getSortOrder = (fieldName: string, columns: Map<string, ResultColumn>, valueColumn: string | null = null): any => {
+export const getSortOrder = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+  valueColumn: string | null = null,
+): any => {
   if (!fieldName || !columns.get(fieldName)) return {}
   const column = columns.get(fieldName)
   if (!column) return {}
@@ -449,14 +451,14 @@ export const getSortOrder = (fieldName: string, columns: Map<string, ResultColum
   } else if (isNumericColumn(column)) {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn, order: 'descending' }
+        sort: { field: valueColumn, order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'descending' } }
   } else {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn, order: 'descending' }
+        sort: { field: valueColumn, order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'ascending' } }
@@ -483,7 +485,6 @@ export const getVegaFieldType = (fieldName: string, columns: Map<string, ResultC
   }
 }
 
-
 export const createFieldEncoding = (
   fieldName: string,
   columns: Map<string, ResultColumn>,
@@ -501,7 +502,6 @@ export const createFieldEncoding = (
     ...(sort ? getSortOrder(fieldName, columns) : {}),
   }
 }
-
 
 /**
  * Create standard opacity and stroke width encoding for interaction

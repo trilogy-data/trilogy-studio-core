@@ -2,7 +2,13 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnFormat, createFieldEncoding, getFormatHint, getVegaFieldType, createInteractionEncodings } from './helpers'
+import {
+  getColumnFormat,
+  createFieldEncoding,
+  getFormatHint,
+  getVegaFieldType,
+  createInteractionEncodings,
+} from './helpers'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
 import { createHeadlineSpec } from './headlineSpec'
@@ -71,7 +77,6 @@ const createColorEncoding = (
   currentTheme: string = 'light',
   hideLegend: boolean = false,
 ) => {
-
   let legendConfig = {}
   if (isMobile) {
     legendConfig = {
@@ -103,17 +108,21 @@ const createColorEncoding = (
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
       ...getFormatHint(colorField, columns),
-      legend: hideLegend ? null : {
-        ...legendConfig,
-      },
+      legend: hideLegend
+        ? null
+        : {
+            ...legendConfig,
+          },
     }
     return rval
   }
 
   return {
-    legend: hideLegend ? null : {
-      ...legendConfig,
-    },
+    legend: hideLegend
+      ? null
+      : {
+          ...legendConfig,
+        },
   }
 }
 
@@ -126,7 +135,6 @@ const createSizeEncoding = (
   }
   return {}
 }
-
 
 /**
  * Create brush parameter for line/area charts
@@ -221,7 +229,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-          intChart.filter((obj) => config.xField in obj)
+            intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -252,22 +260,21 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-        {
-          name: 'highlight2',
-          select: {
-            type: 'point',
-            on: 'mouseover',
-            clear: 'mouseout',
+          {
+            name: 'highlight2',
+            select: {
+              type: 'point',
+              on: 'mouseover',
+              clear: 'mouseout',
+            },
           },
-        },
-      ]
+        ]
       : [],
   }
 
   // Return an array containing both layers
   return [mainLayer, secondaryLayer]
 }
-
 
 /**
  * Create chart specification for horizontal bar chart
@@ -557,7 +564,7 @@ export const generateVegaSpec = (
     columns,
     isMobile,
     currentTheme,
-    config.hideLegend
+    config.hideLegend,
   )
 
   // Handle trellis (facet) layout if specified
@@ -691,7 +698,7 @@ export const generateVegaSpec = (
   if (currentTheme === 'dark') {
     spec.config = {
       // TODO - figure how to get this from css
-      background: '#262626'
+      background: '#262626',
     }
   }
   return spec

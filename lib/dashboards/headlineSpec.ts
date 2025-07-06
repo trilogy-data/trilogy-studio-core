@@ -1,6 +1,6 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isNumericColumn, isImageColumn, getColumnFormat, getVegaFieldType } from './helpers'
+import { isImageColumn, getColumnFormat, getVegaFieldType } from './helpers'
 
 const createHeadlineLayer = (
   column: string,
@@ -35,7 +35,7 @@ const createHeadlineLayer = (
   const labelFontSizeFormula = isMobile
     ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
-  let topMark = {};
+  let topMark = {}
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     topMark = {
       mark: {
@@ -55,8 +55,7 @@ const createHeadlineLayer = (
         },
       },
     }
-  }
-  else {
+  } else {
     topMark = {
       mark: {
         type: 'text',
@@ -78,8 +77,7 @@ const createHeadlineLayer = (
     }
   }
   return [
-    topMark
-    ,
+    topMark,
     {
       mark: {
         type: 'text',

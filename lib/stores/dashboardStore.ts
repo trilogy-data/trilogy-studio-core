@@ -477,7 +477,6 @@ export const useDashboardStore = defineStore('dashboards', {
         await this.updateItemContent(dashboardId, key, content)
         await this.updateItemType(dashboardId, key, data.type)
       }
-
     },
   },
 })

@@ -77,19 +77,26 @@
                   class="action-button"
                 >
                   {{
-                    creatorIsExpanded[file.name] ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import'
+                    creatorIsExpanded[file.name]
+                      ? 'Hide'
+                      : modelExists(file.name)
+                        ? 'Reload'
+                        : 'Import'
                   }}
                 </button>
               </div>
             </div>
-            <button 
+            <button
               class="expand-button"
               @click="toggleComponents(file.downloadUrl)"
-              :class="{ 'expanded': isExpanded[file.downloadUrl] }"
+              :class="{ expanded: isExpanded[file.downloadUrl] }"
               :title="isExpanded[file.downloadUrl] ? 'Hide Content' : 'Show Content'"
             >
               <i class="mdi mdi-chevron-down expand-icon"></i>
-              <span class="expand-text">{{ isExpanded[file.downloadUrl]? 'Hide' : 'Show'}} {{ file.components.length }}</span>
+              <span class="expand-text"
+                >{{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }}
+                {{ file.components.length }}</span
+              >
             </button>
           </div>
 
@@ -122,11 +129,13 @@
                     <a :href="component.url" target="_blank" class="component-link">
                       {{ component.name || 'Unnamed Component' }}
                     </a>
-                    <span v-if="component.purpose" class="component-purpose">{{ component.purpose }}</span>
+                    <span v-if="component.purpose" class="component-purpose">{{
+                      component.purpose
+                    }}</span>
                   </div>
                 </div>
                 <div v-if="component.type === 'dashboard'" class="dashboard-actions">
-                  <button 
+                  <button
                     @click="copyDashboardImportLink(component, file)"
                     class="copy-import-button"
                     :title="'Copy import link for ' + component.name"
@@ -215,10 +224,10 @@ const getComponentIcon = (type: string): string => {
 const copyDashboardImportLink = async (component: any, file: any): Promise<void> => {
   // Get current base URL
   const currentBase = window.location.origin + window.location.pathname
-  
+
   // Construct the import link
   const importLink = `${currentBase}#screen=dashboard-import&model=${encodeURIComponent(file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(file.name)}&connection=${encodeURIComponent(file.engine)}`
-  
+
   try {
     await navigator.clipboard.writeText(importLink)
     // You might want to show a toast notification here
@@ -342,8 +351,7 @@ onMounted(async () => {
   transition: box-shadow 0.2s ease;
   background-color: var(--card-bg-color, rgba(255, 255, 255, 0.03));
 }
-sty
-.model-item:hover {
+sty .model-item:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -585,22 +593,22 @@ sty
     flex: 1 0 100%;
     margin-bottom: 8px;
   }
-  
+
   .model-item-header {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .expand-button {
     align-self: flex-start;
   }
-  
+
   .component-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .dashboard-actions {
     align-self: flex-start;
   }

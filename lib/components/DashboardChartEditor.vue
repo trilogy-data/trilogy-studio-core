@@ -38,13 +38,13 @@ const getDefaultDimensions = () => {
   if (isDesktop) {
     return {
       width: Math.floor(window.innerWidth * 0.75),
-      height: Math.floor(window.innerHeight * 0.75)
+      height: Math.floor(window.innerHeight * 0.75),
     }
   } else {
     // Mobile defaults remain unchanged
     return {
       width: 800,
-      height: 400
+      height: 400,
     }
   }
 }
