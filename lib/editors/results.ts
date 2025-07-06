@@ -61,7 +61,19 @@ export type FieldKey =
 
 // Chart configuration interface
 export interface ChartConfig {
-  chartType: string
+  chartType:
+    | 'line'
+    | 'bar'
+    | 'barh'
+    | 'point'
+    | 'usa-map'
+    | 'tree'
+    | 'area'
+    | 'headline'
+    | 'donut'
+    | 'heatmap'
+    | 'boxplot'
+    | 'treemap'
   xField?: string
   yField?: string
   yField2?: string

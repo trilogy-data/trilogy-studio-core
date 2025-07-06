@@ -26,7 +26,7 @@ export const Controls: ChartControl[] = [
     field: 'yField',
     columnFilter: 'categorical',
     allowEmpty: false,
-    visibleFor: ['barh'],
+    visibleFor: ['barh', 'donut'],
     filterGroup: 'axes',
   },
   {
@@ -35,7 +35,7 @@ export const Controls: ChartControl[] = [
     field: 'xField',
     columnFilter: 'numeric',
     allowEmpty: false,
-    visibleFor: ['barh'],
+    visibleFor: ['barh', 'donut'],
     filterGroup: 'axes',
   },
   // {
@@ -98,7 +98,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['bar', 'barh', 'point'],
+    visibleFor: ['bar', 'barh', 'point', 'donut'],
     filterGroup: 'appearance',
   },
   {
@@ -235,4 +235,12 @@ export const Charts = [
     label: 'Tree',
     icon: 'mdi mdi-tree',
   },
+  {
+    value: 'donut',
+    label: 'Donut',
+    icon: 'mdi mdi-chart-donut',
+  },
 ]
+
+export const lightDefaultColor = '#1f77b4'
+export const darkDefaultColor = '#9467bd'

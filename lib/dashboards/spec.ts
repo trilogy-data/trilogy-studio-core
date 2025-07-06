@@ -9,10 +9,12 @@ import {
   getVegaFieldType,
   createInteractionEncodings,
 } from './helpers'
+import { lightDefaultColor, darkDefaultColor } from './constants'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
 import { createHeadlineSpec } from './headlineSpec'
 import { createBarChartSpec } from './barChartSpec'
+import { createDonutChartSpec } from './donutSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -98,7 +100,7 @@ const createColorEncoding = (
       scale:
         fieldType === 'quantitative'
           ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
-          : { scheme: 'category20c' },
+          : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' },
       condition: [
         {
           param: 'highlight',
@@ -247,6 +249,7 @@ const createInteractiveLayer = (
     ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
     mark: {
       type: config.chartType === 'line' ? 'line' : 'area',
+      // @ts-ignore
       ...(config.chartType === 'area' ? { line: true } : {}),
       ...(filtered ? { color: 'orange' } : { color: 'lightgray' }),
       strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
@@ -286,6 +289,7 @@ const createBarHChartSpec = (
   encoding: any,
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
   return {
     params: [
@@ -307,7 +311,10 @@ const createBarHChartSpec = (
         nearest: true,
       },
     ],
-    mark: 'bar',
+    mark: {
+      type: 'bar',
+      color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
+    },
     encoding: {
       y: {
         ...createFieldEncoding(config.yField || '', columns),
@@ -429,7 +436,7 @@ const createPointChartSpec = (
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
 ) => {
-  const color = currentTheme === 'light' ? '#4FC3F7' : '#FF7043'
+  const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
   return {
     params: [
       {
@@ -598,9 +605,19 @@ export const generateVegaSpec = (
       break
 
     case 'barh':
-      chartSpec = createBarHChartSpec(config, columns, tooltipFields, encoding, isMobile, intChart)
+      chartSpec = createBarHChartSpec(
+        config,
+        columns,
+        tooltipFields,
+        encoding,
+        isMobile,
+        intChart,
+        currentTheme,
+      )
       break
-
+    case 'donut':
+      chartSpec = createDonutChartSpec(config, columns, tooltipFields, encoding, intChart)
+      break
     case 'line':
       chartSpec = createLineChartSpec(
         config,
