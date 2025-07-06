@@ -167,7 +167,7 @@ describe('generateVegaSpec', () => {
       const spec = generateVegaSpec(testData, config, testColumns, null, true) // mobile = true
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.mark).toBe('bar')
+      expect(spec.mark.type).toBe('bar')
       expect(spec.encoding.x.field).toBe('sales')
       expect(spec.encoding.y.field).toBe('region')
       expect(spec.encoding.y.sort).toBe('-x') // Sorted by x value

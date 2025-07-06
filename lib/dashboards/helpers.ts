@@ -176,7 +176,17 @@ export const filteredColumns = (
 export const determineDefaultConfig = (
   data: readonly Row[],
   columns: Map<string, ResultColumn>,
-  chartType?: string,
+  chartType?:
+    | 'line'
+    | 'bar'
+    | 'barh'
+    | 'point'
+    | 'usa-map'
+    | 'tree'
+    | 'area'
+    | 'heatmap'
+    | 'headline'
+    | 'donut',
 ): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {}
 
@@ -243,6 +253,18 @@ export const determineDefaultConfig = (
   if (defaults.chartType === 'barh') {
     defaults.yField = categoricalColumns[0].name
     defaults.xField = numericColumns[0].name
+    const nonAssignedCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
+    )
+    if (nonAssignedCategorical.length > 0) {
+      defaults.colorField = nonAssignedCategorical[0].name
+    }
+    if (numericColumns.length > 1 && !defaults.colorField) {
+      defaults.colorField = numericColumns[1].name
+    }
+  } else if (defaults.chartType === 'donut') {
+    defaults.xField = categoricalColumns[0].name
+    defaults.yField = numericColumns[0].name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -386,6 +408,7 @@ export const determineEligibleChartTypes = (
     }
     eligibleCharts.push('bar')
     eligibleCharts.push('barh')
+    eligibleCharts.push('donut')
   }
 
   // Multiple numeric columns - scatter plot

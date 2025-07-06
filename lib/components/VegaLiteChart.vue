@@ -595,7 +595,21 @@ export default defineComponent({
       internalConfig.value[field] = value
       if (field === 'chartType') {
         // Reset other fields when changing chart type
-        const configDefaults = determineDefaultConfig(props.data, props.columns, value)
+        const configDefaults = determineDefaultConfig(
+          props.data,
+          props.columns,
+          value as
+            | 'bar'
+            | 'line'
+            | 'barh'
+            | 'point'
+            | 'usa-map'
+            | 'tree'
+            | 'area'
+            | 'headline'
+            | 'donut'
+            | 'heatmap',
+        )
         // Normal chart type fields
         internalConfig.value.xField = configDefaults.xField
         internalConfig.value.yField = configDefaults.yField

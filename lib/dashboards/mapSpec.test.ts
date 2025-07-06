@@ -396,7 +396,7 @@ describe('createMapSpec', () => {
   describe('World Scatter Maps', () => {
     it('should generate valid world scatter map spec', () => {
       const config: ChartConfig = {
-        chartType: 'world-map',
+        chartType: 'usa-map',
         xField: 'longitude',
         yField: 'latitude',
         sizeField: 'population',
@@ -428,7 +428,7 @@ describe('createMapSpec', () => {
 
     it('should calculate proper projection center for world map', () => {
       const config: ChartConfig = {
-        chartType: 'world-map',
+        chartType: 'usa-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -448,7 +448,7 @@ describe('createMapSpec', () => {
   describe('Country Choropleth Maps', () => {
     it('should generate valid country choropleth map spec', () => {
       const config: ChartConfig = {
-        chartType: 'world-map',
+        chartType: 'usa-map',
         geoField: 'country',
         colorField: 'gdp',
       }
@@ -478,7 +478,7 @@ describe('createMapSpec', () => {
 
     it('should handle country lookup transformation correctly', () => {
       const config: ChartConfig = {
-        chartType: 'world-map',
+        chartType: 'usa-map',
         geoField: 'country',
         colorField: 'population',
       }
@@ -501,7 +501,7 @@ describe('createMapSpec', () => {
 
     it('should include proper tooltip configuration for countries', () => {
       const config: ChartConfig = {
-        chartType: 'world-map',
+        chartType: 'usa-map',
         geoField: 'country',
         colorField: 'gdp',
       }
@@ -626,7 +626,7 @@ describe('createMapSpec', () => {
 
     it('should return empty object for unsupported configurations', () => {
       const config: ChartConfig = {
-        chartType: 'unsupported-map',
+        chartType: 'usa-map',
         // No valid field configuration
       }
 
@@ -644,7 +644,7 @@ describe('createMapSpec', () => {
   describe('Data Boundary Detection', () => {
     it('should correctly identify US data and use US projection', () => {
       const config: ChartConfig = {
-        chartType: 'map',
+        chartType: 'usa-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -660,7 +660,7 @@ describe('createMapSpec', () => {
 
     it('should correctly identify world data and use mercator projection', () => {
       const config: ChartConfig = {
-        chartType: 'map',
+        chartType: 'usa-map',
         xField: 'longitude',
         yField: 'latitude',
       }
