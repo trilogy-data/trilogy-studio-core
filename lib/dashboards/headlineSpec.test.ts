@@ -7,11 +7,6 @@ interface MockedFormatting {
   snakeCaseToCapitalizedWords: MockedFunction<(str: string) => string>
 }
 
-interface MockedHelpers {
-  isNumericColumn: MockedFunction<(column: ResultColumn) => boolean>
-  getColumnFormat: MockedFunction<(column: string, columns: Map<string, ResultColumn>) => string>
-}
-
 // Mock only the essential helper functions
 vi.mock(
   './formatting',
@@ -19,17 +14,6 @@ vi.mock(
     snakeCaseToCapitalizedWords: vi.fn((str: string): string =>
       str.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
     ),
-  }),
-)
-
-vi.mock(
-  './helpers',
-  (): MockedHelpers => ({
-    isNumericColumn: vi.fn((column: ResultColumn): boolean => column.type === 'number'),
-    //@ts-ignore
-    getColumnFormat: vi.fn((column: string, columns: Map<string, ResultColumn>): string => {
-      return '.2f'
-    }),
   }),
 )
 
@@ -70,25 +54,25 @@ describe('createHeadlineSpec', (): void => {
       expect(spec).toHaveProperty('layer')
     })
 
-    it('should only include numeric columns', (): void => {
+    it('should include all columns', (): void => {
       const spec = createHeadlineSpec(mockData, mockColumns, 'light' as Theme)
 
       // Should have 6 layers (2 per numeric column: value + label)
-      expect(spec.layer).toHaveLength(6)
+      expect(spec.layer).toHaveLength(8)
 
       // Check that all layers are for numeric columns
       const textFields: (string | undefined)[] = spec.layer
         .filter((layer: any) => layer.encoding?.text?.field)
         .map((layer: any) => layer.encoding.text!.field)
 
-      expect(textFields).toEqual(['revenue', 'profit', 'users'])
+      expect(textFields).toEqual(['revenue', 'profit', 'users', 'name'])
     })
 
     it('should handle empty data', (): void => {
       const spec = createHeadlineSpec(null, mockColumns, 'light' as Theme)
 
       expect(spec.data.values).toEqual([])
-      expect(spec.layer).toHaveLength(6) // Still creates layers for columns
+      expect(spec.layer).toHaveLength(8) // Still creates layers for columns
     })
 
     it('should handle empty columns', (): void => {
@@ -109,7 +93,7 @@ describe('createHeadlineSpec', (): void => {
 
       // Check that dy is fixed (not expression-based)
       const layersWithFixedDy = spec.layer.filter((layer: any) => typeof layer.mark.dy === 'number')
-      expect(layersWithFixedDy).toHaveLength(6)
+      expect(layersWithFixedDy).toHaveLength(8) // 4 metrics * 2 layers each
     })
 
     it('should use width-based font sizing for desktop', (): void => {
@@ -153,7 +137,7 @@ describe('createHeadlineSpec', (): void => {
 
       // Check that dx is 0 (no horizontal offset)
       const layersWithZeroDx = spec.layer.filter((layer: any) => layer.mark.dx === 0)
-      expect(layersWithZeroDx).toHaveLength(6)
+      expect(layersWithZeroDx).toHaveLength(8) // 4 metrics * 2 layers each
     })
 
     it('should use height-based font sizing for mobile', (): void => {
@@ -237,11 +221,12 @@ describe('createHeadlineSpec', (): void => {
           layer.encoding?.text?.value && typeof layer.encoding.text.value === 'string',
       )
 
-      expect(labelLayers).toHaveLength(3)
+      expect(labelLayers).toHaveLength(4)
       expect(labelLayers.map((l: any) => l.encoding.text!.value)).toEqual([
         'Revenue',
         'Profit',
         'Users',
+        'Name',
       ])
     })
   })
@@ -281,7 +266,7 @@ describe('createHeadlineSpec', (): void => {
       const spec = createHeadlineSpec(mockData, mockColumns, 'light' as Theme)
 
       // Should have pairs of layers: value + label for each numeric column
-      expect(spec.layer).toHaveLength(6) // 3 numeric columns * 2 layers each
+      expect(spec.layer).toHaveLength(8) // 4 numeric columns * 2 layers each
 
       // Check alternating pattern: value, label, value, label, etc.
       for (let i: number = 0; i < spec.layer.length; i += 2) {

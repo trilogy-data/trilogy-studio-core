@@ -187,6 +187,10 @@ export const determineDefaultConfig = (
   const longitudeColumns = filteredColumns('longitude', columns)
   const geoColumns = filteredColumns('geographic', columns)
 
+  // if the columns map is empty, return {}
+  if (columns.size === 0) {
+    return {}
+  }
   if (numericColumns.length === 0) {
     defaults.chartType = 'headline'
     return defaults

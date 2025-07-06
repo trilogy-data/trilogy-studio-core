@@ -294,7 +294,7 @@ describe('Chart Utils', () => {
   })
 
   describe('Eligible Chart Types', () => {
-    it('should return empty array if no numeric columns are available', () => {
+    it('should return headline only if no numeric columns are available', () => {
       const noNumericColumns = new Map<string, ResultColumn>()
       noNumericColumns.set('category', {
         name: 'category',
@@ -303,7 +303,7 @@ describe('Chart Utils', () => {
       })
 
       const eligibleCharts = determineEligibleChartTypes(testData, noNumericColumns)
-      expect(eligibleCharts.length).toBe(0)
+      expect(eligibleCharts.length).toBe(1)
     })
 
     it('should include line and area charts when temporal and numeric columns exist', () => {
