@@ -177,6 +177,7 @@ async function handleFilterChange(newFilter: string) {
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
+        extraContent: rootContent.value
       })
       .then(() => {
         filterError.value = ''
@@ -192,7 +193,6 @@ async function handleFilterChange(newFilter: string) {
 }
 
 const validateFilter = async (filter: string) => {
-  console.log('Validating filter:', filter)
   // Strip a leading WHERE off the filter
   let filterWithoutWhere = filter.replace(/^\s*where\s+/i, '')
 
@@ -204,6 +204,7 @@ const validateFilter = async (filter: string) => {
         editorType: 'trilogy',
         imports: dashboard.value.imports,
         extraFilters: [filterWithoutWhere],
+        extraContent: rootContent.value,
       },
       () => {},
       () => {},
@@ -232,6 +233,7 @@ async function populateCompletion() {
     let completion = await dashboardStore.populateCompletion(
       dashboard.value.id,
       queryExecutionService,
+      editorStore,
     )
     if (completion) {
       globalCompletion.value = completion

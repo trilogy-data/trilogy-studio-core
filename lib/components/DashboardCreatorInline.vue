@@ -190,6 +190,7 @@ export default {
             dashboardPrompt.value,
             llmStore,
             queryExecutionService,
+            editorStore,
           )
           console.log('Prompt spec generated:', promptSpec)
 
@@ -199,6 +200,7 @@ export default {
               promptSpec,
               llmStore,
               queryExecutionService,
+              editorStore,
             )
           }
         }

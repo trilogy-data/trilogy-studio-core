@@ -5,8 +5,11 @@ import { CELL_TYPES } from '../dashboards/base'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import QueryExecutionService from '../stores/queryExecutionService'
+import type { EditorStoreType } from '../stores/editorStore'
+
 
 const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType
+const editorStore = inject<EditorStoreType>('editorStore') as EditorStoreType
 const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType
 const queryExecutionService = inject<QueryExecutionService>(
   'queryExecutionService',
@@ -159,6 +162,7 @@ async function generateDashboardWithLLM(): Promise<void> {
       dashboardPrompt.value,
       llmStore,
       queryExecutionService,
+      editorStore,
     )
     console.log('Prompt spec generated:', promptSpec)
 
@@ -169,6 +173,7 @@ async function generateDashboardWithLLM(): Promise<void> {
         promptSpec,
         llmStore,
         queryExecutionService,
+        editorStore,
       )
 
       // Update the dashboard description if not already set

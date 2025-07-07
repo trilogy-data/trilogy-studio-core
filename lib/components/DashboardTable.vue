@@ -167,7 +167,6 @@ export default defineComponent({
         const conn = connectionStore.connections[connName]
 
         // Create query input object using the chart's query content
-        console.log(rootContent.value)
         const queryInput = {
           text: query.value,
           queryType: conn.query_type,
@@ -264,13 +263,8 @@ export default defineComponent({
     })
 
     // Initial query execution
-    console.log('Initial query execution')
+  
     executeQuery()
-
-    // Watch for changes that should trigger a refresh
-    // watch([query, filters, chartImports], () => {
-    //   executeQuery()
-    // })
 
     watch([query, chartImports], () => {
       executeQuery()
@@ -327,7 +321,7 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   vertical-align: middle;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--bg-loading);
   backdrop-filter: blur(2px);
   z-index: 10;
 }

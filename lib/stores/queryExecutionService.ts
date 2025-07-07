@@ -392,7 +392,9 @@ export default class QueryExecutionService {
           }))
         : []
     }
-
+    if (queryInput.extraContent) {
+      sources = sources.concat(queryInput.extraContent)
+    }
     // Call the trilogyResolver to validate the query
     const validation: ValidateResponse = await this.trilogyResolver.validate_query(
       queryInput.text,
