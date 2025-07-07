@@ -2,19 +2,14 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import {
-  getColumnFormat,
-  createFieldEncoding,
-  getFormatHint,
-  getVegaFieldType,
-  createInteractionEncodings,
-} from './helpers'
+import { getColumnFormat, createFieldEncoding, getFormatHint, getVegaFieldType } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
 import { createHeadlineSpec } from './headlineSpec'
 import { createBarChartSpec } from './barChartSpec'
 import { createDonutChartSpec } from './donutSpec'
+import { createBarHChartSpec } from './barHChartSpec'
 
 const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -282,58 +277,6 @@ const createInteractiveLayer = (
 /**
  * Create chart specification for horizontal bar chart
  */
-const createBarHChartSpec = (
-  config: ChartConfig,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  isMobile: boolean,
-  intChart: Array<Partial<ChartConfig>>,
-  currentTheme: string = 'light',
-) => {
-  return {
-    params: [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click,touchend',
-        },
-        value: intChart,
-        nearest: true,
-      },
-    ],
-    mark: {
-      type: 'bar',
-      color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
-    },
-    encoding: {
-      y: {
-        ...createFieldEncoding(config.yField || '', columns),
-        sort: '-x',
-        axis: {
-          labelExpr: isMobile
-            ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
-            : 'datum.label',
-        },
-      },
-      x: createFieldEncoding(config.xField || '', columns, {
-        axis: { format: getColumnFormat(config.xField, columns) },
-      }),
-      ...createInteractionEncodings(),
-      tooltip: tooltipFields,
-      ...encoding,
-    },
-  }
-}
 
 /**
  * Create chart specification for line chart
@@ -555,7 +498,7 @@ export const generateVegaSpec = (
   chartSelection: Object[] | null,
   isMobile: boolean = false,
   title: string = '',
-  currentTheme: string = 'light',
+  currentTheme: 'light' | 'dark' | '' = 'light',
 ) => {
   let intChart: Array<Partial<ChartConfig>> = chartSelection
     ? chartSelection.map((x) => toRaw(x))
@@ -600,7 +543,15 @@ export const generateVegaSpec = (
 
   switch (config.chartType) {
     case 'bar':
-      chartSpec = createBarChartSpec(config, columns, tooltipFields, encoding, data, intChart)
+      chartSpec = createBarChartSpec(
+        config,
+        columns,
+        tooltipFields,
+        encoding,
+        data,
+        intChart,
+        currentTheme,
+      )
 
       break
 
@@ -616,7 +567,14 @@ export const generateVegaSpec = (
       )
       break
     case 'donut':
-      chartSpec = createDonutChartSpec(config, columns, tooltipFields, encoding, intChart)
+      chartSpec = createDonutChartSpec(
+        config,
+        columns,
+        tooltipFields,
+        encoding,
+        intChart,
+        currentTheme,
+      )
       break
     case 'line':
       chartSpec = createLineChartSpec(

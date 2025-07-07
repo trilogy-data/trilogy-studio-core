@@ -51,8 +51,9 @@ import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
 import LoadingView from './LoadingView.vue'
-import { type GridItemData, type DimensionClick } from '../dashboards/base'
+import { type GridItemDataResponse, type DimensionClick } from '../dashboards/base'
 import type { AnalyticsStoreType } from '../stores/analyticsStore'
+
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -70,7 +71,7 @@ export default defineComponent({
       required: true,
     },
     getItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string) => GridItemData>,
+      type: Function as PropType<(itemId: string, dashboardId: string) => GridItemDataResponse>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -138,6 +139,10 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).connectionName || []
     })
 
+    const rootContent = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
+    })
+
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
@@ -175,7 +180,9 @@ export default defineComponent({
         }
         //@ts-ignore
         const conn = connectionStore.connections[connName]
-
+        if (!conn) {
+          throw new Error(`Connection "${connName}" not found!`)
+        }
         // Create query input object using the chart's query content
         const queryInput = {
           text: query.value,
@@ -183,6 +190,7 @@ export default defineComponent({
           editorType: 'trilogy',
           imports: chartImports.value,
           extraFilters: filters.value,
+          extraContent: rootContent.value,
           parameters: chartParameters.value,
         }
 
@@ -274,7 +282,6 @@ export default defineComponent({
     })
 
     // Initial query execution
-    console.log('Initial query execution')
     executeQuery()
 
     // Watch for changes that should trigger a refresh

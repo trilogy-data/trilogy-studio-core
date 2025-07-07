@@ -503,9 +503,7 @@ export default class QueryExecutionService {
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
             alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
+            contents: this.editorStore.editors[source.editor]?.contents || '',
           }))
         : []
     if (queryInput.extraContent) {

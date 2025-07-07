@@ -1,17 +1,17 @@
 <!-- ImportSelector.vue -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { type Import } from '../stores/resolver'
+import { type DashboardImport } from '../dashboards/base'
 
 interface ImportSelectorProps {
-  availableImports: Import[]
-  activeImports: Import[]
+  availableImports: DashboardImport[]
+  activeImports: DashboardImport[]
 }
 
 const props = defineProps<ImportSelectorProps>()
 
 const emit = defineEmits<{
-  'update:imports': [imports: Import[]]
+  'update:imports': [imports: DashboardImport[]]
 }>()
 
 // Show/hide dropdown
@@ -28,20 +28,20 @@ function closeDropdown(): void {
 }
 
 // Check if import is active
-function isImportActive(importName: string): boolean {
-  return props.activeImports.some((imp) => imp.name === importName)
+function isImportActive(importId: string): boolean {
+  return props.activeImports.some((imp) => imp.id === importId)
 }
 
 // Toggle an import (single select mode)
-function toggleImport(importItem: Import): void {
-  let newImports: Import[] = []
+function toggleImport(importItem: DashboardImport): void {
+  let newImports: DashboardImport[] = []
 
   if (isImportActive(importItem.name)) {
     // If already active, deselect it (empty array)
     newImports = []
   } else {
     // If not active, select only this one
-    newImports = [{ name: importItem.name, alias: '' }]
+    newImports = [{ name: importItem.name, alias: importItem.alias, id: importItem.id }]
   }
 
   emit('update:imports', newImports)
@@ -137,15 +137,15 @@ onUnmounted(() => {
       <div class="import-list">
         <div
           v-for="importItem in availableImports"
-          :key="importItem.name"
+          :key="importItem.id"
           class="import-item"
-          :class="{ active: isImportActive(importItem.name) }"
+          :class="{ active: isImportActive(importItem.id) }"
           @click="toggleImport(importItem)"
           :data-testid="`set-dashboard-source-${importItem.name}`"
         >
           <div class="import-checkbox">
             <svg
-              v-if="isImportActive(importItem.name)"
+              v-if="isImportActive(importItem.id)"
               xmlns="http://www.w3.org/2000/svg"
               width="16"
               height="16"

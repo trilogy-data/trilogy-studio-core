@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useAnalyticsStore } from './analyticsStore'
 
 export interface UserSettings {
-  theme: string
+  theme: 'dark' | 'light' | ''
   trilogyResolver: string
   telemetryEnabled: boolean | null
   [key: string]: string | boolean | number | null | undefined

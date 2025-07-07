@@ -78,7 +78,7 @@ function formatValue(value: unknown) {
   // Handle string values
   if (typeof value === 'string') {
     // Escape single quotes in strings
-    const escapedValue = value.replace(/'/g, "''")
+    const escapedValue = value.replace(/'/g, "\\'")
     return `'${escapedValue}'`
   }
   // Handle boolean values
@@ -97,7 +97,7 @@ function formatCondition(key: string, value: unknown): string {
     return `${key} IS NULL`
   } else if (typeof value === 'string') {
     // Escape single quotes in strings
-    const escapedValue = value.replace(/'/g, "''")
+    const escapedValue = value.replace(/'/g, "\\'")
     return `${key}='''${escapedValue}'''`
   } else if (Array.isArray(value)) {
     // Handle array values
@@ -108,7 +108,7 @@ function formatCondition(key: string, value: unknown): string {
     return `${key} IS NULL`
   } else {
     // For complex objects, arrays, etc. - convert to JSON string
-    const escapedValue = JSON.stringify(value).replace(/'/g, "''")
+    const escapedValue = JSON.stringify(value).replace(/'/g, "\\'")
     return `${key}='${escapedValue}'`
   }
 }

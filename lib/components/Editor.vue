@@ -239,6 +239,13 @@ export default defineComponent({
             )
             this.$emit('save-models')
           }
+        } else {
+          // If it's a source, we need to remove it from the model
+          let model = this.connectionStore.connections[this.editorData.connection].model
+          if (model) {
+            this.modelStore.models[model].removeModelSourceSimple(this.editorData.id)
+            this.$emit('save-models')
+          }
         }
       }
       this.editorData.tags = this.editorData.tags.includes(tag)

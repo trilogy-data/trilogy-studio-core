@@ -48,8 +48,9 @@ import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import DataTable from './DataTable.vue'
 import LoadingView from './LoadingView.vue'
-import { type GridItemData, type DimensionClick } from '../dashboards/base'
+import { type GridItemDataResponse, type DimensionClick } from '../dashboards/base'
 import { type AnalyticsStoreType } from '../stores/analyticsStore'
+
 export default defineComponent({
   name: 'DashboardChart',
   components: {
@@ -67,7 +68,7 @@ export default defineComponent({
       required: true,
     },
     getItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string) => GridItemData>,
+      type: Function as PropType<(itemId: string, dashboardId: string) => GridItemDataResponse>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -131,6 +132,10 @@ export default defineComponent({
       return itemData.onRefresh || null
     })
 
+    const rootContent = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
+    })
+
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
@@ -162,6 +167,7 @@ export default defineComponent({
         const conn = connectionStore.connections[connName]
 
         // Create query input object using the chart's query content
+        console.log(rootContent.value)
         const queryInput = {
           text: query.value,
           queryType: conn.query_type,
@@ -169,6 +175,7 @@ export default defineComponent({
           imports: chartImports.value,
           extraFilters: filters.value,
           parameters: chartParameters.value,
+          extraContent: rootContent.value,
         }
 
         // Get the query execution service from the provider

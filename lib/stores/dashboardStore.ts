@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
-import type { LayoutItem, CellType } from '../dashboards/base'
+import type { LayoutItem, CellType, DashboardImport } from '../dashboards/base'
 import { CELL_TYPES, DashboardModel } from '../dashboards/base'
-import type { Import } from './resolver'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
@@ -168,7 +167,10 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    updateDashboardImports(id: string, imports: Import[]) {
+    updateDashboardImports(id: string, imports: DashboardImport[]) {
+      console.log('Updating imports for dashboard:', id)
+      console.log('New imports:', imports)
+
       if (this.dashboards[id]) {
         this.dashboards[id].imports = imports
       } else {
