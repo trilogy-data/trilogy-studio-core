@@ -8,7 +8,6 @@ import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
 import { completionToModelInput } from '../llm/utils'
 import type { EditorStoreType } from './editorStore'
-import editorStore from './editorStore'
 
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
@@ -347,7 +346,11 @@ export const useDashboardStore = defineStore('dashboards', {
 
       return serialized
     },
-    async populateCompletion(dashboardId: string, queryExecutionService: QueryExecutionService, editorStore: EditorStoreType) {
+    async populateCompletion(
+      dashboardId: string,
+      queryExecutionService: QueryExecutionService,
+      editorStore: EditorStoreType,
+    ) {
       const dashboard = this.dashboards[dashboardId]
       if (dashboard) {
         let results = await queryExecutionService?.validateQuery(dashboard.connection, {
@@ -358,8 +361,10 @@ export const useDashboardStore = defineStore('dashboards', {
             alias: imp.name,
             // legacy handling
             contents:
-              editorStore.editors[imp.id]?.contents || editorStore.editors[imp.name]?.contents || '',
-          }))
+              editorStore.editors[imp.id]?.contents ||
+              editorStore.editors[imp.name]?.contents ||
+              '',
+          })),
         })
         if (results) {
           console.log('Completion results:', results)
@@ -377,7 +382,11 @@ export const useDashboardStore = defineStore('dashboards', {
       queryExecutionService: QueryExecutionService,
       editorStore: EditorStoreType,
     ): Promise<ModelConceptInput[]> {
-      let completions = await this.populateCompletion(dashboardId, queryExecutionService, editorStore)
+      let completions = await this.populateCompletion(
+        dashboardId,
+        queryExecutionService,
+        editorStore,
+      )
 
       if (!completions) {
         throw new Error(`No completion items found for dashboard ID "${dashboardId}".`)
@@ -391,7 +400,11 @@ export const useDashboardStore = defineStore('dashboards', {
       queryExecutionService: QueryExecutionService,
       editorStore: EditorStoreType,
     ) {
-      let completion = await this.populateAIConcepts(this.activeDashboardId, queryExecutionService, editorStore)
+      let completion = await this.populateAIConcepts(
+        this.activeDashboardId,
+        queryExecutionService,
+        editorStore,
+      )
       let rawResponse = await llmStore.generateDashboardCompletion(
         prompt,
         parseDashboardSpec,
@@ -431,7 +444,9 @@ export const useDashboardStore = defineStore('dashboards', {
           extraContent: current.imports.map((imp) => ({
             alias: imp.name,
             contents:
-              editorStore.editors[imp.id]?.contents || editorStore.editors[imp.name]?.contents || '',
+              editorStore.editors[imp.id]?.contents ||
+              editorStore.editors[imp.name]?.contents ||
+              '',
           })),
         }
 
@@ -443,9 +458,9 @@ export const useDashboardStore = defineStore('dashboards', {
           current.connection,
           queryInput,
           // Starter callback (empty for now)
-          () => { },
+          () => {},
           // Progress callback
-          () => { },
+          () => {},
           // Failure callback
           onError,
           // Success callback

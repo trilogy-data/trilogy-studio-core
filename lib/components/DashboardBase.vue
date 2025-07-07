@@ -177,7 +177,7 @@ async function handleFilterChange(newFilter: string) {
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
-        extraContent: rootContent.value
+        extraContent: rootContent.value,
       })
       .then(() => {
         filterError.value = ''

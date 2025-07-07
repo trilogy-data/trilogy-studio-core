@@ -130,34 +130,24 @@ export default defineComponent({
 
     // Create and configure the editor
     const createEditor = (): void => {
-      if (!editorElement.value) return
-
+      if (!editorElement.value) {
+        console.error('Editor element is not available')
+        return
+      }
+      console.log('Creating editor for context:', props.context)
       // If editor already exists and is mounted, just update content
       if (editorMap.has(props.context) && mountedMap.get(props.context)) {
         const editorInstance = editorMap.get(props.context)
-        editorInstance?.setValue(props.contents)
-        return
+        if (editorInstance) {
+          console.log('Editor already exists, updating content')
+          editorInstance.setValue(props.contents)
+          editorInstance.layout()
+          return
+        }
       }
 
       // Create theme
-      editor.defineTheme('trilogyStudio', {
-        base: props.theme === 'light' ? 'vs' : 'vs-dark',
-        inherit: true,
-        rules: [
-          { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' },
-          { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' },
-          { token: 'definition', foreground: '#E5C07B', fontStyle: 'bold' },
-          { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' },
-          { token: 'string', foreground: '#CE9178' },
-          { token: 'number', foreground: '#B5CEA8' },
-          { token: 'operator', foreground: '#D4D4D4' },
-          { token: 'delimiter', foreground: '#D4D4D4' },
-          { token: 'function', foreground: '#C586C0', fontStyle: 'bold' },
-          { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' },
-          { token: 'property', foreground: '#BFBFBF' },
-        ],
-        colors: {},
-      })
+
 
       // Create editor
       const editorInstance = editor.create(editorElement.value, {
@@ -172,8 +162,31 @@ export default defineComponent({
         wordWrap: 'on',
       })
 
+      //loop over light/dark, create themes
+      for (const theme of ['light', 'dark']) {
+        // Define the theme with the prefix
+        editor.defineTheme(`trilogyStudio${theme}`, {
+          base: theme === 'light' ? 'vs' : 'vs-dark',
+          inherit: true,
+          rules: [
+            { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' },
+            { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' },
+            { token: 'definition', foreground: '#E5C07B', fontStyle: 'bold' },
+            { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' },
+            { token: 'string', foreground: '#CE9178' },
+            { token: 'number', foreground: '#B5CEA8' },
+            { token: 'operator', foreground: '#D4D4D4' },
+            { token: 'delimiter', foreground: '#D4D4D4' },
+            { token: 'function', foreground: '#C586C0', fontStyle: 'bold' },
+            { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' },
+            { token: 'property', foreground: '#BFBFBF' },
+          ],
+          colors: {},
+        })
+      }
+
       // Set theme
-      editor.setTheme('trilogyStudio')
+      editor.setTheme(`trilogyStudio${props.theme}`)
 
       // Track this editor instance
       editorMap.set(props.context, editorInstance)
@@ -338,25 +351,7 @@ export default defineComponent({
     watch(
       () => props.theme,
       () => {
-        editor.defineTheme('trilogyStudio', {
-          base: props.theme === 'light' ? 'vs' : 'vs-dark',
-          inherit: true,
-          rules: [
-            { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' },
-            { token: 'keyword', foreground: '#569CD6', fontStyle: 'bold' },
-            { token: 'definition', foreground: '#E5C07B', fontStyle: 'bold' },
-            { token: 'type', foreground: '#4EC9B0', fontStyle: 'bold' },
-            { token: 'string', foreground: '#CE9178' },
-            { token: 'number', foreground: '#B5CEA8' },
-            { token: 'operator', foreground: '#D4D4D4' },
-            { token: 'delimiter', foreground: '#D4D4D4' },
-            { token: 'function', foreground: '#C586C0', fontStyle: 'bold' },
-            { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' },
-            { token: 'property', foreground: '#BFBFBF' },
-          ],
-          colors: {},
-        })
-        editor.setTheme('trilogyStudio')
+        editor.setTheme(`trilogyStudio${props.theme}`)
       },
     )
 

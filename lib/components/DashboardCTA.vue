@@ -7,7 +7,6 @@ import type { LLMConnectionStoreType } from '../stores/llmStore'
 import QueryExecutionService from '../stores/queryExecutionService'
 import type { EditorStoreType } from '../stores/editorStore'
 
-
 const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType
 const editorStore = inject<EditorStoreType>('editorStore') as EditorStoreType
 const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType

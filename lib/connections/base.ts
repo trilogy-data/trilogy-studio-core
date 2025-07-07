@@ -7,7 +7,7 @@ export enum AssetType {
   VIEW = 'view',
 }
 
-export const EscapePlaceholder = "!`"
+export const EscapePlaceholder = '!`'
 
 export class Column {
   name: string

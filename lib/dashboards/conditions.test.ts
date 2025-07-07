@@ -36,7 +36,9 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should escape single quotes in string values', () => {
-      expect(objectToSqlExpression({ name: "O'Connor" })).toBe(`name='''O${EscapePlaceholder}Connor'''`)
+      expect(objectToSqlExpression({ name: "O'Connor" })).toBe(
+        `name='''O${EscapePlaceholder}Connor'''`,
+      )
     })
 
     it('should handle complex objects by converting to JSON strings', () => {

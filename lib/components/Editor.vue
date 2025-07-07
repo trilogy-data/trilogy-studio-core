@@ -21,6 +21,7 @@
       <div class="editor-content">
         <code-editor
           ref="codeEditor"
+          :id="context"
           :editor-id="editorId"
           :context="context"
           :contents="editorData.contents"

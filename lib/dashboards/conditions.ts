@@ -1,4 +1,4 @@
-import { EscapePlaceholder } from "../connections/base"
+import { EscapePlaceholder } from '../connections/base'
 
 /**
  * Converts an object or array of objects to a SQL WHERE clause expression

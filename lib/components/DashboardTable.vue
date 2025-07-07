@@ -263,7 +263,7 @@ export default defineComponent({
     })
 
     // Initial query execution
-  
+
     executeQuery()
 
     watch([query, chartImports], () => {
