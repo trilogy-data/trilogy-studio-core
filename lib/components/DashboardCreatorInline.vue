@@ -136,7 +136,7 @@ export default {
       return imports.map((importItem) => ({
         id: importItem.id,
         name: importItem.name,
-        alias: importItem.name,
+        alias: '',
       }))
     })
 
