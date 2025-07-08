@@ -100,6 +100,7 @@ import type { Import, CompletionItem } from '../stores/resolver'
 import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
 import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
+import type { ContentInput } from '../stores/resolver'
 interface OperationState {
   success: boolean
   duration: number
@@ -139,6 +140,11 @@ export default defineComponent({
       required: false,
       default: () => [],
     },
+    rootContent: {
+      type: Array as PropType<ContentInput[]>,
+      required: false,
+      default: () => [],
+    },
   },
 
   data() {
@@ -164,7 +170,6 @@ export default defineComponent({
     const isMobile = inject('isMobile')
     const llmConnectionStore = inject('llmConnectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
-
     return {
       queryExecutionService,
       connectionStore,
@@ -329,6 +334,7 @@ export default defineComponent({
           editorType: this.editor.type,
           sources: [],
           imports: this.imports,
+          extraContent: this.rootContent,
         }
 
         const annotations = await queryExecutionService.validateQuery(
@@ -407,6 +413,7 @@ export default defineComponent({
           queryType: conn ? conn.query_type : '',
           editorType: this.editor.type,
           imports: this.imports,
+          extraContent: this.rootContent,
         }
 
         // Execute query
@@ -532,6 +539,7 @@ export default defineComponent({
             queryType: conn ? conn.query_type : '',
             editorType: this.editor.type,
             imports: this.imports,
+            extraContent: this.rootContent,
           }
 
           try {

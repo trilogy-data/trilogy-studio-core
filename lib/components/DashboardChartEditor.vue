@@ -3,6 +3,7 @@ import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
 import SimpleEditor from './SimpleEditor.vue'
 import { type Import } from '../stores/resolver'
 import { nextTick } from 'process'
+import type { ContentInput } from '../stores/resolver'
 
 interface EditorRef {
   getContent: () => string
@@ -12,6 +13,7 @@ const props = defineProps<{
   content: string
   connectionName: string
   imports: Import[]
+  rootContent: ContentInput[]
   showing: boolean
   initialWidth?: number
   initialHeight?: number
@@ -215,6 +217,7 @@ onUnmounted(() => {
           :initContent="queryText"
           :connectionName="connectionName"
           :imports="imports"
+          :rootContent="rootContent"
           ref="editor"
         ></SimpleEditor>
       </div>

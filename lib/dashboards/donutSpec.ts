@@ -40,12 +40,12 @@ export const createDonutChartSpec = (
     encoding: {
       theta: {
         type: 'quantitative',
-        field: config.yField,
+        field: config.xField,
       },
       color: {
-        ...createFieldEncoding(config.xField || '', columns, {
+        ...createFieldEncoding(config.yField || '', columns, {
           legend: {
-            title: config.xField || 'Category',
+            title: config.yField || 'Category',
             orient: 'right',
           },
         }),
@@ -54,7 +54,7 @@ export const createDonutChartSpec = (
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       order: {
-        field: config.yField,
+        field: config.xField,
         sort: 'descending',
       },
       ...encoding,
@@ -63,10 +63,10 @@ export const createDonutChartSpec = (
   let labelLayer = {
     transform: [
       {
-        window: [{ op: 'sum', field: config.yField, as: 'total' }],
+        window: [{ op: 'sum', field: config.xField, as: 'total' }],
       },
       {
-        calculate: `datum.${config.yField} / datum.total`,
+        calculate: `datum.${config.xField} / datum.total`,
         as: 'angle_pct',
       },
       {
@@ -81,12 +81,12 @@ export const createDonutChartSpec = (
     },
     encoding: {
       theta: {
-        field: config.yField,
+        field: config.xField,
         type: 'quantitative',
         stack: true,
       },
-      text: { field: config.xField, type: 'nominal' },
-      order: { field: config.yField, sort: 'descending' },
+      text: { field: config.yField, type: 'nominal' },
+      order: { field: config.xField, sort: 'descending' },
     },
   }
 

@@ -263,8 +263,8 @@ export const determineDefaultConfig = (
       defaults.colorField = numericColumns[1].name
     }
   } else if (defaults.chartType === 'donut') {
-    defaults.xField = categoricalColumns[0].name
-    defaults.yField = numericColumns[0].name
+    defaults.yField = categoricalColumns[0].name
+    defaults.xField = numericColumns[0].name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
