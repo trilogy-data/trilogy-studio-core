@@ -148,7 +148,6 @@ export default defineComponent({
 
       // Create theme
 
-
       // Create editor
       const editorInstance = editor.create(editorElement.value, {
         value: props.contents,
