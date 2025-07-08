@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { objectToSqlExpression } from './conditions'
+import { EscapePlaceholder } from '../connections/base'
 
 describe('objectToSqlExpression', () => {
   // Test single object cases
@@ -35,7 +36,9 @@ describe('objectToSqlExpression', () => {
     })
 
     it('should escape single quotes in string values', () => {
-      expect(objectToSqlExpression({ name: "O'Connor" })).toBe("name='''O''Connor'''")
+      expect(objectToSqlExpression({ name: "O'Connor" })).toBe(
+        `name='''O${EscapePlaceholder}Connor'''`,
+      )
     })
 
     it('should handle complex objects by converting to JSON strings', () => {
@@ -100,7 +103,7 @@ describe('objectToSqlExpression', () => {
       ])
 
       expect(result).toBe(
-        "(id=1 OR id=2) AND (name='''John''' OR name='''O''Connor''') AND active=true AND tags between 1 and 2 AND status='''pending''' AND metadata IS NULL",
+        `(id=1 OR id=2) AND (name='''John''' OR name='''O${EscapePlaceholder}Connor''') AND active=true AND tags between 1 and 2 AND status='''pending''' AND metadata IS NULL`,
       )
     })
   })
@@ -108,7 +111,7 @@ describe('objectToSqlExpression', () => {
   // Edge cases and special scenarios
   describe('edge cases', () => {
     it('should handle objects with empty string values', () => {
-      expect(objectToSqlExpression({ name: '' })).toBe("name=''''''")
+      expect(objectToSqlExpression({ name: '' })).toBe(`name=''''''`)
     })
 
     it('should handle objects with special characters in string values', () => {

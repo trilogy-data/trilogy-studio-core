@@ -8,6 +8,7 @@ export const createDonutChartSpec = (
   tooltipFields: any[],
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
   let donutLayer = {
     params: [
@@ -60,13 +61,35 @@ export const createDonutChartSpec = (
     },
   }
   let labelLayer = {
-    mark: { type: 'text', radius: 85, fill: 'white', fontWeight: 'bold' },
+    transform: [
+      {
+        window: [{ op: 'sum', field: config.yField, as: 'total' }],
+      },
+      {
+        calculate: `datum.${config.yField} / datum.total`,
+        as: 'angle_pct',
+      },
+      {
+        filter: 'datum.angle_pct > 0.05',
+      },
+    ],
+    mark: {
+      type: 'text',
+      radius: 85,
+      color: currentTheme === 'light' ? 'black' : 'white',
+      fontSize: 10,
+    },
     encoding: {
-      theta: { field: config.yField, type: 'quantitative', stack: true },
+      theta: {
+        field: config.yField,
+        type: 'quantitative',
+        stack: true,
+      },
       text: { field: config.xField, type: 'nominal' },
       order: { field: config.yField, sort: 'descending' },
     },
   }
+
   return {
     layer: [donutLayer, labelLayer],
   }

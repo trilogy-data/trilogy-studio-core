@@ -1,12 +1,18 @@
 // Define types for dashboard layouts
 import type { ChartConfig } from '../editors/results'
-import type { Import } from '../stores/resolver'
+
 import { objectToSqlExpression } from './conditions'
+import type { ContentInput } from '../stores/resolver'
 export interface DimensionClick {
   source: string
   filters: Record<string, string>
   chart: Record<string, string>
   append: boolean
+}
+export interface DashboardImport {
+  id: string
+  name: string
+  alias: string
 }
 
 export interface LayoutItem {
@@ -34,8 +40,22 @@ export interface GridItemData {
   width?: number
   height?: number
   chartConfig?: ChartConfig
+  conceptFilters?: FilterInput[]
+  chartFilters?: FilterInput[]
+  filters?: Filter[]
+  parameters?: Record<string, unknown>
+}
+
+export interface GridItemDataResponse {
+  type: 'chart' | 'markdown' | 'table'
+  content: string
+  rootContent: ContentInput[]
+  name: string
+  width?: number
+  height?: number
+  chartConfig?: ChartConfig
   connectionName?: string
-  imports?: Import[]
+  imports?: DashboardImport[]
   conceptFilters?: FilterInput[]
   chartFilters?: FilterInput[]
   filters?: Filter[]
@@ -54,7 +74,7 @@ export interface Dashboard {
   createdAt: Date
   updatedAt: Date
   filter: string | null
-  imports: Import[]
+  imports: DashboardImport[]
   version: number
   description: string
   state: 'editing' | 'published' | 'locked'
@@ -81,7 +101,7 @@ export class DashboardModel implements Dashboard {
   createdAt: Date
   updatedAt: Date
   filter: string | null = null
-  imports: Import[] = []
+  imports: DashboardImport[] = []
   version: number
   state: 'editing' | 'published' | 'locked' = 'editing'
   description: string = ''

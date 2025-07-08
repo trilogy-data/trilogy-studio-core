@@ -6,6 +6,7 @@ import {
   createInteractionEncodings,
   getSortOrder,
 } from './helpers'
+import { lightDefaultColor, darkDefaultColor } from './constants'
 
 export const createBarChartSpec = (
   config: ChartConfig,
@@ -14,6 +15,7 @@ export const createBarChartSpec = (
   encoding: any,
   data: readonly Row[] | null,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: 'light' | 'dark' | '' = 'light',
 ) => {
   // Determine the number of unique values in the x-field
   let xValueCount = 0
@@ -51,7 +53,10 @@ export const createBarChartSpec = (
         nearest: true,
       },
     ],
-    mark: 'bar',
+    mark: {
+      type: 'bar',
+      color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
+    },
     encoding: {
       x: {
         ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),

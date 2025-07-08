@@ -383,6 +383,11 @@ export class ModelConfig {
     this.addModelSource(new ModelSource(editor, alias, [], []))
   }
 
+  removeModelSourceSimple(editor: string) {
+    this.sources = this.sources.filter((s) => s.editor !== editor)
+    this.changed = true
+  }
+
   updateModelSourceName(id: string, newName: string) {
     let source = this.sources.find((s) => s.editor === id)
     if (source) {

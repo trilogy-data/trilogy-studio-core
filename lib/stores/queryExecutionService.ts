@@ -392,7 +392,9 @@ export default class QueryExecutionService {
           }))
         : []
     }
-
+    if (queryInput.extraContent) {
+      sources = sources.concat(queryInput.extraContent)
+    }
     // Call the trilogyResolver to validate the query
     const validation: ValidateResponse = await this.trilogyResolver.validate_query(
       queryInput.text,
@@ -503,9 +505,7 @@ export default class QueryExecutionService {
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
             alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
+            contents: this.editorStore.editors[source.editor]?.contents || '',
           }))
         : []
     if (queryInput.extraContent) {

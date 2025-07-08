@@ -7,6 +7,8 @@ export enum AssetType {
   VIEW = 'view',
 }
 
+export const EscapePlaceholder = '!`'
+
 export class Column {
   name: string
   type: string
@@ -216,6 +218,11 @@ export default abstract class BaseConnection {
     return db.schemas.find((t) => t.name === schema)?.tables.find((t) => t.name === table) || null
   }
 
+  replaceEscapedStrings(sql: string): string {
+    // Replace escaped single quote placeholder with the language appropriate escape path
+    return sql.replace(new RegExp(EscapePlaceholder, 'g'), "''")
+  }
+
   async query(
     sql: string,
     parameters: Record<string, any> | null = null,
@@ -230,8 +237,9 @@ export default abstract class BaseConnection {
     }
 
     this.running = true
+
     try {
-      const results = await this.query_core(sql, parameters, identifier)
+      const results = await this.query_core(this.replaceEscapedStrings(sql), parameters, identifier)
       this.running = false
       return results
     } catch (error) {

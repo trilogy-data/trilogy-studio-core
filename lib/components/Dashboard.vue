@@ -196,6 +196,7 @@ function handleToggleEditMode() {
       <ChartEditor
         :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
         :showing="showQueryEditor"
         @save="dashboardBase?.saveContent"

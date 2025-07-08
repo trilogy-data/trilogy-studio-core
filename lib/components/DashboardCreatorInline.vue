@@ -37,7 +37,7 @@
         <option
           v-for="importItem in availableImports"
           :key="importItem.name"
-          :value="importItem.name"
+          :value="importItem.id"
         >
           {{ importItem.name }}
         </option>
@@ -81,7 +81,7 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import QueryExecutionService from '../stores/queryExecutionService'
 import { type EditorStoreType } from '../stores/editorStore'
-import { type Import } from '../stores/resolver'
+import { type DashboardImport } from '../dashboards/base'
 
 export default {
   name: 'DashboardCreatorInline',
@@ -128,22 +128,22 @@ export default {
       return Object.values(connectionStore.connections).filter((conn) => conn.model)
     })
 
-    const availableImports: Ref<Import[]> = computed(() => {
+    const availableImports: Ref<DashboardImport[]> = computed(() => {
       const imports = Object.values(editorStore.editors).filter(
         (editor) => editor.connection === selectedConnection.value,
       )
 
       return imports.map((importItem) => ({
+        id: importItem.id,
         name: importItem.name,
-        alias: importItem.name,
+        alias: '',
       }))
     })
 
     // Set default import when imports are available
-    // Watch for changes in availableImports and update selectedImport accordingly
     computed(() => {
       if (availableImports.value.length > 0 && !selectedImport.value) {
-        selectedImport.value = availableImports.value[0].name
+        selectedImport.value = availableImports.value[0].id
       } else if (availableImports.value.length === 0) {
         // Reset selectedImport if no imports are available
         selectedImport.value = ''
@@ -163,16 +163,11 @@ export default {
         const dashboard = dashboardStore.newDashboard(dashboardName.value, selectedConnection.value)
 
         // Use the selected import instead of hardcoded 'lineitem'
-        const importToUse =
-          selectedImport.value ||
-          (availableImports.value.length > 0 ? availableImports.value[0].name : '')
-
-        dashboardStore.updateDashboardImports(dashboard.id, [
-          {
-            name: importToUse,
-            alias: '',
-          },
-        ])
+        const importToUse = availableImports.value.find((imp) => imp.id === selectedImport.value)
+        if (!importToUse) {
+          throw new Error('Selected import not found')
+        }
+        dashboardStore.updateDashboardImports(dashboard.id, [importToUse])
 
         // Reset form
         dashboardName.value = ''
@@ -195,6 +190,7 @@ export default {
             dashboardPrompt.value,
             llmStore,
             queryExecutionService,
+            editorStore,
           )
           console.log('Prompt spec generated:', promptSpec)
 
@@ -204,6 +200,7 @@ export default {
               promptSpec,
               llmStore,
               queryExecutionService,
+              editorStore,
             )
           }
         }

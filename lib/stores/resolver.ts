@@ -169,12 +169,14 @@ export default class TrilogyResolver {
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
+    extraContent: Record<string, any> | null = null,
   ): Promise<ValidateResponse> {
     const requestParams = {
       query: query,
       sources: sources || [],
       imports: imports || [],
       extra_filters: extraFilters || [],
+      extra_content: extraContent || {},
     }
 
     // Generate hash of request params

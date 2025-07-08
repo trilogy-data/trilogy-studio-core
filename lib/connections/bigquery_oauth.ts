@@ -1,5 +1,5 @@
 import BaseConnection from './base'
-import { Database, Schema, Table, Column } from './base'
+import { Database, Schema, Table, Column, EscapePlaceholder } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
@@ -407,6 +407,11 @@ export default class BigQueryOauthConnection extends BaseConnection {
   // Helper method to implement sleep/delay
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  replaceEscapedStrings(sql: string): string {
+    // Replace escaped single quote placeholder with the language appropriate escape path
+    return sql.replace(new RegExp(EscapePlaceholder, 'g'), "\\'")
   }
 
   async query_core(

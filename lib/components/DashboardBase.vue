@@ -4,14 +4,16 @@ import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } fr
 import { useDashboardStore } from '../stores/dashboardStore'
 import {
   type LayoutItem,
-  type GridItemData,
+  type GridItemDataResponse,
   type CellType,
   CELL_TYPES,
   type DimensionClick,
 } from '../dashboards/base'
-import type { Import, CompletionItem } from '../stores/resolver'
+import type { CompletionItem } from '../stores/resolver'
+import type { DashboardImport } from '../dashboards/base'
 import QueryExecutionService from '../stores/queryExecutionService'
 import useScreenNavigation from '../stores/useScreenNavigation'
+import useEditorStore from '../stores/editorStore'
 
 // Props definition
 const props = defineProps<{
@@ -31,10 +33,11 @@ const emit = defineEmits<{
 
 // Initialize services and stores
 const dashboardStore = useDashboardStore()
+const editorStore = useEditorStore()
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 const { setActiveDashboard } = useScreenNavigation()
 
-if (!queryExecutionService) {
+if (!queryExecutionService || !editorStore) {
   throw new Error('QueryExecutionService not provided')
 }
 
@@ -87,6 +90,16 @@ const selectedConnection = computed(() => {
 const editMode = computed(() => {
   if (props.viewMode) return false
   return dashboard.value ? dashboard.value.state === 'editing' : false
+})
+
+const rootContent = computed(() => {
+  if (!dashboard.value) return []
+  return dashboard.value.imports.map((imp) => ({
+    alias: imp.name,
+    // legacy handling
+    contents:
+      editorStore.editors[imp.id]?.contents || editorStore.editors[imp.name]?.contents || '',
+  }))
 })
 
 // Lifecycle hooks
@@ -164,6 +177,7 @@ async function handleFilterChange(newFilter: string) {
         editorType: 'trilogy',
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
+        extraContent: rootContent.value,
       })
       .then(() => {
         filterError.value = ''
@@ -179,7 +193,6 @@ async function handleFilterChange(newFilter: string) {
 }
 
 const validateFilter = async (filter: string) => {
-  console.log('Validating filter:', filter)
   // Strip a leading WHERE off the filter
   let filterWithoutWhere = filter.replace(/^\s*where\s+/i, '')
 
@@ -191,6 +204,7 @@ const validateFilter = async (filter: string) => {
         editorType: 'trilogy',
         imports: dashboard.value.imports,
         extraFilters: [filterWithoutWhere],
+        extraContent: rootContent.value,
       },
       () => {},
       () => {},
@@ -219,6 +233,7 @@ async function populateCompletion() {
     let completion = await dashboardStore.populateCompletion(
       dashboard.value.id,
       queryExecutionService,
+      editorStore,
     )
     if (completion) {
       globalCompletion.value = completion
@@ -227,7 +242,7 @@ async function populateCompletion() {
   }
 }
 
-async function handleImportChange(newImports: Import[]) {
+async function handleImportChange(newImports: DashboardImport[]) {
   if (dashboard.value && dashboard.value.id) {
     dashboardStore.updateDashboardImports(dashboard.value.id, newImports)
     await populateCompletion()
@@ -318,7 +333,7 @@ function closeEditors(): void {
 }
 
 // Data management
-function getItemData(itemId: string, dashboardId: string): GridItemData {
+function getItemData(itemId: string, dashboardId: string): GridItemDataResponse {
   if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
     return {
       type: CELL_TYPES.CHART,
@@ -328,6 +343,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
       height: 0,
       imports: [],
       filters: [],
+      rootContent: [],
     }
   }
 
@@ -340,6 +356,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
       height: 0,
       imports: [],
       filters: [],
+      rootContent: [],
     }
   }
 
@@ -354,6 +371,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
       height: 0,
       imports: dashboard.value.imports,
       filters: [],
+      rootContent: [],
     }
   }
 
@@ -384,6 +402,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemData {
     conceptFilters: item.conceptFilters || [],
     parameters: item.parameters || {},
     onRefresh: handleRefresh,
+    rootContent: rootContent.value,
   }
 }
 
@@ -499,6 +518,7 @@ defineExpose({
   showMarkdownEditor,
   editingItem,
   dashboardMaxWidth,
+  rootContent,
 
   // Methods
   handleFilterChange,

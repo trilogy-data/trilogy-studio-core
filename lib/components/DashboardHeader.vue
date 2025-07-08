@@ -4,7 +4,8 @@ import { useConnectionStore, useEditorStore } from '../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
-import { type Import, type CompletionItem } from '../stores/resolver'
+import { type CompletionItem } from '../stores/resolver'
+import { type DashboardImport } from '../dashboards/base'
 
 const props = defineProps({
   dashboard: {
@@ -65,14 +66,15 @@ function handleFilterApply(newValue: string) {
   emit('filter-change', newValue)
 }
 
-const availableImports: Ref<Import[]> = computed(() => {
+const availableImports: Ref<DashboardImport[]> = computed(() => {
   const imports = Object.values(editorStore.editors).filter(
     (editor) => editor.connection === props.selectedConnection,
   )
 
   return imports.map((importItem) => ({
+    id: importItem.id,
     name: importItem.name,
-    alias: importItem.name,
+    alias: '',
   }))
 })
 
@@ -80,7 +82,7 @@ const availableImports: Ref<Import[]> = computed(() => {
 const activeImports = computed(() => props.dashboard?.imports || [])
 
 // Handle imports change
-function handleImportsChange(newImports: Import[]) {
+function handleImportsChange(newImports: DashboardImport[]) {
   emit('import-change', newImports)
 }
 
