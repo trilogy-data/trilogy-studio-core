@@ -348,7 +348,6 @@ export default defineComponent({
       xField: '',
       yField: '',
       yField2: '',
-      yAggregation: 'sum',
       colorField: '',
       sizeField: '',
       groupField: '',
@@ -558,7 +557,7 @@ export default defineComponent({
       lastSpec.value = currentSpecString
       try {
         await vegaEmbed(vegaContainer.value, spec, {
-          actions: internalConfig.value.showDebug,
+          actions: internalConfig.value.showDebug ? true : false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
           renderer: 'canvas', // Use canvas renderer for better performance with large datasets
         }).then((result) => {
@@ -614,7 +613,7 @@ export default defineComponent({
         internalConfig.value.xField = configDefaults.xField
         internalConfig.value.yField = configDefaults.yField
         internalConfig.value.yField2 = configDefaults.yField2
-        internalConfig.value.yAggregation = configDefaults.yAggregation
+
         internalConfig.value.colorField = configDefaults.colorField
         internalConfig.value.sizeField = configDefaults.sizeField
         internalConfig.value.groupField = configDefaults.groupField

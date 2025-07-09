@@ -6,10 +6,11 @@ import DashboardSharePopup from './DashboardSharePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
 import { type CompletionItem } from '../stores/resolver'
 import { type DashboardImport } from '../dashboards/base'
+import { type Dashboard } from '../dashboards/base'
 
 const props = defineProps({
   dashboard: {
-    type: Object,
+    type: Object as () => Dashboard,
     required: true,
   },
   editMode: Boolean,

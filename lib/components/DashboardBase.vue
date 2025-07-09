@@ -403,6 +403,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     parameters: item.parameters || {},
     onRefresh: handleRefresh,
     rootContent: rootContent.value,
+    results: item.results || null,
   }
 }
 
@@ -429,6 +430,9 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
 
   if (data.width && data.height) {
     dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
+  }
+  if (data.results) {
+    dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
   }
 }
 
