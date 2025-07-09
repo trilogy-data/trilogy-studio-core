@@ -8,6 +8,7 @@ import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
 import { completionToModelInput } from '../llm/utils'
 import type { EditorStoreType } from './editorStore'
+import type { Results } from '../editors/results'
 
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
@@ -220,6 +221,18 @@ export const useDashboardStore = defineStore('dashboards', {
     updateItemContent(dashboardId: string, itemId: string, content: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemContent(itemId, content)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemResults(
+      dashboardId: string,
+      itemId: string,
+      results: Results, // Assuming results can be of any type, adjust as needed
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemResults(itemId, results)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

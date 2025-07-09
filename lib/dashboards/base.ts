@@ -1,6 +1,6 @@
 // Define types for dashboard layouts
 import type { ChartConfig } from '../editors/results'
-
+import type { Results } from '../editors/results'
 import { objectToSqlExpression } from './conditions'
 import type { ContentInput } from '../stores/resolver'
 export interface DimensionClick {
@@ -44,6 +44,7 @@ export interface GridItemData {
   chartFilters?: FilterInput[]
   filters?: Filter[]
   parameters?: Record<string, unknown>
+  results?: Results | null
 }
 
 export interface GridItemDataResponse {
@@ -61,6 +62,7 @@ export interface GridItemDataResponse {
   filters?: Filter[]
   parameters?: Record<string, unknown>
   onRefresh?: (itemId: string) => void
+  results?: Results | null
 }
 
 export interface Dashboard {
@@ -205,6 +207,16 @@ export class DashboardModel implements Dashboard {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
         content,
+      }
+      this.updatedAt = new Date()
+    }
+  }
+
+  updateItemResults(itemId: string, results: Results | null): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        results,
       }
       this.updatedAt = new Date()
     }
@@ -390,13 +402,22 @@ export class DashboardModel implements Dashboard {
 
   // Get a serializable object for storage
   serialize(): Dashboard {
+    // Create a copy of gridItems without the results property
+    const serializedGridItems: Record<string, GridItemData> = {}
+
+    for (const [itemId, gridItem] of Object.entries(this.gridItems)) {
+      // Destructure to separate results from other properties
+      const { results, ...itemWithoutResults } = gridItem
+      serializedGridItems[itemId] = itemWithoutResults
+    }
+
     return {
       id: this.id,
       name: this.name,
       storage: this.storage,
       connection: this.connection,
       layout: this.layout,
-      gridItems: this.gridItems,
+      gridItems: serializedGridItems,
       nextId: this.nextId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

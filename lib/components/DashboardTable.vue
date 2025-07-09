@@ -83,7 +83,6 @@ export default defineComponent({
     },
   },
   setup(props, { emit }) {
-    const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
@@ -95,7 +94,9 @@ export default defineComponent({
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
     })
-
+    const results = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).results || null
+    })
     const chartHeight = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
     })
@@ -202,7 +203,9 @@ export default defineComponent({
 
         // Update component state based on result
         if (result.success && result.results) {
-          results.value = result.results
+          props.setItemData(props.itemId, props.dashboardId, {
+            results: result.results as Results,
+          })
           error.value = null
         } else if (result.error) {
           error.value = result.error

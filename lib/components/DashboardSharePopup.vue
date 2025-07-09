@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { type Dashboard } from '../dashboards/base'
 const props = defineProps<{
-  dashboard: object | null
+  dashboard: Dashboard | null
   isOpen: boolean
 }>()
 const emit = defineEmits<{
@@ -11,7 +12,7 @@ const emit = defineEmits<{
 const jsonString = ref<string>('')
 
 // Function to filter out unwanted properties
-const filterDashboard = (dashboard: any): any => {
+const filterDashboard = (dashboard: Dashboard): any => {
   if (!dashboard) return null
 
   // Create a deep copy to avoid modifying the original
@@ -30,6 +31,18 @@ const filterDashboard = (dashboard: any): any => {
       delete itemCopy.moved
       return itemCopy
     })
+  }
+
+  // Iterate over gridItems: Record<string, GridItemData> and remove results objects
+  if (dashboardCopy.gridItems && typeof dashboardCopy.gridItems === 'object') {
+    for (const [itemId, gridItem] of Object.entries(dashboardCopy.gridItems)) {
+      const itemCopy = { ...(gridItem as any) }
+      delete itemCopy.results
+      if (itemCopy.chartConfig) {
+        delete itemCopy.chartConfig.showDebug
+      }
+      dashboardCopy.gridItems[itemId] = itemCopy
+    }
   }
 
   return dashboardCopy

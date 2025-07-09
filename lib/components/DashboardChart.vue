@@ -1,8 +1,12 @@
 <template>
-  <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <VegaLiteChart
-      v-else-if="results"
+      v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
       :columns="results.headers"
       :data="results.data"
@@ -46,7 +50,7 @@ import {
   type PropType,
 } from 'vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import type { Results, ChartConfig } from '../editors/results'
+import type { ChartConfig } from '../editors/results'
 import QueryExecutionService from '../stores/queryExecutionService'
 import ErrorMessage from './ErrorMessage.vue'
 import VegaLiteChart from './VegaLiteChart.vue'
@@ -86,17 +90,56 @@ export default defineComponent({
     },
   },
   setup(props, { emit }) {
-    const results = ref<Results | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
+    const ready = ref(false)
+    const chartContainer = ref<HTMLElement | null>(null)
+
+    const getPositionBasedDelay = () => {
+      if (!chartContainer.value) return 0
+
+      const rect = chartContainer.value.getBoundingClientRect()
+      const scrollY = window.scrollY || document.documentElement.scrollTop
+
+      // Get absolute position from top of document
+      const absoluteTop = rect.top + scrollY
+
+      // Very minimal delays (10ms per 200px)
+      const delay = Math.floor(absoluteTop / 200) * 10
+
+      // Cap at reasonable maximum
+      let finalDelay = Math.min(delay, 100)
+      return finalDelay
+    }
+
     // Set up event listeners when the component is mounted
     onMounted(() => {
       window.addEventListener('dashboard-refresh', handleDashboardRefresh)
       window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+      // Apply position-based delay after DOM is ready
+      setTimeout(() => {
+        const delay = getPositionBasedDelay()
+
+        if (!results.value) {
+          ready.value = true
+          executeQuery()
+        } else {
+          // Cached results with delay
+          loading.value = true
+          setTimeout(() => {
+            loading.value = false
+            ready.value = true
+          }, delay)
+        }
+      }, 0) // Use nextTick equivalent
     })
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
+    })
+
+    const results = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).results || null
     })
 
     const chartTitle = computed(() => {
@@ -222,7 +265,9 @@ export default defineComponent({
         }
         // Update component state based on result
         if (result.success && result.results) {
-          results.value = result.results
+          props.setItemData(props.itemId, props.dashboardId, {
+            results: result.results,
+          })
           error.value = null
         } else if (result.error) {
           error.value = result.error
@@ -244,8 +289,9 @@ export default defineComponent({
     const handleLocalRefresh = () => {
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
+      } else {
+        executeQuery()
       }
-      executeQuery()
     }
 
     // Global dashboard refresh handler
@@ -281,14 +327,6 @@ export default defineComponent({
       window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
     })
 
-    // Initial query execution
-    executeQuery()
-
-    // Watch for changes that should trigger a refresh
-    // watch([query, filters, chartImports], () => {
-    //   executeQuery()
-    // })
-
     watch([query, chartImports], () => {
       executeQuery()
     })
@@ -302,7 +340,9 @@ export default defineComponent({
     })
 
     return {
+      chartContainer,
       results,
+      ready,
       loading,
       error,
       query,
