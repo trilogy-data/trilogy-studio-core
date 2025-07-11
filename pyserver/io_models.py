@@ -3,7 +3,7 @@ from typing import List, Optional
 from trilogy.authoring import (
     DataType,
     Purpose,
-    ListType,
+    ArrayType,
     StructType,
 )  # , NumericType, TraitDataType
 from trilogy.core.models.core import NumericType, TraitDataType, MapType
@@ -29,7 +29,7 @@ class UIConcept(BaseModel):
     address: str
     name: str
     namespace: str
-    datatype: DataType | ListType | MapType | StructType | NumericType | TraitDataType
+    datatype: DataType | ArrayType | MapType | StructType | NumericType | TraitDataType
     purpose: Purpose
     description: Optional[str] = None
     lineage: List[LineageItem] = Field(default_factory=list)
@@ -116,7 +116,7 @@ class ValidateQueryInSchema(BaseModel):
 
 class QueryOutColumn(BaseModel):
     name: str
-    datatype: DataType | TraitDataType | ListType | StructType | MapType | NumericType
+    datatype: DataType | TraitDataType | ArrayType | StructType | MapType | NumericType
     purpose: Purpose
     traits: List[str] | None = None
     description: str | None = None

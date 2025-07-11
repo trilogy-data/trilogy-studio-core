@@ -10,7 +10,7 @@ from trilogy.authoring import (
     Concept,
     Environment,
     StructType,
-    ListType,
+    ArrayType,
     MapType,
 )
 from io_models import (
@@ -59,7 +59,7 @@ def truncate_to_last_semicolon(text: str) -> str:
 
 def datatype_to_display(
     datatype: (
-        DataType | TraitDataType | NumericType | ListType | MapType | StructType | Any
+        DataType | TraitDataType | NumericType | ArrayType | MapType | StructType | Any
     ),
 ) -> str:
     if isinstance(datatype, TraitDataType):
@@ -69,7 +69,7 @@ def datatype_to_display(
         return datatype.value
     elif isinstance(datatype, NumericType):
         return f"{datatype.value}({datatype.precision},{datatype.scale})"
-    elif isinstance(datatype, ListType):
+    elif isinstance(datatype, ArrayType):
         return f"Array<{datatype_to_display(datatype.type)}>"
     elif isinstance(datatype, MapType):
         return f"Map<{datatype_to_display(datatype.key_type)}, {datatype_to_display(datatype.value_type)}>"
