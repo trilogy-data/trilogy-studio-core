@@ -73,6 +73,11 @@ export abstract class LLMProvider {
     return this.apiKey
   }
 
+  delete(): void {
+    this.deleted = true
+    this.changed = true
+  }
+
   abstract reset(): void
 
   // Abstract method to be implemented by specific providers

@@ -318,8 +318,6 @@ export default {
           params: { label, type },
         })
 
-        console.log('Fetching credential:', label)
-
         // Only show the prompt if it's not already visible
         if (!showCredentialPrompt.value) {
           showCredentialPrompt.value = true

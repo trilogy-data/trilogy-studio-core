@@ -154,6 +154,11 @@ export default class Editor implements EditorInterface {
     this.chatInteraction = chatInteraction
   }
 
+  delete() {
+    this.deleted = true
+    this.changed = true
+  }
+
   toJSON(preserveResults: boolean = false): object {
     return {
       // default for migration

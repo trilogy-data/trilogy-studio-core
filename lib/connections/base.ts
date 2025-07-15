@@ -163,6 +163,11 @@ export default abstract class BaseConnection {
   getSecret(): string | null {
     return null
   }
+
+  delete() {
+    this.deleted = true
+    this.changed = true
+  }
   // @ts-ignore
   setSecret(secret: string): void {
     // Do nothing

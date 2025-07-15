@@ -187,6 +187,7 @@ export default {
       sorted.forEach(([name, provider]) => {
         const connection = provider as any
         const modelCount = connection.availableModels?.length || 0
+        if (connection.deleted) return // Skip deleted connections
 
         // Add the connection itself
         list.push({
@@ -302,15 +303,12 @@ export default {
       // Ask for confirmation before deleting
       if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
         // Remove the connection from the store
-        delete this.llmConnectionStore.connections[connectionName]
+        this.llmConnectionStore.connections[connectionName].delete()
 
         // If this was the active connection, reset active connection
         if (this.llmConnectionStore.activeConnection === id) {
           this.llmConnectionStore.activeConnection = ''
         }
-
-        // Save the updated connections
-        this.saveConnections()
       }
     },
 

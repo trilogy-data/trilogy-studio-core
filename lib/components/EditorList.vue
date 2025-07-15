@@ -179,11 +179,7 @@ export default {
     },
     confirmDelete() {
       if (this.editorToDelete) {
-        this.editorStore.editors[this.editorToDelete].deleted = true
-        // sync the deletion
-        this.saveEditors()
-        // and purge
-        this.editorStore.removeEditor(this.editorToDelete)
+        this.editorStore.editors[this.editorToDelete].delete()
       }
       this.showDeleteConfirmationState = false
       this.editorToDelete = null

@@ -425,7 +425,7 @@ export default defineComponent({
       this.fetchParseResults(model)
     },
     remove(model: string) {
-      this.modelStore.removeModelConfig(model)
+      this.modelConfigs[model].delete()
     },
   },
 })

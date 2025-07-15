@@ -143,6 +143,11 @@ export class DashboardModel implements Dashboard {
     this.changed = false
   }
 
+  delete() {
+    this.deleted = true
+    this.changed = true
+  }
+
   // Add a new item to the dashboard
   addItem(
     type: CellType,
@@ -387,10 +392,7 @@ export class DashboardModel implements Dashboard {
   updateItemDimensions(itemId: string, width: number, height: number): void {
     if (this.gridItems[itemId]) {
       // check if values have changed
-      if (
-        this.gridItems[itemId].width === width &&
-        this.gridItems[itemId].height === height
-      ) {
+      if (this.gridItems[itemId].width === width && this.gridItems[itemId].height === height) {
         return // No change needed
       }
       // Update width
@@ -400,7 +402,6 @@ export class DashboardModel implements Dashboard {
         height,
       }
       this.updatedAt = new Date()
-      this.changed = true
     }
   }
 

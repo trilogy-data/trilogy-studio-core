@@ -400,10 +400,10 @@ export default {
       if (this.connectionToDelete) {
         for (const editor of Object.values(this.editorStore.editors)) {
           if (editor.connection === this.connectionToDelete) {
-            this.editorStore.removeEditor(editor.name)
+            editor.delete()
           }
         }
-        this.connectionStore.removeConnection(this.connectionToDelete)
+        this.connectionStore.deleteConnection(this.connectionToDelete)
       }
 
       this.showDeleteConfirmationState = false

@@ -36,6 +36,9 @@ export function buildConnectionTree(
     }
   })
   sorted.forEach((connection) => {
+    if (connection.deleted) {
+      return // Skip deleted connections
+    }
     let databases = connection.databases ? connection.databases : []
     list.push({
       id: connection.name,

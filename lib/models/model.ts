@@ -325,6 +325,7 @@ export class ModelConfig {
   parseError: string | null = null
   changed: boolean = true
   description: string | null = null
+  deleted: boolean = false
 
   constructor({
     name,
@@ -343,6 +344,11 @@ export class ModelConfig {
     // this.parseResults = parseResults
     this.changed = true
     this.description = description || null
+  }
+
+  delete() {
+    this.deleted = true
+    this.changed = true
   }
 
   setParseResults(parseResults: ModelParseResults) {

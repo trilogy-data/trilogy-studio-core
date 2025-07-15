@@ -176,6 +176,9 @@ export default class LocalStorage extends AbstractStorage {
         current[model.name] = model
         model.changed = false
       }
+      if (model.deleted) {
+        delete current[model.name]
+      }
     })
     localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }

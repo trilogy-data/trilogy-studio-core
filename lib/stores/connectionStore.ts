@@ -115,9 +115,9 @@ const useConnectionStore = defineStore('connections', {
 
       return operationPromise
     },
-    removeConnection(name: string) {
+    deleteConnection(name: string) {
       if (this.connections[name]) {
-        this.connections[name].deleted = true
+        this.connections[name].delete()
       }
     },
     connectionStateToStatus(connection: Connection | null) {
