@@ -7,6 +7,9 @@ const useModelConfigStore = defineStore('models', {
   }),
   getters: {
     modelList: (state) => Object.keys(state.models).map((key) => state.models[key]),
+    unsavedModels: (state) => {
+      return Object.values(state.models).filter((model) => model.changed).length
+    },
   },
   actions: {
     newModelConfig(name: string, force: boolean = false) {

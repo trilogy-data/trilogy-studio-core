@@ -188,7 +188,11 @@ export const determineDefaultConfig = (
     | 'headline'
     | 'donut',
 ): Partial<ChartConfig> => {
-  const defaults: Partial<ChartConfig> = {}
+  const defaults: Partial<ChartConfig> = {
+    showDebug: false,
+    showTitle: true,
+    hideLegend: false,
+  }
 
   const numericColumns = filteredColumns('numeric', columns)
   const categoricalColumns = filteredColumns('categorical', columns)

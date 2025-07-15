@@ -106,6 +106,8 @@ export default abstract class BaseConnection {
   maxPollingIntervalMs: number = 60000 // Cap at 1 minute per poll
   maxTotalWaitTimeMs: number = 3600000 // Maximum 1 hour total wait time
   backoffFactor: number = 1.5 // Multiplier for exponential growth
+  changed: boolean = false
+  deleted: boolean = false
 
   constructor(
     name: string,
@@ -137,6 +139,7 @@ export default abstract class BaseConnection {
         })
     }
     this.secureFields = []
+    this.changed = false
   }
 
   abstract getDatabases(): Promise<Database[]>
@@ -145,6 +148,18 @@ export default abstract class BaseConnection {
   abstract getColumns(database: string, schema: string, table: string): Promise<Column[]>
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
+  setAttribute<K extends keyof this>(key: K, value: this[K]): void
+  setAttribute(key: string, value: any): void
+  setAttribute(key: string, value: any): void {
+    if (!(key in this)) {
+      throw new Error(`Attribute "${key}" does not exist on BaseConnection.`)
+    }
+    if ((this as any)[key] === value) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    ;(this as any)[key] = value
+  }
   getSecret(): string | null {
     return null
   }

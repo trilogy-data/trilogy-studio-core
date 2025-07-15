@@ -117,8 +117,19 @@ export default class Editor implements EditorInterface {
   }
 
   setContent(contents: string) {
+    if (this.contents === contents) {
+      return // No change, do nothing
+    }
     this.contents = contents
     this.changed = true
+  }
+
+  setName(name: string) {
+    if (this.name === name) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    this.name = name
   }
 
   addTag(tag: EditorTag) {

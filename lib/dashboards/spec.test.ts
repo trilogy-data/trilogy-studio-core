@@ -585,13 +585,14 @@ describe('generateVegaSpec', () => {
         chartType: 'usa-map',
         geoField: 'state',
         colorField: 'sales',
+        showTitle: true,
       }
 
       const spec = generateVegaSpec(testData, config, testColumns, null, false, 'Sales by State')
 
       // Should call the mocked createMapSpec function
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.title).toBe('Sales by State')
+      expect(spec.title.text).toBe('Sales by State')
       expect(spec.mark).toBe('geoshape') // From our mock
     })
   })

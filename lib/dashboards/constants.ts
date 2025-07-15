@@ -120,6 +120,15 @@ export const Controls: ChartControl[] = [
     filterGroup: 'appearance',
   },
   {
+    id: 'show-title',
+    label: 'Show Title',
+    field: 'showTitle',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
+    filterGroup: 'appearance',
+  },
+  {
     id: 'color-by',
     label: 'Color By (optional)',
     field: 'colorField',

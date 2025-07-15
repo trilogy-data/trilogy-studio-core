@@ -176,6 +176,7 @@ export default {
     const current = getDefaultValueFromHash('dashboard') || ''
 
     onMounted(() => {
+      let anyOpen = false
       Object.values(dashboardStore.dashboards).forEach((item) => {
         let storageKey = `s-${item.storage}`
         let connectionKey = `c-${item.storage}-${item.connection}`
@@ -199,6 +200,10 @@ export default {
           }
         }
       })
+      if (!anyOpen && Object.keys(dashboardStore.dashboards).length > 0) {
+        const firstDashboard = Object.values(dashboardStore.dashboards)[0]
+        collapsed.value[`s-${firstDashboard.storage}`] = false
+      }
     })
 
     const contentList = computed(() => {

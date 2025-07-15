@@ -306,6 +306,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
   },
 
   getters: {
+    connectionList: (state) => Object.keys(state.connections).map((key) => state.connections[key]),
+    unsavedConnections: (state) => {
+      return Object.values(state.connections).filter((connection) => connection.changed).length
+    },
     getConnection: (state) => {
       return (name: string) => state.connections[name] || null
     },

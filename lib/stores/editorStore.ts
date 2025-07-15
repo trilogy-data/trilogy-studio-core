@@ -11,6 +11,9 @@ const useEditorStore = defineStore('editors', {
   }),
   getters: {
     editorList: (state) => Object.keys(state.editors).map((key) => state.editors[key]),
+    unsavedEditors: (state) => {
+      return Object.values(state.editors).filter((editor) => editor.changed).length
+    },
   },
   actions: {
     newEditor(
@@ -53,11 +56,11 @@ const useEditorStore = defineStore('editors', {
       return base.filter((editor) => tags.every((tag) => editor.tags.includes(tag)))
     },
     updateEditorName(id: string, newName: string) {
-      this.editors[id].name = newName
+      this.editors[id].setName(newName)
     },
     removeEditor(id: string) {
       if (this.editors[id]) {
-        delete this.editors[id]
+        this.editors[id].deleted = true
       } else {
         return false
       }

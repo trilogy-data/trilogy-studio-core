@@ -19,6 +19,7 @@ vi.mock('../connections', () => ({
 
 class MockLLMProvider extends LLMProvider {
   type: string = 'openai'
+  deleted: boolean = false
   // @ts-ignore
   async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {
     return {
@@ -163,14 +164,14 @@ describe('EditorLocalStorage', () => {
     expect(await localStorage.hasEditor('editor2')).toBe(false)
   })
 
-  it('should save and load connections', () => {
+  it('should save and load connections', async () => {
     const connections = {
       conn1: { type: 'bigquery-oauth', name: 'conn1', storage: 'local' },
       conn2: { type: 'duckdb', name: 'conn2', storage: 'local' },
     }
 
     // @ts-ignore
-    localStorage.saveConnections(Object.values(connections))
+    await localStorage.saveConnections(Object.values(connections))
     localStorage.loadConnections().then((loadedConnections) => {
       expect(Object.keys(loadedConnections)).toHaveLength(2)
       expect(loadedConnections['conn1'].name).toBe('conn1')
@@ -178,13 +179,13 @@ describe('EditorLocalStorage', () => {
     })
   })
 
-  it('should delete a connection by name', () => {
+  it('should delete a connection by name', async () => {
     const connections = {
       conn1: { type: 'bigquery-oauth', name: 'conn1' },
       conn2: { type: 'duckdb', name: 'conn2' },
     }
     // @ts-ignore
-    localStorage.saveConnections(Object.values(connections))
+    await localStorage.saveConnections(Object.values(connections))
     localStorage.deleteConnection('conn1').then(() => {
       localStorage.loadConnections().then((loadedConnections) => {
         expect(Object.keys(loadedConnections)).toHaveLength(1)
@@ -242,7 +243,7 @@ describe('EditorLocalStorage', () => {
       conn2: new MockLLMProvider('conn2', 'mock-api-key', 'claude-2'),
     }
 
-    localStorage.saveLLMConnections(Object.values(connections))
+    await localStorage.saveLLMConnections(Object.values(connections))
     localStorage.loadLLMConnections().then((loadedConnections) => {
       expect(Object.keys(loadedConnections)).toHaveLength(2)
       expect(loadedConnections['conn1'].name).toBe('conn1')
@@ -252,30 +253,27 @@ describe('EditorLocalStorage', () => {
     })
   })
 
-  it('should delete an LLM connection by name', () => {
+  it('should delete an LLM connection by name', async () => {
     const connections = {
       conn1: new MockLLMProvider('conn1', 'mock-api-key', 'gpt-4'),
       conn2: new MockLLMProvider('conn2', 'mock-api-key', 'claude-2'),
     }
 
-    localStorage.saveLLMConnections(Object.values(connections))
-    localStorage.deleteLLMConnection('conn1').then(() => {
-      localStorage.loadLLMConnections().then((loadedConnections) => {
-        expect(Object.keys(loadedConnections)).toHaveLength(1)
-        // expect(loadedConnections['conn2'].type).toBe('Anthropic');
-        expect(loadedConnections['conn2'].model).toBe('claude-2')
-      })
-    })
+    await localStorage.saveLLMConnections(Object.values(connections))
+    await localStorage.deleteLLMConnection('conn1')
+    const loadedConnections = await localStorage.loadLLMConnections()
+    expect(Object.keys(loadedConnections)).toHaveLength(1)
+    // expect(loadedConnections['conn2'].type).toBe('Anthropic');
+    expect(loadedConnections['conn2'].model).toBe('claude-2')
   })
 
-  it('should clear all LLM connections', () => {
+  it('should clear all LLM connections', async () => {
     const llmConnections = [new MockLLMProvider('OpenAI', 'mock-api-key', 'gpt-4')]
 
-    localStorage.saveLLMConnections(llmConnections)
-    localStorage.clearLLMConnections()
+    await localStorage.saveLLMConnections(llmConnections)
+    await localStorage.clearLLMConnections()
 
-    localStorage.loadLLMConnections().then((loadedConnections) => {
-      expect(Object.keys(loadedConnections)).toHaveLength(0)
-    })
+    const loadedConnections = await localStorage.loadLLMConnections()
+    expect(Object.keys(loadedConnections)).toHaveLength(0)
   })
 })

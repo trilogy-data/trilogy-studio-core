@@ -98,10 +98,10 @@
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
               <input
-                v-if="control.field === 'hideLegend'"
+                v-if="['hideLegend', 'showTitle'].includes(control.field)"
                 type="checkbox"
                 :id="control.id"
-                :checked="internalConfig[control.field]"
+                :checked="internalConfig[control.field] as boolean"
                 @change="
                   updateConfig(
                     control.field,
@@ -353,7 +353,10 @@ export default defineComponent({
       groupField: '',
       trellisField: '',
       geoField: '',
+      annotationField: '',
+      hideLegend: false,
       showDebug: false,
+      showTitle: false,
     })
 
     // Determine reasonable defaults based on column types
@@ -620,6 +623,8 @@ export default defineComponent({
         internalConfig.value.trellisField = configDefaults.trellisField
         internalConfig.value.geoField = configDefaults.geoField
         internalConfig.value.showDebug = configDefaults.showDebug
+        internalConfig.value.hideLegend = configDefaults.hideLegend
+        internalConfig.value.showTitle = configDefaults.showTitle
       }
 
       // Notify parent component if the callback is provided

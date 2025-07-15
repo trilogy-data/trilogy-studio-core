@@ -46,7 +46,7 @@ import {
 } from '../data/credentialHelpers'
 import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
-import { provide, computed, ref, defineAsyncComponent } from 'vue'
+import { provide, computed, ref, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import type { PropType } from 'vue'
 import { Storage } from '../data'
 
@@ -388,6 +388,7 @@ export default {
             if (connection.getSecret() == 'saved') {
               let cred = await getCredential(connection.getSecretName(), 'connection')
               connection.setSecret(cred ? cred.value : '')
+              connection.changed = false // this secret change shouldn't mark the connection as changed
             }
             props.connectionStore.addConnection(connection)
           }
@@ -409,6 +410,7 @@ export default {
             if (llmConnection.getApiKey() == 'saved') {
               let apiKey = await getCredential(llmConnection.getCredentialName(), 'llm')
               llmConnection.setApiKey(apiKey ? apiKey.value : '')
+              llmConnection.changed = false // this apiKey change shouldn't mark the connection as changed
             }
             // don't check for defaulting the connection when restoring API keys
             props.llmConnectionStore.addConnection(llmConnection, false)
@@ -547,12 +549,66 @@ export default {
       ])
     }
 
+    const unSaved = computed(() => {
+      return (
+        Number(props.editorStore.unsavedEditors || 0) +
+        Number(props.connectionStore.unsavedConnections || 0) +
+        Number(props.modelStore.unsavedModels || 0) +
+        Number(props.llmConnectionStore.unsavedConnections || 0) +
+        Number(props.dashboardStore.unsavedDashboards || 0)
+      )
+    })
+
+    const autoSaveInterval = ref(null as null | ReturnType<typeof setInterval>)
+
+    const startAutoSave = () => {
+      // Clear any existing interval
+      if (autoSaveInterval.value) {
+        clearInterval(autoSaveInterval.value)
+      }
+
+      // Set up interval to check and save every 5 minutes (300,000 ms)
+      autoSaveInterval.value = setInterval(
+        async () => {
+          // Only save if there are unsaved changes
+          if (unSaved.value > 0) {
+            console.log(`Auto-saving ${unSaved.value} unsaved changes...`)
+            try {
+              await saveAll()
+              console.log('Auto-save completed successfully')
+            } catch (error) {
+              console.error('Auto-save failed:', error)
+            }
+          }
+        },
+        1 * 60 * 1000,
+      ) // 5 minutes in milliseconds
+    }
+
+    const stopAutoSave = () => {
+      if (autoSaveInterval.value) {
+        clearInterval(autoSaveInterval.value)
+        autoSaveInterval.value = null
+      }
+    }
+
+    // Start auto-save when component is ready
+    onMounted(() => {
+      startAutoSave()
+    })
+
+    // Clean up interval when component is destroyed
+    onBeforeUnmount(() => {
+      stopAutoSave()
+    })
+
     provide('saveEditors', saveEditors)
     provide('saveConnections', saveConnections)
     provide('saveModels', saveModels)
     provide('saveLLMConnections', saveLLMConnections)
     provide('saveDashboards', saveDashboards)
     provide('saveAll', saveAll)
+    provide('unSaved', unSaved)
     const isMobile = computed(() => loaded && windowWidth.value <= 768)
     const handleResize = () => {
       windowWidth.value = window.innerWidth
@@ -562,6 +618,7 @@ export default {
     return {
       loaded,
       isMobile,
+      unSaved,
       handleResize,
       // For CredentialManager component props
       showCredentialPrompt,

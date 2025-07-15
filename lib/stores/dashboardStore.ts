@@ -29,6 +29,10 @@ export const useDashboardStore = defineStore('dashboards', {
 
     getConnectionDashboards: (state) => (connection: string) =>
       Object.values(state.dashboards).filter((dashboard) => dashboard.connection === connection),
+
+    unsavedDashboards: (state) => {
+      return Object.values(state.dashboards).filter((dashboard) => dashboard.changed).length
+    },
   },
 
   actions: {

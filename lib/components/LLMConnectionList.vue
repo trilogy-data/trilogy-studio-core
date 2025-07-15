@@ -10,10 +10,6 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
       </div>
       <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
@@ -82,14 +78,8 @@ export default {
     const updateModel = (connection: LLMProvider, model: string) => {
       // This would need to be implemented based on your provider structure
       if (model) {
-        // Replace the old connection
-        console.log(model)
-        llmConnectionStore.connections[connection.name].model = model
-        console.log(
-          `Updated model for ${connection.name} to ${model}`,
-          llmConnectionStore.connections[connection.name],
-        )
-        console.log(llmConnectionStore.connections[connection.name])
+        llmConnectionStore.connections[connection.name].setModel(model)
+
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
         // save our new model

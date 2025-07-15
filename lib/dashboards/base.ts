@@ -107,6 +107,8 @@ export class DashboardModel implements Dashboard {
   version: number
   state: 'editing' | 'published' | 'locked' = 'editing'
   description: string = ''
+  changed: boolean = false
+  deleted: boolean = false
 
   constructor({
     id,
@@ -138,6 +140,7 @@ export class DashboardModel implements Dashboard {
     this.version = version
     this.state = state
     this.description = description
+    this.changed = false
   }
 
   // Add a new item to the dashboard
@@ -198,6 +201,7 @@ export class DashboardModel implements Dashboard {
 
     this.nextId++
     this.updatedAt = new Date()
+    this.changed = true
     return itemId
   }
 
@@ -209,6 +213,7 @@ export class DashboardModel implements Dashboard {
         content,
       }
       this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -219,6 +224,7 @@ export class DashboardModel implements Dashboard {
         results,
       }
       this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -229,6 +235,7 @@ export class DashboardModel implements Dashboard {
         type,
       }
       this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -245,6 +252,8 @@ export class DashboardModel implements Dashboard {
         })
         // gridItem.parameters = build.parameters
       }
+      this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -288,6 +297,7 @@ export class DashboardModel implements Dashboard {
       gridItem.parameters = {}
     }
     this.updatedAt = new Date()
+    this.changed = true
   }
 
   updateItemCrossFilters(
@@ -339,6 +349,8 @@ export class DashboardModel implements Dashboard {
         this.updateItemFilters(id)
       }
     }
+    this.updatedAt = new Date()
+    this.changed = true
   }
 
   // Update an item's name
@@ -349,6 +361,7 @@ export class DashboardModel implements Dashboard {
         name,
       }
       this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -359,6 +372,7 @@ export class DashboardModel implements Dashboard {
         chartConfig: config,
       }
       this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -366,6 +380,7 @@ export class DashboardModel implements Dashboard {
   updateLayout(newLayout: LayoutItem[]): void {
     this.layout = newLayout
     this.updatedAt = new Date()
+    this.changed = true
   }
 
   // Update item dimensions
@@ -376,6 +391,8 @@ export class DashboardModel implements Dashboard {
         width,
         height,
       }
+      this.updatedAt = new Date()
+      this.changed = true
     }
   }
 
@@ -390,6 +407,7 @@ export class DashboardModel implements Dashboard {
     }
 
     this.updatedAt = new Date()
+    this.changed = true
   }
 
   // Clear all items
@@ -398,6 +416,7 @@ export class DashboardModel implements Dashboard {
     this.gridItems = {}
     this.nextId = 0
     this.updatedAt = new Date()
+    this.changed = true
   }
 
   // Get a serializable object for storage
