@@ -224,7 +224,6 @@ export class DashboardModel implements Dashboard {
         results,
       }
       this.updatedAt = new Date()
-      this.changed = true
     }
   }
 
@@ -380,12 +379,21 @@ export class DashboardModel implements Dashboard {
   updateLayout(newLayout: LayoutItem[]): void {
     this.layout = newLayout
     this.updatedAt = new Date()
+
     this.changed = true
   }
 
   // Update item dimensions
   updateItemDimensions(itemId: string, width: number, height: number): void {
     if (this.gridItems[itemId]) {
+      // check if values have changed
+      if (
+        this.gridItems[itemId].width === width &&
+        this.gridItems[itemId].height === height
+      ) {
+        return // No change needed
+      }
+      // Update width
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
         width,
