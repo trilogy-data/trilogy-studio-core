@@ -96,7 +96,17 @@ export default class LocalStorage extends AbstractStorage {
   async saveConnections(
     connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>,
   ): Promise<void> {
-    localStorage.setItem(this.connectionStorageKey, JSON.stringify(connections))
+    const current = await this.loadConnections()
+    connections.forEach((connection) => {
+      if (connection.changed || !(connection.name in current)) {
+        current[connection.name] = connection
+        connection.changed = false
+      }
+      if (connection.deleted) {
+        delete current[connection.name]
+      }
+    })
+    localStorage.setItem(this.connectionStorageKey, JSON.stringify(Object.values(current)))
   }
 
   async loadConnections(): Promise<
@@ -142,7 +152,7 @@ export default class LocalStorage extends AbstractStorage {
   async deleteConnection(name: string): Promise<void> {
     const connections = await this.loadConnections()
     if (connections[name]) {
-      delete connections[name]
+      connections[name].deleted = true
       this.saveConnections(Object.values(connections))
     }
   }
@@ -164,6 +174,10 @@ export default class LocalStorage extends AbstractStorage {
     modelConfig.forEach((model) => {
       if (model.changed || !(model.name in current)) {
         current[model.name] = model
+        model.changed = false
+      }
+      if (model.deleted) {
+        delete current[model.name]
       }
     })
     localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
@@ -186,9 +200,19 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async saveLLMConnections(connections: Array<LLMProvider>): Promise<void> {
+    const current: Record<string, LLMProvider> = await this.loadLLMConnections()
+    connections.forEach((connection) => {
+      if (connection.changed || !(connection.name in current)) {
+        current[connection.name] = connection
+        connection.changed = false
+      }
+      if (connection.deleted) {
+        delete current[connection.name]
+      }
+    })
     localStorage.setItem(
       this.llmConnectionStorageKey,
-      JSON.stringify(connections.map((connection) => connection.toJSON())),
+      JSON.stringify(Object.values(current).map((connection) => connection.toJSON())),
     )
   }
 
@@ -228,8 +252,9 @@ export default class LocalStorage extends AbstractStorage {
   async deleteLLMConnection(name: string): Promise<void> {
     const connections = await this.loadLLMConnections()
     if (connections[name]) {
-      delete connections[name]
-      this.saveLLMConnections(Object.values(connections))
+      connections[name].deleted = true
+
+      await this.saveLLMConnections(Object.values(connections))
     }
   }
 
@@ -247,20 +272,16 @@ export default class LocalStorage extends AbstractStorage {
   async saveDashboards(dashboardsList: DashboardModel[]): Promise<void> {
     const dashboards = await this.loadDashboards()
 
-    // Update or add dashboards that have changed
     dashboardsList.forEach((dashboard) => {
-      // Assuming Dashboard has a 'changed' property like editors
-      // If not, we can just always update
-      if ((dashboard as any).changed) {
+      if (dashboard.changed) {
         dashboards[dashboard.id] = dashboard
-        ;(dashboard as any).changed = false
+        dashboard.changed = false
       } else {
         // If no changed flag, always update
         dashboards[dashboard.id] = dashboard
       }
 
-      // Check for deleted flag if implemented
-      if ((dashboard as any).deleted) {
+      if (dashboard.deleted) {
         delete dashboards[dashboard.id]
       }
     })
@@ -269,11 +290,7 @@ export default class LocalStorage extends AbstractStorage {
       this.dashboardStorageKey,
       JSON.stringify(
         Object.values(dashboards).map((dashboard) => {
-          // Ensure we're saving a serializable version
-          if (typeof (dashboard as any).serialize === 'function') {
-            return (dashboard as any).serialize()
-          }
-          return dashboard
+          return dashboard.serialize()
         }),
       ),
     )

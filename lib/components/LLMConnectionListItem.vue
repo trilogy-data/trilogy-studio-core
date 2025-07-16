@@ -136,15 +136,12 @@
           :is-connected="isConnected(item.connection)"
           :data-testid="`refresh-llm-connection-${item.connection.name}`"
         />
-        <!-- Delete Button for Connection -->
-        <LoadingButton
-          class="loading-button delete-button"
-          @click.stop
-          :action="() => deleteConnection(item.id)"
-          title="Delete connection"
-        >
-          <i class="mdi mdi-delete-outline"></i>
-        </LoadingButton>
+
+        <tooltip class="tacticle-button" content="Delete Connection" position="left">
+          <span class="remove-btn" @click.stop="deleteConnection(item.id)">
+            <i class="mdi mdi-trash-can tactile-button"></i>
+          </span>
+        </tooltip>
         <!-- Status Indicator -->
         <connection-status-icon v-if="item.connection" :connection="item.connection" />
       </div>
@@ -162,7 +159,7 @@ import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import LoadingButton from './LoadingButton.vue'
 import ContextMenu from './ContextMenu.vue'
 import type { LLMProvider } from '../llm/base'
-
+import Tooltip from './Tooltip.vue'
 interface ListItem {
   id: string
   name: string
@@ -199,6 +196,7 @@ export default defineComponent({
     ConnectionStatusIcon,
     LoadingButton,
     ContextMenu,
+    Tooltip,
   },
   props: {
     item: {

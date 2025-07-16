@@ -170,7 +170,7 @@ const filterCount = computed(() => {
       class="edit-button always-visible"
       :data-testid="`edit-dashboard-item-content-${item.i}`"
     >
-      Edit
+      Data
     </button>
     <button
       v-if="editMode"
@@ -324,6 +324,8 @@ const filterCount = computed(() => {
 .grid-item-content {
   height: 100%;
   width: 100%;
+  /* margin:12px; */
+  /* padding: 4px; */
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
@@ -331,10 +333,7 @@ const filterCount = computed(() => {
   position: relative;
   /* Important for positioning the overlay header */
   overflow-y: hidden;
-}
-
-.grid-item-edit-style {
-  border: 1px solid var(--border);
+  background-color: var(--dashboard-background);
 }
 
 .overlay-header {

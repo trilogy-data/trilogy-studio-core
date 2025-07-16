@@ -29,6 +29,12 @@ const useConnectionStore = defineStore('connections', {
   state: () => ({
     connections: {} as Record<string, Connection>,
   }),
+  getters: {
+    connectionList: (state) => Object.keys(state.connections).map((key) => state.connections[key]),
+    unsavedConnections: (state) => {
+      return Object.values(state.connections).filter((connection) => connection.changed).length
+    },
+  },
   actions: {
     addConnection(connection: Connection) {
       this.connections[connection.name] = connection
@@ -109,10 +115,9 @@ const useConnectionStore = defineStore('connections', {
 
       return operationPromise
     },
-    removeConnection(name: string) {
+    deleteConnection(name: string) {
       if (this.connections[name]) {
-        // this.connections[name].close()
-        delete this.connections[name]
+        this.connections[name].delete()
       }
     },
     connectionStateToStatus(connection: Connection | null) {

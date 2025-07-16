@@ -10,10 +10,6 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
       </div>
       <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
@@ -82,14 +78,8 @@ export default {
     const updateModel = (connection: LLMProvider, model: string) => {
       // This would need to be implemented based on your provider structure
       if (model) {
-        // Replace the old connection
-        console.log(model)
-        llmConnectionStore.connections[connection.name].model = model
-        console.log(
-          `Updated model for ${connection.name} to ${model}`,
-          llmConnectionStore.connections[connection.name],
-        )
-        console.log(llmConnectionStore.connections[connection.name])
+        llmConnectionStore.connections[connection.name].setModel(model)
+
         // Reset/test the connection
         llmConnectionStore.resetConnection(connection.name)
         // save our new model
@@ -197,6 +187,7 @@ export default {
       sorted.forEach(([name, provider]) => {
         const connection = provider as any
         const modelCount = connection.availableModels?.length || 0
+        if (connection.deleted) return // Skip deleted connections
 
         // Add the connection itself
         list.push({
@@ -312,15 +303,12 @@ export default {
       // Ask for confirmation before deleting
       if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
         // Remove the connection from the store
-        delete this.llmConnectionStore.connections[connectionName]
+        this.llmConnectionStore.connections[connectionName].delete()
 
         // If this was the active connection, reset active connection
         if (this.llmConnectionStore.activeConnection === id) {
           this.llmConnectionStore.activeConnection = ''
         }
-
-        // Save the updated connections
-        this.saveConnections()
       }
     },
 

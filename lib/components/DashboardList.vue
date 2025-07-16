@@ -16,9 +16,6 @@
         >
           Import
         </button>
-        <loading-button :action="saveDashboards" :keyCombination="['control', 'd']">
-          Save
-        </loading-button>
       </div>
       <dashboard-creator-inline
         :visible="creatorVisible"
@@ -81,6 +78,9 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
 
   dashboards.forEach((dashboard) => {
     const storage = dashboard.storage || 'local'
+    if (dashboard.deleted) {
+      return // Skip deleted dashboards
+    }
     if (!storageMap[storage]) {
       storageMap[storage] = []
     }
@@ -176,6 +176,7 @@ export default {
     const current = getDefaultValueFromHash('dashboard') || ''
 
     onMounted(() => {
+      let anyOpen = false
       Object.values(dashboardStore.dashboards).forEach((item) => {
         let storageKey = `s-${item.storage}`
         let connectionKey = `c-${item.storage}-${item.connection}`
@@ -199,6 +200,10 @@ export default {
           }
         }
       })
+      if (!anyOpen && Object.keys(dashboardStore.dashboards).length > 0) {
+        const firstDashboard = Object.values(dashboardStore.dashboards)[0]
+        collapsed.value[`s-${firstDashboard.storage}`] = false
+      }
     })
 
     const contentList = computed(() => {
@@ -235,13 +240,8 @@ export default {
       if (this.dashboardToDelete) {
         // Mark as deleted for sync (if that property exists)
         if (this.dashboardStore.dashboards[this.dashboardToDelete]) {
-          // @ts-ignore - Add deleted flag if needed
-          this.dashboardStore.dashboards[this.dashboardToDelete].deleted = true
+          this.dashboardStore.dashboards[this.dashboardToDelete].delete()
         }
-        // Sync the deletion
-        this.saveDashboards()
-        // And purge
-        this.dashboardStore.removeDashboard(this.dashboardToDelete)
       }
       this.showDeleteConfirmationState = false
       this.dashboardToDelete = null
@@ -269,17 +269,10 @@ export default {
 </script>
 
 <style scoped>
-.button-container {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
 .import-button {
   background-color: var(--button-bg);
   color: var(--text-color);
   border: none;
-  padding: 4px 8px;
   cursor: pointer;
 }
 

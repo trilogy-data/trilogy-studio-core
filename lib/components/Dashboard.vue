@@ -23,6 +23,7 @@ const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 // Desktop-specific reactive state
 const draggable = ref(true)
 const resizable = ref(true)
+const loaded = ref(false)
 
 // Computed properties from base with proper fallbacks
 const dashboard = computed(() => dashboardBase.value?.dashboard)
@@ -77,14 +78,23 @@ function triggerResize(): void {
   })
 }
 
-// Handle layout updates with draggable/resizable state management
-function onLayoutUpdated(newLayout: any) {
-  dashboardBase.value?.onLayoutUpdated(newLayout)
-
-  // Trigger resize on layout changes
+function layoutReadyEvent() {
+  loaded.value = true
+  // Trigger initial resize after layout is ready
   nextTick(() => {
     triggerResize()
   })
+}
+
+// Handle layout updates with draggable/resizable state management
+function onLayoutUpdated(newLayout: any) {
+  if (loaded.value) {
+    dashboardBase.value?.onLayoutUpdated(newLayout)
+    // Trigger resize on layout changes
+    nextTick(() => {
+      triggerResize()
+    })
+  }
 }
 
 // Update draggable/resizable when edit mode changes
@@ -151,6 +161,7 @@ function handleToggleEditMode() {
           :vertical-compact="true"
           :use-css-transforms="true"
           @layout-updated="onLayoutUpdated"
+          @layout-ready="layoutReadyEvent"
         >
           <grid-item
             v-for="item in layout"

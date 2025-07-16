@@ -3,6 +3,8 @@
     <div class="model-content">
       <div class="model-header">
         <div class="model-title">Community Models</div>
+      
+
         <button
           class="refresh-button"
           @click="refreshData"
@@ -13,7 +15,7 @@
           <span v-else>Refreshing...</span>
         </button>
       </div>
-
+           <FeedbackBanner />
       <div class="filters my-4">
         <div class="filter-row flex gap-4 mb-2">
           <div class="search-box flex-grow">
@@ -161,6 +163,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, defineProps, inject } from 'vue'
 import ModelCreator from './ModelCreator.vue'
+import FeedbackBanner from './FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import {
   type ModelFile,

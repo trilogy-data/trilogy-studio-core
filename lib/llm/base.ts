@@ -35,6 +35,8 @@ export abstract class LLMProvider {
   public error: string | null = null
   public saveCredential: boolean
   public isDefault: boolean = false
+  public changed: boolean = false
+  public deleted: boolean = false
 
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     this.apiKey = apiKey
@@ -47,14 +49,33 @@ export abstract class LLMProvider {
     this.error = null
     this.saveCredential = saveCredential
     this.isDefault = false
+    this.changed = false
+    this.deleted = false
   }
 
   setApiKey(apiKey: string): void {
+    if (this.apiKey === apiKey) {
+      return // No change, do nothing
+    }
+    this.changed = true
     this.apiKey = apiKey
+  }
+
+  setModel(model: string): void {
+    if (this.model === model) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    this.model = model
   }
 
   getApiKey(): string {
     return this.apiKey
+  }
+
+  delete(): void {
+    this.deleted = true
+    this.changed = true
   }
 
   abstract reset(): void

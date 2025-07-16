@@ -8,9 +8,6 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveEditors" :keyCombination="['control', 's']">
-          Save
-        </loading-button>
       </div>
       <editor-creator-inline
         :visible="creatorVisible"
@@ -101,12 +98,14 @@ export default {
     const current = getDefaultValueFromHash('editor') || ''
 
     onMounted(() => {
+      let anyOpen = false
       Object.values(editorStore.editors).forEach((item) => {
         let storageKey = `s-${item.storage}`
         let connectionKey = `c-${item.storage}-${item.connection}`
         if (current === item.id) {
           collapsed.value[storageKey] = false
           collapsed.value[connectionKey] = false
+          anyOpen = true
         } else {
           // if it's not in collapsed, default to true
           // but if it is, keep it false if it's false
@@ -123,6 +122,10 @@ export default {
           }
         }
       })
+      if (!anyOpen && Object.keys(editorStore.editors).length > 0) {
+        const firstEditor = Object.values(editorStore.editors)[0]
+        collapsed.value[`s-${firstEditor.storage}`] = false
+      }
     })
 
     const contentList = computed(() => {
@@ -176,11 +179,7 @@ export default {
     },
     confirmDelete() {
       if (this.editorToDelete) {
-        this.editorStore.editors[this.editorToDelete].deleted = true
-        // sync the deletion
-        this.saveEditors()
-        // and purge
-        this.editorStore.removeEditor(this.editorToDelete)
+        this.editorStore.editors[this.editorToDelete].delete()
       }
       this.showDeleteConfirmationState = false
       this.editorToDelete = null

@@ -85,6 +85,7 @@ export interface ChartConfig {
   annotationField?: string
   hideLegend?: boolean
   showDebug?: boolean
+  showTitle?: boolean
 }
 
 type SerializableValue =

@@ -151,6 +151,7 @@ export default {
       }> = []
       let sorted = Object.values(modelStore.models).sort((a, b) => a.name.localeCompare(b.name))
       sorted.forEach((model) => {
+        if (model.deleted) return // Skip deleted models
         let modelId = ['model', model.name].join(KeySeparator)
         list.push({
           id: modelId,

@@ -490,7 +490,27 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
   }
 
   setPrivateKey(privateKey: string): void {
+    if (this.config.privateKey === privateKey) {
+      return
+    }
+    this.changed = true
     this.config.privateKey = privateKey
+  }
+
+  setAccount(account: string): void {
+    if (this.config.account === account) {
+      return
+    }
+    this.changed = true
+    this.config.account = account
+  }
+
+  setUsername(username: string): void {
+    if (this.config.username === username) {
+      return
+    }
+    this.changed = true
+    this.config.username = username
   }
 
   // integrate with generic interface
@@ -499,7 +519,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
   }
 
   setSecret(secret: string): void {
-    this.config.privateKey = secret
+    this.setPrivateKey(secret)
   }
 
   /**

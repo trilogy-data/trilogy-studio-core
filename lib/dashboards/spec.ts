@@ -659,10 +659,6 @@ export const generateVegaSpec = (
     ]
   }
 
-  if (title && config.chartType === 'usa-map') {
-    spec.title = title
-  }
-
   if (config.yField2) {
     spec.resolve = {
       scale: {
@@ -674,6 +670,19 @@ export const generateVegaSpec = (
     spec.config = {
       // TODO - figure how to get this from css
       background: '#262626',
+    }
+  }
+  if (currentTheme === 'light') {
+    spec.config = {
+      background: '#FBFBFB',
+    }
+  }
+  if (config.showTitle && title) {
+    spec.title = {
+      text: title,
+      // fontSize: 20,
+      // fontWeight: 'bold',
+      color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
     }
   }
   return spec

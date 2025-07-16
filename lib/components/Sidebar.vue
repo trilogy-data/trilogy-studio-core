@@ -2,12 +2,24 @@
   <div class="sidebar-container">
     <div class="sidebar-icons">
       <div class="trilogy-icon">
-        <img
-          class="trilogy-icon"
-          @click="selectItem('welcome')"
-          :src="trilogyIcon"
-          title="Trilogy Studio (Alpha)"
-        />
+        <div class="trilogy-icon-wrapper">
+          <tooltip :content="unSaved? `Save ${unSaved} changes` : 'All changes saved!'">
+            <img
+              class="trilogy-icon"
+              :class="{ spinning: isSaving }"
+              @click="handleSave"
+              :src="trilogyIcon"
+              data-testid="trilogy-icon"
+            />
+          </tooltip>
+          <div
+            v-if="(unSaved?.valueOf() || 0) > 0"
+            class="unsaved-badge"
+            :title="`${unSaved} unsaved ${(unSaved?.valueOf() || 0) > 1 ? 'changes' : 'change'}`"
+          >
+            {{ unSaved }}
+          </div>
+        </div>
       </div>
       <div v-if="isMobile">Home</div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
@@ -134,7 +146,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject } from 'vue'
+import { defineComponent, inject, ref } from 'vue'
 import EditorList from './EditorList.vue'
 import ConnectionList from './ConnectionList.vue'
 import TutorialSidebar from './TutorialSidebar.vue'
@@ -183,6 +195,15 @@ export default defineComponent({
       default: getDefaultValueFromHash('dashboard'),
       optional: true,
     },
+  },
+  setup() {
+    const isSaving = ref(false)
+    const previousUnSaved = ref(null)
+
+    return {
+      isSaving,
+      previousUnSaved,
+    }
   },
   data() {
     let sidebarFeatureItems = [
@@ -238,7 +259,9 @@ export default defineComponent({
       //   },
     ]
     let isMobile = inject<CallableFunction>('isMobile')
-    if (!isMobile) {
+    let saveAll = inject<CallableFunction>('saveAll')
+    let unSaved = inject<Number>('unSaved') || 0
+    if (!isMobile || !saveAll) {
       throw new Error('isMobile is not provided')
     }
     const notMobile = !isMobile
@@ -249,6 +272,8 @@ export default defineComponent({
       sidebarItems: sideBarItems,
       sidebarFeatureItems: sidebarFeatureItems,
       isMobile,
+      unSaved,
+      saveAll,
       notMobile,
     }
   },
@@ -262,7 +287,38 @@ export default defineComponent({
     DashboardList,
   },
 
+  watch: {
+    unSaved: {
+      handler(newValue, oldValue) {
+        // If unSaved count goes to 0 from a positive number, trigger spin animation
+        if (oldValue > 0 && newValue === 0 && !this.isSaving) {
+          this.triggerSaveAnimation()
+        }
+        this.previousUnSaved = newValue
+      },
+      immediate: true,
+    },
+  },
+
   methods: {
+    triggerSaveAnimation() {
+      this.isSaving = true
+      // Ensure minimum 500ms spin duration
+      setTimeout(() => {
+        this.isSaving = false
+      }, 500)
+    },
+    async handleSave() {
+      this.isSaving = true
+
+      // Call the original saveAll function
+      await this.saveAll()
+
+      // Ensure minimum 500ms spin duration
+      setTimeout(() => {
+        this.isSaving = false
+      }, 500)
+    },
     selectItem(index: string) {
       this.$emit('screen-selected', index)
     },
@@ -312,13 +368,55 @@ export default defineComponent({
 </script>
 
 <style scoped>
+@keyframes spin-and-return {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
 .trilogy-icon {
   width: 30px;
   height: 30px;
   display: flex;
   text-align: center;
   cursor: pointer;
+  transition: transform 0.3s ease;
   /* justify-content: flex-start; */
+}
+
+.trilogy-icon.spinning {
+  animation: spin-and-return 1s ease-in-out;
+}
+
+.trilogy-icon-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.unsaved-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #2196f3;
+  color: white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+  min-width: 12px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  z-index: 1;
 }
 
 .sidebar-container {

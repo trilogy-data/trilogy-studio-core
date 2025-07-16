@@ -10,9 +10,6 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <loading-button :action="saveConnections" :key-combination="['control', 's']"
-          >Save</loading-button
-        >
       </div>
       <connection-creator-inline
         :visible="creatorVisible"
@@ -134,7 +131,7 @@ export default {
 
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       if (connection.type === 'motherduck') {
-        connection.mdToken = token
+        connection.setAttribute('mdToken', token)
         connectionStore.resetConnection(connection.name)
       }
     }
@@ -149,8 +146,7 @@ export default {
 
     const updateSnowflakeAccount = async (connection: SnowflakeJwtConnection, account: string) => {
       if (connection.type === 'snowflake') {
-        connection.config.account = account
-        console.log(connection.config)
+        connection.setAccount(account)
         await saveConnections()
         connectionStore.resetConnection(connection.name)
       }
@@ -161,7 +157,7 @@ export default {
       username: string,
     ) => {
       if (connection.type === 'snowflake') {
-        connection.config.username = username
+        connection.setUsername(username)
         await saveConnections()
         connectionStore.resetConnection(connection.name)
       }
@@ -169,7 +165,7 @@ export default {
 
     const updateBigqueryProject = async (connection: BigQueryOauthConnection, project: string) => {
       if (connection.type === 'bigquery-oauth') {
-        connection.projectId = project
+        connection.setAttribute('projectId', project)
         await saveConnections()
         connectionStore.resetConnection(connection.name)
       }
@@ -179,8 +175,7 @@ export default {
       project: string,
     ) => {
       if (connection.type === 'bigquery-oauth') {
-        connection.browsingProjectId = project
-        console.log('updating browsing project', project)
+        connection.setAttribute('browsingProjectId', project)
         await saveConnections()
       }
     }
@@ -196,7 +191,6 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     const refreshId = async (id: string, connection: string, type: string) => {
-      console.log('refreshing', id, connection, type)
       try {
         isLoading.value[id] = true
         if (!connectionStore.connections[connection]?.connected) {
@@ -406,10 +400,10 @@ export default {
       if (this.connectionToDelete) {
         for (const editor of Object.values(this.editorStore.editors)) {
           if (editor.connection === this.connectionToDelete) {
-            this.editorStore.removeEditor(editor.name)
+            editor.delete()
           }
         }
-        this.connectionStore.removeConnection(this.connectionToDelete)
+        this.connectionStore.deleteConnection(this.connectionToDelete)
       }
 
       this.showDeleteConfirmationState = false
@@ -417,7 +411,6 @@ export default {
     },
     // @ts-ignore
     deleteConnection(editor) {
-      // Replace direct deletion with confirmation
       this.showDeleteConfirmation(editor)
     },
   },

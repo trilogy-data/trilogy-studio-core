@@ -56,6 +56,9 @@ order by
   }
   await page.getByTestId('delete-editor-test-one').click()
   await page.getByTestId('confirm-editor-deletion').click()
+  await page.getByTestId('trilogy-icon').click()
+  await page.waitForTimeout(1200); // 1000ms animation + 200ms buffer
+
   await page.reload()
   // confirm we've deleted it
   if (isMobile) {

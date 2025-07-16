@@ -44,6 +44,9 @@ export function buildEditorTree(
 
   // First, organize editors into nested groups
   sorted.forEach((editor) => {
+    if (editor.deleted) {
+      return // Skip deleted editors
+    }
     if (!storageGroups[editor.storage]) {
       storageGroups[editor.storage] = {}
     }
