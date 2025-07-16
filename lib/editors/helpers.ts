@@ -4,7 +4,6 @@ export function buildEditorTree(
   editors: Editor[],
   collapsed: Record<string, boolean>,
   hiddenTags: Set<string>,
-  // Add a new parameter to track active connections
   activeConnections: Set<string> = new Set<string>(),
 ) {
   const list: Array<{
@@ -15,7 +14,6 @@ export function buildEditorTree(
     indent: Array<number>
     editor?: any
   }> = []
-  // Track connections we've already processed for deduplication
   const processedConnections = new Set<string>()
 
   // Modified sort logic to prioritize active connections
@@ -28,8 +26,8 @@ export function buildEditorTree(
     const aIsActive = activeConnections.has(a.connection)
     const bIsActive = activeConnections.has(b.connection)
 
-    if (aIsActive && !bIsActive) return -1 // a is active, b is not -> a comes first
-    if (!aIsActive && bIsActive) return 1 // b is active, a is not -> b comes first
+    if (aIsActive && !bIsActive) return -1
+    if (!aIsActive && bIsActive) return 1
 
     // If both have same active status, fall back to alphabetical
     const connectionComparison = a.connection.localeCompare(b.connection)
@@ -56,7 +54,108 @@ export function buildEditorTree(
     storageGroups[editor.storage][editor.connection].push(editor)
   })
 
-  // Then, build the list with proper order and indentation
+  // Helper function to build folder structure for a connection
+  function buildFolderStructure(
+    editors: Editor[],
+    storage: string,
+    connection: string,
+    baseIndent: number[]
+  ) {
+    // Create a tree structure for folders
+    const folderTree: Record<string, any> = {}
+    
+    // Process each editor and build folder structure
+    editors.forEach((editor) => {
+      // Skip editors with hidden tags
+      if (
+        hiddenTags.size > 0 &&
+        //@ts-ignore
+        editor.tags.some((tag) => hiddenTags.has(tag))
+      ) {
+        return
+      }
+
+      const pathParts = editor.name.split('/')
+      let currentLevel = folderTree
+      
+      // Build nested folder structure
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const folderName = pathParts[i]
+        if (!currentLevel[folderName]) {
+          currentLevel[folderName] = {
+            type: 'folder',
+            children: {},
+            editors: []
+          }
+        }
+        currentLevel = currentLevel[folderName].children
+      }
+      
+      // Add the editor to the final folder or root
+      // Use editor ID as key to handle duplicate names, but display the filename
+      const fileName = pathParts[pathParts.length - 1]
+      currentLevel[editor.id] = {
+        type: 'editor',
+        editor: editor,
+        displayName: fileName
+      }
+    })
+
+    // Helper function to recursively add folders and editors to the list
+    function addToList(tree: Record<string, any>, currentIndent: number[], pathPrefix: string = '') {
+      // Sort entries: folders first, then editors
+      const entries = Object.entries(tree).sort(([aKey, aVal], [bKey, bVal]) => {
+        if (aVal.type === 'folder' && bVal.type === 'editor') return -1
+        if (aVal.type === 'editor' && bVal.type === 'folder') return 1
+        
+        // For folders, sort by folder name
+        if (aVal.type === 'folder' && bVal.type === 'folder') {
+          return aKey.localeCompare(bKey)
+        }
+        
+        // For editors, sort by display name
+        if (aVal.type === 'editor' && bVal.type === 'editor') {
+          return aVal.displayName.localeCompare(bVal.displayName)
+        }
+        
+        return aKey.localeCompare(bKey)
+      })
+
+      entries.forEach(([key, node]) => {
+        if (node.type === 'folder') {
+          const folderPath = pathPrefix ? `${pathPrefix}/${key}` : key
+          const folderKey = `f-${storage}-${connection}-${folderPath}`
+          
+          list.push({
+            key: folderKey,
+            objectKey: folderPath,
+            label: key,
+            type: 'folder',
+            indent: currentIndent,
+          })
+
+          // If folder is not collapsed, add its contents
+          if (!collapsed[folderKey]) {
+            addToList(node.children, [...currentIndent, currentIndent.length], folderPath)
+          }
+        } else if (node.type === 'editor') {
+          const editorKey = `e-${storage}-${connection}-${node.editor.id}`
+          list.push({
+            objectKey: node.editor.id,
+            key: editorKey,
+            label: node.displayName,
+            type: 'editor',
+            indent: currentIndent,
+            editor: node.editor,
+          })
+        }
+      })
+    }
+
+    addToList(folderTree, baseIndent)
+  }
+
+  // Build the main tree structure
   Object.entries(storageGroups).forEach(([storage, connections]) => {
     const storageKey = `s-${storage}`
     // Add storage item
@@ -75,10 +174,9 @@ export function buildEditorTree(
         const aIsActive = activeConnections.has(connA)
         const bIsActive = activeConnections.has(connB)
 
-        if (aIsActive && !bIsActive) return -1 // a is active, b is not -> a comes first
-        if (!aIsActive && bIsActive) return 1 // b is active, a is not -> b comes first
+        if (aIsActive && !bIsActive) return -1
+        if (!aIsActive && bIsActive) return 1
 
-        // If both have same active status, fall back to alphabetical
         return connA.localeCompare(connB)
       })
 
@@ -95,27 +193,9 @@ export function buildEditorTree(
           })
           processedConnections.add(connectionKey)
 
-          // If connection is not collapsed, add editors
+          // If connection is not collapsed, add folder structure
           if (!collapsed[connectionKey]) {
-            editors.forEach((editor) => {
-              // Skip editors with hidden tags
-              if (
-                hiddenTags.size > 0 &&
-                //@ts-ignore
-                editor.tags.some((tag) => hiddenTags.has(tag))
-              ) {
-                return
-              }
-              const editorKey = `e-${storage}-${connection}-${editor.id}`
-              list.push({
-                objectKey: editor.id,
-                key: editorKey,
-                label: editor.name,
-                type: 'editor',
-                indent: [0, 1],
-                editor,
-              })
-            })
+            buildFolderStructure(editors, storage, connection, [0, 1])
           }
         }
       })

@@ -97,34 +97,66 @@ export default {
     }
     const current = getDefaultValueFromHash('editor') || ''
 
+    // Helper function to get all folder paths for an editor
+    const getFolderPaths = (editorName: string, storage: string, connection: string): string[] => {
+      const pathParts = editorName.split('/')
+      const folderPaths: string[] = []
+      
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const folderPath = pathParts.slice(0, i + 1).join('/')
+        folderPaths.push(`f-${storage}-${connection}-${folderPath}`)
+      }
+      
+      return folderPaths
+    }
+
     onMounted(() => {
       let anyOpen = false
-      Object.values(editorStore.editors).forEach((item) => {
-        let storageKey = `s-${item.storage}`
-        let connectionKey = `c-${item.storage}-${item.connection}`
-        if (current === item.id) {
+      const editorsArray = Object.values(editorStore.editors)
+      
+      editorsArray.forEach((editor) => {
+        const storageKey = `s-${editor.storage}`
+        const connectionKey = `c-${editor.storage}-${editor.connection}`
+        const folderPaths = getFolderPaths(editor.name, editor.storage, editor.connection)
+        
+        if (current === editor.id) {
+          // If this is the current editor, open all parent containers
           collapsed.value[storageKey] = false
           collapsed.value[connectionKey] = false
+          folderPaths.forEach(folderPath => {
+            collapsed.value[folderPath] = false
+          })
           anyOpen = true
         } else {
-          // if it's not in collapsed, default to true
-          // but if it is, keep it false if it's false
+          // Set default states for storage and connection
           if (collapsed.value[storageKey] === undefined) {
             collapsed.value[storageKey] = true
-          } else if (collapsed.value[storageKey] === false) {
-            collapsed.value[storageKey] = false
           }
-
           if (collapsed.value[connectionKey] === undefined) {
             collapsed.value[connectionKey] = true
-          } else if (collapsed.value[connectionKey] === false) {
-            collapsed.value[connectionKey] = false
           }
+          
+          // Set default states for folders (collapsed by default)
+          folderPaths.forEach(folderPath => {
+            if (collapsed.value[folderPath] === undefined) {
+              collapsed.value[folderPath] = true
+            }
+          })
         }
       })
-      if (!anyOpen && Object.keys(editorStore.editors).length > 0) {
-        const firstEditor = Object.values(editorStore.editors)[0]
-        collapsed.value[`s-${firstEditor.storage}`] = false
+      
+      // If no editor is currently selected but we have editors, open the first one's containers
+      if (!anyOpen && editorsArray.length > 0) {
+        const firstEditor = editorsArray[0]
+        const storageKey = `s-${firstEditor.storage}`
+        const connectionKey = `c-${firstEditor.storage}-${firstEditor.connection}`
+        const folderPaths = getFolderPaths(firstEditor.name, firstEditor.storage, firstEditor.connection)
+        
+        collapsed.value[storageKey] = false
+        collapsed.value[connectionKey] = false
+        folderPaths.forEach(folderPath => {
+          collapsed.value[folderPath] = false
+        })
       }
     })
 
@@ -191,6 +223,7 @@ export default {
       if (type === 'editor') {
         this.$emit('editor-selected', objectKey)
       } else {
+        // Handle clicks on storage, connection, or folder items
         this.toggleCollapse(key)
       }
     },
