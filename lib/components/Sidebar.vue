@@ -9,6 +9,7 @@
               :class="{ spinning: isSaving }"
               @click="handleSave"
               :src="trilogyIcon"
+              data-testid="trilogy-icon"
             />
           </tooltip>
           <div

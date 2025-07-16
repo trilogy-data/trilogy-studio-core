@@ -590,14 +590,24 @@ export default {
       }
     }
 
-    // Start auto-save when component is ready
+    const handleUnsavedChanges = (event: BeforeUnloadEvent) => {
+      if (unSaved.value > 0) {
+        event.preventDefault()
+        // Modern browsers ignore custom messages and show their own warning
+        return ''
+      }
+    }
+
     onMounted(() => {
       startAutoSave()
+      window.addEventListener('beforeunload', handleUnsavedChanges)
+      window.addEventListener('resize', handleResize)
     })
 
-    // Clean up interval when component is destroyed
     onBeforeUnmount(() => {
       stopAutoSave()
+      window.removeEventListener('beforeunload', handleUnsavedChanges)
+      window.removeEventListener('resize', handleResize)
     })
 
     provide('saveEditors', saveEditors)
@@ -629,12 +639,6 @@ export default {
       confirmBypass,
       cancelBypass,
     }
-  },
-  mounted() {
-    window.addEventListener('resize', this.handleResize)
-  },
-  beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize)
   },
 }
 </script>
