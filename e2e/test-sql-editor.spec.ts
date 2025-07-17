@@ -50,7 +50,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Verify folder structure is created
-  // Check that analysis folder exists
+  // Check that analysis folder exists 
   const analysisFolder = page.getByTestId('editor-list-id-f-local-duckdb-test-analysis')
   await expect(analysisFolder).toBeVisible()
 
@@ -89,6 +89,9 @@ test('test', async ({ page, isMobile }) => {
   await expect(page.getByTestId('query-results-length')).toContainText('1')
 
   // Test folder collapse/expand functionality
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
   await analysisFolder.click() // Collapse analysis folder
   await expect(reportsFolder).not.toBeVisible()
   await expect(dataFolder).not.toBeVisible()
@@ -125,8 +128,17 @@ order by
   }
 
   // Delete the sales-report editor
+  if (isMobile) {
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+  }
   await page.getByTestId('delete-editor-sales-report').click()
   await page.getByTestId('confirm-editor-deletion').click()
+
+  // if (isMobile) {
+  //   await page.getByTestId('editor-list-id-e-local-duckdb-test-analysis/reports/sales-report').click()
+  // }
 
   // Delete the customer-data editor
   await page.getByTestId('delete-editor-customer-data').click()
