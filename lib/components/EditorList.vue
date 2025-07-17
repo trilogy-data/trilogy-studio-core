@@ -118,7 +118,6 @@ export default {
         const storageKey = `s-${editor.storage}`
         const connectionKey = `c-${editor.storage}-${editor.connection}`
         const folderPaths = getFolderPaths(editor.name, editor.storage, editor.connection)
-        console.log(folderPaths)
         if (current === editor.id) {
           // If this is the current editor, open all parent containers
           collapsed.value[storageKey] = false
