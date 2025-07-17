@@ -26,7 +26,7 @@ def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment
         return Environment()
 
     resolver = DictImportResolver(
-        content={source.alias: source.contents for _, source in enumerate(sources)}
+        content={source.alias.replace('/', '.'): source.contents for _, source in enumerate(sources)}
     )
     env = Environment(config=EnvironmentOptions(import_resolver=resolver))
 

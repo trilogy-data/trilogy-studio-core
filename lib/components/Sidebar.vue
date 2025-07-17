@@ -3,7 +3,7 @@
     <div class="sidebar-icons">
       <div class="trilogy-icon">
         <div class="trilogy-icon-wrapper">
-          <tooltip :content="unSaved? `Save ${unSaved} changes` : 'All changes saved!'">
+          <tooltip :content="unSaved ? `Save ${unSaved} changes` : 'All changes saved!'">
             <img
               class="trilogy-icon"
               :class="{ spinning: isSaving }"
