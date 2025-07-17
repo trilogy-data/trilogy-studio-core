@@ -78,12 +78,12 @@
     gap: 12px;
     padding: 0 16px;
   }
- 
+
   .feedback-text {
     font-size: 13px;
     text-align: center;
   }
- 
+
   .feedback-link {
     font-size: 13px;
     padding: 6px 14px;
@@ -94,12 +94,12 @@
   .feedback-banner {
     padding: 2px 0;
   }
- 
+
   .feedback-text {
     font-size: 12px;
     line-height: 1.4;
   }
- 
+
   .feedback-link {
     font-size: 12px;
     padding: 6px 12px;

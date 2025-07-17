@@ -59,11 +59,11 @@ export function buildEditorTree(
     editors: Editor[],
     storage: string,
     connection: string,
-    baseIndent: number[]
+    baseIndent: number[],
   ) {
     // Create a tree structure for folders
     const folderTree: Record<string, any> = {}
-    
+
     // Process each editor and build folder structure
     editors.forEach((editor) => {
       // Skip editors with hidden tags
@@ -77,7 +77,7 @@ export function buildEditorTree(
 
       const pathParts = editor.name.split('/')
       let currentLevel = folderTree
-      
+
       // Build nested folder structure
       for (let i = 0; i < pathParts.length - 1; i++) {
         const folderName = pathParts[i]
@@ -85,39 +85,43 @@ export function buildEditorTree(
           currentLevel[folderName] = {
             type: 'folder',
             children: {},
-            editors: []
+            editors: [],
           }
         }
         currentLevel = currentLevel[folderName].children
       }
-      
+
       // Add the editor to the final folder or root
       // Use editor ID as key to handle duplicate names, but display the filename
       const fileName = pathParts[pathParts.length - 1]
       currentLevel[editor.id] = {
         type: 'editor',
         editor: editor,
-        displayName: fileName
+        displayName: fileName,
       }
     })
 
     // Helper function to recursively add folders and editors to the list
-    function addToList(tree: Record<string, any>, currentIndent: number[], pathPrefix: string = '') {
+    function addToList(
+      tree: Record<string, any>,
+      currentIndent: number[],
+      pathPrefix: string = '',
+    ) {
       // Sort entries: folders first, then editors
       const entries = Object.entries(tree).sort(([aKey, aVal], [bKey, bVal]) => {
         if (aVal.type === 'folder' && bVal.type === 'editor') return -1
         if (aVal.type === 'editor' && bVal.type === 'folder') return 1
-        
+
         // For folders, sort by folder name
         if (aVal.type === 'folder' && bVal.type === 'folder') {
           return aKey.localeCompare(bKey)
         }
-        
+
         // For editors, sort by display name
         if (aVal.type === 'editor' && bVal.type === 'editor') {
           return aVal.displayName.localeCompare(bVal.displayName)
         }
-        
+
         return aKey.localeCompare(bKey)
       })
 
@@ -125,7 +129,7 @@ export function buildEditorTree(
         if (node.type === 'folder') {
           const folderPath = pathPrefix ? `${pathPrefix}/${key}` : key
           const folderKey = `f-${storage}-${connection}-${folderPath}`
-          
+
           list.push({
             key: folderKey,
             objectKey: folderPath,

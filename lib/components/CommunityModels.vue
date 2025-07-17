@@ -3,7 +3,6 @@
     <div class="model-content">
       <div class="model-header">
         <div class="model-title">Community Models</div>
-      
 
         <button
           class="refresh-button"
@@ -15,7 +14,7 @@
           <span v-else>Refreshing...</span>
         </button>
       </div>
-           <FeedbackBanner />
+      <FeedbackBanner />
       <div class="filters my-4">
         <div class="filter-row flex gap-4 mb-2">
           <div class="search-box flex-grow">

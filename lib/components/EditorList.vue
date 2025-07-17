@@ -101,29 +101,29 @@ export default {
     const getFolderPaths = (editorName: string, storage: string, connection: string): string[] => {
       const pathParts = editorName.split('/')
       const folderPaths: string[] = []
-      
+
       for (let i = 0; i < pathParts.length - 1; i++) {
         const folderPath = pathParts.slice(0, i + 1).join('/')
         folderPaths.push(`f-${storage}-${connection}-${folderPath}`)
       }
-      
+
       return folderPaths
     }
 
     onMounted(() => {
       let anyOpen = false
       const editorsArray = Object.values(editorStore.editors)
-      
+
       editorsArray.forEach((editor) => {
         const storageKey = `s-${editor.storage}`
         const connectionKey = `c-${editor.storage}-${editor.connection}`
         const folderPaths = getFolderPaths(editor.name, editor.storage, editor.connection)
-        
+        console.log(folderPaths)
         if (current === editor.id) {
           // If this is the current editor, open all parent containers
           collapsed.value[storageKey] = false
           collapsed.value[connectionKey] = false
-          folderPaths.forEach(folderPath => {
+          folderPaths.forEach((folderPath) => {
             collapsed.value[folderPath] = false
           })
           anyOpen = true
@@ -135,26 +135,30 @@ export default {
           if (collapsed.value[connectionKey] === undefined) {
             collapsed.value[connectionKey] = true
           }
-          
+
           // Set default states for folders (collapsed by default)
-          folderPaths.forEach(folderPath => {
+          folderPaths.forEach((folderPath) => {
             if (collapsed.value[folderPath] === undefined) {
               collapsed.value[folderPath] = true
             }
           })
         }
       })
-      
+
       // If no editor is currently selected but we have editors, open the first one's containers
       if (!anyOpen && editorsArray.length > 0) {
         const firstEditor = editorsArray[0]
         const storageKey = `s-${firstEditor.storage}`
         const connectionKey = `c-${firstEditor.storage}-${firstEditor.connection}`
-        const folderPaths = getFolderPaths(firstEditor.name, firstEditor.storage, firstEditor.connection)
-        
+        const folderPaths = getFolderPaths(
+          firstEditor.name,
+          firstEditor.storage,
+          firstEditor.connection,
+        )
+
         collapsed.value[storageKey] = false
         collapsed.value[connectionKey] = false
-        folderPaths.forEach(folderPath => {
+        folderPaths.forEach((folderPath) => {
           collapsed.value[folderPath] = false
         })
       }
