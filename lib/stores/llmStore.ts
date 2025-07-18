@@ -281,6 +281,26 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return this.generateValidatedCompletion(base, validator, maxAttempts, modelOverride)
     },
 
+    async generateSQLQueryCompletion(
+      inputString: string,
+    ): Promise<ValidatedResponse> {
+      return this.generateCompletion(
+        this.activeConnection,
+        {
+          prompt: inputString,
+        },
+      ).then((response) => {
+        return {
+          success: true,
+          prompt: inputString,
+          message: response.text,
+          content: extractLastTripleQuotedText(response.text),
+          attempts: 1,
+        }
+      })
+    },
+
+
     async generateFilterQuery(
       inputString: string,
       concepts: ModelConceptInput[],

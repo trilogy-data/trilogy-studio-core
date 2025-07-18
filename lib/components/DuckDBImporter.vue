@@ -51,7 +51,7 @@ export default defineComponent({
   name: 'FileUpload',
   props: {
     db: {
-      type: Object as () => duckdb.AsyncDuckDB,
+      type: Object as () => duckdb.AsyncDuckDB || null,
       required: true,
     },
     connection: {

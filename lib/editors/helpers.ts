@@ -1,10 +1,11 @@
 import { Editor } from '.'
+import type { Connection } from '../connections'
 
 export function buildEditorTree(
+  connections: Connection[],
   editors: Editor[],
   collapsed: Record<string, boolean>,
   hiddenTags: Set<string>,
-  activeConnections: Set<string> = new Set<string>(),
 ) {
   const list: Array<{
     key: string
@@ -16,6 +17,11 @@ export function buildEditorTree(
   }> = []
   const processedConnections = new Set<string>()
 
+  const connectionLookup = connections.reduce((acc, conn) => {
+    acc[conn.name] = conn
+    return acc
+  }, {} as Record<string, Connection>)
+
   // Modified sort logic to prioritize active connections
   const sorted = Object.values(editors).sort((a, b) => {
     // First compare storage
@@ -23,8 +29,8 @@ export function buildEditorTree(
     if (storageComparison !== 0) return storageComparison
 
     // Then prioritize active connections
-    const aIsActive = activeConnections.has(a.connection)
-    const bIsActive = activeConnections.has(b.connection)
+    const aIsActive = connectionLookup[a.connection]?.connected || false
+    const bIsActive = connectionLookup[b.connection]?.connected || false
 
     if (aIsActive && !bIsActive) return -1
     if (!aIsActive && bIsActive) return 1
@@ -39,6 +45,15 @@ export function buildEditorTree(
 
   // Group editors by storage and connection for clearer organization
   const storageGroups: Record<string, Record<string, any[]>> = {}
+  // first, collect all connections
+  connections.forEach((conn) => {
+    if (!storageGroups[conn.storage]) {
+      storageGroups[conn.storage] = {}
+    }
+    if (!storageGroups[conn.storage][conn.name]) {
+      storageGroups[conn.storage][conn.name] = []
+    }
+  })
 
   // First, organize editors into nested groups
   sorted.forEach((editor) => {
@@ -175,8 +190,8 @@ export function buildEditorTree(
     if (!collapsed[storageKey]) {
       // Sort connections to show active ones first
       const sortedConnections = Object.entries(connections).sort(([connA], [connB]) => {
-        const aIsActive = activeConnections.has(connA)
-        const bIsActive = activeConnections.has(connB)
+        const aIsActive = connectionLookup[connA]?.connected || false
+        const bIsActive = connectionLookup[connB]?.connected || false
 
         if (aIsActive && !bIsActive) return -1
         if (!aIsActive && bIsActive) return 1

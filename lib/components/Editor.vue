@@ -1,44 +1,19 @@
 <template>
   <div class="parent">
-    <error-message v-if="!editorData"
-      >An editor by this ID ({{ editorId }}) could not be found.</error-message
-    >
+    <error-message v-if="!editorData">An editor by this ID ({{ editorId }}) could not be found.</error-message>
     <template v-else>
-      <editor-header
-        :name="editorData.name"
-        :editor-type="editorData.type"
-        :tags="editorData.tags"
-        :loading="editorData.loading"
-        :connection-has-model="connectionHasModel"
-        @name-update="updateEditorName"
-        @save="$emit('save-editors')"
-        @validate="validateQuery"
-        @run="runQuery"
-        @cancel="cancelQuery"
-        @toggle-tag="toggleTag"
-        @generate="generateLLMQuery"
-      />
+      <editor-header :name="editorData.name" :editor-type="editorData.type" :tags="editorData.tags"
+        :loading="editorData.loading" :connection-has-model="connectionHasModel" @name-update="updateEditorName"
+        @save="$emit('save-editors')" @validate="validateQuery" @run="runQuery" @cancel="cancelQuery"
+        @toggle-tag="toggleTag" @generate="handleLLMTrigger" />
       <div class="editor-content">
-        <code-editor
-          ref="codeEditor"
-          :id="context"
-          :editor-id="editorId"
-          :context="context"
-          :contents="editorData.contents"
-          :editor-type="editorData.type"
-          :theme="userSettingsStore.getSettings.theme"
-          @contents-change="handleContentsChange"
-          @run-query="runQuery"
-          @validate-query="validateQuery"
+        <code-editor ref="codeEditor" :id="context" :editor-id="editorId" :context="context"
+          :contents="editorData.contents" :editor-type="editorData.type" :theme="userSettingsStore.getSettings.theme"
+          @contents-change="handleContentsChange" @run-query="runQuery" @validate-query="validateQuery"
           @format-query="formatQuery"
-          @generate-llm-query="generateLLMQuery"
-          @save="$emit('save-editors')"
-        />
-        <SymbolsPane
-          :symbols="editorData.completionSymbols || []"
-          ref="symbolsPane"
-          v-if="!isMobile"
-        />
+          @generate-llm-query="handleLLMTrigger"
+          @save="$emit('save-editors')" />
+        <SymbolsPane :symbols="editorData.completionSymbols || []" ref="symbolsPane" v-if="!isMobile" />
       </div>
     </template>
   </div>
@@ -289,11 +264,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       }
 
@@ -355,11 +330,11 @@ export default defineComponent({
       const sources: ContentInput[] =
         conn && conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
 
       // Prepare imports
@@ -480,7 +455,7 @@ export default defineComponent({
         this.editorData.connection,
         queryInput,
         // Starter callback (empty for now)
-        () => {},
+        () => { },
         // Progress callback
         onProgress,
         // Failure callback
@@ -503,7 +478,116 @@ export default defineComponent({
       this.$emit('query-finished')
     },
 
+    async handleLLMTrigger(): Promise<void> {
+      console.log('LLM trigger handled')
+      if (this.editorData.type === 'sql') {
+        await this.generateLLMQuerySQL()
+      } else {
+        await this.generateLLMQuery()
+      }
+    },
+
+
     // Add the LLM query generation method
+    async generateLLMQuerySQL(): Promise<void> {
+      console.log('Generating LLM SQL query...')
+      if (!this.llmStore || !this.editorData) {
+        console.error('LLM store or editor data is not available')
+        return
+      }
+      if (!this.loading && this.llmStore) {
+        let editorId = this.editorData.id
+        this.editorData.loading = true
+        this.editorData.startTime = Date.now()
+        this.editorData.results = new Results(new Map(), [])
+        this.editorData.setError(null)
+        this.editorData.setChatInteraction(null)
+        const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+        if (!codeEditorRef) {
+          throw new Error('Code editor reference not found')
+        }
+
+        const text = codeEditorRef.getEditorText(this.editorData.contents)
+        let range: Range = codeEditorRef.getEditorRange()
+        let prompt = `Generate a sql query for syntax ${this.editorData.syntax} with prompt ${text}. Return your answer in triple quotes to make it easy to extract.`
+        await this.llmStore
+          .generateSQLQueryCompletion(prompt)
+          .then((query) => {
+            if (query) {
+              // Get the target editor directly
+              let targetEditor = this.editorStore.editors[editorId]
+              if (!targetEditor) {
+                throw new Error('Target editor not found.')
+              }
+
+              let replacementLen = 0
+              // Also update the CodeEditor with the new content
+              if (this.editorData.id === editorId && this.$refs.codeEditor) {
+                const mutation = (responseText: string | null) => {
+                  // Split the content into lines
+                  // Determine where to insert the query text
+                  // If we have a range, calculate the insertion position
+                  let insertionPosition = range
+                    ? range.startLineNumber
+                    : targetEditor.contents.split('\n').length
+                  let contentLines = targetEditor.contents.split('\n')
+
+                  // Insert the query at the appropriate position
+                  contentLines.splice(insertionPosition, replacementLen, responseText || '')
+                  // store our length so we can replace this query if user has more edits
+                  // this is the length of the split array
+
+                  // Update the editor contents directly
+                  targetEditor.setContent(contentLines.join('\n'))
+                  // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
+                  let op = {
+                    range: range,
+                    text: `${text}\n${responseText}`,
+                    forceMoveMarkers: true,
+                  }
+                  codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+
+                  // cache for next time
+                  replacementLen = (responseText || '').split('\n').length
+                  range = new Range(
+                    range.startLineNumber,
+                    range.startColumn,
+                    range.endLineNumber + replacementLen,
+                    range.endColumn,
+                  )
+                  codeEditorRef.getEditorInstance().setSelection(range)
+                  return true
+                }
+
+                mutation(query.content)
+                // validator is always true for SQL
+                const validator = async (testText: string): Promise<boolean> => {
+                  return true
+                }
+                targetEditor.setChatInteraction({
+                  messages: [
+                    { role: 'user', content: query.prompt },
+                    {
+                      role: 'assistant',
+                      content: query.message,
+                    },
+                  ],
+                  validationFn: validator,
+                  extractionFn: extractLastTripleQuotedText,
+                  mutationFn: mutation,
+                })
+              }
+            } else {
+              throw new Error('LLM could not successfully generate query.')
+            }
+          })
+          .catch((error) => {
+            this.editorData.setError(error)
+            throw error
+          })
+          .finally(() => { })
+      }
+    },
     async generateLLMQuery(): Promise<void> {
       if (!this.loading && this.llmStore) {
         try {
@@ -552,9 +636,9 @@ export default defineComponent({
               this.editorData.connection,
               queryInput,
               // Starter callback (empty for now)
-              () => {},
+              () => { },
               // Progress callback
-              () => {},
+              () => { },
               // Failure callback
               onError,
               // Success callback
@@ -639,7 +723,7 @@ export default defineComponent({
               this.editorData.setError(error)
               throw error
             })
-            .finally(() => {})
+            .finally(() => { })
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM query:', error)

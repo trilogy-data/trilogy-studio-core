@@ -165,14 +165,10 @@ export default {
 
     const contentList = computed(() => {
       return buildEditorTree(
+        Object.values(connectionStore.connections),
         Object.values(editorStore.editors),
         collapsed.value,
         hiddenTags.value,
-        new Set(
-          Object.values(connectionStore.connections)
-            .filter((c) => c.connected)
-            .map((c) => c.name),
-        ),
       )
     })
 
