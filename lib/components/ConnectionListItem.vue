@@ -233,11 +233,7 @@
       </tooltip>
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <CreateEditorFromDatasourcePopup
-        :connection="item.connection"
-        :table="item.object"
-      />
-
+      <CreateEditorFromDatasourcePopup :connection="item.connection" :table="item.object" />
     </div>
   </div>
 </template>
@@ -250,14 +246,12 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import CreateEditorFromDatasourcePopup from './CreateEditorFromDatasourcePopup.vue'
 import {
-  Connection,
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
-import { Table } from '../connections'
 import DuckDBImporter from './DuckDBImporter.vue'
 
 // Define prop types
@@ -402,7 +396,6 @@ const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) 
 const toggleSaveCredential = (connection: any) => {
   emit('toggleSaveCredential', connection)
 }
-
 </script>
 
 <style scoped>

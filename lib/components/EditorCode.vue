@@ -276,11 +276,10 @@ export default defineComponent({
         })
       }
 
-      // LLM query generation: Ctrl+Shift+Enter 
+      // LLM query generation: Ctrl+Shift+Enter
       editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
         emit('generate-llm-query')
       })
-
 
       // Save: Ctrl+S
       editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {

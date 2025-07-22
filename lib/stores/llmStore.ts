@@ -281,15 +281,10 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return this.generateValidatedCompletion(base, validator, maxAttempts, modelOverride)
     },
 
-    async generateSQLQueryCompletion(
-      inputString: string,
-    ): Promise<ValidatedResponse> {
-      return this.generateCompletion(
-        this.activeConnection,
-        {
-          prompt: inputString,
-        },
-      ).then((response) => {
+    async generateSQLQueryCompletion(inputString: string): Promise<ValidatedResponse> {
+      return this.generateCompletion(this.activeConnection, {
+        prompt: inputString,
+      }).then((response) => {
         return {
           success: true,
           prompt: inputString,
@@ -299,7 +294,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         }
       })
     },
-
 
     async generateFilterQuery(
       inputString: string,

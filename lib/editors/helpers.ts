@@ -17,10 +17,13 @@ export function buildEditorTree(
   }> = []
   const processedConnections = new Set<string>()
 
-  const connectionLookup = connections.reduce((acc, conn) => {
-    acc[conn.name] = conn
-    return acc
-  }, {} as Record<string, Connection>)
+  const connectionLookup = connections.reduce(
+    (acc, conn) => {
+      acc[conn.name] = conn
+      return acc
+    },
+    {} as Record<string, Connection>,
+  )
 
   // Modified sort logic to prioritize active connections
   const sorted = Object.values(editors).sort((a, b) => {
