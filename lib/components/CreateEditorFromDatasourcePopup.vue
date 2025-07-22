@@ -12,9 +12,9 @@
 
     <!-- Popup Modal -->
     <div v-if="showPopup" class="popup-overlay" @click.self="closePopup">
-      <div class="popup-content">
+      <div class="popup-content" data-testid="datasource-creation-modal">
         <div class="popup-header">
-          <h3>Create Datasource from {{ table.name }}</h3>
+          <h3 data-testid="modal-title">Create Datasource from {{ table.name }}</h3>
           <button class="close-button" @click="closePopup">
             <i class="mdi mdi-close"></i>
           </button>
@@ -30,9 +30,10 @@
                 <label class="section-label">Column Configuration</label>
                 <div class="column-config-container">
                   <div
-                    v-for="column in table.columns"
-                    :key="column.name"
+                    v-for="column in tableColumns"
+                    :key="`${column.name}-${componentKey}`"
                     class="column-config-item"
+                    :data-testid="`column-config-${column.name}`"
                   >
                     <div class="column-row">
                       <div class="column-info">
@@ -43,21 +44,26 @@
                             :value="column.name"
                             v-model="selectedGrainKeys"
                             @change="updateDatasourcePreview"
+                            :data-testid="`grain-key-checkbox-${column.name}`"
                           />
-                          <div class="menu-title" @click="() => (isEditing[column.name] = true)">
+                          <div class="menu-title" @click="() => startEditing(column.name)">
                             Field:
-                            <span v-if="!isEditing[column.name]" class="editable-text">
+                            <span
+                              v-if="!isEditing[column.name]"
+                              class="editable-text"
+                              :data-testid="`edit-column-name-${column.name}`"
+                            >
                               {{ columnAliases[column.name] }}
                               <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
                             </span>
                             <input
                               v-else
                               ref="nameInput"
-                              data-testid="editor-name-input"
+                              :data-testid="`column-name-input-${column.name}`"
                               v-model="columnAliases[column.name]"
-                              @blur="() => (isEditing[column.name] = false)"
-                              @keyup.enter="() => (isEditing[column.name] = false)"
-                              @keyup.esc="() => (isEditing[column.name] = false)"
+                              @blur="() => stopEditing(column.name)"
+                              @keyup.enter="() => stopEditing(column.name)"
+                              @keyup.esc="() => cancelEditing(column.name)"
                               class="name-input"
                               type="text"
                             />
@@ -78,16 +84,21 @@
                           "
                           placeholder="Enter description..."
                           class="description-input"
+                          :data-testid="`description-input-${column.name}`"
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-                <div v-if="selectedGrainKeys.length === 0" class="warning-text">
+                <div
+                  v-if="selectedGrainKeys.length === 0"
+                  class="warning-text"
+                  data-testid="no-grain-keys-warning"
+                >
                   No grain keys selected. All columns inferred as keys.
                 </div>
                 <div v-else>
-                  <span class="primary-key-badge"
+                  <span class="primary-key-badge" data-testid="grain-key-display"
                     >Grain Key: {{ selectedGrainKeys.join(', ') }}</span
                   >
                 </div>
@@ -112,8 +123,11 @@
                       :results="sampleData.data"
                       :headers="sampleData.headers"
                       :fitParent="true"
+                      data-testid="sample-data-table"
                     />
-                    <div class="sample-info">Showing {{ sampleData.data.length }} rows</div>
+                    <div class="sample-info" data-testid="sample-data-info">
+                      Showing {{ sampleData.data.length }} rows
+                    </div>
                   </div>
                   <div v-else class="no-data-text">No sample data available</div>
                 </div>
@@ -124,7 +138,7 @@
             <div class="right-column">
               <div class="form-section">
                 <label class="section-label">Datasource Preview</label>
-                <div class="code-preview">
+                <div class="code-preview" data-testid="datasource-preview">
                   <code-block :content="datasourcePreview" language="trilogy" />
                 </div>
               </div>
@@ -133,8 +147,16 @@
         </div>
 
         <div class="popup-footer">
-          <button class="cancel-button" @click="closePopup">Cancel</button>
-          <button class="create-button" @click="createDatasource">Create Datasource</button>
+          <button class="cancel-button" @click="closePopup" data-testid="cancel-datasource-button">
+            Cancel
+          </button>
+          <button
+            class="create-button"
+            @click="createDatasource"
+            data-testid="create-datasource-button"
+          >
+            Create Datasource
+          </button>
         </div>
       </div>
     </div>
@@ -142,7 +164,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, computed, watch, nextTick, inject } from 'vue'
 import type { Connection, Table } from '../connections'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
@@ -181,47 +203,83 @@ const error = ref<string | null>(null)
 const columnDescriptions = ref<Record<string, string>>({})
 const columnAliases = ref<Record<string, string>>({})
 const isEditing = ref<Record<string, boolean>>({})
-// Initialize primary keys and descriptions from table columns
-onMounted(() => {
-  selectedGrainKeys.value = props.table.columns
-    .filter((column) => column.primary)
-    .map((column) => column.name)
+const componentKey = ref(0) // Force re-render key
+const originalColumnAliases = ref<Record<string, string>>({}) // Store original values for canceling
 
-  // Initialize column descriptions
+// Reactive computed for table columns to ensure proper reactivity
+const tableColumns = computed(() => props.table?.columns || [])
+
+// Initialize data when table changes
+const initializeColumnData = async () => {
+  console.log('Initializing column data for table:', props.table.name)
+  if (props.table?.columns.length === 0) {
+    console.log('No columns found for table:', props.table.name)
+    console.log('Forcing refresh')
+    await connectionStore.connections[props.connection.name].refreshColumns(
+      props.table.database,
+      props.table.schema,
+      props.table.name,
+    )
+  }
+
+  // Clear existing data
+  selectedGrainKeys.value = []
+  columnDescriptions.value = {}
+  columnAliases.value = {}
+  originalColumnAliases.value = {}
+  isEditing.value = {}
+
+  // Initialize with fresh data
   props.table.columns.forEach((column) => {
+    // Set primary keys
+    if (column.primary) {
+      selectedGrainKeys.value.push(column.name)
+    }
+
+    // Initialize column data
     columnAliases.value[column.name] = column.name
+    originalColumnAliases.value[column.name] = column.name
     isEditing.value[column.name] = false
+
     if (column.description) {
       columnDescriptions.value[column.name] = column.description
     }
   })
-})
+
+  // Force component update
+  componentKey.value++
+}
+
+// Watch for table prop changes to reinitialize
+watch(() => props.table, initializeColumnData, { immediate: true, deep: true })
 
 // Computed datasource preview
 const datasourcePreview = computed(() => {
+  if (!tableColumns.value.length) return ''
+
   let primaryKeyInputs = selectedGrainKeys.value
   if (selectedGrainKeys.value.length === 0) {
-    primaryKeyInputs = props.table.columns.flatMap((x) => x.name)
+    primaryKeyInputs = tableColumns.value.map((x) => x.name)
   }
-  const primaryKeyFields = primaryKeyInputs.flatMap((x) => columnAliases.value[x])
+  const primaryKeyFields = primaryKeyInputs.map((x) => columnAliases.value[x] || x)
   const keyPrefix = primaryKeyFields.length > 0 ? `${primaryKeyFields.join(',')}` : 'PLACEHOLDER'
 
-  const propertyDeclarations = props.table.columns
+  const propertyDeclarations = tableColumns.value
     .map((column) => {
       const description = columnDescriptions.value[column.name] || column.description || ''
       const descriptionComment = description ? ` #${description}` : ''
-      return primaryKeyFields.includes(column.name)
-        ? `key ${columnAliases.value[column.name]} ${column.trilogyType};${descriptionComment}`
+      const alias = columnAliases.value[column.name] || column.name
+      return primaryKeyFields.includes(alias)
+        ? `key ${alias} ${column.trilogyType};${descriptionComment}`
         : `property <${keyPrefix}>.${column.name} ${column.trilogyType};${descriptionComment}`
     })
     .join('\n')
 
-  const columnDefinitions = props.table.columns
-    .map((column) =>
-      column.name != columnAliases.value[column.name]
-        ? `\t${column.name}:${columnAliases.value[column.name]},`
-        : `\t${column.name},`,
-    )
+  const columnDefinitions = tableColumns.value
+    .map((column) => {
+      const alias = columnAliases.value[column.name] || column.name
+      return column.name !== alias ? `\t${column.name}:${alias},` : `\t${column.name},`
+    })
     .join('\n')
 
   const grainDeclaration =
@@ -239,14 +297,23 @@ const datasourcePreview = computed(() => {
 
 // Methods
 const openPopup = async () => {
-  showPopup.value = true
   await loadSampleData()
+  await initializeColumnData()
+  await nextTick()
+  showPopup.value = true
 }
 
 const closePopup = () => {
+  console.log('Closing popup and resetting state...')
   showPopup.value = false
   sampleData.value = null
   error.value = null
+  // Reset all data
+  selectedGrainKeys.value = []
+  columnDescriptions.value = {}
+  columnAliases.value = {}
+  originalColumnAliases.value = {}
+  isEditing.value = {}
   emit('close')
 }
 
@@ -285,7 +352,23 @@ const updateColumnDescription = (columnName: string, description: string) => {
 
 const updateDatasourcePreview = () => {
   // Trigger reactivity for datasource preview
-  // The computed property will automatically update
+  console.log('Updating datasource preview...')
+  componentKey.value++
+}
+
+const startEditing = (columnName: string) => {
+  originalColumnAliases.value[columnName] = columnAliases.value[columnName]
+  isEditing.value[columnName] = true
+}
+
+const stopEditing = (columnName: string) => {
+  isEditing.value[columnName] = false
+  updateDatasourcePreview()
+}
+
+const cancelEditing = (columnName: string) => {
+  columnAliases.value[columnName] = originalColumnAliases.value[columnName]
+  isEditing.value[columnName] = false
 }
 
 const createDatasource = async () => {
@@ -357,7 +440,7 @@ const createDatasource = async () => {
   background: var(--sidebar-bg);
   border: 1px solid var(--border);
   width: 95%;
-  max-width: 1800px;
+  max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;
   color: var(--text-color);
@@ -644,6 +727,34 @@ const createDatasource = async () => {
 
 .create-button:hover {
   background-color: #b85c00;
+}
+
+.menu-title {
+  cursor: pointer;
+}
+
+.editable-text {
+  border-bottom: 1px dashed var(--text-faint);
+  cursor: pointer;
+}
+
+.edit-indicator {
+  margin-left: 4px;
+  opacity: 0.6;
+  font-size: 10px;
+}
+
+.name-input {
+  border: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  color: var(--text-color);
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: #cc6900;
 }
 
 /* Responsive adjustments */
