@@ -248,6 +248,8 @@ select count(order.id) as order_count;`
   await page.getByTestId('database-iris-data-memory-tutorial').click()
   await page.getByTestId('schema-iris-data-main-tutorial').click()
   await page.getByTestId('create-datasource-iris_data').click()
+  // accept defaults
+  await page.getByTestId('create-datasource-button').click()
 
   // Modify the generated datasource file
   if (isMobile) {
