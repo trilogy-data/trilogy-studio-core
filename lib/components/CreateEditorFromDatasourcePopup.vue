@@ -119,12 +119,14 @@
                     v-else-if="sampleData && sampleData.data && sampleData.data.length > 0"
                     class="data-table-wrapper"
                   >
+                  <div class="data-table-wrapper-core">
                     <DataTable
                       :results="sampleData.data"
                       :headers="sampleData.headers"
                       :fitParent="true"
                       data-testid="sample-data-table"
                     />
+                    </div>
                     <div class="sample-info" data-testid="sample-data-info">
                       Showing {{ sampleData.data.length }} rows
                     </div>
@@ -251,7 +253,7 @@ const initializeColumnData = async () => {
 }
 
 // Watch for table prop changes to reinitialize
-watch(() => props.table, initializeColumnData, { immediate: true, deep: true })
+watch(() => props.table, ()=> {showPopup.value === true? initializeColumnData : ()=>{}}, { immediate: true, deep: true })
 
 // Computed datasource preview
 const datasourcePreview = computed(() => {
@@ -297,8 +299,8 @@ const datasourcePreview = computed(() => {
 
 // Methods
 const openPopup = async () => {
-  await loadSampleData()
   await initializeColumnData()
+  await loadSampleData()
   await nextTick()
   showPopup.value = true
 }
@@ -661,15 +663,24 @@ const createDatasource = async () => {
   border: 1px solid var(--border);
   border-radius: 4px;
   width: 100%;
+  height: 250px;
+}
+
+.data-table-wrapper-core {
+  overflow: auto;
+  height: 210px;
 }
 
 .sample-info {
-  padding: 8px 12px;
   font-size: 12px;
   color: var(--text-muted);
   background: var(--sidebar-bg);
   border-top: 1px solid var(--border);
   text-align: center;
+  height:40px;
+   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .no-data-text {
