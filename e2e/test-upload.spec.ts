@@ -118,7 +118,9 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await page.waitForSelector('[data-testid="datasource-creation-modal"]', { timeout: 5000 })
 
     // Verify modal title contains the table name
-    await expect(page.getByTestId('modal-title')).toContainText('Create Datasource from sample_users')
+    await expect(page.getByTestId('modal-title')).toContainText(
+      'Create Datasource from sample_users',
+    )
 
     // Verify that columns are displayed in the modal
     await expect(page.getByTestId('column-config-id')).toBeVisible()
@@ -153,17 +155,17 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await page.getByTestId('create-datasource-button').click()
 
     // Wait for modal to close
-    await page.waitForSelector('[data-testid="datasource-creation-modal"]', { state: 'detached', timeout: 5000 })
+    await page.waitForSelector('[data-testid="datasource-creation-modal"]', {
+      state: 'detached',
+      timeout: 5000,
+    })
 
-    // Verify we're redirected to the editors screen  
+    // Verify we're redirected to the editors screen
     await expect(page.getByTestId('edit-editor-name')).toBeVisible()
 
     // Verify the new editor contains the generated datasource code
     await expect(page.getByTestId('editor')).toContainText('datasource sample_users')
     await expect(page.getByTestId('editor')).toContainText('key id')
     await expect(page.getByTestId('editor')).toContainText('grain (id, user_name)')
-
   })
-
-
 })

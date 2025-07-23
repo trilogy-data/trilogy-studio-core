@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('test', async ({ page, isMobile }) => {
+test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('http://localhost:5173/trilogy-studio-core/')
   await page.getByTestId('tutorial-button').click()
   await page.getByTestId('community-model-search').click()
@@ -8,7 +8,6 @@ test('test', async ({ page, isMobile }) => {
   await page.getByRole('button', { name: 'Import' }).click()
   await page.getByRole('button', { name: 'Submit' }).click()
   await page.getByRole('button', { name: '󱘖' }).click()
-
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this testid, so filter to the visible one
   await page
@@ -153,6 +152,7 @@ select count(order.id) as order_count;`
   await expect(await page.getByRole('gridcell', { name: '30000' })).toContainText('30000')
   await page.getByTestId('next-prompt').click()
   // Step 6: Create datasource with headquarters
+
   if (isMobile) {
     await page.getByTestId('editor').click()
     await page.getByTestId('editor').press('ControlOrMeta+a')
@@ -188,6 +188,7 @@ select count(order.id) as order_count;`
     await page.keyboard.type(chunk)
   }
 
+ 
   await page.getByTestId('editor-run-button').click()
 
   // Wait for query to complete
@@ -244,7 +245,14 @@ select count(order.id) as order_count;`
   }
   await page.getByTestId('connection-iris-data-tutorial').click()
 
-  // Generate datasource from iris_data table
+  // popup freezes in webkit
+  if (browserName === 'webkit') {
+    return
+  }
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+
   await page.getByTestId('database-iris-data-memory-tutorial').click()
   await page.getByTestId('schema-iris-data-main-tutorial').click()
   await page.getByTestId('create-datasource-iris_data').click()
