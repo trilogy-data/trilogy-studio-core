@@ -249,9 +249,6 @@ select count(order.id) as order_count;`
   if (browserName === 'webkit') {
     return
   }
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
 
   await page.getByTestId('database-iris-data-memory-tutorial').click()
   await page.getByTestId('schema-iris-data-main-tutorial').click()
