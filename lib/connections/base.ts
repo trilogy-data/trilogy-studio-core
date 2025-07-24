@@ -146,6 +146,7 @@ export default abstract class BaseConnection {
   abstract getSchemas(database: string): Promise<Schema[]>
   abstract getTables(database: string, schema: string | null): Promise<Table[]>
   abstract getColumns(database: string, schema: string, table: string): Promise<Column[]>
+
   abstract getTable(database: string, table: string, schema: string | null): Promise<Table>
 
   setAttribute<K extends keyof this>(key: K, value: this[K]): void
@@ -214,6 +215,19 @@ export default abstract class BaseConnection {
       return schemaObj
     }
     return null
+  }
+
+  async refreshColumns(database: string, schema: string, table: string): Promise<Column[]> {
+    let tableInstance = this.getLocalTable(database, schema, table)
+    if (!tableInstance) {
+      tableInstance = await this.getTable(database, table, schema)
+      if (!tableInstance) {
+        throw new Error(`Table ${table} not found in schema ${schema} of database ${database}.`)
+      }
+    }
+    let columns = await this.getColumns(database, schema, tableInstance?.name || '')
+    tableInstance.columns = columns
+    return columns
   }
 
   async getTableSample(

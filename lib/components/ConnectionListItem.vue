@@ -233,14 +233,7 @@
       </tooltip>
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <editor-creator-icon
-        :connection="item.connection.name"
-        type="trilogy"
-        title="Create Datasource From Table"
-        :content="() => createTableDatasource(item.connection, item.object)"
-        icon="mdi-database-plus-outline"
-        :data-testid="`create-datasource-${item.object.name}`"
-      />
+      <CreateEditorFromDatasourcePopup :connection="item.connection" :table="item.object" />
     </div>
   </div>
 </template>
@@ -251,15 +244,14 @@ import ConnectionIcon from './ConnectionIcon.vue'
 import ModelSelector from './ModelSelector.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
+import CreateEditorFromDatasourcePopup from './CreateEditorFromDatasourcePopup.vue'
 import {
-  Connection,
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
 import EditorCreatorIcon from './EditorCreatorIcon.vue'
 import Tooltip from './Tooltip.vue'
-import { Table } from '../connections'
 import DuckDBImporter from './DuckDBImporter.vue'
 
 // Define prop types
@@ -403,37 +395,6 @@ const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) 
 
 const toggleSaveCredential = (connection: any) => {
   emit('toggleSaveCredential', connection)
-}
-
-const createTableDatasource = (connection: Connection, datasource: Table) => {
-  // Get all column definitions in format name:type
-  const primaryKeyFields = datasource.columns
-    .filter((column) => column.primary)
-    .map((column) => column.name)
-
-  const keyPrefix = primaryKeyFields.length > 0 ? `${primaryKeyFields.join('.')}` : 'PLACEHOLDER'
-  const propertyDeclarations = datasource.columns
-    .map((column) => {
-      let description = column.description ? ` #${column.description}` : ''
-      return column.primary
-        ? `key ${column.name} ${column.trilogyType}; ${description}`
-        : `property <${keyPrefix}>.${column.name} ${column.trilogyType}; ${description}`
-    })
-    .join('\n')
-  const columnDefinitions = datasource.columns
-    .map((column) => `\t${column.name}:${column.name},`)
-    .join('\n')
-
-  const grainDeclaration =
-    primaryKeyFields.length > 0 ? `grain (${primaryKeyFields.join(', ')})` : ''
-  // Create the formatted string
-  let address = datasource.name
-  if (connection.type === 'bigquery-oauth') {
-    address = `\`${datasource.database}.${datasource.schema}.${datasource.name}\``
-  } else if (connection.type == 'snowflake') {
-    address = `${datasource.database}.${datasource.schema}.${datasource.name}`
-  }
-  return `#auto-generated datasource from table/view ${datasource.name}\n\n${propertyDeclarations}\n\ndatasource ${datasource.name} (\n${columnDefinitions}\n)\n${grainDeclaration}\naddress ${address};`
 }
 </script>
 

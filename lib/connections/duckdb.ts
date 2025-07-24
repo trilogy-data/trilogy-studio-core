@@ -271,6 +271,8 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.STRING
       case 'BIGINT':
         return ColumnType.INTEGER
+      case 'INTEGER':
+        return ColumnType.INTEGER
       case 'DOUBLE':
         return ColumnType.FLOAT
       case 'BOOLEAN':

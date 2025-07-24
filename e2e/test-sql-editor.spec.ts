@@ -50,7 +50,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Verify folder structure is created
-  // Check that analysis folder exists 
+  // Check that analysis folder exists
   const analysisFolder = page.getByTestId('editor-list-id-f-local-duckdb-test-analysis')
   await expect(analysisFolder).toBeVisible()
 

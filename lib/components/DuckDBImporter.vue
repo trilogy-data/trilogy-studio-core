@@ -18,7 +18,7 @@
         >
       </div>
       <div v-else-if="!isLoading">
-        <div>
+        <div class="truncate-text">
           Drag or<label class="file-input-label">
             select
             <input
@@ -29,7 +29,7 @@
               class="hidden-input"
             />
           </label>
-          local CSV/Parquet File or DuckDB DB
+          CSV/Parquet or DuckDB DB
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export default defineComponent({
   name: 'FileUpload',
   props: {
     db: {
-      type: Object as () => duckdb.AsyncDuckDB,
+      type: (Object as () => duckdb.AsyncDuckDB) || null,
       required: true,
     },
     connection: {

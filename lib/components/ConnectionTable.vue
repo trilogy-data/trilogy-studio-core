@@ -194,41 +194,6 @@ export default defineComponent({
         : new Results(new Map(), []),
     )
 
-    const getCellClass = (value: any, type: string) => {
-      if (value === null) return 'null-value'
-
-      switch (type) {
-        case 'number':
-        case 'integer':
-        case 'float':
-        case 'decimal':
-          return 'number-value'
-        case 'boolean':
-          return 'boolean-value'
-        case 'date':
-        case 'datetime':
-        case 'timestamp':
-          return 'date-value'
-        default:
-          return 'text-value'
-      }
-    }
-
-    const formatCellValue = (value: any, type: string) => {
-      if (value === null) return 'NULL'
-
-      switch (type) {
-        case 'date':
-        case 'datetime':
-        case 'timestamp':
-          return new Date(value).toLocaleString()
-        case 'boolean':
-          return value ? 'true' : 'false'
-        default:
-          return String(value)
-      }
-    }
-
     return {
       activeTab,
       searchTerm,
@@ -238,8 +203,6 @@ export default defineComponent({
       isLoading,
       error,
       loadSampleData,
-      getCellClass,
-      formatCellValue,
       AssetType,
     }
   },
@@ -287,7 +250,7 @@ export default defineComponent({
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-color);
 }
 
 .table-type-badge {
@@ -404,7 +367,7 @@ export default defineComponent({
   text-align: left;
   padding: 0.75rem 1rem;
   background: var(--query-window-bg);
-  color: #475569;
+  color: var(--text-faint);
   font-weight: 600;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -416,7 +379,7 @@ export default defineComponent({
 .data-table td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
-  color: #1e293b;
+  color: var(--text-color);
 }
 
 .structure-table tr:hover,

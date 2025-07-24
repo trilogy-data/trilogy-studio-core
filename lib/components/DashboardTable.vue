@@ -7,7 +7,6 @@
       :headers="results.headers"
       :results="results.data"
       :containerHeight="chartHeight"
-      :container-width="chartWidth"
       :prettyPrint="true"
       :fitParent="true"
       @cell-click="handleDimensionClick"

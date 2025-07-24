@@ -36,7 +36,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUpdated } from 'vue'
+import { defineComponent, ref, onMounted, onUpdated, type PropType } from 'vue'
 import Prism from 'prismjs'
 
 // Define your extended SQL language (e.g., "MySQLExtension")
@@ -78,7 +78,7 @@ export default defineComponent({
       required: true,
     },
     language: {
-      type: String,
+      type: String as PropType<'sql' | 'trilogy'>,
       default: 'sql',
     },
     copy: {
