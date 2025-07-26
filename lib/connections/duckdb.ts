@@ -260,12 +260,16 @@ export default class DuckDBConnection extends BaseConnection {
       case 12:
         return ColumnType.ARRAY
       default:
-        console.log('Unknown DuckDB type:', duckDBType)
+        console.log('Unknown DuckDB int type:', duckDBType)
         return ColumnType.UNKNOWN // Use a fallback if necessary
     }
   }
 
   private mapDuckDBStringTypeToColumnType(duckDBType: string): ColumnType {
+    if (duckDBType.startsWith('DECIMAL')) {
+      return ColumnType.NUMERIC; // or ColumnType.DECIMAL if you have one
+    }
+
     switch (duckDBType) {
       case 'VARCHAR':
         return ColumnType.STRING
