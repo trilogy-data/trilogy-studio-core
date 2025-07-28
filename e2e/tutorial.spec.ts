@@ -188,7 +188,6 @@ select count(order.id) as order_count;`
     await page.keyboard.type(chunk)
   }
 
- 
   await page.getByTestId('editor-run-button').click()
 
   // Wait for query to complete

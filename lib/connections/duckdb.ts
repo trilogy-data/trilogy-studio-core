@@ -267,7 +267,7 @@ export default class DuckDBConnection extends BaseConnection {
 
   private mapDuckDBStringTypeToColumnType(duckDBType: string): ColumnType {
     if (duckDBType.startsWith('DECIMAL')) {
-      return ColumnType.NUMERIC; // or ColumnType.DECIMAL if you have one
+      return ColumnType.NUMERIC // or ColumnType.DECIMAL if you have one
     }
 
     switch (duckDBType) {

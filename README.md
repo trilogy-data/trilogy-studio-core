@@ -26,15 +26,41 @@ Read more about Trilogy [here](https://trilogydata.dev/).
 
 This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server that can run queries.
 
-
 ## Run MCP Locally
 
-### Claude
+### Claude Desktop
 
 Trilogy Studio can be run as a local MCP server for Claude.
 
+Checkout repo, and from root run below:
+
 ```bash
 uv run mcp install pyserver/mcp.py
+```
+
+Or directly edit:
+
+On MacOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
+On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+
+```json
+"mcpServers": {
+    "Trilogy Language Tools": {
+      "command": "C:\\Users\\ethan\\.local\\bin\\uv.EXE",
+      "args": [
+        "run",
+        "--with",
+        "mcp[cli]",
+        "--with",
+        "pytrilogy",
+        "--with",
+        "trilogy-public-models",
+        "mcp",
+        "run",
+        "<repo_root>\\pyserver\\mcp_server.py"
+      ]
+    }
+}
 ```
 
 ## Run Language Server
@@ -54,11 +80,10 @@ You can build a production copy and serve as a static website. Github Pages is a
 
 ## Developing
 
-Contributions welcome. See contributing guide for details.
-
+Contributions loved! See contributing guide for details.
 
 ### Inspiration
-There are lots of good IDEs out here. Trilogy Studio is probably only right if you want to use Trilogy. Takes inspiration from:
+There are lots of good IDEs out here. Trilogy Studio is probably only best if you want to use Trilogy. Takes inspiration from:
 
 - Dbeaver
 - SQL Server Management Studio
@@ -69,7 +94,7 @@ There are lots of good IDEs out here. Trilogy Studio is probably only right if y
 
 ### Tech Stack
 
-Could not exist without the following:
+Appreciative of the following:
 
 Frontend
 - Vue
@@ -77,11 +102,11 @@ Frontend
 - Tabulator
 
 Backend
-- Lark
+- Lark (python)
 
 
 ### LLM Benchmarking
 
-`bash
- npx tsx scripts/benchmark-llm.ts  
- `
+```bash
+npx tsx scripts/benchmark-llm.ts  
+```

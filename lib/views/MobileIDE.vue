@@ -155,17 +155,17 @@ aside {
 </style>
 
 <script lang="ts">
-import MobileSidebarLayout from '../components/MobileSidebarLayout.vue'
-import CommunityModels from '../components/CommunityModels.vue'
-import ConnectionView from '../components/ConnectionView.vue'
-import DashboardAutoImporter from '../components/DashboardAutoImporter.vue'
-import TabbedLayout from '../components/TabbedLayout.vue'
+import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
+import CommunityModels from '../components/community/CommunityModels.vue'
+import ConnectionView from './ConnectionView.vue'
+import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter.vue'
+import TabbedLayout from '../components/layout/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
 import LoadingButton from '../components/LoadingButton.vue'
-import ModelView from '../components/ModelView.vue'
-import UserSettings from '../components/UserSettings.vue'
-import UserProfile from '../components/UserProfile.vue'
+import ModelView from './ModelView.vue'
+import UserSettings from '../components/user/UserSettings.vue'
+import UserProfile from '../components/user/UserProfile.vue'
 import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -178,14 +178,16 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
-const TutorialPage = defineAsyncComponent(() => import('../components/TutorialPage.vue'))
-const Sidebar = defineAsyncComponent(() => import('../components/Sidebar.vue'))
-const Editor = defineAsyncComponent(() => import('../components/Editor.vue'))
+const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
+const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
+const Editor = defineAsyncComponent(() => import('../components/editor/Editor.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
-const WelcomePage = defineAsyncComponent(() => import('../components/WelcomePage.vue'))
-const MobileDashboard = defineAsyncComponent(() => import('../components/DashboardMobile.vue'))
-const ResultsView = defineAsyncComponent(() => import('../components/ResultsView.vue'))
-const LLMView = defineAsyncComponent(() => import('../components/LLMView.vue'))
+const WelcomePage = defineAsyncComponent(() => import('./WelcomePage.vue'))
+const MobileDashboard = defineAsyncComponent(
+  () => import('../components/dashboard/DashboardMobile.vue'),
+)
+const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
+const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
 export default {
   name: 'MobileIDEComponent',
