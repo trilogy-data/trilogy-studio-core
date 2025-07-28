@@ -299,7 +299,8 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     result = executor.execute_query(parsed)
     if isinstance(parsed, ProcessedRawSQLStatement):
         headers = [
-            QueryHeader(name=col, datatype=DataType.UNKNOWN.name) for col in result.keys()
+            QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
+            for col in result.keys()
         ]
     else:
         headers = [
