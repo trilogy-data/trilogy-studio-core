@@ -73,17 +73,17 @@ const createMockConnection = () => ({
 })
 
 // Mock the URL store
-vi.mock('../stores/urlStore', () => ({
+vi.mock('../../stores/urlStore', () => ({
   getDefaultValueFromHash: vi.fn(),
 }))
 
 // Mock the screen navigation hook
-vi.mock('../stores/useScreenNavigation', () => ({
+vi.mock('../../stores/useScreenNavigation', () => ({
   default: () => mockScreenNavigation,
 }))
 
 // Mock the ModelImportService
-vi.mock('../models/helpers', () => ({
+vi.mock('../../models/helpers', () => ({
   ModelImportService: vi.fn(() => mockModelImportService),
 }))
 
