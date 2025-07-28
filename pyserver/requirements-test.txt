@@ -3,3 +3,9 @@ mypy
 ruff
 types-click-default-group
 types-requests
+mcp[cli]
+pytrilogy>=0.0.3.78
+fastapi
+click-default-group
+uvicorn
+httpx

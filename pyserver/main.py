@@ -46,6 +46,7 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from env_helpers import parse_env_from_full_model, model_to_response
 from trilogy.render import get_dialect_generator
 from trilogy import CONFIG, __version__
+from trilogy.core.exceptions import InvalidSyntaxException
 
 
 # Define the path to the .env file
@@ -561,7 +562,6 @@ def generate_queries(queries: MultiQueryInSchema):
             )
 
         return result
-
     except Exception as e:
         if ENABLE_PERF_LOGGING:
             error_time = time.time() - start_time
@@ -613,7 +613,14 @@ def generate_query(query: QueryInSchema):
             )
 
         return result
+    except InvalidSyntaxException as e:
+        if ENABLE_PERF_LOGGING:
+            error_time = time.time() - start_time
+            perf_logger.error(
+                f"Query generation failed after {error_time:.4f}s: {str(e)}"
+            )
 
+        raise HTTPException(status_code=422, detail=e.args[0])
     except Exception as e:
         if ENABLE_PERF_LOGGING:
             error_time = time.time() - start_time
@@ -621,7 +628,7 @@ def generate_query(query: QueryInSchema):
                 f"Query generation failed after {error_time:.4f}s: {str(e)}"
             )
 
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.post("/parse_model")

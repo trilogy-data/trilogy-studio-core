@@ -246,9 +246,9 @@ select count(order.id) as order_count;`
   await page.getByTestId('connection-iris-data-tutorial').click()
 
   // popup freezes in webkit
-  if (browserName === 'webkit') {
-    return
-  }
+  // if (browserName === 'webkit') {
+  //   return
+  // }
 
   await page.getByTestId('database-iris-data-memory-tutorial').click()
   await page.getByTestId('schema-iris-data-main-tutorial').click()
