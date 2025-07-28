@@ -3,4 +3,3 @@ fastapi
 click-default-group
 uvicorn
 httpx
-pytest
