@@ -568,7 +568,7 @@ def generate_queries(queries: MultiQueryInSchema):
             perf_logger.error(
                 f"Multi-query generation failed after {error_time:.4f}s: {str(e)}"
             )
-        
+
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
@@ -619,7 +619,7 @@ def generate_query(query: QueryInSchema):
             perf_logger.error(
                 f"Query generation failed after {error_time:.4f}s: {str(e)}"
             )
-        
+
         raise HTTPException(status_code=422, detail=e.args[0])
     except Exception as e:
         if ENABLE_PERF_LOGGING:
@@ -627,8 +627,8 @@ def generate_query(query: QueryInSchema):
             perf_logger.error(
                 f"Query generation failed after {error_time:.4f}s: {str(e)}"
             )
-        
-        raise HTTPException(status_code=422, detail=e.value)
+
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.post("/parse_model")

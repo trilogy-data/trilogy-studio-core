@@ -2,14 +2,23 @@ from mcp.server.fastmcp import FastMCP
 from dataclasses import dataclass
 from trilogy import Dialects, Environment
 from trilogy.authoring import Concept
-from trilogy.core.models.core import TraitDataType
+from trilogy.core.models.core import (
+    TraitDataType,
+    DataType,
+    ArrayType,
+    StructType,
+    MapType,
+    NumericType,
+    DataTyped,
+)
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
+from trilogy.core.statements.execute import ProcessedQuery, ProcessedRawSQLStatement
 from functools import wraps
 
 
 # Simple in-memory cache for HTTP requests
-_http_cache = {}
+_http_cache: dict[str, str] = {}
 
 
 def memoize_http(func):
@@ -54,7 +63,7 @@ class ModelConfig:
     engine: str
     filename: str
     name: str
-    tags: list[str] = None
+    tags: list[str] | None = None
 
 
 @dataclass
@@ -75,11 +84,40 @@ mcp = FastMCP(
 CONNECTIONS = {"DEFAULT_DUCKDB": Dialects.DUCK_DB.default_executor()}
 
 
+def datatype_to_str_datatype(
+    datatype: (
+        TraitDataType
+        | DataType
+        | ArrayType
+        | StructType
+        | MapType
+        | NumericType
+        | DataTyped
+    ),
+) -> str:
+    """Convert a TraitDataType to a string representation"""
+    if isinstance(datatype, TraitDataType):
+        traits = ",".join(datatype.traits)
+        return f"{datatype_to_str_datatype(datatype.data_type)}<{traits}>"
+    if isinstance(datatype, ArrayType):
+        return f"ARRAY<{datatype_to_str_datatype(datatype.value_data_type)}>"
+    if isinstance(datatype, StructType):
+        fields = ", ".join(
+            f"{name}:{datatype_to_str_datatype(datatype.fields[key])}"
+            for key, name in enumerate(datatype.fields_map.keys())
+        )
+        return f"STRUCT<{fields}>"
+    if isinstance(datatype, MapType):
+        return f"MAP<{datatype_to_str_datatype(datatype.key_data_type)}, {datatype_to_str_datatype(datatype.value_data_type)}>"
+    if isinstance(datatype, NumericType):
+        return f"Numeric<{datatype.precision},{datatype.scale}>"
+    if isinstance(datatype, DataTyped):
+        return datatype_to_str_datatype(datatype.output_datatype)
+    return str(datatype.name)
+
+
 def concept_to_str_datatype(concept: Concept) -> str:
-    if isinstance(concept.datatype, TraitDataType):
-        traits = ",".join(concept.datatype.traits)
-        return f"{concept.datatype.data_type.name}<{traits}>"
-    return str(concept.datatype.name)
+    return datatype_to_str_datatype(concept.datatype)
 
 
 def process_concept(concept: Concept) -> dict:
@@ -172,23 +210,23 @@ def get_syntax_docs() -> str:
     """Get the syntax documentation"""
     return """
 - No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNION, or SELECT *.
-- All fields exist in a global namespace; field paths look like \`order.product.id\`. Always use the full path. NEVER include a from clause.
+- All fields exist in a global namespace; field paths look like `order.product.id`. Always use the full path. NEVER include a from clause.
 - If a field has a grain defined, and that grain is not in the query output, aggregate it to get desired result. 
 - If a field has a 'alias_for' defined, it is shorthand for that calculation. Use the field name instead of the calculation in your query to be concise. 
-- Newly created fields at the output of the select must be aliased with as (e.g. \`sum(births) as all_births\`). 
+- Newly created fields at the output of the select must be aliased with as (e.g. `sum(births) as all_births`). 
 - Aliases cannot happen inside calculations or in the where/having/order clause. Never alias fields with existing names. 'sum(revenue) as total_revenue' is valid, but '(sum(births) as total_revenue) +1 as revenue_plus_one' is not.
 - Implicit grouping: NEVER include a group by clause. Grouping is by non-aggregated fields in the SELECT clause.
-- You can dynamically group inline to get groups at different grains - ex:  \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for alternate grouping.
-- Count must specify a field (no \`count(*)\`) Counts are automatically deduplicated. Do not ever use DISTINCT.
-- Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. \`sum(1) by x as count\`). 
+- You can dynamically group inline to get groups at different grains - ex:  `sum(metric) by dim1, dim2 as sum_by_dim1_dm2` for alternate grouping.
+- Count must specify a field (no `count(*)`) Counts are automatically deduplicated. Do not ever use DISTINCT.
+- Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. `sum(1) by x as count`). 
 - Aggregates in SELECT must be filtered via HAVING. Use WHERE for pre-aggregation filters.
-- Use \`field ? condition\` for inline filters (e.g. \`sum(x ? x > 0)\`).
-- Always use a reasonable \`LIMIT\` for final queries unless the request is for a time series or line chart.
-- Window functions: \`rank entity [optional over group] by field desc\` (e.g. \`rank name over state by sum(births) desc as top_name\`).
+- Use `field ? condition` for inline filters (e.g. `sum(x ? x > 0)`).
+- Always use a reasonable `LIMIT` for final queries unless the request is for a time series or line chart.
+- Window functions: `rank entity [optional over group] by field desc` (e.g. `rank name over state by sum(births) desc as top_name`).
 - For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
 - For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
-- Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
-- Comments use \`#\` only, per line.
+- Use `::type` casting, e.g., `"2020-01-01"::date`.
+- Comments use `#` only, per line.
 - Two example queries: "where year between 1940 and 1950
 select
     name,
@@ -238,7 +276,7 @@ def create_connection(name: str, model_name: str) -> str:
 def list_connection_fields(name: str) -> list[dict]:
     """List datasets in a connection"""
     if name not in CONNECTIONS:
-        return f"Connection '{name}' does not exist."
+        raise ValueError(f"Connection '{name}' does not exist.")
     executor = CONNECTIONS[name]
     return [
         process_concept(c)
@@ -259,10 +297,20 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     executor = CONNECTIONS[connection]
     parsed = executor.parse_text(command)[-1]
     result = executor.execute_query(parsed)
-    headers = [
-        QueryHeader(name=col.name, datatype=concept_to_str_datatype(col))
-        for col in parsed.output_columns
-    ]
+    if isinstance(parsed, ProcessedRawSQLStatement):
+        headers = [
+            QueryHeader(name=col, datatype=DataType.UNKNOWN.name) for col in result.keys()
+        ]
+    else:
+        headers = [
+            QueryHeader(
+                name=col.name,
+                datatype=concept_to_str_datatype(
+                    executor.environment.concepts[col.address]
+                ),
+            )
+            for col in parsed.output_columns
+        ]
     return QueryResult(
         headers=headers,
         results=[

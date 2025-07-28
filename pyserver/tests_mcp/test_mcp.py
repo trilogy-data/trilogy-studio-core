@@ -25,17 +25,21 @@ def test_list_connection_fields():
 
     assert len(fields) > 0
 
-    matched = [f for f in fields if f['name'] == "origin.city"].pop()
-    assert matched['datatype'] == "STRING<city>"
+    matched = [f for f in fields if f["name"] == "origin.city"].pop()
+    assert matched["datatype"] == "STRING<city>"
+
 
 def test_run_trilogy_query():
     c = create_model_connection("test_duckdb_faa", "faa")
-    results = run_trilogy_query('''select
+    results = run_trilogy_query(
+        """select
     origin.city,
     count(id2) ->flight_count
-    order by flight_count desc limit 10;''', "test_duckdb_faa")
+    order by flight_count desc limit 10;""",
+        "test_duckdb_faa",
+    )
 
     assert len(results.headers) == 2
-                      
+
     # concepts = run_trilogy_query("show concepts;", "test_duckdb_faa")
     # assert len(concepts.concepts) > 0
