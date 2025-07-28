@@ -24,9 +24,20 @@ Read more about Trilogy [here](https://trilogydata.dev/).
 
 ## This Repo
 
-This repo contains the studio frontend and a minimal FastAPI language server that powers language features.
+This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server that can run queries.
 
-## Running Locally
+
+## Run MCP Locally
+
+### Claude
+
+Trilogy Studio can be run as a local MCP server for Claude.
+
+```bash
+uv run mcp install pyserver/mcp.py
+```
+
+## Run Language Server
 
 > [!TIP]
 > Quick Setup: Run `npm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `npm run local` to start a local instance.

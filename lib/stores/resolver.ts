@@ -142,7 +142,7 @@ export default class TrilogyResolver {
     if (error.response && error.response.data) {
       base = error.response.data.detail
     }
-    return JSON.stringify(base)
+    return base
   }
 
   private async fetchWithErrorHandling(url: string, options: RequestInit): Promise<any> {
