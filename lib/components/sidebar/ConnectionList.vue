@@ -72,9 +72,9 @@
 import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreatorInline from './ConnectionCreatorInline.vue'
-import LoadingButton from './LoadingButton.vue'
-import StatusIcon from './StatusIcon.vue'
-import Tooltip from './Tooltip.vue'
+import LoadingButton from '../LoadingButton.vue'
+import StatusIcon from '../StatusIcon.vue'
+import Tooltip from '../Tooltip.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { EditorStoreType } from '../../stores/editorStore'
@@ -84,7 +84,6 @@ import type {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../../connections'
-import motherduckIcon from '../static/motherduck.png'
 import { KeySeparator } from '../../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
 import { buildConnectionTree, filterConnectionTree } from '../../connections'
@@ -365,7 +364,6 @@ export default {
       updateSnowflakeAccount,
       updateSnowflakeUsername,
       toggleSaveCredential,
-      motherduckIcon,
       updateBigqueryProject,
       updateBigqueryBrowsingProject,
       refreshId,
@@ -457,12 +455,6 @@ export default {
   100% {
     background-position: 100% 0;
   }
-}
-
-.motherduck-icon {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
 }
 
 /* Add styles for the search box */

@@ -71,11 +71,11 @@
 <script lang="ts">
 import { inject } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import Tooltip from './Tooltip.vue'
-import StatusIcon from './StatusIcon.vue'
+import Tooltip from '../Tooltip.vue'
+import StatusIcon from '../StatusIcon.vue'
 import type { Connection } from '../../connections'
-import trilogyIcon from '../static/trilogy_small.webp'
-import EditorCreatorIcon from './editor/EditorCreatorIcon.vue'
+import trilogyIcon from '../../static/trilogy_small.webp'
+import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
 import useModelConfigStore from '../../stores/modelStore'
 
 export default {

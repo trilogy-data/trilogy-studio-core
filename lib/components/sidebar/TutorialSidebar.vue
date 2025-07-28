@@ -32,7 +32,7 @@
 
 <script lang="ts">
 import { ref, computed, inject, onMounted } from 'vue'
-import SidebarList from './sidebar/SidebarList.vue'
+import SidebarList from './SidebarList.vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import { documentation } from '../../data/tutorial/documentation'
 import { KeySeparator } from '../../data/constants'

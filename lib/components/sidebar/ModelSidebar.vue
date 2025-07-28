@@ -68,12 +68,12 @@
 <script lang="ts">
 import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
-import ModelCreator from './model/ModelCreator.vue'
-import LoadingButton from './LoadingButton.vue'
+import ModelCreator from '../model/ModelCreator.vue'
+import LoadingButton from '../LoadingButton.vue'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import TrilogyResolver from '../../stores/resolver'
-import trilogyIcon from '../static/trilogy_small.webp'
+import trilogyIcon from '../../static/trilogy_small.webp'
 import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 

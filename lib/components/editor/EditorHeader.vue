@@ -68,7 +68,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import LoadingButton from './LoadingButton.vue'
+import LoadingButton from '../LoadingButton.vue'
 import { EditorTag } from '../../editors'
 
 export default defineComponent({

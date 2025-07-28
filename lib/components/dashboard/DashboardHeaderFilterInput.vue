@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useLLMConnectionStore } from '../../stores'
-import Tooltip from './Tooltip.vue'
+import Tooltip from '../Tooltip.vue'
 import FilterAutocomplete from './DashboardFilterAutocomplete.vue'
 import { type CompletionItem } from '../../stores/resolver'
 

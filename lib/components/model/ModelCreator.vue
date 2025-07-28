@@ -177,8 +177,8 @@ import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import { ModelImportService } from '../../models/helpers'
-import Tooltip from './Tooltip.vue'
-import LoadingButton from './LoadingButton.vue'
+import Tooltip from '../Tooltip.vue'
+import LoadingButton from '../LoadingButton.vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 
 export default defineComponent({

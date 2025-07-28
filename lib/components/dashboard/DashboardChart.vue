@@ -52,9 +52,9 @@ import {
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChartConfig } from '../../editors/results'
 import QueryExecutionService from '../../stores/queryExecutionService'
-import ErrorMessage from './ErrorMessage.vue'
-import VegaLiteChart from './VegaLiteChart.vue'
-import LoadingView from './LoadingView.vue'
+import ErrorMessage from '../ErrorMessage.vue'
+import VegaLiteChart from '../VegaLiteChart.vue'
+import LoadingView from '../LoadingView.vue'
 import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
 import type { AnalyticsStoreType } from '../../stores/analyticsStore'
 

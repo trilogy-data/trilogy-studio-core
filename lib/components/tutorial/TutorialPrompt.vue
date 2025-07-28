@@ -49,7 +49,7 @@
         />
       </div>
       <div class="results-section">
-        <results-view
+        <result-component
           :editorData="editorStore.editors[editorId]"
           :containerHeight="500"
           @llm-query-accepted="runQuery"
@@ -73,9 +73,9 @@
 <script lang="ts">
 import { ref, computed, inject, watch } from 'vue'
 import type { EditorStoreType } from '../../stores/editorStore'
-import Editor from './editor/Editor.vue'
-import ResultsView from './ResultsView.vue'
-import CodeBlock from './CodeBlock.vue'
+import Editor from '../editor/Editor.vue'
+import ResultComponent from '../editor/ResultComponent.vue'
+import CodeBlock from '../CodeBlock.vue'
 import type { TutorialPrompt } from '../../data/tutorial/docTypes'
 
 interface EditorComponent {
@@ -87,7 +87,7 @@ export default {
   name: 'TutorialPromptComponent',
   components: {
     Editor,
-    ResultsView,
+    ResultComponent,
     CodeBlock,
   },
   props: {

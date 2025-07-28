@@ -156,10 +156,10 @@ import { AnthropicProvider, OpenAIProvider, MistralProvider, GoogleProvider } fr
 import LLMProviderIcon from './LLMProviderIcon.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
-import LoadingButton from './LoadingButton.vue'
-import ContextMenu from './ContextMenu.vue'
+import LoadingButton from '../LoadingButton.vue'
+import ContextMenu from '../ContextMenu.vue'
 import type { LLMProvider } from '../../llm/base'
-import Tooltip from './Tooltip.vue'
+import Tooltip from '../Tooltip.vue'
 interface ListItem {
   id: string
   name: string

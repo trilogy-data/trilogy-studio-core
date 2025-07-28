@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import useQueryHistory from '../../stores/connectionHistoryStore'
-import CodeBlock from './CodeBlock.vue'
+import CodeBlock from '../CodeBlock.vue'
 
 const props = defineProps({
   connectionName: {

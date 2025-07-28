@@ -43,7 +43,7 @@
         <!-- <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre> -->
       </div>
       <error-message v-else-if="error">
-          {{ error }}
+        {{ error }}
         <template #action v-if="error === 'Connection is not active.'">
           <loading-button :action="handleReconnect">
             Reconnect
@@ -62,18 +62,18 @@
 </template>
 
 <script lang="ts">
-import DataTable from './DataTable.vue'
-import { Results } from '../editors/results'
+import DataTable from '../DataTable.vue'
+import { Results } from '../../editors/results'
 // import type {ChartConfig} from '../editors/results'
 import { ref, onMounted, onUpdated, inject, type PropType } from 'vue'
 import Prism from 'prismjs'
-import VegaLiteChart from './VegaLiteChart.vue'
-import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import type { ConnectionStoreType } from '../stores/connectionStore'
-import ErrorMessage from './ErrorMessage.vue'
-import LoadingButton from './LoadingButton.vue'
-import CodeBlock from './CodeBlock.vue'
-import type { ChartConfig } from '../editors/results'
+import VegaLiteChart from '../VegaLiteChart.vue'
+import { getDefaultValueFromHash, pushHashToUrl } from '../../stores/urlStore'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
+import ErrorMessage from '../ErrorMessage.vue'
+import LoadingButton from '../LoadingButton.vue'
+import CodeBlock from '../CodeBlock.vue'
+import type { ChartConfig } from '../../editors/results'
 
 export default {
   name: 'ResultsContainer',

@@ -9,7 +9,7 @@
 <script lang="ts">
 import { inject } from 'vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
-import Tooltip from './Tooltip.vue'
+import Tooltip from '../Tooltip.vue'
 
 export default {
   name: 'DashboardCreatorIcon',

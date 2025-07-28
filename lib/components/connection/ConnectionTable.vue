@@ -118,7 +118,7 @@ import { defineComponent, ref, computed } from 'vue'
 import { Table, AssetType } from '../../connections'
 import { Results } from '../../editors/results'
 import { inject } from 'vue'
-import DataTable from './DataTable.vue'
+import DataTable from '../DataTable.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 
 export default defineComponent({

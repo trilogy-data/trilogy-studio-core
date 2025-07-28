@@ -61,12 +61,12 @@
 import { inject, ref, computed, onMounted } from 'vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import DashboardCreatorInline from './DashboardCreatorInline.vue'
-import DashboardImportPopup from './DashboardImportPopup.vue'
+import DashboardCreatorInline from '../dashboard/DashboardCreatorInline.vue'
+import DashboardImportPopup from '../dashboard/DashboardImportPopup.vue'
 import DashboardListItem from './DashboardListItem.vue'
 import { DashboardModel } from '../../dashboards'
 import SidebarList from './SidebarList.vue'
-import LoadingButton from './LoadingButton.vue'
+import LoadingButton from '../LoadingButton.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 
 // Helper function to build dashboard tree

@@ -1,6 +1,7 @@
 <template>
   <div class="error-message" ref="errorMessage">
-    <span class="error-text" data-testid="error-text"><span class="error-icon">⚠️</span><slot></slot>
+    <span class="error-text" data-testid="error-text"
+      ><span class="error-icon">⚠️</span><slot></slot>
     </span>
     <div class="error-action">
       <slot name="action"></slot>
@@ -38,7 +39,6 @@ export default {
   /* Soft shadow to lift the banner */
   height: 100%;
   vertical-align: middle;
-
 }
 
 .error-icon {

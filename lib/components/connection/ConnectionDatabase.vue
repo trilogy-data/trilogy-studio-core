@@ -199,7 +199,7 @@
 import { defineComponent, type PropType, ref, inject } from 'vue'
 import type { Database } from '../../connections'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import LoadingButton from './LoadingButton.vue'
+import LoadingButton from '../LoadingButton.vue'
 
 export default defineComponent({
   name: 'ConnectionDatabases',

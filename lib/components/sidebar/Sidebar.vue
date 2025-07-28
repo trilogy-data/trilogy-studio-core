@@ -147,14 +147,14 @@
 
 <script lang="ts">
 import { defineComponent, inject, ref } from 'vue'
-import EditorList from './sidebar/EditorList.vue'
-import ConnectionList from './sidebar/ConnectionList.vue'
-import TutorialSidebar from './sidebar/TutorialSidebar.vue'
-import ModelSidebar from './sidebar/ModelSidebar.vue'
-import LLMConnectionList from './sidebar/LLMConnectionList.vue'
-import DashboardList from './dashboard/DashboardList.vue'
-import trilogyIcon from '../static/trilogy.png'
-import Tooltip from './Tooltip.vue'
+import EditorList from '../sidebar/EditorList.vue'
+import ConnectionList from '../sidebar/ConnectionList.vue'
+import TutorialSidebar from '../sidebar/TutorialSidebar.vue'
+import ModelSidebar from './ModelSidebar.vue'
+import LLMConnectionList from './LLMConnectionList.vue'
+import DashboardList from './DashboardList.vue'
+import trilogyIcon from '../../static/trilogy.png'
+import Tooltip from '../Tooltip.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 
 export default defineComponent({

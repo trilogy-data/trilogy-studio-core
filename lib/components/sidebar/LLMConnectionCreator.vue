@@ -110,7 +110,7 @@ option {
 <script lang="ts">
 import { defineComponent, ref, inject } from 'vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
-import LoadingButton from './LoadingButton.vue'
+import LoadingButton from '../LoadingButton.vue'
 // Define the expected store type
 
 export default defineComponent({

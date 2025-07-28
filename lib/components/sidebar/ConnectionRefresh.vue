@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import LoadingButton from './LoadingButton.vue'
+import LoadingButton from '../LoadingButton.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 

@@ -139,7 +139,7 @@ import { KeySeparator } from '../data/constants'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 
 import ResultsView from '../components/editor/ResultComponent.vue'
-import CommunityModels from '../components/CommunityModels.vue'
+import CommunityModels from '../components/community/CommunityModels.vue'
 import LLMConnectionList from '../components/sidebar/LLMConnectionList.vue'
 import Dashboard from '../components/dashboard/Dashboard.vue'
 import CodeBlock from '../components/CodeBlock.vue'

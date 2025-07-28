@@ -82,7 +82,7 @@
 import { defineComponent, ref, nextTick, watch, onMounted, inject, type PropType } from 'vue'
 import { type LLMConnectionStoreType, replaceTripleQuotedText } from '../../stores/llmStore'
 import { type LLMMessage } from '../../llm'
-import CodeBlock from './CodeBlock.vue'
+import CodeBlock from '../CodeBlock.vue'
 export default defineComponent({
   name: 'LLMChatRefinementComponent',
   components: {

@@ -107,8 +107,8 @@ option {
 import { defineComponent, ref, inject } from 'vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import Tooltip from './Tooltip.vue'
-import InlineErrorMessage from './InlineErrorMessage.vue'
+import Tooltip from '../Tooltip.vue'
+import InlineErrorMessage from '../InlineErrorMessage.vue'
 
 export default defineComponent({
   name: 'EditorCreator',

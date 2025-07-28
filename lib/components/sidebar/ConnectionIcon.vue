@@ -17,8 +17,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import Tooltip from './Tooltip.vue'
-import motherduckIcon from '../static/motherduck.png'
+import Tooltip from '../Tooltip.vue'
+import motherduckIcon from '../../static/motherduck.png'
 
 interface ConnectionIconProps {
   connectionType?: string

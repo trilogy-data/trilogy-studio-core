@@ -33,9 +33,9 @@
 <script lang="ts">
 import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
-import LoadingButton from './LoadingButton.vue'
-import StatusIcon from './StatusIcon.vue'
-import Tooltip from './Tooltip.vue'
+import LoadingButton from '../LoadingButton.vue'
+import StatusIcon from '../StatusIcon.vue'
+import Tooltip from '../Tooltip.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import { KeySeparator } from '../../data/constants'
 import { LLMProvider } from '../../llm/base'

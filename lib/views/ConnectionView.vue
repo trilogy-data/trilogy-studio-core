@@ -44,11 +44,11 @@
 import { defineComponent, inject, ref } from 'vue'
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import ConnectionTable from './connection/ConnectionTable.vue'
-import ConnectionDatabase from './connection/ConnectionDatabase.vue'
-import ConnectionSchema from './connection/ConnectionSchema.vue'
+import ConnectionTable from '../components/connection/ConnectionTable.vue'
+import ConnectionDatabase from '../components/connection/ConnectionDatabase.vue'
+import ConnectionSchema from '../components/connection/ConnectionSchema.vue'
 import { KeySeparator } from '../data/constants'
-import ConnectionHistory from './connection/ConnectionHistory.vue'
+import ConnectionHistory from '../components/connection/ConnectionHistory.vue'
 export default defineComponent({
   name: 'ConnectionView',
   props: {

@@ -32,12 +32,12 @@
 </template>
 
 <script lang="ts">
-import LoadingView from './LoadingView.vue'
-import ErrorMessage from './ErrorMessage.vue'
-import LoadingButton from './LoadingButton.vue'
+import LoadingView from '../LoadingView.vue'
+import ErrorMessage from '../ErrorMessage.vue'
+import LoadingButton from '../LoadingButton.vue'
 import ResultsContainer from './Results.vue'
-import HintComponent from './HintComponent.vue'
-import LLMChatRefinement from './llm/LLMChatRefinement.vue'
+import HintComponent from '../HintComponent.vue'
+import LLMChatRefinement from '../llm/LLMChatRefinement.vue'
 import { inject, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore.ts'
 import type { EditorModel } from '../../main.ts'

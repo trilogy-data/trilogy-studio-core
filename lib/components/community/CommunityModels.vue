@@ -161,9 +161,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, defineProps, inject } from 'vue'
-import ModelCreator from './model/ModelCreator.vue'
-import FeedbackBanner from './FeedbackBanner.vue'
-import { type ModelConfigStoreType } from '../stores/modelStore'
+import ModelCreator from '../model/ModelCreator.vue'
+import FeedbackBanner from '../FeedbackBanner.vue'
+import { type ModelConfigStoreType } from '../../stores/modelStore'
 import {
   type ModelFile,
   // fetchBranches,
@@ -171,7 +171,7 @@ import {
   filterModelFiles,
   getDefaultConnection as getDefaultConnectionService,
   getAvailableEngines,
-} from '../models/githubApiService'
+} from '../../models/githubApiService'
 
 const props = defineProps({
   initialSearch: {

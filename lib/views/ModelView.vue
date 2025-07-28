@@ -54,12 +54,12 @@ import { defineComponent, inject, ref } from 'vue'
 import { ModelSource, ModelConfig } from '../models' // Adjust the import path
 import type { ModelConfigStoreType } from '../stores/modelStore'
 import type { EditorStoreType } from '../stores/editorStore'
-import ModelConcept from './model/ModelConcept.vue'
+import ModelConcept from '../components/model/ModelConcept.vue'
 import TrilogyResolver from '../stores/resolver'
-import LoadingButton from './LoadingButton.vue'
-import ErrorMessage from './ErrorMessage.vue'
-import ModelCard from './model/ModelCard.vue'
-import Editor from './editor/Editor.vue'
+import LoadingButton from '../components/LoadingButton.vue'
+import ErrorMessage from '../components/ErrorMessage.vue'
+import ModelCard from '../components/model/ModelCard.vue'
+import Editor from '../components/editor/Editor.vue'
 import { KeySeparator } from '../data/constants'
 export default defineComponent({
   name: 'ModelView',

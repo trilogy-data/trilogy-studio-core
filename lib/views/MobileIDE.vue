@@ -156,7 +156,7 @@ aside {
 
 <script lang="ts">
 import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
-import CommunityModels from './CommunityModels.vue'
+import CommunityModels from '../components/community/CommunityModels.vue'
 import ConnectionView from './ConnectionView.vue'
 import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter.vue'
 import TabbedLayout from '../components/layout/TabbedLayout.vue'
@@ -183,8 +183,10 @@ const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar
 const Editor = defineAsyncComponent(() => import('../components/editor/Editor.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 const WelcomePage = defineAsyncComponent(() => import('./WelcomePage.vue'))
-const MobileDashboard = defineAsyncComponent(() => import('../components/dashboard/DashboardMobile.vue'))
-const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue/index.ts'))
+const MobileDashboard = defineAsyncComponent(
+  () => import('../components/dashboard/DashboardMobile.vue'),
+)
+const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
 export default {

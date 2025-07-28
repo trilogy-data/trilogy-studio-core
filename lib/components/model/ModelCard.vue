@@ -265,11 +265,11 @@ import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import ModelConcept from './ModelConcept.vue'
 import FetchResolver from '../../stores/resolver'
-import LoadingButton from './LoadingButton.vue'
-import ErrorMessage from './ErrorMessage.vue'
-import ConceptTable from './ConceptTable.vue'
-import DatasourceTable from './connection/DatasourceTable.vue'
-import Editor from './editor/Editor.vue'
+import LoadingButton from '../LoadingButton.vue'
+import ErrorMessage from '../ErrorMessage.vue'
+import ConceptTable from '../ConceptTable.vue'
+import DatasourceTable from '../connection/DatasourceTable.vue'
+import Editor from '../editor/Editor.vue'
 
 export default defineComponent({
   name: 'ModelConfigViewer',

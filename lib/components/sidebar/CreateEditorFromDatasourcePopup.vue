@@ -119,13 +119,13 @@
                     v-else-if="sampleData && sampleData.data && sampleData.data.length > 0"
                     class="data-table-wrapper"
                   >
-                  <div class="data-table-wrapper-core">
-                    <DataTable
-                      :results="sampleData.data"
-                      :headers="sampleData.headers"
-                      :fitParent="true"
-                      data-testid="sample-data-table"
-                    />
+                    <div class="data-table-wrapper-core">
+                      <DataTable
+                        :results="sampleData.data"
+                        :headers="sampleData.headers"
+                        :fitParent="true"
+                        data-testid="sample-data-table"
+                      />
                     </div>
                     <div class="sample-info" data-testid="sample-data-info">
                       Showing {{ sampleData.data.length }} rows
@@ -171,8 +171,8 @@ import type { Connection, Table } from '../../connections'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import { Results } from '../../editors/results'
-import DataTable from './DataTable.vue'
-import CodeBlock from './CodeBlock.vue'
+import DataTable from '../DataTable.vue'
+import CodeBlock from '../CodeBlock.vue'
 
 interface CreateDatasourcePopupProps {
   connection: Connection
@@ -253,7 +253,13 @@ const initializeColumnData = async () => {
 }
 
 // Watch for table prop changes to reinitialize
-watch(() => props.table, ()=> {showPopup.value === true? initializeColumnData : ()=>{}}, { immediate: true, deep: true })
+watch(
+  () => props.table,
+  () => {
+    showPopup.value === true ? initializeColumnData : () => {}
+  },
+  { immediate: true, deep: true },
+)
 
 // Computed datasource preview
 const datasourcePreview = computed(() => {
@@ -677,8 +683,8 @@ const createDatasource = async () => {
   background: var(--sidebar-bg);
   border-top: 1px solid var(--border);
   text-align: center;
-  height:40px;
-   display: flex;
+  height: 40px;
+  display: flex;
   align-items: center;
   justify-content: center;
 }

@@ -63,9 +63,9 @@
 import { computed, inject } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
-import DashboardCreatorIcon from './DashboardCreatorIcon.vue'
-import Tooltip from './Tooltip.vue'
-import StatusIcon from './StatusIcon.vue'
+import DashboardCreatorIcon from '../dashboard/DashboardCreatorIcon.vue'
+import Tooltip from '../Tooltip.vue'
+import StatusIcon from '../StatusIcon.vue'
 export default {
   name: 'DashboardListItem',
   props: {

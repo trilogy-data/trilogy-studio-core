@@ -241,7 +241,7 @@
 <script setup lang="ts">
 import { computed, ref, type Ref } from 'vue'
 import ConnectionIcon from './ConnectionIcon.vue'
-import ModelSelector from './ModelSelector.vue'
+import ModelSelector from '../model/ModelSelector.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import CreateEditorFromDatasourcePopup from './CreateEditorFromDatasourcePopup.vue'
@@ -250,9 +250,9 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../../connections'
-import EditorCreatorIcon from './editor/EditorCreatorIcon.vue'
-import Tooltip from './Tooltip.vue'
-import DuckDBImporter from './sidebar/DuckDBImporter.vue'
+import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
+import Tooltip from '../Tooltip.vue'
+import DuckDBImporter from '../sidebar/DuckDBImporter.vue'
 
 // Define prop types
 interface ConnectionListItemProps {
