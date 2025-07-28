@@ -96,7 +96,7 @@ interface CodeEditorRef {
   setModelMarkers: (model: any, owner: string, markers: any[]) => void
 }
 // Define the query partial interface
-interface QueryPartial {
+export interface QueryPartial {
   text: string
   queryType: string
   editorType: 'trilogy' | 'sql' | 'preql'

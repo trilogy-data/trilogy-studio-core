@@ -78,7 +78,7 @@ import ResultComponent from '../editor/ResultComponent.vue'
 import CodeBlock from '../CodeBlock.vue'
 import type { TutorialPrompt } from '../../data/tutorial/docTypes'
 
-interface EditorComponent {
+export interface EditorComponent {
   setContent(content: string): void
   runQuery(): void
 }

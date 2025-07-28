@@ -17,7 +17,7 @@ import LoadingButton from '../LoadingButton.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 
-interface RefreshButtonProps {
+export interface RefreshButtonProps {
   connection: {
     name: string
     connected: boolean

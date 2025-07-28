@@ -1,18 +1,23 @@
 import { Pinia } from 'pinia'
 const { createPrompt } = await import('trilogy-studio-core/llm')
-const { TrilogyResolver, useLLMConnectionStore, QueryExecutionService, useConnectionStore } =
+const { TrilogyResolver, useLLMConnectionStore, QueryExecutionService, useConnectionStore, useUserSettingsStore } =
   await import('trilogy-studio-core/stores')
 import { BenchMarkQuery, TestResult, ImportMap, ContentInput, Import } from './types'
 
 export class TestRunner {
   private resolver: TrilogyResolver
+  private settingStore: ReturnType<typeof useUserSettingsStore>
   private connectionStore: ReturnType<typeof useConnectionStore>
   private queryExecutionService: QueryExecutionService
   private llmStore: ReturnType<typeof useLLMConnectionStore>
   private numRepeats = 5
 
   constructor(pinia: Pinia, connectionName: string) {
-    this.resolver = new TrilogyResolver('http://127.0.0.1:5678')
+    this.settingStore = useUserSettingsStore()
+    this.settingStore.updateSettings({
+      trilogyResolver: 'http://127.0.0.1:5678'
+    })
+    this.resolver = new TrilogyResolver(this.settingStore)
     this.connectionStore = useConnectionStore(pinia)
     this.queryExecutionService = new QueryExecutionService(
       this.resolver,

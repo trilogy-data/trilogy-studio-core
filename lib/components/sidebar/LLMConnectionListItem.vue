@@ -158,9 +158,10 @@ import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import LoadingButton from '../LoadingButton.vue'
 import ContextMenu from '../ContextMenu.vue'
+import type { Position, ContextMenuItem } from '../ContextMenu.vue'
 import type { LLMProvider } from '../../llm/base'
 import Tooltip from '../Tooltip.vue'
-interface ListItem {
+export interface ListItem {
   id: string
   name: string
   indent: number
@@ -176,17 +177,7 @@ interface ListItem {
   connection: LLMProvider
 }
 
-interface ContextMenuItem {
-  id: string
-  label: string
-  icon?: string
-  danger?: boolean
-}
 
-interface Position {
-  x: number
-  y: number
-}
 
 export default defineComponent({
   name: 'LLMConnectionListItem',
