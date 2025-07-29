@@ -21,7 +21,7 @@ self.MonacoEnvironment = {
 }
 
 async function initializeTrilogy() {
-  const { configureTrilogy } = await import('trilogy-studio-core/monaco')
+  const { configureTrilogy } = await import('trilogy-studio-components/monaco')
   configureTrilogy()
 }
 // Start loading trilogy configuration in the background
