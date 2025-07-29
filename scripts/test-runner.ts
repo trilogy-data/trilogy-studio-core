@@ -1,7 +1,7 @@
 import { Pinia } from 'pinia'
-const { createPrompt } = await import('trilogy-studio-core/llm')
+const { createPrompt } = await import('trilogy-studio-components/llm')
 const { TrilogyResolver, useLLMConnectionStore, QueryExecutionService, useConnectionStore, useUserSettingsStore } =
-  await import('trilogy-studio-core/stores')
+  await import('trilogy-studio-components/stores')
 import { BenchMarkQuery, TestResult, ImportMap, ContentInput, Import } from './types'
 
 export class TestRunner {
@@ -105,6 +105,8 @@ export class TestRunner {
           missingKeywords: [],
           response: response.content || '',
           latency,
+          error: response.error || null,
+          query: response.content || null,
         })
       } catch (error) {
         console.error(
@@ -118,6 +120,8 @@ export class TestRunner {
           missingKeywords: testCase.expected_keywords,
           response: `Error: ${error.message}`,
           latency: Date.now() - startTime,
+          error: error.message,
+          query: null,
         })
       }
     }

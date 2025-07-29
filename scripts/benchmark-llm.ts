@@ -5,12 +5,12 @@ import path from 'path'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-const { DuckDBConnection } = await import('trilogy-studio-core/connections')
+const { DuckDBConnection } = await import('trilogy-studio-components/connections')
 import { createProviderInstance } from './providers'
-import { loadTestData, getApiKey, saveResults, printSummary } from './utils'
+import { loadTestData, getApiKey, printSummary } from './utils'
 import { TestRunner } from './test-runner'
 import { ProviderConfig, ProviderResult, TestResult } from './types'
-const { useLLMConnectionStore, useConnectionStore } = await import('trilogy-studio-core/stores')
+const { useLLMConnectionStore, useConnectionStore } = await import('trilogy-studio-components/stores')
 
 // Load environment variables from .env file
 dotenv.config()
@@ -46,6 +46,91 @@ const argv = yargs(hideBin(process.argv))
     description: 'Specific test ID to run (runs all tests if not specified)',
   })
   .help().argv
+
+// Function to save results to both JSON and Markdown files
+async function saveResults(providerResults: ProviderResult[]) {
+  // Save JSON results (keep existing functionality)
+  const resultsPath = path.join(process.cwd(), 'results.json')
+  fs.writeFileSync(resultsPath, JSON.stringify(providerResults, null, 2))
+  console.log(`Results saved to ${resultsPath}`)
+
+  // Save/append to Markdown file
+  await saveMarkdownResults(providerResults)
+}
+
+// Function to save results to markdown file
+async function saveMarkdownResults(providerResults: ProviderResult[]) {
+  const markdownPath = path.join(process.cwd(), 'llm-results.md')
+  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19)
+
+  let markdownContent = ''
+
+  // Check if file exists to determine if we need to add header
+  const fileExists = fs.existsSync(markdownPath)
+
+  if (!fileExists) {
+    // Create initial header for new file
+    markdownContent += '# LLM Benchmark Results\n\n'
+    markdownContent += 'This file contains benchmark test results for various LLM providers.\n\n'
+  }
+
+  // Add timestamp header for this run
+  markdownContent += `## Test Run - ${timestamp}\n\n`
+
+  // Add summary table
+  markdownContent += '### Summary\n\n'
+  markdownContent += '| Provider | Model | Pass Rate | Average Latency (ms) | Total Tests |\n'
+  markdownContent += '|----------|-------|-----------|---------------------|-------------|\n'
+
+  for (const result of providerResults) {
+    const passRate = (result.passRate * 100).toFixed(2)
+    const avgLatency = result.averageLatency.toFixed(2)
+    const totalTests = result.results.length
+
+    markdownContent += `| ${result.provider} | ${result.model} | ${passRate}% | ${avgLatency} | ${totalTests} |\n`
+  }
+
+  markdownContent += '\n'
+
+  // Add detailed results for each provider
+  for (const result of providerResults) {
+    markdownContent += `### ${result.provider} - ${result.model}\n\n`
+    markdownContent += `**Pass Rate:** ${(result.passRate * 100).toFixed(2)}%  \n`
+    markdownContent += `**Average Latency:** ${result.averageLatency.toFixed(2)}ms  \n`
+    markdownContent += `**Total Tests:** ${result.results.length}\n\n`
+
+    // Group results by test ID
+    const testGroups = result.results.reduce((groups, testResult) => {
+      if (!groups[testResult.testId]) {
+        groups[testResult.testId] = []
+      }
+      groups[testResult.testId].push(testResult)
+      return groups
+    }, {} as Record<string, TestResult[]>)
+
+    markdownContent += '#### Test Results\n\n'
+    markdownContent += '| Test ID | Query | Status | Latency (ms) | Error |\n'
+    markdownContent += '|---------|-------|--------|-------------|-------|\n'
+
+    for (const [testId, tests] of Object.entries(testGroups)) {
+      for (const test of tests) {
+        const status = test.passed ? '✅ Pass' : '❌ Fail'
+        const error = test.error ? test.error.substring(0, 50) + '...' : ''
+        const query = test.query ? test.query.substring(0, 60) + (test.query.length > 60 ? '...' : '') : ''
+
+        markdownContent += `| ${testId} | ${query} | ${status} | ${test.latency.toFixed(2)} | ${error} |\n`
+      }
+    }
+
+    markdownContent += '\n'
+  }
+
+  markdownContent += '---\n\n'
+
+  // Append to file
+  fs.appendFileSync(markdownPath, markdownContent)
+  console.log(`Results appended to ${markdownPath}`)
+}
 
 // Main function to run all tests
 async function main() {
@@ -201,7 +286,7 @@ async function main() {
       }
     }
 
-    // Save results to file
+    // Save results to both JSON and Markdown files
     await saveResults(providerResults)
 
     // Print summary
