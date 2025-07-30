@@ -177,8 +177,6 @@ export interface ListItem {
   connection: LLMProvider
 }
 
-
-
 export default defineComponent({
   name: 'LLMConnectionListItem',
   components: {

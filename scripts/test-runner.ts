@@ -1,7 +1,12 @@
 import { Pinia } from 'pinia'
 const { createPrompt } = await import('trilogy-studio-components/llm')
-const { TrilogyResolver, useLLMConnectionStore, QueryExecutionService, useConnectionStore, useUserSettingsStore } =
-  await import('trilogy-studio-components/stores')
+const {
+  TrilogyResolver,
+  useLLMConnectionStore,
+  QueryExecutionService,
+  useConnectionStore,
+  useUserSettingsStore,
+} = await import('trilogy-studio-components/stores')
 import { BenchMarkQuery, TestResult, ImportMap, ContentInput, Import } from './types'
 
 export class TestRunner {
@@ -15,7 +20,7 @@ export class TestRunner {
   constructor(pinia: Pinia, connectionName: string) {
     this.settingStore = useUserSettingsStore()
     this.settingStore.updateSettings({
-      trilogyResolver: 'http://127.0.0.1:5678'
+      trilogyResolver: 'http://127.0.0.1:5678',
     })
     this.resolver = new TrilogyResolver(this.settingStore)
     this.connectionStore = useConnectionStore(pinia)

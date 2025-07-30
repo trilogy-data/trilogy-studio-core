@@ -27,6 +27,7 @@ const emit = defineEmits<{
   'background-click': [itemId: string]
   'remove-filter': [itemId: string, filterSource: string]
   'remove-item': [itemId: string]
+  'copy-item': [itemId: string]
 }>()
 
 // Item title editing states
@@ -85,6 +86,10 @@ function removeItem(): void {
   if (confirm(`Are you sure you want to remove "${itemData.value.name}"?`)) {
     emit('remove-item', props.item.i)
   }
+}
+
+function copyItem(): void {
+  emit('copy-item', props.item.i)
 }
 
 function dimensionClick(v: DimensionClick): void {
@@ -174,6 +179,14 @@ const filterCount = computed(() => {
     </button>
     <button
       v-if="editMode"
+      @click="copyItem"
+      class="copy-button always-visible"
+      :data-testid="`copy-dashboard-item-${item.i}`"
+    >
+      Copy
+    </button>
+    <button
+      v-if="editMode"
       @click="removeItem"
       class="remove-button always-visible"
       :data-testid="`remove-dashboard-item-${item.i}`"
@@ -260,20 +273,7 @@ const filterCount = computed(() => {
       <!-- View mode - show icon with count, or detailed filters on mouseover -->
       <template v-else>
         <div class="filter-summary" v-if="!isFiltersVisible && filterCount > 0">
-          <svg
-            class="filter-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-          </svg>
+          <i class="mdi mdi-filter-outline filter-icon"></i>
         </div>
 
         <div v-if="isFiltersVisible && filterCount > 0" class="filter-details">
@@ -440,6 +440,16 @@ const filterCount = computed(() => {
   margin-left: 8px;
 }
 
+.copy-button {
+  /* padding: 4px 8px;*/
+  color: var(--special-text);
+  border: 1px solid var(--special-text);
+  background-color: transparent;
+  cursor: pointer;
+  font-size: var(--small-font-size);
+  margin-left: 8px;
+}
+
 .remove-button {
   /* padding: 4px 8px;*/
   color: var(--delete-color);
@@ -451,6 +461,14 @@ const filterCount = computed(() => {
 }
 
 .edit-button.always-visible {
+  position: absolute;
+  top: 4px;
+  right: 120px;
+  z-index: 20;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.copy-button.always-visible {
   position: absolute;
   top: 4px;
   right: 70px;
@@ -467,6 +485,11 @@ const filterCount = computed(() => {
 }
 
 .edit-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.copy-button:hover {
   opacity: 1;
   background-color: rgba(0, 0, 0, 0.1);
 }
@@ -575,6 +598,7 @@ const filterCount = computed(() => {
 .filter-icon {
   margin-right: 3px;
   color: var(--special-text);
+  font-size: 14px;
 }
 
 .filter-count {

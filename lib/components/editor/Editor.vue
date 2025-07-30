@@ -361,7 +361,6 @@ export default defineComponent({
                 : '',
             }))
           : []
-
       // Prepare imports
       let imports: Import[] = []
       if (this.editorData.type !== 'sql') {

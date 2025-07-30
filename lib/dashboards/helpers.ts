@@ -56,7 +56,7 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
 
 export const isImageColumn = (column: ResultColumn): boolean => {
   return [ColumnType.STRING].includes(column.type) &&
-    column.traits?.some((trait) => trait.endsWith('url'))
+    column.traits?.some((trait) => trait.endsWith('url_image'))
     ? true
     : false
 }

@@ -10,7 +10,9 @@ import { createProviderInstance } from './providers'
 import { loadTestData, getApiKey, printSummary } from './utils'
 import { TestRunner } from './test-runner'
 import { ProviderConfig, ProviderResult, TestResult } from './types'
-const { useLLMConnectionStore, useConnectionStore } = await import('trilogy-studio-components/stores')
+const { useLLMConnectionStore, useConnectionStore } = await import(
+  'trilogy-studio-components/stores'
+)
 
 // Load environment variables from .env file
 dotenv.config()
@@ -100,13 +102,16 @@ async function saveMarkdownResults(providerResults: ProviderResult[]) {
     markdownContent += `**Total Tests:** ${result.results.length}\n\n`
 
     // Group results by test ID
-    const testGroups = result.results.reduce((groups, testResult) => {
-      if (!groups[testResult.testId]) {
-        groups[testResult.testId] = []
-      }
-      groups[testResult.testId].push(testResult)
-      return groups
-    }, {} as Record<string, TestResult[]>)
+    const testGroups = result.results.reduce(
+      (groups, testResult) => {
+        if (!groups[testResult.testId]) {
+          groups[testResult.testId] = []
+        }
+        groups[testResult.testId].push(testResult)
+        return groups
+      },
+      {} as Record<string, TestResult[]>,
+    )
 
     markdownContent += '#### Test Results\n\n'
     markdownContent += '| Test ID | Query | Status | Latency (ms) | Error |\n'
@@ -116,7 +121,9 @@ async function saveMarkdownResults(providerResults: ProviderResult[]) {
       for (const test of tests) {
         const status = test.passed ? '✅ Pass' : '❌ Fail'
         const error = test.error ? test.error.substring(0, 50) + '...' : ''
-        const query = test.query ? test.query.substring(0, 60) + (test.query.length > 60 ? '...' : '') : ''
+        const query = test.query
+          ? test.query.substring(0, 60) + (test.query.length > 60 ? '...' : '')
+          : ''
 
         markdownContent += `| ${testId} | ${query} | ${status} | ${test.latency.toFixed(2)} | ${error} |\n`
       }

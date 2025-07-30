@@ -428,9 +428,7 @@ Promise.all(loadingPromises)
 const saveEditors = async () => {
   for (let source of props.storageSources) {
     await source.saveEditors(
-      Object.values(props.editorStore.editors).filter(
-        (editor) => editor.storage == source.type,
-      ),
+      Object.values(props.editorStore.editors).filter((editor) => editor.storage == source.type),
     )
   }
   console.log('Editors saved')
@@ -464,7 +462,11 @@ const saveConnections = async () => {
   )
 
   // Filter out null values (connections without secrets)
-  const validCredentials = credentialsToSave.filter((credential) => credential !== null) as { label: string; type: CredentialType; value: string }[]
+  const validCredentials = credentialsToSave.filter((credential) => credential !== null) as {
+    label: string
+    type: CredentialType
+    value: string
+  }[]
 
   // Save all credentials at once
   if (validCredentials.length > 0) {
@@ -499,11 +501,7 @@ const saveLLMConnections = async () => {
     async (connection) => {
       if (connection.getApiKey()) {
         // Store the API key in the credential manager
-        return await storeCredential(
-          connection.getCredentialName(),
-          'llm',
-          connection.getApiKey(),
-        )
+        return await storeCredential(connection.getCredentialName(), 'llm', connection.getApiKey())
       }
       return true
     },
