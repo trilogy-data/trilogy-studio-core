@@ -11,7 +11,7 @@ import {
   createFilterPrompt,
 } from '../llm'
 
-interface ValidatedResponse {
+export interface ValidatedResponse {
   success: boolean
   prompt: string
   message: string

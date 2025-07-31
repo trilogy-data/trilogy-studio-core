@@ -118,18 +118,18 @@ import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
 import { extractLastTripleQuotedText } from '../stores/llmStore'
 
-interface TestResult {
+export interface TestResult {
   passed: boolean
   reason?: string
 }
 
-interface TestRunDetail {
+export interface TestRunDetail {
   passed: number
   total: number
   runs: TestResult[]
 }
 
-interface MessageWithTest extends LLMMessage {
+export interface MessageWithTest extends LLMMessage {
   testResult?: TestResult
 }
 

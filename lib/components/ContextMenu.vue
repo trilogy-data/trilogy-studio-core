@@ -17,12 +17,12 @@
 import { defineComponent, computed, onMounted, onUnmounted } from 'vue'
 import type { PropType } from 'vue'
 
-interface Position {
+export interface Position {
   x: number
   y: number
 }
 
-interface ContextMenuItem {
+export interface ContextMenuItem {
   id: string
   label: string
   icon?: string

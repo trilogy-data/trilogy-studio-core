@@ -2,4 +2,4 @@
 
 Add prompt to test_cases.
 
-Add any require dimports to imports.ts
+Add any required imports to imports.ts

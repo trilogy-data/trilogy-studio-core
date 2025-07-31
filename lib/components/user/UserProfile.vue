@@ -19,7 +19,6 @@
 import { defineComponent, reactive } from 'vue'
 import trilogyIcon from '../../static/trilogy.png'
 
-
 export default defineComponent({
   name: 'UserProfile',
   setup() {

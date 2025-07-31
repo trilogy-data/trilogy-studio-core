@@ -36,12 +36,14 @@ const createHeadlineLayer = (
     ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
   let topMark = {}
+  let includeLabel = true;
   if (isImageColumn(columns.get(column) as ResultColumn)) {
+    includeLabel = false; // Don't show label for image columns
     topMark = {
       mark: {
         type: 'image',
-        width: { expr: `min(100, max(width, 100)/${Math.min(6, total * 2)})` },
-        height: { expr: `min(100, max(height, 100)/${Math.min(6, total * 2)})` },
+        width: { expr: `width` },
+        height: { expr: `height` },
         align: 'center',
         baseline: 'middle',
         x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
@@ -75,6 +77,10 @@ const createHeadlineLayer = (
         color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
       },
     }
+  }
+  if (!includeLabel) {
+    // If it's an image column, we don't need a label
+    return [topMark]
   }
   return [
     topMark,

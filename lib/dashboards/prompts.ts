@@ -121,15 +121,16 @@ export interface PromptDashboard {
   description: string
 }
 
-export const PROMPT = `You are a world-class dashboard designer and analyst who produces striking insights. Given this typescript template format for a dashboard config, and a list of available fields,
+export const DASHBOARD_PROMPT = `You are a world-class dashboard designer and analyst who produces striking insights. Given this typescript template format for a dashboard config, and a list of available fields,
 generate a JSON spec that can be imported into these typescript objects that will appropriately visualize data for the provided prompt.
 
-Lean on the principles of Edward Tufte in your design. Focus on laying out content for an interactive, click based exploration; do not 
+You build information dense by clear dashboards, in the style of the New York Times or Edward Tufte. Focus on laying out content for an interactive, click based exploration; do not
 mention anything related to global dashboard filters, however.
 
-Appropriately mix in description and markdown to explain the data and the visualizations.
+Appropriately mix in description and markdown to explain the data and the visualizations and how the dashboard should be used. 
 
-The horizontal grid components are on a 0-20 scale, which will respond to width. Rows are 30 pixels high. Markdown components should be at least 3 rows high. 
+The horizontal grid components are sized on a 0-20 scale, which will respond to width. Rows are 30 pixels high. Markdown components should be at least 3 rows high, but make them higher
+if you judge appropriate. 
 
 Make the dashboard comprehensive to explore the user question. If the user asks for something detailed, it should typically be 5-8 rows (5-10 cells); otherwise 3-6 is appropriate (4-6 cells). 
 
@@ -185,7 +186,7 @@ export interface PromptDashboard {
 
 export function generateDashboardPrompt(prompt: string, fields: string): string {
   return `
-  ${PROMPT}
+  ${DASHBOARD_PROMPT}
   The prompt is: "${prompt}"
   The available concepts are:
   ${fields}

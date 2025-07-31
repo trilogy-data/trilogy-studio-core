@@ -1,18 +1,28 @@
 # Trilogy Studio Components
 
-Core components for reuse across interfaces.
+This package contains the core UI components for Trilogy Studio.
 
-## Styles
+## Manual Publishing
 
-Requires following imports:
+To publish this package manually, follow these steps:
 
-```js
-import 'tabulator-tables/dist/css/tabulator.min.css'
-import 'tabulator-tables/dist/css/tabulator_midnight.css'
-import '@mdi/font/css/materialdesignicons.css'
-import 'splitpanes/dist/splitpanes.css'
-```
-
-## Testing
-
-`npm run dev`
+1.  Navigate to the `lib` directory:
+    ```bash
+    cd lib
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Build the components:
+    ```bash
+    npm run build
+    ```
+4.  Login to NPM:
+    ```bash
+    npm login
+    ```
+5.  Publish the package:
+    ```bash
+    npm publish
+    ```

@@ -255,7 +255,7 @@ import Tooltip from '../Tooltip.vue'
 import DuckDBImporter from '../sidebar/DuckDBImporter.vue'
 
 // Define prop types
-interface ConnectionListItemProps {
+export interface ConnectionListItemProps {
   item: {
     id: string
     name: string

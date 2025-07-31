@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 
-interface AnalyticsEvent {
+export interface AnalyticsEvent {
   path: string
   title?: string
   event?: boolean
 }
 
-interface AnalyticsState {
+export interface AnalyticsState {
   isEnabled: boolean
   sendTelemetry: boolean
 }

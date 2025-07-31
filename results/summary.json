@@ -2,22 +2,22 @@
   {
     "provider": "OPENAI",
     "model": "gpt-4.1-nano",
-    "passRate": 0.95,
-    "averageLatency": 7205.6,
+    "passRate": 0.7,
+    "averageLatency": 5730.25,
     "totalTests": 20
   },
   {
     "provider": "ANTHROPIC",
     "model": "claude-3-7-sonnet-20250219",
-    "passRate": 0.9,
-    "averageLatency": 14066.6,
+    "passRate": 1,
+    "averageLatency": 17200.9,
     "totalTests": 20
   },
   {
     "provider": "GOOGLE",
     "model": "gemini-2.0-flash",
     "passRate": 0.9,
-    "averageLatency": 7094.3,
+    "averageLatency": 4962.75,
     "totalTests": 20
   }
 ]

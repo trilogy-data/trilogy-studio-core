@@ -17,6 +17,8 @@ export interface TestResult {
   missingKeywords: string[]
   response: string
   latency: number
+  error: string | null
+  query: string | null
 }
 
 export interface ProviderResult {

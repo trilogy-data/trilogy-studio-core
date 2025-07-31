@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import StatusIcon from '../StatusIcon.vue'
-interface StatusIconProps {
+export interface StatusIconProps {
   connection: {
     name: string
     connected: boolean
