@@ -42,8 +42,8 @@ const createHeadlineLayer = (
     topMark = {
       mark: {
         type: 'image',
-        width: { expr: `width` },
-        height: { expr: `height` },
+        width: { expr: `width / ${total}` },
+        height: { expr: `height / ${total}` },
         align: 'center',
         baseline: 'middle',
         x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop

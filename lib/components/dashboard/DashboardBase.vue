@@ -53,7 +53,7 @@ const showAddItemModal = ref(false)
 const globalCompletion = ref<CompletionItem[]>([])
 
 // Computed properties
-const dashboardMaxWidth = computed(() => props.maxWidth || 1500)
+const dashboardMaxWidth = computed(() => props.maxWidth || '100vw')
 
 const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)

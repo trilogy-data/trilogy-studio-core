@@ -25,6 +25,7 @@
       :chartConfig="editorData.chartConfig"
       :error="editorData.error || undefined"
       @config-change="(config) => editorData.setChartConfig(config)"
+      @refresh-click="()=> $emit('refresh-click')"
     />
     <!-- <llm-interaction></llm-interaction> -->
     <hint-component v-else />
@@ -75,7 +76,6 @@ export default {
   },
   methods: {
     llmQueryAccepted() {
-      console.log('emitting llmQueryAccepted')
       this.$emit('llm-query-accepted')
     },
   },
