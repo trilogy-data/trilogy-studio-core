@@ -760,12 +760,13 @@ input:checked + .toggle-slider:before {
     height: var(--chart-control-height);
   }
 
-  .controls-toggle {
-    position: static;
-    transform: none;
-    flex-direction: row;
-    justify-content: flex-end;
-    margin-bottom: 8px;
+  .control-btn {
+
+    width: 32px;
+    height: 32px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+
   }
 }
 </style>

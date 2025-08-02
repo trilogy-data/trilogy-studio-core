@@ -92,7 +92,7 @@ const createHeadlineLayer = (
         align: 'center',
         baseline: 'top',
         dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height + 10` } : 10, // Vertical offset for mobile, fixed for desktop
+        dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         text: { value: snakeCaseToCapitalizedWords(column) },
