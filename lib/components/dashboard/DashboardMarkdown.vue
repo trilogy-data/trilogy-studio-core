@@ -2,17 +2,17 @@
   <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
 
-    <div v-else-if="!loading" class="markdown-content">
+    <div class="markdown-content">
       <div class="rendered-markdown" v-html="renderedMarkdown"></div>
     </div>
 
-    <!-- Loading overlay positioned absolutely over the entire component -->
-    <div v-if="loading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
-    </div>
-
     <div v-if="!loading && editMode" class="chart-actions">
-      <button v-if="onRefresh" @click="handleLocalRefresh" class="chart-refresh-button" title="Refresh this markdown">
+      <button
+        v-if="onRefresh"
+        @click="handleLocalRefresh"
+        class="chart-refresh-button"
+        title="Refresh this markdown"
+      >
         <span class="refresh-icon">⟳</span>
       </button>
     </div>
@@ -31,237 +31,13 @@ import {
   type PropType,
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import type { Results, ChartConfig } from '../../editors/results'
+import type { Results } from '../../editors/results'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingView from '../LoadingView.vue'
-import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
+import { type GridItemDataResponse } from '../../dashboards/base'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore'
-
-// Helper function to safely get nested object values
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => {
-    if (current && typeof current === 'object') {
-      // Handle array access like data[0]
-      const arrayMatch = key.match(/^(\w+)\[(\d+)\]$/)
-      if (arrayMatch) {
-        const [, arrayName, index] = arrayMatch
-        return current[arrayName] ? current[arrayName][parseInt(index)] : undefined
-      }
-      return current[key]
-    }
-    return undefined
-  }, obj)
-}
-
-// Helper function to evaluate fallback expressions
-function evaluateFallback(expression: string, queryResults: any): string {
-  try {
-    // Handle fallback syntax: {expression || 'fallback'}
-    const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-    if (fallbackMatch) {
-      const [, mainExpr, fallbackExpr] = fallbackMatch
-      const mainValue = evaluateExpression(mainExpr.trim(), queryResults)
-      
-      if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-        return String(mainValue)
-      } else {
-        // Parse fallback - could be a string literal or another expression
-        const fallback = fallbackExpr.trim()
-        if ((fallback.startsWith("'") && fallback.endsWith("'")) || 
-            (fallback.startsWith('"') && fallback.endsWith('"'))) {
-          // String literal fallback
-          return fallback.slice(1, -1)
-        } else {
-          // Expression fallback
-          const fallbackValue = evaluateExpression(fallback, queryResults)
-          return fallbackValue !== undefined ? String(fallbackValue) : fallback
-        }
-      }
-    } else {
-      // No fallback, evaluate normally
-      const value = evaluateExpression(expression, queryResults)
-      return value !== undefined ? String(value) : `{${expression}}`
-    }
-  } catch (error) {
-    console.warn('Error evaluating fallback expression:', expression, error)
-    return `{${expression}}`
-  }
-}
-
-// Helper function to evaluate individual expressions
-function evaluateExpression(expression: string, queryResults: any): any {
-  if (!queryResults || !queryResults.data) {
-    return undefined
-  }
-
-  // Handle data[index].field patterns
-  const dataIndexMatch = expression.match(/^data\[(\d+)\]\.(\w+)$/)
-  if (dataIndexMatch) {
-    const [, index, field] = dataIndexMatch
-    const rowIndex = parseInt(index)
-    if (queryResults.data[rowIndex] && queryResults.data[rowIndex][field] !== undefined) {
-      return queryResults.data[rowIndex][field]
-    }
-    return undefined
-  }
-
-  // Handle data.length
-  if (expression === 'data.length') {
-    return queryResults.data.length
-  }
-
-  // Handle simple field access (uses first row)
-  if (queryResults.data.length > 0) {
-    const firstRow = queryResults.data[0]
-    if (firstRow && firstRow[expression] !== undefined) {
-      return firstRow[expression]
-    }
-  }
-
-  return undefined
-}
-
-// Enhanced markdown renderer with templating support and fallbacks
-function renderMarkdown(text: string, queryResults: any = null): string {
-  if (!text) return ''
-
-  let html = text
-  console.log('Rendering markdown with query results:', queryResults)
-  
-  // Template substitution with fallback support
-  if (queryResults && queryResults.data) {
-    // Replace {expression || fallback} patterns
-    html = html.replace(/\{([^}]+)\}/g, (match, expression) => {
-      return evaluateFallback(expression, queryResults)
-    })
-
-    // Handle loops: {{#each data}} content {{field_name}} {{/each}}
-    html = html.replace(/\{\{#each data\}\}([\s\S]*?)\{\{\/each\}\}/g, (match, template) => {
-      let loopContent = ''
-      queryResults.data.forEach((row: any, index: number) => {
-        let itemContent = template
-        // Replace field references in loop with fallback support
-        itemContent = itemContent.replace(/\{\{([^}]+)\}\}/g, (fieldMatch, fieldExpr) => {
-          const trimmed = fieldExpr.trim()
-          
-          // Handle special cases
-          if (trimmed === '@index') {
-            return String(index)
-          }
-          
-          // Handle fallback syntax in loops
-          const fallbackMatch = trimmed.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-          if (fallbackMatch) {
-            const [, mainField, fallbackExpr] = fallbackMatch
-            const mainValue = row[mainField.trim()]
-            
-            if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-              return String(mainValue)
-            } else {
-              const fallback = fallbackExpr.trim()
-              if ((fallback.startsWith("'") && fallback.endsWith("'")) || 
-                  (fallback.startsWith('"') && fallback.endsWith('"'))) {
-                return fallback.slice(1, -1)
-              } else {
-                // Try to get fallback from row data
-                return row[fallback] !== undefined ? String(row[fallback]) : fallback
-              }
-            }
-          } else {
-            // Simple field access
-            return row[trimmed] !== undefined ? String(row[trimmed]) : `{{${trimmed}}}`
-          }
-        })
-        loopContent += itemContent
-      })
-      return loopContent
-    })
-
-    // Handle conditional loops with limit: {{#each data limit=5}}
-    html = html.replace(/\{\{#each data limit=(\d+)\}\}([\s\S]*?)\{\{\/each\}\}/g, (match, limitStr, template) => {
-      const limit = parseInt(limitStr)
-      let loopContent = ''
-      const limitedData = queryResults.data.slice(0, limit)
-      limitedData.forEach((row: any, index: number) => {
-        let itemContent = template
-        // Apply same fallback logic as above
-        itemContent = itemContent.replace(/\{\{([^}]+)\}\}/g, (fieldMatch, fieldExpr) => {
-          const trimmed = fieldExpr.trim()
-          
-          if (trimmed === '@index') {
-            return String(index)
-          }
-          
-          const fallbackMatch = trimmed.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-          if (fallbackMatch) {
-            const [, mainField, fallbackExpr] = fallbackMatch
-            const mainValue = row[mainField.trim()]
-            
-            if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-              return String(mainValue)
-            } else {
-              const fallback = fallbackExpr.trim()
-              if ((fallback.startsWith("'") && fallback.endsWith("'")) || 
-                  (fallback.startsWith('"') && fallback.endsWith('"'))) {
-                return fallback.slice(1, -1)
-              } else {
-                return row[fallback] !== undefined ? String(row[fallback]) : fallback
-              }
-            }
-          } else {
-            return row[trimmed] !== undefined ? String(row[trimmed]) : `{{${trimmed}}}`
-          }
-        })
-        loopContent += itemContent
-      })
-      return loopContent
-    })
-  } else {
-    // No query results - handle fallbacks for empty data
-    html = html.replace(/\{([^}]+)\}/g, (match, expression) => {
-      const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-      if (fallbackMatch) {
-        const [, , fallbackExpr] = fallbackMatch
-        const fallback = fallbackExpr.trim()
-        if ((fallback.startsWith("'") && fallback.endsWith("'")) || 
-            (fallback.startsWith('"') && fallback.endsWith('"'))) {
-          return fallback.slice(1, -1)
-        }
-        return fallback
-      }
-      return match // Keep original if no fallback and no data
-    })
-  }
-
-  // Standard markdown processing
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>')
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>')
-
-  // Process lists
-  html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
-  html = html.replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
-
-  // Merge consecutive list items
-  html = html.replace(/<\/ul>\s*<ul>/g, '')
-
-  // Process bold and italic
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>')
-
-  // Process links
-  html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2">$1</a>')
-
-  // Process paragraphs
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = html.replace(/\n/g, '<br>')
-  html = '<p>' + html + '</p>'
-  html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
-  html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
-
-  return html
-}
+import { renderMarkdown } from '../../utility/markdownRenderer'
 
 export default defineComponent({
   name: 'DynamicMarkdownChart',
@@ -288,12 +64,12 @@ export default defineComponent({
       required: true,
     },
     setItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => void>,
       required: true,
       default: () => ({ type: 'MARKDOWN', content: { markdown: '', query: '' } }),
     },
   },
-  setup(props, { emit }) {
+  setup(props) {
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
@@ -306,7 +82,7 @@ export default defineComponent({
 
     const contentData = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
-      return itemData.content || { markdown: '', query: '' }
+      return itemData.structured_content || { markdown: '', query: '' }
     })
 
     const markdown = computed(() => {
@@ -317,12 +93,8 @@ export default defineComponent({
       return contentData.value.query || ''
     })
 
-    const results = computed(() => {
+    const results = computed((): Results | null => {
       return props.getItemData(props.itemId, props.dashboardId).results || null
-    })
-
-    const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
     })
 
     const chartImports = computed(() => {
@@ -352,9 +124,9 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).rootContent || []
     })
 
-    // Render markdown with query results
+    // Render markdown with query results and loading state
     const renderedMarkdown = computed(() => {
-      return renderMarkdown(markdown.value, results.value)
+      return renderMarkdown(markdown.value, results.value, loading.value)
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -411,7 +183,7 @@ export default defineComponent({
           connName,
           queryInput,
           // Progress callback for connection issues
-          () => { },
+          () => {},
           (message) => {
             if (message.error) {
               error.value = message.message
@@ -515,21 +287,6 @@ export default defineComponent({
   align-items: stretch;
   position: relative;
   overflow-y: hidden;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  vertical-align: middle;
-  background-color: var(--bg-loading);
-  backdrop-filter: blur(2px);
-  z-index: 10;
 }
 
 .chart-actions {
@@ -648,5 +405,16 @@ export default defineComponent({
   border-radius: 3px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+}
+
+/* Global styles for loading pills (since they're injected via v-html) */
+:global(.loading-pill) {
+  display: inline-block;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 4px;
+  filter: blur(0.5px);
+  vertical-align: baseline;
 }
 </style>

@@ -35,7 +35,7 @@ export interface FilterInput {
 }
 
 export interface MarkdownData {
-  content: string
+  markdown: string
   query: string
 }
 export interface GridItemData {
@@ -51,12 +51,12 @@ export interface GridItemData {
   filters?: Filter[]
   parameters?: Record<string, unknown>
   results?: Results | null
-
 }
 
 export interface GridItemDataResponse {
   type: 'chart' | 'markdown' | 'table'
-  content: string | MarkdownData
+  content: string
+  structured_content: MarkdownData
   rootContent: ContentInput[]
   name: string
   allowCrossFilter: boolean
@@ -249,10 +249,7 @@ export class DashboardModel implements Dashboard {
     }
   }
 
-  updateItemCrossFilterEligibility(
-    itemId: string,
-    allowCrossFilter: boolean,
-  ): void {
+  updateItemCrossFilterEligibility(itemId: string, allowCrossFilter: boolean): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
@@ -261,7 +258,9 @@ export class DashboardModel implements Dashboard {
       this.updatedAt = new Date()
       this.changed = true
     } else {
-      console.warn(`Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update cross-filter eligibility.`)
+      console.warn(
+        `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update cross-filter eligibility.`,
+      )
     }
   }
 
@@ -464,7 +463,6 @@ export class DashboardModel implements Dashboard {
     this.updatedAt = new Date()
     this.changed = true
   }
-
 
   // Clear all items
   clearItems(): void {

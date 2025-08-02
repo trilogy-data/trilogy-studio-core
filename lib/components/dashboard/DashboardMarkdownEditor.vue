@@ -4,17 +4,18 @@ import SimpleEditor from '../SimpleEditor.vue'
 import { type Import } from '../../stores/resolver'
 import { nextTick } from 'process'
 import type { ContentInput } from '../../stores/resolver'
+import type { MarkdownData } from '../../dashboards/base'
 
 interface EditorRef {
   getContent: () => string
 }
 
 const props = defineProps<{
-  content: { markdown: string; query?: string } | string
+  content: MarkdownData
   connectionName: string
   imports: Import[]
   rootContent: ContentInput[]
-  showing: boolean
+  // showing: boolean
   initialWidth?: number
   initialHeight?: number
 }>()
@@ -73,14 +74,18 @@ const editorElement = ref<HTMLElement | null>(null)
 const canCloseOnClickOutside = ref(true)
 
 // Update refs when props change
-watch(() => props.content, (newContent) => {
-  const data = typeof newContent === 'string'
-    ? { markdown: newContent, query: '' }
-    : { markdown: newContent.markdown || '', query: newContent.query || '' }
+watch(
+  () => props.content,
+  (newContent) => {
+    const data =
+      typeof newContent === 'string'
+        ? { markdown: newContent, query: '' }
+        : { markdown: newContent.markdown || '', query: newContent.query || '' }
 
-  markdownText.value = data.markdown
-  queryText.value = data.query
-})
+    markdownText.value = data.markdown
+    queryText.value = data.query
+  },
+)
 
 function saveContent(): void {
   if (editor.value) {
@@ -89,7 +94,7 @@ function saveContent(): void {
   }
   const contentToSave = {
     markdown: markdownText.value,
-    query: queryText.value
+    query: queryText.value,
   }
   emit('save', contentToSave)
 }
@@ -104,7 +109,7 @@ function switchTab(tab: string): void {
 
 function handleClickOutside(event: MouseEvent): void {
   const popupElement = document.querySelector('.content-editor')
-  if (!popupElement || !props.showing || !canCloseOnClickOutside.value) return
+  if (!popupElement || !canCloseOnClickOutside.value) return
 
   // Don't close if we're currently resizing
   if (isResizing.value) return
@@ -280,19 +285,32 @@ onUnmounted(() => {
 
 <template>
   <div class="editor-overlay">
-    <div class="content-editor" ref="editorElement" :style="{
-      width: `${editorWidth}px`,
-      height: `${editorHeight}px`,
-      top: `${editorTop}%`,
-      left: `${editorLeft}%`,
-      transform: `translate(-50%, -50%)`,
-    }">
+    {{ content }}
+    <div
+      class="content-editor"
+      ref="editorElement"
+      :style="{
+        width: `${editorWidth}px`,
+        height: `${editorHeight}px`,
+        top: `${editorTop}%`,
+        left: `${editorLeft}%`,
+        transform: `translate(-50%, -50%)`,
+      }"
+    >
       <!-- Tab Navigation -->
       <div class="tab-header">
-        <button @click="switchTab('markdown')" :class="{ active: activeTab === 'markdown' }" class="tab-button">
+        <button
+          @click="switchTab('markdown')"
+          :class="{ active: activeTab === 'markdown' }"
+          class="tab-button"
+        >
           📝 Markdown Template
         </button>
-        <button @click="switchTab('query')" :class="{ active: activeTab === 'query' }" class="tab-button">
+        <button
+          @click="switchTab('query')"
+          :class="{ active: activeTab === 'query' }"
+          class="tab-button"
+        >
           🔍 Data Query
         </button>
       </div>
@@ -307,26 +325,41 @@ onUnmounted(() => {
             <button @click="addList" title="List">•</button>
             <button @click="addLink" title="Link">🔗</button>
             <div class="toolbar-separator"></div>
-            <button @click="addDataReference" title="Insert data reference" class="data-button">{}</button>
+            <button @click="addDataReference" title="Insert data reference" class="data-button">
+              {}
+            </button>
             <button @click="addLoop" title="Insert loop" class="data-button">↻</button>
           </div>
-          <textarea v-model="markdownText" placeholder="Enter markdown content here...
+          <textarea
+            v-model="markdownText"
+            placeholder="Enter markdown content here...
 
 Template examples:
 - {field_name} - First row value
 - {data[0].field_name} - Specific row
 - {data.length} - Total rows
 - {{#each data}} {{field_name}} {{/each}} - Loop all
-- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5" class="markdown-editor"></textarea>
+- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5"
+            class="markdown-editor"
+          ></textarea>
         </div>
 
         <!-- Query Tab -->
         <div v-if="activeTab === 'query'" class="tab-content">
           <div class="query-help">
-            <p>Write a query to fetch data for your markdown template. Leave empty if no data is needed.</p>
+            <p>
+              Write a query to fetch data for your markdown template. Leave empty if no data is
+              needed.
+            </p>
           </div>
-          <SimpleEditor class="editor-content" :initContent="queryText" :connectionName="connectionName"
-            :imports="imports" :rootContent="rootContent" ref="editor"></SimpleEditor>
+          <SimpleEditor
+            class="editor-content"
+            :initContent="queryText"
+            :connectionName="connectionName"
+            :imports="imports"
+            :rootContent="rootContent"
+            ref="editor"
+          ></SimpleEditor>
         </div>
       </div>
 

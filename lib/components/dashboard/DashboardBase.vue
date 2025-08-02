@@ -8,6 +8,7 @@ import {
   type CellType,
   CELL_TYPES,
   type DimensionClick,
+  type MarkdownData,
 } from '../../dashboards/base'
 import type { CompletionItem } from '../../stores/resolver'
 import type { DashboardImport } from '../../dashboards/base'
@@ -207,10 +208,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => { },
-      () => { },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
+      () => {},
+      () => {},
       true,
     )
 
@@ -350,6 +351,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     return {
       type: CELL_TYPES.CHART,
       content: '',
+      structured_content: { markdown: '', query: '' },
       name: `Item ${itemId}`,
       allowCrossFilter: true,
       width: 0,
@@ -364,6 +366,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     return {
       type: CELL_TYPES.CHART,
       content: '',
+      structured_content: { markdown: '', query: '' },
       name: `Item ${itemId}`,
       allowCrossFilter: true,
       width: 0,
@@ -380,6 +383,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     return {
       type: CELL_TYPES.CHART,
       content: '',
+      structured_content: { markdown: '', query: '' },
       name: `Item ${itemId}`,
       allowCrossFilter: true,
       width: 0,
@@ -403,9 +407,23 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     }
   }
 
+  function isMarkdownData(obj: any): obj is MarkdownData {
+    return (
+      obj &&
+      typeof obj === 'object' &&
+      typeof obj.markdown === 'string' &&
+      typeof obj.query === 'string'
+    )
+  }
+
   return {
     type: item.type,
-    content: item.content,
+    // check if it's MarkdownData, and if so, extract markdown
+    //
+    content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
+    structured_content: isMarkdownData(item.content)
+      ? item.content
+      : { markdown: '', query: item.content || '' },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,

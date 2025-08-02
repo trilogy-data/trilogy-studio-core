@@ -1,6 +1,6 @@
 // chartHelpers.ts
 import type { View } from 'vega'
-import type { ResultColumn,  ChartConfig, FieldKey } from '../editors/results'
+import type { ResultColumn, ChartConfig, FieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import {
@@ -37,7 +37,10 @@ export class ChromaChartHelpers {
   /**
    * Downloads the chart as a PNG file
    */
-  async downloadChart(vegaView: View | null, emit: (event: string, ...args: any[]) => void): Promise<void> {
+  async downloadChart(
+    vegaView: View | null,
+    emit: (event: string, ...args: any[]) => void,
+  ): Promise<void> {
     if (!vegaView) {
       console.warn('Chart view not available for download')
       return
@@ -72,7 +75,6 @@ export class ChromaChartHelpers {
     item: SignalValue,
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
-    emit: (event: string, ...args: any[]) => void
   ): void {
     if (item && ['line', 'area'].includes(config.chartType)) {
       if (!config.xField) return
@@ -86,22 +88,22 @@ export class ChromaChartHelpers {
       }
 
       const values = item[dateLookup as keyof typeof item] ?? []
-      
+
       // Check if values exists and has elements
       if (!values || !Array.isArray(values) || values.length === 0) {
         // Brush is being cleared - record the time and schedule a background click
         this.brushState.lastBrushClearTime = Date.now()
-        
+
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
           console.log('Cancelling background click due to recent point click')
           this.brushState.pendingBackgroundClick = false
           return
         }
-        
+
         console.log(
           'Scheduling background click due to brush clear, elapsed since last point click:',
-          Date.now() - this.brushState.lastClickTime
+          Date.now() - this.brushState.lastClickTime,
         )
         this.eventHandlers.onBackgroundClick()
         return
@@ -140,7 +142,7 @@ export class ChromaChartHelpers {
     event: ScenegraphEvent,
     item: any,
     config: ChartConfig,
-    columns: Map<string, ResultColumn>
+    columns: Map<string, ResultColumn>,
   ): void {
     const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
@@ -168,7 +170,7 @@ export class ChromaChartHelpers {
     item: any,
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
-    append: boolean
+    append: boolean,
   ): void {
     if (!config.geoField) return
 
@@ -191,7 +193,7 @@ export class ChromaChartHelpers {
     item: any,
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
-    append: boolean
+    append: boolean,
   ): void {
     let baseFilters = {}
     let baseChart = {}
@@ -227,22 +229,22 @@ export class ChromaChartHelpers {
     // Handle x-field clicks
     if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
       let xFilterValue = item.datum[xFieldRaw]
-      
+
       if (DATETIME_COLS.includes(columns.get(xFieldRaw)?.type as ColumnType)) {
         xFilterValue = convertTimestampToISODate(item.datum[xFieldRaw])
       }
-      
+
       baseFilters = { ...baseFilters, [xField]: xFilterValue }
       baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
     }
     // Handle y-field clicks
     else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
       let yFilterValue = item.datum[yFieldRaw]
-      
+
       if (DATETIME_COLS.includes(columns.get(yFieldRaw)?.type as ColumnType)) {
         yFilterValue = convertTimestampToISODate(item.datum[yFieldRaw])
       }
-      
+
       baseFilters = { ...baseFilters, [yField]: yFilterValue }
       baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
     }
@@ -252,7 +254,7 @@ export class ChromaChartHelpers {
       chart: baseChart,
       append,
     })
-    
+
     this.eventHandlers.onPointClick(item.datum)
   }
 
@@ -264,11 +266,11 @@ export class ChromaChartHelpers {
     eligible = eligible.concat(filteredColumns('geographic', columns).map((x) => x.name))
     eligible = eligible.concat(filteredColumns('latitude', columns).map((x) => x.name))
     eligible = eligible.concat(filteredColumns('longitude', columns).map((x) => x.name))
-    
+
     if (config.chartType !== 'area') {
       eligible = eligible.concat(filteredColumns('temporal', columns).map((x) => x.name))
     }
-    
+
     return eligible
   }
 
@@ -305,14 +307,14 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
     isMobile: boolean,
-    debouncedBrushHandler: (name: string, item: SignalValue) => void
+    debouncedBrushHandler: (name: string, item: SignalValue) => void,
   ): (() => void) | null {
     if (['area', 'line'].includes(config.chartType)) {
       view.addSignalListener('brush', debouncedBrushHandler)
       view.addEventListener('click', (event, item) => {
         this.handlePointClick(event, item, config, columns)
       })
-      
+
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
         view.removeEventListener('click', (event, item) => {
@@ -324,7 +326,7 @@ export class ChromaChartHelpers {
         this.handlePointClick(event, item, config, columns)
       }
       view.addEventListener('touchend', touchHandler)
-      
+
       return () => {
         view.removeEventListener('touchend', touchHandler)
       }
@@ -333,7 +335,7 @@ export class ChromaChartHelpers {
         this.handlePointClick(event, item, config, columns)
       }
       view.addEventListener('click', clickHandler)
-      
+
       return () => {
         view.removeEventListener('click', clickHandler)
       }

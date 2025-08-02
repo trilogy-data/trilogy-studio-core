@@ -180,6 +180,9 @@ function typeToFormatter(col: ResultColumn) {
       //@ts-ignore
       formatter: (cell) => {
         const url = cell.getValue()
+        if (!url) {
+          return ''
+        }
         return `<img src="${url}" alt="${url}" style="max-width: 100%; max-height: 100%;">`
       },
     }
