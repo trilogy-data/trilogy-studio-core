@@ -64,7 +64,7 @@ export class ModelImportService {
       alias: string
       purpose: EditorTag | null
       content: string
-      type?: 'sql' | 'dashboard' | 'trilogy' | undefined
+      type?: 'sql' | 'dashboard' | 'trilogy' | 'data' | undefined
     }[]
   > {
     return Promise.all(
@@ -80,7 +80,7 @@ export class ModelImportService {
             alias: component.alias,
             purpose: this.purposeToTag(component.purpose),
             content,
-            type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
+            type: component.type as 'sql' | 'dashboard' | 'trilogy' | 'data'  | undefined,
           }
         } catch (error) {
           console.error(error)
@@ -129,6 +129,9 @@ export class ModelImportService {
       this.modelStore.models[modelName].sources = data
         .map((response) => {
           // Handle dashboard imports
+          if (response.type === 'data') {
+            return null // Skip data type, not handled here
+          }
           if (response.type === 'dashboard' && response.content) {
             try {
               // Parse dashboard JSON
