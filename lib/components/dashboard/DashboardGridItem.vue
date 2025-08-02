@@ -607,15 +607,11 @@ const filterCount = computed(() => {
 }
 
 @media (max-width: 768px) {
-
-
   .control-btn {
-
     width: 32px;
     height: 32px;
     margin-left: 5px;
     margin-right: 5px;
-
   }
 }
 </style>
