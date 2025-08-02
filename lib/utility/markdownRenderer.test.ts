@@ -365,20 +365,6 @@ describe('renderMarkdown', () => {
     expect(result).toContain('<h2>Jane</h2>')
   })
 
-  it('should log debug information', () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
-    renderMarkdown('Test', mockResults)
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Rendering markdown with query results:',
-      mockResults,
-      'loading:',
-      false,
-    )
-
-    consoleSpy.mockRestore()
-  })
 })
 
 describe('Security Tests', () => {

@@ -20,6 +20,7 @@
     </div>
   </div>
 </template>
+
 <style scoped>
 .mobile-select-bar {
   height: 40px;
@@ -33,7 +34,13 @@
   right: 0;
   z-index: 100;
   background-color: var(--bg-color);
+  /* Add webkit-specific properties for Safari */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
+
 .icon-container {
   position: absolute;
   left: 16px;
@@ -41,48 +48,89 @@
   display: flex;
   align-items: center;
 }
+
 .hamburger-icon {
   font-size: 24px;
   display: flex;
 }
+
 .header {
   font-size: 20px;
   width: 100%;
   text-align: center;
 }
+
 .interface {
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: 100vh; /* Use viewport height instead of 100% */
+  /* Prevent iOS Safari bounce scrolling on the main container */
+  overflow: hidden;
 }
+
 .interface-wrap {
   display: flex;
   flex-wrap: nowrap;
   flex: 1 1 auto;
-  max-height: 100%;
+  max-height: calc(100vh - 40px); /* Account for header height */
   isolation: isolate;
-  margin-top: 40px; /* Add space for the fixed header */
+  padding-top: 40px; /* Use padding instead of margin for better Safari compatibility */
+  /* Ensure proper box-sizing */
+  box-sizing: border-box;
 }
+
 .sidebar {
   background-color: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
-  /* flex-wrap: wrap; */
   flex: 1 1 auto;
-  height: calc(100% - 40px);
+  height: 100%;
   width: 100%;
   z-index: 51;
-  overflow-y: visible;
+  overflow-y: auto;
+  /* Add iOS-specific scrolling properties */
+  -webkit-overflow-scrolling: touch;
 }
+
 .nested-page-content {
   flex: 1 1 auto;
   height: 100%;
   z-index: 1;
-  overflow: scroll;
+  overflow: auto;
+  /* Improve scrolling on iOS Safari */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent content from going under the header */
+  position: relative;
+}
+
+/* Additional iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .interface {
+    /* Fix for iOS Safari viewport height issues */
+    height: -webkit-fill-available;
+  }
+  
+  .interface-wrap {
+    max-height: calc(-webkit-fill-available - 40px);
+  }
+}
+
+/* Ensure safe area insets are respected on newer iPhones */
+@media screen and (max-width: 768px) {
+  .mobile-select-bar {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    top: env(safe-area-inset-top);
+  }
+  
+  .interface-wrap {
+    padding-top: calc(40px + env(safe-area-inset-top));
+  }
 }
 </style>
+
 <script lang="ts">
 export default {
   name: 'MobileSidebarLayout',
