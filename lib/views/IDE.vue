@@ -1,6 +1,15 @@
 <template>
   <div class="main">
-    <sidebar-layout>
+    <!-- Full screen mode - no sidebar -->
+    <div v-if="isFullScreen" class="full-screen-container">
+      <template v-if="activeScreen === 'dashboard'">
+        <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
+      </template>
+      <!-- Add other full screen views as needed -->
+    </div>
+
+    <!-- Normal mode with sidebar -->
+    <sidebar-layout v-else>
       <template #sidebar>
         <sidebar
           @editor-selected="setActiveEditor"
@@ -68,7 +77,7 @@
         <user-settings />
       </template>
       <template v-else-if="activeScreen === 'dashboard'">
-        <dashboard :name="activeDashboardComputed" />
+        <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'dashboard-import'">
         <dashboard-auto-importer @import-complete="handleImportComplete" />
@@ -104,6 +113,37 @@ header {
 .main {
   width: 100vw;
   height: 100vh;
+}
+
+.full-screen-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.full-screen-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  background: var(--bg-light, #f8f9fa);
+  border-bottom: 1px solid var(--border-light, #e0e0e0);
+  flex-shrink: 0;
+}
+
+.exit-fullscreen-btn {
+  padding: 0.5rem 1rem;
+  background: var(--primary-color, #0ea5e9);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.exit-fullscreen-btn:hover {
+  background: var(--primary-color-hover, #0284c7);
 }
 
 aside {
@@ -203,6 +243,7 @@ export default {
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'results',
+      isFullScreen: false,
     }
   },
   components: {
@@ -332,6 +373,9 @@ export default {
       if (this.editorRef) {
         this.editorRef.runQuery()
       }
+    },
+    toggleFullScreen(status: boolean) {
+      this.isFullScreen = status
     },
     async startDemo() {
       let editor = await setupDemo(

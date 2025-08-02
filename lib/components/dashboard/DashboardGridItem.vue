@@ -72,6 +72,19 @@ function saveTitleEdit(): void {
   }
 }
 
+function toggleCrossFilterEligible(): void {
+  const itemData = props.getItemData(props.item.i, props.dashboardId)
+  console.log(itemData)
+  const newAllowCrossFilter = !itemData.allowCrossFilter
+
+  // Update the allowCrossFilter property
+  console.log(`Toggling cross-filter eligibility for item ${props.item.i}: ${newAllowCrossFilter}`)
+  props.setItemData(props.item.i, props.dashboardId, {
+    ...itemData,
+    allowCrossFilter: newAllowCrossFilter,
+  })
+}
+
 // Cancel title editing
 function cancelTitleEdit(): void {
   editingItemTitle.value = false
@@ -147,75 +160,48 @@ const filterCount = computed(() => {
 </script>
 
 <template>
-  <div
-    class="grid-item-content"
-    :data-testid="`dashboard-component-${item.i}`"
-    :class="{
-      //@ts-ignore
-      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
-      'grid-item-edit-style': editMode,
-    }"
-    @mouseenter="
+  <div class="grid-item-content" :data-testid="`dashboard-component-${item.i}`" :class="{
+    //@ts-ignore
+    'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
+    'grid-item-edit-style': editMode,
+  }" @mouseenter="
       () => {
         isHeaderVisible = true
         isFiltersVisible = true
       }
-    "
-    @mouseleave="
+    " @mouseleave="
       () => {
         isHeaderVisible = false
         isFiltersVisible = false
       }
-    "
-  >
+    ">
     <!-- Edit Controls (styled like control buttons) -->
     <div class="header-controls" v-if="editMode">
-      <button
-        @click="openEditor"
-        class="control-btn"
-        :data-testid="`edit-dashboard-item-content-${item.i}`"
-        title="Edit data"
-      >
+      <button @click="openEditor" class="control-btn" :data-testid="`edit-dashboard-item-content-${item.i}`"
+        title="Edit data">
         <i class="mdi mdi-database-edit-outline icon"></i>
       </button>
-      <button
-        @click="copyItem"
-        class="control-btn"
-        :data-testid="`copy-dashboard-item-${item.i}`"
-        title="Copy item"
-      >
+      <button @click="toggleCrossFilterEligible" class="control-btn" :data-testid="`toggle-crossfilter-item-content-${item.i}`"
+        title="Toggle cross-filtering eligibility">
+        <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
+        <i v-else class="mdi mdi-filter-outline icon"></i>
+      </button>
+      <button @click="copyItem" class="control-btn" :data-testid="`copy-dashboard-item-${item.i}`" title="Copy item">
         <i class="mdi mdi-content-copy icon"></i>
       </button>
-      <button
-        @click="removeItem"
-        class="control-btn remove-btn"
-        :data-testid="`remove-dashboard-item-${item.i}`"
-        title="Remove item"
-      >
+      <button @click="removeItem" class="control-btn remove-btn" :data-testid="`remove-dashboard-item-${item.i}`"
+        title="Remove item">
         <i class="mdi mdi-delete-outline icon"></i>
       </button>
     </div>
 
     <!-- Transparent overlay header (only in edit mode) -->
-    <div
-      v-if="editMode"
-      class="grid-item-header overlay-header"
-      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
-    >
+    <div v-if="editMode" class="grid-item-header overlay-header"
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }">
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="drag-handle-svg"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="drag-handle-svg">
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -223,7 +209,7 @@ const filterCount = computed(() => {
       </div>
 
       <!-- Editable item title -->
-      <div class="item-title-container">
+      <div class="item-title-container no-drag">
         <!-- Display title (clickable) -->
         <div v-if="!editingItemTitle" class="item-title editable-title" @click="startTitleEditing">
           {{ itemData.name }}
@@ -231,17 +217,9 @@ const filterCount = computed(() => {
         </div>
 
         <!-- Edit title input -->
-        <input
-          v-else
-          :id="`title-input-${item.i}`"
-          v-model="editableItemName"
-          @blur="saveTitleEdit"
-          @keyup.enter="saveTitleEdit"
-          @keyup.esc="cancelTitleEdit"
-          class="title-input"
-          type="text"
-          :placeholder="getPlaceholderText"
-        />
+        <input v-else :id="`title-input-${item.i}`" v-model="editableItemName" @blur="saveTitleEdit"
+          @keyup.enter="saveTitleEdit" @keyup.esc="cancelTitleEdit" class="title-input" type="text"
+          :placeholder="getPlaceholderText" />
       </div>
     </div>
 
@@ -249,25 +227,15 @@ const filterCount = computed(() => {
     <div class="filters-container" v-if="supportsFilters">
       <!-- Edit mode - show filters normally -->
       <template v-if="editMode">
-        <div
-          class="filter-tag"
-          v-for="(filter, index) in itemData.filters"
-          :key="`${filter.source}-${filter.value}-${index}`"
-        >
+        <div class="filter-tag" v-for="(filter, index) in itemData.filters"
+          :key="`${filter.source}-${filter.value}-${index}`">
           <span class="filter-content">
-            <span class="filter-source"
-              >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
-            >
+            <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
             <span class="filter-value">
-              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
-            >
+              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span>
           </span>
-          <button
-            class="filter-remove-btn"
-            @click="removeFilter(filter.source)"
-            title="Remove filter"
-            v-if="filter.source !== 'global'"
-          >
+          <button class="filter-remove-btn" @click="removeFilter(filter.source)" title="Remove filter"
+            v-if="filter.source !== 'global'">
             ×
           </button>
         </div>
@@ -280,25 +248,15 @@ const filterCount = computed(() => {
         </div>
 
         <div v-if="isFiltersVisible && filterCount > 0" class="filter-details">
-          <div
-            class="filter-tag"
-            v-for="(filter, index) in itemData.filters"
-            :key="`${filter.source}-${filter.value}-${index}`"
-          >
+          <div class="filter-tag" v-for="(filter, index) in itemData.filters"
+            :key="`${filter.source}-${filter.value}-${index}`">
             <span class="filter-content">
-              <span class="filter-source"
-                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
-              >
+              <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
               <span class="filter-value">
-                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
-              >
+                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span>
             </span>
-            <button
-              class="filter-remove-btn"
-              @click="removeFilter(filter.source)"
-              :title="`Remove ${filter.source} filter`"
-              v-if="filter.source !== 'global'"
-            >
+            <button class="filter-remove-btn" @click="removeFilter(filter.source)"
+              :title="`Remove ${filter.source} filter`" v-if="filter.source !== 'global'">
               ×
             </button>
           </div>
@@ -309,16 +267,9 @@ const filterCount = computed(() => {
     <!-- Content area -->
     <div class="content-area" :class="{ 'content-area-filter': supportsFilters }">
       <!-- Render the appropriate component based on cell type -->
-      <component
-        :is="cellComponent"
-        :dashboardId="props.dashboardId"
-        :itemId="item.i"
-        :setItemData="setItemData"
-        :getItemData="getItemData"
-        :editMode="editMode"
-        @dimension-click="dimensionClick"
-        @background-click="backgroundClick"
-      />
+      <component :is="cellComponent" :dashboardId="props.dashboardId" :itemId="item.i" :setItemData="setItemData"
+        :getItemData="getItemData" :editMode="editMode" @dimension-click="dimensionClick"
+        @background-click="backgroundClick" />
     </div>
   </div>
 </template>
@@ -339,7 +290,7 @@ const filterCount = computed(() => {
 /* Header controls styling (positioned in top right of header) */
 .header-controls {
   position: absolute;
-  top: 0px; 
+  top: 0px;
   right: 0px;
   z-index: 20;
   display: flex;
@@ -359,6 +310,7 @@ const filterCount = computed(() => {
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
   /* border-radius: 4px; */
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
 }
 
 .control-btn:hover {
@@ -425,7 +377,7 @@ const filterCount = computed(() => {
 .item-title-container {
   flex: 1;
   min-width: 0;
-
+  touch-action: none;
 }
 
 .item-title {
@@ -577,6 +529,7 @@ const filterCount = computed(() => {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }

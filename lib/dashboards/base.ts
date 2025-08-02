@@ -33,10 +33,16 @@ export interface FilterInput {
   source: string
   value: Record<string, string>
 }
+
+export interface MarkdownData {
+  content: string
+  query: string
+}
 export interface GridItemData {
   type: 'chart' | 'markdown' | 'table'
-  content: string
+  content: string | MarkdownData
   name: string
+  allowCrossFilter: boolean
   width?: number
   height?: number
   chartConfig?: ChartConfig
@@ -45,13 +51,15 @@ export interface GridItemData {
   filters?: Filter[]
   parameters?: Record<string, unknown>
   results?: Results | null
+
 }
 
 export interface GridItemDataResponse {
   type: 'chart' | 'markdown' | 'table'
-  content: string
+  content: string | MarkdownData
   rootContent: ContentInput[]
   name: string
+  allowCrossFilter: boolean
   width?: number
   height?: number
   chartConfig?: ChartConfig
@@ -202,12 +210,31 @@ export class DashboardModel implements Dashboard {
       name: finalName,
       width: 0,
       height: 0,
+      allowCrossFilter: true, // Default to allowing cross-filtering
     }
 
     this.nextId++
     this.updatedAt = new Date()
     this.changed = true
     return itemId
+  }
+
+  copyItem(itemId: string): string {
+    if (!this.gridItems[itemId]) {
+      throw new Error(`Item with ID "${itemId}" does not exist in the dashboard.`)
+    }
+    let layoutItem = this.layout.find((item) => item.i === itemId)
+    if (!layoutItem) {
+      throw new Error(`Layout item with ID "${itemId}" does not exist in the dashboard
+.`)
+    }
+    const newItemId = this.nextId.toString()
+    this.gridItems[newItemId] = { ...this.gridItems[itemId] }
+    this.layout.push({ ...layoutItem, i: newItemId })
+    this.updatedAt = new Date()
+    this.changed = true
+    this.nextId++
+    return newItemId
   }
 
   // Update an item's content
@@ -219,6 +246,22 @@ export class DashboardModel implements Dashboard {
       }
       this.updatedAt = new Date()
       this.changed = true
+    }
+  }
+
+  updateItemCrossFilterEligibility(
+    itemId: string,
+    allowCrossFilter: boolean,
+  ): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        allowCrossFilter,
+      }
+      this.updatedAt = new Date()
+      this.changed = true
+    } else {
+      console.warn(`Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update cross-filter eligibility.`)
     }
   }
 
@@ -324,6 +367,9 @@ export class DashboardModel implements Dashboard {
       }
       if (id !== itemId) {
         const gridItem = this.gridItems[id]
+        if (!gridItem.allowCrossFilter) {
+          continue // Skip items that do not allow cross-filtering
+        }
         gridItem.conceptFilters = gridItem.conceptFilters || []
         let shouldAppend = true
         if (operation !== 'append') {
@@ -419,6 +465,7 @@ export class DashboardModel implements Dashboard {
     this.changed = true
   }
 
+
   // Clear all items
   clearItems(): void {
     this.layout = []
@@ -459,10 +506,19 @@ export class DashboardModel implements Dashboard {
 
   // Create a dashboard from stored data
   static fromSerialized(data: Dashboard): DashboardModel {
+    // set all gridItems to have allowCrossFilter as true if not explicit false
+    const gridItems: Record<string, GridItemData> = {}
+    for (const [itemId, itemData] of Object.entries(data.gridItems)) {
+      gridItems[itemId] = {
+        ...itemData,
+        allowCrossFilter: itemData.allowCrossFilter !== false, // Default to true if not explicitly false
+      }
+    }
     return new DashboardModel({
       ...data,
       createdAt: new Date(data.createdAt),
       updatedAt: new Date(data.updatedAt),
+      gridItems,
     })
   }
 }

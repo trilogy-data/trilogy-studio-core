@@ -230,6 +230,18 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    updateItemCrossFilterEligibility(
+      dashboardId: string,
+      itemId: string,
+      allowCrossFilter: boolean,
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemCrossFilterEligibility(itemId, allowCrossFilter)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
     updateItemResults(
       dashboardId: string,
       itemId: string,
@@ -337,6 +349,15 @@ export const useDashboardStore = defineStore('dashboards', {
     removeItemFromDashboard(dashboardId: string, itemId: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].removeItem(itemId)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    copyItemInDashboard(dashboardId: string, itemId: string) {
+      if (this.dashboards[dashboardId]) {
+        const newItemId = this.dashboards[dashboardId].copyItem(itemId)
+        return newItemId
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

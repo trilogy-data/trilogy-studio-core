@@ -29,6 +29,7 @@ const emit = defineEmits<{
   layoutUpdated: [layout: LayoutItem[]]
   dimensionsUpdate: [itemId: string]
   triggerResize: []
+  fullScreen: [boolean]
 }>()
 
 // Initialize services and stores
@@ -206,10 +207,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => {},
-      () => {},
-      () => {},
-      () => {},
+      () => { },
+      () => { },
+      () => { },
+      () => { },
       true,
     )
 
@@ -229,6 +230,11 @@ const validateFilter = async (filter: string) => {
 }
 
 async function populateCompletion() {
+  if (dashboard.value) {
+    if (dashboard.value && dashboard.value.state !== 'editing') {
+      emit('fullScreen', true)
+    }
+  }
   if (dashboard.value && dashboard.value.id && queryExecutionService) {
     let completion = await dashboardStore.populateCompletion(
       dashboard.value.id,
@@ -294,6 +300,11 @@ function removeItem(itemId: string): void {
   dashboardStore.removeItemFromDashboard(dashboard.value.id, itemId)
 }
 
+function copyItem(itemId: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+  dashboardStore.copyItemInDashboard(dashboard.value.id, itemId)
+}
+
 function closeAddModal(): void {
   showAddItemModal.value = false
 }
@@ -322,6 +333,7 @@ function saveContent(content: string): void {
   if (!dashboard.value || !dashboard.value.id || !editingItem.value) return
 
   const itemId = editingItem.value.i
+  console.log('Saving content for item:', itemId, content)
   dashboardStore.updateItemContent(dashboard.value.id, itemId, content)
   closeEditors()
 }
@@ -339,6 +351,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       type: CELL_TYPES.CHART,
       content: '',
       name: `Item ${itemId}`,
+      allowCrossFilter: true,
       width: 0,
       height: 0,
       imports: [],
@@ -352,6 +365,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       type: CELL_TYPES.CHART,
       content: '',
       name: `Item ${itemId}`,
+      allowCrossFilter: true,
       width: 0,
       height: 0,
       imports: [],
@@ -367,6 +381,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       type: CELL_TYPES.CHART,
       content: '',
       name: `Item ${itemId}`,
+      allowCrossFilter: true,
       width: 0,
       height: 0,
       imports: dashboard.value.imports,
@@ -392,6 +407,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     type: item.type,
     content: item.content,
     name: item.name,
+    allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
     height: item.height || 0,
     imports: dashboard.value.imports,
@@ -434,6 +450,14 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   if (data.results) {
     dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
   }
+
+  if (data.allowCrossFilter !== undefined) {
+    dashboardStore.updateItemCrossFilterEligibility(
+      dashboard.value.id,
+      itemId,
+      data.allowCrossFilter,
+    )
+  }
 }
 
 // Connection management
@@ -460,7 +484,6 @@ function handleRefresh(itemId?: string): void {
   const refreshEvent = new CustomEvent('dashboard-refresh')
   window.dispatchEvent(refreshEvent)
 
-  console.log('Refreshing all dashboard items')
   emit('triggerResize')
 }
 
@@ -536,6 +559,7 @@ defineExpose({
   addItem,
   clearItems,
   removeItem,
+  copyItem,
   closeAddModal,
   openEditor,
   saveContent,

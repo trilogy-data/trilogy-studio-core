@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -17,12 +17,16 @@ defineProps<{
   viewMode?: boolean
 }>()
 
+const emit = defineEmits<{
+  fullScreen: [enabled: boolean]
+}>()
+
 // Use the base dashboard logic
 const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 
 // Desktop-specific reactive state
-const draggable = ref(true)
-const resizable = ref(true)
+const editable = computed(() => dashboard.value?.state === 'editing' || false)
+
 const loaded = ref(false)
 
 // Computed properties from base with proper fallbacks
@@ -38,6 +42,7 @@ const showQueryEditor = computed(() => dashboardBase.value?.showQueryEditor || f
 const showMarkdownEditor = computed(() => dashboardBase.value?.showMarkdownEditor || false)
 const editingItem = computed(() => dashboardBase.value?.editingItem)
 const dashboardMaxWidth = computed(() => dashboardBase.value?.dashboardMaxWidth || 1500)
+
 
 // Function wrappers that ensure base is available
 const getItemData = (itemId: string, dashboardId: string) => {
@@ -100,51 +105,28 @@ function onLayoutUpdated(newLayout: any) {
 // Update draggable/resizable when edit mode changes
 function handleToggleEditMode() {
   dashboardBase.value?.toggleEditMode()
-
-  if (dashboard.value) {
-    draggable.value = dashboard.value.state === 'editing'
-    resizable.value = dashboard.value.state === 'editing'
-  }
-
+  emit('fullScreen', !editMode.value)
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
   })
+
 }
 </script>
 
 <template>
-  <DashboardBase
-    ref="dashboardBase"
-    :key="name"
-    :name="name"
-    :connection-id="connectionId"
-    :max-width="maxWidth"
-    :view-mode="viewMode"
-    :is-mobile="false"
-    @layout-updated="onLayoutUpdated"
-    @dimensions-update="updateItemDimensions"
-    @trigger-resize="triggerResize"
-  />
+  <DashboardBase ref="dashboardBase" :key="name" :name="name" :connection-id="connectionId" :max-width="maxWidth"
+    :is-mobile="false" :view-mode="viewMode" @layout-updated="onLayoutUpdated" @dimensions-update="updateItemDimensions"
+    @trigger-resize="triggerResize" @full-screen="(x) => $emit('fullScreen', x)" />
 
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :edits-locked="dashboard.state === 'locked'"
-      :selected-connection="selectedConnection"
-      :filterError="filterError"
-      :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter"
-      @connection-change="dashboardBase?.onConnectionChange"
-      @filter-change="dashboardBase?.handleFilterChange"
-      @import-change="dashboardBase?.handleImportChange"
-      @add-item="dashboardBase?.openAddItemModal"
-      @clear-items="dashboardBase?.clearItems"
-      @toggle-edit-mode="handleToggleEditMode"
-      @refresh="dashboardBase?.handleRefresh"
-      @clear-filter="dashboardBase?.handleFilterClear"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :edits-locked="dashboard.state === 'locked'"
+      :selected-connection="selectedConnection" :filterError="filterError" :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter" @connection-change="dashboardBase?.onConnectionChange"
+      @filter-change="dashboardBase?.handleFilterChange" @import-change="dashboardBase?.handleImportChange"
+      @add-item="dashboardBase?.openAddItemModal" @clear-items="dashboardBase?.clearItems"
+      @toggle-edit-mode="handleToggleEditMode" @refresh="dashboardBase?.handleRefresh"
+      @clear-filter="dashboardBase?.handleFilterClear" />
 
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
@@ -152,75 +134,41 @@ function handleToggleEditMode() {
 
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
-        <GridLayout
-          :col-num="20"
-          :row-height="30"
-          :is-draggable="draggable"
-          :is-resizable="resizable"
-          :layout="layout"
-          :vertical-compact="true"
-          :use-css-transforms="true"
-          @layout-updated="onLayoutUpdated"
-          @layout-ready="layoutReadyEvent"
-        >
-          <grid-item
-            v-for="item in layout"
-            :key="item.i"
-            :static="item.static"
-            :x="item.x"
-            :y="item.y"
-            :w="item.w"
-            :h="item.h"
-            :i="item.i"
-            :data-i="item.i"
-            drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle"
-          >
-            <DashboardGridItem
-              :dashboard-id="dashboard.id"
-              :item="item"
-              :edit-mode="editMode"
-              :filter="filter"
-              :get-item-data="getItemData"
-              @dimension-click="dashboardBase?.setCrossFilter"
-              :set-item-data="setItemData"
-              @edit-content="dashboardBase?.openEditor"
-              @remove-filter="dashboardBase?.removeFilter"
-              @background-click="dashboardBase?.unSelect"
-              @update-dimensions="updateItemDimensions"
-              @remove-item="dashboardBase?.removeItem"
-            />
+        <GridLayout :col-num="20" :row-height="30" :is-draggable="editable" :is-resizable="editable" :layout="layout"
+          :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdated"
+          @layout-ready="layoutReadyEvent">
+          <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
+            :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
+            drag-handle-class=".grid-item-drag-handle">
+            <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
+              :get-item-data="getItemData" @dimension-click="dashboardBase?.setCrossFilter" :set-item-data="setItemData"
+              @edit-content="dashboardBase?.openEditor" @remove-filter="dashboardBase?.removeFilter"
+              @background-click="dashboardBase?.unSelect" @update-dimensions="updateItemDimensions"
+              @copy-item="dashboardBase?.copyItem" @remove-item="dashboardBase?.removeItem" />
           </grid-item>
         </GridLayout>
       </div>
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal
-      :show="showAddItemModal"
-      @add="dashboardBase?.addItem"
-      @close="dashboardBase?.closeAddModal"
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="dashboardBase?.addItem"
+      @close="dashboardBase?.closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
-      />
+        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor"
+        @save="dashboardBase?.saveContent" @cancel="dashboardBase?.closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
-      />
+      <MarkdownEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).content" @save="dashboardBase?.saveContent"
+        @cancel="dashboardBase?.closeEditors" />
     </Teleport>
   </div>
 
@@ -230,11 +178,8 @@ function handleToggleEditMode() {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
-      <dashboard-creator-inline
-        class="inline-creator"
-        :visible="true"
-        @dashboard-created="dashboardBase?.dashboardCreated"
-      ></dashboard-creator-inline>
+      <dashboard-creator-inline class="inline-creator" :visible="true"
+        @dashboard-created="dashboardBase?.dashboardCreated"></dashboard-creator-inline>
     </template>
   </div>
 </template>
@@ -271,6 +216,24 @@ function handleToggleEditMode() {
 .grid-content {
   width: 100%;
   height: 100%;
+}
+
+.fullscreen-grid-container {
+  flex: 1;
+  overflow: auto;
+  padding: 15px;
+  background-color: var(--bg-color);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreen-grid-content {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  /* Remove max-width constraint in fullscreen */
 }
 
 .vue-grid-layout {
