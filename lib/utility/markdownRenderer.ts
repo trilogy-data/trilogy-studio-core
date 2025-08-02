@@ -13,9 +13,6 @@ export function escapeHtml(text: string): string {
   return div.innerHTML
 }
 
-/**
- * HTML sanitization function using DOMPurify (recommended for production)
- */
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'li', 'strong', 'em', 'a', 'br', 'span'],
@@ -427,8 +424,6 @@ export function renderMarkdown(
   loading: boolean = false,
 ): string {
   if (!text) return ''
-
-  console.log('Rendering markdown with query results:', queryResults, 'loading:', loading)
 
   // 1. FIRST: Handle template substitutions on raw text (with loading support)
   let html = processTemplateSubstitutions(text, queryResults, loading)

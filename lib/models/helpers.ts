@@ -59,41 +59,50 @@ export class ModelImportService {
    * @returns Promise resolving to array of component details
    */
   public async fetchModelImports(modelImport: ModelImport): Promise<
-    {
-      name: string
-      alias: string
-      purpose: EditorTag | null
-      content: string
-      type?: 'sql' | 'dashboard' | 'trilogy' | 'data' | undefined
-    }[]
-  > {
-    return Promise.all(
-      modelImport.components.map(async (component) => {
-        try {
-          const response = await fetch(component.url)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
-          }
-          const content = await response.text()
-          return {
-            name: component.name,
-            alias: component.alias,
-            purpose: this.purposeToTag(component.purpose),
-            content,
-            type: component.type as 'sql' | 'dashboard' | 'trilogy' | 'data'  | undefined,
-          }
-        } catch (error) {
-          console.error(error)
-          return {
-            name: component.name,
-            alias: component.alias,
-            purpose: this.purposeToTag(component.purpose),
-            content: '', // Return empty content on failure
-          }
+  {
+    name: string
+    alias: string
+    purpose: EditorTag | null
+    content: string
+    type?: 'sql' | 'dashboard' | 'trilogy' | undefined
+  }[]
+> {
+  const results = await Promise.all(
+    modelImport.components.map(async (component) => {
+      if (component.purpose === 'data') {
+        return null // Skip data type, not handled here
+      }
+      try {
+        const response = await fetch(component.url)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
         }
-      }),
-    )
-  }
+        const content = await response.text()
+        return {
+          name: component.name,
+          alias: component.alias,
+          purpose: this.purposeToTag(component.purpose),
+          content,
+          type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
+        }
+      } catch (error) {
+        console.error(error)
+        return {
+          name: component.name,
+          alias: component.alias,
+          purpose: this.purposeToTag(component.purpose),
+          content: '', // Return empty content on failure
+          type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
+        }
+      }
+    })
+  )
+  
+  // Filter out null values after all promises resolve
+  return results.filter((component): component is NonNullable<typeof component> => 
+    component !== null
+  )
+}
 
   /**
    * Imports a model from a URL and creates editors for its components
@@ -128,10 +137,7 @@ export class ModelImportService {
       //@ts-ignore
       this.modelStore.models[modelName].sources = data
         .map((response) => {
-          // Handle dashboard imports
-          if (response.type === 'data') {
-            return null // Skip data type, not handled here
-          }
+          console.log(response.name)
           if (response.type === 'dashboard' && response.content) {
             try {
               // Parse dashboard JSON
