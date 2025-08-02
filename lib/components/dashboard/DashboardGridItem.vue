@@ -4,7 +4,7 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import {
-  type GridItemData,
+  type GridItemDataResponse,
   type LayoutItem,
   CELL_TYPES,
   type DimensionClick,
@@ -15,7 +15,7 @@ const props = defineProps<{
   dashboardId: string
   item: LayoutItem
   editMode: boolean
-  getItemData: (itemId: string, dashboardId: string) => GridItemData
+  getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
   setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
@@ -70,6 +70,19 @@ function saveTitleEdit(): void {
 
     editingItemTitle.value = false
   }
+}
+
+function toggleCrossFilterEligible(): void {
+  const itemData = props.getItemData(props.item.i, props.dashboardId)
+  console.log(itemData)
+  const newAllowCrossFilter = !itemData.allowCrossFilter
+
+  // Update the allowCrossFilter property
+  console.log(`Toggling cross-filter eligibility for item ${props.item.i}: ${newAllowCrossFilter}`)
+  props.setItemData(props.item.i, props.dashboardId, {
+    ...itemData,
+    allowCrossFilter: newAllowCrossFilter,
+  })
 }
 
 // Cancel title editing
@@ -168,31 +181,43 @@ const filterCount = computed(() => {
       }
     "
   >
-    <!-- Edit Content button (always visible in edit mode) -->
-    <button
-      v-if="editMode"
-      @click="openEditor"
-      class="edit-button always-visible"
-      :data-testid="`edit-dashboard-item-content-${item.i}`"
-    >
-      Data
-    </button>
-    <button
-      v-if="editMode"
-      @click="copyItem"
-      class="copy-button always-visible"
-      :data-testid="`copy-dashboard-item-${item.i}`"
-    >
-      Copy
-    </button>
-    <button
-      v-if="editMode"
-      @click="removeItem"
-      class="remove-button always-visible"
-      :data-testid="`remove-dashboard-item-${item.i}`"
-    >
-      Remove
-    </button>
+    <!-- Edit Controls (styled like control buttons) -->
+    <div class="header-controls" v-if="editMode">
+      <button
+        @click="openEditor"
+        class="control-btn"
+        :data-testid="`edit-dashboard-item-content-${item.i}`"
+        title="Edit data"
+      >
+        <i class="mdi mdi-database-edit-outline icon"></i>
+      </button>
+      <button
+        @click="toggleCrossFilterEligible"
+        class="control-btn"
+        :data-testid="`toggle-crossfilter-item-content-${item.i}`"
+        title="Toggle cross-filtering eligibility"
+      >
+        <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
+        <i v-else class="mdi mdi-filter-outline icon"></i>
+      </button>
+      <button
+        @click="copyItem"
+        class="control-btn"
+        :data-testid="`copy-dashboard-item-${item.i}`"
+        title="Copy item"
+      >
+        <i class="mdi mdi-content-copy icon"></i>
+      </button>
+      <button
+        @click="removeItem"
+        class="control-btn remove-btn"
+        :data-testid="`remove-dashboard-item-${item.i}`"
+        title="Remove item"
+      >
+        <i class="mdi mdi-delete-outline icon"></i>
+      </button>
+    </div>
+
     <!-- Transparent overlay header (only in edit mode) -->
     <div
       v-if="editMode"
@@ -220,7 +245,7 @@ const filterCount = computed(() => {
       </div>
 
       <!-- Editable item title -->
-      <div class="item-title-container">
+      <div class="item-title-container no-drag">
         <!-- Display title (clickable) -->
         <div v-if="!editingItemTitle" class="item-title editable-title" @click="startTitleEditing">
           {{ itemData.name }}
@@ -324,16 +349,56 @@ const filterCount = computed(() => {
 .grid-item-content {
   height: 100%;
   width: 100%;
-  /* margin:12px; */
-  /* padding: 4px; */
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
   border: 1px solid var(--dashboard-border);
   position: relative;
-  /* Important for positioning the overlay header */
   overflow-y: hidden;
   background-color: var(--dashboard-background);
+}
+
+/* Header controls styling (positioned in top right of header) */
+.header-controls {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  z-index: 20;
+  display: flex;
+  /* gap: 4px; */
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--chart-control-height);
+  height: var(--chart-control-height);
+  border: 1px solid var(--border-light);
+  background-color: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  /* border-radius: 4px; */
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
+}
+
+.control-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.control-btn.remove-btn {
+  color: var(--delete-color);
+  border-color: var(--delete-color);
+}
+
+.control-btn.remove-btn:hover {
+  background-color: rgba(255, 0, 0, 0.1);
+}
+
+.icon {
+  font-size: 16px;
 }
 
 .overlay-header {
@@ -383,7 +448,7 @@ const filterCount = computed(() => {
 .item-title-container {
   flex: 1;
   min-width: 0;
-  /* Allows flex child to shrink below min-content width */
+  touch-action: none;
 }
 
 .item-title {
@@ -400,7 +465,6 @@ const filterCount = computed(() => {
   border-radius: 3px;
   display: flex;
   align-items: left;
-  /* justify-content: space-between; */
 }
 
 .editable-title:hover {
@@ -429,79 +493,8 @@ const filterCount = computed(() => {
   color: var(--text-color);
 }
 
-.edit-button {
-  /* padding: 4px 8px;*/
-  color: var(--special-text);
-  border: 1px solid var(--special-text);
-  background-color: transparent;
-  /* border: none; */
-  cursor: pointer;
-  font-size: var(--small-font-size);
-  margin-left: 8px;
-}
-
-.copy-button {
-  /* padding: 4px 8px;*/
-  color: var(--special-text);
-  border: 1px solid var(--special-text);
-  background-color: transparent;
-  cursor: pointer;
-  font-size: var(--small-font-size);
-  margin-left: 8px;
-}
-
-.remove-button {
-  /* padding: 4px 8px;*/
-  color: var(--delete-color);
-  border: 1px solid var(--delete-color);
-  background-color: transparent;
-  cursor: pointer;
-  font-size: var(--small-font-size);
-  margin-left: 8px;
-}
-
-.edit-button.always-visible {
-  position: absolute;
-  top: 4px;
-  right: 120px;
-  z-index: 20;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.copy-button.always-visible {
-  position: absolute;
-  top: 4px;
-  right: 70px;
-  z-index: 20;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.remove-button.always-visible {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 20;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.edit-button:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.copy-button:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.remove-button:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
 .grid-item-drag-handle {
   cursor: move !important;
-  /* Show move cursor */
 }
 
 .drag-handle-icon {
@@ -524,26 +517,18 @@ const filterCount = computed(() => {
 .filters-container {
   display: flex;
   flex-wrap: wrap;
-  /* gap: 4px; */
-  /* padding: 3px 6px; */
-  /* border-bottom: 1px solid var(--border); */
-  /*background-color: var(--sidebar-bg);*/
-  min-height: 24px;
+  min-height: var(--chart-control-height);
 }
 
 .filter-tag {
   display: flex;
   align-items: center;
-  /* background-color: 'black';  
-  border-radius: 0px; */
-  /* border: 1px solid var(--border); */
   padding: 0px 3px 0px 3px;
   font-size: calc(var(--small-font-size) - 5px);
 }
 
 .filter-content {
   display: flex;
-  /* gap: 2px; */
   align-items: center;
 }
 
@@ -578,7 +563,6 @@ const filterCount = computed(() => {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* No filters message - optional */
 .no-filters {
   font-style: italic;
   color: var(--text-muted);
@@ -590,8 +574,6 @@ const filterCount = computed(() => {
   display: flex;
   align-items: center;
   padding: 2px 6px;
-  /* background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.5); */
-  /* border-radius: 12px; */
   cursor: pointer;
 }
 
@@ -610,9 +592,7 @@ const filterCount = computed(() => {
 .filter-details {
   display: flex;
   flex-wrap: wrap;
-  /* padding: 2px; */
   background-color: rgba(var(--sidebar-bg), 0.7);
-  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
   animation: fadeIn 0.2s ease;
 }
 
@@ -620,8 +600,18 @@ const filterCount = computed(() => {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .control-btn {
+    width: 32px;
+    height: 32px;
+    margin-left: 5px;
+    margin-right: 5px;
   }
 }
 </style>

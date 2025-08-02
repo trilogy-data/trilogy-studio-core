@@ -36,6 +36,7 @@
           :containerHeight="containerHeight"
           :initialConfig="chartConfig"
           :onChartConfigChange="onChartChange"
+          @refresh-click="handleLocalRefresh"
         />
       </div>
       <div v-else-if="displayTab === 'sql'" class="sql-view">
@@ -120,6 +121,9 @@ export default {
     },
     onChartChange(config: any) {
       this.$emit('config-change', config)
+    },
+    handleLocalRefresh() {
+      this.$emit('refresh-click')
     },
   },
   computed: {

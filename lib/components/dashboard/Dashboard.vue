@@ -17,12 +17,16 @@ defineProps<{
   viewMode?: boolean
 }>()
 
+const emit = defineEmits<{
+  fullScreen: [enabled: boolean]
+}>()
+
 // Use the base dashboard logic
 const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 
 // Desktop-specific reactive state
-const draggable = ref(true)
-const resizable = ref(true)
+const editable = computed(() => dashboard.value?.state === 'editing' || false)
+
 const loaded = ref(false)
 
 // Computed properties from base with proper fallbacks
@@ -100,12 +104,7 @@ function onLayoutUpdated(newLayout: any) {
 // Update draggable/resizable when edit mode changes
 function handleToggleEditMode() {
   dashboardBase.value?.toggleEditMode()
-
-  if (dashboard.value) {
-    draggable.value = dashboard.value.state === 'editing'
-    resizable.value = dashboard.value.state === 'editing'
-  }
-
+  emit('fullScreen', !editMode.value)
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
@@ -120,11 +119,12 @@ function handleToggleEditMode() {
     :name="name"
     :connection-id="connectionId"
     :max-width="maxWidth"
-    :view-mode="viewMode"
     :is-mobile="false"
+    :view-mode="viewMode"
     @layout-updated="onLayoutUpdated"
     @dimensions-update="updateItemDimensions"
     @trigger-resize="triggerResize"
+    @full-screen="(x) => $emit('fullScreen', x)"
   />
 
   <div class="dashboard-container" v-if="dashboard">
@@ -155,8 +155,8 @@ function handleToggleEditMode() {
         <GridLayout
           :col-num="20"
           :row-height="30"
-          :is-draggable="draggable"
-          :is-resizable="resizable"
+          :is-draggable="editable"
+          :is-resizable="editable"
           :layout="layout"
           :vertical-compact="true"
           :use-css-transforms="true"
@@ -188,6 +188,7 @@ function handleToggleEditMode() {
               @remove-filter="dashboardBase?.removeFilter"
               @background-click="dashboardBase?.unSelect"
               @update-dimensions="updateItemDimensions"
+              @copy-item="dashboardBase?.copyItem"
               @remove-item="dashboardBase?.removeItem"
             />
           </grid-item>
@@ -217,7 +218,10 @@ function handleToggleEditMode() {
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
       <MarkdownEditor
-        :content="getItemData(editingItem.i, dashboard.id).content"
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).structured_content"
         @save="dashboardBase?.saveContent"
         @cancel="dashboardBase?.closeEditors"
       />
@@ -271,6 +275,24 @@ function handleToggleEditMode() {
 .grid-content {
   width: 100%;
   height: 100%;
+}
+
+.fullscreen-grid-container {
+  flex: 1;
+  overflow: auto;
+  padding: 15px;
+  background-color: var(--bg-color);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreen-grid-content {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  /* Remove max-width constraint in fullscreen */
 }
 
 .vue-grid-layout {

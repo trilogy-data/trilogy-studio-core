@@ -19,21 +19,10 @@
       :chartTitle
       @dimension-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
+      @refresh-click="handleLocalRefresh"
     />
-
-    <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
-    </div>
-    <div v-if="!loading && editMode" class="chart-actions">
-      <button
-        v-if="onRefresh"
-        @click="handleLocalRefresh"
-        class="chart-refresh-button"
-        title="Refresh this chart"
-      >
-        <span class="refresh-icon">⟳</span>
-      </button>
     </div>
   </div>
 </template>

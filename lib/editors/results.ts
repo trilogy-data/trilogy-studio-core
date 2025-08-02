@@ -56,6 +56,7 @@ export type FieldKey =
   | 'yField'
   | 'colorField'
   | 'sizeField'
+  | 'geoField'
   | 'groupField'
   | 'trellisField'
 

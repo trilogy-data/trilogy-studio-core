@@ -36,14 +36,14 @@ const createHeadlineLayer = (
     ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
   let topMark = {}
-  let includeLabel = true;
+  let includeLabel = true
   if (isImageColumn(columns.get(column) as ResultColumn)) {
-    includeLabel = false; // Don't show label for image columns
+    includeLabel = false // Don't show label for image columns
     topMark = {
       mark: {
         type: 'image',
-        width: { expr: `width` },
-        height: { expr: `height` },
+        width: { expr: `width / ${total}` },
+        height: { expr: `height / ${total}` },
         align: 'center',
         baseline: 'middle',
         x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
@@ -92,7 +92,7 @@ const createHeadlineLayer = (
         align: 'center',
         baseline: 'top',
         dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height + 10` } : 10, // Vertical offset for mobile, fixed for desktop
+        dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         text: { value: snakeCaseToCapitalizedWords(column) },

@@ -168,6 +168,7 @@ function handleToggleEditMode() {
           @background-click="dashboardBase?.unSelect"
           @update-dimensions="updateItemDimensions"
           @remove-item="dashboardBase?.removeItem"
+          @copy-item="dashboardBase?.copyItem"
         />
       </div>
     </div>
@@ -194,7 +195,10 @@ function handleToggleEditMode() {
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
       <MarkdownEditor
-        :content="getItemData(editingItem.i, dashboard.id).content"
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).structured_content"
         @save="dashboardBase?.saveContent"
         @cancel="dashboardBase?.closeEditors"
       />

@@ -416,7 +416,7 @@ Use Ctrl+Enter to apply`
   background-color: var(--bg-color);
   width: 100%;
   font-size: var(--font-size);
-  height: 20px;
+  height: 30px;
   cursor: pointer;
 }
 
