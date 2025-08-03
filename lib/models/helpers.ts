@@ -80,7 +80,7 @@ export class ModelImportService {
         if (component.purpose === 'data') {
           return null // Skip data type, not handled here
         }
-        
+
         try {
           const response = await fetch(component.url)
           if (!response.ok) {
@@ -104,9 +104,9 @@ export class ModelImportService {
             type: component.type as 'sql' | 'dashboard' | 'trilogy',
           }
         }
-      })
+      }),
     )
-    
+
     // Filter out null values after all promises resolve
     return results.filter((component): component is ComponentData => component !== null)
   }
@@ -145,9 +145,9 @@ export class ModelImportService {
    * Creates or updates a dashboard
    */
   private createOrUpdateDashboard(
-    component: ComponentData, 
-    connectionName: string, 
-    dashboards: Map<string, string>
+    component: ComponentData,
+    connectionName: string,
+    dashboards: Map<string, string>,
   ): void {
     if (!component.content) {
       console.warn(`Dashboard ${component.name} has no content, skipping`)
@@ -165,9 +165,10 @@ export class ModelImportService {
       // Update imports with editor IDs
       dashboardObj.imports = dashboardObj.imports.map((imp) => ({
         ...imp,
-        id: this.editorStore.editorList.find(
-          (e) => e.name === imp.name && e.connection === connectionName
-        )?.id || ''
+        id:
+          this.editorStore.editorList.find(
+            (e) => e.name === imp.name && e.connection === connectionName,
+          )?.id || '',
       }))
 
       // Check if dashboard already exists
@@ -217,17 +218,17 @@ export class ModelImportService {
       const components = await this.fetchModelImports(modelImportBase)
 
       // Separate components by type
-      const editorComponents = components.filter(c => c.type === 'sql' || c.type === 'trilogy')
-      const dashboardComponents = components.filter(c => c.type === 'dashboard')
+      const editorComponents = components.filter((c) => c.type === 'sql' || c.type === 'trilogy')
+      const dashboardComponents = components.filter((c) => c.type === 'dashboard')
 
       // Phase 1: Create/update all editors first
       const modelSources: ModelSource[] = []
-      
+
       for (const component of editorComponents) {
         console.log(`Processing editor: ${component.name}`)
-        
+
         const editor = this.createOrUpdateEditor(component, connectionName)
-        
+
         // Track components by type
         if (component.type === 'sql') {
           sql.set(component.name, component.name)

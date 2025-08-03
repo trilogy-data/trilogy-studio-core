@@ -267,9 +267,9 @@ describe('processTemplateSubstitutions', () => {
 
 describe('convertMarkdownToHtml', () => {
   it('should convert headers', () => {
-    expect(convertMarkdownToHtml('# Header 1')).toContain('<h1>Header 1</h1>')
-    expect(convertMarkdownToHtml('## Header 2')).toContain('<h2>Header 2</h2>')
-    expect(convertMarkdownToHtml('### Header 3')).toContain('<h3>Header 3</h3>')
+    expect(convertMarkdownToHtml('# Header 1')).toContain('<h1 class="rendered-markdown-h1">Header 1</h1>')
+    expect(convertMarkdownToHtml('## Header 2')).toContain('<h2 class="rendered-markdown-h2">Header 2</h2>')
+    expect(convertMarkdownToHtml('### Header 3')).toContain('<h3 class="rendered-markdown-h3">Header 3</h3>')
   })
 
   it('should convert lists', () => {
@@ -290,7 +290,7 @@ describe('convertMarkdownToHtml', () => {
 
   it('should prevent XSS in links', () => {
     const result = convertMarkdownToHtml('[Click](javascript:alert(1))')
-    expect(result).toBe('<p>Click)</p>') // Should just return text
+    expect(result).toBe('Click)') // Should just return text
   })
 
   it('should convert paragraphs and line breaks', () => {
@@ -313,7 +313,7 @@ describe('renderMarkdown', () => {
     const text = '# Welcome {name || "Guest"}\n\nYou are **{age}** years old.\n\n* Item 1\n* Item 2'
     const result = renderMarkdown(text, mockResults)
 
-    expect(result).toContain('<h1>Welcome John</h1>')
+    expect(result).toContain('<h1 class="rendered-markdown-h1">Welcome John</h1>')
     expect(result).toContain('<strong>30</strong>')
     expect(result).toContain('<ul><li>Item 1</li>')
   })
@@ -360,11 +360,10 @@ describe('renderMarkdown', () => {
     const text = '# Team Members\n\n{{#each data}}## {{name}}\n\n{{/each}}'
     const result = renderMarkdown(text, complexData)
 
-    expect(result).toContain('<h1>Team Members</h1>')
-    expect(result).toContain('<h2>John</h2>')
-    expect(result).toContain('<h2>Jane</h2>')
+    expect(result).toContain('<h1 class="rendered-markdown-h1">Team Members</h1>')
+    expect(result).toContain('<h2 class="rendered-markdown-h2">John</h2>')
+    expect(result).toContain('<h2 class="rendered-markdown-h2">Jane</h2>')
   })
-
 })
 
 describe('Security Tests', () => {
@@ -403,7 +402,7 @@ describe('Security Tests', () => {
     const maliciousText = '[Click me](javascript:alert(1))'
     const result = renderMarkdown(maliciousText)
     expect(result).not.toContain('javascript:')
-    expect(result).toBe('<p>Click me)</p>')
+    expect(result).toBe('Click me)')
   })
 
   it('should handle data URLs safely', () => {
@@ -445,7 +444,7 @@ describe('Edge Cases', () => {
     const text = '# {title}\n\n{content}'
     const result = renderMarkdown(text, data)
 
-    expect(result).toContain('<h1>Important</h1>')
+    expect(result).toContain('<h1 class="rendered-markdown-h1">Important</h1>')
     expect(result).toContain('<strong>bold</strong>')
   })
 

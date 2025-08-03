@@ -110,11 +110,11 @@
     /* Fix for iOS Safari viewport height issues */
     height: -webkit-fill-available;
   }
-  
+
   .sidebar {
     height: calc(-webkit-fill-available - 40px);
   }
-  
+
   .nested-page-content {
     height: calc(-webkit-fill-available - 40px);
   }

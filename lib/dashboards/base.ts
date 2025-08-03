@@ -276,9 +276,9 @@ export class DashboardModel implements Dashboard {
       let item = this.gridItems[itemId]
       if (item.chartFilters && item.chartFilters.length > 0) {
         // if any chart filter values are not static strings, ignore
-        
-        let allStaticStrings = item.chartFilters.every(
-          (filter) => Object.values(filter.value).every((value) => typeof value === 'string'),
+
+        let allStaticStrings = item.chartFilters.every((filter) =>
+          Object.values(filter.value).every((value) => typeof value === 'string'),
         )
         if (!allStaticStrings) {
           console.warn(
@@ -287,14 +287,21 @@ export class DashboardModel implements Dashboard {
           return
         }
 
-        let includesCrossFilter = this.gridItems[itemId].chartFilters?.some(
-          (filter) => Object.keys(filter.value).some((key) => results?.data.some((row) => row[key] === filter.value[key])),
+        let includesCrossFilter = this.gridItems[itemId].chartFilters?.some((filter) =>
+          Object.keys(filter.value).some((key) =>
+            results?.data.some((row) => row[key] === filter.value[key]),
+          ),
         )
         if (!includesCrossFilter) {
           // If the results do not include the cross filter values, remove the cross filter
           // log the values we're looking for -
           let crossFilterValues = this.gridItems[itemId].chartFilters?.map((filter) => filter.value)
-          console.log('Removing cross filter that was sourced from', item.name, 'and is no longer present in the results: ', crossFilterValues)
+          console.log(
+            'Removing cross filter that was sourced from',
+            item.name,
+            'and is no longer present in the results: ',
+            crossFilterValues,
+          )
           this.removeItemCrossFilterSource(itemId)
         }
       }

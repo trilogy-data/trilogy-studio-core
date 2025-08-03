@@ -310,7 +310,6 @@ export default defineComponent({
   filter: blur(0.5px);
   vertical-align: middle;
 }
-
 </style>
 
 <style scoped>
@@ -373,7 +372,6 @@ export default defineComponent({
   color: var(--text-color, #333);
 }
 
-
 .rendered-markdown p {
   margin-top: 0.25em;
   margin-bottom: 0.75em;
@@ -418,6 +416,4 @@ export default defineComponent({
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
 }
-
-
 </style>
