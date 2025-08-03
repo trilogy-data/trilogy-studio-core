@@ -167,7 +167,7 @@ export class ModelImportService {
         ...imp,
         id: this.editorStore.editorList.find(
           (e) => e.name === imp.name && e.connection === connectionName
-        )?.id
+        )?.id || ''
       }))
 
       // Check if dashboard already exists
