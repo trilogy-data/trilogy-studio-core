@@ -6,7 +6,9 @@ import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
 
 // Select a bundle based on browser checks
-
+function isFirefox(): boolean {
+  return typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('firefox')
+}
 interface DuckDBType {
   typeId: number
   precision?: number
@@ -40,6 +42,16 @@ async function createDuckDB(
 
   // Initialize the database
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
+await db.open(
+  isFirefox() 
+    ? {
+        filesystem: {
+          reliableHeadRequests: false,
+          allowFullHTTPReads: true
+        }
+      }
+    : {}
+)
   const connection = await db.connect()
 
   // Cache the connection
