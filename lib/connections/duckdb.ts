@@ -194,6 +194,7 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async query_core(sql: string, parameters: Record<string, any> | null = null): Promise<Results> {
+    console.log('Executing duckdb query')
     let result
     if (parameters) {
       let params = []

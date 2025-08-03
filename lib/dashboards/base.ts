@@ -270,6 +270,17 @@ export class DashboardModel implements Dashboard {
         ...this.gridItems[itemId],
         results,
       }
+      // check if this is the source of any cross filters
+      // if it is, and the _value_ used in that cross filter is not in the results
+      // clear the cross filter from all other items
+      // let item = this.gridItems[itemId]
+      // if (item.conceptFilters) {
+
+      //   let includesCrossFilter = this.gridItems[itemId].conceptFilters?.some(
+      //     (filter) => Object.keys(filter.value).some((key) => results?.data.some((row) => row[key] === filter.value[key])),
+      //   )
+      //   console.log(`Item ${itemId} includes cross filter: ${includesCrossFilter}`)
+      // }
       this.updatedAt = new Date()
     }
   }
