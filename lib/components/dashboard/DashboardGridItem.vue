@@ -150,7 +150,7 @@ const getPlaceholderText = computed(() => {
 // Check if the item type supports filters
 const supportsFilters = computed(() => {
   //@ts-ignore
-  return [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.value.type)
+  return [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.MARKDOWN].includes(itemData.value.type)
 })
 
 // Get the count of filters applied to this item

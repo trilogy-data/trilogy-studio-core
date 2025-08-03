@@ -276,6 +276,42 @@ export default defineComponent({
   },
 })
 </script>
+<style>
+.rendered-markdown h1 {
+  font-size: 1.8em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  border-bottom: 2px solid var(--border-light, #eee);
+  padding-bottom: 0.25em;
+  font-weight: 600;
+}
+
+.rendered-markdown-h2 {
+  font-size: 1.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: var(--heading-color, #2c3e50);
+}
+
+.rendered-markdown-h3 {
+  font-size: 1.2em;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  font-weight: 600;
+  color: var(--heading-color, #34495e);
+}
+.loading-pill {
+  display: inline-block;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 4px;
+  filter: blur(0.5px);
+  vertical-align: middle;
+}
+
+</style>
 
 <style scoped>
 .chart-placeholder {
@@ -326,7 +362,7 @@ export default defineComponent({
 /* Markdown Component Styles */
 .markdown-content {
   height: 100%;
-  padding: 10px 15px;
+  padding: 0px 15px;
   overflow-y: auto;
   flex: 1;
 }
@@ -337,30 +373,6 @@ export default defineComponent({
   color: var(--text-color, #333);
 }
 
-.rendered-markdown h1 {
-  font-size: 1.8em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-  border-bottom: 2px solid var(--border-light, #eee);
-  padding-bottom: 0.25em;
-  font-weight: 600;
-}
-
-.rendered-markdown h2 {
-  font-size: 1.5em;
-  margin-top: 0.75em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
-  color: var(--heading-color, #2c3e50);
-}
-
-.rendered-markdown h3 {
-  font-size: 1.2em;
-  margin-top: 0.5em;
-  margin-bottom: 0.25em;
-  font-weight: 600;
-  color: var(--heading-color, #34495e);
-}
 
 .rendered-markdown p {
   margin-top: 0.25em;
@@ -407,14 +419,5 @@ export default defineComponent({
   font-size: 0.9em;
 }
 
-/* Global styles for loading pills (since they're injected via v-html) */
-:global(.loading-pill) {
-  display: inline-block;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
-  border-radius: 4px;
-  filter: blur(0.5px);
-  vertical-align: baseline;
-}
+
 </style>

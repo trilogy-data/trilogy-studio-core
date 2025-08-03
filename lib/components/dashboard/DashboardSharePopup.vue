@@ -22,6 +22,8 @@ const filterDashboard = (dashboard: Dashboard): any => {
   delete dashboardCopy.id
   delete dashboardCopy.connection
   delete dashboardCopy.storage
+  delete dashboardCopy.changed
+  delete dashboardCopy.deleted
 
   // Remove specified properties from each item if items exist
   if (dashboardCopy.layout && Array.isArray(dashboardCopy.layout)) {
@@ -43,6 +45,14 @@ const filterDashboard = (dashboard: Dashboard): any => {
       }
       dashboardCopy.gridItems[itemId] = itemCopy
     }
+  }
+
+  if (dashboardCopy.imports && Array.isArray(dashboardCopy.imports)) {
+    dashboardCopy.imports = dashboardCopy.imports.map((imp: any) => {
+      const impCopy = { ...imp }
+      delete impCopy.id
+      return impCopy
+    })
   }
 
   return dashboardCopy

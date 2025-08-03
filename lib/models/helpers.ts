@@ -11,6 +11,15 @@ export interface ImportOutput {
   sql: Map<string, string>
   trilogy: Map<string, string>
 }
+
+interface ComponentData {
+  name: string
+  alias: string
+  purpose: EditorTag | null
+  content: string
+  type?: 'sql' | 'dashboard' | 'trilogy'
+}
+
 export class ModelImportService {
   private editorStore: EditorStoreType
   private modelStore: ModelConfigStoreType
@@ -33,8 +42,15 @@ export class ModelImportService {
    */
   public async fetchModelImportBase(url: string): Promise<ModelImport> {
     const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch model import from ${url}: ${response.statusText}`)
+    }
     const content = await response.text()
-    return JSON.parse(content)
+    try {
+      return JSON.parse(content)
+    } catch (error) {
+      throw new Error(`Invalid JSON in model import from ${url}: ${error}`)
+    }
   }
 
   /**
@@ -58,59 +74,124 @@ export class ModelImportService {
    * @param modelImport Model import definition
    * @returns Promise resolving to array of component details
    */
-  public async fetchModelImports(modelImport: ModelImport): Promise<
-  {
-    name: string
-    alias: string
-    purpose: EditorTag | null
-    content: string
-    type?: 'sql' | 'dashboard' | 'trilogy' | undefined
-  }[]
-> {
-  const results = await Promise.all(
-    modelImport.components.map(async (component) => {
-      if (component.purpose === 'data') {
-        return null // Skip data type, not handled here
-      }
-      try {
-        const response = await fetch(component.url)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
+  public async fetchModelImports(modelImport: ModelImport): Promise<ComponentData[]> {
+    const results = await Promise.all(
+      modelImport.components.map(async (component): Promise<ComponentData | null> => {
+        if (component.purpose === 'data') {
+          return null // Skip data type, not handled here
         }
-        const content = await response.text()
-        return {
-          name: component.name,
-          alias: component.alias,
-          purpose: this.purposeToTag(component.purpose),
-          content,
-          type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
+        
+        try {
+          const response = await fetch(component.url)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
+          }
+          const content = await response.text()
+          return {
+            name: component.name,
+            alias: component.alias,
+            purpose: this.purposeToTag(component.purpose),
+            content,
+            type: component.type as 'sql' | 'dashboard' | 'trilogy',
+          }
+        } catch (error) {
+          console.error(`Error fetching component ${component.name}:`, error)
+          return {
+            name: component.name,
+            alias: component.alias,
+            purpose: this.purposeToTag(component.purpose),
+            content: '', // Return empty content on failure
+            type: component.type as 'sql' | 'dashboard' | 'trilogy',
+          }
         }
-      } catch (error) {
-        console.error(error)
-        return {
-          name: component.name,
-          alias: component.alias,
-          purpose: this.purposeToTag(component.purpose),
-          content: '', // Return empty content on failure
-          type: component.type as 'sql' | 'dashboard' | 'trilogy' | undefined,
-        }
-      }
-    })
-  )
-  
-  // Filter out null values after all promises resolve
-  return results.filter((component): component is NonNullable<typeof component> => 
-    component !== null
-  )
-}
+      })
+    )
+    
+    // Filter out null values after all promises resolve
+    return results.filter((component): component is ComponentData => component !== null)
+  }
 
   /**
-   * Imports a model from a URL and creates editors for its components
-   * @param modelName Name of the model to create
-   * @param importAddress URL to import the model from
-   * @param connectionName Connection name to associate with the model
-   * @returns Promise resolving when import is complete
+   * Creates or updates an editor for a component
    */
+  private createOrUpdateEditor(component: ComponentData, connectionName: string): Editor {
+    const existing = Object.values(this.editorStore.editors).find(
+      (editor) => editor.name === component.name && editor.connection === connectionName,
+    )
+
+    let editor: Editor
+    if (!existing) {
+      const editorType = component.type === 'sql' ? 'sql' : 'trilogy'
+      editor = this.editorStore.newEditor(
+        component.name,
+        editorType,
+        connectionName,
+        component.content,
+      )
+    } else {
+      editor = existing
+      this.editorStore.setEditorContents(existing.id, component.content)
+    }
+
+    // Add purpose as a tag if not already present
+    if (component.purpose && !editor.tags.includes(component.purpose)) {
+      this.editorStore.editors[editor.id].tags.push(component.purpose)
+    }
+
+    return editor
+  }
+
+  /**
+   * Creates or updates a dashboard
+   */
+  private createOrUpdateDashboard(
+    component: ComponentData, 
+    connectionName: string, 
+    dashboards: Map<string, string>
+  ): void {
+    if (!component.content) {
+      console.warn(`Dashboard ${component.name} has no content, skipping`)
+      return
+    }
+
+    try {
+      const dashboardObj = DashboardModel.fromSerialized(JSON.parse(component.content))
+
+      // Configure dashboard properties
+      dashboardObj.storage = 'local'
+      dashboardObj.connection = connectionName
+      dashboardObj.state = 'published'
+
+      // Update imports with editor IDs
+      dashboardObj.imports = dashboardObj.imports.map((imp) => ({
+        ...imp,
+        id: this.editorStore.editorList.find(
+          (e) => e.name === imp.name && e.connection === connectionName
+        )?.id
+      }))
+
+      // Check if dashboard already exists
+      const existingDashboard = Object.values(this.dashboardStore.dashboards).find(
+        (dashboard) =>
+          dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
+      )
+
+      if (existingDashboard) {
+        // Update existing dashboard
+        dashboardObj.id = existingDashboard.id
+        this.dashboardStore.dashboards[existingDashboard.id] = dashboardObj
+      } else {
+        // Create new dashboard
+        dashboardObj.id = Math.random().toString(36).substring(2, 15)
+        this.dashboardStore.addDashboard(dashboardObj)
+      }
+
+      dashboards.set(component.name, dashboardObj.name)
+    } catch (error) {
+      console.error(`Error importing dashboard ${component.name}:`, error)
+    }
+  }
+
   /**
    * Imports a model from a URL and creates editors for its components
    * @param modelName Name of the model to create
@@ -124,115 +205,53 @@ export class ModelImportService {
     connectionName: string,
   ): Promise<ImportOutput | null> {
     if (!importAddress) {
-      return new Promise<ImportOutput>(() => null)
+      return null
     }
-    let dashboards = new Map<string, string>()
-    let sql = new Map<string, string>()
-    let trilogy = new Map<string, string>()
+
+    const dashboards = new Map<string, string>()
+    const sql = new Map<string, string>()
+    const trilogy = new Map<string, string>()
+
     try {
       const modelImportBase = await this.fetchModelImportBase(importAddress)
-      const data = await this.fetchModelImports(modelImportBase)
+      const components = await this.fetchModelImports(modelImportBase)
 
-      // Process imported components
-      //@ts-ignore
-      this.modelStore.models[modelName].sources = data
-        .map((response) => {
-          console.log(response.name)
-          if (response.type === 'dashboard' && response.content) {
-            try {
-              // Parse dashboard JSON
-              const dashboardObj = DashboardModel.fromSerialized(JSON.parse(response.content))
+      // Separate components by type
+      const editorComponents = components.filter(c => c.type === 'sql' || c.type === 'trilogy')
+      const dashboardComponents = components.filter(c => c.type === 'dashboard')
 
-              // Set storage to "local"
-              dashboardObj.storage = 'local'
+      // Phase 1: Create/update all editors first
+      const modelSources: ModelSource[] = []
+      
+      for (const component of editorComponents) {
+        console.log(`Processing editor: ${component.name}`)
+        
+        const editor = this.createOrUpdateEditor(component, connectionName)
+        
+        // Track components by type
+        if (component.type === 'sql') {
+          sql.set(component.name, component.name)
+        } else if (component.type === 'trilogy') {
+          trilogy.set(component.name, component.name)
+          // Only trilogy components become model sources
+          modelSources.push(new ModelSource(editor.id, component.alias || component.name, [], []))
+        }
+      }
 
-              // Set connection to the selected connection
-              dashboardObj.connection = connectionName
+      // Phase 2: Create/update dashboards (now that all editor IDs are available)
+      for (const component of dashboardComponents) {
+        console.log(`Processing dashboard: ${component.name}`)
+        this.createOrUpdateDashboard(component, connectionName, dashboards)
+      }
 
-              // Check if a dashboard with the same name already exists on this connection
-              const existingDashboard = Object.values(this.dashboardStore.dashboards).find(
-                (dashboard) =>
-                  dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
-              )
-              dashboardObj.state = 'published'
-              dashboards.set(response.name, dashboardObj.name)
-              if (existingDashboard) {
-                // Reuse the existing dashboard's ID
-                dashboardObj.id = existingDashboard.id
-
-                // Update the existing dashboard
-                this.dashboardStore.dashboards[existingDashboard.id] = dashboardObj
-              } else {
-                // No existing dashboard found, generate a new ID
-                dashboardObj.id = Math.random().toString(36).substring(2, 15)
-                //default import dashboards to published
-
-                // Add it to dashboard store
-                this.dashboardStore.addDashboard(dashboardObj)
-              }
-
-              // Return null as we don't need to create a model source for dashboards
-              return null
-            } catch (error) {
-              console.error('Error importing dashboard:', error)
-              return null
-            }
-          }
-
-          // Handle non-dashboard components (SQL and trilogy files)
-          let editorName = response.name
-          // @ts-ignore
-          let existing: Editor | undefined = Object.values(this.editorStore.editors).find(
-            // @ts-ignore
-            (editor) => editor.name === editorName && editor.connection === connectionName,
-          )
-
-          // Create or update the editor based on editorName
-          let editor: Editor
-          if (!existing || existing === undefined) {
-            if (response.type === 'sql') {
-              editor = this.editorStore.newEditor(
-                editorName,
-                'sql',
-                connectionName,
-                response.content,
-              )
-            } else {
-              editor = this.editorStore.newEditor(
-                editorName,
-                'trilogy',
-                connectionName,
-                response.content,
-              )
-            }
-          } else {
-            // get the existing one from the filter list
-            editor = existing
-            this.editorStore.setEditorContents(existing.id, response.content)
-          }
-
-          // Add source as a tag
-          if (
-            response.purpose &&
-            !this.editorStore.editors[editor.id].tags.includes(response.purpose)
-          ) {
-            this.editorStore.editors[editor.id].tags.push(response.purpose)
-          }
-
-          if (response.type === 'sql') {
-            return null
-          }
-
-          return new ModelSource(editor.id, response.alias || response.name, [], [])
-        })
-        .filter((source) => source)
-
-      // Mark changes
+      // Update model sources
+      this.modelStore.models[modelName].sources = modelSources
       this.modelStore.models[modelName].changed = true
+
       return {
-        dashboards: dashboards,
-        sql: sql,
-        trilogy: trilogy,
+        dashboards,
+        sql,
+        trilogy,
       }
     } catch (error) {
       console.error('Error importing model:', error)
