@@ -28,10 +28,8 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 100;
   background-color: var(--bg-color);
   /* Add webkit-specific properties for Safari */
@@ -39,6 +37,8 @@
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  /* Ensure sticky positioning works properly */
+  width: 100%;
 }
 
 .icon-container {
@@ -65,20 +65,20 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100vh; /* Use viewport height instead of 100% */
-  /* Prevent iOS Safari bounce scrolling on the main container */
-  overflow: hidden;
+  height: 100vh;
+  /* Remove overflow hidden to allow sticky positioning */
+  overflow: visible;
 }
 
 .interface-wrap {
   display: flex;
   flex-wrap: nowrap;
   flex: 1 1 auto;
-  max-height: calc(100vh - 40px); /* Account for header height */
+  /* Remove max-height and padding-top since we're no longer using fixed positioning */
   isolation: isolate;
-  padding-top: 40px; /* Use padding instead of margin for better Safari compatibility */
-  /* Ensure proper box-sizing */
   box-sizing: border-box;
+  /* Allow natural scrolling flow */
+  overflow: visible;
 }
 
 .sidebar {
@@ -86,7 +86,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  height: 100%;
+  height: calc(100vh - 40px);
   width: 100%;
   z-index: 51;
   overflow-y: auto;
@@ -96,12 +96,11 @@
 
 .nested-page-content {
   flex: 1 1 auto;
-  height: 100%;
+  height: calc(100vh - 40px);
   z-index: 1;
   overflow: auto;
   /* Improve scrolling on iOS Safari */
   -webkit-overflow-scrolling: touch;
-  /* Prevent content from going under the header */
   position: relative;
 }
 
@@ -112,8 +111,12 @@
     height: -webkit-fill-available;
   }
   
-  .interface-wrap {
-    max-height: calc(-webkit-fill-available - 40px);
+  .sidebar {
+    height: calc(-webkit-fill-available - 40px);
+  }
+  
+  .nested-page-content {
+    height: calc(-webkit-fill-available - 40px);
   }
 }
 
@@ -122,11 +125,7 @@
   .mobile-select-bar {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
-    top: env(safe-area-inset-top);
-  }
-  
-  .interface-wrap {
-    padding-top: calc(40px + env(safe-area-inset-top));
+    /* Remove top positioning since sticky handles this naturally */
   }
 }
 </style>

@@ -92,7 +92,7 @@ function layoutReadyEvent() {
 
 // Handle layout updates with draggable/resizable state management
 function onLayoutUpdated(newLayout: any) {
-  if (loaded.value) {
+  if (loaded.value === true) {
     dashboardBase.value?.onLayoutUpdated(newLayout)
     // Trigger resize on layout changes
     nextTick(() => {
