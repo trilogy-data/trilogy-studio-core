@@ -368,7 +368,7 @@ describe('AutoImportComponent', () => {
       await nextTick()
 
       await vi.waitFor(() => {
-        expect(mockModelStore.newModelConfig).toHaveBeenCalledWith(TEST_CONSTANTS.MODEL_NAME)
+        expect(mockModelStore.newModelConfig).toHaveBeenCalledWith(TEST_CONSTANTS.MODEL_NAME, true)
       })
     })
 

@@ -115,7 +115,7 @@ const performImport = async () => {
     // Initialize ModelImportService
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
     if (!modelStore.models[modelName.value]) {
-      modelStore.newModelConfig(modelName.value)
+      modelStore.newModelConfig(modelName.value, true)
     }
     // Import model (this will also import any dashboards included in the model)
     let imports = await modelImportService.importModel(

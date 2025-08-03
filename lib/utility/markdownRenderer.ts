@@ -383,9 +383,9 @@ export function convertMarkdownToHtml(text: string): string {
   let html = text
 
   // Convert headers
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>')
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>')
+  html = html.replace(/^### (.*$)/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
+  html = html.replace(/^## (.*$)/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
+  html = html.replace(/^# (.*$)/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
 
   // Process lists
   html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
@@ -408,7 +408,6 @@ export function convertMarkdownToHtml(text: string): string {
   // Process paragraphs
   html = html.replace(/\n\n/g, '</p><p>')
   html = html.replace(/\n/g, '<br>')
-  html = '<p>' + html + '</p>'
   html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
   html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
 
@@ -433,7 +432,6 @@ export function renderMarkdown(
 
   // 3. FINALLY: Sanitize the complete HTML
   const sanitized = sanitizeHtml(html)
-
   // 4. Add CSS for loading animation if in loading state
   if (loading) {
     const css = `

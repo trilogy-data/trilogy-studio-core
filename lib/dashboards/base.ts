@@ -273,14 +273,38 @@ export class DashboardModel implements Dashboard {
       // check if this is the source of any cross filters
       // if it is, and the _value_ used in that cross filter is not in the results
       // clear the cross filter from all other items
-      // let item = this.gridItems[itemId]
-      // if (item.conceptFilters) {
+      let item = this.gridItems[itemId]
+      if (item.chartFilters && item.chartFilters.length > 0) {
+        // if any chart filter values are not static strings, ignore
 
-      //   let includesCrossFilter = this.gridItems[itemId].conceptFilters?.some(
-      //     (filter) => Object.keys(filter.value).some((key) => results?.data.some((row) => row[key] === filter.value[key])),
-      //   )
-      //   console.log(`Item ${itemId} includes cross filter: ${includesCrossFilter}`)
-      // }
+        let allStaticStrings = item.chartFilters.every((filter) =>
+          Object.values(filter.value).every((value) => typeof value === 'string'),
+        )
+        if (!allStaticStrings) {
+          console.warn(
+            `Cross filter values in item ${itemId} are not static strings, skipping cross filter check.`,
+          )
+          return
+        }
+
+        let includesCrossFilter = this.gridItems[itemId].chartFilters?.some((filter) =>
+          Object.keys(filter.value).some((key) =>
+            results?.data.some((row) => row[key] === filter.value[key]),
+          ),
+        )
+        if (!includesCrossFilter) {
+          // If the results do not include the cross filter values, remove the cross filter
+          // log the values we're looking for -
+          let crossFilterValues = this.gridItems[itemId].chartFilters?.map((filter) => filter.value)
+          console.log(
+            'Removing cross filter that was sourced from',
+            item.name,
+            'and is no longer present in the results: ',
+            crossFilterValues,
+          )
+          this.removeItemCrossFilterSource(itemId)
+        }
+      }
       this.updatedAt = new Date()
     }
   }

@@ -423,7 +423,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
     structured_content: isMarkdownData(item.content)
       ? item.content
-      : { markdown: '', query: item.content || '' },
+      : { markdown: item.content || '', query: '' },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
