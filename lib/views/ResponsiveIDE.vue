@@ -9,6 +9,7 @@ import {
   TrilogyResolver,
   useLLMConnectionStore,
   useDashboardStore,
+  useCommunityApiStore,
 } from '../stores'
 
 let defaultResolver = 'https://trilogy-service.fly.dev'
@@ -59,6 +60,9 @@ let models = useModelConfigStore()
 let llms = useLLMConnectionStore()
 
 let dashboards = useDashboardStore()
+
+let communityApiStore = useCommunityApiStore()
+
 </script>
 <!-- @ts-nocheck -->
 <template>
@@ -74,6 +78,7 @@ let dashboards = useDashboardStore()
       :userSettingsStore="userSettingsStore"
       :dashboardStore="dashboards"
       :llmConnectionStore="llms"
+      :communityApiStore="communityApiStore"
     >
     </Manager>
   </div>

@@ -147,6 +147,9 @@
         :activeDashboardKey="activeDashboardKey"
         @toggle-mobile-menu="toggleMobileMenu"
       />
+      <CommunityModelList
+        v-show="active === 'community-models'"
+      />
     </div>
   </div>
 </template>
@@ -158,7 +161,8 @@ import ConnectionList from '../sidebar/ConnectionList.vue'
 import TutorialSidebar from '../sidebar/TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
-import DashboardList from './DashboardList.vue'
+import DashboardList from './DashboardList.vue';
+import CommunityModelList from './CommunityModelList.vue';
 import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
@@ -291,6 +295,7 @@ export default defineComponent({
     ModelSidebar,
     LLMConnectionList,
     DashboardList,
+    CommunityModelList,
   },
 
   watch: {

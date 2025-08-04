@@ -238,3 +238,26 @@ export const getAvailableEngines = (files: ModelFile[]): string[] => {
   })
   return Array.from(engines).sort()
 }
+
+export const buildCommunityModelTree = (files: ModelFile[], collapsed: Record<string, boolean>) => {
+  const tree: any[] = [];
+  const engines: Record<string, any[]> = {};
+
+  files.forEach(file => {
+    if (!engines[file.engine]) {
+      engines[file.engine] = [];
+      tree.push({ type: 'engine', label: file.engine, key: `e-${file.engine}`, indent: 0 });
+    }
+    engines[file.engine].push({ type: 'model', label: file.name, key: `m-${file.name}`, indent: 1, model: file });
+  });
+
+  const result: any[] = [];
+  tree.forEach(item => {
+    result.push(item);
+    if (!collapsed[item.key]) {
+      result.push(...engines[item.label]);
+    }
+  });
+
+  return result;
+};

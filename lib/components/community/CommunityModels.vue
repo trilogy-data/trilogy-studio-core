@@ -164,13 +164,9 @@ import { ref, onMounted, computed, defineProps, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
+import { useCommunityApiStore } from '../../stores/communityApiStore'
 import {
-  type ModelFile,
-  // fetchBranches,
-  fetchModelFiles,
-  filterModelFiles,
   getDefaultConnection as getDefaultConnectionService,
-  getAvailableEngines,
 } from '../../models/githubApiService'
 
 const props = defineProps({
@@ -180,14 +176,14 @@ const props = defineProps({
   },
 })
 
-const files = ref<ModelFile[]>([])
+const communityApiStore = useCommunityApiStore()
+const { error, loading, refreshData, availableEngines } = communityApiStore
+
 const isExpanded = ref<Record<string, boolean>>({})
 const creatorIsExpanded = ref<Record<string, boolean>>({})
-const error = ref<string | null>(null)
 const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref('')
 const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
-const loading = ref(false)
 
 const modelStore = inject<ModelConfigStoreType>('modelStore')
 if (!modelStore) {
@@ -201,10 +197,6 @@ const modelExists = (name: string): boolean => {
 const toggleComponents = (index: string): void => {
   isExpanded.value[index] = !isExpanded.value[index]
 }
-
-const availableEngines = computed(() => {
-  return getAvailableEngines(files.value)
-})
 
 const getDefaultConnection = (engine: string): string => {
   return getDefaultConnectionService(engine)
@@ -247,39 +239,18 @@ const copyDashboardImportLink = async (component: any, file: any): Promise<void>
 }
 
 const filteredFiles = computed(() => {
-  return filterModelFiles(
-    files.value,
+  return communityApiStore.filteredFiles(
     searchQuery.value,
     selectedEngine.value,
     importStatus.value,
-    modelExists,
+    modelStore,
   )
 })
 
-const fetchFiles = async (): Promise<void> => {
-  error.value = null
-  loading.value = true
-
-  const result = await fetchModelFiles()
-  files.value = result.files
-  error.value = result.error
-
-  loading.value = false
-}
-
-// Add refresh function to reload the data
-const refreshData = async (): Promise<void> => {
-  loading.value = true
-
-  // Fetch branches first, then fetch files
-  // const branchesResult = await fetchBranches()
-  // branches.value = branchesResult
-
-  await fetchFiles()
-}
-
 onMounted(async () => {
-  await refreshData()
+  if (communityApiStore.files.length === 0) {
+    await refreshData()
+  }
 })
 </script>
 
