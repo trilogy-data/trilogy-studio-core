@@ -100,7 +100,10 @@ const performImport = async () => {
 
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
-
+    const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
+        if (!modelStore.models[modelName.value]) {
+          modelStore.newModelConfig(modelName.value, true)
+        }
     if (!connectionStore.connections[connectionName]) {
       connectionStore.newConnection(connectionName, connectionType.value, {
         mdToken: connectionOptions.value.mdToken,
@@ -109,14 +112,12 @@ const performImport = async () => {
         password: connectionOptions.value.password,
         account: connectionOptions.value.account,
         privateKey: connectionOptions.value.sshPrivateKey,
+        model: modelName.value,
       })
     }
 
     // Initialize ModelImportService
-    const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
-    if (!modelStore.models[modelName.value]) {
-      modelStore.newModelConfig(modelName.value, true)
-    }
+    
     // Import model (this will also import any dashboards included in the model)
     let imports = await modelImportService.importModel(
       modelName.value,
