@@ -14,6 +14,7 @@
       :item="item"
       :is-collapsed="collapsed[item.key]"
       @item-click="clickAction"
+      @model-selected="handleModelSelected"
     />
   </sidebar-list>
 </template>
@@ -30,6 +31,7 @@ export default {
   setup() {
     const communityApiStore = useCommunityApiStore();
     const { files, loading, refreshData } = communityApiStore;
+    const setActiveScreen = inject('setActiveScreen');
 
     const collapsed = ref<Record<string, boolean>>({});
 
@@ -50,12 +52,19 @@ export default {
       return buildCommunityModelTree(files, collapsed.value);
     });
 
+    const handleModelSelected = (modelName: string) => {
+      if (setActiveScreenWithParams) {
+        (setActiveScreenWithParams as (screen: string, params: Record<string, string>) => void)('community-models', { initialSearch: modelName });
+      }
+    };
+
     return {
       loading,
       refreshData,
       contentList,
       toggleCollapse,
       collapsed,
+      handleModelSelected,
     };
   },
   methods: {

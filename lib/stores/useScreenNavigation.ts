@@ -112,6 +112,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveDashboard,
     toggleMobileMenu,
     setActiveModel,
+    setActiveScreenWithParams,
   }
 }
 

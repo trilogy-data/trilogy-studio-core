@@ -3,7 +3,7 @@
     :class="{
       'sidebar-item': true,
     }"
-    @click="$emit('item-click', item.type, item.objectKey, item.key)"
+    @click="handleItemClick"
   >
     <div
       v-for="_ in item.indent"
@@ -22,6 +22,8 @@
 </template>
 
 <script lang="ts">
+import { inject } from 'vue';
+
 export default {
   name: 'CommunityModelListItem',
   props: {
@@ -34,6 +36,21 @@ export default {
       default: false,
     },
   },
-  emits: ['item-click'],
+  emits: ['item-click', 'model-selected'],
+  setup(props, { emit }) {
+    const isMobile = inject('isMobile');
+
+    const handleItemClick = () => {
+      if (props.item.type === 'model' && isMobile) {
+        emit('model-selected', props.item.label);
+      } else {
+        emit('item-click', props.item.type, props.item.objectKey, props.item.key);
+      }
+    };
+
+    return {
+      handleItemClick,
+    };
+  },
 };
 </script>
