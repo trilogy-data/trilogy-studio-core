@@ -168,7 +168,6 @@ const performImport = async () => {
       screenNavigation.setActiveScreen('dashboard')
     }, 500)
   } catch (err) {
-    throw err
     console.error('Import failed:', err)
     error.value = err instanceof Error ? err.message : 'Import failed'
   }
