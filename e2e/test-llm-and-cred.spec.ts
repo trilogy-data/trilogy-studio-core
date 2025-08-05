@@ -94,7 +94,7 @@ test.describe('LLM Connection Tests', () => {
       await page.getByTestId('mobile-menu-toggle').click()
     }
 
-    await page.locator('.sidebar-item > i').click()
+    await page.getByTestId('llm-connection-list-item-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
 
