@@ -46,8 +46,6 @@
             </select>
           </div>
         </div>
-
-        
       </div>
 
       <div v-if="filteredFiles.length">
@@ -110,12 +108,14 @@
           <div class="model-description">
             <span class="text-faint">Description:</span>
             <div class="description-content">
-              <div 
+              <div
                 :class="[
                   'description-text',
                   {
-                    'description-truncated': !isDescriptionExpanded(file.name) && shouldTruncateDescription(file.description)
-                  }
+                    'description-truncated':
+                      !isDescriptionExpanded(file.name) &&
+                      shouldTruncateDescription(file.description),
+                  },
                 ]"
               >
                 <markdown-renderer :markdown="file.description" />
@@ -177,12 +177,10 @@ import ModelCreator from '../model/ModelCreator.vue'
 import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
-import {
-  getDefaultConnection as getDefaultConnectionService,
-} from '../../models/githubApiService'
-import MarkdownRenderer from '../MarkdownRenderer.vue';
+import { getDefaultConnection as getDefaultConnectionService } from '../../models/githubApiService'
+import MarkdownRenderer from '../MarkdownRenderer.vue'
 
-import useScreenNavigation from '../../stores/useScreenNavigation';
+import useScreenNavigation from '../../stores/useScreenNavigation'
 
 const props = defineProps({
   initialSearch: {
@@ -275,7 +273,8 @@ const isDescriptionExpanded = (fileName: string): boolean => {
 const toggleDescription = (fileName: string): void => {
   // If there's an initial search and only one result, we need to handle the default expansion state
   if ((navigation.initialSearch.value || props.initialSearch) && filteredFiles.value.length === 1) {
-    descriptionExpanded.value[fileName] = descriptionExpanded.value[fileName] === false ? true : false
+    descriptionExpanded.value[fileName] =
+      descriptionExpanded.value[fileName] === false ? true : false
   } else {
     descriptionExpanded.value[fileName] = !descriptionExpanded.value[fileName]
   }

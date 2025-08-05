@@ -4,7 +4,7 @@
     <div class="action-slot">
       <slot name="actions"> </slot>
     </div>
-    <div class="sidebar-content"> 
+    <div class="sidebar-content">
       <slot :isMobile="isMobile"></slot>
     </div>
   </div>
@@ -18,7 +18,6 @@
 
   /* height: 100%; */
 }
-
 
 .sidebar-content {
   display: flex;

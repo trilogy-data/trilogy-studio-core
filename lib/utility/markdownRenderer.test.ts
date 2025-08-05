@@ -267,9 +267,15 @@ describe('processTemplateSubstitutions', () => {
 
 describe('convertMarkdownToHtml', () => {
   it('should convert headers', () => {
-    expect(convertMarkdownToHtml('# Header 1')).toContain('<h1 class="rendered-markdown-h1">Header 1</h1>')
-    expect(convertMarkdownToHtml('## Header 2')).toContain('<h2 class="rendered-markdown-h2">Header 2</h2>')
-    expect(convertMarkdownToHtml('### Header 3')).toContain('<h3 class="rendered-markdown-h3">Header 3</h3>')
+    expect(convertMarkdownToHtml('# Header 1')).toContain(
+      '<h1 class="rendered-markdown-h1">Header 1</h1>',
+    )
+    expect(convertMarkdownToHtml('## Header 2')).toContain(
+      '<h2 class="rendered-markdown-h2">Header 2</h2>',
+    )
+    expect(convertMarkdownToHtml('### Header 3')).toContain(
+      '<h3 class="rendered-markdown-h3">Header 3</h3>',
+    )
   })
 
   it('should convert lists', () => {

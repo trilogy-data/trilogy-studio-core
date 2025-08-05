@@ -25,7 +25,7 @@ const useCommunityApiStore = defineStore('communityApi', {
       this.error = null
       this.loading = true
       console.log('Fetching community model files...')
-      
+
       const result = await fetchModelFiles()
       console.log('Fetched community model files:', result)
       this.files = result.files
@@ -47,13 +47,7 @@ const useCommunityApiStore = defineStore('communityApi', {
         return name in modelStore.models
       }
 
-      return filterModelFiles(
-        this.files,
-        searchQuery,
-        selectedEngine,
-        importStatus,
-        modelExists,
-      )
+      return filterModelFiles(this.files, searchQuery, selectedEngine, importStatus, modelExists)
     },
   },
 })

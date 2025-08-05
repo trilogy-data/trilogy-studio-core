@@ -20,47 +20,54 @@
 </template>
 
 <script lang="ts">
-import { inject, ref, computed, onMounted } from 'vue';
-import { type CommunityApiStoreType } from '../../stores/communityApiStore';
-import SidebarList from './SidebarList.vue';
+import { inject, ref, computed, onMounted } from 'vue'
+import { type CommunityApiStoreType } from '../../stores/communityApiStore'
+import SidebarList from './SidebarList.vue'
 
-import CommunityModelListItem from './CommunityModelListItem.vue';
-import { buildCommunityModelTree } from '../../models/githubApiService';
+import CommunityModelListItem from './CommunityModelListItem.vue'
+import { buildCommunityModelTree } from '../../models/githubApiService'
 
 export default {
   name: 'CommunityModelList',
   setup() {
-    const communityApiStore = inject('communityApiStore') as CommunityApiStoreType;
-    const { refreshData } = communityApiStore;
-    const setActiveScreenWithParams = inject('setActiveScreenWithParams');
+    const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
+    const { refreshData } = communityApiStore
+    const setActiveScreenWithParams = inject('setActiveScreenWithParams')
 
-    const collapsed = ref<Record<string, boolean>>({'e-duckdb':true, 'e-bigquery':true, 'e-snowflake':true});
+    const collapsed = ref<Record<string, boolean>>({
+      'e-duckdb': true,
+      'e-bigquery': true,
+      'e-snowflake': true,
+    })
 
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
-        collapsed.value[key] = false;
+        collapsed.value[key] = false
       }
-      collapsed.value[key] = !collapsed.value[key];
-    };
+      collapsed.value[key] = !collapsed.value[key]
+    }
 
     onMounted(async () => {
       if (communityApiStore.files.length === 0) {
-        await refreshData();
+        await refreshData()
         // default collapsed state for all items
       }
-    });
+    })
 
     const contentList = computed(() => {
-      return buildCommunityModelTree(communityApiStore.files, collapsed.value);
-    });
+      return buildCommunityModelTree(communityApiStore.files, collapsed.value)
+    })
 
-    const loading = computed(() => communityApiStore.loading);
+    const loading = computed(() => communityApiStore.loading)
 
     const handleModelSelected = (modelName: string) => {
       if (setActiveScreenWithParams) {
-        (setActiveScreenWithParams as (screen: string, params: Record<string, string>) => void)('community-models', { initialSearch: modelName });
+        ;(setActiveScreenWithParams as (screen: string, params: Record<string, string>) => void)(
+          'community-models',
+          { initialSearch: modelName },
+        )
       }
-    };
+    }
 
     return {
       loading,
@@ -69,12 +76,12 @@ export default {
       toggleCollapse,
       collapsed,
       handleModelSelected,
-    };
+    }
   },
   methods: {
     clickAction(type: string, _: string, key: string) {
       if (type !== 'model') {
-        this.toggleCollapse(key);
+        this.toggleCollapse(key)
       }
     },
   },
@@ -82,5 +89,5 @@ export default {
     SidebarList,
     CommunityModelListItem,
   },
-};
+}
 </script>

@@ -16,8 +16,50 @@ export function escapeHtml(text: string): string {
 
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'li', 'strong', 'em', 'a', 'br', 'span', 'pre', 'code', 'div', 'button', 'svg', 'rect', 'path', 'polyline'],
-    ALLOWED_ATTR: ['href', 'title', 'class', 'style', 'data-language', 'data-content', 'xmlns', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'x', 'y', 'rx', 'ry', 'd', 'points'],
+    ALLOWED_TAGS: [
+      'h1',
+      'h2',
+      'h3',
+      'p',
+      'ul',
+      'li',
+      'strong',
+      'em',
+      'a',
+      'br',
+      'span',
+      'pre',
+      'code',
+      'div',
+      'button',
+      'svg',
+      'rect',
+      'path',
+      'polyline',
+    ],
+    ALLOWED_ATTR: [
+      'href',
+      'title',
+      'class',
+      'style',
+      'data-language',
+      'data-content',
+      'xmlns',
+      'width',
+      'height',
+      'viewBox',
+      'fill',
+      'stroke',
+      'stroke-width',
+      'stroke-linecap',
+      'stroke-linejoin',
+      'x',
+      'y',
+      'rx',
+      'ry',
+      'd',
+      'points',
+    ],
     ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'object', 'embed', 'iframe', 'form', 'input'],
     FORBID_ATTR: ['onclick', 'onerror', 'onload', 'onmouseover'],
@@ -396,12 +438,14 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Step 1: Extract and replace fenced code blocks with placeholders
   let codeBlockCounter = 0
-  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_match: string, language: string = '', code: string) => {
-    const blockId = generateCodeBlockId()
-    const lang = language.trim() || 'text'
-    const escapedCode = escapeHtml(code.trim())
+  html = html.replace(
+    /```(\w+)?\n?([\s\S]*?)```/g,
+    (_match: string, language: string = '', code: string) => {
+      const blockId = generateCodeBlockId()
+      const lang = language.trim() || 'text'
+      const escapedCode = escapeHtml(code.trim())
 
-    const codeBlockHtml = `<div class="code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
+      const codeBlockHtml = `<div class="code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
       <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
       <button class="copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
         <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -414,11 +458,12 @@ export function convertMarkdownToHtml(text: string): string {
       </button>
     </div>`
 
-    const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
-    codeBlockPlaceholders[placeholder] = codeBlockHtml
-    codeBlockCounter++
-    return placeholder
-  })
+      const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
+      codeBlockPlaceholders[placeholder] = codeBlockHtml
+      codeBlockCounter++
+      return placeholder
+    },
+  )
 
   // Step 2: Process other markdown elements (headers, lists, etc.) on text without code blocks
 
@@ -452,7 +497,7 @@ export function convertMarkdownToHtml(text: string): string {
   html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
 
   // Step 3: Restore code blocks by replacing placeholders
-  Object.keys(codeBlockPlaceholders).forEach(placeholder => {
+  Object.keys(codeBlockPlaceholders).forEach((placeholder) => {
     html = html.replace(placeholder, codeBlockPlaceholders[placeholder])
   })
 

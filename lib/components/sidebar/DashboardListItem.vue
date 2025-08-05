@@ -135,10 +135,9 @@ export default {
 }
 </script>
 <style scoped>
-
 .connection-model {
- display: inline-flex;
- max-width: 25px;
+  display: inline-flex;
+  max-width: 25px;
 }
 .icon-display {
   display: flex;

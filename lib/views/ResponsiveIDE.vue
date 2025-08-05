@@ -62,7 +62,6 @@ let llms = useLLMConnectionStore()
 let dashboards = useDashboardStore()
 
 let communityApiStore = useCommunityApiStore()
-
 </script>
 <!-- @ts-nocheck -->
 <template>

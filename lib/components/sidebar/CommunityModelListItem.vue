@@ -5,10 +5,7 @@
     }"
     @click="handleItemClick"
   >
-    <div
-      v-for="_ in item.indent"
-      class="sidebar-padding"
-    ></div>
+    <div v-for="_ in item.indent" class="sidebar-padding"></div>
     <i
       v-if="!['model'].includes(item.type)"
       :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
@@ -22,7 +19,7 @@
 </template>
 
 <script lang="ts">
-import { inject } from 'vue';
+import { inject } from 'vue'
 
 export default {
   name: 'CommunityModelListItem',
@@ -38,19 +35,19 @@ export default {
   },
   emits: ['item-click', 'model-selected'],
   setup(props, { emit }) {
-    const isMobile = inject('isMobile');
+    const isMobile = inject('isMobile')
 
     const handleItemClick = () => {
       if (props.item.type === 'model' && isMobile) {
-        emit('model-selected', props.item.label);
+        emit('model-selected', props.item.label)
       } else {
-        emit('item-click', props.item.type, props.item.objectKey, props.item.key);
+        emit('item-click', props.item.type, props.item.objectKey, props.item.key)
       }
-    };
+    }
 
     return {
       handleItemClick,
-    };
+    }
   },
-};
+}
 </script>

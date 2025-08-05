@@ -2,11 +2,7 @@
   <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
 
-    <MarkdownRenderer 
-      :markdown="markdown"
-      :results="results"
-      :loading="loading"
-    />
+    <MarkdownRenderer :markdown="markdown" :results="results" :loading="loading" />
 
     <div v-if="!loading && editMode" class="chart-actions">
       <button

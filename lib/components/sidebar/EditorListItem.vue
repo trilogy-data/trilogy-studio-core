@@ -157,8 +157,8 @@ export default {
 
 <style scoped>
 .connection-model {
- display: inline-flex;
- max-width: 25px;
+  display: inline-flex;
+  max-width: 25px;
 }
 
 .sql {
