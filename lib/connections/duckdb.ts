@@ -42,16 +42,16 @@ async function createDuckDB(
 
   // Initialize the database
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
-await db.open(
-  isFirefox() 
-    ? {
-        filesystem: {
-          reliableHeadRequests: false,
-          allowFullHTTPReads: true
+  await db.open(
+    isFirefox()
+      ? {
+          filesystem: {
+            reliableHeadRequests: false,
+            allowFullHTTPReads: true,
+          },
         }
-      }
-    : {}
-)
+      : {},
+  )
   const connection = await db.connect()
 
   // Cache the connection

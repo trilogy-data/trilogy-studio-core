@@ -34,6 +34,7 @@ import type { ModelConfigStoreType } from './modelStore'
 import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
+import type { CommunityApiStoreType } from './communityApiStore'
 import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
 import useScreenNavigation from './useScreenNavigation'
@@ -79,6 +80,10 @@ const props = defineProps({
   },
   dashboardStore: {
     type: Object as PropType<DashboardStoreType>,
+    required: true,
+  },
+  communityApiStore: {
+    type: Object as PropType<CommunityApiStoreType>,
     required: true,
   },
   trilogyResolver: {
@@ -336,10 +341,13 @@ provide('storageSources', props.storageSources)
 provide('userSettingsStore', props.userSettingsStore)
 provide('llmConnectionStore', props.llmConnectionStore)
 provide('dashboardStore', props.dashboardStore)
-const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
+provide('communityApiStore', props.communityApiStore)
+const { setActiveScreen, setActiveEditor, setActiveDashboard, setActiveScreenWithParams } =
+  useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)
 provide('setActiveDashboard', setActiveDashboard)
+provide('setActiveScreenWithParams', setActiveScreenWithParams)
 let store = useAnalyticsStore()
 provide('analyticsStore', store)
 provide(

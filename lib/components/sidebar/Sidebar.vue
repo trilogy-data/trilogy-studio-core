@@ -147,6 +147,7 @@
         :activeDashboardKey="activeDashboardKey"
         @toggle-mobile-menu="toggleMobileMenu"
       />
+      <CommunityModelList v-show="active === 'community-models'" />
     </div>
   </div>
 </template>
@@ -159,6 +160,7 @@ import TutorialSidebar from '../sidebar/TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
 import DashboardList from './DashboardList.vue'
+import CommunityModelList from './CommunityModelList.vue'
 import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
@@ -215,25 +217,25 @@ export default defineComponent({
     let sidebarFeatureItems = [
       {
         name: 'dashboard',
-        tooltip: 'Dashboard',
+        tooltip: 'Chart',
         icon: 'mdi mdi-chart-areaspline',
         screen: 'dashboard',
       },
       {
         name: 'models',
-        tooltip: 'Models',
+        tooltip: 'Model',
         icon: 'mdi mdi-set-center',
         screen: 'models',
       },
       {
         name: 'community-models',
-        tooltip: 'Community',
+        tooltip: 'Inspire',
         icon: 'mdi mdi-library',
         screen: 'community-models',
       },
       {
         name: 'help',
-        tooltip: 'Docs',
+        tooltip: 'Help',
         icon: 'mdi mdi-help',
         screen: 'tutorial',
       },
@@ -241,7 +243,7 @@ export default defineComponent({
     let sideBarItems = [
       {
         name: 'edit',
-        tooltip: 'Editors',
+        tooltip: 'Query',
         icon: 'mdi mdi-file-document-edit',
         screen: 'editors',
       },
@@ -253,7 +255,7 @@ export default defineComponent({
       },
       {
         name: 'llm',
-        tooltip: 'LLMs',
+        tooltip: 'AI',
         icon: 'mdi mdi-creation',
         screen: 'llms',
       },
@@ -291,6 +293,7 @@ export default defineComponent({
     ModelSidebar,
     LLMConnectionList,
     DashboardList,
+    CommunityModelList,
   },
 
   watch: {
@@ -508,6 +511,9 @@ export default defineComponent({
 @media screen and (max-width: 768px) {
   .sidebar-icons {
     overflow-y: scroll;
+    min-width: 55px;
+    max-width: 55px;
+    font-size: var(--small-font-size);
   }
 }
 </style>

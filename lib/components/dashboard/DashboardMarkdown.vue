@@ -2,9 +2,7 @@
   <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
 
-    <div class="markdown-content">
-      <div class="rendered-markdown" v-html="renderedMarkdown"></div>
-    </div>
+    <MarkdownRenderer :markdown="markdown" :results="results" :loading="loading" />
 
     <div v-if="!loading && editMode" class="chart-actions">
       <button
@@ -35,15 +33,16 @@ import type { Results } from '../../editors/results'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingView from '../LoadingView.vue'
+import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { type GridItemDataResponse } from '../../dashboards/base'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore'
-import { renderMarkdown } from '../../utility/markdownRenderer'
 
 export default defineComponent({
   name: 'DynamicMarkdownChart',
   components: {
     ErrorMessage,
     LoadingView,
+    MarkdownRenderer,
   },
   props: {
     dashboardId: {
@@ -122,11 +121,6 @@ export default defineComponent({
 
     const rootContent = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).rootContent || []
-    })
-
-    // Render markdown with query results and loading state
-    const renderedMarkdown = computed(() => {
-      return renderMarkdown(markdown.value, results.value, loading.value)
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -268,7 +262,6 @@ export default defineComponent({
       error,
       query,
       markdown,
-      renderedMarkdown,
       onRefresh,
       handleLocalRefresh,
       startTime,
@@ -276,41 +269,6 @@ export default defineComponent({
   },
 })
 </script>
-<style>
-.rendered-markdown h1 {
-  font-size: 1.8em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-  border-bottom: 2px solid var(--border-light, #eee);
-  padding-bottom: 0.25em;
-  font-weight: 600;
-}
-
-.rendered-markdown-h2 {
-  font-size: 1.5em;
-  margin-top: 0.25em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
-  color: var(--heading-color, #2c3e50);
-}
-
-.rendered-markdown-h3 {
-  font-size: 1.2em;
-  margin-top: 0.5em;
-  margin-bottom: 0.25em;
-  font-weight: 600;
-  color: var(--heading-color, #34495e);
-}
-.loading-pill {
-  display: inline-block;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
-  border-radius: 4px;
-  filter: blur(0.5px);
-  vertical-align: middle;
-}
-</style>
 
 <style scoped>
 .chart-placeholder {
@@ -356,64 +314,5 @@ export default defineComponent({
 .refresh-icon {
   font-size: 16px;
   font-weight: bold;
-}
-
-/* Markdown Component Styles */
-.markdown-content {
-  height: 100%;
-  padding: 0px 15px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.rendered-markdown {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
-  color: var(--text-color, #333);
-}
-
-.rendered-markdown p {
-  margin-top: 0.25em;
-  margin-bottom: 0.75em;
-}
-
-.rendered-markdown ul {
-  margin-top: 0.5em;
-  margin-bottom: 0.75em;
-  padding-left: 2em;
-}
-
-.rendered-markdown li {
-  margin-bottom: 0.25em;
-}
-
-.rendered-markdown a {
-  color: var(--link-color, #2196f3);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
-}
-
-.rendered-markdown a:hover {
-  border-bottom-color: var(--link-color, #2196f3);
-}
-
-.rendered-markdown strong {
-  font-weight: 600;
-  color: var(--strong-color, #2c3e50);
-}
-
-.rendered-markdown em {
-  font-style: italic;
-  color: var(--em-color, #7f8c8d);
-}
-
-/* Style for templated values */
-.rendered-markdown .data-value {
-  background-color: var(--highlight-bg, #f8f9fa);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9em;
 }
 </style>

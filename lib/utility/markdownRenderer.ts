@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify'
 import type { Results } from '../editors/results'
+
 /**
  * HTML escaping function for security
  */
@@ -15,9 +16,51 @@ export function escapeHtml(text: string): string {
 
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'li', 'strong', 'em', 'a', 'br', 'span'],
-    ALLOWED_ATTR: ['href', 'title', 'class', 'style'],
-    ALLOW_DATA_ATTR: false,
+    ALLOWED_TAGS: [
+      'h1',
+      'h2',
+      'h3',
+      'p',
+      'ul',
+      'li',
+      'strong',
+      'em',
+      'a',
+      'br',
+      'span',
+      'pre',
+      'code',
+      'div',
+      'button',
+      'svg',
+      'rect',
+      'path',
+      'polyline',
+    ],
+    ALLOWED_ATTR: [
+      'href',
+      'title',
+      'class',
+      'style',
+      'data-language',
+      'data-content',
+      'xmlns',
+      'width',
+      'height',
+      'viewBox',
+      'fill',
+      'stroke',
+      'stroke-width',
+      'stroke-linecap',
+      'stroke-linejoin',
+      'x',
+      'y',
+      'rx',
+      'ry',
+      'd',
+      'points',
+    ],
+    ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'object', 'embed', 'iframe', 'form', 'input'],
     FORBID_ATTR: ['onclick', 'onerror', 'onload', 'onmouseover'],
   })
@@ -377,10 +420,52 @@ export function processTemplateSubstitutions(
 }
 
 /**
+ * Generate unique ID for code blocks
+ */
+function generateCodeBlockId(): string {
+  return 'code-block-' + Math.random().toString(36).substr(2, 9)
+}
+
+/**
+ * Convert markdown syntax to HTML
+ */
+/**
  * Convert markdown syntax to HTML
  */
 export function convertMarkdownToHtml(text: string): string {
   let html = text
+  const codeBlockPlaceholders: { [key: string]: string } = {}
+
+  // Step 1: Extract and replace fenced code blocks with placeholders
+  let codeBlockCounter = 0
+  html = html.replace(
+    /```(\w+)?\n?([\s\S]*?)```/g,
+    (_match: string, language: string = '', code: string) => {
+      const blockId = generateCodeBlockId()
+      const lang = language.trim() || 'text'
+      const escapedCode = escapeHtml(code.trim())
+
+      const codeBlockHtml = `<div class="code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
+      <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
+      <button class="copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
+        <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <svg class="check-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </button>
+    </div>`
+
+      const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
+      codeBlockPlaceholders[placeholder] = codeBlockHtml
+      codeBlockCounter++
+      return placeholder
+    },
+  )
+
+  // Step 2: Process other markdown elements (headers, lists, etc.) on text without code blocks
 
   // Convert headers
   html = html.replace(/^### (.*$)/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
@@ -411,6 +496,11 @@ export function convertMarkdownToHtml(text: string): string {
   html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
   html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
 
+  // Step 3: Restore code blocks by replacing placeholders
+  Object.keys(codeBlockPlaceholders).forEach((placeholder) => {
+    html = html.replace(placeholder, codeBlockPlaceholders[placeholder])
+  })
+
   return html
 }
 
@@ -432,19 +522,20 @@ export function renderMarkdown(
 
   // 3. FINALLY: Sanitize the complete HTML
   const sanitized = sanitizeHtml(html)
+
   // 4. Add CSS for loading animation if in loading state
   if (loading) {
     const css = `
-            <style>
-                @keyframes shimmer {
-                    0% { background-position: -200% 0; }
-                    100% { background-position: 200% 0; }
-                }
-                .loading-pill {
-                    animation: shimmer 1.5s infinite linear;
-                }
-            </style>
-        `
+      <style>
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .loading-pill {
+          animation: shimmer 1.5s infinite linear;
+        }
+      </style>
+    `
     return css + sanitized
   }
 
