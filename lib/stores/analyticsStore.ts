@@ -36,7 +36,7 @@ export const useAnalyticsStore = defineStore('analytics', {
       try {
         // The window.goatcounter interface
         if (window.goatcounter) {
-          console.debug('Sending telemtryevent:', { path, title, isEvent })
+          console.debug('Sending telemetry event:', { path, title, isEvent })
           window.goatcounter.count({
             path,
             title,

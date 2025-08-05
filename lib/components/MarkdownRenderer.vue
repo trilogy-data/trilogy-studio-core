@@ -47,6 +47,13 @@ export default defineComponent({
   flex: 1;
 }
 
+
+
+
+
+</style>
+
+<style>
 .rendered-markdown {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
@@ -88,23 +95,11 @@ export default defineComponent({
   font-style: italic;
   color: var(--em-color, #7f8c8d);
 }
-
-/* Style for templated values */
-.rendered-markdown .data-value {
-  background-color: var(--highlight-bg, #f8f9fa);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9em;
-}
-</style>
-
-<style>
 .rendered-markdown h1 {
   font-size: 1.8em;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
-  border-bottom: 2px solid var(--border-light, #eee);
+  border-bottom: 2px solid var(--text-color);
   padding-bottom: 0.25em;
   font-weight: 600;
 }
@@ -114,7 +109,7 @@ export default defineComponent({
   margin-top: 0.25em;
   margin-bottom: 0.5em;
   font-weight: 600;
-  color: var(--heading-color, #2c3e50);
+  color: var(--text-color);
 }
 
 .rendered-markdown-h3 {
@@ -122,7 +117,7 @@ export default defineComponent({
   margin-top: 0.5em;
   margin-bottom: 0.25em;
   font-weight: 600;
-  color: var(--heading-color, #34495e);
+  color: var(--text-color);
 }
 
 .loading-pill {
