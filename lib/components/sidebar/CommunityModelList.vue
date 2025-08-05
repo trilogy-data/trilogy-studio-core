@@ -72,7 +72,7 @@ export default {
     };
   },
   methods: {
-    clickAction(type: string, objectKey: string, key: string) {
+    clickAction(type: string, _: string, key: string) {
       if (type !== 'model') {
         this.toggleCollapse(key);
       }
