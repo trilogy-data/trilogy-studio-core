@@ -108,7 +108,26 @@
           </div>
 
           <div class="model-description">
-            <span class="text-faint">Description:</span> <span>{{ file.description }} </span>
+            <span class="text-faint">Description:</span>
+            <div class="description-content">
+              <div 
+                :class="[
+                  'description-text',
+                  {
+                    'description-truncated': !isDescriptionExpanded(file.name) && shouldTruncateDescription(file.description)
+                  }
+                ]"
+              >
+                <markdown-renderer :markdown="file.description" />
+              </div>
+              <button
+                v-if="shouldTruncateDescription(file.description)"
+                @click="toggleDescription(file.name)"
+                class="description-toggle-button"
+              >
+                {{ isDescriptionExpanded(file.name) ? 'Show Less' : 'Show More' }}
+              </button>
+            </div>
           </div>
 
           <div class="model-content-expanded" v-if="isExpanded[file.downloadUrl]">
@@ -157,10 +176,13 @@ import { ref, onMounted, computed, defineProps, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
-import { useCommunityApiStore } from '../../stores/communityApiStore'
+import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import {
   getDefaultConnection as getDefaultConnectionService,
 } from '../../models/githubApiService'
+import MarkdownRenderer from '../MarkdownRenderer.vue';
+
+import useScreenNavigation from '../../stores/useScreenNavigation';
 
 const props = defineProps({
   initialSearch: {
@@ -169,12 +191,14 @@ const props = defineProps({
   },
 })
 
-const communityApiStore = useCommunityApiStore()
-const { error, loading, refreshData, availableEngines } = communityApiStore
+const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
+const { error, refreshData, availableEngines } = communityApiStore
+const navigation = useScreenNavigation()
 
 const isExpanded = ref<Record<string, boolean>>({})
 const creatorIsExpanded = ref<Record<string, boolean>>({})
-const searchQuery = ref(props.initialSearch)
+const descriptionExpanded = ref<Record<string, boolean>>({})
+const searchQuery = ref(navigation.initialSearch.value || props.initialSearch)
 const selectedEngine = ref('')
 const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
 
@@ -186,6 +210,8 @@ if (!modelStore) {
 const modelExists = (name: string): boolean => {
   return name in modelStore.models
 }
+
+const loading = computed(() => communityApiStore.loading)
 
 const toggleComponents = (index: string): void => {
   isExpanded.value[index] = !isExpanded.value[index]
@@ -228,6 +254,30 @@ const copyDashboardImportLink = async (component: any, file: any): Promise<void>
     textArea.select()
     document.execCommand('copy')
     document.body.removeChild(textArea)
+  }
+}
+
+// Description truncation functions
+const shouldTruncateDescription = (description: string): boolean => {
+  if (!description) return false
+  const lines = description.split('\n')
+  return lines.length > 5
+}
+
+const isDescriptionExpanded = (fileName: string): boolean => {
+  // If there's an initial search and only one result, expand by default
+  if ((navigation.initialSearch.value || props.initialSearch) && filteredFiles.value.length === 1) {
+    return descriptionExpanded.value[fileName] !== false
+  }
+  return descriptionExpanded.value[fileName] === true
+}
+
+const toggleDescription = (fileName: string): void => {
+  // If there's an initial search and only one result, we need to handle the default expansion state
+  if ((navigation.initialSearch.value || props.initialSearch) && filteredFiles.value.length === 1) {
+    descriptionExpanded.value[fileName] = descriptionExpanded.value[fileName] === false ? true : false
+  } else {
+    descriptionExpanded.value[fileName] = !descriptionExpanded.value[fileName]
   }
 }
 
@@ -317,7 +367,8 @@ onMounted(async () => {
   transition: box-shadow 0.2s ease;
   background-color: var(--card-bg-color, rgba(255, 255, 255, 0.03));
 }
-sty .model-item:hover {
+
+.model-item:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -398,6 +449,48 @@ sty .model-item:hover {
 
 .model-description {
   margin-bottom: 12px;
+}
+
+.description-content {
+  margin-top: 4px;
+}
+
+.description-text {
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.description-text.description-truncated {
+  max-height: calc(1.4em * 5); /* Approximate 5 lines */
+  position: relative;
+}
+
+.description-text.description-truncated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  height: 1.4em;
+  background: linear-gradient(transparent, var(--card-bg-color, rgba(255, 255, 255, 0.03)));
+  pointer-events: none;
+}
+
+.description-toggle-button {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-top: 4px;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.description-toggle-button:hover {
+  color: var(--accent-color-hover, #1d4ed8);
 }
 
 .model-content-expanded {

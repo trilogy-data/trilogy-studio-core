@@ -4,7 +4,7 @@
     <div class="action-slot">
       <slot name="actions"> </slot>
     </div>
-    <div>
+    <div class="sidebar-content"> 
       <slot :isMobile="isMobile"></slot>
     </div>
   </div>
@@ -15,7 +15,14 @@
   border-radius: 0px;
   padding-left: 4px;
   padding-right: 4px;
+
   /* height: 100%; */
+}
+
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .action-slot {

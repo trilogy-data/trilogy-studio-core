@@ -20,6 +20,7 @@ interface NavigationState {
   activeEditor: Ref<string>
   activeDashboard: Ref<string>
   mobileMenuOpen: Ref<boolean>
+  initialSearch: Ref<string>
 }
 
 interface NavigationStore {
@@ -27,10 +28,12 @@ interface NavigationStore {
   readonly activeEditor: Ref<string>
   readonly activeDashboard: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
+  readonly initialSearch: Ref<string>
   setActiveScreen(screen: ScreenType): void
   setActiveEditor(editor: string): void
   setActiveDashboard(dashboard: string | null): void
   setActiveModel(model: string | null): void
+  setActiveScreenWithParams(screen: ScreenType, params: Record<string, string>): void
   toggleMobileMenu(): void
 }
 
@@ -40,6 +43,7 @@ const createNavigationStore = (): NavigationStore => {
     activeEditor: ref(getDefaultValueFromHash('editor', '')),
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
     mobileMenuOpen: ref(false),
+    initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
   }
 
   // Screens that should close mobile menu when activated
@@ -59,6 +63,23 @@ const createNavigationStore = (): NavigationStore => {
       state.mobileMenuOpen.value = false
     }
   }
+
+  const setActiveScreenWithParams = (screen: ScreenType, params: Record<string, string>): void => {
+    pushHashToUrl('screen', screen)
+    state.activeScreen.value = screen
+
+    for (const key in params) {
+      pushHashToUrl(key, params[key])
+      if (key === 'initialSearch') {
+        state.initialSearch.value = params[key]
+      }
+    }
+
+    if (mobileMenuClosingScreens.includes(screen)) {
+      state.mobileMenuOpen.value = false
+    }
+  }
+
   const setActiveModel = (model: string | null): void => {
     if (model === null) {
       removeHashFromUrl('model')
@@ -106,6 +127,9 @@ const createNavigationStore = (): NavigationStore => {
     },
     get mobileMenuOpen() {
       return state.mobileMenuOpen
+    },
+    get initialSearch() {
+      return state.initialSearch
     },
     setActiveScreen,
     setActiveEditor,

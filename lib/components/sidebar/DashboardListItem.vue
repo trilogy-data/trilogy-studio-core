@@ -25,7 +25,7 @@
     </template>
     <span class="truncate-text">
       {{ item.label }}
-      <span class="text-light" v-if="item.type === 'connection'">
+      <span class="text-light connection-model" v-if="item.type === 'connection'">
         ({{ connectionInfo?.model ? connectionInfo?.model : 'No Model Set' }})</span
       >
     </span>
@@ -135,6 +135,11 @@ export default {
 }
 </script>
 <style scoped>
+
+.connection-model {
+ display: inline-flex;
+ max-width: 25px;
+}
 .icon-display {
   display: flex;
   justify-content: center;

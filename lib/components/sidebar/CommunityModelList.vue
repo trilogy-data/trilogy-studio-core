@@ -21,19 +21,20 @@
 
 <script lang="ts">
 import { inject, ref, computed, onMounted } from 'vue';
-import { useCommunityApiStore } from '../../stores/communityApiStore';
+import { type CommunityApiStoreType } from '../../stores/communityApiStore';
 import SidebarList from './SidebarList.vue';
+
 import CommunityModelListItem from './CommunityModelListItem.vue';
 import { buildCommunityModelTree } from '../../models/githubApiService';
 
 export default {
   name: 'CommunityModelList',
   setup() {
-    const communityApiStore = useCommunityApiStore();
-    const { files, loading, refreshData } = communityApiStore;
-    const setActiveScreen = inject('setActiveScreen');
+    const communityApiStore = inject('communityApiStore') as CommunityApiStoreType;
+    const { refreshData } = communityApiStore;
+    const setActiveScreenWithParams = inject('setActiveScreenWithParams');
 
-    const collapsed = ref<Record<string, boolean>>({});
+    const collapsed = ref<Record<string, boolean>>({'e-duckdb':true, 'e-bigquery':true, 'e-snowflake':true});
 
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
@@ -42,15 +43,18 @@ export default {
       collapsed.value[key] = !collapsed.value[key];
     };
 
-    onMounted(() => {
-      if (files.length === 0) {
-        refreshData();
+    onMounted(async () => {
+      if (communityApiStore.files.length === 0) {
+        await refreshData();
+        // default collapsed state for all items
       }
     });
 
     const contentList = computed(() => {
-      return buildCommunityModelTree(files, collapsed.value);
+      return buildCommunityModelTree(communityApiStore.files, collapsed.value);
     });
+
+    const loading = computed(() => communityApiStore.loading);
 
     const handleModelSelected = (modelName: string) => {
       if (setActiveScreenWithParams) {

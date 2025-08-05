@@ -29,7 +29,7 @@
     <span class="truncate-text">
       {{ item.label }}
       <span class="text-light" v-if="item.type === 'connection'">
-        <span v-if="connectionStore.connections[item.label]?.model">
+        <span class="connection-model" v-if="connectionStore.connections[item.label]?.model">
           ({{ connectionStore.connections[item.label].model }})
         </span>
         <span
@@ -156,6 +156,11 @@ export default {
 </script>
 
 <style scoped>
+.connection-model {
+ display: inline-flex;
+ max-width: 25px;
+}
+
 .sql {
   color: var(--text-color);
   font-style: bold;
