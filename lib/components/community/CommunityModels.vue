@@ -106,7 +106,6 @@
           </div>
 
           <div class="model-description">
-            <span class="text-faint">Description:</span>
             <div class="description-content">
               <div
                 :class="[
