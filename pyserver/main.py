@@ -13,28 +13,10 @@ import uvicorn
 from uvicorn.config import LOGGING_CONFIG
 
 from starlette.background import BackgroundTask
-from trilogy.constants import Parsing
 from trilogy import Environment, Executor
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.dialect.base import BaseDialect
-from trilogy.authoring import (
-    Concept,
-    SelectStatement,
-    MultiSelectStatement,
-    RawSQLStatement,
-    DEFAULT_NAMESPACE,
-    Parenthetical,
-    Conditional,
-    BooleanOperator,
-)
-from trilogy.core.statements.execute import (
-    ProcessedRawSQLStatement,
-    ProcessedQueryPersist,
-    ProcessedShowStatement,
-    ProcessedQuery,
-)
-from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 import click
 from click_default_group import DefaultGroup
@@ -68,8 +50,6 @@ sys.path.append(str(current_directory))
 from io_models import (
     QueryInSchema,
     FormatQueryOutSchema,
-    QueryOut,
-    QueryOutColumn,
     ModelInSchema,
     Model,
     ValidateQueryInSchema,
@@ -79,6 +59,14 @@ from io_models import (
 
 # ruff: noqa: E402
 from diagnostics import get_diagnostics
+from utility import safe_percentage
+from query_helpers import (
+    generate_multi_query_core,
+    generate_query_core,
+    query_to_output,
+    safe_format_query,
+    PARSE_CONFIG,
+)
 
 
 CONFIG.rendering.parameters = False
@@ -87,13 +75,6 @@ logger = getLogger(__name__)
 
 # Set up performance logging
 perf_logger = getLogger("trilogy.performance")
-
-
-def safe_percentage(part, total):
-    """Calculate percentage safely, avoiding divide by zero errors"""
-    if total == 0 or total < 0.0001:  # Avoid very small numbers too
-        return 0.0
-    return (part / total) * 100
 
 
 # Determine if we're in development mode for performance logging
@@ -127,12 +108,7 @@ setup_performance_logging()
 
 PORT = 5678
 
-STATEMENT_LIMIT = 100_00
-
-
 app = FastAPI()
-
-PARSE_CONFIG = Parsing(strict_name_shadow_enforcement=True)
 
 
 @dataclass
@@ -166,24 +142,7 @@ app.add_middleware(
 
 RENDERERS: Dict[str, BaseDialect]
 
-# GENAI_CONNECTIONS: Dict[str, NLPEngine] = {}
-
 router = APIRouter()
-
-
-def safe_format_query(input: str) -> str:
-    input = input.strip()
-    if len(input) == 0:
-        return ""
-    if input[-1] != ";":
-        return input + ";"
-    return input
-
-
-def get_traits(concept: Concept) -> list[str]:
-    if isinstance(concept.datatype, TraitDataType):
-        return concept.datatype.traits
-    return []
 
 
 @router.post("/format_query")
@@ -245,284 +204,6 @@ def validate_query(query: ValidateQueryInSchema):
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
 
-def generate_single_query(
-    query: str,
-    env: Environment,
-    dialect: BaseDialect,
-    extra_filters: list[str] | None = None,
-    parameters: dict[str, str | int | float] | None = None,
-):
-    start_time = time.time()
-
-    # Parse the query
-    parse_start = time.time()
-    _, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
-    parse_time = time.time() - parse_start
-
-    if not parsed:
-        if ENABLE_PERF_LOGGING:
-            perf_logger.debug(
-                f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
-            )
-        return None, []
-
-    final = parsed[-1]
-    variables = parameters or {}
-
-    # Process variables
-    var_start = time.time()
-    variable_prefix = ""
-    for key, variable in variables.items():
-        if isinstance(variable, str):
-            if "'''" in variable:
-                raise ValueError("cannot safely parse strings with triple quotes")
-            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
-        else:
-            variable_prefix += f"\n const {key[1:]} <- {variable};"
-    var_time = time.time() - var_start
-
-    # Handle different statement types
-    if isinstance(final, RawSQLStatement):
-        if ENABLE_PERF_LOGGING:
-            total_time = time.time() - start_time
-            perf_logger.debug(
-                f"Raw SQL generation - Total: {total_time:.4f}s | "
-                f"Parse: {parse_time:.4f}s | "
-                f"Variables: {var_time:.4f}s"
-            )
-        return ProcessedRawSQLStatement(text=final.text), []
-
-    if not isinstance(final, (SelectStatement, MultiSelectStatement)):
-        columns: list[QueryOutColumn] = []
-        if ENABLE_PERF_LOGGING:
-            total_time = time.time() - start_time
-            perf_logger.debug(
-                f"Non-query generation - Total: {total_time:.4f}s | "
-                f"Parse: {parse_time:.4f}s | "
-                f"Variables: {var_time:.4f}s"
-            )
-        return None, columns
-
-    # Process columns
-    col_start = time.time()
-    columns = [
-        QueryOutColumn(
-            name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
-            datatype=env.concepts[x.address].datatype,
-            purpose=env.concepts[x.address].purpose,
-            traits=get_traits(env.concepts[x.address]),
-            description=env.concepts[x.address].metadata.description,
-        )
-        for x in final.output_components
-    ]
-    col_time = time.time() - col_start
-
-    # Set limits and process filters
-    limit_filter_start = time.time()
-    if not final.limit:
-        final.limit = STATEMENT_LIMIT
-
-    if extra_filters:
-        for idx, filter_string in enumerate(extra_filters):
-            base = "" + variable_prefix
-            for v in variables:
-                # remove the prefix
-                filter_string = filter_string.replace(v[0], v[0][1:])
-            _, fparsed = parse_text(
-                f"{base}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};",
-                env,
-                parse_config=PARSE_CONFIG,
-            )
-
-            filterQuery: SelectStatement = fparsed[-1]  # type: ignore
-            if not filterQuery.where_clause:
-                continue
-            if not final.where_clause:
-                final.where_clause = filterQuery.where_clause
-            else:
-                final.where_clause.conditional = Conditional(
-                    left=Parenthetical(content=final.where_clause.conditional),
-                    right=Parenthetical(content=filterQuery.where_clause.conditional),
-                    operator=BooleanOperator.AND,
-                )
-
-    limit_filter_time = time.time() - limit_filter_start
-
-    # Generate the final query
-    gen_start = time.time()
-    result = dialect.generate_queries(env, [final])[-1]
-    gen_time = time.time() - gen_start
-
-    if ENABLE_PERF_LOGGING:
-        total_time = time.time() - start_time
-        perf_logger.debug(
-            f"Query generation details - Total: {total_time:.4f}s | "
-            f"Parse: {parse_time:.4f}s ({safe_percentage(parse_time, total_time):.1f}%) | "
-            f"Variables: {var_time:.4f}s ({safe_percentage(var_time, total_time):.1f}%) | "
-            f"Columns: {col_time:.4f}s ({safe_percentage(col_time, total_time):.1f}%) | "
-            f"Filters: {limit_filter_time:.4f}s ({safe_percentage(limit_filter_time, total_time):.1f}%) | "
-            f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
-        )
-
-    return result, columns
-
-
-def generate_query_core(
-    query: QueryInSchema,
-    dialect: BaseDialect,
-) -> tuple[
-    ProcessedQuery
-    | ProcessedQueryPersist
-    | ProcessedShowStatement
-    | ProcessedRawSQLStatement
-    | None,
-    list[QueryOutColumn],
-]:
-    if ENABLE_PERF_LOGGING:
-        start_time = time.time()
-
-        # Time environment setup
-        env_start = time.time()
-        env = parse_env_from_full_model(query.full_model.sources)
-        env_time = time.time() - env_start
-
-        # Time imports processing
-        import_start = time.time()
-        for imp in query.imports:
-            if imp.alias:
-                imp_string = f"import {imp.name} as {imp.alias};"
-            else:
-                imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
-        import_time = time.time() - import_start
-
-        # Time query generation
-        gen_start = time.time()
-        result = generate_single_query(
-            query.query, env, dialect, query.extra_filters, query.parameters
-        )
-        gen_time = time.time() - gen_start
-
-        total_time = time.time() - start_time
-        perf_logger.info(
-            f"Query core timing - Total: {total_time:.4f}s | "
-            f"Env setup: {env_time:.4f}s ({safe_percentage(env_time, total_time):.1f}%) | "
-            f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
-            f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time,total_time):.1f}%)"
-        )
-        return result
-    else:
-        env = parse_env_from_full_model(query.full_model.sources)
-        for imp in query.imports:
-            if imp.alias:
-                imp_string = f"import {imp.name} as {imp.alias};"
-            else:
-                imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
-        return generate_single_query(
-            query.query, env, dialect, query.extra_filters, query.parameters
-        )
-
-
-def generate_multi_query_core(
-    query: MultiQueryInSchema,
-    dialect: BaseDialect,
-) -> list[
-    tuple[
-        ProcessedQuery
-        | ProcessedQueryPersist
-        | ProcessedShowStatement
-        | ProcessedRawSQLStatement
-        | None,
-        list[QueryOutColumn],
-    ],
-]:
-    if ENABLE_PERF_LOGGING:
-        start_time = time.time()
-
-    env = parse_env_from_full_model(query.full_model.sources)
-
-    if ENABLE_PERF_LOGGING:
-        env_time = time.time() - start_time
-        import_start = time.time()
-
-    for imp in query.imports:
-        if imp.alias:
-            imp_string = f"import {imp.name} as {imp.alias};"
-        else:
-            imp_string = f"import {imp.name};"
-        parse_text(imp_string, env, parse_config=PARSE_CONFIG)
-
-    if ENABLE_PERF_LOGGING:
-        import_time = time.time() - import_start
-        queries_start = time.time()
-
-    all: list[
-        tuple[
-            ProcessedQuery
-            | ProcessedQueryPersist
-            | ProcessedShowStatement
-            | ProcessedRawSQLStatement
-            | None,
-            list[QueryOutColumn],
-        ]
-    ] = []
-    for subquery in query.queries:
-        generated, columns = generate_single_query(
-            subquery.query, env, dialect, subquery.extra_filters, subquery.parameters
-        )
-        all.append((generated, columns))
-
-    if ENABLE_PERF_LOGGING:
-        queries_time = time.time() - queries_start
-        total_time = time.time() - start_time
-        perf_logger.info(
-            f"Multi-query generation - Total: {total_time:.4f}s | "
-            f"Env setup: {env_time:.4f}s ({safe_percentage(env_time,total_time):.1f}%) | "
-            f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
-            f"Queries: {queries_time:.4f}s ({safe_percentage(queries_time,total_time):.1f}%) | "
-            f"Query count: {len(query.queries)}"
-        )
-
-    return all
-
-
-def query_to_output(target, columns, dialect: BaseDialect):
-    if ENABLE_PERF_LOGGING:
-        start_time = time.time()
-
-    if not target:
-        if ENABLE_PERF_LOGGING:
-            perf_logger.debug(
-                f"Empty output generation: {time.time() - start_time:.4f}s"
-            )
-        return QueryOut(generated_sql=None, columns=columns)
-
-    if isinstance(target, RawSQLStatement):
-        output = QueryOut(generated_sql=target.text, columns=columns)
-        if ENABLE_PERF_LOGGING:
-            perf_logger.debug(
-                f"Raw SQL output generation: {time.time() - start_time:.4f}s"
-            )
-        return output
-    else:
-        compile_start = time.time()
-        sql = dialect.compile_statement(target)
-        compile_time = time.time() - compile_start
-
-        output = QueryOut(generated_sql=sql, columns=columns)
-
-        if ENABLE_PERF_LOGGING:
-            total_time = time.time() - start_time
-            perf_logger.debug(
-                f"SQL output generation - Total: {total_time:.4f}s | "
-                f"SQL Compilation: {compile_time:.4f}s ({safe_percentage(compile_time,total_time):.1f}%) | "
-                f"SQL length: {len(sql)} chars"
-            )
-
-        return output
-
-
 @router.post("/generate_queries")
 def generate_queries(queries: MultiQueryInSchema):
     if ENABLE_PERF_LOGGING:
@@ -535,7 +216,7 @@ def generate_queries(queries: MultiQueryInSchema):
             dialect_time = time.time() - start_time
             statements_start = time.time()
 
-        statements = generate_multi_query_core(queries, dialect)
+        statements = generate_multi_query_core(queries, dialect, ENABLE_PERF_LOGGING)
 
         if ENABLE_PERF_LOGGING:
             statements_time = time.time() - statements_start
@@ -543,7 +224,7 @@ def generate_queries(queries: MultiQueryInSchema):
 
         result = {
             "queries": [
-                query_to_output(target, columns, dialect)
+                query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
                 for target, columns in statements
             ]
         }
@@ -589,12 +270,12 @@ def generate_query(query: QueryInSchema):
 
         # Time the query core processing
         core_start = time.time()
-        target, columns = generate_query_core(query, dialect)
+        target, columns = generate_query_core(query, dialect, ENABLE_PERF_LOGGING)
         core_time = time.time() - core_start
 
         # Time the output formatting
         output_start = time.time()
-        result = query_to_output(target, columns, dialect)
+        result = query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
         output_time = time.time() - output_start
 
         if ENABLE_PERF_LOGGING:
