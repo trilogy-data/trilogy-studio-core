@@ -49,7 +49,7 @@
       </span>
     </template>
     <template v-else-if="item.type === 'connection'">
-      <span class="tag-container">
+      <span class="tag-container hover-icon">
         <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
         <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
       </span>
@@ -58,11 +58,11 @@
 
     <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
       <span
-        class="remove-btn"
+        class="remove-btn hover-icon"
         @click.stop="$emit('delete-editor', item.editor)"
         :data-testid="`delete-editor-${item.label}`"
       >
-        <i class="mdi mdi-trash-can"></i>
+        <i class="mdi mdi-trash-can-outline"></i>
       </span>
     </tooltip>
   </div>

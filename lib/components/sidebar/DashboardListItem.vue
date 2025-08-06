@@ -31,7 +31,7 @@
     </span>
     <div class="dashboard-actions">
       <template v-if="item.type === 'connection'">
-        <span class="tag-container">
+        <span class="tag-container hover-icon">
           <dashboard-creator-icon :connection="item.label" title="New Dashboard" />
         </span>
         <status-icon :status="connectionStatus" />
@@ -39,7 +39,7 @@
       <template v-if="item.type === 'dashboard'">
         <tooltip content="Clone Dashboard" position="left">
           <span
-            class="clone-btn"
+            class="clone-btn hover-icon"
             @click.stop="handleClone"
             :data-testid="`clone-dashboard-${item.label}`"
           >
@@ -48,7 +48,7 @@
         </tooltip>
         <tooltip content="Delete Dashboard" position="left">
           <span
-            class="remove-btn"
+            class="remove-btn hover-icon"
             @click.stop="handleDelete"
             :data-testid="`delete-dashboard-${item.label}`"
           >
