@@ -55,10 +55,13 @@
         </span>
 
         <!-- right container, flex out -->
-        <span class="right-container">
-          <loading-button v-if="item.type === 'model'" :action="() => fetchParseResults(item.name)"
-            >Parse</loading-button
-          >
+
+        <span class="right-container hover-icon">
+          <tooltip v-if="item.type === 'model'" content="Refresh Model" position="left">
+            <loading-button :action="() => fetchParseResults(item.name)">
+              <i class="mdi mdi-cog-refresh-outline"></i
+            ></loading-button>
+          </tooltip>
         </span>
       </div>
     </div>
@@ -76,6 +79,7 @@ import TrilogyResolver from '../../stores/resolver'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
+import Tooltip from '../Tooltip.vue'
 
 export default {
   name: 'ModelList',
@@ -270,6 +274,7 @@ export default {
     SidebarList,
     ModelCreator,
     LoadingButton,
+    Tooltip,
   },
 }
 </script>

@@ -1,8 +1,6 @@
 <template>
   <sidebar-list title="Connections">
     <template #actions>
-      <!-- Add search box at the top -->
-
       <div class="button-container">
         <button
           @click="creatorVisible = !creatorVisible"

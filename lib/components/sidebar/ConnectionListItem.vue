@@ -180,13 +180,19 @@
     >
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
-      <span v-if="item.type === 'connection'" @click.stop="handleRefreshConnectionClick"
+      <span
+        v-if="item.type === 'connection'"
+        class="hover-icon"
+        @click.stop="handleRefreshConnectionClick"
         ><i class="mdi mdi-refresh"></i
       ></span>
-      <span v-if="item.type === 'database'" @click.stop="handleRefreshDatabaseClick"
+      <span
+        v-if="item.type === 'database'"
+        class="hover-icon"
+        @click.stop="handleRefreshDatabaseClick"
         ><i class="mdi mdi-refresh"></i
       ></span>
-      <span v-if="item.type === 'schema'" @click.stop="handleRefreshSchemaClick"
+      <span v-if="item.type === 'schema'" class="hover-icon" @click.stop="handleRefreshSchemaClick"
         ><i class="mdi mdi-refresh"></i
       ></span>
     </span>
@@ -194,13 +200,13 @@
     <div class="connection-actions" v-if="item.type === 'connection'">
       <i
         :data-testid="`toggle-history-${item.connection.name}`"
-        class="mdi mdi-history"
+        class="mdi mdi-history hover-icon"
         v-if="isMobile"
         title="Query History"
         @click.stop="toggleMobileMenu"
       ></i>
       <editor-creator-icon
-        class="tacticle-button"
+        class="tacticle-button hover-icon"
         :connection="item.connection.name"
         type="sql"
         title="New SQL Editor"
@@ -211,7 +217,7 @@
         "
       />
       <editor-creator-icon
-        class="tacticle-button"
+        class="tacticle-button hover-icon"
         :connection="item.connection.name"
         title="New Trilogy Editor"
         :data-testid="
@@ -221,19 +227,25 @@
         "
       />
       <connection-refresh
-        class="tacticle-button"
+        class="tacticle-button hover-icon"
         :connection="item.connection"
         :is-connected="item.connection.connected"
       />
-      <connection-status-icon :connection="item.connection" />
-      <tooltip class="tacticle-button" content="Delete Connection" position="left">
+
+      <tooltip class="tacticle-button hover-icon" content="Delete Connection" position="left">
         <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
-          <i class="mdi mdi-trash-can"></i>
+          <i class="mdi mdi-trash-can-outline"></i>
         </span>
       </tooltip>
+      <!-- Connection status icon should always be visible -->
+      <connection-status-icon :connection="item.connection" />
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <CreateEditorFromDatasourcePopup :connection="item.connection" :table="item.object" />
+      <CreateEditorFromDatasourcePopup
+        class="hover-icon"
+        :connection="item.connection"
+        :table="item.object"
+      />
     </div>
   </div>
 </template>

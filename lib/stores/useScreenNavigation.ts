@@ -21,6 +21,7 @@ interface NavigationState {
   activeDashboard: Ref<string>
   mobileMenuOpen: Ref<boolean>
   initialSearch: Ref<string>
+  activeCommunityModelFilter: Ref<string>
 }
 
 interface NavigationStore {
@@ -29,11 +30,13 @@ interface NavigationStore {
   readonly activeDashboard: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
   readonly initialSearch: Ref<string>
+  readonly activeCommunityModelFilter: Ref<string>
   setActiveScreen(screen: ScreenType): void
   setActiveEditor(editor: string): void
   setActiveDashboard(dashboard: string | null): void
   setActiveModel(model: string | null): void
   setActiveScreenWithParams(screen: ScreenType, params: Record<string, string>): void
+  setActiveCommunityModelFilter(filter: string | null): void
   toggleMobileMenu(): void
 }
 
@@ -44,6 +47,7 @@ const createNavigationStore = (): NavigationStore => {
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
     mobileMenuOpen: ref(false),
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
+    activeCommunityModelFilter: ref(getDefaultValueFromHash('communityModelFilter', '')),
   }
 
   // Screens that should close mobile menu when activated
@@ -78,6 +82,16 @@ const createNavigationStore = (): NavigationStore => {
     if (mobileMenuClosingScreens.includes(screen)) {
       state.mobileMenuOpen.value = false
     }
+  }
+
+  const setActiveCommunityModelFilter = (filter: string | null): void => {
+    if (filter === null) {
+      removeHashFromUrl('communityModelFilter')
+      state.activeCommunityModelFilter.value = ''
+      return
+    }
+    pushHashToUrl('communityModelFilter', filter)
+    state.activeCommunityModelFilter.value = filter
   }
 
   const setActiveModel = (model: string | null): void => {
@@ -131,12 +145,16 @@ const createNavigationStore = (): NavigationStore => {
     get initialSearch() {
       return state.initialSearch
     },
+    get activeCommunityModelFilter() {
+      return state.activeCommunityModelFilter
+    },
     setActiveScreen,
     setActiveEditor,
     setActiveDashboard,
     toggleMobileMenu,
     setActiveModel,
     setActiveScreenWithParams,
+    setActiveCommunityModelFilter,
   }
 }
 

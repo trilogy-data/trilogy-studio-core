@@ -19,8 +19,6 @@
 </template>
 
 <script lang="ts">
-import { inject } from 'vue'
-
 export default {
   name: 'CommunityModelListItem',
   props: {
@@ -35,10 +33,8 @@ export default {
   },
   emits: ['item-click', 'model-selected'],
   setup(props, { emit }) {
-    const isMobile = inject('isMobile')
-
     const handleItemClick = () => {
-      if (props.item.type === 'model' && isMobile) {
+      if (props.item.type === 'model') {
         emit('model-selected', props.item.label)
       } else {
         emit('item-click', props.item.type, props.item.objectKey, props.item.key)

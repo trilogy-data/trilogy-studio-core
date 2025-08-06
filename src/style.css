@@ -156,6 +156,10 @@ h1 {
   line-height: 1.1;
 }
 
+.main {
+  background-color: var(--query-window-bg);
+}
+
 /* BUTTONS */
 
 button:hover {
@@ -230,7 +234,7 @@ button {
 
 }
 
-/* sidebar */
+/* SIDEBAR */
 .sidebar-padding {
   width: 7px;
   height: var(--sidebar-list-item-height);
@@ -263,9 +267,16 @@ button {
   border: 1px solid hsl(210, 100%, 50%, 0.75);
 }
 
-.main {
-  background-color: var(--query-window-bg);
+.hover-icon {
+  opacity: 0 ;
+  transition: opacity 0.2s ease-in-out;
 }
+
+.sidebar-item:hover .hover-icon {
+  opacity: 1;
+}
+
+
 
 /* TEXT */
 .text-faint {

@@ -106,7 +106,6 @@
           </div>
 
           <div class="model-description">
-            <span class="text-faint">Description:</span>
             <div class="description-content">
               <div
                 :class="[
@@ -172,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineProps, inject } from 'vue'
+import { ref, onMounted, computed, defineProps, inject, watch } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
@@ -204,6 +203,19 @@ const modelStore = inject<ModelConfigStoreType>('modelStore')
 if (!modelStore) {
   throw new Error('ModelConfigStore not found in context')
 }
+
+watch(
+  () => navigation.activeCommunityModelFilter.value,
+  (newFilter) => {
+    console.log('Active community model filter changed:', newFilter)
+    if (newFilter) {
+      searchQuery.value = newFilter
+    } else {
+      selectedEngine.value = ''
+    }
+  },
+  { immediate: true },
+)
 
 const modelExists = (name: string): boolean => {
   return name in modelStore.models
@@ -461,7 +473,8 @@ onMounted(async () => {
 }
 
 .description-text.description-truncated {
-  max-height: calc(1.4em * 5); /* Approximate 5 lines */
+  max-height: calc(1.4em * 5);
+  /* Approximate 5 lines */
   position: relative;
 }
 
@@ -560,7 +573,8 @@ onMounted(async () => {
 }
 
 .check-icon {
-  color: #22c55e; /* Green color for the checkmark */
+  color: #22c55e;
+  /* Green color for the checkmark */
   font-size: 16px;
 }
 
