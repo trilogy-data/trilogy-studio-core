@@ -36,6 +36,7 @@ interface NavigationStore {
   setActiveDashboard(dashboard: string | null): void
   setActiveModel(model: string | null): void
   setActiveScreenWithParams(screen: ScreenType, params: Record<string, string>): void
+  setActiveCommunityModelFilter(filter: string | null): void
   toggleMobileMenu(): void
 }
 

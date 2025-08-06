@@ -2,8 +2,10 @@
   <sidebar-list title="Models">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
+        >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveModels" :key-combination="['control', 's']">
@@ -13,25 +15,39 @@
       <model-creator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
 
-    <div v-for="item in flatList" :key="item.id" class="sidebar-item"
-      :class="{ 'sidebar-item-selected': activeModelKey === item.id }">
+    <div
+      v-for="item in flatList"
+      :key="item.id"
+      class="sidebar-item"
+      :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
+    >
       <div class="sidebar-content" @click="handleClick(item.id)">
         <!-- headericons  -->
-        <div v-for="(_, index) in Array.from({ length: item.indent }, () => 0)" :key="index" class="sidebar-padding">
-        </div>
+        <div
+          v-for="(_, index) in Array.from({ length: item.indent }, () => 0)"
+          :key="index"
+          class="sidebar-padding"
+        ></div>
 
-        <span @click.stop="handleClick(item.id, true)" v-if="['model', 'source', 'datasource'].includes(item.type)">
+        <span
+          @click.stop="handleClick(item.id, true)"
+          v-if="['model', 'source', 'datasource'].includes(item.type)"
+        >
           <i v-if="!collapsed[item.id]" class="mdi mdi-menu-down"></i>
           <i v-else class="mdi mdi-menu-right"></i>
         </span>
         <img :src="trilogyIcon" class="trilogy-icon" v-if="item.type == 'source'" />
-        <span v-else-if="item.type == 'concept'" :class="`purpose-${item.concept.purpose.toLowerCase()}`">
+        <span
+          v-else-if="item.type == 'concept'"
+          :class="`purpose-${item.concept.purpose.toLowerCase()}`"
+        >
           {{ item.concept.purpose.charAt(0).toUpperCase() }}
         </span>
         <i v-else-if="item.type == 'datasource'" class="mdi mdi-table"></i>
 
         <!-- item name -->
-        <span class="truncate-text">{{ item.name }}
+        <span class="truncate-text"
+          >{{ item.name }}
 
           <!-- item extra -->
           <span v-if="['model', 'source'].includes(item.type)">({{ item.count }})</span>
@@ -42,8 +58,9 @@
 
         <span class="right-container hover-icon">
           <tooltip v-if="item.type === 'model'" content="Refresh Model" position="left">
-            <loading-button  :action="() => fetchParseResults(item.name)"> <i
-                class="mdi mdi-cog-refresh-outline"></i></loading-button>
+            <loading-button :action="() => fetchParseResults(item.name)">
+              <i class="mdi mdi-cog-refresh-outline"></i
+            ></loading-button>
           </tooltip>
         </span>
       </div>
@@ -62,7 +79,7 @@ import TrilogyResolver from '../../stores/resolver'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
-import { Tooltip } from '../Tooltip.vue'
+import Tooltip from '../Tooltip.vue'
 
 export default {
   name: 'ModelList',

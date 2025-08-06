@@ -46,11 +46,6 @@ export default defineComponent({
   overflow-y: auto;
   flex: 1;
 }
-
-
-
-
-
 </style>
 
 <style>
@@ -122,7 +117,12 @@ export default defineComponent({
 
 .loading-pill {
   display: inline-block;
-  background: linear-gradient(90deg, var(--bg-color) 25%, var(--button-bg) 50%, var(--bg-color) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--bg-color) 25%,
+    var(--button-bg) 50%,
+    var(--bg-color) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
   border-radius: 4px;

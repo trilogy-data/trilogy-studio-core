@@ -180,10 +180,16 @@
     >
       {{ item.name }}
       <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
-      <span v-if="item.type === 'connection'" class="hover-icon" @click.stop="handleRefreshConnectionClick"
+      <span
+        v-if="item.type === 'connection'"
+        class="hover-icon"
+        @click.stop="handleRefreshConnectionClick"
         ><i class="mdi mdi-refresh"></i
       ></span>
-      <span v-if="item.type === 'database'" class="hover-icon" @click.stop="handleRefreshDatabaseClick"
+      <span
+        v-if="item.type === 'database'"
+        class="hover-icon"
+        @click.stop="handleRefreshDatabaseClick"
         ><i class="mdi mdi-refresh"></i
       ></span>
       <span v-if="item.type === 'schema'" class="hover-icon" @click.stop="handleRefreshSchemaClick"
@@ -235,7 +241,11 @@
       <connection-status-icon :connection="item.connection" />
     </div>
     <div class="connection-actions" v-if="item.type === 'table'">
-      <CreateEditorFromDatasourcePopup class="hover-icon" :connection="item.connection" :table="item.object" />
+      <CreateEditorFromDatasourcePopup
+        class="hover-icon"
+        :connection="item.connection"
+        :table="item.object"
+      />
     </div>
   </div>
 </template>
@@ -530,6 +540,4 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   background: transparent;
   color: var(--text-color);
 }
-
-
 </style>

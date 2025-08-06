@@ -4,7 +4,12 @@
       <div class="model-header">
         <div class="model-title">Community Models</div>
 
-        <button class="refresh-button" @click="refreshData" :disabled="loading" data-testid="refresh-models-button">
+        <button
+          class="refresh-button"
+          @click="refreshData"
+          :disabled="loading"
+          data-testid="refresh-models-button"
+        >
           <span v-if="!loading">Refresh</span>
           <span v-else>Refreshing...</span>
         </button>
@@ -14,8 +19,12 @@
         <div class="filter-row flex gap-4 mb-2">
           <div class="search-box flex-grow">
             <label class="text-faint filter-label">Name</label>
-            <input type="text" data-testid="community-model-search" v-model="searchQuery"
-              placeholder="Search by model name..." />
+            <input
+              type="text"
+              data-testid="community-model-search"
+              v-model="searchQuery"
+              placeholder="Search by model name..."
+            />
           </div>
 
           <div class="engine-filter">
@@ -44,15 +53,21 @@
           <div class="model-item-header">
             <div class="model-info">
               <div class="font-semibold flex items-center">
-                <span class="imported-indicator mr-2" v-if="modelExists(file.name)"
-                  :data-testid="`imported-${file.name}`">
+                <span
+                  class="imported-indicator mr-2"
+                  v-if="modelExists(file.name)"
+                  :data-testid="`imported-${file.name}`"
+                >
                   <i class="mdi mdi-check check-icon"></i>
                 </span>
                 {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
               </div>
               <div class="model-actions">
-                <button @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
-                  :data-testid="`import-${file.name}`" class="action-button">
+                <button
+                  @click="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+                  :data-testid="`import-${file.name}`"
+                  class="action-button"
+                >
                   {{
                     creatorIsExpanded[file.name]
                       ? 'Hide'
@@ -63,38 +78,52 @@
                 </button>
               </div>
             </div>
-            <button class="expand-button" @click="toggleComponents(file.downloadUrl)"
+            <button
+              class="expand-button"
+              @click="toggleComponents(file.downloadUrl)"
               :class="{ expanded: isExpanded[file.downloadUrl] }"
-              :title="isExpanded[file.downloadUrl] ? 'Hide Content' : 'Show Content'">
+              :title="isExpanded[file.downloadUrl] ? 'Hide Content' : 'Show Content'"
+            >
               <i class="mdi mdi-chevron-down expand-icon"></i>
-              <span class="expand-text">{{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }}
-                {{ file.components.length }}</span>
+              <span class="expand-text"
+                >{{ isExpanded[file.downloadUrl] ? 'Hide' : 'Show' }}
+                {{ file.components.length }}</span
+              >
             </button>
           </div>
 
           <div class="model-creator-container" v-if="creatorIsExpanded[file.name]">
-            <model-creator :formDefaults="{
-              importAddress: file.downloadUrl,
-              connection: getDefaultConnection(file.engine),
-              name: file.name,
-            }" :absolute="false" :visible="creatorIsExpanded[file.name]"
-              @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]" />
+            <model-creator
+              :formDefaults="{
+                importAddress: file.downloadUrl,
+                connection: getDefaultConnection(file.engine),
+                name: file.name,
+              }"
+              :absolute="false"
+              :visible="creatorIsExpanded[file.name]"
+              @close="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
+            />
           </div>
 
           <div class="model-description">
             <div class="description-content">
-              <div :class="[
-                'description-text',
-                {
-                  'description-truncated':
-                    !isDescriptionExpanded(file.name) &&
-                    shouldTruncateDescription(file.description),
-                },
-              ]">
+              <div
+                :class="[
+                  'description-text',
+                  {
+                    'description-truncated':
+                      !isDescriptionExpanded(file.name) &&
+                      shouldTruncateDescription(file.description),
+                  },
+                ]"
+              >
                 <markdown-renderer :markdown="file.description" />
               </div>
-              <button v-if="shouldTruncateDescription(file.description)" @click="toggleDescription(file.name)"
-                class="description-toggle-button">
+              <button
+                v-if="shouldTruncateDescription(file.description)"
+                @click="toggleDescription(file.name)"
+                class="description-toggle-button"
+              >
                 {{ isDescriptionExpanded(file.name) ? 'Show Less' : 'Show More' }}
               </button>
             </div>
@@ -114,12 +143,15 @@
                     </a>
                     <span v-if="component.purpose" class="component-purpose">{{
                       component.purpose
-                      }}</span>
+                    }}</span>
                   </div>
                 </div>
                 <div v-if="component.type === 'dashboard'" class="dashboard-actions">
-                  <button @click="copyDashboardImportLink(component, file)" class="copy-import-button"
-                    :title="'Copy import link for ' + component.name">
+                  <button
+                    @click="copyDashboardImportLink(component, file)"
+                    class="copy-import-button"
+                    :title="'Copy import link for ' + component.name"
+                  >
                     <i class="mdi mdi-content-copy"></i>
                     Copy Share Link
                   </button>
@@ -184,7 +216,6 @@ watch(
   },
   { immediate: true },
 )
-
 
 const modelExists = (name: string): boolean => {
   return name in modelStore.models
@@ -266,7 +297,7 @@ const filteredFiles = computed(() => {
     searchQuery.value,
     selectedEngine.value,
     importStatus.value,
-    modelStore
+    modelStore,
   )
 })
 
@@ -630,7 +661,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .filter-row>div {
+  .filter-row > div {
     flex: 1 0 100%;
     margin-bottom: 8px;
   }

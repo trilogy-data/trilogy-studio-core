@@ -8,8 +8,14 @@
       </div>
     </template>
 
-    <CommunityModelListItem v-for="item in contentList" :key="item.key" :item="item" :is-collapsed="collapsed[item.key]"
-      @item-click="clickAction" @model-selected="handleModelSelected" />
+    <CommunityModelListItem
+      v-for="item in contentList"
+      :key="item.key"
+      :item="item"
+      :is-collapsed="collapsed[item.key]"
+      @item-click="clickAction"
+      @model-selected="handleModelSelected"
+    />
   </sidebar-list>
 </template>
 
@@ -26,9 +32,11 @@ export default {
   setup() {
     const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
     const { refreshData } = communityApiStore
-    const setActiveScreen = inject('setActiveScreen')  as (screen: string) => void;
-    const isMobile = inject('isMobile') as boolean;
-    const setActiveCommunityModelFilter = inject('setActiveCommunityModelFilter') as (filter: string | null) => void;
+    const setActiveScreen = inject('setActiveScreen') as (screen: string) => void
+    const isMobile = inject('isMobile') as boolean
+    const setActiveCommunityModelFilter = inject('setActiveCommunityModelFilter') as (
+      filter: string | null,
+    ) => void
     const collapsed = ref<Record<string, boolean>>({
       'e-duckdb': true,
       'e-bigquery': true,
@@ -56,15 +64,10 @@ export default {
     const loading = computed(() => communityApiStore.loading)
 
     const handleModelSelected = (modelName: string) => {
- 
       if (isMobile) {
-        setActiveScreen(
-          'community-models',
-        )
+        setActiveScreen('community-models')
       }
       setActiveCommunityModelFilter(modelName)
-
-      
     }
 
     const clickAction = (type: string, _: string, key: string) => {
