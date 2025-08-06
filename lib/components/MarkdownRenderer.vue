@@ -88,7 +88,7 @@ export default defineComponent({
 
 .rendered-markdown strong {
   font-weight: 600;
-  color: var(--strong-color, #2c3e50);
+  color: var(--special-text);
 }
 
 .rendered-markdown em {
@@ -122,7 +122,7 @@ export default defineComponent({
 
 .loading-pill {
   display: inline-block;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--bg-color) 25%, var(--button-bg) 50%, var(--bg-color) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
   border-radius: 4px;

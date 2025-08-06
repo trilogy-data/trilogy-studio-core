@@ -203,7 +203,6 @@ export const filterModelFiles = (
         (importStatus === 'imported' && isImported) ||
         (importStatus === 'not-imported' && !isImported)
     }
-
     return nameMatch && engineMatch && importMatch
   })
 }

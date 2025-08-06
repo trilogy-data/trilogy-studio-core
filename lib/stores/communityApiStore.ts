@@ -47,7 +47,13 @@ const useCommunityApiStore = defineStore('communityApi', {
         return name in modelStore.models
       }
 
-      return filterModelFiles(this.files, searchQuery, selectedEngine, importStatus, modelExists)
+      return filterModelFiles(
+        this.files,
+        searchQuery,
+        selectedEngine,
+        importStatus,
+        modelExists,
+      )
     },
   },
 })
