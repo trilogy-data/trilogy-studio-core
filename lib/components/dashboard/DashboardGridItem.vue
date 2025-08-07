@@ -9,13 +9,14 @@ import {
   CELL_TYPES,
   type DimensionClick,
 } from '../../dashboards/base'
-
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 // Props definition
 const props = defineProps<{
   dashboardId: string
   item: LayoutItem
   editMode: boolean
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
+  getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor | null
   setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
@@ -337,6 +338,7 @@ const filterCount = computed(() => {
         :itemId="item.i"
         :setItemData="setItemData"
         :getItemData="getItemData"
+        :getDashboardQueryExecutor="getDashboardQueryExecutor"
         :editMode="editMode"
         @dimension-click="dimensionClick"
         @background-click="backgroundClick"

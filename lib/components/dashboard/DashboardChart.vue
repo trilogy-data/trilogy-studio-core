@@ -1,26 +1,11 @@
 <template>
-  <div
-    ref="chartContainer"
-    class="chart-placeholder no-drag"
-    :class="{ 'chart-placeholder-edit-mode': editMode }"
-  >
+  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart
-      v-else-if="results && ready"
-      :id="`${itemId}-${dashboardId}`"
-      :columns="results.headers"
-      :data="results.data"
-      :showControls="editMode"
-      :initialConfig="chartConfig || undefined"
-      :containerHeight="chartHeight"
-      :container-width="chartWidth"
-      :onChartConfigChange="onChartConfigChange"
-      :chartSelection
-      :chartTitle
-      @dimension-click="handleDimensionClick"
-      @background-click="handleBackgroundClick"
-      @refresh-click="handleLocalRefresh"
-    />
+    <VegaLiteChart v-else-if="results && ready" :id="`${itemId}-${dashboardId}`" :columns="results.headers"
+      :data="results.data" :showControls="editMode" :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight" :container-width="chartWidth" :onChartConfigChange="onChartConfigChange"
+      :chartSelection :chartTitle @dimension-click="handleDimensionClick" @background-click="handleBackgroundClick"
+      @refresh-click="handleLocalRefresh" />
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
@@ -40,7 +25,7 @@ import {
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChartConfig } from '../../editors/results'
-import QueryExecutionService from '../../stores/queryExecutionService'
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import LoadingView from '../LoadingView.vue'
@@ -68,14 +53,19 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
-    editMode: {
-      type: Boolean,
-      required: true,
-    },
     setItemData: {
       type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
+    },
+    editMode: {
+      type: Boolean,
+      required: true,
+    },
+
+    getDashboardQueryExecutor: {
+      type: Function as PropType<() => DashboardQueryExecutor>,
+      required: true,
     },
   },
   setup(props, { emit }) {
@@ -84,6 +74,7 @@ export default defineComponent({
     const startTime = ref<number | null>(null)
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
+    const currentQueryId = ref<string | null>(null)
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -123,6 +114,7 @@ export default defineComponent({
         }
       }, 0) // Use nextTick equivalent
     })
+
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
     })
@@ -147,9 +139,9 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
-    const chartImports = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).imports || []
-    })
+    // const chartImports = computed(() => {
+    //   return props.getItemData(props.itemId, props.dashboardId).imports || []
+    // })
 
     const chartParameters = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).parameters || []
@@ -167,13 +159,7 @@ export default defineComponent({
       )
     })
 
-    const connectionName = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).connectionName || []
-    })
 
-    const rootContent = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
-    })
 
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
@@ -182,20 +168,24 @@ export default defineComponent({
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
     }
-    if (!connectionStore || !queryExecutionService) {
+
+    if (!connectionStore) {
       throw new Error('Connection store not found!')
     }
 
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
-      const dashboardId = props.dashboardId
-      const queryText = query.value
+
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+      if (!dashboardQueryExecutor) {
+        throw new Error('Dashboard query executor not found!')
+      }
+
       startTime.value = Date.now()
       loading.value = true
       error.value = null
@@ -205,72 +195,30 @@ export default defineComponent({
           analyticsStore.log('dashboard-chart-execution', 'CHART', true)
         }
 
-        // Prepare query input
-        let connName = connectionName.value || ''
-        if (!connName) {
-          return
-        }
-        //@ts-ignore
-        const conn = connectionStore.connections[connName]
-        if (!conn) {
-          throw new Error(`Connection "${connName}" not found!`)
-        }
-        // Create query input object using the chart's query content
-        const queryInput = {
-          text: query.value,
-          queryType: conn.query_type,
-          editorType: 'trilogy',
-          imports: chartImports.value,
-          extraFilters: filters.value,
-          extraContent: rootContent.value,
-          parameters: chartParameters.value,
+        // Cancel any existing query for this chart
+        if (currentQueryId.value) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
 
-        // Get the query execution service from the provider
 
-        if (!queryExecutionService) {
-          throw new Error('Query execution service not found!')
-        }
+        // Execute query through the dashboard query executor
+        let queryId = await dashboardQueryExecutor.runSingle( props.itemId)
 
-        // Execute query
-        const { resultPromise } = await queryExecutionService.executeQuery(
-          //@ts-ignore
-          connName,
-          queryInput,
-          // Progress callback for connection issues
-          () => {},
-          (message) => {
-            if (message.error) {
-              error.value = message.message
-            }
-          },
-        )
+        await dashboardQueryExecutor.waitForQuery(queryId)
+        loading.value = false
 
-        // Handle result
-        const result = await resultPromise
-        if (props.dashboardId != dashboardId || query.value !== queryText) {
-          console.log('Query result ignored due to dashboard or query text ID mismatch')
-          return
-        }
-        // Update component state based on result
-        if (result.success && result.results) {
-          props.setItemData(props.itemId, props.dashboardId, {
-            results: result.results,
-          })
-          error.value = null
-        } else if (result.error) {
-          error.value = result.error
-        }
+        
+
       } catch (err) {
         if (err instanceof Error) {
           error.value = err.message
         } else {
           error.value = 'Unknown error occurred'
         }
-        console.error('Error running query:', err)
-      } finally {
+        console.error('Error setting up query:', err)
         loading.value = false
         startTime.value = null
+        currentQueryId.value = null
       }
     }
 
@@ -297,6 +245,7 @@ export default defineComponent({
         executeQuery()
       }
     }
+
     const handleDimensionClick = (dimension: DimensionClick) => {
       emit('dimension-click', {
         source: props.itemId,
@@ -312,13 +261,19 @@ export default defineComponent({
 
     // Remove event listeners when the component is unmounted
     onUnmounted(() => {
+      // Cancel any pending query when component unmounts
+      if (currentQueryId.value) {
+        const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+        if (dashboardQueryExecutor) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
+        }
+      }
+
       window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
       window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
     })
 
-    watch([query, chartImports], () => {
-      executeQuery()
-    })
+
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content
       const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)

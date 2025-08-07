@@ -52,6 +52,10 @@ const setItemData = (itemId: string, dashboardId: string, data: any) => {
   dashboardBase.value!.setItemData(itemId, dashboardId, data)
 }
 
+const getDashboardQueryExecutor = (dashboardId: string) => {
+  return dashboardBase.value!.getDashboardQueryExecutor(dashboardId)
+}
+
 const validateFilter = async (filter: string) => {
   return dashboardBase.value!.validateFilter(filter)
 }
@@ -182,6 +186,7 @@ function handleToggleEditMode() {
               :edit-mode="editMode"
               :filter="filter"
               :get-item-data="getItemData"
+              :get-dashboard-query-executor="getDashboardQueryExecutor"
               @dimension-click="dashboardBase?.setCrossFilter"
               :set-item-data="setItemData"
               @edit-content="dashboardBase?.openEditor"

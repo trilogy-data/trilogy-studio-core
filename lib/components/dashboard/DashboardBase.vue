@@ -15,6 +15,8 @@ import type { DashboardImport } from '../../dashboards/base'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
+import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
 
 // Props definition
 const props = defineProps<{
@@ -37,6 +39,7 @@ const emit = defineEmits<{
 const dashboardStore = useDashboardStore()
 const editorStore = useEditorStore()
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const { setActiveDashboard } = useScreenNavigation()
 
 if (!queryExecutionService || !editorStore) {
@@ -345,6 +348,9 @@ function closeEditors(): void {
   editingItem.value = null
 }
 
+
+
+
 // Data management
 function getItemData(itemId: string, dashboardId: string): GridItemDataResponse {
   if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
@@ -423,15 +429,13 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
     structured_content: isMarkdownData(item.content)
       ? item.content
-      : { markdown: item.content || '', query: '' },
+      : { markdown:  item.type === 'markdown' ? item.content : '', query: item.type !== 'markdown' ? item.content : '' },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
     height: item.height || 0,
-    imports: dashboard.value.imports,
     chartConfig: item.chartConfig,
     filters: finalFilters,
-    connectionName: dashboard.value.connection,
     chartFilters: item.chartFilters || [],
     conceptFilters: item.conceptFilters || [],
     parameters: item.parameters || {},
@@ -477,6 +481,29 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
     )
   }
 }
+
+function getDashboardQueryExecutor(dashboardId: string): DashboardQueryExecutor | null {
+  if (!dashboard.value || !dashboard.value.id) return null
+  if (!queryExecutionService) return null
+  if (!connectionStore) return null
+  const executor = dashboardStore.getOrCreateQueryExecutor(dashboard.value.id, {
+    queryExecutionService,
+    connectionStore,
+    editorStore,
+    connectionName: dashboard.value.connection,
+    dashboardId: dashboard.value.id,
+    getDashboardData: (id: string) => dashboardStore.dashboards[id],
+    getItemData,
+    setItemData,
+ 
+  })
+  if (!executor) {
+    console.warn('No query executor found for dashboard:', dashboard.value.id)
+  }
+  return executor
+}
+
+  
 
 // Connection management
 function onConnectionChange(event: Event): void {
@@ -582,6 +609,7 @@ defineExpose({
   openEditor,
   saveContent,
   closeEditors,
+  getDashboardQueryExecutor,
   getItemData,
   setItemData,
   handleRefresh,

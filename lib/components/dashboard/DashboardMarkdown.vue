@@ -155,6 +155,7 @@ export default defineComponent({
 
         //@ts-ignore
         const conn = connectionStore.connections[connName]
+        console.log(connName)
 
         // Create query input object
         const queryInput = {
