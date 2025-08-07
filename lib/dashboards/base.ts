@@ -51,6 +51,8 @@ export interface GridItemData {
   filters?: Filter[]
   parameters?: Record<string, unknown>
   results?: Results | null
+  loading?: boolean
+  error?: string
 }
 
 export interface GridItemDataResponse {
@@ -71,6 +73,8 @@ export interface GridItemDataResponse {
   parameters?: Record<string, unknown>
   onRefresh?: (itemId: string) => void
   results?: Results | null
+  loading?: boolean
+  error?: string
 }
 
 export interface Dashboard {
@@ -154,6 +158,35 @@ export class DashboardModel implements Dashboard {
   delete() {
     this.deleted = true
     this.changed = true
+  }
+
+  updateItemLayoutDimensions(
+    itemId: string,
+    x: number | null = null,
+    y: number | null = null,
+    w: number | null = null,
+    h: number | null = null,
+  ): void {
+    const layoutItem = this.layout.find((item) => item.i === itemId)
+    if (layoutItem) {
+      if (x) {
+        layoutItem.x = x
+      }
+      if (y) {
+        layoutItem.y = y
+      }
+      if (w) {
+        layoutItem.w = w
+      }
+      if (h) {
+        layoutItem.h = h
+      }
+
+      this.updatedAt = new Date()
+      this.changed = true
+    } else {
+      console.warn(`Layout item with ID "${itemId}" does not exist in the dashboard.`)
+    }
   }
 
   // Add a new item to the dashboard
@@ -264,11 +297,45 @@ export class DashboardModel implements Dashboard {
     }
   }
 
+  updateItemLoading(itemId: string, loading: boolean): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        loading,
+      }
+      this.updatedAt = new Date()
+      this.changed = true
+    } else {
+      console.warn(
+        `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update loading state.`,
+      )
+    }
+  }
+
+  updateItemError(itemId: string, error: string): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        error,
+        loading: false,
+      }
+      this.updatedAt = new Date()
+      this.changed = true
+    } else {
+      console.warn(
+        `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot
+  update error.`,
+
+      )
+    }
+  }
   updateItemResults(itemId: string, results: Results | null): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
         results,
+        loading: false,
+        error: ''
       }
       // check if this is the source of any cross filters
       // if it is, and the _value_ used in that cross filter is not in the results

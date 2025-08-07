@@ -346,6 +346,31 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    updateItemLoading(
+      dashboardId: string,
+      itemId: string,
+      loading: boolean, // Assuming results can be of any type, adjust as needed
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemLoading(itemId, loading)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemError(
+      dashboardId: string,
+      itemId: string,
+      error: string | null,
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemError(itemId, error)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },  
+    
+
     updateItemType(dashboardId: string, itemId: string, type: 'markdown' | 'chart' | 'table') {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemType(itemId, type)
@@ -432,6 +457,21 @@ export const useDashboardStore = defineStore('dashboards', {
     updateItemDimensions(dashboardId: string, itemId: string, width: number, height: number) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemDimensions(itemId, width, height)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemLayoutDimensions(
+      dashboardId: string,
+      itemId: string,
+      x: number | null = null,
+      y: number | null = null,
+      w: number | null = null,
+      h: number | null = null,
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemLayoutDimensions(itemId, x, y, w, h)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

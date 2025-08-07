@@ -86,6 +86,28 @@ function toggleCrossFilterEligible(): void {
   })
 }
 
+// Increase height
+function increaseHeight(): void {
+  const newHeight = props.item.h + 1
+  props.setItemData(props.item.i, props.dashboardId, {
+    dimensions: {
+      width: props.item.w,
+      height: newHeight
+    }
+  })
+}
+
+// Decrease height (minimum height of 1)
+function decreaseHeight(): void {
+  const newHeight = Math.max(1, props.item.h - 1)
+  props.setItemData(props.item.i, props.dashboardId, {
+    dimensions: {
+      width: props.item.w,
+      height: newHeight
+    }
+  })
+}
+
 // Cancel title editing
 function cancelTitleEdit(): void {
   editingItemTitle.value = false
@@ -184,6 +206,22 @@ const filterCount = computed(() => {
   >
     <!-- Edit Controls (styled like control buttons) -->
     <div class="header-controls" v-if="editMode">
+      <button
+        @click="increaseHeight"
+        class="control-btn"
+        :data-testid="`increase-height-item-${item.i}`"
+        title="Increase height"
+      >
+        <i class="mdi mdi-plus icon"></i>
+      </button>
+      <button
+        @click="decreaseHeight"
+        class="control-btn"
+        :data-testid="`decrease-height-item-${item.i}`"
+        title="Decrease height"
+      >
+        <i class="mdi mdi-minus icon"></i>
+      </button>
       <button
         @click="openEditor"
         class="control-btn"

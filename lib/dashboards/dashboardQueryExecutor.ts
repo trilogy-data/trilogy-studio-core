@@ -66,6 +66,8 @@ export class DashboardQueryExecutor {
   private retryAttempts: number;
   private batchDelay: number; // ms to wait before executing batch
   private batchTimeout: NodeJS.Timeout | null = null;
+  private connectionPromise: Promise<void> | null = null;
+  private connectionChecked: boolean = false;
 
   constructor(
     queryExecutionService: any,
@@ -93,6 +95,84 @@ export class DashboardQueryExecutor {
     this.getItemData = getItemData;
     this.setItemData = setItemData;
     this.getDashboardData = getDashboardData;
+    // Check and ensure connection on instantiation
+    this.ensureConnection();
+  }
+
+  /**
+   * Ensure connection is established and cache the promise to avoid multiple connection attempts
+   */
+  private async ensureConnection(): Promise<void> {
+    if (this.connectionChecked && this.isConnectionActive()) {
+      return;
+    }
+
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    this.connectionPromise = this.checkAndConnect();
+    return this.connectionPromise;
+  }
+
+  /**
+   * Check if connection is active, and connect if not
+   */
+  private async checkAndConnect(): Promise<void> {
+    try {
+      const conn = this.connectionStore.connections[this.connectionName];
+      if (!conn) {
+        throw new Error(`Connection "${this.connectionName}" not found in store`);
+      }
+
+      if (!conn.connected) {
+        console.log(`Connection "${this.connectionName}" not connected, attempting to connect...`);
+        await this.connectionStore.resetConnection(this.connectionName);
+        if (!conn.connected) {
+          throw new Error(`Connection "${this.connectionName}" failed to connect`);
+        }
+      }
+
+      this.connectionChecked = true;
+      this.connectionPromise = null; // Reset for future checks
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to establish connection';
+      console.error(`Failed to connect "${this.connectionName}":`, errorMessage);
+      
+      // Fail all queued queries
+      this.failAllQueries(errorMessage);
+      
+      this.connectionPromise = null;
+      throw error;
+    }
+  }
+
+  /**
+   * Check if the current connection is active
+   */
+  private isConnectionActive(): boolean {
+    const conn = this.connectionStore.connections[this.connectionName];
+    return conn?.connected === true;
+  }
+
+  /**
+   * Fail all queued and waiting queries with the given error message
+   */
+  private failAllQueries(errorMessage: string): void {
+    // Fail all queued queries
+    this.queryQueue.forEach(query => {
+      query.onError(errorMessage);
+    });
+    this.queryQueue.clear();
+
+    // Reject all waiting promises
+    this.queryWaiters.forEach(waiter => {
+      waiter.reject(errorMessage);
+    });
+    this.queryWaiters.clear();
+
+    // Clear active queries
+    this.activeQueries.clear();
   }
 
   /**
@@ -102,6 +182,12 @@ export class DashboardQueryExecutor {
     // Charts higher on dashboard get higher priority (lower numbers)
     // You can implement more sophisticated priority logic here
     return 5; // Default middle priority
+  }
+
+  public setConnection(connectionName: string): void {
+    this.connectionName = connectionName;
+    this.connectionChecked = false; // Reset connection check for new connection
+    this.connectionPromise = null;
   }
 
   /**
@@ -131,6 +217,10 @@ export class DashboardQueryExecutor {
       (filter) => filter.value,
     );
     let dashboard = this.getDashboardData(this.dashboardId);
+    this.setItemData(itemId, this.dashboardId, {
+      loading: true,
+      error: null,
+    });
     let request = {
       dashboardId: this.dashboardId,
       queryInput: {
@@ -196,34 +286,68 @@ export class DashboardQueryExecutor {
   /**
    * Queue multiple queries for batch execution with prioritization
    */
-  public runBatch(requests: Omit<QueryRequest, 'priority'>[]): string[] {
+  public runBatch(itemIds: string[]): string[] {
     const queryIds: string[] = [];
+
 
     // Clear any pending batch timeout
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout);
     }
 
-    // Add all requests to queue with priorities
-    requests.forEach(request => {
-      const requestWithPriority = {
-        ...request,
-        priority: this.getDefaultPriority(request.itemId),
-      };
+    // Process each itemId similar to runSingle
+    itemIds.forEach(itemId => {
+      let inputs = this.getItemData(itemId, this.dashboardId)
+      let filters = (this.getItemData(itemId, this.dashboardId).filters || []).map(
+        (filter) => filter.value,
+      );
+      let dashboard = this.getDashboardData(this.dashboardId);
+      this.setItemData(itemId, this.dashboardId, {
+        loading: true,
+        error: null,
+      });
+      
+      let request = {
+        dashboardId: this.dashboardId,
+        queryInput: {
+          text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
+          extraFilters: filters,
+          parameters: inputs.parameters || [],
+          extraContent: dashboard.imports.map((imp) => ({
+            alias: imp.name,
+            // legacy handling
+            contents:
+              this.editorStore.editors[imp.id]?.contents || this.editorStore.editors[imp.name]?.contents || '',
+          }))
+        },
+        priority: this.getDefaultPriority(itemId),
+        itemId,
+        onSuccess: (result: any) => {
+          this.setItemData(itemId, this.dashboardId, {
+              results: result.results,
+            })
+        },
+        onError: (error: string) => {
+          this.setItemData(itemId, this.dashboardId, { error })
+        },
+        onProgress: (message: any) => {
+          () => { }
+        }
+      }
 
-      const queryId = this.generateQueryId(requestWithPriority);
+      const queryId = this.generateQueryId(request);
 
       // Check for duplicates
-      const existingQuery = this.findDuplicateQuery(requestWithPriority);
+      const existingQuery = this.findDuplicateQuery(request);
       if (existingQuery) {
-        console.log(`Deduplicating batch query for ${requestWithPriority.itemId}`);
-        this.addCallbacksToExistingQuery(existingQuery, requestWithPriority);
+        console.log(`Deduplicating batch query for ${request.itemId}`);
+        this.addCallbacksToExistingQuery(existingQuery, request);
         queryIds.push(existingQuery.id);
         return;
       }
 
       const queuedQuery: QueuedQuery = {
-        ...requestWithPriority,
+        ...request,
         id: queryId,
         timestamp: Date.now(),
         retryCount: 0,
@@ -367,16 +491,25 @@ export class DashboardQueryExecutor {
     const queuedQuery = this.queryQueue.get(queryId);
     if (!queuedQuery) return;
 
-    // Move from queue to active
-    this.queryQueue.delete(queryId);
-    this.activeQueries.add(queryId);
-
     try {
+      // Ensure connection is established before executing query
+      await this.ensureConnection();
+
+      // Move from queue to active only after connection is ensured
+      this.queryQueue.delete(queryId);
+      this.activeQueries.add(queryId);
+
       // Get connection
       const conn = this.connectionStore.connections[this.connectionName];
       if (!conn) {
         throw new Error(`Connection "${this.connectionName}" not found!`);
       }
+
+      // Double-check connection is still active
+      if (!conn.connected) {
+        throw new Error(`Connection "${this.connectionName}" is not connected`);
+      }
+
       //fetch latest
       let dashboardData = this.getDashboardData(this.dashboardId);
       // Execute query
@@ -414,6 +547,12 @@ export class DashboardQueryExecutor {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+
+      // If this was a connection error, reset connection state
+      if (errorMessage.includes('connection') || errorMessage.includes('connect')) {
+        this.connectionChecked = false;
+        this.connectionPromise = null;
+      }
 
       // Retry logic
       if (queuedQuery.retryCount < this.retryAttempts) {

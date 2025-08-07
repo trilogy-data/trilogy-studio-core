@@ -1,8 +1,12 @@
 <template>
-  <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
 
-    <MarkdownRenderer :markdown="markdown" :results="results" :loading="loading" />
+    <MarkdownRenderer v-else-if="ready" :markdown="markdown" :results="results" :loading="loading" />
+
+    <div v-if="loading" class="loading-overlay">
+      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+    </div>
 
     <div v-if="!loading && editMode" class="chart-actions">
       <button
@@ -30,7 +34,7 @@ import {
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { Results } from '../../editors/results'
-import QueryExecutionService from '../../stores/queryExecutionService'
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingView from '../LoadingView.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
@@ -67,16 +71,56 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'MARKDOWN', content: { markdown: '', query: '' } }),
     },
+    getDashboardQueryExecutor: {
+      type: Function as PropType<() => DashboardQueryExecutor>,
+      required: true,
+    },
   },
   setup(props) {
     const loading = ref(false)
     const error = ref<string | null>(null)
     const startTime = ref<number | null>(null)
+    const ready = ref(false)
+    const chartContainer = ref<HTMLElement | null>(null)
+    const currentQueryId = ref<string | null>(null)
+
+    const getPositionBasedDelay = () => {
+      if (!chartContainer.value) return 0
+
+      const rect = chartContainer.value.getBoundingClientRect()
+      const scrollY = window.scrollY || document.documentElement.scrollTop
+
+      // Get absolute position from top of document
+      const absoluteTop = rect.top + scrollY
+
+      // Very minimal delays (10ms per 200px)
+      const delay = Math.floor(absoluteTop / 200) * 10
+
+      // Cap at reasonable maximum
+      let finalDelay = Math.min(delay, 100)
+      return finalDelay
+    }
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
       window.addEventListener('dashboard-refresh', handleDashboardRefresh)
       window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+      // Apply position-based delay after DOM is ready
+      setTimeout(() => {
+        const delay = getPositionBasedDelay()
+
+        if (!results.value) {
+          ready.value = true
+          executeQuery()
+        } else {
+          // Cached results with delay
+          loading.value = true
+          setTimeout(() => {
+            loading.value = false
+            ready.value = true
+          }, delay)
+        }
+      }, 0) // Use nextTick equivalent
     })
 
     const contentData = computed(() => {
@@ -96,38 +140,22 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).results || null
     })
 
-    const chartImports = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).imports || []
-    })
-
-    const chartParameters = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).parameters || []
-    })
-
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
         (filter) => filter.value,
       )
     })
 
-    const connectionName = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).connectionName || []
-    })
-
+    // Get refresh callback from item data if available
     const onRefresh = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
       return itemData.onRefresh || null
     })
 
-    const rootContent = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
-    })
-
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
-    if (!connectionStore || !queryExecutionService) {
+    if (!connectionStore) {
       throw new Error('Connection store not found!')
     }
 
@@ -135,6 +163,11 @@ export default defineComponent({
       if (!query.value) {
         // If no query, just render the markdown as-is
         return
+      }
+
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+      if (!dashboardQueryExecutor) {
+        throw new Error('Dashboard query executor not found!')
       }
 
       startTime.value = Date.now()
@@ -146,68 +179,28 @@ export default defineComponent({
           analyticsStore.log('dashboard-markdown-execution', 'MARKDOWN', true)
         }
 
-        // Prepare query input
-        let connName = connectionName.value || ''
-        if (!connName) {
-          error.value = 'No connection specified'
-          return
+        // Cancel any existing query for this markdown component
+        if (currentQueryId.value) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
 
-        //@ts-ignore
-        const conn = connectionStore.connections[connName]
-        console.log(connName)
+        // Execute query through the dashboard query executor
+        let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
-        // Create query input object
-        const queryInput = {
-          text: query.value,
-          queryType: conn.query_type,
-          editorType: 'trilogy',
-          imports: chartImports.value,
-          extraFilters: filters.value,
-          parameters: chartParameters.value,
-          extraContent: rootContent.value,
-        }
+        await dashboardQueryExecutor.waitForQuery(queryId)
+        loading.value = false
 
-        if (!queryExecutionService) {
-          throw new Error('Query execution service not found!')
-        }
-
-        // Execute query
-        const { resultPromise } = await queryExecutionService.executeQuery(
-          //@ts-ignore
-          connName,
-          queryInput,
-          // Progress callback for connection issues
-          () => {},
-          (message) => {
-            if (message.error) {
-              error.value = message.message
-            }
-          },
-        )
-
-        // Handle result
-        const result = await resultPromise
-
-        // Update component state based on result
-        if (result.success && result.results) {
-          props.setItemData(props.itemId, props.dashboardId, {
-            results: result.results as Results,
-          })
-          error.value = null
-        } else if (result.error) {
-          error.value = result.error
-        }
       } catch (err) {
         if (err instanceof Error) {
           error.value = err.message
         } else {
-          error.value = 'Unknown error occurred'
+          // @ts-ignore
+          error.value = err.toString()
         }
-        console.error('Error running query:', err)
-      } finally {
+        console.error('Error setting up query:', err)
         loading.value = false
         startTime.value = null
+        currentQueryId.value = null
       }
     }
 
@@ -216,8 +209,9 @@ export default defineComponent({
       console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
+      } else {
+        executeQuery()
       }
-      executeQuery()
     }
 
     // Global dashboard refresh handler
@@ -237,28 +231,32 @@ export default defineComponent({
 
     // Remove event listeners when the component is unmounted
     onUnmounted(() => {
+      // Cancel any pending query when component unmounts
+      if (currentQueryId.value) {
+        const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+        if (dashboardQueryExecutor) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
+        }
+      }
+
       window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
       window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
     })
 
-    // Initial query execution
-    executeQuery()
-
     // Watch for changes and re-execute query
-    watch([query, chartImports], () => {
-      executeQuery()
-    })
-
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content
       const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
+
       if (contentChanged) {
         executeQuery()
       }
     })
 
     return {
+      chartContainer,
       results,
+      ready,
       loading,
       error,
       query,
@@ -281,6 +279,21 @@ export default defineComponent({
   align-items: stretch;
   position: relative;
   overflow-y: hidden;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  vertical-align: middle;
+  background-color: var(--bg-loading);
+  backdrop-filter: blur(2px);
+  z-index: 10;
 }
 
 .chart-actions {

@@ -162,7 +162,7 @@ function handleToggleEditMode() {
           :is-draggable="editable"
           :is-resizable="editable"
           :layout="layout"
-          :vertical-compact="true"
+          :vertical-compact="false"
           :use-css-transforms="true"
           @layout-updated="onLayoutUpdated"
           @layout-ready="layoutReadyEvent"

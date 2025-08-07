@@ -69,8 +69,7 @@ export default defineComponent({
     },
   },
   setup(props, { emit }) {
-    const loading = ref(false)
-    const error = ref<string | null>(null)
+
     const startTime = ref<number | null>(null)
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
@@ -95,20 +94,17 @@ export default defineComponent({
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
+        // this is to delay *rendering* the chart, not query execution
         const delay = getPositionBasedDelay()
 
         if (!results.value) {
           ready.value = true
-          executeQuery()
+          // executeQuery()
         } else {
           // Cached results with delay
-          loading.value = true
           setTimeout(() => {
-            loading.value = false
             ready.value = true
           }, delay)
         }
@@ -139,6 +135,13 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
+    const loading = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loading || false
+    })
+
+    const error = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).error || null
+    })
 
 
     const filters = computed(() => {
@@ -181,8 +184,6 @@ export default defineComponent({
       }
 
       startTime.value = Date.now()
-      loading.value = true
-      error.value = null
 
       try {
         if (analyticsStore) {
@@ -199,19 +200,10 @@ export default defineComponent({
         let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
-        loading.value = false
-
 
 
       } catch (err) {
-        if (err instanceof Error) {
-          error.value = err.message
-        } else {
-          // @ts-ignore
-          error.value = err.toString()
-        }
         console.error('Error setting up query:', err)
-        loading.value = false
         startTime.value = null
         currentQueryId.value = null
       }

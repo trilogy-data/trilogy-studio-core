@@ -58,14 +58,17 @@ const filterDashboard = (dashboard: Dashboard): any => {
   return dashboardCopy
 }
 
-// Format the dashboard object as pretty-printed JSON when it changes
+// Format the dashboard object as pretty-printed JSON only when popup is visible
 watch(
-  () => props.dashboard,
-  (newDashboard) => {
-    if (newDashboard) {
-      // Filter the dashboard before stringifying
+  [() => props.dashboard, () => props.isOpen],
+  ([newDashboard, isOpen]) => {
+    // Only filter and format when the popup is actually open
+    if (isOpen && newDashboard) {
       const filteredDashboard = filterDashboard(newDashboard)
       jsonString.value = JSON.stringify(filteredDashboard, null, 2)
+    } else if (!isOpen) {
+      // Clear the JSON string when popup is closed to free memory
+      jsonString.value = ''
     }
   },
   { immediate: true, deep: true },
