@@ -139,13 +139,7 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
-    // const chartImports = computed(() => {
-    //   return props.getItemData(props.itemId, props.dashboardId).imports || []
-    // })
 
-    const chartParameters = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).parameters || []
-    })
 
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
@@ -202,18 +196,19 @@ export default defineComponent({
 
 
         // Execute query through the dashboard query executor
-        let queryId = await dashboardQueryExecutor.runSingle( props.itemId)
+        let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
         loading.value = false
 
-        
+
 
       } catch (err) {
         if (err instanceof Error) {
           error.value = err.message
         } else {
-          error.value = 'Unknown error occurred'
+          // @ts-ignore
+          error.value = err.toString()
         }
         console.error('Error setting up query:', err)
         loading.value = false

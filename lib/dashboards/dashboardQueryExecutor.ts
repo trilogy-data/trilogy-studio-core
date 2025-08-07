@@ -131,7 +131,6 @@ export class DashboardQueryExecutor {
       (filter) => filter.value,
     );
     let dashboard = this.getDashboardData(this.dashboardId);
-    console.log(inputs)
     let request = {
       dashboardId: this.dashboardId,
       queryInput: {
@@ -149,7 +148,6 @@ export class DashboardQueryExecutor {
       priority: 5,
       itemId,
       onSuccess: (result: any) => {
-        console.log(`Query succeeded for ${itemId}`, result);
         this.setItemData(itemId, this.dashboardId, {
             results: result.results,
           })
@@ -367,8 +365,6 @@ export class DashboardQueryExecutor {
 
   private async executeQuery(queryId: string): Promise<void> {
     const queuedQuery = this.queryQueue.get(queryId);
-    console.log("Executing query:", queryId)
-    console.log(queuedQuery)
     if (!queuedQuery) return;
 
     // Move from queue to active
@@ -385,7 +381,6 @@ export class DashboardQueryExecutor {
       let dashboardData = this.getDashboardData(this.dashboardId);
       // Execute query
       const queryArgs = { ...queuedQuery.queryInput, imports: dashboardData.imports, editorType: 'trilogy' as 'trilogy' | 'sql' | 'preql', };
-      console.log("Query args:", queryArgs)
       const { resultPromise } = await this.queryExecutionService.executeQuery(
         this.connectionName,
         queryArgs,
