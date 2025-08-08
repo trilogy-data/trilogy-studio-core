@@ -1,7 +1,6 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 import { fetchWithRetry, type RetryOptions } from './utils'
-import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 export class OpenAIProvider extends LLMProvider {
   private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
   private baseModelUrl: string = 'https://api.openai.com/v1/models'
@@ -83,9 +82,9 @@ export class OpenAIProvider extends LLMProvider {
             body: JSON.stringify({
               model: this.model,
               messages: messages,
-              max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-              temperature: options.temperature || DEFAULT_TEMPERATURE,
-              top_p: options.topP || 1.0,
+              // max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+              // temperature: options.temperature || DEFAULT_TEMPERATURE,
+              // top_p: options.topP || 1.0,
             }),
           }),
         this.retryOptions,

@@ -178,7 +178,7 @@ export class DashboardQueryExecutor {
   /**
    * Get default priority based on chart position and type
    */
-  private getDefaultPriority(itemId: string): number {
+  private getDefaultPriority(_: string): number {
     // Charts higher on dashboard get higher priority (lower numbers)
     // You can implement more sophisticated priority logic here
     return 5; // Default middle priority
@@ -395,7 +395,7 @@ export class DashboardQueryExecutor {
    */
   public clearQueue(): void {
     // Reject all waiting promises
-    this.queryWaiters.forEach((waiter, queryId) => {
+    this.queryWaiters.forEach((waiter, _) => {
       waiter.reject('Queue was cleared');
     });
     this.queryWaiters.clear();

@@ -70,7 +70,6 @@ export default defineComponent({
   },
   setup(props, { emit }) {
 
-    const startTime = ref<number | null>(null)
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
     const currentQueryId = ref<string | null>(null)
@@ -143,6 +142,10 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).error || null
     })
 
+    const startTime = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
+    })
+
 
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
@@ -183,8 +186,6 @@ export default defineComponent({
         throw new Error('Dashboard query executor not found!')
       }
 
-      startTime.value = Date.now()
-
       try {
         if (analyticsStore) {
           analyticsStore.log('dashboard-chart-execution', 'CHART', true)
@@ -204,7 +205,6 @@ export default defineComponent({
 
       } catch (err) {
         console.error('Error setting up query:', err)
-        startTime.value = null
         currentQueryId.value = null
       }
     }

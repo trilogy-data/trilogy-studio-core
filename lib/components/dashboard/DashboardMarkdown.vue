@@ -8,14 +8,9 @@
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
 
-    <div v-if="!loading && editMode" class="chart-actions">
-      <button
-        v-if="onRefresh"
-        @click="handleLocalRefresh"
-        class="chart-refresh-button"
-        title="Refresh this markdown"
-      >
-        <span class="refresh-icon">⟳</span>
+    <div v-if="!loading && editMode" class="controls-toggle">
+      <button @click="handleLocalRefresh" class="control-btn" data-testid="refresh-chart-btn" title="Refresh text">
+        <i class="mdi mdi-refresh icon"></i>
       </button>
     </div>
   </div>
@@ -39,7 +34,7 @@ import ErrorMessage from '../ErrorMessage.vue'
 import LoadingView from '../LoadingView.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { type GridItemDataResponse } from '../../dashboards/base'
-import { type AnalyticsStoreType } from '../../stores/analyticsStore'
+import type { AnalyticsStoreType } from '../../stores/analyticsStore'
 
 export default defineComponent({
   name: 'DynamicMarkdownChart',
@@ -62,14 +57,14 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'MARKDOWN', content: { markdown: '', query: '' } }),
     },
+    setItemData: {
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
+      required: true,
+      default: () => ({ type: 'MARKDOWN', content: { markdown: '', query: '' } }),
+    },
     editMode: {
       type: Boolean,
       required: true,
-    },
-    setItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => void>,
-      required: true,
-      default: () => ({ type: 'MARKDOWN', content: { markdown: '', query: '' } }),
     },
     getDashboardQueryExecutor: {
       type: Function as PropType<() => DashboardQueryExecutor>,
@@ -77,9 +72,6 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const loading = ref(false)
-    const error = ref<string | null>(null)
-    const startTime = ref<number | null>(null)
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
     const currentQueryId = ref<string | null>(null)
@@ -105,18 +97,18 @@ export default defineComponent({
     onMounted(() => {
       window.addEventListener('dashboard-refresh', handleDashboardRefresh)
       window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
+        // this is to delay *rendering* the component, not query execution
         const delay = getPositionBasedDelay()
 
         if (!results.value) {
           ready.value = true
-          executeQuery()
+          // executeQuery()
         } else {
           // Cached results with delay
-          loading.value = true
           setTimeout(() => {
-            loading.value = false
             ready.value = true
           }, delay)
         }
@@ -138,6 +130,18 @@ export default defineComponent({
 
     const results = computed((): Results | null => {
       return props.getItemData(props.itemId, props.dashboardId).results || null
+    })
+
+    const loading = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loading || false
+    })
+
+    const error = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).error || null
+    })
+
+    const startTime = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
     const filters = computed(() => {
@@ -170,10 +174,6 @@ export default defineComponent({
         throw new Error('Dashboard query executor not found!')
       }
 
-      startTime.value = Date.now()
-      loading.value = true
-      error.value = null
-
       try {
         if (analyticsStore) {
           analyticsStore.log('dashboard-markdown-execution', 'MARKDOWN', true)
@@ -188,25 +188,15 @@ export default defineComponent({
         let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
-        loading.value = false
 
       } catch (err) {
-        if (err instanceof Error) {
-          error.value = err.message
-        } else {
-          // @ts-ignore
-          error.value = err.toString()
-        }
         console.error('Error setting up query:', err)
-        loading.value = false
-        startTime.value = null
         currentQueryId.value = null
       }
     }
 
     // Handle individual component refresh button click
     const handleLocalRefresh = () => {
-      console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
       } else {
@@ -296,37 +286,50 @@ export default defineComponent({
   z-index: 10;
 }
 
-.chart-actions {
+
+.controls-toggle {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 5;
+  top: 50%;
+  right: 0px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  /* gap: 4px; */
 }
 
-.chart-refresh-button {
+
+.control-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background-color: var(--button-bg, #f5f5f5);
-  border: 1px solid var(--border-light, #ddd);
-  color: var(--text-color, #333);
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  background-color: transparent;
+  color: var(--text-color);
   cursor: pointer;
-  opacity: 0.7;
-  transition:
-    opacity 0.2s,
-    background-color 0.2s;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  /* border-radius: 4px; */
 }
 
-.chart-refresh-button:hover {
-  opacity: 1;
-  background-color: var(--button-hover-bg, #e0e0e0);
+.control-btn:hover {
+  background-color: var(--button-mouseover);
 }
 
-.refresh-icon {
-  font-size: 16px;
-  font-weight: bold;
+.control-btn:disabled {
+  background-color: var(--border-light);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+.control-btn:disabled:hover {
+  background-color: var(--border-light);
+}
+
+.control-btn.active {
+  background-color: var(--special-text);
+  color: white;
 }
 </style>

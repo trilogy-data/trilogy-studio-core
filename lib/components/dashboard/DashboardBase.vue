@@ -452,6 +452,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     imports: dashboard.value.imports,
     error: item.error || '',
     loading: item.loading || false,
+    loadStartTime: item.loadStartTime || null, // Include load start time if available
   }
 }
 

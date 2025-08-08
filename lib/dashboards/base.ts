@@ -52,7 +52,8 @@ export interface GridItemData {
   parameters?: Record<string, unknown>
   results?: Results | null
   loading?: boolean
-  error?: string
+  error?: string | null
+  loadStartTime?: number | null
 }
 
 export interface GridItemDataResponse {
@@ -74,7 +75,8 @@ export interface GridItemDataResponse {
   onRefresh?: (itemId: string) => void
   results?: Results | null
   loading?: boolean
-  error?: string
+  error?: string | null
+  loadStartTime?: number | null
 }
 
 export interface Dashboard {
@@ -303,8 +305,9 @@ export class DashboardModel implements Dashboard {
         ...this.gridItems[itemId],
         loading,
       }
-      this.updatedAt = new Date()
-      this.changed = true
+      if (loading) {
+        this.gridItems[itemId].loadStartTime = Date.now()
+      }
     } else {
       console.warn(
         `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update loading state.`,
@@ -312,15 +315,14 @@ export class DashboardModel implements Dashboard {
     }
   }
 
-  updateItemError(itemId: string, error: string): void {
+  updateItemError(itemId: string, error: string | null): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
         error,
         loading: false,
+        loadStartTime: null,
       }
-      this.updatedAt = new Date()
-      this.changed = true
     } else {
       console.warn(
         `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot
@@ -335,7 +337,8 @@ export class DashboardModel implements Dashboard {
         ...this.gridItems[itemId],
         results,
         loading: false,
-        error: ''
+        error: '',
+        loadStartTime: null,
       }
       // check if this is the source of any cross filters
       // if it is, and the _value_ used in that cross filter is not in the results
@@ -372,7 +375,6 @@ export class DashboardModel implements Dashboard {
           this.removeItemCrossFilterSource(itemId)
         }
       }
-      this.updatedAt = new Date()
     }
   }
 

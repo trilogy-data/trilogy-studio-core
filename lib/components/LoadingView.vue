@@ -15,7 +15,7 @@ import trilogyIcon from '../static/trilogy.png'
 interface Props {
   cancel?: (() => void) | null
   text: string
-  startTime: number
+  startTime: number | null 
 }
 
 export default defineComponent({
@@ -37,11 +37,12 @@ export default defineComponent({
     },
   },
   setup(props: Props) {
+    const startTimeInternal = ref(props.startTime || Date.now())
     const elapsedTime = ref('0.0 sec')
     let interval: ReturnType<typeof setInterval> | null = null
 
     const updateElapsedTime = () => {
-      const ms = Date.now() - props.startTime
+      const ms = Date.now() - startTimeInternal.value
       const seconds = (ms / 1000).toFixed(1) // Show tenths of a second
 
       if (ms < 1000) {
@@ -63,6 +64,7 @@ export default defineComponent({
     }
 
     onMounted(() => {
+      startTimeInternal.value = props.startTime || Date.now()
       interval = setInterval(updateElapsedTime, 100) // Update every 100ms
     })
 

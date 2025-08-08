@@ -57,10 +57,6 @@ function closeSharePopup() {
   isSharePopupOpen.value = false
 }
 
-// Handle filter changes from FilterInputComponent
-function handleFilterChange(newValue: string) {
-  console.log('Filter changed:', newValue)
-}
 
 // Handle filter apply from FilterInputComponent
 function handleFilterApply(newValue: string) {
@@ -103,7 +99,6 @@ function handleRefresh() {
         :is-loading="isLoading"
         :global-completion="globalCompletion"
         :validate-filter="validateFilter"
-        @filter-change="handleFilterChange"
         @filter-apply="handleFilterApply"
         @clear-filter="$emit('clear-filter', '')"
       />
