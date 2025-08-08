@@ -1,15 +1,29 @@
 <template>
-  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
 
-    <MarkdownRenderer v-else-if="ready" :markdown="markdown" :results="results" :loading="loading" />
+    <MarkdownRenderer
+      v-else-if="ready"
+      :markdown="markdown"
+      :results="results"
+      :loading="loading"
+    />
 
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
 
     <div v-if="!loading && editMode" class="controls-toggle">
-      <button @click="handleLocalRefresh" class="control-btn" data-testid="refresh-chart-btn" title="Refresh text">
+      <button
+        @click="handleLocalRefresh"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh text"
+      >
         <i class="mdi mdi-refresh icon"></i>
       </button>
     </div>
@@ -67,7 +81,7 @@ export default defineComponent({
       required: true,
     },
     getDashboardQueryExecutor: {
-      type: Function as PropType<() => DashboardQueryExecutor>,
+      type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
     },
   },
@@ -169,7 +183,7 @@ export default defineComponent({
         return
       }
 
-      const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
       if (!dashboardQueryExecutor) {
         throw new Error('Dashboard query executor not found!')
       }
@@ -188,7 +202,6 @@ export default defineComponent({
         let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
-
       } catch (err) {
         console.error('Error setting up query:', err)
         currentQueryId.value = null
@@ -223,7 +236,7 @@ export default defineComponent({
     onUnmounted(() => {
       // Cancel any pending query when component unmounts
       if (currentQueryId.value) {
-        const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+        const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
         if (dashboardQueryExecutor) {
           dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
@@ -286,7 +299,6 @@ export default defineComponent({
   z-index: 10;
 }
 
-
 .controls-toggle {
   position: absolute;
   top: 50%;
@@ -297,7 +309,6 @@ export default defineComponent({
   flex-direction: column;
   /* gap: 4px; */
 }
-
 
 .control-btn {
   display: flex;

@@ -119,7 +119,7 @@ watch(
 
 onMounted(() => {
   if (dashboard.value && dashboard.value.id) {
-    let dashboardObj = dashboard.value;
+    let dashboardObj = dashboard.value
     dashboardStore.setActiveDashboard(dashboard.value.id)
 
     // Initialize the filter from the dashboard if it exists
@@ -127,10 +127,10 @@ onMounted(() => {
       filter.value = dashboard.value.filter
       filterInput.value = dashboard.value.filter
     }
-    let executor = getDashboardQueryExecutor()
+    let executor = getDashboardQueryExecutor(dashboard.value.id)
     // filter gridItems and get the KEYS belonging to VALUEs with no results
-    let unRun = Object.keys(dashboard.value.gridItems).filter((itemId) =>
-      !dashboardObj.gridItems[itemId].results
+    let unRun = Object.keys(dashboard.value.gridItems).filter(
+      (itemId) => !dashboardObj.gridItems[itemId].results,
     )
     executor?.runBatch(unRun)
     populateCompletion()
@@ -217,10 +217,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => { },
-      () => { },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
+      () => {},
+      () => {},
       true,
     )
 
@@ -352,9 +352,6 @@ function closeEditors(): void {
   editingItem.value = null
 }
 
-
-
-
 // Data management
 function getItemData(itemId: string, dashboardId: string): GridItemDataResponse {
   if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
@@ -384,7 +381,6 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       imports: [],
       filters: [],
       rootContent: [],
-
     }
   }
 
@@ -402,7 +398,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       imports: dashboard.value.imports,
       filters: [],
       rootContent: [],
-          connectionName: dashboard.value.connection || '',
+      connectionName: dashboard.value.connection || '',
     }
   }
 
@@ -435,7 +431,10 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
     structured_content: isMarkdownData(item.content)
       ? item.content
-      : { markdown: item.type === 'markdown' ? item.content : '', query: item.type !== 'markdown' ? item.content : '' },
+      : {
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
@@ -475,20 +474,26 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
 
   if (data.content) {
     dashboardStore.updateItemContent(dashboard.value.id, itemId, data.content)
-    let executor = getDashboardQueryExecutor()
+    let executor = getDashboardQueryExecutor(dashboard.value.id)
     console.log('Running query for item after content update:', itemId)
     executor?.runSingle(itemId)
-
   }
 
   if (data.dimensions) {
-    dashboardStore.updateItemLayoutDimensions(dashboard.value.id, itemId, null, null, data.dimensions.width, data.dimensions.height)
+    dashboardStore.updateItemLayoutDimensions(
+      dashboard.value.id,
+      itemId,
+      null,
+      null,
+      data.dimensions.width,
+      data.dimensions.height,
+    )
   }
 
   if (data.width && data.height) {
     dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
   }
-  if (data.loading ) {
+  if (data.loading) {
     dashboardStore.updateItemLoading(dashboard.value.id, itemId, data.loading)
   }
 
@@ -509,28 +514,27 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   }
 }
 
-function getDashboardQueryExecutor(): DashboardQueryExecutor | null {
-  if (!dashboard.value || !dashboard.value.id) return null
-  if (!queryExecutionService) return null
-  if (!connectionStore) return null
-  const executor = dashboardStore.getOrCreateQueryExecutor(dashboard.value.id, {
+function getDashboardQueryExecutor(dashboardId: string): DashboardQueryExecutor {
+  if (!dashboard.value || !dashboard.value.id)
+    throw new Error('Dashboard not found or not initialized')
+  if (!queryExecutionService) throw new Error('Query execution service not found')
+  if (!connectionStore) throw new Error('Connection store not found')
+  let dashboardData = dashboardStore.dashboards[dashboardId]
+  const executor = dashboardStore.getOrCreateQueryExecutor(dashboardId, {
     queryExecutionService,
     connectionStore,
     editorStore,
-    connectionName: dashboard.value.connection,
-    dashboardId: dashboard.value.id,
+    connectionName: dashboardData.connection,
+    dashboardId: dashboardId,
     getDashboardData: (id: string) => dashboardStore.dashboards[id],
     getItemData,
     setItemData,
-
   })
   if (!executor) {
     console.warn('No query executor found for dashboard:', dashboard.value.id)
   }
   return executor
 }
-
-
 
 // Connection management
 function onConnectionChange(event: Event): void {
@@ -554,7 +558,9 @@ function handleRefresh(itemId?: string): void {
   }
 
   // refresh them all
-  dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(Object.keys(dashboard.value.gridItems))
+  dashboardStore
+    .getQueryExecutor(dashboard.value.id)
+    ?.runBatch(Object.keys(dashboard.value.gridItems))
 }
 
 // Filter management

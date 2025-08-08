@@ -7,7 +7,6 @@ import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 
-
 export interface QueryInput {
   text: string
   editorType: 'trilogy' | 'sql' | 'preql'

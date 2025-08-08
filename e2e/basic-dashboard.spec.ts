@@ -307,7 +307,8 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
       )
       // Continue with other points even if one fails
     }
-  }gdgdsg
+  }
+  gdgdsg
 
   console.log(
     `Final match result: ${atLeastOneMatch ? 'Found at least one matching pixel' : 'No matching pixels found'}`,

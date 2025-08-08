@@ -15,7 +15,7 @@ import trilogyIcon from '../static/trilogy.png'
 interface Props {
   cancel?: (() => void) | null
   text: string
-  startTime: number | null 
+  startTime: number | null
 }
 
 export default defineComponent({

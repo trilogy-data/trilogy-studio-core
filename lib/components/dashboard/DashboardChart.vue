@@ -1,11 +1,26 @@
 <template>
-  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart v-else-if="results && ready" :id="`${itemId}-${dashboardId}`" :columns="results.headers"
-      :data="results.data" :showControls="editMode" :initialConfig="chartConfig || undefined"
-      :containerHeight="chartHeight" :container-width="chartWidth" :onChartConfigChange="onChartConfigChange"
-      :chartSelection :chartTitle @dimension-click="handleDimensionClick" @background-click="handleBackgroundClick"
-      @refresh-click="handleLocalRefresh" />
+    <VegaLiteChart
+      v-else-if="results && ready"
+      :id="`${itemId}-${dashboardId}`"
+      :columns="results.headers"
+      :data="results.data"
+      :showControls="editMode"
+      :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight"
+      :container-width="chartWidth"
+      :onChartConfigChange="onChartConfigChange"
+      :chartSelection
+      :chartTitle
+      @dimension-click="handleDimensionClick"
+      @background-click="handleBackgroundClick"
+      @refresh-click="handleLocalRefresh"
+    />
     <div v-if="loading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
@@ -54,7 +69,7 @@ export default defineComponent({
       default: () => ({ type: 'CHART', content: '' }),
     },
     setItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => void>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -64,12 +79,11 @@ export default defineComponent({
     },
 
     getDashboardQueryExecutor: {
-      type: Function as PropType<() => DashboardQueryExecutor>,
+      type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
     },
   },
   setup(props, { emit }) {
-
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
     const currentQueryId = ref<string | null>(null)
@@ -146,7 +160,6 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
-
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
         (filter) => filter.value,
@@ -158,8 +171,6 @@ export default defineComponent({
         (filter) => filter.value,
       )
     })
-
-
 
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
@@ -181,7 +192,7 @@ export default defineComponent({
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
 
-      const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
       if (!dashboardQueryExecutor) {
         throw new Error('Dashboard query executor not found!')
       }
@@ -196,13 +207,10 @@ export default defineComponent({
           dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
 
-
         // Execute query through the dashboard query executor
         let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
-
-
       } catch (err) {
         console.error('Error setting up query:', err)
         currentQueryId.value = null
@@ -250,7 +258,7 @@ export default defineComponent({
     onUnmounted(() => {
       // Cancel any pending query when component unmounts
       if (currentQueryId.value) {
-        const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+        const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
         if (dashboardQueryExecutor) {
           dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
@@ -259,7 +267,6 @@ export default defineComponent({
       window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
       window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
     })
-
 
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content

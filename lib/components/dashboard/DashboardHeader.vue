@@ -57,7 +57,6 @@ function closeSharePopup() {
   isSharePopupOpen.value = false
 }
 
-
 // Handle filter apply from FilterInputComponent
 function handleFilterApply(newValue: string) {
   emit('filter-change', newValue)

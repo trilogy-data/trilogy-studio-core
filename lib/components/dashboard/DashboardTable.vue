@@ -1,5 +1,9 @@
 <template>
-  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <data-table
       v-else-if="ready && results"
@@ -19,7 +23,12 @@
     </div>
 
     <div v-if="!loading && editMode" class="controls-toggle">
-      <button @click="handleLocalRefresh" class="control-btn" data-testid="refresh-chart-btn" title="Refresh table">
+      <button
+        @click="handleLocalRefresh"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh table"
+      >
         <i class="mdi mdi-refresh icon"></i>
       </button>
     </div>
@@ -77,7 +86,7 @@ export default defineComponent({
       required: true,
     },
     getDashboardQueryExecutor: {
-      type: Function as PropType<() => DashboardQueryExecutor>,
+      type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
     },
   },
@@ -157,22 +166,17 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
-
-
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
         (filter) => filter.value,
       )
     })
 
-
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
       return itemData.onRefresh || null
     })
-
-
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
@@ -184,7 +188,7 @@ export default defineComponent({
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
 
-      const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
       if (!dashboardQueryExecutor) {
         throw new Error('Dashboard query executor not found!')
       }
@@ -203,7 +207,6 @@ export default defineComponent({
         let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
         await dashboardQueryExecutor.waitForQuery(queryId)
-
       } catch (err) {
         console.error('Error setting up query:', err)
         currentQueryId.value = null
@@ -251,7 +254,7 @@ export default defineComponent({
     onUnmounted(() => {
       // Cancel any pending query when component unmounts
       if (currentQueryId.value) {
-        const dashboardQueryExecutor = props.getDashboardQueryExecutor()
+        const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
         if (dashboardQueryExecutor) {
           dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }

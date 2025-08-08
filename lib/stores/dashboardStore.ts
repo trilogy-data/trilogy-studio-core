@@ -9,14 +9,15 @@ import type { ModelConceptInput } from '../llm'
 import { completionToModelInput } from '../llm/utils'
 import type { EditorStoreType } from './editorStore'
 import type { Results } from '../editors/results'
-import { DashboardQueryExecutor, type QueryExecutorDependencies } from '../dashboards/dashboardQueryExecutor'
+import {
+  DashboardQueryExecutor,
+  type QueryExecutorDependencies,
+} from '../dashboards/dashboardQueryExecutor'
 
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
   content: string
 }
-
-
 
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
@@ -40,19 +41,18 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     // New getter for active dashboard's query executor
-    activeQueryExecutor: (state) => 
+    activeQueryExecutor: (state) =>
       state.activeDashboardId ? state.queryExecutors[state.activeDashboardId] : null,
 
     // New getter to check if a dashboard has an active executor
-    hasQueryExecutor: (state) => (dashboardId: string) => 
-      !!state.queryExecutors[dashboardId],
+    hasQueryExecutor: (state) => (dashboardId: string) => !!state.queryExecutors[dashboardId],
   },
 
   actions: {
     // New method: Get or create a query executor for a dashboard
     getOrCreateQueryExecutor(
-      dashboardId: string, 
-      dependencies: QueryExecutorDependencies
+      dashboardId: string,
+      dependencies: QueryExecutorDependencies,
     ): DashboardQueryExecutor {
       // Check if dashboard exists
       if (!this.dashboards[dashboardId]) {
@@ -74,14 +74,14 @@ export const useDashboardStore = defineStore('dashboards', {
         dependencies.getDashboardData,
         dependencies.getItemData,
         dependencies.setItemData,
-        dependencies.options || {}
+        dependencies.options || {},
       )
 
       // Store the executor
       this.queryExecutors[dashboardId] = executor
 
       console.log(`Created new query executor for dashboard: ${dashboardId}`)
-      
+
       return executor
     },
 
@@ -104,7 +104,7 @@ export const useDashboardStore = defineStore('dashboards', {
 
     // New method: Clear all query executors
     clearAllQueryExecutors(): void {
-      Object.keys(this.queryExecutors).forEach(dashboardId => {
+      Object.keys(this.queryExecutors).forEach((dashboardId) => {
         this.queryExecutors[dashboardId].clearQueue()
       })
       this.queryExecutors = {}
@@ -114,14 +114,14 @@ export const useDashboardStore = defineStore('dashboards', {
     // New method: Get status of all query executors
     getQueryExecutorStatuses(): Record<string, any> {
       const statuses: Record<string, any> = {}
-      
+
       Object.entries(this.queryExecutors).forEach(([dashboardId, executor]) => {
         statuses[dashboardId] = {
           dashboardName: this.dashboards[dashboardId]?.name || 'Unknown',
-          ...executor.getStatus()
+          ...executor.getStatus(),
         }
       })
-      
+
       return statuses
     },
 
@@ -278,7 +278,7 @@ export const useDashboardStore = defineStore('dashboards', {
       if (this.dashboards[id]) {
         // Remove the query executor if it exists
         this.removeQueryExecutor(id)
-        
+
         delete this.dashboards[id]
         if (this.activeDashboardId === id) {
           this.activeDashboardId = ''
@@ -358,18 +358,13 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    updateItemError(
-      dashboardId: string,
-      itemId: string,
-      error: string | null,
-    ) {
+    updateItemError(dashboardId: string, itemId: string, error: string | null) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemError(itemId, error)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
-    },  
-    
+    },
 
     updateItemType(dashboardId: string, itemId: string, type: 'markdown' | 'chart' | 'table') {
       if (this.dashboards[dashboardId]) {

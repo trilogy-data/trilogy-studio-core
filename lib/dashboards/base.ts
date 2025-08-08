@@ -327,7 +327,6 @@ export class DashboardModel implements Dashboard {
       console.warn(
         `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot
   update error.`,
-
       )
     }
   }

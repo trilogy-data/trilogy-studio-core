@@ -10,13 +10,14 @@ import {
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
+
 // Props definition
 const props = defineProps<{
   dashboardId: string
   item: LayoutItem
   editMode: boolean
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
-  getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor | null
+  getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
@@ -40,6 +41,20 @@ const isHeaderVisible = ref(false)
 
 // Filter visibility state
 const isFiltersVisible = ref(false)
+
+// Helper function to clean and format filter values
+function cleanFilterValue(value: string): string {
+  return value.replace(/'''/g, "'").replace('local.', '')
+}
+
+// Helper function to truncate filter values
+function truncateFilterValue(value: string, maxLength: number = 1000): string {
+  const cleanValue = cleanFilterValue(value)
+  if (cleanValue.length <= maxLength) {
+    return cleanValue
+  }
+  return cleanValue.substring(0, maxLength) + '...'
+}
 
 // Start editing an item title
 function startTitleEditing(): void {
@@ -314,13 +329,14 @@ const filterCount = computed(() => {
           class="filter-tag"
           v-for="(filter, index) in itemData.filters"
           :key="`${filter.source}-${filter.value}-${index}`"
+          :title="cleanFilterValue(filter.value)"
         >
           <span class="filter-content">
             <span class="filter-source"
               >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
             >
             <span class="filter-value">
-              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+              {{ truncateFilterValue(filter.value) }}</span
             >
           </span>
           <button
@@ -345,13 +361,14 @@ const filterCount = computed(() => {
             class="filter-tag"
             v-for="(filter, index) in itemData.filters"
             :key="`${filter.source}-${filter.value}-${index}`"
+            :title="cleanFilterValue(filter.value)"
           >
             <span class="filter-content">
               <span class="filter-source"
                 >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
               >
               <span class="filter-value">
-                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
+                {{ truncateFilterValue(filter.value) }}</span
               >
             </span>
             <button
@@ -579,6 +596,11 @@ const filterCount = computed(() => {
 
 .filter-value {
   color: var(--text-color);
+  word-break: break-word;
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-remove-btn {
