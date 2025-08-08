@@ -107,8 +107,8 @@ function increaseHeight(): void {
   props.setItemData(props.item.i, props.dashboardId, {
     dimensions: {
       width: props.item.w,
-      height: newHeight
-    }
+      height: newHeight,
+    },
   })
 }
 
@@ -118,8 +118,8 @@ function decreaseHeight(): void {
   props.setItemData(props.item.i, props.dashboardId, {
     dimensions: {
       width: props.item.w,
-      height: newHeight
-    }
+      height: newHeight,
+    },
   })
 }
 
@@ -335,9 +335,7 @@ const filterCount = computed(() => {
             <span class="filter-source"
               >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
             >
-            <span class="filter-value">
-              {{ truncateFilterValue(filter.value) }}</span
-            >
+            <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
           </span>
           <button
             class="filter-remove-btn"
@@ -367,9 +365,7 @@ const filterCount = computed(() => {
               <span class="filter-source"
                 >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
               >
-              <span class="filter-value">
-                {{ truncateFilterValue(filter.value) }}</span
-              >
+              <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
             </span>
             <button
               class="filter-remove-btn"
