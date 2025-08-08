@@ -19,16 +19,15 @@
           <p>We're glad you're back!</p>
         </template>
         <div class="buttons">
+          <button @click="tutorial()" class="btn btn-tertiary" data-testid="tutorial-button">
+            Docs/Tutorial
+          </button>
           <button @click="startDemo()" class="btn btn-secondary" data-testid="demo-editor-button">
             <span v-if="demoLoading">Loading <span class="spinner"></span></span
             ><span v-else>Demo Editor</span>
           </button>
           <button v-if="hasConnections" @click="showCreator = !showCreator" class="btn btn-primary">
             New Editor
-          </button>
-
-          <button @click="tutorial()" class="btn btn-tertiary" data-testid="tutorial-button">
-            Docs/Tutorial
           </button>
         </div>
       </template>
@@ -120,6 +119,40 @@ h1 {
   justify-content: center;
 }
 
+/* Responsive breakpoint for small screens */
+@media (max-width: 768px) {
+  .buttons {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .container {
+    padding: 15px;
+  }
+
+  .buttons {
+    max-width: 240px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .logo-image {
+    width: 48px;
+  }
+}
+
 .btn {
   padding: 10px 20px;
   border: none;
@@ -131,7 +164,7 @@ h1 {
 }
 
 .btn-primary {
-  border: 2px solid #007bff;
+  border: 2px solid #28a745;
   background-color: transparent;
 }
 
@@ -140,7 +173,7 @@ h1 {
 }
 
 .btn-secondary {
-  border: 2px solid #28a745;
+  border: 2px solid #007bff;
   background-color: transparent;
   white-space: nowrap;
 }

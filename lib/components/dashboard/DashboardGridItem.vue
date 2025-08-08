@@ -593,7 +593,7 @@ const filterCount = computed(() => {
 .filter-value {
   color: var(--text-color);
   word-break: break-word;
-  max-width: 500px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

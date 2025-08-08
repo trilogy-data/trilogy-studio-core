@@ -88,9 +88,9 @@ export class DashboardQueryExecutor {
     this.connectionStore = connectionStore
     this.editorStore = editorStore
     this.connectionName = connectionName
-    this.maxConcurrentQueries = options.maxConcurrentQueries || 3
+    this.maxConcurrentQueries = options.maxConcurrentQueries || 6
     this.retryAttempts = options.retryAttempts || 2
-    this.batchDelay = options.batchDelay || 100
+    this.batchDelay = options.batchDelay || 10
     this.dashboardId = dashboardId
     this.getItemData = getItemData
     this.setItemData = setItemData
@@ -178,10 +178,8 @@ export class DashboardQueryExecutor {
   /**
    * Get default priority based on chart position and type
    */
-  private getDefaultPriority(_: string): number {
-    // Charts higher on dashboard get higher priority (lower numbers)
-    // You can implement more sophisticated priority logic here
-    return 5 // Default middle priority
+  private getDefaultPriority(itemId: string): number {
+    return this.getDashboardData(this.dashboardId).layout.find((item) => item.i === itemId)?.y || 0
   }
 
   public setConnection(connectionName: string): void {

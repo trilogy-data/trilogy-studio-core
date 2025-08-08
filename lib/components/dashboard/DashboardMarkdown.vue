@@ -13,10 +13,6 @@
       :loading="loading"
     />
 
-    <div v-if="loading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
-    </div>
-
     <div v-if="!loading && editMode" class="controls-toggle">
       <button
         @click="handleLocalRefresh"

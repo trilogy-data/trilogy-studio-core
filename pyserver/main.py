@@ -256,59 +256,60 @@ def generate_queries(queries: MultiQueryInSchema):
 @router.post("/generate_query")
 def generate_query(query: QueryInSchema):
     if ENABLE_PERF_LOGGING:
-        start_time = time.time()
+        start_time = time.perf_counter()
         query_size = len(query.query)
         perf_logger.info(
             f"Starting query generation - Size: {query_size} chars | Dialect: {query.dialect}"
         )
-
     try:
         # Time the dialect generation
-        dialect_start = time.time()
+        dialect_start = time.perf_counter()
         dialect = get_dialect_generator(query.dialect)
-        dialect_time = time.time() - dialect_start
+        dialect_time = time.perf_counter() - dialect_start
 
         # Time the query core processing
-        core_start = time.time()
+        core_start = time.perf_counter()
         target, columns = generate_query_core(query, dialect, ENABLE_PERF_LOGGING)
-        core_time = time.time() - core_start
+        core_time = time.perf_counter() - core_start
 
         # Time the output formatting
-        output_start = time.time()
+        output_start = time.perf_counter()
         result = query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
-        output_time = time.time() - output_start
+        output_time = time.perf_counter() - output_start
 
         if ENABLE_PERF_LOGGING:
             # Calculate total time and log performance metrics
-            total_time = time.time() - start_time
+            total_time = time.perf_counter() - start_time
             sql_size = len(result.generated_sql) if result.generated_sql else 0
 
+            # Calculate unaccounted time
+            accounted_time = dialect_time + core_time + output_time
+            unaccounted_time = total_time - accounted_time
+
             perf_logger.info(
-                f"Query generation completed - Total: {total_time:.4f}s | "
-                f"Dialect setup: {dialect_time:.4f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
-                f"Core processing: {core_time:.4f}s ({safe_percentage(core_time,total_time):.1f}%) | "
-                f"Output formatting: {output_time:.4f}s ({safe_percentage(output_time,total_time):.1f}%) | "
+                f"Query generation completed - Total: {total_time:.6f}s | "
+                f"Dialect setup: {dialect_time:.6f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
+                f"Core processing: {core_time:.6f}s ({safe_percentage(core_time,total_time):.1f}%) | "
+                f"Output formatting: {output_time:.6f}s ({safe_percentage(output_time,total_time):.1f}%) | "
+                f"Unaccounted: {unaccounted_time:.6f}s ({safe_percentage(unaccounted_time,total_time):.1f}%) | "
                 f"Input size: {query_size} chars | "
                 f"Output size: {sql_size} chars | "
                 f"Dialect: {query.dialect}"
             )
-
         return result
     except InvalidSyntaxException as e:
         if ENABLE_PERF_LOGGING:
-            error_time = time.time() - start_time
+            error_time = time.perf_counter() - start_time
             perf_logger.error(
-                f"Query generation failed after {error_time:.4f}s: {str(e)}"
+                f"Query generation failed after {error_time:.6f}s: {str(e)}"
             )
-
         raise HTTPException(status_code=422, detail=e.args[0])
     except Exception as e:
         if ENABLE_PERF_LOGGING:
-            error_time = time.time() - start_time
+            error_time = time.perf_counter() - start_time
             perf_logger.error(
-                f"Query generation failed after {error_time:.4f}s: {str(e)}"
+                f"Query generation failed after {error_time:.6f}s: {str(e)}"
             )
-
         raise HTTPException(status_code=422, detail=str(e))
 
 
