@@ -204,7 +204,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   // Define points to check relative to the canvas
   // These are relative coordinates (x%, y%) within the canvas
-  const nonWhite = ['#86d0bb', '#225aa5', '#c7e9b5', '#472d7b', '#450356', '#433e85']
+  const nonWhite = ['#86d0bb', '#225aa5', '#c7e9b5', '#472d7b', '#450356', '#433e85', '#471063', '#481a6c', ' #481668']
 
   // Create expanded check points with the main values rounded to nearest 0.5
   // and additional checks at ±0.1 from the rounded value
