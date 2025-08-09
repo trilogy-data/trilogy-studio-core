@@ -105,9 +105,6 @@ export default defineComponent({
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
-
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
         // this is to delay *rendering* the component, not query execution
@@ -212,35 +209,6 @@ export default defineComponent({
         executeQuery()
       }
     }
-
-    // Global dashboard refresh handler
-    const handleDashboardRefresh = () => {
-      console.log(`Markdown ${props.itemId} received dashboard refresh event`)
-      executeQuery()
-    }
-
-    // Targeted chart refresh handler
-    const handleChartRefresh = (event: CustomEvent) => {
-      // Only refresh this component if it's the target or no specific target
-      if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
-        console.log(`Markdown ${props.itemId} received targeted refresh event`)
-        executeQuery()
-      }
-    }
-
-    // Remove event listeners when the component is unmounted
-    onUnmounted(() => {
-      // Cancel any pending query when component unmounts
-      if (currentQueryId.value) {
-        const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
-        if (dashboardQueryExecutor) {
-          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
-        }
-      }
-
-      window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
 
     // Watch for changes and re-execute query
     watch([filters], (newVal, oldVal) => {

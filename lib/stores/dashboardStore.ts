@@ -263,9 +263,6 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     updateDashboardImports(id: string, imports: DashboardImport[]) {
-      console.log('Updating imports for dashboard:', id)
-      console.log('New imports:', imports)
-
       if (this.dashboards[id]) {
         this.dashboards[id].imports = imports
       } else {

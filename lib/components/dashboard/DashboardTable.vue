@@ -18,7 +18,7 @@
     />
 
     <!-- Loading overlay positioned absolutely over the entire component -->
-    <div v-if="loading" class="loading-overlay">
+    <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
 
@@ -94,6 +94,8 @@ export default defineComponent({
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
     const currentQueryId = ref<string | null>(null)
+    const showLoading = ref(false)
+    const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -114,8 +116,7 @@ export default defineComponent({
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+
 
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
@@ -132,6 +133,14 @@ export default defineComponent({
           }, delay)
         }
       }, 0) // Use nextTick equivalent
+    })
+
+    // Clean up timeout on unmount
+    onUnmounted(() => {
+      if (loadingTimeoutId.value) {
+        clearTimeout(loadingTimeoutId.value)
+        loadingTimeoutId.value = null
+      }
     })
 
     const query = computed(() => {
@@ -178,6 +187,26 @@ export default defineComponent({
       return itemData.onRefresh || null
     })
 
+    // Watch loading state and manage the 150ms delay
+    watch(loading, (newLoading, oldLoading) => {
+      // Clear any existing timeout
+      if (loadingTimeoutId.value) {
+        clearTimeout(loadingTimeoutId.value)
+        loadingTimeoutId.value = null
+      }
+
+      if (newLoading) {
+        // Start loading - set a timeout to show loading after 150ms
+        loadingTimeoutId.value = setTimeout(() => {
+          showLoading.value = true
+          loadingTimeoutId.value = null
+        }, 150)
+      } else {
+        // Stop loading - hide immediately
+        showLoading.value = false
+      }
+    }, { immediate: true })
+
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
@@ -222,20 +251,6 @@ export default defineComponent({
       }
     }
 
-    // Global dashboard refresh handler
-    const handleDashboardRefresh = () => {
-      console.log(`Chart ${props.itemId} received dashboard refresh event`)
-      executeQuery()
-    }
-
-    // Targeted chart refresh handler
-    const handleChartRefresh = (event: CustomEvent) => {
-      // Only refresh this component if it's the target or no specific target
-      if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
-        console.log(`Chart ${props.itemId} received targeted refresh event`)
-        executeQuery()
-      }
-    }
 
     const handleDimensionClick = (dimension: DimensionClick) => {
       emit('dimension-click', {
@@ -250,19 +265,8 @@ export default defineComponent({
       emit('background-click')
     }
 
-    // Remove event listeners when the component is unmounted
-    onUnmounted(() => {
-      // Cancel any pending query when component unmounts
-      if (currentQueryId.value) {
-        const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
-        if (dashboardQueryExecutor) {
-          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
-        }
-      }
 
-      window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
+
 
     // Watch for changes and re-execute query
     watch([filters], (newVal, oldVal) => {
@@ -279,6 +283,7 @@ export default defineComponent({
       results,
       ready,
       loading,
+      showLoading,
       error,
       query,
       chartHeight,

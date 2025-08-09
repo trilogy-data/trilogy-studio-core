@@ -38,23 +38,35 @@ export default defineComponent({
   },
   setup(props: Props) {
     const startTimeInternal = ref(props.startTime || Date.now())
-    const elapsedTime = ref('0.0 sec')
-    let interval: ReturnType<typeof setInterval> | null = null
+    const elapsedTime = ref('0 ms')
+    let timeout: ReturnType<typeof setTimeout> | null = null
+
+    const getUpdateInterval = (elapsedMs: number): number => {
+      if (elapsedMs < 1000) return 50        // Update every 50ms for first second
+      if (elapsedMs < 5000) return 100       // Update every 100ms for first 5 seconds  
+      if (elapsedMs < 30000) return 500      // Update every 500ms for first 30 seconds
+      return 1000
+    }
 
     const updateElapsedTime = () => {
       const ms = Date.now() - startTimeInternal.value
-      const seconds = (ms / 1000).toFixed(1) // Show tenths of a second
-
+      
       if (ms < 1000) {
         elapsedTime.value = `${ms} ms`
       } else if (ms < 60000) {
+        const seconds = (ms / 1000).toFixed(1)
         elapsedTime.value = `${seconds} sec`
       } else {
         const minutes = Math.floor(ms / 60000)
         const remainingSeconds = ((ms % 60000) / 1000).toFixed(1)
-        elapsedTime.value =
-          remainingSeconds !== '0.0' ? `${minutes} min ${remainingSeconds} sec` : `${minutes} min`
+        elapsedTime.value = remainingSeconds !== '0.0' 
+          ? `${minutes} min ${remainingSeconds} sec` 
+          : `${minutes} min`
       }
+
+      // Schedule next update with adaptive interval
+      const nextInterval = getUpdateInterval(ms)
+      timeout = setTimeout(updateElapsedTime, nextInterval)
     }
 
     const handleCancel = () => {
@@ -65,11 +77,11 @@ export default defineComponent({
 
     onMounted(() => {
       startTimeInternal.value = props.startTime || Date.now()
-      interval = setInterval(updateElapsedTime, 100) // Update every 100ms
+      updateElapsedTime() // Start the adaptive timer
     })
 
     onBeforeUnmount(() => {
-      if (interval) clearInterval(interval)
+      if (timeout) clearTimeout(timeout)
     })
 
     return {
@@ -86,7 +98,6 @@ export default defineComponent({
   from {
     transform: rotate(0deg);
   }
-
   to {
     transform: rotate(360deg);
   }
@@ -115,7 +126,6 @@ export default defineComponent({
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-10px);
   }

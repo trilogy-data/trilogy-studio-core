@@ -64,3 +64,4 @@ export const DashboardTutorial = new Article(
   ],
   'Dashboard Tutorial',
 )
+

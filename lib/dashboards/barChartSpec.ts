@@ -63,7 +63,8 @@ export const createBarChartSpec = (
         sort: getSortOrder(config.xField || '', columns, config.yField),
       },
       y: createFieldEncoding(config.yField || '', columns, {
-        axis: { format: getColumnFormat(config.yField, columns) },
+        // axis:  { format: getColumnFormat(config.yField, columns) },
+        axis: null,
       }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
