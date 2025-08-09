@@ -189,24 +189,28 @@ export default defineComponent({
     })
 
     // Watch loading state and manage the 150ms delay
-    watch(loading, (newLoading, oldLoading) => {
-      // Clear any existing timeout
-      if (loadingTimeoutId.value) {
-        clearTimeout(loadingTimeoutId.value)
-        loadingTimeoutId.value = null
-      }
-
-      if (newLoading) {
-        // Start loading - set a timeout to show loading after 150ms
-        loadingTimeoutId.value = setTimeout(() => {
-          showLoading.value = true
+    watch(
+      loading,
+      (newLoading, _) => {
+        // Clear any existing timeout
+        if (loadingTimeoutId.value) {
+          clearTimeout(loadingTimeoutId.value)
           loadingTimeoutId.value = null
-        }, 150)
-      } else {
-        // Stop loading - hide immediately
-        showLoading.value = false
-      }
-    }, { immediate: true })
+        }
+
+        if (newLoading) {
+          // Start loading - set a timeout to show loading after 150ms
+          loadingTimeoutId.value = setTimeout(() => {
+            showLoading.value = true
+            loadingTimeoutId.value = null
+          }, 150)
+        } else {
+          // Stop loading - hide immediately
+          showLoading.value = false
+        }
+      },
+      { immediate: true },
+    )
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')

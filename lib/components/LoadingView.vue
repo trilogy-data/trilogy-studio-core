@@ -42,15 +42,15 @@ export default defineComponent({
     let timeout: ReturnType<typeof setTimeout> | null = null
 
     const getUpdateInterval = (elapsedMs: number): number => {
-      if (elapsedMs < 1000) return 50        // Update every 50ms for first second
-      if (elapsedMs < 5000) return 100       // Update every 100ms for first 5 seconds  
-      if (elapsedMs < 30000) return 500      // Update every 500ms for first 30 seconds
+      if (elapsedMs < 1000) return 50 // Update every 50ms for first second
+      if (elapsedMs < 5000) return 100 // Update every 100ms for first 5 seconds
+      if (elapsedMs < 30000) return 500 // Update every 500ms for first 30 seconds
       return 1000
     }
 
     const updateElapsedTime = () => {
       const ms = Date.now() - startTimeInternal.value
-      
+
       if (ms < 1000) {
         elapsedTime.value = `${ms} ms`
       } else if (ms < 60000) {
@@ -59,9 +59,8 @@ export default defineComponent({
       } else {
         const minutes = Math.floor(ms / 60000)
         const remainingSeconds = ((ms % 60000) / 1000).toFixed(1)
-        elapsedTime.value = remainingSeconds !== '0.0' 
-          ? `${minutes} min ${remainingSeconds} sec` 
-          : `${minutes} min`
+        elapsedTime.value =
+          remainingSeconds !== '0.0' ? `${minutes} min ${remainingSeconds} sec` : `${minutes} min`
       }
 
       // Schedule next update with adaptive interval

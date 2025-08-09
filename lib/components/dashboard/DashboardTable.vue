@@ -116,8 +116,6 @@ export default defineComponent({
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
-
-
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
         // this is to delay *rendering* the component, not query execution
@@ -188,24 +186,28 @@ export default defineComponent({
     })
 
     // Watch loading state and manage the 150ms delay
-    watch(loading, (newLoading, oldLoading) => {
-      // Clear any existing timeout
-      if (loadingTimeoutId.value) {
-        clearTimeout(loadingTimeoutId.value)
-        loadingTimeoutId.value = null
-      }
-
-      if (newLoading) {
-        // Start loading - set a timeout to show loading after 150ms
-        loadingTimeoutId.value = setTimeout(() => {
-          showLoading.value = true
+    watch(
+      loading,
+      (newLoading, _) => {
+        // Clear any existing timeout
+        if (loadingTimeoutId.value) {
+          clearTimeout(loadingTimeoutId.value)
           loadingTimeoutId.value = null
-        }, 150)
-      } else {
-        // Stop loading - hide immediately
-        showLoading.value = false
-      }
-    }, { immediate: true })
+        }
+
+        if (newLoading) {
+          // Start loading - set a timeout to show loading after 150ms
+          loadingTimeoutId.value = setTimeout(() => {
+            showLoading.value = true
+            loadingTimeoutId.value = null
+          }, 150)
+        } else {
+          // Stop loading - hide immediately
+          showLoading.value = false
+        }
+      },
+      { immediate: true },
+    )
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
@@ -251,7 +253,6 @@ export default defineComponent({
       }
     }
 
-
     const handleDimensionClick = (dimension: DimensionClick) => {
       emit('dimension-click', {
         source: props.itemId,
@@ -264,9 +265,6 @@ export default defineComponent({
     const handleBackgroundClick = () => {
       emit('background-click')
     }
-
-
-
 
     // Watch for changes and re-execute query
     watch([filters], (newVal, oldVal) => {

@@ -91,7 +91,7 @@ watch(
 )
 
 // Watch for tab changes to preserve query editor content
-watch(activeTab, (newTab, oldTab) => {
+watch(activeTab, (_, oldTab) => {
   if (oldTab === 'query' && editor.value) {
     // Save the current query editor content before switching away
     queryEditorContent.value = editor.value.getContent()
@@ -103,7 +103,7 @@ function saveContent(): void {
   if (activeTab.value === 'query' && editor.value) {
     queryEditorContent.value = editor.value.getContent()
   }
-  
+
   const contentToSave = {
     markdown: markdownText.value,
     query: queryEditorContent.value,

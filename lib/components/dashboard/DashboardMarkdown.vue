@@ -27,16 +27,7 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  inject,
-  computed,
-  watch,
-  ref,
-  onMounted,
-  onUnmounted,
-  type PropType,
-} from 'vue'
+import { defineComponent, inject, computed, watch, ref, onMounted, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { Results } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'

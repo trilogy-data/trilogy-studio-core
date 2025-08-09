@@ -58,7 +58,7 @@ export class DashboardQueryExecutor {
   private latestQueryByItemId: Map<string, string> = new Map()
   // Track which itemIds are associated with each query ID (for cleanup)
   private itemIdByQueryId: Map<string, string> = new Map()
-  
+
   private queryExecutionService: QueryExecutionService
   private connectionStore: ConnectionStoreType
   private editorStore: EditorStoreType
@@ -189,10 +189,10 @@ export class DashboardQueryExecutor {
    */
   private cancelPendingQueriesForItem(itemId: string): void {
     const currentLatestQueryId = this.latestQueryByItemId.get(itemId)
-    
+
     // Find and cancel all queries for this itemId except the current latest
     const queriesToCancel: string[] = []
-    
+
     this.queryQueue.forEach((query, queryId) => {
       if (query.itemId === itemId && queryId !== currentLatestQueryId) {
         queriesToCancel.push(queryId)
@@ -219,7 +219,7 @@ export class DashboardQueryExecutor {
   private isLatestQueryForItem(queryId: string): boolean {
     const itemId = this.itemIdByQueryId.get(queryId)
     if (!itemId) return false
-    
+
     const latestQueryId = this.latestQueryByItemId.get(itemId)
     return latestQueryId === queryId
   }
@@ -511,7 +511,7 @@ export class DashboardQueryExecutor {
     this.queryQueue.clear()
     this.latestQueryByItemId.clear()
     this.itemIdByQueryId.clear()
-    
+
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout)
       this.batchTimeout = null
@@ -697,7 +697,7 @@ export class DashboardQueryExecutor {
       }
     } finally {
       this.activeQueries.delete(queryId)
-      
+
       // Clean up tracking data when query completes
       this.cleanupQueryTracking(queryId)
 
