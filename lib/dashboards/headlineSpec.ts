@@ -97,20 +97,15 @@ const createHeadlineLayer = (
   if (!datum) {
     if (!includeLabel) {
       return []
-    }
-    else {
+    } else {
       return [labelMark]
-
     }
   }
   if (!includeLabel) {
     // If it's an image column, we don't need a label
     return [topMark]
   }
-  return [
-    topMark,
-    labelMark
-  ]
+  return [topMark, labelMark]
 }
 
 export const createHeadlineSpec = (
@@ -131,7 +126,7 @@ export const createHeadlineSpec = (
       columns,
       currentTheme,
       isMobile,
-      data[0] ? data[0][column.name] : null,
+      data ? data[0][column.name] : null,
     )
   })
 
