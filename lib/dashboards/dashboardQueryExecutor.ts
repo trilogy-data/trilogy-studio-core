@@ -54,6 +54,11 @@ export class DashboardQueryExecutor {
   private queryQueue: Map<string, QueuedQuery> = new Map()
   private activeQueries: Set<string> = new Set()
   private queryWaiters: Map<string, QueryWaiter> = new Map()
+  // Track the latest query ID for each itemId
+  private latestQueryByItemId: Map<string, string> = new Map()
+  // Track which itemIds are associated with each query ID (for cleanup)
+  private itemIdByQueryId: Map<string, string> = new Map()
+  
   private queryExecutionService: QueryExecutionService
   private connectionStore: ConnectionStoreType
   private editorStore: EditorStoreType
@@ -173,6 +178,64 @@ export class DashboardQueryExecutor {
 
     // Clear active queries
     this.activeQueries.clear()
+
+    // Clear tracking maps
+    this.latestQueryByItemId.clear()
+    this.itemIdByQueryId.clear()
+  }
+
+  /**
+   * Cancel pending queries for a specific itemId
+   */
+  private cancelPendingQueriesForItem(itemId: string): void {
+    const currentLatestQueryId = this.latestQueryByItemId.get(itemId)
+    
+    // Find and cancel all queries for this itemId except the current latest
+    const queriesToCancel: string[] = []
+    
+    this.queryQueue.forEach((query, queryId) => {
+      if (query.itemId === itemId && queryId !== currentLatestQueryId) {
+        queriesToCancel.push(queryId)
+      }
+    })
+
+    this.activeQueries.forEach((queryId) => {
+      const itemIdForQuery = this.itemIdByQueryId.get(queryId)
+      if (itemIdForQuery === itemId && queryId !== currentLatestQueryId) {
+        queriesToCancel.push(queryId)
+      }
+    })
+
+    // Cancel the identified queries
+    queriesToCancel.forEach((queryId) => {
+      console.log(`Cancelling outdated query ${queryId} for itemId ${itemId}`)
+      this.cancelQuery(queryId)
+    })
+  }
+
+  /**
+   * Check if a query ID is the latest for its itemId
+   */
+  private isLatestQueryForItem(queryId: string): boolean {
+    const itemId = this.itemIdByQueryId.get(queryId)
+    if (!itemId) return false
+    
+    const latestQueryId = this.latestQueryByItemId.get(itemId)
+    return latestQueryId === queryId
+  }
+
+  /**
+   * Cleanup tracking data for a completed query
+   */
+  private cleanupQueryTracking(queryId: string): void {
+    const itemId = this.itemIdByQueryId.get(queryId)
+    if (itemId) {
+      // Only remove from latestQueryByItemId if this was indeed the latest query
+      if (this.latestQueryByItemId.get(itemId) === queryId) {
+        this.latestQueryByItemId.delete(itemId)
+      }
+      this.itemIdByQueryId.delete(queryId)
+    }
   }
 
   /**
@@ -237,12 +300,22 @@ export class DashboardQueryExecutor {
       priority: 5,
       itemId,
       onSuccess: (result: any) => {
-        this.setItemData(itemId, this.dashboardId, {
-          results: result.results,
-        })
+        // Only update if this is still the latest query for this itemId
+        if (this.isLatestQueryForItem(queryId)) {
+          this.setItemData(itemId, this.dashboardId, {
+            results: result.results,
+          })
+        } else {
+          console.log(`Ignoring outdated query result for itemId ${itemId}`)
+        }
       },
       onError: (error: string) => {
-        this.setItemData(itemId, this.dashboardId, { error })
+        // Only update if this is still the latest query for this itemId
+        if (this.isLatestQueryForItem(queryId)) {
+          this.setItemData(itemId, this.dashboardId, { error })
+        } else {
+          console.log(`Ignoring outdated query error for itemId ${itemId}`)
+        }
       },
       onProgress: (_: any) => {
         ;() => {}
@@ -255,10 +328,21 @@ export class DashboardQueryExecutor {
 
     const queryId = this.generateQueryId(requestWithPriority)
 
-    // Check for duplicate queries
+    // Cancel any pending queries for this itemId before adding the new one
+    this.cancelPendingQueriesForItem(itemId)
+
+    // Track this as the latest query for the itemId
+    this.latestQueryByItemId.set(itemId, queryId)
+    this.itemIdByQueryId.set(queryId, itemId)
+
+    // Check for duplicate queries (after canceling old ones)
     const existingQuery = this.findDuplicateQuery(requestWithPriority)
     if (existingQuery) {
       console.log(`Deduplicating query for ${requestWithPriority.itemId}`)
+      // Update tracking to point to the existing query
+      this.latestQueryByItemId.set(itemId, existingQuery.id)
+      this.itemIdByQueryId.set(existingQuery.id, itemId)
+      this.itemIdByQueryId.delete(queryId) // Clean up the unused queryId
       // Add callbacks to existing query
       this.addCallbacksToExistingQuery(existingQuery, requestWithPriority)
       return existingQuery.id
@@ -323,12 +407,22 @@ export class DashboardQueryExecutor {
         priority: this.getDefaultPriority(itemId),
         itemId,
         onSuccess: (result: any) => {
-          this.setItemData(itemId, this.dashboardId, {
-            results: result.results,
-          })
+          // Only update if this is still the latest query for this itemId
+          if (this.isLatestQueryForItem(queryId)) {
+            this.setItemData(itemId, this.dashboardId, {
+              results: result.results,
+            })
+          } else {
+            console.log(`Ignoring outdated batch query result for itemId ${itemId}`)
+          }
         },
         onError: (error: string) => {
-          this.setItemData(itemId, this.dashboardId, { error })
+          // Only update if this is still the latest query for this itemId
+          if (this.isLatestQueryForItem(queryId)) {
+            this.setItemData(itemId, this.dashboardId, { error })
+          } else {
+            console.log(`Ignoring outdated batch query error for itemId ${itemId}`)
+          }
         },
         onProgress: (_: any) => {
           ;() => {}
@@ -337,10 +431,21 @@ export class DashboardQueryExecutor {
 
       const queryId = this.generateQueryId(request)
 
-      // Check for duplicates
+      // Cancel any pending queries for this itemId before adding the new one
+      this.cancelPendingQueriesForItem(itemId)
+
+      // Track this as the latest query for the itemId
+      this.latestQueryByItemId.set(itemId, queryId)
+      this.itemIdByQueryId.set(queryId, itemId)
+
+      // Check for duplicates (after canceling old ones)
       const existingQuery = this.findDuplicateQuery(request)
       if (existingQuery) {
         console.log(`Deduplicating batch query for ${request.itemId}`)
+        // Update tracking to point to the existing query
+        this.latestQueryByItemId.set(itemId, existingQuery.id)
+        this.itemIdByQueryId.set(existingQuery.id, itemId)
+        this.itemIdByQueryId.delete(queryId) // Clean up the unused queryId
         this.addCallbacksToExistingQuery(existingQuery, request)
         queryIds.push(existingQuery.id)
         return
@@ -376,6 +481,9 @@ export class DashboardQueryExecutor {
       this.queryWaiters.delete(queryId)
     }
 
+    // Clean up tracking
+    this.cleanupQueryTracking(queryId)
+
     if (this.queryQueue.has(queryId)) {
       this.queryQueue.delete(queryId)
       return true
@@ -401,6 +509,9 @@ export class DashboardQueryExecutor {
     this.queryWaiters.clear()
 
     this.queryQueue.clear()
+    this.latestQueryByItemId.clear()
+    this.itemIdByQueryId.clear()
+    
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout)
       this.batchTimeout = null
@@ -414,11 +525,13 @@ export class DashboardQueryExecutor {
     queued: number
     active: number
     queuedQueries: QueuedQuery[]
+    latestQueryByItemId: Record<string, string>
   } {
     return {
       queued: this.queryQueue.size,
       active: this.activeQueries.size,
       queuedQueries: Array.from(this.queryQueue.values()),
+      latestQueryByItemId: Object.fromEntries(this.latestQueryByItemId),
     }
   }
 
@@ -584,6 +697,9 @@ export class DashboardQueryExecutor {
       }
     } finally {
       this.activeQueries.delete(queryId)
+      
+      // Clean up tracking data when query completes
+      this.cleanupQueryTracking(queryId)
 
       // Process next queries in queue
       setTimeout(() => {
