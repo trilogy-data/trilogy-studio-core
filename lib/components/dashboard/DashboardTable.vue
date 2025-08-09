@@ -1,8 +1,12 @@
 <template>
-  <div class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <data-table
-      v-else-if="results"
+      v-else-if="ready && results"
       :id="`${itemId}-${dashboardId}`"
       :headers="results.headers"
       :results="results.data"
@@ -14,17 +18,18 @@
     />
 
     <!-- Loading overlay positioned absolutely over the entire component -->
-    <div v-if="loading" class="loading-overlay">
+    <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
-    <div v-if="!loading && editMode" class="chart-actions">
+
+    <div v-if="!loading && editMode" class="controls-toggle">
       <button
-        v-if="onRefresh"
         @click="handleLocalRefresh"
-        class="chart-refresh-button"
-        title="Refresh this table"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh table"
       >
-        <span class="refresh-icon">⟳</span>
+        <i class="mdi mdi-refresh icon"></i>
       </button>
     </div>
   </div>
@@ -42,13 +47,13 @@ import {
   type PropType,
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import type { Results, ChartConfig } from '../../editors/results'
-import QueryExecutionService from '../../stores/queryExecutionService'
+import type { Results } from '../../editors/results'
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
 import DataTable from '../DataTable.vue'
 import LoadingView from '../LoadingView.vue'
 import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
-import { type AnalyticsStoreType } from '../../stores/analyticsStore'
+import type { AnalyticsStoreType } from '../../stores/analyticsStore'
 
 export default defineComponent({
   name: 'DashboardChart',
@@ -71,31 +76,91 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
-    editMode: {
-      type: Boolean,
-      required: true,
-    },
     setItemData: {
       type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
+    editMode: {
+      type: Boolean,
+      required: true,
+    },
+    getDashboardQueryExecutor: {
+      type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
+      required: true,
+    },
   },
   setup(props, { emit }) {
-    const loading = ref(false)
-    const error = ref<string | null>(null)
-    const startTime = ref<number | null>(null)
+    const ready = ref(false)
+    const chartContainer = ref<HTMLElement | null>(null)
+    const currentQueryId = ref<string | null>(null)
+    const showLoading = ref(false)
+    const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
+
+    const getPositionBasedDelay = () => {
+      if (!chartContainer.value) return 0
+
+      const rect = chartContainer.value.getBoundingClientRect()
+      const scrollY = window.scrollY || document.documentElement.scrollTop
+
+      // Get absolute position from top of document
+      const absoluteTop = rect.top + scrollY
+
+      // Very minimal delays (10ms per 200px)
+      const delay = Math.floor(absoluteTop / 200) * 10
+
+      // Cap at reasonable maximum
+      let finalDelay = Math.min(delay, 100)
+      return finalDelay
+    }
+
     // Set up event listeners when the component is mounted
     onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
+      // Apply position-based delay after DOM is ready
+      setTimeout(() => {
+        // this is to delay *rendering* the component, not query execution
+        const delay = getPositionBasedDelay()
+
+        if (!results.value) {
+          ready.value = true
+          // executeQuery()
+        } else {
+          // Cached results with delay
+          setTimeout(() => {
+            ready.value = true
+          }, delay)
+        }
+      }, 0) // Use nextTick equivalent
     })
+
+    // Clean up timeout on unmount
+    onUnmounted(() => {
+      if (loadingTimeoutId.value) {
+        clearTimeout(loadingTimeoutId.value)
+        loadingTimeoutId.value = null
+      }
+    })
+
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
     })
-    const results = computed(() => {
+
+    const results = computed((): Results | null => {
       return props.getItemData(props.itemId, props.dashboardId).results || null
     })
+
+    const loading = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loading || false
+    })
+
+    const error = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).error || null
+    })
+
+    const startTime = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
+    })
+
     const chartHeight = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
     })
@@ -108,22 +173,10 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
-    const chartImports = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).imports || []
-    })
-
-    const chartParameters = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).parameters || []
-    })
-
     const filters = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
         (filter) => filter.value,
       )
-    })
-
-    const connectionName = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).connectionName || []
     })
 
     // Get refresh callback from item data if available
@@ -132,119 +185,74 @@ export default defineComponent({
       return itemData.onRefresh || null
     })
 
-    const rootContent = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
-    })
+    // Watch loading state and manage the 150ms delay
+    watch(
+      loading,
+      (newLoading, _) => {
+        // Clear any existing timeout
+        if (loadingTimeoutId.value) {
+          clearTimeout(loadingTimeoutId.value)
+          loadingTimeoutId.value = null
+        }
+
+        if (newLoading) {
+          // Start loading - set a timeout to show loading after 150ms
+          loadingTimeoutId.value = setTimeout(() => {
+            showLoading.value = true
+            loadingTimeoutId.value = null
+          }, 150)
+        } else {
+          // Stop loading - hide immediately
+          showLoading.value = false
+        }
+      },
+      { immediate: true },
+    )
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
-    const onChartConfigChange = (chartConfig: ChartConfig) => {
-      props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
-    }
-    if (!connectionStore || !queryExecutionService) {
+    if (!connectionStore) {
       throw new Error('Connection store not found!')
     }
 
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
-      startTime.value = Date.now()
-      loading.value = true
-      error.value = null
+
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
+      if (!dashboardQueryExecutor) {
+        throw new Error('Dashboard query executor not found!')
+      }
 
       try {
         if (analyticsStore) {
           analyticsStore.log('dashboard-table-execution', 'TABLE', true)
         }
 
-        // Prepare query input
-        let connName = connectionName.value || ''
-        if (!connName) {
-          return
-        }
-        //@ts-ignore
-        const conn = connectionStore.connections[connName]
-
-        // Create query input object using the chart's query content
-        const queryInput = {
-          text: query.value,
-          queryType: conn.query_type,
-          editorType: 'trilogy',
-          imports: chartImports.value,
-          extraFilters: filters.value,
-          parameters: chartParameters.value,
-          extraContent: rootContent.value,
+        // Cancel any existing query for this table component
+        if (currentQueryId.value) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
 
-        // Get the query execution service from the provider
+        // Execute query through the dashboard query executor
+        let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
-        if (!queryExecutionService) {
-          throw new Error('Query execution service not found!')
-        }
-
-        // Execute query
-        const { resultPromise } = await queryExecutionService.executeQuery(
-          //@ts-ignore
-          connName,
-          queryInput,
-          // Progress callback for connection issues
-          () => {},
-          (message) => {
-            if (message.error) {
-              error.value = message.message
-            }
-          },
-        )
-
-        // Handle result
-        const result = await resultPromise
-
-        // Update component state based on result
-        if (result.success && result.results) {
-          props.setItemData(props.itemId, props.dashboardId, {
-            results: result.results as Results,
-          })
-          error.value = null
-        } else if (result.error) {
-          error.value = result.error
-        }
+        await dashboardQueryExecutor.waitForQuery(queryId)
       } catch (err) {
-        if (err instanceof Error) {
-          error.value = err.message
-        } else {
-          error.value = 'Unknown error occurred'
-        }
-        console.error('Error running query:', err)
-      } finally {
-        loading.value = false
-        startTime.value = null
+        console.error('Error setting up query:', err)
+        currentQueryId.value = null
       }
     }
 
-    // Handle individual chart refresh button click
+    // Handle individual component refresh button click
     const handleLocalRefresh = () => {
-      console.log('local refresh click')
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
-      }
-      executeQuery()
-    }
-
-    // Global dashboard refresh handler
-    const handleDashboardRefresh = () => {
-      console.log(`Chart ${props.itemId} received dashboard refresh event`)
-      executeQuery()
-    }
-
-    // Targeted chart refresh handler
-    const handleChartRefresh = (event: CustomEvent) => {
-      // Only refresh this chart if it's the target or no specific target
-      if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
-        console.log(`Chart ${props.itemId} received targeted refresh event`)
+      } else {
         executeQuery()
       }
     }
+
     const handleDimensionClick = (dimension: DimensionClick) => {
       emit('dimension-click', {
         source: props.itemId,
@@ -258,19 +266,7 @@ export default defineComponent({
       emit('background-click')
     }
 
-    // Remove event listeners when the component is unmounted
-    onUnmounted(() => {
-      window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
-
-    // Initial query execution
-
-    executeQuery()
-
-    watch([query, chartImports], () => {
-      executeQuery()
-    })
+    // Watch for changes and re-execute query
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content
       const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
@@ -281,14 +277,16 @@ export default defineComponent({
     })
 
     return {
+      chartContainer,
       results,
+      ready,
       loading,
+      showLoading,
       error,
       query,
       chartHeight,
       chartWidth,
       chartConfig,
-      onChartConfigChange,
       onRefresh,
       handleLocalRefresh,
       startTime,
@@ -305,10 +303,8 @@ export default defineComponent({
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  /* padding: 5px; */
-  color: #666;
+  justify-content: flex-start;
+  align-items: stretch;
   position: relative;
   overflow-y: hidden;
 }
@@ -328,51 +324,48 @@ export default defineComponent({
   z-index: 10;
 }
 
-.chart-query {
-  font-family: monospace;
-  font-size: 12px;
-  margin-top: 10px;
-  padding: 8px;
-  background-color: var(--bg-color);
-  border: 1px var(--border);
-  border-radius: 4px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chart-actions {
+.controls-toggle {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 5;
+  top: 50%;
+  right: 0px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  /* gap: 4px; */
 }
 
-.chart-refresh-button {
+.control-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background-color: var(--button-bg, #f5f5f5);
-  border: 1px solid var(--border-light, #ddd);
-  color: var(--text-color, #333);
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  background-color: transparent;
+  color: var(--text-color);
   cursor: pointer;
-  opacity: 0.7;
-  transition:
-    opacity 0.2s,
-    background-color 0.2s;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  /* border-radius: 4px; */
 }
 
-.chart-refresh-button:hover {
-  opacity: 1;
-  background-color: var(--button-hover-bg, #e0e0e0);
+.control-btn:hover {
+  background-color: var(--button-mouseover);
 }
 
-.refresh-icon {
-  font-size: 16px;
-  font-weight: bold;
+.control-btn:disabled {
+  background-color: var(--border-light);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+.control-btn:disabled:hover {
+  background-color: var(--border-light);
+}
+
+.control-btn.active {
+  background-color: var(--special-text);
+  color: white;
 }
 </style>

@@ -15,6 +15,8 @@ import type { DashboardImport } from '../../dashboards/base'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
+import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
 
 // Props definition
 const props = defineProps<{
@@ -37,6 +39,7 @@ const emit = defineEmits<{
 const dashboardStore = useDashboardStore()
 const editorStore = useEditorStore()
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
+const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const { setActiveDashboard } = useScreenNavigation()
 
 if (!queryExecutionService || !editorStore) {
@@ -116,6 +119,7 @@ watch(
 
 onMounted(() => {
   if (dashboard.value && dashboard.value.id) {
+    let dashboardObj = dashboard.value
     dashboardStore.setActiveDashboard(dashboard.value.id)
 
     // Initialize the filter from the dashboard if it exists
@@ -123,7 +127,12 @@ onMounted(() => {
       filter.value = dashboard.value.filter
       filterInput.value = dashboard.value.filter
     }
-
+    let executor = getDashboardQueryExecutor(dashboard.value.id)
+    // filter gridItems and get the KEYS belonging to VALUEs with no results
+    let unRun = Object.keys(dashboard.value.gridItems).filter(
+      (itemId) => !dashboardObj.gridItems[itemId].results,
+    )
+    executor?.runBatch(unRun)
     populateCompletion()
   }
 
@@ -332,10 +341,8 @@ function openEditor(item: LayoutItem): void {
 
 function saveContent(content: string): void {
   if (!dashboard.value || !dashboard.value.id || !editingItem.value) return
-
   const itemId = editingItem.value.i
-  console.log('Saving content for item:', itemId, content)
-  dashboardStore.updateItemContent(dashboard.value.id, itemId, content)
+  setItemData(itemId, dashboard.value.id, { content })
   closeEditors()
 }
 
@@ -391,6 +398,7 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
       imports: dashboard.value.imports,
       filters: [],
       rootContent: [],
+      connectionName: dashboard.value.connection || '',
     }
   }
 
@@ -423,21 +431,27 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
     structured_content: isMarkdownData(item.content)
       ? item.content
-      : { markdown: item.content || '', query: '' },
+      : {
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
     height: item.height || 0,
-    imports: dashboard.value.imports,
     chartConfig: item.chartConfig,
     filters: finalFilters,
-    connectionName: dashboard.value.connection,
     chartFilters: item.chartFilters || [],
     conceptFilters: item.conceptFilters || [],
     parameters: item.parameters || {},
     onRefresh: handleRefresh,
     rootContent: rootContent.value,
     results: item.results || null,
+    connectionName: dashboard.value.connection || '',
+    imports: dashboard.value.imports,
+    error: item.error || '',
+    loading: item.loading || false,
+    loadStartTime: item.loadStartTime || null, // Include load start time if available
   }
 }
 
@@ -460,13 +474,35 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
 
   if (data.content) {
     dashboardStore.updateItemContent(dashboard.value.id, itemId, data.content)
+    let executor = getDashboardQueryExecutor(dashboard.value.id)
+    console.log('Running query for item after content update:', itemId)
+    executor?.runSingle(itemId)
+  }
+
+  if (data.dimensions) {
+    dashboardStore.updateItemLayoutDimensions(
+      dashboard.value.id,
+      itemId,
+      null,
+      null,
+      data.dimensions.width,
+      data.dimensions.height,
+    )
   }
 
   if (data.width && data.height) {
     dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
   }
+  if (data.loading) {
+    dashboardStore.updateItemLoading(dashboard.value.id, itemId, data.loading)
+  }
+
   if (data.results) {
     dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
+  }
+
+  if (data.error) {
+    dashboardStore.updateItemError(dashboard.value.id, itemId, data.error)
   }
 
   if (data.allowCrossFilter !== undefined) {
@@ -478,6 +514,28 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   }
 }
 
+function getDashboardQueryExecutor(dashboardId: string): DashboardQueryExecutor {
+  if (!dashboard.value || !dashboard.value.id)
+    throw new Error('Dashboard not found or not initialized')
+  if (!queryExecutionService) throw new Error('Query execution service not found')
+  if (!connectionStore) throw new Error('Connection store not found')
+  let dashboardData = dashboardStore.dashboards[dashboardId]
+  const executor = dashboardStore.getOrCreateQueryExecutor(dashboardId, {
+    queryExecutionService,
+    connectionStore,
+    editorStore,
+    connectionName: dashboardData.connection,
+    dashboardId: dashboardId,
+    getDashboardData: (id: string) => dashboardStore.dashboards[id],
+    getItemData,
+    setItemData,
+  })
+  if (!executor) {
+    console.warn('No query executor found for dashboard:', dashboard.value.id)
+  }
+  return executor
+}
+
 // Connection management
 function onConnectionChange(event: Event): void {
   const target = event.target as HTMLSelectElement
@@ -485,6 +543,7 @@ function onConnectionChange(event: Event): void {
 
   if (dashboard.value && dashboard.value.id) {
     dashboardStore.updateDashboardConnection(dashboard.value.id, connectionId)
+    dashboardStore.getQueryExecutor(dashboard.value.id)?.setConnection(connectionId)
   }
 }
 
@@ -493,16 +552,15 @@ function handleRefresh(itemId?: string): void {
   if (!dashboard.value) return
 
   if (itemId) {
-    const refreshEvent = new CustomEvent('chart-refresh', { detail: { itemId } })
-    window.dispatchEvent(refreshEvent)
+    dashboardStore.getQueryExecutor(dashboard.value.id)?.runSingle(itemId)
     emit('dimensionsUpdate', itemId)
     return
   }
 
-  const refreshEvent = new CustomEvent('dashboard-refresh')
-  window.dispatchEvent(refreshEvent)
-
-  emit('triggerResize')
+  // refresh them all
+  dashboardStore
+    .getQueryExecutor(dashboard.value.id)
+    ?.runBatch(Object.keys(dashboard.value.gridItems))
 }
 
 // Filter management
@@ -582,6 +640,7 @@ defineExpose({
   openEditor,
   saveContent,
   closeEditors,
+  getDashboardQueryExecutor,
   getItemData,
   setItemData,
   handleRefresh,

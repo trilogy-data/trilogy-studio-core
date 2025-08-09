@@ -88,6 +88,7 @@ class MultiQueryComponent(BaseModel):
     query: str
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
+    label: str | None = None
 
 
 class MultiQueryInSchema(BaseModel):

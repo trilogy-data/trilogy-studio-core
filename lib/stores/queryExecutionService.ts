@@ -7,9 +7,6 @@ import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 
-// BigInt.prototype.toJSON = function() {
-//   return this.toString();
-// };
 export interface QueryInput {
   text: string
   editorType: 'trilogy' | 'sql' | 'preql'

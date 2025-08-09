@@ -156,11 +156,13 @@ function handleToggleEditMode() {
         :style="{ height: `${calculateMobileHeight(item)}px` }"
       >
         <DashboardGridItem
+          v-if="dashboardBase"
           :dashboard-id="dashboard.id"
           :item="item"
           :edit-mode="editMode"
           :filter="filter"
           :get-item-data="getItemData"
+          :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
           @dimension-click="dashboardBase?.setCrossFilter"
           :set-item-data="setItemData"
           @edit-content="dashboardBase?.openEditor"

@@ -9,6 +9,7 @@ const createHeadlineLayer = (
   columns: Map<string, ResultColumn>,
   currentTheme: string,
   isMobile: boolean = false,
+  datum: any = null,
 ) => {
   let xOffset = 0
   let yOffset = 0
@@ -78,28 +79,33 @@ const createHeadlineLayer = (
       },
     }
   }
+  let labelMark = {
+    mark: {
+      type: 'text',
+      fontSize: { expr: labelFontSizeFormula },
+      fontWeight: 'normal',
+      align: 'center',
+      baseline: 'top',
+      dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
+      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
+    },
+    encoding: {
+      text: { value: snakeCaseToCapitalizedWords(column) },
+      color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
+    },
+  }
+  if (!datum) {
+    if (!includeLabel) {
+      return []
+    } else {
+      return [labelMark]
+    }
+  }
   if (!includeLabel) {
     // If it's an image column, we don't need a label
     return [topMark]
   }
-  return [
-    topMark,
-    {
-      mark: {
-        type: 'text',
-        fontSize: { expr: labelFontSizeFormula },
-        fontWeight: 'normal',
-        align: 'center',
-        baseline: 'top',
-        dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
-      },
-      encoding: {
-        text: { value: snakeCaseToCapitalizedWords(column) },
-        color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
-      },
-    },
-  ]
+  return [topMark, labelMark]
 }
 
 export const createHeadlineSpec = (
@@ -120,6 +126,7 @@ export const createHeadlineSpec = (
       columns,
       currentTheme,
       isMobile,
+      data ? data[0][column.name] : null,
     )
   })
 

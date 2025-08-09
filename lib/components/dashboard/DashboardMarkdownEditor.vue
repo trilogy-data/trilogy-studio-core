@@ -32,6 +32,8 @@ const contentData = computed(() => {
 
 const markdownText = ref(contentData.value.markdown)
 const queryText = ref(contentData.value.query)
+// Add internal state for the query editor content
+const queryEditorContent = ref(contentData.value.query)
 const imports = ref(props.imports)
 const editor = ref(null as EditorRef | null)
 
@@ -84,17 +86,27 @@ watch(
 
     markdownText.value = data.markdown
     queryText.value = data.query
+    queryEditorContent.value = data.query
   },
 )
 
-function saveContent(): void {
-  if (editor.value) {
-    const editorContent = editor.value.getContent()
-    queryText.value = editorContent
+// Watch for tab changes to preserve query editor content
+watch(activeTab, (_, oldTab) => {
+  if (oldTab === 'query' && editor.value) {
+    // Save the current query editor content before switching away
+    queryEditorContent.value = editor.value.getContent()
   }
+})
+
+function saveContent(): void {
+  // If we're currently on the query tab, get the latest content
+  if (activeTab.value === 'query' && editor.value) {
+    queryEditorContent.value = editor.value.getContent()
+  }
+
   const contentToSave = {
     markdown: markdownText.value,
-    query: queryText.value,
+    query: queryEditorContent.value,
   }
   emit('save', contentToSave)
 }
@@ -104,6 +116,10 @@ function cancel(): void {
 }
 
 function switchTab(tab: string): void {
+  // Save current query editor content before switching
+  if (activeTab.value === 'query' && editor.value) {
+    queryEditorContent.value = editor.value.getContent()
+  }
   activeTab.value = tab
 }
 
@@ -354,7 +370,7 @@ Template examples:
           </div>
           <SimpleEditor
             class="editor-content"
-            :initContent="queryText"
+            :initContent="queryEditorContent"
             :connectionName="connectionName"
             :imports="imports"
             :rootContent="rootContent"

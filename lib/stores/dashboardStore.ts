@@ -9,6 +9,10 @@ import type { ModelConceptInput } from '../llm'
 import { completionToModelInput } from '../llm/utils'
 import type { EditorStoreType } from './editorStore'
 import type { Results } from '../editors/results'
+import {
+  DashboardQueryExecutor,
+  type QueryExecutorDependencies,
+} from '../dashboards/dashboardQueryExecutor'
 
 interface ContentPlaceholder {
   type: 'markdown' | 'chart' | 'table'
@@ -19,6 +23,8 @@ export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
     dashboards: {} as Record<string, DashboardModel>,
     activeDashboardId: '',
+    // New state for query executors
+    queryExecutors: {} as Record<string, DashboardQueryExecutor>,
   }),
 
   getters: {
@@ -33,9 +39,92 @@ export const useDashboardStore = defineStore('dashboards', {
     unsavedDashboards: (state) => {
       return Object.values(state.dashboards).filter((dashboard) => dashboard.changed).length
     },
+
+    // New getter for active dashboard's query executor
+    activeQueryExecutor: (state) =>
+      state.activeDashboardId ? state.queryExecutors[state.activeDashboardId] : null,
+
+    // New getter to check if a dashboard has an active executor
+    hasQueryExecutor: (state) => (dashboardId: string) => !!state.queryExecutors[dashboardId],
   },
 
   actions: {
+    // New method: Get or create a query executor for a dashboard
+    getOrCreateQueryExecutor(
+      dashboardId: string,
+      dependencies: QueryExecutorDependencies,
+    ): DashboardQueryExecutor {
+      // Check if dashboard exists
+      if (!this.dashboards[dashboardId]) {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+
+      // Return existing executor if it exists
+      if (this.queryExecutors[dashboardId]) {
+        return this.queryExecutors[dashboardId]
+      }
+
+      // Create new executor
+      const executor = new DashboardQueryExecutor(
+        dependencies.queryExecutionService,
+        dependencies.connectionStore,
+        dependencies.editorStore,
+        dependencies.connectionName,
+        dependencies.dashboardId,
+        dependencies.getDashboardData,
+        dependencies.getItemData,
+        dependencies.setItemData,
+        dependencies.options || {},
+      )
+
+      // Store the executor
+      this.queryExecutors[dashboardId] = executor
+
+      console.log(`Created new query executor for dashboard: ${dashboardId}`)
+
+      return executor
+    },
+
+    // New method: Get existing query executor (returns null if doesn't exist)
+    getQueryExecutor(dashboardId: string): DashboardQueryExecutor | null {
+      return this.queryExecutors[dashboardId] || null
+    },
+
+    // New method: Remove query executor for a dashboard
+    removeQueryExecutor(dashboardId: string): boolean {
+      if (this.queryExecutors[dashboardId]) {
+        // Clear any pending queries before removing
+        this.queryExecutors[dashboardId].clearQueue()
+        delete this.queryExecutors[dashboardId]
+        console.log(`Removed query executor for dashboard: ${dashboardId}`)
+        return true
+      }
+      return false
+    },
+
+    // New method: Clear all query executors
+    clearAllQueryExecutors(): void {
+      Object.keys(this.queryExecutors).forEach((dashboardId) => {
+        this.queryExecutors[dashboardId].clearQueue()
+      })
+      this.queryExecutors = {}
+      console.log('Cleared all query executors')
+    },
+
+    // New method: Get status of all query executors
+    getQueryExecutorStatuses(): Record<string, any> {
+      const statuses: Record<string, any> = {}
+
+      Object.entries(this.queryExecutors).forEach(([dashboardId, executor]) => {
+        statuses[dashboardId] = {
+          dashboardName: this.dashboards[dashboardId]?.name || 'Unknown',
+          ...executor.getStatus(),
+        }
+      })
+
+      return statuses
+    },
+
     // Create a new dashboard
     newDashboard(name: string, connection: string) {
       const id = name
@@ -174,9 +263,6 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     updateDashboardImports(id: string, imports: DashboardImport[]) {
-      console.log('Updating imports for dashboard:', id)
-      console.log('New imports:', imports)
-
       if (this.dashboards[id]) {
         this.dashboards[id].imports = imports
       } else {
@@ -184,9 +270,12 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    // Remove dashboard
+    // Remove dashboard - Enhanced to also remove query executor
     removeDashboard(id: string) {
       if (this.dashboards[id]) {
+        // Remove the query executor if it exists
+        this.removeQueryExecutor(id)
+
         delete this.dashboards[id]
         if (this.activeDashboardId === id) {
           this.activeDashboardId = ''
@@ -249,6 +338,26 @@ export const useDashboardStore = defineStore('dashboards', {
     ) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemResults(itemId, results)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemLoading(
+      dashboardId: string,
+      itemId: string,
+      loading: boolean, // Assuming results can be of any type, adjust as needed
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemLoading(itemId, loading)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemError(dashboardId: string, itemId: string, error: string | null) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemError(itemId, error)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
@@ -340,6 +449,21 @@ export const useDashboardStore = defineStore('dashboards', {
     updateItemDimensions(dashboardId: string, itemId: string, width: number, height: number) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemDimensions(itemId, width, height)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemLayoutDimensions(
+      dashboardId: string,
+      itemId: string,
+      x: number | null = null,
+      y: number | null = null,
+      w: number | null = null,
+      h: number | null = null,
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemLayoutDimensions(itemId, x, y, w, h)
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

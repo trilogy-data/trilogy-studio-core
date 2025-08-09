@@ -9,6 +9,7 @@ import {
   CELL_TYPES,
   type DimensionClick,
 } from '../../dashboards/base'
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 
 // Props definition
 const props = defineProps<{
@@ -16,6 +17,7 @@ const props = defineProps<{
   item: LayoutItem
   editMode: boolean
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
+  getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   setItemData: (itemId: string, dashboardId: string, data: any) => void
 }>()
 
@@ -39,6 +41,20 @@ const isHeaderVisible = ref(false)
 
 // Filter visibility state
 const isFiltersVisible = ref(false)
+
+// Helper function to clean and format filter values
+function cleanFilterValue(value: string): string {
+  return value.replace(/'''/g, "'").replace('local.', '')
+}
+
+// Helper function to truncate filter values
+function truncateFilterValue(value: string, maxLength: number = 1000): string {
+  const cleanValue = cleanFilterValue(value)
+  if (cleanValue.length <= maxLength) {
+    return cleanValue
+  }
+  return cleanValue.substring(0, maxLength) + '...'
+}
 
 // Start editing an item title
 function startTitleEditing(): void {
@@ -82,6 +98,28 @@ function toggleCrossFilterEligible(): void {
   props.setItemData(props.item.i, props.dashboardId, {
     ...itemData,
     allowCrossFilter: newAllowCrossFilter,
+  })
+}
+
+// Increase height
+function increaseHeight(): void {
+  const newHeight = props.item.h + 1
+  props.setItemData(props.item.i, props.dashboardId, {
+    dimensions: {
+      width: props.item.w,
+      height: newHeight,
+    },
+  })
+}
+
+// Decrease height (minimum height of 1)
+function decreaseHeight(): void {
+  const newHeight = Math.max(1, props.item.h - 1)
+  props.setItemData(props.item.i, props.dashboardId, {
+    dimensions: {
+      width: props.item.w,
+      height: newHeight,
+    },
   })
 }
 
@@ -184,6 +222,22 @@ const filterCount = computed(() => {
     <!-- Edit Controls (styled like control buttons) -->
     <div class="header-controls" v-if="editMode">
       <button
+        @click="increaseHeight"
+        class="control-btn"
+        :data-testid="`increase-height-item-${item.i}`"
+        title="Increase height"
+      >
+        <i class="mdi mdi-plus icon"></i>
+      </button>
+      <button
+        @click="decreaseHeight"
+        class="control-btn"
+        :data-testid="`decrease-height-item-${item.i}`"
+        title="Decrease height"
+      >
+        <i class="mdi mdi-minus icon"></i>
+      </button>
+      <button
         @click="openEditor"
         class="control-btn"
         :data-testid="`edit-dashboard-item-content-${item.i}`"
@@ -275,14 +329,13 @@ const filterCount = computed(() => {
           class="filter-tag"
           v-for="(filter, index) in itemData.filters"
           :key="`${filter.source}-${filter.value}-${index}`"
+          :title="cleanFilterValue(filter.value)"
         >
           <span class="filter-content">
             <span class="filter-source"
               >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
             >
-            <span class="filter-value">
-              {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
-            >
+            <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
           </span>
           <button
             class="filter-remove-btn"
@@ -306,14 +359,13 @@ const filterCount = computed(() => {
             class="filter-tag"
             v-for="(filter, index) in itemData.filters"
             :key="`${filter.source}-${filter.value}-${index}`"
+            :title="cleanFilterValue(filter.value)"
           >
             <span class="filter-content">
               <span class="filter-source"
                 >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
               >
-              <span class="filter-value">
-                {{ filter.value.replace(/'''/g, "'").replace('local.', '') }}</span
-              >
+              <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
             </span>
             <button
               class="filter-remove-btn"
@@ -337,6 +389,7 @@ const filterCount = computed(() => {
         :itemId="item.i"
         :setItemData="setItemData"
         :getItemData="getItemData"
+        :getDashboardQueryExecutor="getDashboardQueryExecutor"
         :editMode="editMode"
         @dimension-click="dimensionClick"
         @background-click="backgroundClick"
@@ -539,6 +592,11 @@ const filterCount = computed(() => {
 
 .filter-value {
   color: var(--text-color);
+  word-break: break-word;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-remove-btn {

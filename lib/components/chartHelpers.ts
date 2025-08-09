@@ -279,6 +279,7 @@ export class ChromaChartHelpers {
    */
   validateConfigFields(config: ChartConfig, columns: Map<string, ResultColumn>): boolean {
     let isValid = true
+    let anySet = false
     const fieldsToCheck: FieldKey[] = [
       'xField',
       'yField',
@@ -290,12 +291,16 @@ export class ChromaChartHelpers {
     ]
 
     for (const field of fieldsToCheck) {
+      anySet = anySet || Boolean(config[field])
       if (config[field] && !columns.has(config[field])) {
         config[field] = ''
         isValid = false
       }
     }
-
+    // if we have no values set, update
+    if (!anySet) {
+      return false
+    }
     return isValid
   }
 

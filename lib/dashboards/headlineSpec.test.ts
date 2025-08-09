@@ -72,7 +72,7 @@ describe('createHeadlineSpec', (): void => {
       const spec = createHeadlineSpec(null, mockColumns, 'light' as Theme)
 
       expect(spec.data.values).toEqual([])
-      expect(spec.layer).toHaveLength(8) // Still creates layers for columns
+      expect(spec.layer).toHaveLength(4) // Still creates layers for columns
     })
 
     it('should handle empty columns', (): void => {

@@ -21,7 +21,7 @@
       @background-click="handleBackgroundClick"
       @refresh-click="handleLocalRefresh"
     />
-    <div v-if="loading" class="loading-overlay">
+    <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
   </div>
@@ -40,7 +40,7 @@ import {
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChartConfig } from '../../editors/results'
-import QueryExecutionService from '../../stores/queryExecutionService'
+import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import LoadingView from '../LoadingView.vue'
@@ -68,22 +68,27 @@ export default defineComponent({
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
+    setItemData: {
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => void>,
+      required: true,
+      default: () => ({ type: 'CHART', content: '' }),
+    },
     editMode: {
       type: Boolean,
       required: true,
     },
-    setItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
+
+    getDashboardQueryExecutor: {
+      type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
-      default: () => ({ type: 'CHART', content: '' }),
     },
   },
   setup(props, { emit }) {
-    const loading = ref(false)
-    const error = ref<string | null>(null)
-    const startTime = ref<number | null>(null)
     const ready = ref(false)
     const chartContainer = ref<HTMLElement | null>(null)
+    const currentQueryId = ref<string | null>(null)
+    const showLoading = ref(false)
+    const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -104,25 +109,31 @@ export default defineComponent({
 
     // Set up event listeners when the component is mounted
     onMounted(() => {
-      window.addEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.addEventListener('chart-refresh', handleChartRefresh as EventListener)
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
+        // this is to delay *rendering* the chart, not query execution
         const delay = getPositionBasedDelay()
 
         if (!results.value) {
           ready.value = true
-          executeQuery()
+          // executeQuery()
         } else {
           // Cached results with delay
-          loading.value = true
           setTimeout(() => {
-            loading.value = false
             ready.value = true
           }, delay)
         }
       }, 0) // Use nextTick equivalent
     })
+
+    // Clean up timeout on unmount
+    onUnmounted(() => {
+      if (loadingTimeoutId.value) {
+        clearTimeout(loadingTimeoutId.value)
+        loadingTimeoutId.value = null
+      }
+    })
+
     const query = computed(() => {
       return props.getItemData(props.itemId, props.dashboardId).content
     })
@@ -147,12 +158,16 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
-    const chartImports = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).imports || []
+    const loading = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loading || false
     })
 
-    const chartParameters = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).parameters || []
+    const error = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).error || null
+    })
+
+    const startTime = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
     const filters = computed(() => {
@@ -167,110 +182,72 @@ export default defineComponent({
       )
     })
 
-    const connectionName = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).connectionName || []
-    })
-
-    const rootContent = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).rootContent || []
-    })
-
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
       return itemData.onRefresh || null
     })
 
+    // Watch loading state and manage the 150ms delay
+    watch(
+      loading,
+      (newLoading, _) => {
+        // Clear any existing timeout
+        if (loadingTimeoutId.value) {
+          clearTimeout(loadingTimeoutId.value)
+          loadingTimeoutId.value = null
+        }
+
+        if (newLoading) {
+          // Start loading - set a timeout to show loading after 150ms
+          loadingTimeoutId.value = setTimeout(() => {
+            showLoading.value = true
+            loadingTimeoutId.value = null
+          }, 150)
+        } else {
+          // Stop loading - hide immediately
+          showLoading.value = false
+        }
+      },
+      { immediate: true },
+    )
+
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
     }
-    if (!connectionStore || !queryExecutionService) {
+
+    if (!connectionStore) {
       throw new Error('Connection store not found!')
     }
 
     const executeQuery = async (): Promise<any> => {
       if (!query.value) return
-      const dashboardId = props.dashboardId
-      const queryText = query.value
-      startTime.value = Date.now()
-      loading.value = true
-      error.value = null
+
+      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
+      if (!dashboardQueryExecutor) {
+        throw new Error('Dashboard query executor not found!')
+      }
 
       try {
         if (analyticsStore) {
           analyticsStore.log('dashboard-chart-execution', 'CHART', true)
         }
 
-        // Prepare query input
-        let connName = connectionName.value || ''
-        if (!connName) {
-          return
-        }
-        //@ts-ignore
-        const conn = connectionStore.connections[connName]
-        if (!conn) {
-          throw new Error(`Connection "${connName}" not found!`)
-        }
-        // Create query input object using the chart's query content
-        const queryInput = {
-          text: query.value,
-          queryType: conn.query_type,
-          editorType: 'trilogy',
-          imports: chartImports.value,
-          extraFilters: filters.value,
-          extraContent: rootContent.value,
-          parameters: chartParameters.value,
+        // Cancel any existing query for this chart
+        if (currentQueryId.value) {
+          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
 
-        // Get the query execution service from the provider
+        // Execute query through the dashboard query executor
+        let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
 
-        if (!queryExecutionService) {
-          throw new Error('Query execution service not found!')
-        }
-
-        // Execute query
-        const { resultPromise } = await queryExecutionService.executeQuery(
-          //@ts-ignore
-          connName,
-          queryInput,
-          // Progress callback for connection issues
-          () => {},
-          (message) => {
-            if (message.error) {
-              error.value = message.message
-            }
-          },
-        )
-
-        // Handle result
-        const result = await resultPromise
-        if (props.dashboardId != dashboardId || query.value !== queryText) {
-          console.log('Query result ignored due to dashboard or query text ID mismatch')
-          return
-        }
-        // Update component state based on result
-        if (result.success && result.results) {
-          props.setItemData(props.itemId, props.dashboardId, {
-            results: result.results,
-          })
-          error.value = null
-        } else if (result.error) {
-          error.value = result.error
-        }
+        await dashboardQueryExecutor.waitForQuery(queryId)
       } catch (err) {
-        if (err instanceof Error) {
-          error.value = err.message
-        } else {
-          error.value = 'Unknown error occurred'
-        }
-        console.error('Error running query:', err)
-      } finally {
-        loading.value = false
-        startTime.value = null
+        console.error('Error setting up query:', err)
+        currentQueryId.value = null
       }
     }
 
@@ -283,20 +260,6 @@ export default defineComponent({
       }
     }
 
-    // Global dashboard refresh handler
-    const handleDashboardRefresh = () => {
-      console.log(`Chart ${props.itemId} received dashboard refresh event`)
-      executeQuery()
-    }
-
-    // Targeted chart refresh handler
-    const handleChartRefresh = (event: CustomEvent) => {
-      // Only refresh this chart if it's the target or no specific target
-      if (!event.detail || !event.detail.itemId || event.detail.itemId === props.itemId) {
-        console.log(`Chart ${props.itemId} received targeted refresh event`)
-        executeQuery()
-      }
-    }
     const handleDimensionClick = (dimension: DimensionClick) => {
       emit('dimension-click', {
         source: props.itemId,
@@ -310,15 +273,6 @@ export default defineComponent({
       emit('background-click')
     }
 
-    // Remove event listeners when the component is unmounted
-    onUnmounted(() => {
-      window.removeEventListener('dashboard-refresh', handleDashboardRefresh)
-      window.removeEventListener('chart-refresh', handleChartRefresh as EventListener)
-    })
-
-    watch([query, chartImports], () => {
-      executeQuery()
-    })
     watch([filters], (newVal, oldVal) => {
       // Check if arrays have the same content
       const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
@@ -333,6 +287,7 @@ export default defineComponent({
       results,
       ready,
       loading,
+      showLoading,
       error,
       query,
       chartHeight,
