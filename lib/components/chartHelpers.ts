@@ -148,6 +148,8 @@ export class ChromaChartHelpers {
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
 
+    
+
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
@@ -225,7 +227,6 @@ export class ChromaChartHelpers {
 
     // Determine eligible fields for filtering
     const eligible = this.getEligibleFields(config, columns)
-
     // Handle x-field clicks
     if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
       let xFilterValue = item.datum[xFieldRaw]

@@ -22,7 +22,7 @@ export function computeMercatorProjectionFactors(
     return [x, y]
   }
 
-  const projected = data.map((d) => mercator(d[lonField], d[latField]))
+  const projected = data.filter(d => d[lonField] && d[latField]).map((d) => mercator(d[lonField], d[latField]))
   const xs = projected.map(([x]) => x)
   const ys = projected.map(([_, y]) => y)
 
@@ -43,7 +43,7 @@ export function computeMercatorProjectionFactors(
 
   // Use the smaller dimension to ensure the map fits within bounds
   // Add padding factor (0.9) to leave some margin
-  const scaleFactor = 0.9 / Math.max(dx, dy)
+  const scaleFactor = Math.max(0.9 / Math.max(dx, dy), 0.25)
 
   return {
     scaleFactor,

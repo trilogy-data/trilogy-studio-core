@@ -37,7 +37,8 @@
                   >
                     <div class="column-row">
                       <div class="column-info">
-                        <span class="pk-label">Grain Key?</span>
+                        <span class="pk-label">
+                        <span >Grain Key?</span>
                         <label class="checkbox-label">
                           <input
                             type="checkbox"
@@ -46,6 +47,8 @@
                             @change="updateDatasourcePreview"
                             :data-testid="`grain-key-checkbox-${column.name}`"
                           />
+                              </label>
+                              </span>
                           <div class="menu-title" @click="() => startEditing(column.name)">
                             Field:
                             <span
@@ -70,7 +73,7 @@
                           </div>
                           <span class="column-type">(bound to: {{ column.name }})</span>
                           <span class="column-type">({{ column.trilogyType }})</span>
-                        </label>
+                    
                       </div>
                       <div class="column-description">
                         <input
@@ -279,7 +282,7 @@ const datasourcePreview = computed(() => {
       const alias = columnAliases.value[column.name] || column.name
       return primaryKeyFields.includes(alias)
         ? `key ${alias} ${column.trilogyType};${descriptionComment}`
-        : `property <${keyPrefix}>.${column.name} ${column.trilogyType};${descriptionComment}`
+        : `property <${keyPrefix}>.${alias} ${column.trilogyType};${descriptionComment}`
     })
     .join('\n')
 
@@ -580,7 +583,6 @@ const createDatasource = async () => {
 .pk-label {
   font-size: 10px;
   color: var(--text-faint);
-  margin-left: auto;
 }
 
 .column-header {

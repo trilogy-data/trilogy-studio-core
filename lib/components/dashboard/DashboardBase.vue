@@ -132,8 +132,11 @@ onMounted(() => {
     let unRun = Object.keys(dashboard.value.gridItems).filter(
       (itemId) => !dashboardObj.gridItems[itemId].results,
     )
+    console.log('Running initial queries for dashboard:', dashboard.value.id)
     executor?.runBatch(unRun)
-    populateCompletion()
+    if (dashboard.value.state !== 'editing') {
+      emit('fullScreen', true)
+    }
   }
 
   // Set up resize observer
@@ -240,11 +243,6 @@ const validateFilter = async (filter: string) => {
 }
 
 async function populateCompletion() {
-  if (dashboard.value) {
-    if (dashboard.value && dashboard.value.state !== 'editing') {
-      emit('fullScreen', true)
-    }
-  }
   if (dashboard.value && dashboard.value.id && queryExecutionService) {
     let completion = await dashboardStore.populateCompletion(
       dashboard.value.id,

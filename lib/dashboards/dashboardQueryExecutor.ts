@@ -370,6 +370,8 @@ export class DashboardQueryExecutor {
    * Queue multiple queries for batch execution with prioritization
    */
   public runBatch(itemIds: string[]): string[] {
+    console.log(`Running batch for ${itemIds.length} items`)
+    // throw new Error('Batch execution is not implemented yet')
     const queryIds: string[] = []
 
     // Clear any pending batch timeout

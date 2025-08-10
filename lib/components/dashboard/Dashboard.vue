@@ -282,23 +282,7 @@ function handleToggleEditMode() {
   height: 100%;
 }
 
-.fullscreen-grid-container {
-  flex: 1;
-  overflow: auto;
-  padding: 15px;
-  background-color: var(--bg-color);
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
 
-.fullscreen-grid-content {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  /* Remove max-width constraint in fullscreen */
-}
 
 .vue-grid-layout {
   background: var(--bg-color);

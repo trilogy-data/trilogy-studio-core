@@ -80,7 +80,7 @@
         <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'dashboard-import'">
-        <dashboard-auto-importer @import-complete="handleImportComplete" />
+        <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models />

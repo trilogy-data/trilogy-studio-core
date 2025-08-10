@@ -256,6 +256,7 @@ export default defineComponent({
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
     const lastSpec = ref<string | null>(null)
     const vegaView = ref<View | null>(null)
+    const hasLoaded = ref<boolean>(false)
     let removeEventListener: (() => void) | null = null
 
     if (!settingsStore) {
@@ -383,11 +384,6 @@ export default defineComponent({
       }
     }
 
-    // Flag to determine if we should show the trellis option
-    const hasTrellisOption = computed(() => {
-      return props.data && props.data.length > 0 && Object.keys(props.columns).length > 2
-    })
-
     // Render the chart
     const renderChart = async (force: boolean = false) => {
       if (!vegaContainer.value || showingControls.value) return
@@ -397,7 +393,7 @@ export default defineComponent({
 
       const currentSpecString = JSON.stringify(spec)
 
-      if (lastSpec.value === currentSpecString && !force) {
+      if (hasLoaded.value && lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
       }
@@ -412,7 +408,11 @@ export default defineComponent({
         }).then((result) => {
           // Store the view reference for downloading
           vegaView.value = result.view
+          hasLoaded.value = true
 
+          if (removeEventListener) {
+            removeEventListener() // Clean up previous listener if it exists
+          }
           // Setup event listeners using the helper
           removeEventListener = chartHelpers.setupEventListeners(
             result.view,
@@ -501,7 +501,6 @@ export default defineComponent({
       internalConfig,
       renderChart,
       filteredColumnsInternal,
-      hasTrellisOption,
       showingControls,
       updateConfig,
       toggleControls,
@@ -516,10 +515,6 @@ export default defineComponent({
     // Computed property to get controls visible for the current chart type
     visibleControls(): ChartControl[] {
       return Controls.filter((control) => {
-        // Special case for trellis field - only show if hasTrellisOption is true
-        if (control.id === 'trellis-field' && !this.hasTrellisOption) {
-          return false
-        }
         return control.visibleFor.includes(this.internalConfig.chartType)
       })
     },
