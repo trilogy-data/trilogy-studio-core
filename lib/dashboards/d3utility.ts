@@ -22,7 +22,9 @@ export function computeMercatorProjectionFactors(
     return [x, y]
   }
 
-  const projected = data.filter(d => d[lonField] && d[latField]).map((d) => mercator(d[lonField], d[latField]))
+  const projected = data
+    .filter((d) => d[lonField] && d[latField])
+    .map((d) => mercator(d[lonField], d[latField]))
   const xs = projected.map(([x]) => x)
   const ys = projected.map(([_, y]) => y)
 

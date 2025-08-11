@@ -134,6 +134,10 @@ onMounted(() => {
     )
     console.log('Running initial queries for dashboard:', dashboard.value.id)
     executor?.runBatch(unRun)
+    if (globalCompletion.value.length === 0) {
+      populateCompletion()
+    }
+
     if (dashboard.value.state !== 'editing') {
       emit('fullScreen', true)
     }
@@ -577,7 +581,10 @@ function setCrossFilter(info: DimensionClick): void {
     {} as Record<string, string>,
   )
 
-  if (!finalFilters || Object.keys(finalFilters).length === 0) return
+  if (!finalFilters || Object.keys(finalFilters).length === 0) {
+    console.log('No valid filters to apply from cross-filter event')
+    return
+  }
 
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,

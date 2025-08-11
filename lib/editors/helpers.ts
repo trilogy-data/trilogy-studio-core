@@ -14,6 +14,7 @@ export function buildEditorTree(
     type: string
     indent: Array<number>
     editor?: any
+    connection?: string
   }> = []
   const processedConnections = new Set<string>()
 
@@ -154,6 +155,7 @@ export function buildEditorTree(
             label: key,
             type: 'folder',
             indent: currentIndent,
+            connection: connection,
           })
 
           // If folder is not collapsed, add its contents

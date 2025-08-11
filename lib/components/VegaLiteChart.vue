@@ -410,9 +410,9 @@ export default defineComponent({
           vegaView.value = result.view
           hasLoaded.value = true
 
-          if (removeEventListener) {
-            removeEventListener() // Clean up previous listener if it exists
-          }
+          // if (removeEventListener) {
+          //   removeEventListener() // Clean up previous listener if it exists
+          // }
           // Setup event listeners using the helper
           removeEventListener = chartHelpers.setupEventListeners(
             result.view,

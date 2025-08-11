@@ -52,7 +52,7 @@
         class="action-item"
         :action="() => $emit('generate')"
         data-testid="editor-generate-button"
-        >Generate
+        >Assistant
       </loading-button>
       <button
         @click="() => (loading ? $emit('cancel') : $emit('run'))"

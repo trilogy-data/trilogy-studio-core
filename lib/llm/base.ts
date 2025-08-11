@@ -17,11 +17,12 @@ export interface LLMRequestOptions {
 }
 
 export interface LLMMessage {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   modelInfo?: {
     totalTokens: number
   }
+  hidden?: boolean // Used to hide messages in the UI
 }
 
 export abstract class LLMProvider {

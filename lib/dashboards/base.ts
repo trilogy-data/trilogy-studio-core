@@ -208,10 +208,11 @@ export class DashboardModel implements Dashboard {
     if (type === CELL_TYPES.MARKDOWN) {
       defaultHeight = 3 // Smaller height for markdown
     }
-
+    let yFinal = y
+    yFinal = this.layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0)
     this.layout.push({
       x,
-      y,
+      y: yFinal,
       w: w,
       h: h || defaultHeight,
       i: itemId,

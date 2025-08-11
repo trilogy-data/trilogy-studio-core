@@ -483,7 +483,8 @@ const filterCount = computed(() => {
 
 /* Make sure non-drag-handle content doesn't trigger dragging */
 .grid-item-content *:not(.grid-item-drag-handle) {
-  touch-action: auto !important;
+  /* touch-action: auto !important; */
+  touch-action: none;
 }
 
 .content-area {

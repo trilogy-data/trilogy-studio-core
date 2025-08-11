@@ -2,7 +2,13 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnFormat, createFieldEncoding, getFormatHint, getVegaFieldType } from './helpers'
+import {
+  createSizeEncoding,
+  createColorEncoding,
+  createFieldEncoding,
+  getFormatHint,
+  getVegaFieldType,
+} from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
@@ -10,8 +16,7 @@ import { createHeadlineSpec } from './headlineSpec'
 import { createBarChartSpec } from './barChartSpec'
 import { createDonutChartSpec } from './donutSpec'
 import { createBarHChartSpec } from './barHChartSpec'
-
-const HIGHLIGHT_COLOR = '#FF7F7F'
+import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 
 /**
  * Create a field encoding for Vega-Lite
@@ -20,29 +25,24 @@ const HIGHLIGHT_COLOR = '#FF7F7F'
 /**
  * Generate tooltip fields with proper formatting
  */
-const generateTooltipFields = (
-  _: string,
-  xField: string,
-  yField: string,
-  columns: Map<string, ResultColumn>,
-  colorField?: string,
-  sizeField?: string,
-): any[] => {
+const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
 
-  if (xField && columns.get(xField)) {
-    fields.push(createFieldEncoding(xField, columns, {}, false))
+  if (config.xField && columns.get(config.xField)) {
+    fields.push(createFieldEncoding(config.xField, columns, {}, false))
   }
 
-  if (yField && columns.get(yField)) {
-    fields.push(createFieldEncoding(yField, columns, {}, false))
+  if (config.yField && columns.get(config.yField)) {
+    fields.push(createFieldEncoding(config.yField, columns, {}, false))
   }
-
-  if (colorField && columns.get(colorField)) {
-    fields.push(createFieldEncoding(colorField, columns, {}, false))
+  if (config.yField2 && columns.get(config.yField2)) {
+    fields.push(createFieldEncoding(config.yField2, columns, {}, false))
   }
-  if (sizeField && columns.get(sizeField)) {
-    fields.push(createFieldEncoding(sizeField, columns, {}, false))
+  if (config.colorField && columns.get(config.colorField)) {
+    fields.push(createFieldEncoding(config.colorField, columns, {}, false))
+  }
+  if (config.sizeField && columns.get(config.sizeField)) {
+    fields.push(createFieldEncoding(config.sizeField, columns, {}, false))
   }
   return fields
 }
@@ -61,310 +61,6 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
         bandPaddingInner: 0.2,
       },
     },
-  }
-}
-
-/**
- * Create color encoding configuration
- */
-const createColorEncoding = (
-  colorField: string | undefined,
-  columns: Map<string, ResultColumn>,
-  isMobile: boolean = false,
-  currentTheme: string = 'light',
-  hideLegend: boolean = false,
-) => {
-  let legendConfig = {}
-  if (isMobile) {
-    legendConfig = {
-      ...legendConfig,
-      ...{
-        orient: 'bottom',
-        direction: 'horizontal',
-      },
-    }
-  }
-
-  if (colorField && columns.get(colorField)) {
-    const fieldType = getVegaFieldType(colorField, columns)
-    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns) }
-    let rval = {
-      field: colorField,
-      type: fieldType,
-      title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
-      scale:
-        fieldType === 'quantitative'
-          ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
-          : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' },
-      condition: [
-        {
-          param: 'highlight',
-          empty: false,
-          value: HIGHLIGHT_COLOR,
-        },
-        { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
-      ],
-      ...getFormatHint(colorField, columns),
-      legend: hideLegend
-        ? null
-        : {
-            ...legendConfig,
-          },
-    }
-    return rval
-  }
-
-  return {
-    legend: hideLegend
-      ? null
-      : {
-          ...legendConfig,
-        },
-  }
-}
-
-const createSizeEncoding = (
-  sizeField: string | undefined,
-  columns: Map<string, ResultColumn>,
-): any => {
-  if (sizeField && columns.get(sizeField)) {
-    return { scale: { type: 'sqrt' }, field: sizeField }
-  }
-  return {}
-}
-
-/**
- * Create brush parameter for line/area charts
- */
-const createBrushParam = (intChart: Array<Partial<ChartConfig>>, config: ChartConfig) => {
-  return {
-    name: 'brush',
-    select: {
-      type: 'interval',
-      encodings: ['x'],
-      // value: intChart
-    },
-    value:
-      intChart.length > 0 && config.xField
-        ? [{ x: intChart[0][config.xField as keyof typeof config] }]
-        : [],
-  }
-}
-
-/**
- * Create layer for interactive charts (line/area)
- */
-const createInteractiveLayer = (
-  config: ChartConfig,
-  data: readonly Row[] | null,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  intChart: Array<Partial<ChartConfig>> = [],
-  filtered: boolean = false,
-  currentTheme: string = 'light',
-  isMobile: boolean = false,
-) => {
-  // Create the main layer for the primary y-axis
-  const markColor = currentTheme === 'light' ? 'steelblue' : '#4FC3F7'
-  const mainLayer = {
-    ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
-    mark: {
-      type: config.chartType === 'line' ? 'line' : 'area',
-      ...(config.chartType === 'area' ? { line: true } : {}),
-      ...(filtered ? { color: markColor } : { color: 'lightgray' }),
-    },
-    data: { values: data },
-    encoding: {
-      x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns, {
-        axis: { format: getColumnFormat(config.yField, columns) },
-      }),
-
-      tooltip: tooltipFields,
-    },
-    params: [] as Array<any>,
-  }
-
-  if (config.colorField) {
-    if (!filtered) {
-      mainLayer.encoding = {
-        ...mainLayer.encoding,
-        ...{ detail: { field: config.colorField, color: 'lightgray' } },
-      }
-    } else {
-      mainLayer.encoding = {
-        ...mainLayer.encoding,
-        ...{ color: createColorEncoding(config.colorField, columns, isMobile, currentTheme) },
-      }
-    }
-  }
-  mainLayer.params = []
-  if (!filtered) {
-    mainLayer.params = [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click',
-          clear: 'dragleave,dblclick',
-          encodings: ['y'],
-        },
-        // @ts-ignore
-        value: intChart.filter((obj) => !(config.xField in obj)) ? intChart : [],
-      },
-
-      createBrushParam(
-        // @ts-ignore
-        intChart.filter((obj) => config.xField in obj).length > 0
-          ? // @ts-ignore
-            intChart.filter((obj) => config.xField in obj)
-          : [],
-        config,
-      ),
-    ]
-  }
-
-  // If no secondary y field is defined, return just the main layer
-  // no secondary field for area charts
-  if (!config.yField2 || config.chartType === 'area') {
-    return [mainLayer]
-  }
-
-  // Create a secondary layer for the second y-axis
-  const secondaryLayer = {
-    ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
-    mark: {
-      type: config.chartType === 'line' ? 'line' : 'area',
-      // @ts-ignore
-      ...(config.chartType === 'area' ? { line: true } : {}),
-      ...(filtered ? { color: 'orange' } : { color: 'lightgray' }),
-      strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
-    },
-    data: { values: data },
-    encoding: {
-      x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField2, columns),
-      tooltip: tooltipFields,
-      ...encoding,
-    },
-    params: !filtered
-      ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
-          },
-        ]
-      : [],
-  }
-
-  // Return an array containing both layers
-  return [mainLayer, secondaryLayer]
-}
-
-/**
- * Create chart specification for horizontal bar chart
- */
-
-/**
- * Create chart specification for line chart
- */
-const createLineChartSpec = (
-  config: ChartConfig,
-  data: readonly Row[] | null,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  intChart: Array<Partial<ChartConfig>>,
-  currentTheme: string = 'light',
-  isMobile: boolean = false,
-) => {
-  let base = createInteractiveLayer(
-    config,
-    data,
-    columns,
-    tooltipFields,
-    encoding,
-    intChart,
-    false,
-    currentTheme,
-    isMobile,
-  )
-  let filtered = createInteractiveLayer(
-    config,
-    data,
-    columns,
-    tooltipFields,
-    encoding,
-    intChart,
-    true,
-    currentTheme,
-    isMobile,
-  )
-  // if there are two fields in both, we have two y-axes. Layer them independently.
-  let layers = []
-  if (base.length > 1 && filtered.length > 1) {
-    layers = [{ layer: [base[0], filtered[0]] }, { layer: [base[1], filtered[1]] }]
-  } else {
-    layers = [...base, ...filtered]
-  }
-  return {
-    data: undefined,
-    layer: layers,
-  }
-}
-
-/**
- * Create chart specification for area chart
- */
-const createAreaChartSpec = (
-  config: ChartConfig,
-  data: readonly Row[] | null,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  isMobile: boolean = false,
-  intChart: Array<Partial<ChartConfig>>,
-  currentTheme: string = 'light',
-) => {
-  return {
-    data: undefined,
-    layer: [
-      ...createInteractiveLayer(
-        config,
-        data,
-        columns,
-        tooltipFields,
-        encoding,
-        intChart,
-        false,
-        currentTheme,
-        isMobile,
-      ),
-      ...createInteractiveLayer(
-        config,
-        data,
-        columns,
-        tooltipFields,
-        encoding,
-        intChart,
-        true,
-        currentTheme,
-        isMobile,
-      ),
-    ],
   }
 }
 
@@ -500,9 +196,9 @@ export const generateVegaSpec = (
   title: string = '',
   currentTheme: 'light' | 'dark' | '' = 'light',
 ) => {
-  let intChart: Array<Partial<ChartConfig>> = chartSelection
-    ? chartSelection.map((x) => toRaw(x))
-    : []
+  let intChart: { [key: string]: string | number | Array<any> }[] = chartSelection
+    ? (chartSelection.map((x) => toRaw(x)) as { [key: string]: string | number | Array<any> }[])
+    : ([] as { [key: string]: string | number | Array<any> }[])
 
   // Create base spec
   let spec: any = createBaseSpec(data)
@@ -529,14 +225,7 @@ export const generateVegaSpec = (
     spec.spec = { width: 'container', height: 200 }
   }
 
-  const tooltipFields = generateTooltipFields(
-    config.chartType,
-    config.xField || '',
-    config.yField || '',
-    columns,
-    config.colorField,
-    config.sizeField,
-  )
+  const tooltipFields = generateTooltipFields(config, columns)
 
   // Generate chart specification based on chart type
   let chartSpec = {}

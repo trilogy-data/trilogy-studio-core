@@ -161,6 +161,7 @@ function handleToggleEditMode() {
           :row-height="30"
           :is-draggable="editable"
           :is-resizable="editable"
+          :is-bounded="true"
           :layout="layout"
           :vertical-compact="false"
           :use-css-transforms="true"
@@ -281,8 +282,6 @@ function handleToggleEditMode() {
   width: 100%;
   height: 100%;
 }
-
-
 
 .vue-grid-layout {
   background: var(--bg-color);

@@ -71,7 +71,7 @@ watch(
       jsonString.value = ''
     }
   },
-  { immediate: true, deep: true },
+  { immediate: true },
 )
 
 // Handle copy functionality

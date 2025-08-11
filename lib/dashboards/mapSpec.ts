@@ -76,37 +76,39 @@ const createUSBaseLayer = () => ({
 
 const createWorldBaseLayer = () => {
   return {
-    "data": {
-      "sequence": { "start": 0, "stop": 20, "as": "a" },
-      "name": "tile_list_cba3076ebb77"
+    data: {
+      sequence: { start: 0, stop: 20, as: 'a' },
+      name: 'tile_list_cba3076ebb77',
     },
-    "mark": {
-      "type": "image",
-      "clip": true,
-      "height": { "expr": "tile_size + 1" },
-      "width": { "expr": "tile_size + 1" }
+    mark: {
+      type: 'image',
+      clip: true,
+      height: { expr: 'tile_size + 1' },
+      width: { expr: 'tile_size + 1' },
     },
-    "encoding": {
-      "url": { "field": "url", "type": "nominal" },
-      "x": { "field": "x", "scale": null, "type": "quantitative" },
-      "y": { "field": "y", "scale": null, "type": "quantitative" }
+    encoding: {
+      url: { field: 'url', type: 'nominal' },
+      x: { field: 'x', scale: null, type: 'quantitative' },
+      y: { field: 'y', scale: null, type: 'quantitative' },
     },
-    "transform": [
-      { "calculate": "sequence(0, 20)", "as": "b" },
-      { "flatten": ["b"] },
+    transform: [
+      { calculate: 'sequence(0, 20)', as: 'b' },
+      { flatten: ['b'] },
       {
-        "calculate": "'https://a.basemaps.cartocdn.com/light_all/' + zoom_ceil + '/' + ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) + '/' + (datum.b + djj_floor) + '.png'",
-        "as": "url"
+        calculate:
+          "'https://a.basemaps.cartocdn.com/light_all/' + zoom_ceil + '/' + ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) + '/' + (datum.b + djj_floor) + '.png'",
+        as: 'url',
       },
-      { "calculate": "datum.a * tile_size + dx + (tile_size / 2)", "as": "x" },
-      { "calculate": "datum.b * tile_size + dy + (tile_size / 2)", "as": "y" },
+      { calculate: 'datum.a * tile_size + dx + (tile_size / 2)', as: 'x' },
+      { calculate: 'datum.b * tile_size + dy + (tile_size / 2)', as: 'y' },
       {
-        "filter": "datum.x < (width + tile_size / 2) && datum.y < (height + tile_size / 2)"
+        filter: 'datum.x < (width + tile_size / 2) && datum.y < (height + tile_size / 2)',
       },
       {
-        "filter": "((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) >= 0 && (datum.b + djj_floor) >= 0 && ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) <= (max_one_side_tiles_count - 1) && (datum.b + djj_floor) <= (max_one_side_tiles_count - 1)"
-      }
-    ]
+        filter:
+          '((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) >= 0 && (datum.b + djj_floor) >= 0 && ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) <= (max_one_side_tiles_count - 1) && (datum.b + djj_floor) <= (max_one_side_tiles_count - 1)',
+      },
+    ],
   }
 }
 
@@ -138,9 +140,9 @@ const createColorEncoding = (
   let legend = hideLegend
     ? null
     : {
-      title: snakeCaseToCapitalizedWords(field),
-      format: getColumnFormat(field, columns),
-    }
+        title: snakeCaseToCapitalizedWords(field),
+        format: getColumnFormat(field, columns),
+      }
 
   let colorConfig = {
     field,
@@ -311,11 +313,11 @@ const createUSScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-              field: config.sizeField,
-              type: 'quantitative',
-              title: snakeCaseToCapitalizedWords(config.sizeField),
-              scale: { type: 'sqrt' },
-            }
+                field: config.sizeField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.sizeField),
+                scale: { type: 'sqrt' },
+              }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
@@ -391,31 +393,31 @@ const createWorldScatterMapSpec = (
     // use OSM tiles as background for world map
     // these parameters are used to determine which to fetch
     params: [
-      { name: "base_tile_size", value: 256 },
-      { name: "pr_scale", expr: "geoScale('projection')" },
+      { name: 'base_tile_size', value: 256 },
+      { name: 'pr_scale', expr: "geoScale('projection')" },
       {
-        name: "zoom_level",
-        expr: "log((2 * PI * pr_scale) / base_tile_size) / log(2)"
+        name: 'zoom_level',
+        expr: 'log((2 * PI * pr_scale) / base_tile_size) / log(2)',
       },
-      { name: "zoom_ceil", expr: "ceil(zoom_level)" },
-      { name: "max_one_side_tiles_count", expr: "pow(2, zoom_ceil)" },
+      { name: 'zoom_ceil', expr: 'ceil(zoom_level)' },
+      { name: 'max_one_side_tiles_count', expr: 'pow(2, zoom_ceil)' },
       {
-        name: "tile_size",
-        expr: "base_tile_size * pow(2, zoom_level - zoom_ceil)"
+        name: 'tile_size',
+        expr: 'base_tile_size * pow(2, zoom_level - zoom_ceil)',
       },
-      { name: "base_point", expr: "invert('projection', [0, 0])" },
+      { name: 'base_point', expr: "invert('projection', [0, 0])" },
       {
-        name: "dii",
-        expr: "(base_point[0] + 180) / 360 * max_one_side_tiles_count"
+        name: 'dii',
+        expr: '(base_point[0] + 180) / 360 * max_one_side_tiles_count',
       },
-      { name: "dii_floor", expr: "floor(dii)" },
-      { name: "dx", expr: "(dii_floor - dii) * tile_size" },
+      { name: 'dii_floor', expr: 'floor(dii)' },
+      { name: 'dx', expr: '(dii_floor - dii) * tile_size' },
       {
-        name: "djj",
-        expr: "(1 - log(tan(base_point[1] * PI / 180) + 1 / cos(base_point[1] * PI / 180)) / PI) / 2 * max_one_side_tiles_count"
+        name: 'djj',
+        expr: '(1 - log(tan(base_point[1] * PI / 180) + 1 / cos(base_point[1] * PI / 180)) / PI) / 2 * max_one_side_tiles_count',
       },
-      { name: "djj_floor", expr: "floor(djj)" },
-      { name: "dy", expr: "round((djj_floor - djj) * tile_size)" }
+      { name: 'djj_floor', expr: 'floor(djj)' },
+      { name: 'dy', expr: 'round((djj_floor - djj) * tile_size)' },
     ],
     layer: [
       createWorldBaseLayer(),
@@ -427,11 +429,11 @@ const createWorldScatterMapSpec = (
           latitude: { field: config.yField, type: 'quantitative' },
           size: config.sizeField
             ? {
-              field: config.sizeField,
-              type: 'quantitative',
-              title: snakeCaseToCapitalizedWords(config.sizeField),
-              scale: { type: 'sqrt' },
-            }
+                field: config.sizeField,
+                type: 'quantitative',
+                title: snakeCaseToCapitalizedWords(config.sizeField),
+                scale: { type: 'sqrt' },
+              }
             : undefined,
           color: config.colorField
             ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)

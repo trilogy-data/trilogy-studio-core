@@ -73,6 +73,10 @@ export default defineComponent({
       type: String,
       default: 'New Editor',
     },
+    root: {
+      type: String,
+      default: '',
+    },
   },
   setup(props) {
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -88,7 +92,10 @@ export default defineComponent({
       try {
         // Generate a unique name with timestamp
         const timestamp = Date.now()
-        const editorName = `trilogy-new-${props.connection}_${timestamp}`
+        let editorName = `new-editor-${timestamp}`
+        if (props.root) {
+          editorName = `${props.root}/${editorName}`
+        }
 
         // Create a new editor with trilogy type
         const editor = editorStore.newEditor(

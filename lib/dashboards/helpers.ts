@@ -3,6 +3,9 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
+
+const HIGHLIGHT_COLOR = '#FF7F7F'
+
 const temporalTraits = [
   'year',
   'month',
@@ -563,4 +566,68 @@ export const createInteractionEncodings = () => {
       value: 0,
     },
   }
+}
+
+export const createColorEncoding = (
+  colorField: string | undefined,
+  columns: Map<string, ResultColumn>,
+  isMobile: boolean = false,
+  currentTheme: string = 'light',
+  hideLegend: boolean = false,
+) => {
+  let legendConfig = {}
+  if (isMobile) {
+    legendConfig = {
+      ...legendConfig,
+      ...{
+        orient: 'bottom',
+        direction: 'horizontal',
+      },
+    }
+  }
+
+  // Helper function to conditionally add legend
+  const addLegendIfNeeded = (obj: any) => {
+    if (!hideLegend && Object.keys(legendConfig).length > 0) {
+      obj.legend = legendConfig
+    }
+    return obj
+  }
+
+  if (colorField && columns.get(colorField)) {
+    const fieldType = getVegaFieldType(colorField, columns)
+    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns) }
+    const rval = {
+      field: colorField,
+      type: fieldType,
+      title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
+      scale:
+        fieldType === 'quantitative'
+          ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
+          : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' },
+      condition: [
+        {
+          param: 'highlight',
+          empty: false,
+          value: HIGHLIGHT_COLOR,
+        },
+        { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
+      ],
+      ...getFormatHint(colorField, columns),
+    }
+
+    return addLegendIfNeeded(rval)
+  }
+
+  return addLegendIfNeeded({})
+}
+
+export const createSizeEncoding = (
+  sizeField: string | undefined,
+  columns: Map<string, ResultColumn>,
+): any => {
+  if (sizeField && columns.get(sizeField)) {
+    return { scale: { type: 'sqrt' }, field: sizeField }
+  }
+  return {}
 }

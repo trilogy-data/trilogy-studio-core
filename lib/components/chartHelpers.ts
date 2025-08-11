@@ -148,8 +148,6 @@ export class ChromaChartHelpers {
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
 
-    
-
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
