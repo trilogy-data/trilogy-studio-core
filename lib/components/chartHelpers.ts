@@ -32,7 +32,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file

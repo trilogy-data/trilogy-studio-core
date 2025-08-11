@@ -727,7 +727,6 @@ export default defineComponent({
             extractionFn: extractLastTripleQuotedText,
             mutationFn: mutation,
           })
-
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM query:', error)
