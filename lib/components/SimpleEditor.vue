@@ -567,7 +567,7 @@ export default defineComponent({
 
         if (generatedQuery) {
           // Insert the generated query
-          globalEditor.setValue(generatedQuery)
+          globalEditor.setValue(generatedQuery.content)
 
           // Update editor content
           this.editor.contents = globalEditor.getValue()
@@ -584,6 +584,7 @@ export default defineComponent({
       } catch (error) {
         if (error instanceof Error) {
           this.editor.setError(error.message)
+          throw error
         } else {
           this.editor.setError('Unknown error occurred during LLM generation')
         }

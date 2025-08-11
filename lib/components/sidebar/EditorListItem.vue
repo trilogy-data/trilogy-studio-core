@@ -55,6 +55,21 @@
       </span>
       <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
     </template>
+    <template v-else-if="item.type === 'folder'">
+      <span class="tag-container hover-icon">
+        <editor-creator-icon
+          :connection="item.connection"
+          type="sql"
+          title="New SQL Editor"
+          :root="item.objectKey"
+        />
+        <editor-creator-icon
+          :connection="item.connection"
+          title="New Trilogy Editor"
+          :root="item.objectKey"
+        />
+      </span>
+    </template>
 
     <tooltip v-if="item.type === 'editor'" content="Delete Editor" position="left">
       <span

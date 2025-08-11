@@ -225,7 +225,6 @@ export class ChromaChartHelpers {
 
     // Determine eligible fields for filtering
     const eligible = this.getEligibleFields(config, columns)
-
     // Handle x-field clicks
     if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
       let xFilterValue = item.datum[xFieldRaw]
@@ -315,23 +314,23 @@ export class ChromaChartHelpers {
     debouncedBrushHandler: (name: string, item: SignalValue) => void,
   ): (() => void) | null {
     if (['area', 'line'].includes(config.chartType)) {
-      view.addSignalListener('brush', debouncedBrushHandler)
-      view.addEventListener('click', (event, item) => {
+      // Create a reference to the click handler so we can remove it later
+      const clickHandler = (event: any, item: any) => {
         this.handlePointClick(event, item, config, columns)
-      })
+      }
+
+      view.addSignalListener('brush', debouncedBrushHandler)
+      view.addEventListener('click', clickHandler)
 
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
-        view.removeEventListener('click', (event, item) => {
-          this.handlePointClick(event, item, config, columns)
-        })
+        view.removeEventListener('click', clickHandler) // ✅ Same function reference
       }
     } else if (isMobile) {
       const touchHandler = (event: any, item: any) => {
         this.handlePointClick(event, item, config, columns)
       }
       view.addEventListener('touchend', touchHandler)
-
       return () => {
         view.removeEventListener('touchend', touchHandler)
       }
@@ -340,7 +339,6 @@ export class ChromaChartHelpers {
         this.handlePointClick(event, item, config, columns)
       }
       view.addEventListener('click', clickHandler)
-
       return () => {
         view.removeEventListener('click', clickHandler)
       }

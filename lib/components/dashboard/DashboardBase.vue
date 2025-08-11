@@ -132,8 +132,15 @@ onMounted(() => {
     let unRun = Object.keys(dashboard.value.gridItems).filter(
       (itemId) => !dashboardObj.gridItems[itemId].results,
     )
+    console.log('Running initial queries for dashboard:', dashboard.value.id)
     executor?.runBatch(unRun)
-    populateCompletion()
+    if (globalCompletion.value.length === 0) {
+      populateCompletion()
+    }
+
+    if (dashboard.value.state !== 'editing') {
+      emit('fullScreen', true)
+    }
   }
 
   // Set up resize observer
@@ -240,11 +247,6 @@ const validateFilter = async (filter: string) => {
 }
 
 async function populateCompletion() {
-  if (dashboard.value) {
-    if (dashboard.value && dashboard.value.state !== 'editing') {
-      emit('fullScreen', true)
-    }
-  }
   if (dashboard.value && dashboard.value.id && queryExecutionService) {
     let completion = await dashboardStore.populateCompletion(
       dashboard.value.id,
@@ -579,7 +581,10 @@ function setCrossFilter(info: DimensionClick): void {
     {} as Record<string, string>,
   )
 
-  if (!finalFilters || Object.keys(finalFilters).length === 0) return
+  if (!finalFilters || Object.keys(finalFilters).length === 0) {
+    console.log('No valid filters to apply from cross-filter event')
+    return
+  }
 
   dashboardStore.updateItemCrossFilters(
     dashboard.value.id,

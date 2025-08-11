@@ -37,40 +37,42 @@
                   >
                     <div class="column-row">
                       <div class="column-info">
-                        <span class="pk-label">Grain Key?</span>
-                        <label class="checkbox-label">
-                          <input
-                            type="checkbox"
-                            :value="column.name"
-                            v-model="selectedGrainKeys"
-                            @change="updateDatasourcePreview"
-                            :data-testid="`grain-key-checkbox-${column.name}`"
-                          />
-                          <div class="menu-title" @click="() => startEditing(column.name)">
-                            Field:
-                            <span
-                              v-if="!isEditing[column.name]"
-                              class="editable-text"
-                              :data-testid="`edit-column-name-${column.name}`"
-                            >
-                              {{ columnAliases[column.name] }}
-                              <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
-                            </span>
+                        <span class="pk-label">
+                          <span>Grain Key?</span>
+                          <label class="checkbox-label">
                             <input
-                              v-else
-                              ref="nameInput"
-                              :data-testid="`column-name-input-${column.name}`"
-                              v-model="columnAliases[column.name]"
-                              @blur="() => stopEditing(column.name)"
-                              @keyup.enter="() => stopEditing(column.name)"
-                              @keyup.esc="() => cancelEditing(column.name)"
-                              class="name-input"
-                              type="text"
+                              type="checkbox"
+                              :value="column.name"
+                              v-model="selectedGrainKeys"
+                              @change="updateDatasourcePreview"
+                              :data-testid="`grain-key-checkbox-${column.name}`"
                             />
-                          </div>
-                          <span class="column-type">(bound to: {{ column.name }})</span>
-                          <span class="column-type">({{ column.trilogyType }})</span>
-                        </label>
+                          </label>
+                        </span>
+                        <div class="menu-title" @click="() => startEditing(column.name)">
+                          Field:
+                          <span
+                            v-if="!isEditing[column.name]"
+                            class="editable-text"
+                            :data-testid="`edit-column-name-${column.name}`"
+                          >
+                            {{ columnAliases[column.name] }}
+                            <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
+                          </span>
+                          <input
+                            v-else
+                            ref="nameInput"
+                            :data-testid="`column-name-input-${column.name}`"
+                            v-model="columnAliases[column.name]"
+                            @blur="() => stopEditing(column.name)"
+                            @keyup.enter="() => stopEditing(column.name)"
+                            @keyup.esc="() => cancelEditing(column.name)"
+                            class="name-input"
+                            type="text"
+                          />
+                        </div>
+                        <span class="column-type">(bound to: {{ column.name }})</span>
+                        <span class="column-type">({{ column.trilogyType }})</span>
                       </div>
                       <div class="column-description">
                         <input
@@ -279,7 +281,7 @@ const datasourcePreview = computed(() => {
       const alias = columnAliases.value[column.name] || column.name
       return primaryKeyFields.includes(alias)
         ? `key ${alias} ${column.trilogyType};${descriptionComment}`
-        : `property <${keyPrefix}>.${column.name} ${column.trilogyType};${descriptionComment}`
+        : `property <${keyPrefix}>.${alias} ${column.trilogyType};${descriptionComment}`
     })
     .join('\n')
 
@@ -580,7 +582,6 @@ const createDatasource = async () => {
 .pk-label {
   font-size: 10px;
   color: var(--text-faint);
-  margin-left: auto;
 }
 
 .column-header {

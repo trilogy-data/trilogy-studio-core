@@ -144,7 +144,7 @@ test.describe('CSV Upload and Datasource Creation', () => {
 
     // Verify the datasource preview updates
     await expect(page.getByTestId('datasource-preview')).toContainText('key id')
-    await expect(page.getByTestId('datasource-preview')).toContainText('key user_name')
+    await expect(page.getByTestId('datasource-preview')).toContainText('property <id>.user_name')
     await expect(page.getByTestId('datasource-preview')).toContainText('name:user_name')
 
     // Verify sample data is loaded and displayed
@@ -166,6 +166,6 @@ test.describe('CSV Upload and Datasource Creation', () => {
     // Verify the new editor contains the generated datasource code
     await expect(page.getByTestId('editor')).toContainText('datasource sample_users')
     await expect(page.getByTestId('editor')).toContainText('key id')
-    await expect(page.getByTestId('editor')).toContainText('grain (id, user_name)')
+    await expect(page.getByTestId('editor')).toContainText('grain (id)')
   })
 })

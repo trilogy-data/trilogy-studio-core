@@ -215,7 +215,10 @@ export default defineComponent({
           .sort(sortMatches)
       }
 
-      filteredSymbols.value = filtered
+      filteredSymbols.value = filtered.sort((a, b) => {
+        // Sort by label alphabetically
+        return a.label.localeCompare(b.label)
+      })
     }
 
     // Watch for changes in symbols or search query

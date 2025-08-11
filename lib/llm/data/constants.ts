@@ -1,4 +1,12 @@
-export const rulesInput = `- No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNION, or SELECT *.
+export const rulesInput = `
+Trilogy statements define a semantic model or query. If a user is asking for data, they want a SELECT.
+Semantic model statements:
+- import <> imports a model to reuse. The output of imports will be visible in fields available to use.
+- key|property|auto|metric defines fields locally. The output will also be visible in fields available to use, so you generally don't need to edit these unless requested.
+- datasource statements define a datasource, which is a mapping of fields to a SQL database table. The left side is the SQL column name, the right side is the field name.
+
+SELECT RULES:
+- No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNION, or SELECT *.
 - All fields exist in a global namespace; field paths look like \`order.product.id\`. Always use the full path. NEVER include a from clause.
 - If a field has a grain defined, and that grain is not in the query output, aggregate it to get desired result. 
 - If a field has a 'alias_for' defined, it is shorthand for that calculation. Use the field name instead of the calculation in your query to be concise. 
@@ -16,6 +24,7 @@ export const rulesInput = `- No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNI
 - For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
 - For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
+- Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`.
 - Comments use \`#\` only, per line.
 - Two example queries: "where year between 1940 and 1950
   select
@@ -39,7 +48,7 @@ export const rulesInput = `- No FROM, JOIN, GROUP BY, SUB SELECTS, DISTINCT, UNI
     total_flights desc;
   "`
 
-export const aggFunctions = ['avg', 'count', 'max', 'min', 'sum']
+export const aggFunctions = ['avg', 'count', 'max', 'min', 'sum', 'array_agg']
 
 export const functions = [
   'abs',
@@ -53,12 +62,11 @@ export const functions = [
   'contains',
   'current_date',
   'current_datetime',
-  'date',
-  'date_add',
-  'date_diff',
-  'date_part',
-  'date_sub',
-  'date_truncate',
+  "date_add #date_add(date, unit, interval), ex date_add('2020-01-01'::date, month, 1)",
+  "date_diff #date_diff(date1, date2, unit), ex date_diff('2020-01-01'::date, '2020-01-02'::date, day)",
+  "date_part #date_part(date, unit), ex date_part('2020-01-01'::date, year)",
+  "date_sub #date_sub(date, unit, interval), ex date_sub('2020-01-01'::date, day, 1)",
+  "date_trunc #date_trunc(date, unit), ex date_trunc('2020-01-01'::date, month)",
   'datetime',
   'day',
   'day_of_week',
@@ -73,7 +81,7 @@ export const functions = [
   // 'map_access',
   'minute',
   'month',
-  'now',
+  'now #now()',
   'nullif',
   'quarter',
   'random',
@@ -89,6 +97,7 @@ export const functions = [
   'strpos',
   'struct',
   'substring (1-indexed)',
+  'trim',
   'sum',
   'timestamp',
   'trim',
@@ -97,6 +106,7 @@ export const functions = [
   'upper',
   'week',
   'year',
+  'array_join_string',
 ]
 export const datatypes = [
   // PRIMITIVES

@@ -41,11 +41,11 @@ export default defineComponent({
     const elapsedTime = ref('0 ms')
     let timeout: ReturnType<typeof setTimeout> | null = null
 
-    const getUpdateInterval = (elapsedMs: number): number => {
-      if (elapsedMs < 1000) return 50 // Update every 50ms for first second
-      if (elapsedMs < 5000) return 100 // Update every 100ms for first 5 seconds
-      if (elapsedMs < 30000) return 500 // Update every 500ms for first 30 seconds
-      return 1000
+    const getUpdateInterval = (_: number): number => {
+      // if (elapsedMs < 1000) return 50 // Update every 50ms for first second
+      // if (elapsedMs < 5000) return 100 // Update every 100ms for first 5 seconds
+      // if (elapsedMs < 30000) return 500 // Update every 500ms for first 30 seconds
+      return 100
     }
 
     const updateElapsedTime = () => {

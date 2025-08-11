@@ -10,6 +10,7 @@ import { getDefaultValueFromHash } from '../../stores/urlStore'
 
 const emit = defineEmits<{
   importComplete: [dashboardId: string]
+  fullScreen: [boolean]
 }>()
 
 const dashboardStore = inject<DashboardStoreType>('dashboardStore')
@@ -157,7 +158,7 @@ const performImport = async () => {
     importSuccess.value = true
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
-
+    emit('fullScreen', true)
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 
@@ -235,10 +236,6 @@ const switchToManualImport = () => {
   screenNavigation.setActiveScreen('dashboard')
   // Could emit event to show manual import modal
 }
-//http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/usa_names.json&dashboard=USA%20Names&modelName=top-names-usa-dashboard&connection=bigquery
-//http://localhost:5173/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/tpc_h.json&dashboard=example-dashboard&modelName=tpc-h-demo&connection=duckdb
-//https://trilogydata.dev/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/usa_names.json&dashboard=USA%20Names&modelName=top-names-usa-dashboard&connection=bigquery
-//https://trilogydata.dev/trilogy-studio-core/#screen=dashboard-import&model=https://trilogy-data.github.io/trilogy-public-models/studio/tpc_h.json&dashboard=example-dashboard&modelName=tpc-h-demo&connection=duckdb
 </script>
 
 <template>

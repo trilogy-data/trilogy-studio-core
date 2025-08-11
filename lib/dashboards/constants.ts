@@ -71,7 +71,7 @@ export const Controls: ChartControl[] = [
     field: 'yField2',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['line'],
+    visibleFor: ['line', 'area'],
     filterGroup: 'axes',
   },
   {

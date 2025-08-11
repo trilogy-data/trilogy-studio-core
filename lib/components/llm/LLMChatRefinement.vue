@@ -1,13 +1,13 @@
 <template>
   <div class="chat-refinement-container" data-testid="chat-refinement-container">
     <div class="chat-header">
-      <div>Refine Response</div>
+      <div>Chat</div>
       <button class="close-button" @click="handleClose" data-testid="close-header-button">×</button>
     </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
       <div
-        v-for="(message, index) in messages"
+        v-for="(message, index) in messages.filter((m) => !m.hidden)"
         :key="index"
         class="message"
         :class="message.role"
@@ -47,13 +47,7 @@
         ref="inputTextarea"
         data-testid="input-textarea"
       ></textarea>
-      <button
-        @click="sendMessage"
-        :disabled="isLoading || !userInput.trim()"
-        data-testid="send-button"
-      >
-        Send
-      </button>
+      <button @click="sendMessage" :disabled="isLoading" data-testid="send-button">Send</button>
     </div>
 
     <!-- Action buttons -->
@@ -113,12 +107,16 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    initialMessage: {
+      type: String,
+      required: false,
+    },
   },
 
   setup(props, { emit }) {
     // Chat state
     const messages = ref<LLMMessage[]>(props.messages)
-    const userInput = ref('')
+    const userInput = ref(props.initialMessage || '')
     const isLoading = ref(false)
     const messagesContainer = ref<HTMLElement | null>(null)
     const inputTextarea = ref<HTMLTextAreaElement | null>(null)
@@ -228,15 +226,18 @@ export default defineComponent({
 
     // Handle sending a new message
     const sendMessage = async () => {
-      if (!userInput.value.trim() || isLoading.value) return
-
+      if (isLoading.value) return
+      let content = userInput.value.trim()
+      if (!content) {
+        content = 'Continue.' // Default message if input is empty
+      }
       // Add user message
       messages.value.push({
         role: 'user',
-        content: userInput.value,
+        content: content,
       })
 
-      const userPrompt = userInput.value
+      const userPrompt = content
       userInput.value = '' // Clear input
       isLoading.value = true
       scrollToBottom()

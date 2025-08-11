@@ -126,7 +126,7 @@ export const createHeadlineSpec = (
       columns,
       currentTheme,
       isMobile,
-      data ? data[0][column.name] : null,
+      data ? (data[0] ? data[0][column.name] : null) : null,
     )
   })
 

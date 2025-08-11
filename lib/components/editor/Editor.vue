@@ -84,7 +84,7 @@ import { extractLastTripleQuotedText } from '../../stores/llmStore.ts'
 import { Range } from 'monaco-editor'
 import { completionToModelInput } from '../../llm/utils.ts'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
-
+import { leadIn } from '../../llm/data/prompts.ts'
 // Define interfaces for the refs
 interface CodeEditorRef {
   getEditorInstance: () => any
@@ -503,7 +503,6 @@ export default defineComponent({
     },
 
     async handleLLMTrigger(): Promise<void> {
-      console.log('LLM trigger handled')
       if (this.editorData.type === 'sql') {
         await this.generateLLMQuerySQL()
       } else {
@@ -614,12 +613,12 @@ export default defineComponent({
       if (!this.loading && this.llmStore) {
         try {
           let editorId = this.editorData.id
+
           this.editorData.loading = true
           this.editorData.startTime = Date.now()
           this.editorData.results = new Results(new Map(), [])
           this.editorData.setError(null)
-          this.editorData.setChatInteraction(null)
-
+          let targetEditor = this.editorStore.editors[editorId]
           // Get text and range from the CodeEditor
           const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
           if (!codeEditorRef) {
@@ -629,9 +628,8 @@ export default defineComponent({
           const text = codeEditorRef.getEditorText(this.editorData.contents)
           let range: Range = codeEditorRef.getEditorRange()
 
-          await this.validateQuery(false)
-
           // Run our async call
+          await this.validateQuery(false)
           let concepts = completionToModelInput(this.editorData.completionSymbols)
 
           if (concepts.length === 0) {
@@ -645,7 +643,7 @@ export default defineComponent({
             const queryPartial = await this.buildQueryArgs(text)
             const queryInput: QueryInput = {
               // run an explain here, not the query
-              text: text + '\n' + testText,
+              text: testText,
               editorType: queryPartial.editorType,
               imports: queryPartial.imports,
             }
@@ -674,78 +672,61 @@ export default defineComponent({
             return true
           }
 
-          await this.llmStore
-            .generateQueryCompletion(text, concepts, validator)
-            .then((query) => {
-              if (query) {
-                // Get the target editor directly
-                let targetEditor = this.editorStore.editors[editorId]
-                if (!targetEditor) {
-                  throw new Error('Target editor not found.')
-                }
+          const mutation = (responseText: string | null) => {
+            let replacementLen = 0
+            // Split the content into lines
+            // Determine where to insert the query text
+            // If we have a range, calculate the insertion position
+            let insertionPosition = range
+              ? range.startLineNumber
+              : this.editorData.contents.split('\n').length
+            let contentLines = targetEditor.contents.split('\n')
 
-                let replacementLen = 0
-                // Also update the CodeEditor with the new content
-                if (this.editorData.id === editorId && this.$refs.codeEditor) {
-                  const mutation = (responseText: string | null) => {
-                    // Split the content into lines
-                    // Determine where to insert the query text
-                    // If we have a range, calculate the insertion position
-                    let insertionPosition = range
-                      ? range.startLineNumber
-                      : targetEditor.contents.split('\n').length
-                    let contentLines = targetEditor.contents.split('\n')
+            // Insert the query at the appropriate position
+            contentLines.splice(insertionPosition, replacementLen, responseText || '')
+            // store our length so we can replace this query if user has more edits
+            // this is the length of the split array
 
-                    // Insert the query at the appropriate position
-                    contentLines.splice(insertionPosition, replacementLen, responseText || '')
-                    // store our length so we can replace this query if user has more edits
-                    // this is the length of the split array
+            // Update the editor contents directly
+            targetEditor.setContent(contentLines.join('\n'))
+            // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
+            let op = {
+              range: range,
+              text: `${responseText}`,
+              forceMoveMarkers: true,
+            }
+            codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
 
-                    // Update the editor contents directly
-                    targetEditor.setContent(contentLines.join('\n'))
-                    // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-                    let op = {
-                      range: range,
-                      text: `${text}\n${responseText}`,
-                      forceMoveMarkers: true,
-                    }
-                    codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
-
-                    // cache for next time
-                    replacementLen = (responseText || '').split('\n').length
-                    range = new Range(
-                      range.startLineNumber,
-                      range.startColumn,
-                      range.endLineNumber + replacementLen,
-                      range.endColumn,
-                    )
-                    codeEditorRef.getEditorInstance().setSelection(range)
-                    return true
-                  }
-
-                  mutation(query.content)
-                  targetEditor.setChatInteraction({
-                    messages: [
-                      { role: 'user', content: query.prompt },
-                      {
-                        role: 'assistant',
-                        content: query.message,
-                      },
-                    ],
-                    validationFn: validator,
-                    extractionFn: extractLastTripleQuotedText,
-                    mutationFn: mutation,
-                  })
-                }
-              } else {
-                throw new Error('LLM could not successfully generate query.')
-              }
-            })
-            .catch((error) => {
-              this.editorData.setError(error)
-              throw error
-            })
-            .finally(() => {})
+            // cache for next time
+            replacementLen = (responseText || '').split('\n').length
+            range = new Range(
+              range.startLineNumber,
+              range.startColumn,
+              range.endLineNumber + replacementLen,
+              range.endColumn,
+            )
+            codeEditorRef.getEditorInstance().setSelection(range)
+            return true
+          }
+          // detect if the user had a highlighted range or the entire editor
+          let initMessage = `How can I help? I've been loaded with context on Trilogy and this file.`
+          if (range) {
+            initMessage += `I'll focus on the highlighted text: ${text}. Press enter if you want me to go ahead with this.`
+          }
+          this.editorData.setChatInteraction({
+            messages: [
+              { role: 'system', content: leadIn, hidden: true },
+              {
+                role: 'user',
+                content: `Here is a file I'm editing in the Trilogy language. ${targetEditor.contents}.`,
+                hidden: true,
+              },
+              { role: 'system', content: initMessage },
+            ],
+            validationFn: validator,
+            extractionFn: extractLastTripleQuotedText,
+            mutationFn: mutation,
+          })
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM query:', error)
