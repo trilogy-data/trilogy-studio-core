@@ -728,31 +728,6 @@ export default defineComponent({
             mutationFn: mutation,
           })
 
-          // await this.llmStore
-          //   .generateQueryCompletion(text, concepts, validator)
-          //   .then((query) => {
-          //     if (query) {
-          //       // Get the target editor directly
-          //       let targetEditor = this.editorStore.editors[editorId]
-          //       if (!targetEditor) {
-          //         throw new Error('Target editor not found.')
-          //       }
-
-          //       // Also update the CodeEditor with the new content
-          //       if (this.editorData.id === editorId && this.$refs.codeEditor) {
-
-          //         mutation(query.content)
-
-          //       }
-          //     } else {
-          //       throw new Error('LLM could not successfully generate query.')
-          //     }
-          //   })
-          //   .catch((error) => {
-          //     this.editorData.setError(error)
-          //     throw error
-          //   })
-          //   .finally(() => {})
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM query:', error)
