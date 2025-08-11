@@ -2,60 +2,32 @@
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Controls moved to right side, middle aligned, vertically stacked -->
     <div class="controls-toggle" v-if="showControls">
-      <button
-        @click="downloadChart"
-        class="control-btn"
-        data-testid="download-chart-btn"
-        title="Download chart as PNG"
-      >
+      <button @click="downloadChart" class="control-btn" data-testid="download-chart-btn" title="Download chart as PNG">
         <i class="mdi mdi-download-outline icon"></i>
       </button>
-      <button
-        @click="refreshChart"
-        class="control-btn"
-        data-testid="refresh-chart-btn"
-        title="Refresh chart"
-      >
+      <button @click="refreshChart" class="control-btn" data-testid="refresh-chart-btn" title="Refresh chart">
         <i class="mdi mdi-refresh icon"></i>
       </button>
-      <button
-        @click="toggleControls"
-        class="control-btn"
-        :class="{ active: showingControls }"
-        data-testid="toggle-chart-controls-btn"
-        :title="showingControls ? 'View Chart' : 'Edit Chart'"
-      >
-        <i
-          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
-          class="icon"
-        ></i>
+      <button @click="toggleControls" class="control-btn" :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn" :title="showingControls ? 'View Chart' : 'Edit Chart'">
+        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
       </button>
     </div>
 
     <!-- Content area with conditional rendering -->
     <div class="chart-content-area">
       <!-- Chart visualization area - only show when controls are hidden -->
-      <div
-        v-show="!showingControls"
-        ref="vegaContainer"
-        class="vega-container"
-        data-testid="vega-chart-container"
-      ></div>
+      <div v-show="!showingControls" ref="vegaContainer" class="vega-container" data-testid="vega-chart-container">
+      </div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
         <div class="inner-padding">
           <div class="control-section">
             <div class="chart-type-icons">
-              <button
-                v-for="type in charts"
-                :key="type.value"
-                @click="updateConfig('chartType', type.value)"
-                class="chart-icon"
-                :class="{ selected: internalConfig.chartType === type.value }"
-                :title="type.label"
-                :data-testid="`chart-type-${type.value}`"
-              >
+              <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
+                class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label"
+                :data-testid="`chart-type-${type.value}`">
                 <div class="icon-container">
                   <i :class="type.icon" class="icon"></i>
                 </div>
@@ -66,24 +38,15 @@
           <!-- Group axes controls  -->
           <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
             <label class="control-section-label">Axes</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -91,45 +54,26 @@
           </div>
 
           <!-- Group appearance controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'appearance')">
             <label class="control-section-label">Appearance</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
-              <input
-                v-if="['hideLegend', 'showTitle'].includes(control.field)"
-                type="checkbox"
-                :id="control.id"
-                :checked="internalConfig[control.field] as boolean"
-                @change="
+              <input v-if="['hideLegend', 'showTitle'].includes(control.field)" type="checkbox" :id="control.id"
+                :checked="internalConfig[control.field] as boolean" @change="
                   updateConfig(
                     control.field,
                     ($event.target as HTMLInputElement).checked ? 'true' : 'false',
                   )
-                "
-                data-testid="toggle-legend"
-              />
+                  " data-testid="toggle-legend" />
 
-              <select
-                v-else
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select v-else :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -137,46 +81,29 @@
           </div>
 
           <!-- Group advanced controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') || true">
             <label class="control-section-label">Advanced</label>
             <!-- Debug mode toggle -->
             <div class="control-group no-drag">
               <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
               <div class="toggle-switch-container">
                 <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    id="debug-mode-toggle"
-                    :checked="internalConfig.showDebug"
-                    @change="toggleDebugMode"
-                    data-testid="debug-mode-toggle"
-                  />
+                  <input type="checkbox" id="debug-mode-toggle" :checked="internalConfig.showDebug"
+                    @change="toggleDebugMode" data-testid="debug-mode-toggle" />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
             </div>
             <!-- Existing trellis field control -->
-            <div
-              v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -239,11 +166,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => {},
+      default: () => { },
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => {},
+      default: () => { },
     },
     chartTitle: {
       type: String,
@@ -410,9 +337,10 @@ export default defineComponent({
           vegaView.value = result.view
           hasLoaded.value = true
 
-          // if (removeEventListener) {
-          //   removeEventListener() // Clean up previous listener if it exists
-          // }
+          if (removeEventListener) {
+            removeEventListener()
+            removeEventListener = null
+          }
           // Setup event listeners using the helper
           removeEventListener = chartHelpers.setupEventListeners(
             result.view,
@@ -437,16 +365,16 @@ export default defineComponent({
           props.data,
           props.columns,
           value as
-            | 'bar'
-            | 'line'
-            | 'barh'
-            | 'point'
-            | 'usa-map'
-            | 'tree'
-            | 'area'
-            | 'headline'
-            | 'donut'
-            | 'heatmap',
+          | 'bar'
+          | 'line'
+          | 'barh'
+          | 'point'
+          | 'usa-map'
+          | 'tree'
+          | 'area'
+          | 'headline'
+          | 'donut'
+          | 'heatmap',
         )
 
         // Update all config fields
@@ -459,6 +387,7 @@ export default defineComponent({
       }
     }
 
+    // Also ensure cleanup happens when the component unmounts or view changes
     onUnmounted(() => {
       // Clean up event listener if it exists
       if (removeEventListener) {
@@ -466,7 +395,10 @@ export default defineComponent({
         removeEventListener = null
       }
       // Clear the view reference
-      vegaView.value = null
+      if (vegaView.value) {
+        vegaView.value.finalize() // Properly dispose of the Vega view
+        vegaView.value = null
+      }
     })
 
     // Watch for changes in data, columns or config
@@ -741,11 +673,11 @@ export default defineComponent({
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: var(--special-text);
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(16px);
 }
 
