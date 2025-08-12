@@ -32,7 +32,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) {}
+  constructor(private eventHandlers: ChartEventHandlers) { }
 
   /**
    * Downloads the chart as a PNG file
@@ -147,7 +147,6 @@ export class ChromaChartHelpers {
     const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
-
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
@@ -212,41 +211,36 @@ export class ChromaChartHelpers {
       }
     }
 
-    // Handle x and y field clicks
-    const xFieldRaw = config.xField
-    const yFieldRaw = config.yField
 
-    if (!xFieldRaw || !yFieldRaw) return
 
-    const xField = columns.get(xFieldRaw)?.address
-    const yField = columns.get(yFieldRaw)?.address
 
-    if (!xField || !yField) return
-
+    let baseCols = [config.xField, config.yField]
+    if (config.chartType === 'headline') {
+      baseCols = [...Object.keys(item.datum)]
+    }
     // Determine eligible fields for filtering
     const eligible = this.getEligibleFields(config, columns)
     // Handle x-field clicks
-    if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-      let xFilterValue = item.datum[xFieldRaw]
-
-      if (DATETIME_COLS.includes(columns.get(xFieldRaw)?.type as ColumnType)) {
-        xFilterValue = convertTimestampToISODate(item.datum[xFieldRaw])
-      }
-
-      baseFilters = { ...baseFilters, [xField]: xFilterValue }
-      baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
+    let checks = baseCols.filter((f) => f && eligible.includes(f))
+    if (checks.length === 0) {
+      console.warn('No eligible fields for filtering found')
+      return
     }
-    // Handle y-field clicks
-    else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-      let yFilterValue = item.datum[yFieldRaw]
+    //loop over eligible
+    eligible.forEach((field) => {
+      let fieldAddress = columns.get(field)?.address
+      if (!fieldAddress) return
+      if (item.datum[field] && eligible.includes(field)) {
+        let filterValue = item.datum[field]
 
-      if (DATETIME_COLS.includes(columns.get(yFieldRaw)?.type as ColumnType)) {
-        yFilterValue = convertTimestampToISODate(item.datum[yFieldRaw])
+        if (DATETIME_COLS.includes(columns.get(field)?.type as ColumnType)) {
+          filterValue = convertTimestampToISODate(item.datum[field])
+        }
+
+        baseFilters = { ...baseFilters, [fieldAddress]: filterValue }
+        baseChart = { ...baseChart, [field]: item.datum[field] }
       }
-
-      baseFilters = { ...baseFilters, [yField]: yFilterValue }
-      baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
-    }
+    })
 
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
@@ -296,8 +290,18 @@ export class ChromaChartHelpers {
         isValid = false
       }
     }
+    // config set
+    const configKeys: FieldKey[] = [
+      'hideLegend'
+    ]
+    let anyConfigSet = false
+    for (const key of configKeys) {
+      if (config[key] === true) {
+        anyConfigSet = true
+      }
+    }
     // if we have no values set, update
-    if (!anySet) {
+    if (!anySet && !anyConfigSet) {
       return false
     }
     return isValid

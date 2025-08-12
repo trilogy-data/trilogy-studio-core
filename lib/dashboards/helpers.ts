@@ -4,7 +4,7 @@ import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
 
-const HIGHLIGHT_COLOR = '#FF7F7F'
+export const HIGHLIGHT_COLOR = '#FF7F7F'
 
 const temporalTraits = [
   'year',
@@ -568,7 +568,19 @@ export const createInteractionEncodings = () => {
   }
 }
 
+export const getLegendOrientation = (field:string) => {
+  if (field && field.length > 10) {
+    return {
+      orient: "right",
+      titleOrient: "right",
+      titleFontSize: 10
+    }
+  }
+  return {}
+}
+
 export const createColorEncoding = (
+  config: ChartConfig,
   colorField: string | undefined,
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
@@ -583,6 +595,12 @@ export const createColorEncoding = (
         orient: 'bottom',
         direction: 'horizontal',
       },
+    }
+  }
+  if (colorField && colorField.length > 10) {
+    legendConfig = {
+      ...legendConfig,
+      ...getLegendOrientation(colorField),
     }
   }
 

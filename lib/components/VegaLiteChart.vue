@@ -1,7 +1,11 @@
 <template>
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
-    <!-- Controls moved to right side, middle aligned, vertically stacked -->
-    <div class="controls-toggle" v-if="showControls">
+    <!-- Controls positioned based on container height -->
+    <div 
+      class="controls-toggle" 
+      :class="{ 'bottom-controls': isShortContainer }"
+      v-if="showControls"
+    >
       <button
         @click="downloadChart"
         class="control-btn"
@@ -33,7 +37,7 @@
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div class="chart-content-area">
+    <div class="chart-content-area" :class="{ 'with-bottom-controls': isShortContainer && showControls }">
       <!-- Chart visualization area - only show when controls are hidden -->
       <div
         v-show="!showingControls"
@@ -104,14 +108,14 @@
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
               <input
-                v-if="['hideLegend', 'showTitle'].includes(control.field)"
+                v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)"
                 type="checkbox"
                 :id="control.id"
                 :checked="internalConfig[control.field] as boolean"
                 @change="
                   updateConfig(
                     control.field,
-                    ($event.target as HTMLInputElement).checked ? 'true' : 'false',
+                    ($event.target as HTMLInputElement).checked ? true : false,
                   )
                 "
                 data-testid="toggle-legend"
@@ -269,6 +273,11 @@ export default defineComponent({
 
     // Controls panel state
     const showingControls = ref(false)
+
+    // Computed property to determine if container is too short for side controls
+    const isShortContainer = computed(() => {
+      return props.containerHeight && props.containerHeight < 150
+    })
 
     // Internal configuration that merges provided config with defaults
     const internalConfig = ref<ChartConfig>({
@@ -428,9 +437,11 @@ export default defineComponent({
       }
     }
 
-    const updateConfig = (field: keyof ChartConfig, value: string) => {
+    const updateConfig = (field: keyof ChartConfig, value: string | boolean | number) => {
       // @ts-ignore
       internalConfig.value[field] = value
+
+      console.log(`Updated config field ${field} to`, value)
 
       if (field === 'chartType') {
         // Reset other fields when changing chart type
@@ -456,6 +467,7 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
+        console.log('Emitting chart config change:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }
@@ -487,6 +499,7 @@ export default defineComponent({
         const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
 
         if (!wasValid) {
+          console.log('Invalid config fields detected, resetting to defaults')
           initializeConfig(true) // force column reset on column change
         }
 
@@ -513,6 +526,7 @@ export default defineComponent({
       downloadChart,
       refreshChart,
       charts: eligible,
+      isShortContainer,
     }
   },
 
@@ -548,7 +562,20 @@ export default defineComponent({
   z-index: 10;
   display: flex;
   flex-direction: column;
-  /* gap: 4px; */
+}
+
+.controls-toggle.bottom-controls {
+  position: absolute;
+  top: auto;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(50%);
+  flex-direction: row;
+  gap: 4px;
+  padding: 4px;
+  background-color: rgba(var(--bg-color-rgb), 0.9);
+  border-radius: 4px 4px 0 0;
+  backdrop-filter: blur(4px);
 }
 
 .viz {
@@ -572,6 +599,8 @@ export default defineComponent({
   transition: background-color 0.2s;
   /* border-radius: 4px; */
 }
+
+
 
 .control-btn:hover {
   background-color: var(--button-mouseover);
@@ -597,6 +626,11 @@ export default defineComponent({
   width: calc(100% - 28px);
   height: 100%;
   position: relative;
+}
+
+.chart-content-area.with-bottom-controls {
+  width: 100%;
+  height: calc(100% - 36px); /* Account for bottom controls height */
 }
 
 .vega-container {
@@ -766,5 +800,24 @@ input:checked + .toggle-slider:before {
     margin-top: 5px;
     margin-bottom: 5px;
   }
-}
-</style>
+  
+  /* Force bottom controls on mobile */
+  .controls-toggle {
+    position: absolute;
+    top: auto;
+    bottom: 0;
+    right: 50%;
+    transform: translateX(50%);
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    background-color: rgba(var(--bg-color-rgb), 0.9);
+    border-radius: 4px 4px 0 0;
+    backdrop-filter: blur(4px);
+  }
+  
+  .chart-content-area {
+    width: 100%;
+    height: calc(100% - 40px);
+  }
+}</style>

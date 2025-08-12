@@ -321,40 +321,27 @@ const filterCount = computed(() => {
       </div>
     </div>
 
-    <!-- Filters display container -->
-    <div class="filters-container" v-if="supportsFilters">
+    <!-- Content area (now full height) -->
+    <div class="content-area">
+      <!-- Render the appropriate component based on cell type -->
+      <component
+        :is="cellComponent"
+        :dashboardId="props.dashboardId"
+        :itemId="item.i"
+        :setItemData="setItemData"
+        :getItemData="getItemData"
+        :getDashboardQueryExecutor="getDashboardQueryExecutor"
+        :editMode="editMode"
+        @dimension-click="dimensionClick"
+        @background-click="backgroundClick"
+      />
+    </div>
+
+    <!-- Filters overlay container (positioned over content area) -->
+    <div class="filters-overlay" v-if="supportsFilters">
       <!-- Edit mode - show filters normally -->
       <template v-if="editMode">
-        <div
-          class="filter-tag"
-          v-for="(filter, index) in itemData.filters"
-          :key="`${filter.source}-${filter.value}-${index}`"
-          :title="cleanFilterValue(filter.value)"
-        >
-          <span class="filter-content">
-            <span class="filter-source"
-              >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
-            >
-            <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
-          </span>
-          <button
-            class="filter-remove-btn"
-            @click="removeFilter(filter.source)"
-            title="Remove filter"
-            v-if="filter.source !== 'global'"
-          >
-            ×
-          </button>
-        </div>
-      </template>
-
-      <!-- View mode - show icon with count, or detailed filters on mouseover -->
-      <template v-else>
-        <div class="filter-summary" v-if="!isFiltersVisible && filterCount > 0">
-          <i class="mdi mdi-filter-outline filter-icon"></i>
-        </div>
-
-        <div v-if="isFiltersVisible && filterCount > 0" class="filter-details">
+        <div class="filters-container edit-mode">
           <div
             class="filter-tag"
             v-for="(filter, index) in itemData.filters"
@@ -370,7 +357,7 @@ const filterCount = computed(() => {
             <button
               class="filter-remove-btn"
               @click="removeFilter(filter.source)"
-              :title="`Remove ${filter.source} filter`"
+              title="Remove filter"
               v-if="filter.source !== 'global'"
             >
               ×
@@ -378,22 +365,41 @@ const filterCount = computed(() => {
           </div>
         </div>
       </template>
-    </div>
 
-    <!-- Content area -->
-    <div class="content-area" :class="{ 'content-area-filter': supportsFilters }">
-      <!-- Render the appropriate component based on cell type -->
-      <component
-        :is="cellComponent"
-        :dashboardId="props.dashboardId"
-        :itemId="item.i"
-        :setItemData="setItemData"
-        :getItemData="getItemData"
-        :getDashboardQueryExecutor="getDashboardQueryExecutor"
-        :editMode="editMode"
-        @dimension-click="dimensionClick"
-        @background-click="backgroundClick"
-      />
+      <!-- View mode - show icon with count, or detailed filters on mouseover -->
+      <template v-else>
+        <div class="filters-container view-mode" v-if="filterCount > 0">
+          <!-- Show icon when not hovering -->
+          <div class="filter-summary" v-if="!isFiltersVisible">
+            <i class="mdi mdi-filter-outline filter-icon"></i>
+          </div>
+
+          <!-- Show detailed filters when hovering -->
+          <div v-if="isFiltersVisible" class="filter-details">
+            <div
+              class="filter-tag"
+              v-for="(filter, index) in itemData.filters"
+              :key="`${filter.source}-${filter.value}-${index}`"
+              :title="cleanFilterValue(filter.value)"
+            >
+              <span class="filter-content">
+                <span class="filter-source"
+                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+                >
+                <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
+              </span>
+              <button
+                class="filter-remove-btn"
+                @click="removeFilter(filter.source)"
+                :title="`Remove ${filter.source} filter`"
+                v-if="filter.source !== 'global'"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -493,10 +499,7 @@ const filterCount = computed(() => {
   flex-direction: column;
   width: 100%;
   height: 100%;
-}
-
-.content-area-filter {
-  height: calc(100% - 24px);
+  /* Content now takes full height */
 }
 
 .item-title-container {
@@ -564,14 +567,35 @@ const filterCount = computed(() => {
 }
 
 .grid-item-header:hover .drag-handle-icon {
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
-/* Filter styles */
+/* Filters overlay - positioned over content area */
+.filters-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  pointer-events: none; /* Allow clicks to pass through to content below */
+}
+
 .filters-container {
   display: flex;
   flex-wrap: wrap;
+  pointer-events: auto; /* Re-enable pointer events for filter elements */
+}
+
+.filters-container.edit-mode {
+  /* background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.9); */
+  backdrop-filter: blur(2px);
+  border-bottom: 1px solid var(--dashboard-border);
   min-height: var(--chart-control-height);
+}
+
+.filters-container.view-mode {
+  background-color: transparent;
+  justify-content: flex-end; /* Move filter summary to the right */
 }
 
 .filter-tag {
@@ -632,14 +656,18 @@ const filterCount = computed(() => {
 .filter-summary {
   display: flex;
   align-items: center;
-  padding: 2px 6px;
+  padding: 6px 8px;
   cursor: pointer;
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
+  backdrop-filter: blur(2px);
+  border-radius: 4px;
+  margin: 4px;
+   margin-left: auto; /* Push to the right side */
 }
 
 .filter-icon {
-  margin-right: 3px;
   color: var(--special-text);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .filter-count {
@@ -651,8 +679,13 @@ const filterCount = computed(() => {
 .filter-details {
   display: flex;
   flex-wrap: wrap;
-  background-color: rgba(var(--sidebar-bg), 0.7);
+  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.9);
+  backdrop-filter: blur(2px);
   animation: fadeIn 0.2s ease;
+  border-radius: 4px;
+  margin: 4px;
+    margin-left: auto; /* Align with filter summary on the right */
+  max-width: 300px; /* Prevent it from being too wide */
 }
 
 @keyframes fadeIn {

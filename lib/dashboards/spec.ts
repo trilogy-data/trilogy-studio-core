@@ -104,7 +104,7 @@ const createPointChartSpec = (
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
       y: createFieldEncoding(config.yField || '', columns),
-      color: createColorEncoding(config.colorField, columns, false, currentTheme),
+      color: createColorEncoding(config, config.colorField, columns, false, currentTheme),
       size: createSizeEncoding(config.sizeField, columns),
       tooltip: tooltipFields,
       ...encoding,
@@ -206,6 +206,7 @@ export const generateVegaSpec = (
   // Set up color encoding
   let encoding: any = {}
   encoding.color = createColorEncoding(
+    config,
     !['heatmap'].includes(config.chartType) ? config.colorField : undefined,
     columns,
     isMobile,
@@ -303,7 +304,7 @@ export const generateVegaSpec = (
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(data, columns, currentTheme, isMobile)
+      chartSpec = createHeadlineSpec(config, data, columns, currentTheme, isMobile, intChart)
       break
 
     case 'heatmap':
@@ -311,7 +312,7 @@ export const generateVegaSpec = (
       break
 
     case 'usa-map':
-      chartSpec = createMapSpec(config, data || [], columns, isMobile, intChart)
+      chartSpec = createMapSpec(config, data || [], columns, isMobile, intChart, currentTheme)
       break
 
     case 'boxplot':

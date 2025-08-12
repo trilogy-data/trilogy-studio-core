@@ -58,7 +58,7 @@ const createInteractiveLayer = (
     } else {
       mainLayer.encoding = {
         ...mainLayer.encoding,
-        ...{ color: createColorEncoding(config.colorField, columns, isMobile, currentTheme) },
+        ...{ color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme) },
       }
     }
   }
