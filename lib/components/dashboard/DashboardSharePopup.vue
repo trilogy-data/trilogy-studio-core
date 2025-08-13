@@ -31,6 +31,7 @@ const filterDashboard = (dashboard: Dashboard): any => {
       const itemCopy = { ...item }
       delete itemCopy.static
       delete itemCopy.moved
+      delete itemCopy.state
       return itemCopy
     })
   }
@@ -40,6 +41,12 @@ const filterDashboard = (dashboard: Dashboard): any => {
     for (const [itemId, gridItem] of Object.entries(dashboardCopy.gridItems)) {
       const itemCopy = { ...(gridItem as any) }
       delete itemCopy.results
+      delete itemCopy.loading
+      delete itemCopy.loadStartTime
+      delete itemCopy.filters
+      delete itemCopy.error
+      delete itemCopy.chartFilters
+      delete itemCopy.conceptFilters
       if (itemCopy.chartConfig) {
         delete itemCopy.chartConfig.showDebug
       }
@@ -113,7 +120,7 @@ const handleClickOutside = (event: MouseEvent): void => {
         </div>
       </div>
       <div class="popup-footer">
-        <button @click="copyToClipboard" class="copy-button" data-testid="copy-json-button">
+        <button @click="copyToClipboard" class="dashboard-copy-button" data-testid="copy-json-button">
           {{ copySuccess ? 'Copied!' : 'Copy' }}
         </button>
       </div>
@@ -184,7 +191,7 @@ const handleClickOutside = (event: MouseEvent): void => {
   justify-content: flex-end;
   border-top: 1px solid var(--border);
 }
-.copy-button {
+.dashboard-copy-button {
   background-color: var(--special-text);
   color: white;
   border: none;
@@ -192,7 +199,7 @@ const handleClickOutside = (event: MouseEvent): void => {
   cursor: pointer;
   font-weight: 500;
 }
-.copy-button:hover {
+.dashboard-copy-button:hover {
   opacity: 0.9;
 }
 /* Media queries for responsiveness */
