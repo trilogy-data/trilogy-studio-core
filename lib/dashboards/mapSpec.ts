@@ -1,7 +1,7 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnHasTrait, getColumnFormat, isCategoricalColumn, createColorEncoding, getLegendOrientation  } from './helpers'
+import { getColumnHasTrait, getColumnFormat, createColorEncoding } from './helpers'
 import { computeMercatorProjectionFactors } from './d3utility'
 
 /**

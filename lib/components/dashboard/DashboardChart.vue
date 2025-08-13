@@ -318,6 +318,7 @@ export default defineComponent({
   color: #666;
   position: relative;
   overflow-y: hidden;
+  padding-top: 5px;
 }
 
 .loading-overlay {

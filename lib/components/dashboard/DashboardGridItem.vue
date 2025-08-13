@@ -466,8 +466,8 @@ const filterCount = computed(() => {
   left: 0;
   right: 0;
   z-index: 10;
-  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
-  backdrop-filter: blur(2px);
+  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 1);
+  /* backdrop-filter: blur(2px); */
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -475,7 +475,9 @@ const filterCount = computed(() => {
 
 .header-visible {
   opacity: 1;
+  backdrop-filter: blur(2px);
   pointer-events: all;
+  background-color: var(--sidebar-bg);
 }
 
 .grid-item-header {
@@ -531,7 +533,7 @@ const filterCount = computed(() => {
 .edit-indicator {
   font-size: 12px;
   margin-left: 8px;
-  opacity: 0.6;
+  opacity: 1;
   display: none;
 }
 
@@ -576,7 +578,7 @@ const filterCount = computed(() => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 15;
+  z-index: 7;
   pointer-events: none; /* Allow clicks to pass through to content below */
 }
 
@@ -588,7 +590,7 @@ const filterCount = computed(() => {
 
 .filters-container.edit-mode {
   /* background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.9); */
-  backdrop-filter: blur(2px);
+  /* backdrop-filter: blur(2px); */
   border-bottom: 1px solid var(--dashboard-border);
   min-height: var(--chart-control-height);
 }
@@ -662,7 +664,8 @@ const filterCount = computed(() => {
   backdrop-filter: blur(2px);
   border-radius: 4px;
   margin: 4px;
-   margin-left: auto; /* Push to the right side */
+  margin-right: 16px; /* Add some space on the right */
+  margin-left: auto; /* Push to the right side */
 }
 
 .filter-icon {

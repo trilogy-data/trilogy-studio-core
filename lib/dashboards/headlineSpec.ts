@@ -2,6 +2,22 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { isImageColumn, getColumnFormat, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
+
+const valueToString = (value: any): string => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  if (typeof value === 'string') {
+    return `'${value}'` // Escape single quotes for string literals
+  }
+  // Handle arrays and objects by converting to JSON string
+  return JSON.stringify(value)
+}
+
+
 const createHeadlineLayer = (
   column: string,
   index: number,
@@ -40,13 +56,17 @@ const createHeadlineLayer = (
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
   let topMark = {}
   let includeLabel = includeLabelSetting
+  let selectMarks = []
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
     topMark = {
+      transform: [
+        { filter: `datum.${column} === ${valueToString(datum)}` }
+      ],
       mark: {
         type: 'image',
         width: { expr: `width / ${total}` },
-        height: { expr: `height / ${total}` },
+        height: { expr: `height` },
         align: 'center',
         baseline: 'middle',
         x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
@@ -59,11 +79,38 @@ const createHeadlineLayer = (
           format: getColumnFormat(column, columns),
         },
       },
+            params: [
+        {
+          name: `highlight_${index}`,
+          select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+        },
+        {
+          name: `select_${index}`,
+          select: 'point',
+          value: intChart,
+        },
+      ],
     }
+    selectMarks = [
+      {
+        mark: {
+          type: "rect",
+          stroke: {
+            expr: "length(data('select_1_store'))>0 ? '#FF7F7F' : '#262626'"
+          },
+          strokeWidth: 4,
+          width: 5,
+          fillOpacity: 0,
+          x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+          y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 10,
+          height: 5,
+        },
+      },
+    ]
   } else {
     topMark = {
       transform: [
-        { filter: `datum.${column} === '${datum}'` }
+        { filter: `datum.${column} === ${valueToString(datum)}` }
       ],
       mark: {
         type: 'text',
@@ -82,7 +129,7 @@ const createHeadlineLayer = (
         },
         color: {
           condition: { "param": `select_${index}`, "value": HIGHLIGHT_COLOR, empty: false },
-          value: currentTheme === 'light' ? '#262626' : '#f0f0f0' 
+          value: currentTheme === 'light' ? '#262626' : '#f0f0f0'
         }
       },
       params: [
@@ -106,7 +153,7 @@ const createHeadlineLayer = (
       align: 'center',
       baseline: 'top',
       dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
+      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 20, // Vertical offset for mobile, fixed for desktop
     },
     encoding: {
       text: { value: snakeCaseToCapitalizedWords(column) },
@@ -122,9 +169,9 @@ const createHeadlineLayer = (
   }
   if (!includeLabel) {
     // If it's an image column, we don't need a label
-    return [topMark]
+    return [topMark].concat(selectMarks)
   }
-  return [topMark, labelMark]
+  return [topMark, labelMark].concat(selectMarks)
 }
 
 export const createHeadlineSpec = (

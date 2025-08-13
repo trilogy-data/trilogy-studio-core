@@ -702,6 +702,8 @@ const createDatasource = async () => {
   background: var(--query-window-bg);
   padding: 12px;
   overflow-x: auto;
+  overflow-y: scroll;
+  max-height: 50vh;
 }
 
 .code-preview pre {
