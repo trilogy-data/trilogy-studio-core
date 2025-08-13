@@ -608,8 +608,7 @@ export const createColorEncoding = (
   const addLegendIfNeeded = (obj: any) => {
     if (!hideLegend && Object.keys(legendConfig).length > 0) {
       obj.legend = legendConfig
-    }
-    else if (hideLegend) {
+    } else if (hideLegend) {
       obj.legend = null
     }
     return obj

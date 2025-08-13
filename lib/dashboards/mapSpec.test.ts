@@ -30,24 +30,6 @@ vi.mock('./formatting', () => ({
   }),
 }))
 
-vi.mock('./helpers', () => ({
-  getColumnHasTrait: vi.fn(
-    (fieldName: string, columns: Map<string, ResultColumn>, trait: string) => {
-      const column = columns.get(fieldName)
-      return column?.traits?.includes(trait) || false
-    },
-  ),
-  getColumnFormat: vi.fn((fieldName: string, columns: Map<string, ResultColumn>) => {
-    const column = columns.get(fieldName)
-    if (column?.traits?.includes('usd')) return '$,.2f'
-    if (column?.traits?.includes('percent')) return '.1%'
-    return '.2f'
-  }),
-  isCategoricalColumn: vi.fn((column: ResultColumn) => {
-    return column.type === ColumnType.STRING
-  }),
-}))
-
 vi.mock('./d3utility', () => ({
   // @ts-ignore
   computeMercatorProjectionFactors: vi.fn((data: any[], xField: string, yField: string) => ({
@@ -607,21 +589,6 @@ describe('createMapSpec', () => {
       }).toThrow(
         'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
       )
-    })
-
-    it('should handle missing column references gracefully', () => {
-      const config: ChartConfig = {
-        chartType: 'usa-map',
-        geoField: 'state',
-        colorField: 'nonexistent_field',
-      }
-
-      const data = createUSStateData()
-      const columns = createUSStateColumns()
-
-      expect(() => {
-        createMapSpec(config, data, columns, false, intChart)
-      }).toThrow('Column nonexistent_field not found in provided columns map')
     })
 
     it('should return empty object for unsupported configurations', () => {

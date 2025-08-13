@@ -487,7 +487,7 @@ describe('createHeadlineSpec', (): void => {
   describe('image column handling', (): void => {
     it('should handle image columns differently', (): void => {
       const imageColumns = new Map<string, ResultColumn>([
-        ['image', { name: 'image', type: 'string' } as ResultColumn],
+        ['image', { name: 'image', type: 'string', traits: ['url_image'] } as ResultColumn],
       ])
 
       const imageData = [{ image: 'https://example.com/image.jpg' } as Row]

@@ -183,32 +183,59 @@ export const createHeadlineSpec = (
 
   // Map each column to its visualization layers with proper index
   let size = columnsArray.length * dataFull.length
-  // flatte
-  let columnLayers = dataFull.map((row, index1) => {
-    return columnsArray.map((column, index2) => {
-      let datum = row ? (row ? row[column.name] : null) : null
-      let filtered_display = intChart.filter((item) => {
-        return (
-          item[column.name] !== undefined &&
-          item[column.name] !== null &&
-          item[column.name] !== '' &&
-          item[column.name] == datum
+  let columnLayers = []
+  if (dataFull.length === 0) {
+    columnLayers = [
+      columnsArray.map((column, index2) => {
+        let datum = null
+        let filtered_display = intChart.filter((item) => {
+          return (
+            item[column.name] !== undefined &&
+            item[column.name] !== null &&
+            item[column.name] !== '' &&
+            item[column.name] == datum
+          )
+        })
+        return createHeadlineLayer(
+          column.name,
+          index2 + 1,
+          size,
+          columns,
+          currentTheme,
+          isMobile,
+          datum,
+          !(config.hideLegend === true),
+          filtered_display,
+        )
+      }),
+    ]
+  } else {
+    columnLayers = dataFull.map((row, index1) => {
+      return columnsArray.map((column, index2) => {
+        let datum = row ? (row ? row[column.name] : null) : null
+        let filtered_display = intChart.filter((item) => {
+          return (
+            item[column.name] !== undefined &&
+            item[column.name] !== null &&
+            item[column.name] !== '' &&
+            item[column.name] == datum
+          )
+        })
+        console.log('datum', datum, filtered_display)
+        return createHeadlineLayer(
+          column.name,
+          (index1 + 1) * (index2 + 1),
+          size,
+          columns,
+          currentTheme,
+          isMobile,
+          datum,
+          !(config.hideLegend === true),
+          filtered_display,
         )
       })
-      console.log('datum', datum, filtered_display)
-      return createHeadlineLayer(
-        column.name,
-        (index1 + 1) * (index2 + 1),
-        size,
-        columns,
-        currentTheme,
-        isMobile,
-        datum,
-        !(config.hideLegend === true),
-        filtered_display,
-      )
     })
-  })
+  }
 
   // flatten array of arrays of arrays to a single array
   let flatLayers = columnLayers.reduce(
