@@ -124,7 +124,6 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
   format: getColumnFormat(field, columns),
 })
 
-
 /**
  * Creates common interaction parameters
  */
@@ -271,7 +270,14 @@ const createUSScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config, config.colorField, columns, isMobile, currentTheme, config.hideLegend)
+            ? createColorEncoding(
+                config,
+                config.colorField,
+                columns,
+                isMobile,
+                currentTheme,
+                config.hideLegend,
+              )
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -388,7 +394,14 @@ const createWorldScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config, config.colorField, columns, isMobile, currentTheme, config.hideLegend)
+            ? createColorEncoding(
+                config,
+                config.colorField,
+                columns,
+                isMobile,
+                currentTheme,
+                config.hideLegend,
+              )
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -406,11 +419,19 @@ const createUSChoroplethMapSpec = (
   columns: Map<string, ResultColumn>,
   intChart: Array<Partial<ChartConfig>>,
   isMobile: boolean = false,
+  currentTheme: string = 'light',
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
   if (config.colorField) {
-    colorConfig = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+    colorConfig = createColorEncoding(
+      config,
+      config.colorField,
+      columns,
+      isMobile,
+      currentTheme,
+      config.hideLegend,
+    )
   } else {
     colorConfig = { value: 'steelblue' }
   }
@@ -489,7 +510,7 @@ export const createMapSpec = (
 
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile)
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
   }
 
   // Handle country map case
@@ -506,7 +527,14 @@ export const createMapSpec = (
     }
     let colorEncoding = {}
     if (config.colorField) {
-      colorEncoding = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+      colorEncoding = createColorEncoding(
+        config,
+        config.colorField,
+        columns,
+        isMobile,
+        currentTheme,
+        config.hideLegend,
+      )
     }
     return {
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

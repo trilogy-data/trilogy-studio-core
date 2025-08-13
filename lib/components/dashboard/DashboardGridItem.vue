@@ -687,7 +687,7 @@ const filterCount = computed(() => {
   animation: fadeIn 0.2s ease;
   border-radius: 4px;
   margin: 4px;
-    margin-left: auto; /* Align with filter summary on the right */
+  margin-left: auto; /* Align with filter summary on the right */
   max-width: 300px; /* Prevent it from being too wide */
 }
 

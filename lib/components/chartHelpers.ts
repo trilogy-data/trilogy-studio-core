@@ -1,6 +1,6 @@
 // chartHelpers.ts
 import type { View } from 'vega'
-import type { ResultColumn, ChartConfig, FieldKey } from '../editors/results'
+import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import {
@@ -32,7 +32,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file
@@ -147,6 +147,7 @@ export class ChromaChartHelpers {
     const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
+    console.log('Point clicked:', item, 'Append:', append)
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
@@ -211,9 +212,6 @@ export class ChromaChartHelpers {
       }
     }
 
-
-
-
     let baseCols = [config.xField, config.yField]
     if (config.chartType === 'headline') {
       baseCols = [...Object.keys(item.datum)]
@@ -241,7 +239,6 @@ export class ChromaChartHelpers {
         baseChart = { ...baseChart, [field]: item.datum[field] }
       }
     })
-
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
       chart: baseChart,
@@ -291,9 +288,7 @@ export class ChromaChartHelpers {
       }
     }
     // config set
-    const configKeys: FieldKey[] = [
-      'hideLegend'
-    ]
+    const configKeys: BoolFieldKey[] = ['hideLegend', 'showDebug', 'showTitle']
     let anyConfigSet = false
     for (const key of configKeys) {
       if (config[key] === true) {

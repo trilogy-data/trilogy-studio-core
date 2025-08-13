@@ -282,7 +282,7 @@ export class DashboardQueryExecutor {
       loading: true,
       error: null,
     })
-    
+
     let request = {
       dashboardId: this.dashboardId,
       queryInput: {
@@ -336,7 +336,7 @@ export class DashboardQueryExecutor {
     if (existingQuery) {
       console.log(`Deduplicating query for ${request.itemId}`)
       finalQueryId = existingQuery.id
-      
+
       // Add callbacks to existing query
       this.addCallbacksToExistingQuery(existingQuery, request)
     } else {
@@ -459,7 +459,7 @@ export class DashboardQueryExecutor {
       // NOW set up tracking for the final query (whether new or deduplicated)
       this.latestQueryByItemId.set(itemId, finalQueryId)
       this.itemIdByQueryId.set(finalQueryId, itemId)
-      
+
       queryIds.push(finalQueryId)
     })
 

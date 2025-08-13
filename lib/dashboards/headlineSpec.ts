@@ -17,7 +17,6 @@ const valueToString = (value: any): string => {
   return JSON.stringify(value)
 }
 
-
 const createHeadlineLayer = (
   column: string,
   index: number,
@@ -56,13 +55,11 @@ const createHeadlineLayer = (
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
   let topMark = {}
   let includeLabel = includeLabelSetting
-  let selectMarks = []
+  let selectMarks: object[] = []
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
     topMark = {
-      transform: [
-        { filter: `datum.${column} === ${valueToString(datum)}` }
-      ],
+      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
       mark: {
         type: 'image',
         width: { expr: `width / ${total}` },
@@ -79,7 +76,7 @@ const createHeadlineLayer = (
           format: getColumnFormat(column, columns),
         },
       },
-            params: [
+      params: [
         {
           name: `highlight_${index}`,
           select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
@@ -94,24 +91,22 @@ const createHeadlineLayer = (
     selectMarks = [
       {
         mark: {
-          type: "rect",
+          type: 'rect',
           stroke: {
-            expr: "length(data('select_1_store'))>0 ? '#FF7F7F' : '#262626'"
+            expr: `length(data('select_${index}_store'))>0 ? '#FF7F7F'  : 'transparent'`,
           },
           strokeWidth: 4,
           width: 5,
           fillOpacity: 0,
           x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-          y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 10,
+          y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0,
           height: 5,
         },
       },
     ]
   } else {
     topMark = {
-      transform: [
-        { filter: `datum.${column} === ${valueToString(datum)}` }
-      ],
+      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
       mark: {
         type: 'text',
         fontSize: { expr: fontSizeFormula },
@@ -128,9 +123,9 @@ const createHeadlineLayer = (
           format: getColumnFormat(column, columns),
         },
         color: {
-          condition: { "param": `select_${index}`, "value": HIGHLIGHT_COLOR, empty: false },
-          value: currentTheme === 'light' ? '#262626' : '#f0f0f0'
-        }
+          condition: { param: `select_${index}`, value: HIGHLIGHT_COLOR, empty: false },
+          value: currentTheme === 'light' ? '#262626' : '#f0f0f0',
+        },
       },
       params: [
         {
@@ -191,6 +186,16 @@ export const createHeadlineSpec = (
   // flatte
   let columnLayers = dataFull.map((row, index1) => {
     return columnsArray.map((column, index2) => {
+      let datum = row ? (row ? row[column.name] : null) : null
+      let filtered_display = intChart.filter((item) => {
+        return (
+          item[column.name] !== undefined &&
+          item[column.name] !== null &&
+          item[column.name] !== '' &&
+          item[column.name] == datum
+        )
+      })
+      console.log('datum', datum, filtered_display)
       return createHeadlineLayer(
         column.name,
         (index1 + 1) * (index2 + 1),
@@ -198,16 +203,18 @@ export const createHeadlineSpec = (
         columns,
         currentTheme,
         isMobile,
-        row ? (row ? row[column.name] : null) : null,
+        datum,
         !(config.hideLegend === true),
-        intChart
+        filtered_display,
       )
     })
   })
 
-
   // flatten array of arrays of arrays to a single array
-  let flatLayers = columnLayers.reduce((acc, val) => acc.concat(val.reduce((a, v) => a.concat(v), [])), [])
+  let flatLayers = columnLayers.reduce(
+    (acc, val) => acc.concat(val.reduce((a, v) => a.concat(v), [])),
+    [],
+  )
 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

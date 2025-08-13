@@ -104,7 +104,7 @@ const createPointChartSpec = (
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
       y: createFieldEncoding(config.yField || '', columns),
-      color: createColorEncoding(config, config.colorField, columns, false, currentTheme),
+      color: createColorEncoding(config, config.colorField, columns, false, currentTheme, config.hideLegend),
       size: createSizeEncoding(config.sizeField, columns),
       tooltip: tooltipFields,
       ...encoding,

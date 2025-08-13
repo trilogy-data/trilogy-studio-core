@@ -91,17 +91,18 @@ const useConnectionStore = defineStore('connections', {
       // Create a new operation with timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error(`Reset operation timed out after ${connectionTimeout / 1000} seconds`)),
+          () =>
+            reject(
+              new Error(`Reset operation timed out after ${connectionTimeout / 1000} seconds`),
+            ),
           connectionTimeout,
         )
       })
 
       // The actual reset operation
-      const resetPromise = this.connections[name]
-        .reset()
-        .then(() => {
-          return runStartup(this.connections[name])
-        })
+      const resetPromise = this.connections[name].reset().then(() => {
+        return runStartup(this.connections[name])
+      })
 
       // Use Promise.race to implement timeout
       const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {

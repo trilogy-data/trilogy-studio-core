@@ -568,19 +568,19 @@ export const createInteractionEncodings = () => {
   }
 }
 
-export const getLegendOrientation = (field:string) => {
+export const getLegendOrientation = (field: string) => {
   if (field && field.length > 10) {
     return {
-      orient: "right",
-      titleOrient: "right",
-      titleFontSize: 10
+      orient: 'right',
+      titleOrient: 'right',
+      titleFontSize: 10,
     }
   }
   return {}
 }
 
 export const createColorEncoding = (
-  config: ChartConfig,
+  _: ChartConfig,
   colorField: string | undefined,
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
@@ -608,6 +608,9 @@ export const createColorEncoding = (
   const addLegendIfNeeded = (obj: any) => {
     if (!hideLegend && Object.keys(legendConfig).length > 0) {
       obj.legend = legendConfig
+    }
+    else if (hideLegend) {
+      obj.legend = null
     }
     return obj
   }

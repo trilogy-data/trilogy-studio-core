@@ -59,7 +59,8 @@ export type FieldKey =
   | 'geoField'
   | 'groupField'
   | 'trellisField'
-  | 'hideLegend'
+
+export type BoolFieldKey = 'hideLegend' | 'showDebug' | 'showTitle'
 
 // Chart configuration interface
 export interface ChartConfig {

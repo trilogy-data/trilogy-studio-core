@@ -1,8 +1,8 @@
 <template>
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Controls positioned based on container height -->
-    <div 
-      class="controls-toggle" 
+    <div
+      class="controls-toggle"
       :class="{ 'bottom-controls': isShortContainer }"
       v-if="showControls"
     >
@@ -37,7 +37,10 @@
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div class="chart-content-area" :class="{ 'with-bottom-controls': isShortContainer && showControls }">
+    <div
+      class="chart-content-area"
+      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
+    >
       <!-- Chart visualization area - only show when controls are hidden -->
       <div
         v-show="!showingControls"
@@ -488,7 +491,7 @@ export default defineComponent({
 
     // Watch for changes in data, columns or config
     watch(
-      () => [props.containerHeight, props.containerWidth],
+      () => [props.containerHeight, props.containerWidth, props.chartSelection],
       () => renderChart(true),
     )
 
@@ -599,8 +602,6 @@ export default defineComponent({
   transition: background-color 0.2s;
   /* border-radius: 4px; */
 }
-
-
 
 .control-btn:hover {
   background-color: var(--button-mouseover);
@@ -800,7 +801,7 @@ input:checked + .toggle-slider:before {
     margin-top: 5px;
     margin-bottom: 5px;
   }
-  
+
   /* Force bottom controls on mobile */
   .controls-toggle {
     position: absolute;
@@ -815,9 +816,10 @@ input:checked + .toggle-slider:before {
     border-radius: 4px 4px 0 0;
     backdrop-filter: blur(4px);
   }
-  
+
   .chart-content-area {
     width: 100%;
     height: calc(100% - 40px);
   }
-}</style>
+}
+</style>
