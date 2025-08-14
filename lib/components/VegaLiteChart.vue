@@ -1,66 +1,31 @@
 <template>
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Controls positioned based on container height -->
-    <div
-      class="controls-toggle"
-      :class="{ 'bottom-controls': isShortContainer }"
-      v-if="showControls"
-    >
-      <button
-        @click="downloadChart"
-        class="control-btn"
-        data-testid="download-chart-btn"
-        title="Download chart as PNG"
-      >
+    <div class="controls-toggle" :class="{ 'bottom-controls': isShortContainer }" v-if="showControls">
+      <button @click="downloadChart" class="control-btn" data-testid="download-chart-btn" title="Download chart as PNG">
         <i class="mdi mdi-download-outline icon"></i>
       </button>
-      <button
-        @click="refreshChart"
-        class="control-btn"
-        data-testid="refresh-chart-btn"
-        title="Refresh chart"
-      >
+      <button @click="refreshChart" class="control-btn" data-testid="refresh-chart-btn" title="Refresh chart">
         <i class="mdi mdi-refresh icon"></i>
       </button>
-      <button
-        @click="toggleControls"
-        class="control-btn"
-        :class="{ active: showingControls }"
-        data-testid="toggle-chart-controls-btn"
-        :title="showingControls ? 'View Chart' : 'Edit Chart'"
-      >
-        <i
-          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
-          class="icon"
-        ></i>
+      <button @click="toggleControls" class="control-btn" :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn" :title="showingControls ? 'View Chart' : 'Edit Chart'">
+        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
       </button>
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div
-      class="chart-content-area"
-      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
-    >
+    <div class="chart-content-area" :class="{ 'with-bottom-controls': isShortContainer && showControls }">
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!showingControls">
-        <div
-          ref="vegaContainer1"
-          class="vega-container"
-          :class="{ 
-            'vega-active': activeContainer === 1,
-            'vega-transitioning': transitioning && activeContainer === 1
-          }"
-          data-testid="vega-chart-container-1"
-        ></div>
-        <div
-          ref="vegaContainer2"
-          class="vega-container"
-          :class="{ 
-            'vega-active': activeContainer === 2,
-            'vega-transitioning': transitioning && activeContainer === 2
-          }"
-          data-testid="vega-chart-container-2"
-        ></div>
+        <div ref="vegaContainer1" class="vega-container" :class="{
+          'vega-active': activeContainer === 1,
+          'vega-transitioning': transitioning && activeContainer === 1
+        }" data-testid="vega-chart-container-1"></div>
+        <div ref="vegaContainer2" class="vega-container" :class="{
+          'vega-active': activeContainer === 2,
+          'vega-transitioning': transitioning && activeContainer === 2
+        }" data-testid="vega-chart-container-2"></div>
       </div>
 
       <!-- Controls panel - only show when toggled -->
@@ -68,15 +33,9 @@
         <div class="inner-padding">
           <div class="control-section">
             <div class="chart-type-icons">
-              <button
-                v-for="type in charts"
-                :key="type.value"
-                @click="updateConfig('chartType', type.value)"
-                class="chart-icon"
-                :class="{ selected: internalConfig.chartType === type.value }"
-                :title="type.label"
-                :data-testid="`chart-type-${type.value}`"
-              >
+              <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
+                class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label"
+                :data-testid="`chart-type-${type.value}`">
                 <div class="icon-container">
                   <i :class="type.icon" class="icon"></i>
                 </div>
@@ -87,24 +46,15 @@
           <!-- Group axes controls  -->
           <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
             <label class="control-section-label">Axes</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -112,45 +62,26 @@
           </div>
 
           <!-- Group appearance controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'appearance')">
             <label class="control-section-label">Appearance</label>
-            <div
-              v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
-              <input
-                v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)"
-                type="checkbox"
-                :id="control.id"
-                :checked="internalConfig[control.field] as boolean"
-                @change="
+              <input v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)" type="checkbox"
+                :id="control.id" :checked="internalConfig[control.field] as boolean" @change="
                   updateConfig(
                     control.field,
                     ($event.target as HTMLInputElement).checked ? true : false,
                   )
-                "
-                data-testid="toggle-legend"
-              />
+                  " data-testid="toggle-legend" />
 
-              <select
-                v-else
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select v-else :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -158,46 +89,29 @@
           </div>
 
           <!-- Group advanced controls -->
-          <div
-            class="control-section"
-            v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
-          >
+          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') || true">
             <label class="control-section-label">Advanced</label>
             <!-- Debug mode toggle -->
             <div class="control-group no-drag">
               <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
               <div class="toggle-switch-container">
                 <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    id="debug-mode-toggle"
-                    :checked="internalConfig.showDebug"
-                    @change="toggleDebugMode"
-                    data-testid="debug-mode-toggle"
-                  />
+                  <input type="checkbox" id="debug-mode-toggle" :checked="internalConfig.showDebug"
+                    @change="toggleDebugMode" data-testid="debug-mode-toggle" />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
             </div>
             <!-- Existing trellis field control -->
-            <div
-              v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
-              :key="control.id"
-              class="control-group no-drag"
-            >
+            <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
+              class="control-group no-drag">
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select
-                :id="control.id"
-                :value="internalConfig[control.field]"
+              <select :id="control.id" :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag"
-              >
+                class="form-select no-drag">
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option
-                  v-for="column in filteredColumnsInternal(control.columnFilter)"
-                  :key="column.name"
-                  :value="column.name"
-                >
+                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
+                  :value="column.name">
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -268,11 +182,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => {},
+      default: () => { },
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => {},
+      default: () => { },
     },
     chartTitle: {
       type: String,
@@ -283,33 +197,33 @@ export default defineComponent({
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
-    
+
     // Track last rendered spec to avoid unnecessary re-renders
     const lastSpec = ref<string | null>(null)
-    
+
     // Dual container refs and state management
     const vegaContainer1 = ref<HTMLElement | null>(null)
     const vegaContainer2 = ref<HTMLElement | null>(null)
     const activeContainer = ref<1 | 2>(1)
     const transitioning = ref(false)
-    
+
     // Store views for both containers
     const vegaViews = ref<Map<1 | 2, View | null>>(new Map([
       [1, null],
       [2, null]
     ]))
-    
+
     // Track event listeners for cleanup
     const eventListeners = ref<Map<1 | 2, (() => void) | null>>(new Map([
       [1, null],
       [2, null]
     ]))
-    
+
     // Render operation tracking for concurrency control
     let renderCounter = 0
     const pendingRender = ref<RenderOperation | null>(null)
     const activeRender = ref<RenderOperation | null>(null)
-    
+
     const hasLoaded = ref<boolean>(false)
 
     if (!settingsStore) {
@@ -370,7 +284,7 @@ export default defineComponent({
         listener()
         eventListeners.value.set(container, null)
       }
-      
+
       // Finalize view
       const view = vegaViews.value.get(container)
       if (view) {
@@ -451,17 +365,8 @@ export default defineComponent({
 
     // Toggle debug mode
     const toggleDebugMode = () => {
-      internalConfig.value.showDebug = !internalConfig.value.showDebug
-
-      // Notify parent component if the callback is provided
-      if (props.onChartConfigChange) {
-        props.onChartConfigChange({ ...internalConfig.value })
-      }
-
-      // Re-render chart to apply debug mode changes
-      if (!showingControls.value) {
-        renderChart(true)
-      }
+      let newValue = !internalConfig.value.showDebug
+      updateConfig('showDebug', newValue)
     }
 
     // Main render function with hot-swap logic
@@ -477,6 +382,9 @@ export default defineComponent({
       if (hasLoaded.value && lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
+      }
+      else {
+        console.log('Rendering new spec on chart:', props.chartTitle)
       }
 
       // Create new render operation
@@ -499,14 +407,9 @@ export default defineComponent({
       // This render is now pending
       pendingRender.value = renderOp
 
-      // Wait for any active render to complete or abort
-      while (activeRender.value && !activeRender.value.aborted) {
-        await new Promise(resolve => setTimeout(resolve, 50))
-      }
-
       // Check if this render was aborted while waiting
       if (renderOp.aborted) {
-        console.log(`Render ${renderOp.id} aborted before starting`)
+        console.log(`Render ${renderOp.id} ${props.chartTitle} aborted before starting`)
         return
       }
 
@@ -517,7 +420,7 @@ export default defineComponent({
       try {
         // Get the target container
         const targetContainer = renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
-        
+
         if (!targetContainer) {
           console.log(`Container ${renderOp.container} not available`)
           return
@@ -538,7 +441,7 @@ export default defineComponent({
 
         // Check for abort after async operation
         if (renderOp.aborted) {
-          console.log(`Render ${renderOp.id} aborted after vega embed`)
+          console.log(`Render ${renderOp.id} ${props.chartTitle} aborted after vega embed`)
           // Clean up the just-created view since we're aborting
           result.view.finalize()
           return
@@ -546,13 +449,13 @@ export default defineComponent({
 
         // Store the new view
         vegaViews.value.set(renderOp.container, result.view)
-        
+
         // Clean up old event listener for this container
         const oldListener = eventListeners.value.get(renderOp.container)
         if (oldListener) {
           oldListener()
         }
-        
+
         // Setup new event listeners
         const removeListener = chartHelpers.setupEventListeners(
           result.view,
@@ -572,14 +475,14 @@ export default defineComponent({
 
         // Perform the hot-swap transition
         transitioning.value = true
-        
+
         // Wait a tick for the new chart to be ready
         await nextTick()
-        
+
         // Switch active container
         const previousContainer = activeContainer.value
         activeContainer.value = renderOp.container
-        
+
         // Let the transition effect play out
         setTimeout(() => {
           transitioning.value = false
@@ -614,16 +517,16 @@ export default defineComponent({
           props.data,
           props.columns,
           value as
-            | 'bar'
-            | 'line'
-            | 'barh'
-            | 'point'
-            | 'usa-map'
-            | 'tree'
-            | 'area'
-            | 'headline'
-            | 'donut'
-            | 'heatmap',
+          | 'bar'
+          | 'line'
+          | 'barh'
+          | 'point'
+          | 'usa-map'
+          | 'tree'
+          | 'area'
+          | 'headline'
+          | 'donut'
+          | 'heatmap',
         )
 
         // Update all config fields
@@ -646,33 +549,65 @@ export default defineComponent({
       if (activeRender.value) {
         activeRender.value.aborted = true
       }
-      
+
       // Clean up both containers
       cleanupContainer(1)
       cleanupContainer(2)
     })
-
+    watch(
+      () => [props.chartSelection],
+      (newValues, oldValues) => {
+        const [newSelection] = newValues;
+        const [oldSelection] = oldValues;
+        if (newSelection !== oldSelection) {
+          if (newSelection && oldSelection && newSelection.length === oldSelection.length) {
+            // this is not a real change
+            return
+          }
+        }
+        if (internalConfig.value.chartType !== 'headline') return;
+        renderChart(true);
+      }
+    )
     // Watch for changes in data, columns or config
     watch(
-      () => [props.containerHeight, props.containerWidth, props.chartSelection],
-      () => renderChart(true),
+      () => [props.containerHeight, props.containerWidth],
+      () => {
+        renderChart(true);
+      }
     )
+    let updatePending = false
 
     watch(
       () => [props.columns, props.data],
-      () => {
-        // Validate configuration fields using helper
-        const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
+      (newValues, oldValues) => {
+        if (updatePending) return
+        // check they are actually different
+        if (JSON.stringify(newValues) === JSON.stringify(oldValues)) return
+        updatePending = true
+        nextTick(() => {
+          updatePending = false
 
-        if (!wasValid) {
-          console.log('Invalid config fields detected, resetting to defaults')
-          initializeConfig(true) // force column reset on column change
-        }
-
-        renderChart()
+          const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
+          if (!wasValid) {
+            console.log('Invalid config fields detected, resetting to defaults')
+            initializeConfig(true)
+          }
+          renderChart()
+        })
       },
-      { deep: true },
+      { deep: true }
     )
+    // watchEffect(() => {
+    //   // Automatically tracks props.columns, props.data, and internalConfig.value
+    //   // Runs only once per update cycle even if multiple dependencies change
+    //   const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
+    //   if (!wasValid) {
+    //     console.log('Invalid config fields detected, resetting to defaults')
+    //     initializeConfig(true)
+    //   }
+    //   renderChart()
+    // })
 
     const eligible = computed(() => {
       return Charts.filter((x) =>
@@ -965,11 +900,11 @@ export default defineComponent({
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: var(--special-text);
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(16px);
 }
 

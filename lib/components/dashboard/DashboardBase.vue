@@ -500,6 +500,7 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   }
 
   if (data.results) {
+    console.log('Setting results for item:', itemId)
     dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
   }
 

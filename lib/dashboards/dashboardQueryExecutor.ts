@@ -705,7 +705,7 @@ export class DashboardQueryExecutor {
       // Process next queries in queue
       setTimeout(() => {
         this.processBatch()
-      }, 50)
+      }, 5)
     }
   }
 }
