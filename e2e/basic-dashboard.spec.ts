@@ -346,7 +346,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   
 // Find the first matching point from our successful checks
-let clickPoint = null
+let clickPoint = null as { relX: number; relY: number; expectedColors: string[] } | null
 for (const point of texasCheckPoints) {
   try {
     const color = await getRelativePixelColor(page, point.relX, point.relY)
