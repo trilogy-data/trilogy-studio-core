@@ -95,12 +95,13 @@ const createHeadlineLayer = (
           stroke: {
             expr: `vlSelectionTest('select_${index}_store', datum) && datum['${column}'] === ${valueToString(datum)} ? '#FF7F7F' : 'transparent'`,
           },
-          strokeWidth: 4,
-          width: 5,
+          strokeWidth: 5,
+          width: 1,
+          height: 1,
           fillOpacity: 0,
           x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
           y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0,
-          height: 5,
+
         },
       },
     ]

@@ -477,7 +477,6 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   if (data.content) {
     dashboardStore.updateItemContent(dashboard.value.id, itemId, data.content)
     let executor = getDashboardQueryExecutor(dashboard.value.id)
-    console.log('Running query for item after content update:', itemId)
     executor?.runSingle(itemId)
   }
 

@@ -91,16 +91,13 @@
           <!-- Group advanced controls -->
           <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') || true">
             <label class="control-section-label">Advanced</label>
-            <!-- Debug mode toggle -->
+            <!-- Open in Vega Editor button -->
             <div class="control-group no-drag">
-              <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
-              <div class="toggle-switch-container">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="debug-mode-toggle" :checked="internalConfig.showDebug"
-                    @change="toggleDebugMode" data-testid="debug-mode-toggle" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
+              <label class="chart-label">Vega Editor</label>
+              <button @click="openInVegaEditor" class="editor-btn" title="Open chart spec in Vega Editor">
+                <i class="mdi mdi-open-in-new icon"></i>
+                Open in Editor
+              </button>
             </div>
             <!-- Existing trellis field control -->
             <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
@@ -363,10 +360,27 @@ export default defineComponent({
       emit('refresh-click')
     }
 
-    // Toggle debug mode
-    const toggleDebugMode = () => {
-      let newValue = !internalConfig.value.showDebug
-      updateConfig('showDebug', newValue)
+    // Open chart spec in Vega Editor
+    const openInVegaEditor = () => {
+      const spec = generateVegaSpecInternal()
+      const editorUrl = 'https://vega.github.io/editor/';
+      const editor = window.open(editorUrl, '_blank');
+
+      const msg = {
+        mode: 'vega-lite',
+        spec,
+        config: {},
+        renderer: 'canvas',
+        theme: 'default'
+      };
+
+      window.addEventListener('message', function handler(event) {
+        if (event.source === editor && event.data === 'ready') {
+          //@ts-ignore
+          editor.postMessage(msg, '*');
+          window.removeEventListener('message', handler);
+        }
+      });
     }
 
     // Main render function with hot-swap logic
@@ -559,13 +573,8 @@ export default defineComponent({
       (newValues, oldValues) => {
         const [newSelection] = newValues;
         const [oldSelection] = oldValues;
-        if (newSelection !== oldSelection) {
-          if (newSelection && oldSelection && newSelection.length === oldSelection.length) {
-            // this is not a real change
-            return
-          }
-        }
-        if (internalConfig.value.chartType !== 'headline') return;
+        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return;
+        // if (internalConfig.value.chartType !== 'headline') return;
         renderChart(true);
       }
     )
@@ -598,16 +607,6 @@ export default defineComponent({
       },
       { deep: true }
     )
-    // watchEffect(() => {
-    //   // Automatically tracks props.columns, props.data, and internalConfig.value
-    //   // Runs only once per update cycle even if multiple dependencies change
-    //   const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
-    //   if (!wasValid) {
-    //     console.log('Invalid config fields detected, resetting to defaults')
-    //     initializeConfig(true)
-    //   }
-    //   renderChart()
-    // })
 
     const eligible = computed(() => {
       return Charts.filter((x) =>
@@ -626,7 +625,7 @@ export default defineComponent({
       showingControls,
       updateConfig,
       toggleControls,
-      toggleDebugMode,
+      openInVegaEditor,
       downloadChart,
       refreshChart,
       charts: eligible,
@@ -857,55 +856,23 @@ export default defineComponent({
   font-size: var(--icon-size);
 }
 
-/* Styles for the toggle switch */
-.toggle-switch-container {
+/* Styles for the editor button */
+.editor-btn {
   display: flex;
   align-items: center;
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  background-color: var(--button-bg);
+  color: var(--text-color);
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--border-light);
-  transition: 0.4s;
-  border-radius: 10px;
+  font-size: var(--small-font-size);
+  transition: background-color 0.2s;
 }
 
-.toggle-slider:before {
-  position: absolute;
-  content: '';
-  height: 16px;
-  width: 16px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked+.toggle-slider {
-  background-color: var(--special-text);
-}
-
-input:checked+.toggle-slider:before {
-  transform: translateX(16px);
+.editor-btn:hover {
+  background-color: var(--button-mouseover);
 }
 
 /* Mobile responsiveness */

@@ -95,7 +95,7 @@ export class DashboardQueryExecutor {
     this.connectionName = connectionName
     this.maxConcurrentQueries = options.maxConcurrentQueries || 6
     this.retryAttempts = options.retryAttempts || 2
-    this.batchDelay = options.batchDelay || 10
+    this.batchDelay = options.batchDelay || 0
     this.dashboardId = dashboardId
     this.getItemData = getItemData
     this.setItemData = setItemData
@@ -319,7 +319,7 @@ export class DashboardQueryExecutor {
         }
       },
       onProgress: (_: any) => {
-        ;() => {}
+        ; () => { }
       },
     }
 
@@ -425,7 +425,7 @@ export class DashboardQueryExecutor {
           }
         },
         onProgress: (_: any) => {
-          ;() => {}
+          ; () => { }
         },
       }
 
@@ -546,9 +546,9 @@ export class DashboardQueryExecutor {
         queuedQuery.dashboardId === request.dashboardId &&
         queuedQuery.queryInput.text === request.queryInput.text &&
         JSON.stringify(queuedQuery.queryInput.extraFilters) ===
-          JSON.stringify(request.queryInput.extraFilters) &&
+        JSON.stringify(request.queryInput.extraFilters) &&
         JSON.stringify(queuedQuery.queryInput.parameters) ===
-          JSON.stringify(request.queryInput.parameters)
+        JSON.stringify(request.queryInput.parameters)
       ) {
         return queuedQuery
       }
@@ -637,7 +637,7 @@ export class DashboardQueryExecutor {
       const { resultPromise } = await this.queryExecutionService.executeQuery(
         this.connectionName,
         queryArgs,
-        () => {}, // Progress callback for connection issues
+        () => { }, // Progress callback for connection issues
         (message: any) => {
           if (message.error) {
             queuedQuery.onProgress(message)
@@ -702,10 +702,7 @@ export class DashboardQueryExecutor {
       // Clean up tracking data when query completes
       this.cleanupQueryTracking(queryId)
 
-      // Process next queries in queue
-      setTimeout(() => {
-        this.processBatch()
-      }, 5)
+      this.processBatch()
     }
   }
 }
