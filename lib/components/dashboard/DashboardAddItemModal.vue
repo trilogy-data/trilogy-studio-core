@@ -51,15 +51,15 @@ onUnmounted(() => {
         <h3>Add New Item</h3>
         <div class="item-type-selector">
           <label>
-            <input type="radio" v-model="newItemType" :value="CELL_TYPES.CHART" />
+            <input type="radio" v-model="newItemType" :value="CELL_TYPES.CHART" data-testid="dashboard-add-item-type-chart" />
             Chart
           </label>
           <label>
-            <input type="radio" v-model="newItemType" :value="CELL_TYPES.TABLE" />
+            <input type="radio" v-model="newItemType" :value="CELL_TYPES.TABLE" data-testid="dashboard-add-item-type-table" />
             Table
           </label>
           <label>
-            <input type="radio" v-model="newItemType" :value="CELL_TYPES.MARKDOWN" />
+            <input type="radio" v-model="newItemType" :value="CELL_TYPES.MARKDOWN" data-testid="dashboard-add-item-type-markdown" />
             Markdown
           </label>
         </div>

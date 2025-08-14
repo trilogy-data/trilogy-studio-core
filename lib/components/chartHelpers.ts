@@ -172,10 +172,13 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     append: boolean,
   ): void {
+    console.log('Geographic point clicked:', item)
     if (!config.geoField) return
 
     const geoField = columns.get(config.geoField)
     const geoConcept = geoField?.address
+
+    console.log('Geographic point clicked:', item)
 
     if (!geoConcept || !geoField) return
 
@@ -323,15 +326,17 @@ export class ChromaChartHelpers {
 
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
-        view.removeEventListener('click', clickHandler) // ✅ Same function reference
+        view.removeEventListener('click', clickHandler) 
       }
     } else if (isMobile) {
       const touchHandler = (event: any, item: any) => {
         this.handlePointClick(event, item, config, columns)
       }
+      view.addEventListener('click', touchHandler)
       view.addEventListener('touchend', touchHandler)
       return () => {
         view.removeEventListener('touchend', touchHandler)
+        view.removeEventListener('click', touchHandler)
       }
     } else {
       const clickHandler = (event: any, item: any) => {

@@ -93,7 +93,7 @@ const createHeadlineLayer = (
         mark: {
           type: 'rect',
           stroke: {
-            expr: `length(data('select_${index}_store'))>0 ? '#FF7F7F'  : 'transparent'`,
+            expr: `vlSelectionTest('select_${index}_store', datum) && datum['${column}'] === ${valueToString(datum)} ? '#FF7F7F' : 'transparent'`,
           },
           strokeWidth: 4,
           width: 5,
@@ -222,7 +222,6 @@ export const createHeadlineSpec = (
             item[column.name] == datum
           )
         })
-        console.log('datum', datum, filtered_display)
         return createHeadlineLayer(
           column.name,
           (index1 + 1) * (index2 + 1),

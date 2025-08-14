@@ -1,26 +1,11 @@
 <template>
-  <div
-    ref="chartContainer"
-    class="chart-placeholder no-drag"
-    :class="{ 'chart-placeholder-edit-mode': editMode }"
-  >
+  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart
-      v-else-if="results && ready"
-      :id="`${itemId}-${dashboardId}`"
-      :columns="results.headers"
-      :data="results.data"
-      :showControls="editMode"
-      :initialConfig="chartConfig || undefined"
-      :containerHeight="chartHeight"
-      :container-width="chartWidth"
-      :onChartConfigChange="onChartConfigChange"
-      :chartSelection
-      :chartTitle
-      @dimension-click="handleDimensionClick"
-      @background-click="handleBackgroundClick"
-      @refresh-click="handleLocalRefresh"
-    />
+    <VegaLiteChart v-else-if="results && ready" :id="`${itemId}-${dashboardId}`" :columns="results.headers"
+      :data="results.data" :showControls="editMode" :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight" :container-width="chartWidth" :onChartConfigChange="onChartConfigChange"
+      :chartSelection :chartTitle @dimension-click="handleDimensionClick" @background-click="handleBackgroundClick"
+      @refresh-click="handleLocalRefresh" />
     <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
@@ -203,7 +188,7 @@ export default defineComponent({
           loadingTimeoutId.value = setTimeout(() => {
             showLoading.value = true
             loadingTimeoutId.value = null
-          }, 150)
+          }, 250)
         } else {
           // Stop loading - hide immediately
           showLoading.value = false
@@ -382,5 +367,9 @@ export default defineComponent({
 .refresh-icon {
   font-size: 16px;
   font-weight: bold;
+}
+
+.chart-placeholder-edit-mode {
+  padding-top: 15px;
 }
 </style>
