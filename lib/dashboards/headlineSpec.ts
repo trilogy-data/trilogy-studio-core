@@ -101,7 +101,6 @@ const createHeadlineLayer = (
           fillOpacity: 0,
           x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
           y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0,
-
         },
       },
     ]
@@ -187,28 +186,30 @@ export const createHeadlineSpec = (
   let columnLayers = []
   // if we have no data, we create label layers only
   if (dataFull.length === 0) {
-    columnLayers = [columnsArray.map((column, index2) => {
-      let datum = null
-      let filtered_display = intChart.filter((item) => {
-        return (
-          item[column.name] !== undefined &&
-          item[column.name] !== null &&
-          item[column.name] !== '' &&
-          item[column.name] == datum
+    columnLayers = [
+      columnsArray.map((column, index2) => {
+        let datum = null
+        let filtered_display = intChart.filter((item) => {
+          return (
+            item[column.name] !== undefined &&
+            item[column.name] !== null &&
+            item[column.name] !== '' &&
+            item[column.name] == datum
+          )
+        })
+        return createHeadlineLayer(
+          column.name,
+          index2 + 1,
+          size,
+          columns,
+          currentTheme,
+          isMobile,
+          datum,
+          !(config.hideLegend === true),
+          filtered_display,
         )
-      })
-      return createHeadlineLayer(
-        column.name,
-        index2 + 1,
-        size,
-        columns,
-        currentTheme,
-        isMobile,
-        datum,
-        !(config.hideLegend === true),
-        filtered_display,
-      )
-    })]
+      }),
+    ]
   }
   // otherwise, loop through row and columns
   else {

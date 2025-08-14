@@ -1,31 +1,66 @@
 <template>
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
     <!-- Controls positioned based on container height -->
-    <div class="controls-toggle" :class="{ 'bottom-controls': isShortContainer }" v-if="showControls">
-      <button @click="downloadChart" class="control-btn" data-testid="download-chart-btn" title="Download chart as PNG">
+    <div
+      class="controls-toggle"
+      :class="{ 'bottom-controls': isShortContainer }"
+      v-if="showControls"
+    >
+      <button
+        @click="downloadChart"
+        class="control-btn"
+        data-testid="download-chart-btn"
+        title="Download chart as PNG"
+      >
         <i class="mdi mdi-download-outline icon"></i>
       </button>
-      <button @click="refreshChart" class="control-btn" data-testid="refresh-chart-btn" title="Refresh chart">
+      <button
+        @click="refreshChart"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh chart"
+      >
         <i class="mdi mdi-refresh icon"></i>
       </button>
-      <button @click="toggleControls" class="control-btn" :class="{ active: showingControls }"
-        data-testid="toggle-chart-controls-btn" :title="showingControls ? 'View Chart' : 'Edit Chart'">
-        <i :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'" class="icon"></i>
+      <button
+        @click="toggleControls"
+        class="control-btn"
+        :class="{ active: showingControls }"
+        data-testid="toggle-chart-controls-btn"
+        :title="showingControls ? 'View Chart' : 'Edit Chart'"
+      >
+        <i
+          :class="showingControls ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'"
+          class="icon"
+        ></i>
       </button>
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div class="chart-content-area" :class="{ 'with-bottom-controls': isShortContainer && showControls }">
+    <div
+      class="chart-content-area"
+      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
+    >
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!showingControls">
-        <div ref="vegaContainer1" class="vega-container" :class="{
-          'vega-active': activeContainer === 1,
-          'vega-transitioning': transitioning && activeContainer === 1
-        }" data-testid="vega-chart-container-1"></div>
-        <div ref="vegaContainer2" class="vega-container" :class="{
-          'vega-active': activeContainer === 2,
-          'vega-transitioning': transitioning && activeContainer === 2
-        }" data-testid="vega-chart-container-2"></div>
+        <div
+          ref="vegaContainer1"
+          class="vega-container"
+          :class="{
+            'vega-active': activeContainer === 1,
+            'vega-transitioning': transitioning && activeContainer === 1,
+          }"
+          data-testid="vega-chart-container-1"
+        ></div>
+        <div
+          ref="vegaContainer2"
+          class="vega-container"
+          :class="{
+            'vega-active': activeContainer === 2,
+            'vega-transitioning': transitioning && activeContainer === 2,
+          }"
+          data-testid="vega-chart-container-2"
+        ></div>
       </div>
 
       <!-- Controls panel - only show when toggled -->
@@ -33,9 +68,15 @@
         <div class="inner-padding">
           <div class="control-section">
             <div class="chart-type-icons">
-              <button v-for="type in charts" :key="type.value" @click="updateConfig('chartType', type.value)"
-                class="chart-icon" :class="{ selected: internalConfig.chartType === type.value }" :title="type.label"
-                :data-testid="`chart-type-${type.value}`">
+              <button
+                v-for="type in charts"
+                :key="type.value"
+                @click="updateConfig('chartType', type.value)"
+                class="chart-icon"
+                :class="{ selected: internalConfig.chartType === type.value }"
+                :title="type.label"
+                :data-testid="`chart-type-${type.value}`"
+              >
                 <div class="icon-container">
                   <i :class="type.icon" class="icon"></i>
                 </div>
@@ -46,15 +87,24 @@
           <!-- Group axes controls  -->
           <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
             <label class="control-section-label">Axes</label>
-            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')" :key="control.id"
-              class="control-group no-drag">
+            <div
+              v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
+              :key="control.id"
+              class="control-group no-drag"
+            >
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select :id="control.id" :value="internalConfig[control.field]"
+              <select
+                :id="control.id"
+                :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag">
+                class="form-select no-drag"
+              >
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                  :value="column.name">
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -62,26 +112,45 @@
           </div>
 
           <!-- Group appearance controls -->
-          <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'appearance')">
+          <div
+            class="control-section"
+            v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
+          >
             <label class="control-section-label">Appearance</label>
-            <div v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')" :key="control.id"
-              class="control-group no-drag">
+            <div
+              v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
+              :key="control.id"
+              class="control-group no-drag"
+            >
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
-              <input v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)" type="checkbox"
-                :id="control.id" :checked="internalConfig[control.field] as boolean" @change="
+              <input
+                v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)"
+                type="checkbox"
+                :id="control.id"
+                :checked="internalConfig[control.field] as boolean"
+                @change="
                   updateConfig(
                     control.field,
                     ($event.target as HTMLInputElement).checked ? true : false,
                   )
-                  " data-testid="toggle-legend" />
+                "
+                data-testid="toggle-legend"
+              />
 
-              <select v-else :id="control.id" :value="internalConfig[control.field]"
+              <select
+                v-else
+                :id="control.id"
+                :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag">
+                class="form-select no-drag"
+              >
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                  :value="column.name">
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -89,26 +158,42 @@
           </div>
 
           <!-- Group advanced controls -->
-          <div class="control-section" v-if="visibleControls.some((c) => c.id === 'trellis-field') || true">
+          <div
+            class="control-section"
+            v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
+          >
             <label class="control-section-label">Advanced</label>
             <!-- Open in Vega Editor button -->
             <div class="control-group no-drag">
               <label class="chart-label">Vega Editor</label>
-              <button @click="openInVegaEditor" class="editor-btn" title="Open chart spec in Vega Editor">
+              <button
+                @click="openInVegaEditor"
+                class="editor-btn"
+                title="Open chart spec in Vega Editor"
+              >
                 <i class="mdi mdi-open-in-new icon"></i>
                 Open in Editor
               </button>
             </div>
             <!-- Existing trellis field control -->
-            <div v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')" :key="control.id"
-              class="control-group no-drag">
+            <div
+              v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+              :key="control.id"
+              class="control-group no-drag"
+            >
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
-              <select :id="control.id" :value="internalConfig[control.field]"
+              <select
+                :id="control.id"
+                :value="internalConfig[control.field]"
                 @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
-                class="form-select no-drag">
+                class="form-select no-drag"
+              >
                 <option v-if="control.allowEmpty" value="">None</option>
-                <option v-for="column in filteredColumnsInternal(control.columnFilter)" :key="column.name"
-                  :value="column.name">
+                <option
+                  v-for="column in filteredColumnsInternal(control.columnFilter)"
+                  :key="column.name"
+                  :value="column.name"
+                >
                   {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
                 </option>
               </select>
@@ -179,11 +264,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => { },
+      default: () => {},
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => { },
+      default: () => {},
     },
     chartTitle: {
       type: String,
@@ -205,16 +290,20 @@ export default defineComponent({
     const transitioning = ref(false)
 
     // Store views for both containers
-    const vegaViews = ref<Map<1 | 2, View | null>>(new Map([
-      [1, null],
-      [2, null]
-    ]))
+    const vegaViews = ref<Map<1 | 2, View | null>>(
+      new Map([
+        [1, null],
+        [2, null],
+      ]),
+    )
 
     // Track event listeners for cleanup
-    const eventListeners = ref<Map<1 | 2, (() => void) | null>>(new Map([
-      [1, null],
-      [2, null]
-    ]))
+    const eventListeners = ref<Map<1 | 2, (() => void) | null>>(
+      new Map([
+        [1, null],
+        [2, null],
+      ]),
+    )
 
     // Render operation tracking for concurrency control
     let renderCounter = 0
@@ -363,24 +452,48 @@ export default defineComponent({
     // Open chart spec in Vega Editor
     const openInVegaEditor = () => {
       const spec = generateVegaSpecInternal()
-      const editorUrl = 'https://vega.github.io/editor/';
-      const editor = window.open(editorUrl, '_blank');
+      const editorUrl = 'https://vega.github.io/editor/'
 
-      const msg = {
+      // Prepare the message to send
+      const data = {
         mode: 'vega-lite',
-        spec,
+        spec: JSON.stringify(spec),
         config: {},
         renderer: 'canvas',
-        theme: 'default'
-      };
+        theme: 'default',
+      }
 
-      window.addEventListener('message', function handler(event) {
-        if (event.source === editor && event.data === 'ready') {
-          //@ts-ignore
-          editor.postMessage(msg, '*');
-          window.removeEventListener('message', handler);
+      const editor = window.open(editorUrl, '_blank')
+
+      const wait = 10_000 // total retry time in ms
+      const step = 250 // retry interval in ms
+      const { origin } = new URL(editorUrl)
+
+      let count = ~~(wait / step)
+
+      function listen(evt: MessageEvent) {
+        if (evt.source === editor) {
+          count = 0 // stop retries
+          window.removeEventListener('message', listen, false)
         }
-      });
+      }
+      window.addEventListener('message', listen, false)
+
+      // send message repeatedly until ack received or timeout
+      function send() {
+        if (count <= 0) {
+          return
+        }
+        if (!editor) {
+          console.error('Failed to open Vega Editor window')
+          return
+        }
+        editor.postMessage(data, origin)
+        setTimeout(send, step)
+        count -= 1
+      }
+
+      setTimeout(send, step)
     }
 
     // Main render function with hot-swap logic
@@ -396,8 +509,7 @@ export default defineComponent({
       if (hasLoaded.value && lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
-      }
-      else {
+      } else {
         console.log('Rendering new spec on chart:', props.chartTitle)
       }
 
@@ -405,7 +517,7 @@ export default defineComponent({
       const renderOp: RenderOperation = {
         id: ++renderCounter,
         aborted: false,
-        container: activeContainer.value === 1 ? 2 : 1 as 1 | 2
+        container: activeContainer.value === 1 ? 2 : (1 as 1 | 2),
       }
 
       // If there's an active render, mark pending render for abort
@@ -433,7 +545,8 @@ export default defineComponent({
 
       try {
         // Get the target container
-        const targetContainer = renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
+        const targetContainer =
+          renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
 
         if (!targetContainer) {
           console.log(`Container ${renderOp.container} not available`)
@@ -507,8 +620,9 @@ export default defineComponent({
         lastSpec.value = currentSpecString
         hasLoaded.value = true
 
-        console.log(`Render ${renderOp.id} completed successfully on container ${renderOp.container}`)
-
+        console.log(
+          `Render ${renderOp.id} completed successfully on container ${renderOp.container}`,
+        )
       } catch (error) {
         console.error(`Error in render ${renderOp.id}:`, error)
       } finally {
@@ -531,16 +645,16 @@ export default defineComponent({
           props.data,
           props.columns,
           value as
-          | 'bar'
-          | 'line'
-          | 'barh'
-          | 'point'
-          | 'usa-map'
-          | 'tree'
-          | 'area'
-          | 'headline'
-          | 'donut'
-          | 'heatmap',
+            | 'bar'
+            | 'line'
+            | 'barh'
+            | 'point'
+            | 'usa-map'
+            | 'tree'
+            | 'area'
+            | 'headline'
+            | 'donut'
+            | 'heatmap',
         )
 
         // Update all config fields
@@ -571,19 +685,19 @@ export default defineComponent({
     watch(
       () => [props.chartSelection],
       (newValues, oldValues) => {
-        const [newSelection] = newValues;
-        const [oldSelection] = oldValues;
-        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return;
+        const [newSelection] = newValues
+        const [oldSelection] = oldValues
+        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
         // if (internalConfig.value.chartType !== 'headline') return;
-        renderChart(true);
-      }
+        renderChart(true)
+      },
     )
     // Watch for changes in data, columns or config
     watch(
       () => [props.containerHeight, props.containerWidth],
       () => {
-        renderChart(true);
-      }
+        renderChart(true)
+      },
     )
     let updatePending = false
 
@@ -605,7 +719,7 @@ export default defineComponent({
           renderChart()
         })
       },
-      { deep: true }
+      { deep: true },
     )
 
     const eligible = computed(() => {

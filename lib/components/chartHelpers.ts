@@ -325,7 +325,7 @@ export class ChromaChartHelpers {
 
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
-        view.removeEventListener('click', clickHandler) 
+        view.removeEventListener('click', clickHandler)
       }
     } else if (isMobile) {
       const touchHandler = (event: any, item: any) => {
