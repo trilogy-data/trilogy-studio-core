@@ -231,6 +231,7 @@ export default defineComponent({
 .chart-placeholder {
   flex: 1;
   height: 100%;
+  padding-top: 5px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;

@@ -120,12 +120,21 @@ export const Controls: ChartControl[] = [
     filterGroup: 'appearance',
   },
   {
+    id: 'hide-label',
+    label: 'Hide Label',
+    field: 'hideLegend',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['headline'],
+    filterGroup: 'appearance',
+  },
+  {
     id: 'show-title',
     label: 'Show Title',
     field: 'showTitle',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline'],
     filterGroup: 'appearance',
   },
   {

@@ -1,6 +1,6 @@
 // chartHelpers.ts
 import type { View } from 'vega'
-import type { ResultColumn, ChartConfig, FieldKey } from '../editors/results'
+import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import {
@@ -147,7 +147,7 @@ export class ChromaChartHelpers {
     const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
-
+    console.log('Point clicked:', item, 'Append:', append)
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
@@ -172,10 +172,13 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     append: boolean,
   ): void {
+    console.log('Geographic point clicked:', item)
     if (!config.geoField) return
 
     const geoField = columns.get(config.geoField)
     const geoConcept = geoField?.address
+
+    console.log('Geographic point clicked:', item)
 
     if (!geoConcept || !geoField) return
 
@@ -212,42 +215,33 @@ export class ChromaChartHelpers {
       }
     }
 
-    // Handle x and y field clicks
-    const xFieldRaw = config.xField
-    const yFieldRaw = config.yField
-
-    if (!xFieldRaw || !yFieldRaw) return
-
-    const xField = columns.get(xFieldRaw)?.address
-    const yField = columns.get(yFieldRaw)?.address
-
-    if (!xField || !yField) return
-
+    let baseCols = [config.xField, config.yField]
+    if (config.chartType === 'headline') {
+      baseCols = [...Object.keys(item.datum)]
+    }
     // Determine eligible fields for filtering
     const eligible = this.getEligibleFields(config, columns)
     // Handle x-field clicks
-    if (item.datum[xFieldRaw] && eligible.includes(xFieldRaw)) {
-      let xFilterValue = item.datum[xFieldRaw]
-
-      if (DATETIME_COLS.includes(columns.get(xFieldRaw)?.type as ColumnType)) {
-        xFilterValue = convertTimestampToISODate(item.datum[xFieldRaw])
-      }
-
-      baseFilters = { ...baseFilters, [xField]: xFilterValue }
-      baseChart = { ...baseChart, [xFieldRaw]: item.datum[xFieldRaw] }
+    let checks = baseCols.filter((f) => f && eligible.includes(f))
+    if (checks.length === 0) {
+      console.warn('No eligible fields for filtering found')
+      return
     }
-    // Handle y-field clicks
-    else if (item.datum[yFieldRaw] && eligible.includes(yFieldRaw)) {
-      let yFilterValue = item.datum[yFieldRaw]
+    //loop over eligible
+    eligible.forEach((field) => {
+      let fieldAddress = columns.get(field)?.address
+      if (!fieldAddress) return
+      if (item.datum[field] && eligible.includes(field)) {
+        let filterValue = item.datum[field]
 
-      if (DATETIME_COLS.includes(columns.get(yFieldRaw)?.type as ColumnType)) {
-        yFilterValue = convertTimestampToISODate(item.datum[yFieldRaw])
+        if (DATETIME_COLS.includes(columns.get(field)?.type as ColumnType)) {
+          filterValue = convertTimestampToISODate(item.datum[field])
+        }
+
+        baseFilters = { ...baseFilters, [fieldAddress]: filterValue }
+        baseChart = { ...baseChart, [field]: item.datum[field] }
       }
-
-      baseFilters = { ...baseFilters, [yField]: yFilterValue }
-      baseChart = { ...baseChart, [yFieldRaw]: item.datum[yFieldRaw] }
-    }
-
+    })
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
       chart: baseChart,
@@ -296,8 +290,16 @@ export class ChromaChartHelpers {
         isValid = false
       }
     }
+    // config set
+    const configKeys: BoolFieldKey[] = ['hideLegend', 'showDebug', 'showTitle']
+    let anyConfigSet = false
+    for (const key of configKeys) {
+      if (config[key] === true) {
+        anyConfigSet = true
+      }
+    }
     // if we have no values set, update
-    if (!anySet) {
+    if (!anySet && !anyConfigSet) {
       return false
     }
     return isValid
@@ -324,15 +326,17 @@ export class ChromaChartHelpers {
 
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
-        view.removeEventListener('click', clickHandler) // ✅ Same function reference
+        view.removeEventListener('click', clickHandler) 
       }
     } else if (isMobile) {
       const touchHandler = (event: any, item: any) => {
         this.handlePointClick(event, item, config, columns)
       }
+      view.addEventListener('click', touchHandler)
       view.addEventListener('touchend', touchHandler)
       return () => {
         view.removeEventListener('touchend', touchHandler)
+        view.removeEventListener('click', touchHandler)
       }
     } else {
       const clickHandler = (event: any, item: any) => {

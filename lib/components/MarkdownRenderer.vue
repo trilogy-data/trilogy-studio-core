@@ -137,7 +137,7 @@ export default defineComponent({
   margin: 16px 0;
 }
 
-.code-container:hover .copy-button {
+.code-container:hover .markdown-copy-button {
   opacity: 1;
 }
 
@@ -217,7 +217,7 @@ code {
   line-height: 1.5;
 }
 
-.copy-button {
+.markdown-copy-button {
   position: absolute;
   top: 8px;
   right: 8px;

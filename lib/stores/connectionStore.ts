@@ -13,7 +13,7 @@ import useModelConfigStore from './modelStore'
 // Track in-progress operations
 const pendingOperations = new Map()
 
-const connectionTimeout = 30000 // 30 seconds - assume all connections take less time.
+const connectionTimeout = 60000 // 60 seconds - includes startup time;
 
 async function runStartup(connection: Connection) {
   let editors = useEditorStore()
@@ -91,24 +91,24 @@ const useConnectionStore = defineStore('connections', {
       // Create a new operation with timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error('Reset operation timed out after 30 seconds')),
+          () =>
+            reject(
+              new Error(`Reset operation timed out after ${connectionTimeout / 1000} seconds`),
+            ),
           connectionTimeout,
         )
       })
 
       // The actual reset operation
-      const resetPromise = this.connections[name]
-        .reset()
-        .then(() => {
-          return runStartup(this.connections[name])
-        })
-        .finally(() => {
-          // Clean up when operation completes or fails
-          pendingOperations.delete(operationKey)
-        })
+      const resetPromise = this.connections[name].reset().then(() => {
+        return runStartup(this.connections[name])
+      })
 
       // Use Promise.race to implement timeout
-      const operationPromise = Promise.race([resetPromise, timeoutPromise])
+      const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {
+        // Clean up when operation completes, fails, OR times out
+        pendingOperations.delete(operationKey)
+      })
 
       // Store the operation promise
       pendingOperations.set(operationKey, operationPromise)

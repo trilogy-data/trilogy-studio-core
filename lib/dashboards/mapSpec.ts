@@ -1,7 +1,7 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnHasTrait, getColumnFormat, isCategoricalColumn } from './helpers'
+import { getColumnHasTrait, getColumnFormat, createColorEncoding } from './helpers'
 import { computeMercatorProjectionFactors } from './d3utility'
 
 /**
@@ -125,57 +125,6 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
 })
 
 /**
- * Creates standard color encoding configuration
- */
-const createColorEncoding = (
-  field: string,
-  isMobile: boolean,
-  columns: Map<string, ResultColumn>,
-  hideLegend: boolean = false,
-) => {
-  let full = columns.get(field)
-  if (!full) {
-    throw new Error(`Column ${field} not found in provided columns map`)
-  }
-  let legend = hideLegend
-    ? null
-    : {
-        title: snakeCaseToCapitalizedWords(field),
-        format: getColumnFormat(field, columns),
-      }
-
-  let colorConfig = {
-    field,
-    type: 'quantitative',
-    title: snakeCaseToCapitalizedWords(field),
-    scale: { scheme: 'viridis' },
-    legend: legend,
-  }
-  if (isCategoricalColumn(full)) {
-    return {
-      field,
-      type: 'nominal',
-      title: snakeCaseToCapitalizedWords(field),
-      scale: { scheme: 'category20' },
-      legend: legend,
-    }
-  }
-
-  if (isMobile) {
-    return {
-      ...colorConfig,
-      legend: {
-        ...legend,
-        orient: 'bottom',
-        direction: 'horizontal',
-      },
-    }
-  }
-
-  return colorConfig
-}
-
-/**
  * Creates common interaction parameters
  */
 const createInteractionParams = (intChart: Array<Partial<ChartConfig>>) => [
@@ -275,6 +224,7 @@ const createUSScatterMapSpec = (
   columns: Map<string, ResultColumn>,
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
   const tooltipFields = []
 
@@ -320,7 +270,14 @@ const createUSScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+            ? createColorEncoding(
+                config,
+                config.colorField,
+                columns,
+                isMobile,
+                currentTheme,
+                config.hideLegend,
+              )
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -335,6 +292,7 @@ const createWorldScatterMapSpec = (
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
   data: readonly Row[],
+  currentTheme: string = 'light',
 ) => {
   const tooltipFields = []
 
@@ -436,7 +394,14 @@ const createWorldScatterMapSpec = (
               }
             : undefined,
           color: config.colorField
-            ? createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+            ? createColorEncoding(
+                config,
+                config.colorField,
+                columns,
+                isMobile,
+                currentTheme,
+                config.hideLegend,
+              )
             : { value: 'steelblue' },
           tooltip: tooltipFields,
         },
@@ -454,11 +419,19 @@ const createUSChoroplethMapSpec = (
   columns: Map<string, ResultColumn>,
   intChart: Array<Partial<ChartConfig>>,
   isMobile: boolean = false,
+  currentTheme: string = 'light',
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
   if (config.colorField) {
-    colorConfig = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+    colorConfig = createColorEncoding(
+      config,
+      config.colorField,
+      columns,
+      isMobile,
+      currentTheme,
+      config.hideLegend,
+    )
   } else {
     colorConfig = { value: 'steelblue' }
   }
@@ -521,6 +494,7 @@ export const createMapSpec = (
   columns: Map<string, ResultColumn>,
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
+  currentTheme: string = 'light',
 ) => {
   // Handle scatter plot case
   if (config.xField && config.yField) {
@@ -529,14 +503,14 @@ export const createMapSpec = (
       isDataMostlyInUS(data, config.yField, config.xField) &&
       isDataSufficientlySpreadForAlbers(data, config.yField, config.xField)
     ) {
-      return createUSScatterMapSpec(config, columns, isMobile, intChart)
+      return createUSScatterMapSpec(config, columns, isMobile, intChart, currentTheme)
     }
-    return createWorldScatterMapSpec(config, columns, isMobile, intChart, data)
+    return createWorldScatterMapSpec(config, columns, isMobile, intChart, data, currentTheme)
   }
 
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile)
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
   }
 
   // Handle country map case
@@ -553,7 +527,14 @@ export const createMapSpec = (
     }
     let colorEncoding = {}
     if (config.colorField) {
-      colorEncoding = createColorEncoding(config.colorField, isMobile, columns, config.hideLegend)
+      colorEncoding = createColorEncoding(
+        config,
+        config.colorField,
+        columns,
+        isMobile,
+        currentTheme,
+        config.hideLegend,
+      )
     }
     return {
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',

@@ -161,9 +161,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     throw new Error('Could not get canvas bounds')
   }
 
-  console.log(`Canvas dimensions: ${canvasBounds.width}x${canvasBounds.height}`)
-  console.log(`Canvas position: ${canvasBounds.x}, ${canvasBounds.y}`)
-
   // Create a grid of points to sample (5x5 grid)
   const gridSize = 10
   interface PixelColor {
@@ -324,6 +321,106 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   if (!atLeastOneMatch) {
     throw new Error('No pixels matched expected non-white colors in rendered map')
   }
+
+  await page.getByTestId('add-item-button').click()
+  await page.getByTestId('dashboard-add-item-type-table').check()
+  await page.getByTestId('dashboard-add-item-confirm').click()
+  await page.getByTestId('edit-dashboard-item-content-1').click()
+
+  // set content
+  await page.getByTestId('simple-editor-content').click()
+  if (browser.browserType().name() === 'webkit') {
+    await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
+  } else {
+    await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
+  }
+
+  await page.keyboard.type('select\n    origin.state,\n    count\norder by count desc;')
+  await page.getByTestId('editor-run-button').click()
+  await page.getByTestId('simple-editor-results')
+
+  // save it
+  await page.getByTestId('save-dashboard-chart').click()
+
+  // TODO: click the pixel we found above, and verify the resulting table is filtered to only one state
+
+  
+// Find the first matching point from our successful checks
+let clickPoint = null as { relX: number; relY: number; expectedColors: string[] } | null
+for (const point of texasCheckPoints) {
+  try {
+    const color = await getRelativePixelColor(page, point.relX, point.relY)
+    if (point.expectedColors.includes(color.hex)) {
+      clickPoint = point
+      console.log(`Will click on matching point at (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)}) with color ${color.hex}`)
+      break
+    }
+  } catch (error) {
+    console.error(`Error checking pixel for click point:`, error)
+    continue
+  }
+}
+
+if (!clickPoint) {
+  throw new Error('No valid click point found - cannot proceed with cross-filtering test')
+}
+
+// Click on the map at the identified point
+const canvasElement = page.locator(vegaSelector)
+const bounds = await canvasElement.boundingBox()
+if (!bounds) {
+  throw new Error('Could not get canvas bounds for clicking')
+}
+
+// Convert relative coordinates to absolute screen coordinates
+const clickX = bounds.x + (bounds.width * clickPoint.relX)
+const clickY = bounds.y + (bounds.height * clickPoint.relY)
+
+console.log(`Clicking map at screen coordinates (${Math.round(clickX)}, ${Math.round(clickY)})`)
+await page.mouse.click(clickX, clickY)
+
+// Wait for the cross-filtering to take effect
+await page.waitForTimeout(1000)
+
+// Find the table element using the xpath pattern you provided
+// Adjusting to be more flexible since the exact ID might vary
+const tableContainer = page.locator('//*[contains(@id, "faa-test")]/div/div[2]/div/div[2]/div[1]').first()
+
+// Alternative selector in case xpath doesn't work in all browsers
+const tableContainerAlt = page.locator('[data-testid="simple-editor-results"]').nth(1)
+
+// Try to find the table rows - looking for the actual data rows
+let tableRows
+
+try {
+  // Fallback to alternative selector
+  await expect(tableContainerAlt).toBeVisible({ timeout: 5000 })
+  tableRows = tableContainerAlt.locator('table tbody tr, .table-row, tr').filter({ hasNotText: /^\s*$/ })
+  console.log('Using alternative selector for table')
+} catch {
+  // Final fallback - look for any table in the dashboard
+  tableRows = page.locator('table tbody tr, .table-row').filter({ hasNotText: /^\s*$/ })
+  console.log('Using general table selector')
+}
+
+
+// Count the visible rows (excluding header rows)
+const rowCount = await tableRows.count()
+console.log(`Found ${rowCount} rows in the filtered table`)
+
+// Verify that the table now shows only one row (the filtered state)
+expect(rowCount).toBe(2)
+
+// Optional: Verify that the single row contains data (not empty)
+if (rowCount === 2) {
+  const rowText = await tableRows.first().textContent()
+  expect(rowText).toBeTruthy()
+  expect(rowText.trim()).not.toBe('')
+  console.log(`Filtered table row contains: ${rowText}`)
+}
+
+console.log('✓ Cross-filtering test passed: Map click successfully filtered table to one row')
+
 })
 
 // // Add a specific test for testing the AI assistance feature

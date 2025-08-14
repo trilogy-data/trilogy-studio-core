@@ -282,6 +282,7 @@ export class DashboardQueryExecutor {
       loading: true,
       error: null,
     })
+
     let request = {
       dashboardId: this.dashboardId,
       queryInput: {
@@ -297,11 +298,11 @@ export class DashboardQueryExecutor {
             '',
         })),
       },
-      priority: 5,
+      priority: this.getDefaultPriority(itemId),
       itemId,
       onSuccess: (result: any) => {
         // Only update if this is still the latest query for this itemId
-        if (this.isLatestQueryForItem(queryId)) {
+        if (this.isLatestQueryForItem(finalQueryId)) {
           this.setItemData(itemId, this.dashboardId, {
             results: result.results,
           })
@@ -311,7 +312,7 @@ export class DashboardQueryExecutor {
       },
       onError: (error: string) => {
         // Only update if this is still the latest query for this itemId
-        if (this.isLatestQueryForItem(queryId)) {
+        if (this.isLatestQueryForItem(finalQueryId)) {
           this.setItemData(itemId, this.dashboardId, { error })
         } else {
           console.log(`Ignoring outdated query error for itemId ${itemId}`)
@@ -321,49 +322,47 @@ export class DashboardQueryExecutor {
         ;() => {}
       },
     }
-    const requestWithPriority = {
-      ...request,
-      priority: this.getDefaultPriority(itemId),
-    }
 
-    const queryId = this.generateQueryId(requestWithPriority)
+    // Generate a potential query ID first
+    const potentialQueryId = this.generateQueryId(request)
 
-    // Cancel any pending queries for this itemId before adding the new one
+    // Cancel any pending queries for this itemId FIRST
     this.cancelPendingQueriesForItem(itemId)
 
-    // Track this as the latest query for the itemId
-    this.latestQueryByItemId.set(itemId, queryId)
-    this.itemIdByQueryId.set(queryId, itemId)
+    // Check for duplicate queries BEFORE setting up tracking
+    const existingQuery = this.findDuplicateQuery(request)
+    let finalQueryId: string
 
-    // Check for duplicate queries (after canceling old ones)
-    const existingQuery = this.findDuplicateQuery(requestWithPriority)
     if (existingQuery) {
-      console.log(`Deduplicating query for ${requestWithPriority.itemId}`)
-      // Update tracking to point to the existing query
-      this.latestQueryByItemId.set(itemId, existingQuery.id)
-      this.itemIdByQueryId.set(existingQuery.id, itemId)
-      this.itemIdByQueryId.delete(queryId) // Clean up the unused queryId
+      console.log(`Deduplicating query for ${request.itemId}`)
+      finalQueryId = existingQuery.id
+
       // Add callbacks to existing query
-      this.addCallbacksToExistingQuery(existingQuery, requestWithPriority)
-      return existingQuery.id
+      this.addCallbacksToExistingQuery(existingQuery, request)
+    } else {
+      // Create new query since no duplicate was found
+      finalQueryId = potentialQueryId
+      const queuedQuery: QueuedQuery = {
+        ...request,
+        id: finalQueryId,
+        timestamp: Date.now(),
+        retryCount: 0,
+      }
+
+      this.queryQueue.set(finalQueryId, queuedQuery)
+
+      // Execute immediately if capacity allows
+      if (this.activeQueries.size < this.maxConcurrentQueries) {
+        console.log(`Executing query immediately for ${request.itemId}`)
+        this.executeQuery(finalQueryId)
+      }
     }
 
-    const queuedQuery: QueuedQuery = {
-      ...requestWithPriority,
-      id: queryId,
-      timestamp: Date.now(),
-      retryCount: 0,
-    }
+    // NOW set up tracking for the final query (whether new or deduplicated)
+    this.latestQueryByItemId.set(itemId, finalQueryId)
+    this.itemIdByQueryId.set(finalQueryId, itemId)
 
-    this.queryQueue.set(queryId, queuedQuery)
-
-    // Execute immediately if capacity allows
-    if (this.activeQueries.size < this.maxConcurrentQueries) {
-      console.log(`Executing query immediately for ${requestWithPriority.itemId}`)
-      this.executeQuery(queryId)
-    }
-
-    return queryId
+    return finalQueryId
   }
 
   /**
@@ -371,7 +370,6 @@ export class DashboardQueryExecutor {
    */
   public runBatch(itemIds: string[]): string[] {
     console.log(`Running batch for ${itemIds.length} items`)
-    // throw new Error('Batch execution is not implemented yet')
     const queryIds: string[] = []
 
     // Clear any pending batch timeout
@@ -410,7 +408,7 @@ export class DashboardQueryExecutor {
         itemId,
         onSuccess: (result: any) => {
           // Only update if this is still the latest query for this itemId
-          if (this.isLatestQueryForItem(queryId)) {
+          if (this.isLatestQueryForItem(finalQueryId)) {
             this.setItemData(itemId, this.dashboardId, {
               results: result.results,
             })
@@ -420,7 +418,7 @@ export class DashboardQueryExecutor {
         },
         onError: (error: string) => {
           // Only update if this is still the latest query for this itemId
-          if (this.isLatestQueryForItem(queryId)) {
+          if (this.isLatestQueryForItem(finalQueryId)) {
             this.setItemData(itemId, this.dashboardId, { error })
           } else {
             console.log(`Ignoring outdated batch query error for itemId ${itemId}`)
@@ -431,37 +429,38 @@ export class DashboardQueryExecutor {
         },
       }
 
-      const queryId = this.generateQueryId(request)
+      // Generate a potential query ID first
+      const potentialQueryId = this.generateQueryId(request)
 
-      // Cancel any pending queries for this itemId before adding the new one
+      // Cancel any pending queries for this itemId FIRST
       this.cancelPendingQueriesForItem(itemId)
 
-      // Track this as the latest query for the itemId
-      this.latestQueryByItemId.set(itemId, queryId)
-      this.itemIdByQueryId.set(queryId, itemId)
-
-      // Check for duplicates (after canceling old ones)
+      // Check for duplicates BEFORE setting up tracking
       const existingQuery = this.findDuplicateQuery(request)
+      let finalQueryId: string
+
       if (existingQuery) {
         console.log(`Deduplicating batch query for ${request.itemId}`)
-        // Update tracking to point to the existing query
-        this.latestQueryByItemId.set(itemId, existingQuery.id)
-        this.itemIdByQueryId.set(existingQuery.id, itemId)
-        this.itemIdByQueryId.delete(queryId) // Clean up the unused queryId
+        finalQueryId = existingQuery.id
         this.addCallbacksToExistingQuery(existingQuery, request)
-        queryIds.push(existingQuery.id)
-        return
+      } else {
+        // Create new query since no duplicate was found
+        finalQueryId = potentialQueryId
+        const queuedQuery: QueuedQuery = {
+          ...request,
+          id: finalQueryId,
+          timestamp: Date.now(),
+          retryCount: 0,
+        }
+
+        this.queryQueue.set(finalQueryId, queuedQuery)
       }
 
-      const queuedQuery: QueuedQuery = {
-        ...request,
-        id: queryId,
-        timestamp: Date.now(),
-        retryCount: 0,
-      }
+      // NOW set up tracking for the final query (whether new or deduplicated)
+      this.latestQueryByItemId.set(itemId, finalQueryId)
+      this.itemIdByQueryId.set(finalQueryId, itemId)
 
-      this.queryQueue.set(queryId, queuedQuery)
-      queryIds.push(queryId)
+      queryIds.push(finalQueryId)
     })
 
     // Schedule batch execution with delay to allow for more queries to be added

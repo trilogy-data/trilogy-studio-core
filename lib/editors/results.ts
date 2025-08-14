@@ -60,6 +60,8 @@ export type FieldKey =
   | 'groupField'
   | 'trellisField'
 
+export type BoolFieldKey = 'hideLegend' | 'showDebug' | 'showTitle'
+
 // Chart configuration interface
 export interface ChartConfig {
   chartType:

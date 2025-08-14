@@ -163,7 +163,7 @@ function handleToggleEditMode() {
           :is-resizable="editable"
           :is-bounded="true"
           :layout="layout"
-          :vertical-compact="false"
+          :vertical-compact="true"
           :use-css-transforms="true"
           @layout-updated="onLayoutUpdated"
           @layout-ready="layoutReadyEvent"

@@ -1,6 +1,21 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isImageColumn, getColumnFormat, getVegaFieldType } from './helpers'
+import { isImageColumn, getColumnFormat, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
+import { type ChartConfig } from '../editors/results'
+
+const valueToString = (value: any): string => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  if (typeof value === 'string') {
+    return `'${value}'` // Escape single quotes for string literals
+  }
+  // Handle arrays and objects by converting to JSON string
+  return JSON.stringify(value)
+}
 
 const createHeadlineLayer = (
   column: string,
@@ -10,6 +25,8 @@ const createHeadlineLayer = (
   currentTheme: string,
   isMobile: boolean = false,
   datum: any = null,
+  includeLabelSetting = true,
+  intChart: { [key: string]: string | number | Array<any> }[],
 ) => {
   let xOffset = 0
   let yOffset = 0
@@ -18,13 +35,13 @@ const createHeadlineLayer = (
     // Vertical distribution for mobile
     yOffset =
       total > 1
-        ? ((index / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of height
+        ? (((index - 1) / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of height
         : 0 // Center if only one value
   } else {
     // Horizontal distribution for desktop
     xOffset =
       total > 1
-        ? ((index / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of width
+        ? (((index - 1) / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of width
         : 0 // Center if only one value
   }
 
@@ -37,18 +54,20 @@ const createHeadlineLayer = (
     ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
     : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
   let topMark = {}
-  let includeLabel = true
+  let includeLabel = includeLabelSetting
+  let selectMarks: object[] = []
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
     topMark = {
+      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
       mark: {
         type: 'image',
         width: { expr: `width / ${total}` },
-        height: { expr: `height / ${total}` },
+        height: { expr: `height` },
         align: 'center',
         baseline: 'middle',
         x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : { expr: `height/2 -20` }, // Vertical offset for mobile, fixed for desktop
+        y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         url: {
@@ -57,9 +76,37 @@ const createHeadlineLayer = (
           format: getColumnFormat(column, columns),
         },
       },
+      params: [
+        {
+          name: `highlight_${index}`,
+          select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+        },
+        {
+          name: `select_${index}`,
+          select: 'point',
+          value: intChart,
+        },
+      ],
     }
+    selectMarks = [
+      {
+        mark: {
+          type: 'rect',
+          stroke: {
+            expr: `vlSelectionTest('select_${index}_store', datum) && datum['${column}'] === ${valueToString(datum)} ? '#FF7F7F' : 'transparent'`,
+          },
+          strokeWidth: 4,
+          width: 5,
+          fillOpacity: 0,
+          x: isMobile ? { expr: `width/2` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+          y: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0,
+          height: 5,
+        },
+      },
+    ]
   } else {
     topMark = {
+      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
       mark: {
         type: 'text',
         fontSize: { expr: fontSizeFormula },
@@ -67,7 +114,7 @@ const createHeadlineLayer = (
         align: 'center',
         baseline: 'middle',
         dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : -20, // Vertical offset for mobile, fixed for desktop
+        dy: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         text: {
@@ -75,8 +122,22 @@ const createHeadlineLayer = (
           type: getVegaFieldType(column, columns),
           format: getColumnFormat(column, columns),
         },
-        color: { value: currentTheme === 'light' ? '#262626' : '#f0f0f0' },
+        color: {
+          condition: { param: `select_${index}`, value: HIGHLIGHT_COLOR, empty: false },
+          value: currentTheme === 'light' ? '#262626' : '#f0f0f0',
+        },
       },
+      params: [
+        {
+          name: `highlight_${index}`,
+          select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+        },
+        {
+          name: `select_${index}`,
+          select: 'point',
+          value: intChart,
+        },
+      ],
     }
   }
   let labelMark = {
@@ -87,7 +148,7 @@ const createHeadlineLayer = (
       align: 'center',
       baseline: 'top',
       dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 10, // Vertical offset for mobile, fixed for desktop
+      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 20, // Vertical offset for mobile, fixed for desktop
     },
     encoding: {
       text: { value: snakeCaseToCapitalizedWords(column) },
@@ -103,35 +164,84 @@ const createHeadlineLayer = (
   }
   if (!includeLabel) {
     // If it's an image column, we don't need a label
-    return [topMark]
+    return [topMark].concat(selectMarks)
   }
-  return [topMark, labelMark]
+  return [topMark, labelMark].concat(selectMarks)
 }
 
 export const createHeadlineSpec = (
+  config: ChartConfig,
   data: readonly Row[] | null,
   columns: Map<string, ResultColumn>,
   currentTheme: string,
   isMobile: boolean = false,
+  intChart: { [key: string]: string | number | Array<any> }[],
 ) => {
   // get all columns that are isNumericColumn using isNumericColumn
   let columnsArray = Array.from(columns.values())
+  let dataFull = data ? data : []
 
   // Map each column to its visualization layers with proper index
-  let columnLayers = columnsArray.map((column, index) => {
-    return createHeadlineLayer(
-      column.name,
-      index,
-      columnsArray.length,
-      columns,
-      currentTheme,
-      isMobile,
-      data ? (data[0] ? data[0][column.name] : null) : null,
-    )
-  })
+  let size = columnsArray.length * dataFull.length
+  let columnLayers = []
+  // if we have no data, we create label layers only
+  if (dataFull.length === 0) {
+    columnLayers = [columnsArray.map((column, index2) => {
+      let datum = null
+      let filtered_display = intChart.filter((item) => {
+        return (
+          item[column.name] !== undefined &&
+          item[column.name] !== null &&
+          item[column.name] !== '' &&
+          item[column.name] == datum
+        )
+      })
+      return createHeadlineLayer(
+        column.name,
+        index2 + 1,
+        size,
+        columns,
+        currentTheme,
+        isMobile,
+        datum,
+        !(config.hideLegend === true),
+        filtered_display,
+      )
+    })]
+  }
+  // otherwise, loop through row and columns
+  else {
+    columnLayers = dataFull.map((row, index1) => {
+      return columnsArray.map((column, index2) => {
+        let datum = row ? (row ? row[column.name] : null) : null
+        let filtered_display = intChart.filter((item) => {
+          return (
+            item[column.name] !== undefined &&
+            item[column.name] !== null &&
+            item[column.name] !== '' &&
+            item[column.name] == datum
+          )
+        })
+        return createHeadlineLayer(
+          column.name,
+          (index1 + 1) * (index2 + 1),
+          size,
+          columns,
+          currentTheme,
+          isMobile,
+          datum,
+          !(config.hideLegend === true),
+          filtered_display,
+        )
+      })
+    })
+  }
 
-  // flatten array of arrays to a single array
-  let flatLayers = columnLayers.reduce((acc, val) => acc.concat(val), [])
+  // flatten array of arrays of arrays to a single array
+  let flatLayers = columnLayers.reduce(
+    (acc, val) => acc.concat(val.reduce((a, v) => a.concat(v), [])),
+    [],
+  )
 
   return {
     $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
@@ -139,8 +249,9 @@ export const createHeadlineSpec = (
     width: 'container',
     height: 'container',
     data: {
-      values: data ? data[0] : [],
+      values: data ? data : [],
     },
+
     config: {
       view: { stroke: null },
       axis: { grid: false, domain: false },

@@ -1,7 +1,11 @@
 <template>
   <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !showingControls }">
-    <!-- Controls moved to right side, middle aligned, vertically stacked -->
-    <div class="controls-toggle" v-if="showControls">
+    <!-- Controls positioned based on container height -->
+    <div
+      class="controls-toggle"
+      :class="{ 'bottom-controls': isShortContainer }"
+      v-if="showControls"
+    >
       <button
         @click="downloadChart"
         class="control-btn"
@@ -33,14 +37,31 @@
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div class="chart-content-area">
-      <!-- Chart visualization area - only show when controls are hidden -->
-      <div
-        v-show="!showingControls"
-        ref="vegaContainer"
-        class="vega-container"
-        data-testid="vega-chart-container"
-      ></div>
+    <div
+      class="chart-content-area"
+      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
+    >
+      <!-- Dual chart visualization containers for smooth hot-swapping -->
+      <div class="vega-swap-container" v-show="!showingControls">
+        <div
+          ref="vegaContainer1"
+          class="vega-container"
+          :class="{ 
+            'vega-active': activeContainer === 1,
+            'vega-transitioning': transitioning && activeContainer === 1
+          }"
+          data-testid="vega-chart-container-1"
+        ></div>
+        <div
+          ref="vegaContainer2"
+          class="vega-container"
+          :class="{ 
+            'vega-active': activeContainer === 2,
+            'vega-transitioning': transitioning && activeContainer === 2
+          }"
+          data-testid="vega-chart-container-2"
+        ></div>
+      </div>
 
       <!-- Controls panel - only show when toggled -->
       <div v-if="showingControls" class="chart-controls-panel">
@@ -104,14 +125,14 @@
               <label class="chart-label" :for="control.id">{{ control.label }}</label>
 
               <input
-                v-if="['hideLegend', 'showTitle'].includes(control.field)"
+                v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)"
                 type="checkbox"
                 :id="control.id"
                 :checked="internalConfig[control.field] as boolean"
                 @change="
                   updateConfig(
                     control.field,
-                    ($event.target as HTMLInputElement).checked ? 'true' : 'false',
+                    ($event.target as HTMLInputElement).checked ? true : false,
                   )
                 "
                 data-testid="toggle-legend"
@@ -198,6 +219,7 @@ import {
   computed,
   inject,
   onUnmounted,
+  nextTick,
 } from 'vue'
 import type { PropType } from 'vue'
 import vegaEmbed from 'vega-embed'
@@ -214,6 +236,13 @@ import {
 import { generateVegaSpec } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
+
+// Type for tracking render operations
+interface RenderOperation {
+  id: number
+  aborted: boolean
+  container: 1 | 2
+}
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -254,10 +283,34 @@ export default defineComponent({
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
+    
+    // Track last rendered spec to avoid unnecessary re-renders
     const lastSpec = ref<string | null>(null)
-    const vegaView = ref<View | null>(null)
+    
+    // Dual container refs and state management
+    const vegaContainer1 = ref<HTMLElement | null>(null)
+    const vegaContainer2 = ref<HTMLElement | null>(null)
+    const activeContainer = ref<1 | 2>(1)
+    const transitioning = ref(false)
+    
+    // Store views for both containers
+    const vegaViews = ref<Map<1 | 2, View | null>>(new Map([
+      [1, null],
+      [2, null]
+    ]))
+    
+    // Track event listeners for cleanup
+    const eventListeners = ref<Map<1 | 2, (() => void) | null>>(new Map([
+      [1, null],
+      [2, null]
+    ]))
+    
+    // Render operation tracking for concurrency control
+    let renderCounter = 0
+    const pendingRender = ref<RenderOperation | null>(null)
+    const activeRender = ref<RenderOperation | null>(null)
+    
     const hasLoaded = ref<boolean>(false)
-    let removeEventListener: (() => void) | null = null
 
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
@@ -265,10 +318,14 @@ export default defineComponent({
 
     // Create a computed property for the current theme
     const currentTheme = computed(() => settingsStore.settings.theme)
-    const vegaContainer = ref<HTMLElement | null>(null)
 
     // Controls panel state
     const showingControls = ref(false)
+
+    // Computed property to determine if container is too short for side controls
+    const isShortContainer = computed(() => {
+      return props.containerHeight && props.containerHeight < 150
+    })
 
     // Internal configuration that merges provided config with defaults
     const internalConfig = ref<ChartConfig>({
@@ -299,6 +356,28 @@ export default defineComponent({
     const debouncedBrushHandler = debounce((name: string, item: any) => {
       chartHelpers.handleBrush(name, item, internalConfig.value, props.columns)
     }, 500)
+
+    // Get the currently active Vega view for operations like download
+    const getActiveView = (): View | null => {
+      return vegaViews.value.get(activeContainer.value) || null
+    }
+
+    // Clean up a specific container's resources
+    const cleanupContainer = (container: 1 | 2) => {
+      // Clean up event listener
+      const listener = eventListeners.value.get(container)
+      if (listener) {
+        listener()
+        eventListeners.value.set(container, null)
+      }
+      
+      // Finalize view
+      const view = vegaViews.value.get(container)
+      if (view) {
+        view.finalize()
+        vegaViews.value.set(container, null)
+      }
+    }
 
     // Initialize on mount
     onMounted(() => {
@@ -361,7 +440,8 @@ export default defineComponent({
 
     // Download chart as PNG
     const downloadChart = async () => {
-      await chartHelpers.downloadChart(vegaView.value, emit)
+      const activeView = getActiveView()
+      await chartHelpers.downloadChart(activeView, emit)
     }
 
     // Refresh chart - emits refresh-click event
@@ -384,53 +464,149 @@ export default defineComponent({
       }
     }
 
-    // Render the chart
+    // Main render function with hot-swap logic
     const renderChart = async (force: boolean = false) => {
-      if (!vegaContainer.value || showingControls.value) return
+      if (showingControls.value) return
 
       const spec = generateVegaSpecInternal()
       if (!spec) return
 
       const currentSpecString = JSON.stringify(spec)
 
+      // Skip if spec hasn't changed and not forced
       if (hasLoaded.value && lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
       }
 
-      lastSpec.value = currentSpecString
+      // Create new render operation
+      const renderOp: RenderOperation = {
+        id: ++renderCounter,
+        aborted: false,
+        container: activeContainer.value === 1 ? 2 : 1 as 1 | 2
+      }
+
+      // If there's an active render, mark pending render for abort
+      if (activeRender.value) {
+        activeRender.value.aborted = true
+      }
+
+      // If there's a pending render, abort it
+      if (pendingRender.value) {
+        pendingRender.value.aborted = true
+      }
+
+      // This render is now pending
+      pendingRender.value = renderOp
+
+      // Wait for any active render to complete or abort
+      while (activeRender.value && !activeRender.value.aborted) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+
+      // Check if this render was aborted while waiting
+      if (renderOp.aborted) {
+        console.log(`Render ${renderOp.id} aborted before starting`)
+        return
+      }
+
+      // Move from pending to active
+      pendingRender.value = null
+      activeRender.value = renderOp
 
       try {
-        await vegaEmbed(vegaContainer.value, spec, {
+        // Get the target container
+        const targetContainer = renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
+        
+        if (!targetContainer) {
+          console.log(`Container ${renderOp.container} not available`)
+          return
+        }
+
+        // Check for abort before expensive operations
+        if (renderOp.aborted) {
+          console.log(`Render ${renderOp.id} aborted before vega embed`)
+          return
+        }
+
+        // Render to the inactive container
+        const result = await vegaEmbed(targetContainer, spec, {
           actions: internalConfig.value.showDebug ? true : false,
           theme: currentTheme.value === 'dark' ? 'dark' : undefined,
-          renderer: 'canvas', // Use canvas renderer for better performance with large datasets
-        }).then((result) => {
-          // Store the view reference for downloading
-          vegaView.value = result.view
-          hasLoaded.value = true
-
-          if (removeEventListener) {
-            removeEventListener()
-            removeEventListener = null
-          }
-          // Setup event listeners using the helper
-          removeEventListener = chartHelpers.setupEventListeners(
-            result.view,
-            internalConfig.value,
-            props.columns,
-            isMobile.value,
-            debouncedBrushHandler,
-          )
+          renderer: 'canvas',
         })
+
+        // Check for abort after async operation
+        if (renderOp.aborted) {
+          console.log(`Render ${renderOp.id} aborted after vega embed`)
+          // Clean up the just-created view since we're aborting
+          result.view.finalize()
+          return
+        }
+
+        // Store the new view
+        vegaViews.value.set(renderOp.container, result.view)
+        
+        // Clean up old event listener for this container
+        const oldListener = eventListeners.value.get(renderOp.container)
+        if (oldListener) {
+          oldListener()
+        }
+        
+        // Setup new event listeners
+        const removeListener = chartHelpers.setupEventListeners(
+          result.view,
+          internalConfig.value,
+          props.columns,
+          isMobile.value,
+          debouncedBrushHandler,
+        )
+        eventListeners.value.set(renderOp.container, removeListener)
+
+        // Final abort check before transition
+        if (renderOp.aborted) {
+          console.log(`Render ${renderOp.id} aborted before transition`)
+          cleanupContainer(renderOp.container)
+          return
+        }
+
+        // Perform the hot-swap transition
+        transitioning.value = true
+        
+        // Wait a tick for the new chart to be ready
+        await nextTick()
+        
+        // Switch active container
+        const previousContainer = activeContainer.value
+        activeContainer.value = renderOp.container
+        
+        // Let the transition effect play out
+        setTimeout(() => {
+          transitioning.value = false
+          // Clean up the old container after transition
+          cleanupContainer(previousContainer)
+        }, 300) // Match CSS transition duration
+
+        lastSpec.value = currentSpecString
+        hasLoaded.value = true
+
+        console.log(`Render ${renderOp.id} completed successfully on container ${renderOp.container}`)
+
       } catch (error) {
-        console.error('Error rendering Vega chart:', error)
+        console.error(`Error in render ${renderOp.id}:`, error)
+      } finally {
+        // Clear active render if it's this one
+        if (activeRender.value?.id === renderOp.id) {
+          activeRender.value = null
+        }
       }
     }
 
-    const updateConfig = (field: keyof ChartConfig, value: string) => {
+    const updateConfig = (field: keyof ChartConfig, value: string | boolean | number) => {
       // @ts-ignore
       internalConfig.value[field] = value
+
+      console.log(`Updated config field ${field} to`, value)
 
       if (field === 'chartType') {
         // Reset other fields when changing chart type
@@ -456,27 +632,29 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
+        console.log('Emitting chart config change:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }
 
-    // Also ensure cleanup happens when the component unmounts or view changes
+    // Cleanup on unmount
     onUnmounted(() => {
-      // Clean up event listener if it exists
-      if (removeEventListener) {
-        removeEventListener()
-        removeEventListener = null
+      // Abort any pending renders
+      if (pendingRender.value) {
+        pendingRender.value.aborted = true
       }
-      // Clear the view reference
-      if (vegaView.value) {
-        vegaView.value.finalize() // Properly dispose of the Vega view
-        vegaView.value = null
+      if (activeRender.value) {
+        activeRender.value.aborted = true
       }
+      
+      // Clean up both containers
+      cleanupContainer(1)
+      cleanupContainer(2)
     })
 
     // Watch for changes in data, columns or config
     watch(
-      () => [props.containerHeight, props.containerWidth],
+      () => [props.containerHeight, props.containerWidth, props.chartSelection],
       () => renderChart(true),
     )
 
@@ -487,6 +665,7 @@ export default defineComponent({
         const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
 
         if (!wasValid) {
+          console.log('Invalid config fields detected, resetting to defaults')
           initializeConfig(true) // force column reset on column change
         }
 
@@ -502,7 +681,10 @@ export default defineComponent({
     })
 
     return {
-      vegaContainer,
+      vegaContainer1,
+      vegaContainer2,
+      activeContainer,
+      transitioning,
       internalConfig,
       renderChart,
       filteredColumnsInternal,
@@ -513,6 +695,7 @@ export default defineComponent({
       downloadChart,
       refreshChart,
       charts: eligible,
+      isShortContainer,
     }
   },
 
@@ -548,13 +731,24 @@ export default defineComponent({
   z-index: 10;
   display: flex;
   flex-direction: column;
-  /* gap: 4px; */
+}
+
+.controls-toggle.bottom-controls {
+  position: absolute;
+  top: auto;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(50%);
+  flex-direction: row;
+  gap: 4px;
+  padding: 4px;
+  background-color: rgba(var(--bg-color-rgb), 0.9);
+  border-radius: 4px 4px 0 0;
+  backdrop-filter: blur(4px);
 }
 
 .viz {
-  /* flex: 1; */
   width: 100%;
-  /* height: 100%; */
   position: relative;
 }
 
@@ -570,7 +764,6 @@ export default defineComponent({
   cursor: pointer;
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
-  /* border-radius: 4px; */
 }
 
 .control-btn:hover {
@@ -599,10 +792,37 @@ export default defineComponent({
   position: relative;
 }
 
+.chart-content-area.with-bottom-controls {
+  width: 100%;
+  height: calc(100% - 36px);
+}
+
+/* Hot-swap container styles */
+.vega-swap-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
 .vega-container {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  /* transition: opacity 0.1s ease-in-out; */
+  pointer-events: none;
+}
+
+.vega-container.vega-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vega-container.vega-transitioning {
+  opacity: 1;
 }
 
 .chart-controls-panel {
@@ -648,7 +868,6 @@ export default defineComponent({
   margin-bottom: 0;
   white-space: nowrap;
   min-width: 80px;
-  /* Give labels a consistent width */
   flex-shrink: 0;
 }
 
@@ -765,6 +984,26 @@ input:checked + .toggle-slider:before {
     height: 32px;
     margin-top: 5px;
     margin-bottom: 5px;
+  }
+
+  /* Force bottom controls on mobile */
+  .controls-toggle {
+    position: absolute;
+    top: auto;
+    bottom: 0;
+    right: 50%;
+    transform: translateX(50%);
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    background-color: rgba(var(--bg-color-rgb), 0.9);
+    border-radius: 4px 4px 0 0;
+    backdrop-filter: blur(4px);
+  }
+
+  .chart-content-area {
+    width: 100%;
+    height: calc(100% - 40px);
   }
 }
 </style>
