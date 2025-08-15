@@ -270,8 +270,6 @@ export default defineComponent({
 
     const showContextMenu = (event: MouseEvent) => {
       // Only show context menu for connections
-      console.log(event)
-      console.log(props.item)
       if (props.item.type === 'connection') {
         contextMenuPosition.value = {
           x: event.clientX,

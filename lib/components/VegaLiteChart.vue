@@ -46,18 +46,18 @@
         <div
           ref="vegaContainer1"
           class="vega-container"
-          :class="{ 
+          :class="{
             'vega-active': activeContainer === 1,
-            'vega-transitioning': transitioning && activeContainer === 1
+            'vega-transitioning': transitioning && activeContainer === 1,
           }"
           data-testid="vega-chart-container-1"
         ></div>
         <div
           ref="vegaContainer2"
           class="vega-container"
-          :class="{ 
+          :class="{
             'vega-active': activeContainer === 2,
-            'vega-transitioning': transitioning && activeContainer === 2
+            'vega-transitioning': transitioning && activeContainer === 2,
           }"
           data-testid="vega-chart-container-2"
         ></div>
@@ -163,21 +163,17 @@
             v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
           >
             <label class="control-section-label">Advanced</label>
-            <!-- Debug mode toggle -->
+            <!-- Open in Vega Editor button -->
             <div class="control-group no-drag">
-              <label class="chart-label" for="debug-mode-toggle">Debug Mode</label>
-              <div class="toggle-switch-container">
-                <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    id="debug-mode-toggle"
-                    :checked="internalConfig.showDebug"
-                    @change="toggleDebugMode"
-                    data-testid="debug-mode-toggle"
-                  />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
+              <label class="chart-label">Vega Editor</label>
+              <button
+                @click="openInVegaEditor"
+                class="editor-btn"
+                title="Open chart spec in Vega Editor"
+              >
+                <i class="mdi mdi-open-in-new icon"></i>
+                Open in Editor
+              </button>
             </div>
             <!-- Existing trellis field control -->
             <div
@@ -283,33 +279,37 @@ export default defineComponent({
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
-    
+
     // Track last rendered spec to avoid unnecessary re-renders
     const lastSpec = ref<string | null>(null)
-    
+
     // Dual container refs and state management
     const vegaContainer1 = ref<HTMLElement | null>(null)
     const vegaContainer2 = ref<HTMLElement | null>(null)
     const activeContainer = ref<1 | 2>(1)
     const transitioning = ref(false)
-    
+
     // Store views for both containers
-    const vegaViews = ref<Map<1 | 2, View | null>>(new Map([
-      [1, null],
-      [2, null]
-    ]))
-    
+    const vegaViews = ref<Map<1 | 2, View | null>>(
+      new Map([
+        [1, null],
+        [2, null],
+      ]),
+    )
+
     // Track event listeners for cleanup
-    const eventListeners = ref<Map<1 | 2, (() => void) | null>>(new Map([
-      [1, null],
-      [2, null]
-    ]))
-    
+    const eventListeners = ref<Map<1 | 2, (() => void) | null>>(
+      new Map([
+        [1, null],
+        [2, null],
+      ]),
+    )
+
     // Render operation tracking for concurrency control
     let renderCounter = 0
     const pendingRender = ref<RenderOperation | null>(null)
     const activeRender = ref<RenderOperation | null>(null)
-    
+
     const hasLoaded = ref<boolean>(false)
 
     if (!settingsStore) {
@@ -370,7 +370,7 @@ export default defineComponent({
         listener()
         eventListeners.value.set(container, null)
       }
-      
+
       // Finalize view
       const view = vegaViews.value.get(container)
       if (view) {
@@ -449,19 +449,51 @@ export default defineComponent({
       emit('refresh-click')
     }
 
-    // Toggle debug mode
-    const toggleDebugMode = () => {
-      internalConfig.value.showDebug = !internalConfig.value.showDebug
+    // Open chart spec in Vega Editor
+    const openInVegaEditor = () => {
+      const spec = generateVegaSpecInternal()
+      const editorUrl = 'https://vega.github.io/editor/'
 
-      // Notify parent component if the callback is provided
-      if (props.onChartConfigChange) {
-        props.onChartConfigChange({ ...internalConfig.value })
+      // Prepare the message to send
+      const data = {
+        mode: 'vega-lite',
+        spec: JSON.stringify(spec),
+        config: {},
+        renderer: 'canvas',
+        theme: 'default',
       }
 
-      // Re-render chart to apply debug mode changes
-      if (!showingControls.value) {
-        renderChart(true)
+      const editor = window.open(editorUrl, '_blank')
+
+      const wait = 10_000 // total retry time in ms
+      const step = 250 // retry interval in ms
+      const { origin } = new URL(editorUrl)
+
+      let count = ~~(wait / step)
+
+      function listen(evt: MessageEvent) {
+        if (evt.source === editor) {
+          count = 0 // stop retries
+          window.removeEventListener('message', listen, false)
+        }
       }
+      window.addEventListener('message', listen, false)
+
+      // send message repeatedly until ack received or timeout
+      function send() {
+        if (count <= 0) {
+          return
+        }
+        if (!editor) {
+          console.error('Failed to open Vega Editor window')
+          return
+        }
+        editor.postMessage(data, origin)
+        setTimeout(send, step)
+        count -= 1
+      }
+
+      setTimeout(send, step)
     }
 
     // Main render function with hot-swap logic
@@ -477,13 +509,15 @@ export default defineComponent({
       if (hasLoaded.value && lastSpec.value === currentSpecString && !force) {
         console.log('Skipping render - spec unchanged')
         return
+      } else {
+        console.log('Rendering new spec on chart:', props.chartTitle)
       }
 
       // Create new render operation
       const renderOp: RenderOperation = {
         id: ++renderCounter,
         aborted: false,
-        container: activeContainer.value === 1 ? 2 : 1 as 1 | 2
+        container: activeContainer.value === 1 ? 2 : (1 as 1 | 2),
       }
 
       // If there's an active render, mark pending render for abort
@@ -499,14 +533,9 @@ export default defineComponent({
       // This render is now pending
       pendingRender.value = renderOp
 
-      // Wait for any active render to complete or abort
-      while (activeRender.value && !activeRender.value.aborted) {
-        await new Promise(resolve => setTimeout(resolve, 50))
-      }
-
       // Check if this render was aborted while waiting
       if (renderOp.aborted) {
-        console.log(`Render ${renderOp.id} aborted before starting`)
+        console.log(`Render ${renderOp.id} ${props.chartTitle} aborted before starting`)
         return
       }
 
@@ -516,8 +545,9 @@ export default defineComponent({
 
       try {
         // Get the target container
-        const targetContainer = renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
-        
+        const targetContainer =
+          renderOp.container === 1 ? vegaContainer1.value : vegaContainer2.value
+
         if (!targetContainer) {
           console.log(`Container ${renderOp.container} not available`)
           return
@@ -538,7 +568,7 @@ export default defineComponent({
 
         // Check for abort after async operation
         if (renderOp.aborted) {
-          console.log(`Render ${renderOp.id} aborted after vega embed`)
+          console.log(`Render ${renderOp.id} ${props.chartTitle} aborted after vega embed`)
           // Clean up the just-created view since we're aborting
           result.view.finalize()
           return
@@ -546,13 +576,13 @@ export default defineComponent({
 
         // Store the new view
         vegaViews.value.set(renderOp.container, result.view)
-        
+
         // Clean up old event listener for this container
         const oldListener = eventListeners.value.get(renderOp.container)
         if (oldListener) {
           oldListener()
         }
-        
+
         // Setup new event listeners
         const removeListener = chartHelpers.setupEventListeners(
           result.view,
@@ -572,14 +602,14 @@ export default defineComponent({
 
         // Perform the hot-swap transition
         transitioning.value = true
-        
+
         // Wait a tick for the new chart to be ready
         await nextTick()
-        
+
         // Switch active container
         const previousContainer = activeContainer.value
         activeContainer.value = renderOp.container
-        
+
         // Let the transition effect play out
         setTimeout(() => {
           transitioning.value = false
@@ -590,8 +620,9 @@ export default defineComponent({
         lastSpec.value = currentSpecString
         hasLoaded.value = true
 
-        console.log(`Render ${renderOp.id} completed successfully on container ${renderOp.container}`)
-
+        console.log(
+          `Render ${renderOp.id} completed successfully on container ${renderOp.container}`,
+        )
       } catch (error) {
         console.error(`Error in render ${renderOp.id}:`, error)
       } finally {
@@ -632,7 +663,6 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
-        console.log('Emitting chart config change:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }
@@ -646,30 +676,47 @@ export default defineComponent({
       if (activeRender.value) {
         activeRender.value.aborted = true
       }
-      
+
       // Clean up both containers
       cleanupContainer(1)
       cleanupContainer(2)
     })
-
+    watch(
+      () => [props.chartSelection],
+      (newValues, oldValues) => {
+        const [newSelection] = newValues
+        const [oldSelection] = oldValues
+        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
+        // if (internalConfig.value.chartType !== 'headline') return;
+        renderChart(true)
+      },
+    )
     // Watch for changes in data, columns or config
     watch(
-      () => [props.containerHeight, props.containerWidth, props.chartSelection],
-      () => renderChart(true),
+      () => [props.containerHeight, props.containerWidth],
+      () => {
+        renderChart(true)
+      },
     )
+    let updatePending = false
 
     watch(
       () => [props.columns, props.data],
-      () => {
-        // Validate configuration fields using helper
-        const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
+      (newValues, oldValues) => {
+        if (updatePending) return
+        // check they are actually different
+        if (JSON.stringify(newValues) === JSON.stringify(oldValues)) return
+        updatePending = true
+        nextTick(() => {
+          updatePending = false
 
-        if (!wasValid) {
-          console.log('Invalid config fields detected, resetting to defaults')
-          initializeConfig(true) // force column reset on column change
-        }
-
-        renderChart()
+          const wasValid = chartHelpers.validateConfigFields(internalConfig.value, props.columns)
+          if (!wasValid) {
+            console.log('Invalid config fields detected, resetting to defaults')
+            initializeConfig(true)
+          }
+          renderChart()
+        })
       },
       { deep: true },
     )
@@ -691,7 +738,7 @@ export default defineComponent({
       showingControls,
       updateConfig,
       toggleControls,
-      toggleDebugMode,
+      openInVegaEditor,
       downloadChart,
       refreshChart,
       charts: eligible,
@@ -922,55 +969,23 @@ export default defineComponent({
   font-size: var(--icon-size);
 }
 
-/* Styles for the toggle switch */
-.toggle-switch-container {
+/* Styles for the editor button */
+.editor-btn {
   display: flex;
   align-items: center;
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  background-color: var(--button-bg);
+  color: var(--text-color);
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--border-light);
-  transition: 0.4s;
-  border-radius: 10px;
+  font-size: var(--small-font-size);
+  transition: background-color 0.2s;
 }
 
-.toggle-slider:before {
-  position: absolute;
-  content: '';
-  height: 16px;
-  width: 16px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked + .toggle-slider {
-  background-color: var(--special-text);
-}
-
-input:checked + .toggle-slider:before {
-  transform: translateX(16px);
+.editor-btn:hover {
+  background-color: var(--button-mouseover);
 }
 
 /* Mobile responsiveness */

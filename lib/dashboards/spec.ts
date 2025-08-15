@@ -206,9 +206,29 @@ export const generateVegaSpec = (
   let intChart: { [key: string]: string | number | Array<any> }[] = chartSelection
     ? (chartSelection.map((x) => toRaw(x)) as { [key: string]: string | number | Array<any> }[])
     : ([] as { [key: string]: string | number | Array<any> }[])
+  // preprocess data - if any column is a year, map it to a data.forEach(d => d.year = new Date(d.year, 0, 1));
+  // Preprocess data - find all columns with 'year' trait and map integer years to dates
+  const yearColumns = Array.from(columns.entries())
+    .filter(([_, col]) => col.traits?.includes('year'))
+    .map(([colName, _]) => colName)
+
+  let localData = data ? [...data] : []
+  if (yearColumns.length > 0 && localData) {
+    localData.forEach((row) => {
+      yearColumns.forEach((colName) => {
+        const yearValue = row[colName]
+        // Check if the value is a number (integer year) and convert to Date
+        if (typeof yearValue === 'number' && Number.isInteger(yearValue)) {
+          // Create date for January 1st of the given year
+          //@ts-ignore
+          row[colName] = new Date(yearValue, 0, 1)
+        }
+      })
+    })
+  }
 
   // Create base spec
-  let spec: any = createBaseSpec(data)
+  let spec: any = createBaseSpec(localData)
 
   // Set up color encoding
   let encoding: any = {}
@@ -245,7 +265,7 @@ export const generateVegaSpec = (
         columns,
         tooltipFields,
         encoding,
-        data,
+        localData,
         intChart,
         currentTheme,
       )
@@ -276,7 +296,7 @@ export const generateVegaSpec = (
     case 'line':
       chartSpec = createLineChartSpec(
         config,
-        data,
+        localData,
         columns,
         tooltipFields,
         encoding,
@@ -289,7 +309,7 @@ export const generateVegaSpec = (
     case 'area':
       chartSpec = createAreaChartSpec(
         config,
-        data,
+        localData,
         columns,
         tooltipFields,
         encoding,
@@ -311,7 +331,7 @@ export const generateVegaSpec = (
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(config, data, columns, currentTheme, isMobile, intChart)
+      chartSpec = createHeadlineSpec(config, localData, columns, currentTheme, isMobile, intChart)
       break
 
     case 'heatmap':
@@ -319,7 +339,7 @@ export const generateVegaSpec = (
       break
 
     case 'usa-map':
-      chartSpec = createMapSpec(config, data || [], columns, isMobile, intChart, currentTheme)
+      chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme)
       break
 
     case 'boxplot':
@@ -327,7 +347,7 @@ export const generateVegaSpec = (
       break
 
     case 'tree':
-      chartSpec = createTreemapSpec(config, data, columns, tooltipFields, encoding)
+      chartSpec = createTreemapSpec(config, localData, columns, tooltipFields, encoding)
       break
   }
 

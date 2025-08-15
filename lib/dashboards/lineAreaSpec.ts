@@ -1,4 +1,4 @@
-import { getColumnFormat, createFieldEncoding, createColorEncoding } from './helpers'
+import { getFormatHint, createFieldEncoding, createColorEncoding } from './helpers'
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 
@@ -39,9 +39,11 @@ const createInteractiveLayer = (
     },
     data: { values: data },
     encoding: {
-      x: createFieldEncoding(config.xField || '', columns),
+      x: createFieldEncoding(config.xField || '', columns, {
+        axis: { ...getFormatHint(config.xField, columns) },
+      }),
       y: createFieldEncoding(config.yField || '', columns, {
-        axis: { format: getColumnFormat(config.yField, columns) },
+        axis: { ...getFormatHint(config.yField, columns) },
       }),
 
       tooltip: tooltipFields,

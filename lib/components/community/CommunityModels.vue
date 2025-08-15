@@ -207,7 +207,6 @@ if (!modelStore) {
 watch(
   () => navigation.activeCommunityModelFilter.value,
   (newFilter) => {
-    console.log('Active community model filter changed:', newFilter)
     if (newFilter) {
       searchQuery.value = newFilter
     } else {

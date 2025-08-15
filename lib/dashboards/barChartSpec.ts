@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import {
-  getColumnFormat,
+  getFormatHint,
   createFieldEncoding,
   createInteractionEncodings,
   getSortOrder,
@@ -63,7 +63,7 @@ export const createBarChartSpec = (
         sort: getSortOrder(config.xField || '', columns, config.yField),
       },
       y: createFieldEncoding(config.yField || '', columns, {
-        axis: { format: getColumnFormat(config.yField, columns) },
+        axis: { ...getFormatHint(config.yField, columns) },
       }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,

@@ -400,7 +400,7 @@ export default defineComponent({
           this.analyticsStore.log('studio-query-execution', this.editorData.type, true)
         }
       } catch (error) {
-        console.log(error)
+        console.error(error)
       }
 
       // Set component to loading state

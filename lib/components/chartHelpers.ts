@@ -83,12 +83,14 @@ export class ChromaChartHelpers {
       if (!timeField) return
 
       let dateLookup = config.xField
+      let isYear = columns.get(config.xField)?.traits?.includes('year') ?? false
       if (DATETIME_COLS.includes(timeField?.type)) {
         dateLookup = 'yearmonthdate_' + config.xField
+      } else if (isYear) {
+        dateLookup = 'year_' + config.xField
       }
 
       const values = item[dateLookup as keyof typeof item] ?? []
-
       // Check if values exists and has elements
       if (!values || !Array.isArray(values) || values.length === 0) {
         // Brush is being cleared - record the time and schedule a background click
@@ -124,11 +126,24 @@ export class ChromaChartHelpers {
           append: false,
         })
       } else if ([ColumnType.NUMBER, ColumnType.INTEGER].includes(timeField?.type)) {
-        this.eventHandlers.onDimensionClick({
-          filters: { [timeAddress]: [start, end] },
-          chart: { [config.xField]: [start, end] },
-          append: false,
-        })
+        if (isYear) {
+          this.eventHandlers.onDimensionClick({
+            filters: {
+              [timeAddress]: [
+                convertTimestampToISODate(start).getFullYear(),
+                convertTimestampToISODate(end).getFullYear(),
+              ],
+            },
+            chart: { [config.xField]: [start, end] },
+            append: false,
+          })
+        } else {
+          this.eventHandlers.onDimensionClick({
+            filters: { [timeAddress]: [start, end] },
+            chart: { [config.xField]: [start, end] },
+            append: false,
+          })
+        }
       }
     } else {
       this.eventHandlers.onBackgroundClick()
@@ -147,7 +162,6 @@ export class ChromaChartHelpers {
     const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
-    console.log('Point clicked:', item, 'Append:', append)
     if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
@@ -172,13 +186,10 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     append: boolean,
   ): void {
-    console.log('Geographic point clicked:', item)
     if (!config.geoField) return
 
     const geoField = columns.get(config.geoField)
     const geoConcept = geoField?.address
-
-    console.log('Geographic point clicked:', item)
 
     if (!geoConcept || !geoField) return
 
@@ -326,7 +337,7 @@ export class ChromaChartHelpers {
 
       return () => {
         view.removeSignalListener('brush', debouncedBrushHandler)
-        view.removeEventListener('click', clickHandler) 
+        view.removeEventListener('click', clickHandler)
       }
     } else if (isMobile) {
       const touchHandler = (event: any, item: any) => {

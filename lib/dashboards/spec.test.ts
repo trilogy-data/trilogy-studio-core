@@ -548,7 +548,7 @@ describe('generateVegaSpec', () => {
       const spec = generateVegaSpec(null, config, testColumns, null)
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.data.values).toBeNull()
+      expect(spec.data.values.length).toBe(0) // Should handle null data as empty
     })
 
     it('should handle missing field references gracefully', () => {

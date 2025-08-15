@@ -95,7 +95,7 @@ export class DashboardQueryExecutor {
     this.connectionName = connectionName
     this.maxConcurrentQueries = options.maxConcurrentQueries || 6
     this.retryAttempts = options.retryAttempts || 2
-    this.batchDelay = options.batchDelay || 10
+    this.batchDelay = options.batchDelay || 0
     this.dashboardId = dashboardId
     this.getItemData = getItemData
     this.setItemData = setItemData
@@ -702,10 +702,7 @@ export class DashboardQueryExecutor {
       // Clean up tracking data when query completes
       this.cleanupQueryTracking(queryId)
 
-      // Process next queries in queue
-      setTimeout(() => {
-        this.processBatch()
-      }, 50)
+      this.processBatch()
     }
   }
 }
