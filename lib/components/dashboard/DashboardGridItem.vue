@@ -438,7 +438,7 @@ const filterCount = computed(() => {
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
   /* border-radius: 4px; */
-  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
+  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.8);
 }
 
 .control-btn:hover {

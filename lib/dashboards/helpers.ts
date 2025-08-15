@@ -508,7 +508,7 @@ export const getVegaFieldType = (fieldName: string, columns: Map<string, ResultC
       return 'temporal'
     }
     if ([ColumnType.DATE].includes(column.type)) {
-      return 'nominal'
+      return 'temporal'
     }
     return 'ordinal'
   } else if (isNumericColumn(column)) {

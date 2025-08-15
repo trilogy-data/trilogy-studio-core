@@ -121,7 +121,7 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
   title: snakeCaseToCapitalizedWords(
     field && columns.get(field)?.description ? columns.get(field)?.description : field,
   ),
-  format: getFormatHint(field, columns),
+  ...getFormatHint(field, columns),
 })
 
 /**
