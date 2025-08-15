@@ -77,7 +77,6 @@ export const getGeoTraitType = (column: ResultColumn): string => {
   return 'unknown'
 }
 
-
 export const isTemporalColumn = (column: ResultColumn): boolean => {
   let base = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIME, ColumnType.TIMESTAMP].includes(
     column.type,
@@ -430,7 +429,10 @@ export const determineEligibleChartTypes = (
 /**
  * Get formatting hints for a field based on its column type
  */
-export const getFormatHint = (fieldName: string | undefined, columns: Map<string, ResultColumn>): any => {
+export const getFormatHint = (
+  fieldName: string | undefined,
+  columns: Map<string, ResultColumn>,
+): any => {
   if (!fieldName || !columns.get(fieldName)) return {}
 
   const column = columns.get(fieldName)
@@ -443,16 +445,16 @@ export const getFormatHint = (fieldName: string | undefined, columns: Map<string
   }
   if (getColumnHasTrait(fieldName, columns, 'year')) {
     return {
-      labelAngle: -45,   // optional: tilt labels to fit better
-      format: "%Y",
+      labelAngle: -45, // optional: tilt labels to fit better
+      format: '%Y',
       timeUnit: 'year',
     }
   }
   switch (column.type) {
     case ColumnType.DATE:
-      return { timeUnit: 'yearmonthdate', labelAngle: -45, }
+      return { timeUnit: 'yearmonthdate', labelAngle: -45 }
     case ColumnType.TIME:
-      return { timeUnit: 'hoursminutesseconds', labelAngle: -45, }
+      return { timeUnit: 'hoursminutesseconds', labelAngle: -45 }
     case ColumnType.DATETIME:
       return { timeUnit: 'yearmonthdate-hours' }
     case ColumnType.INTEGER:

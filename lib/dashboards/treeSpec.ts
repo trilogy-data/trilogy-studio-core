@@ -1,5 +1,5 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
-import { getFormatHint  } from './helpers'
+import { getFormatHint } from './helpers'
 
 export const createTreemapSpec = (
   config: ChartConfig,
@@ -124,7 +124,7 @@ export const createTreemapSpec = (
         text: {
           field: 'value',
           type: 'quantitative',
-          ...getFormatHint (sizeField, columns) || ',d',
+          ...(getFormatHint(sizeField, columns) || ',d'),
         },
         color: {
           condition: {

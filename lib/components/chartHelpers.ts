@@ -32,7 +32,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file
@@ -86,14 +86,11 @@ export class ChromaChartHelpers {
       let isYear = columns.get(config.xField)?.traits?.includes('year') ?? false
       if (DATETIME_COLS.includes(timeField?.type)) {
         dateLookup = 'yearmonthdate_' + config.xField
-      }
-      else if (isYear) {
+      } else if (isYear) {
         dateLookup = 'year_' + config.xField
       }
 
-
       const values = item[dateLookup as keyof typeof item] ?? []
-      console.log(item)
       // Check if values exists and has elements
       if (!values || !Array.isArray(values) || values.length === 0) {
         // Brush is being cleared - record the time and schedule a background click
@@ -131,12 +128,16 @@ export class ChromaChartHelpers {
       } else if ([ColumnType.NUMBER, ColumnType.INTEGER].includes(timeField?.type)) {
         if (isYear) {
           this.eventHandlers.onDimensionClick({
-            filters: { [timeAddress]: [convertTimestampToISODate(start).getFullYear(), convertTimestampToISODate(end).getFullYear()] },
+            filters: {
+              [timeAddress]: [
+                convertTimestampToISODate(start).getFullYear(),
+                convertTimestampToISODate(end).getFullYear(),
+              ],
+            },
             chart: { [config.xField]: [start, end] },
             append: false,
           })
-        }
-        else {
+        } else {
           this.eventHandlers.onDimensionClick({
             filters: { [timeAddress]: [start, end] },
             chart: { [config.xField]: [start, end] },
@@ -144,24 +145,24 @@ export class ChromaChartHelpers {
           })
         }
       }
-      } else {
-        this.eventHandlers.onBackgroundClick()
-      }
+    } else {
+      this.eventHandlers.onBackgroundClick()
     }
+  }
 
-    /**
-     * Handles point click events for all chart types
-     */
-    handlePointClick(
-      event: ScenegraphEvent,
-      item: any,
-      config: ChartConfig,
-      columns: Map<string, ResultColumn>,
-    ): void {
-      const currentTime = Date.now()
+  /**
+   * Handles point click events for all chart types
+   */
+  handlePointClick(
+    event: ScenegraphEvent,
+    item: any,
+    config: ChartConfig,
+    columns: Map<string, ResultColumn>,
+  ): void {
+    const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
-    if(!item || !item.datum) {
+    if (!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
     }
@@ -185,13 +186,10 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     append: boolean,
   ): void {
-    console.log('Geographic point clicked:', item)
     if (!config.geoField) return
 
     const geoField = columns.get(config.geoField)
     const geoConcept = geoField?.address
-
-    console.log('Geographic point clicked:', item)
 
     if (!geoConcept || !geoField) return
 

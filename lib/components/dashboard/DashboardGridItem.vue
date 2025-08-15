@@ -90,11 +90,9 @@ function saveTitleEdit(): void {
 
 function toggleCrossFilterEligible(): void {
   const itemData = props.getItemData(props.item.i, props.dashboardId)
-  console.log(itemData)
   const newAllowCrossFilter = !itemData.allowCrossFilter
 
   // Update the allowCrossFilter property
-  console.log(`Toggling cross-filter eligibility for item ${props.item.i}: ${newAllowCrossFilter}`)
   props.setItemData(props.item.i, props.dashboardId, {
     ...itemData,
     allowCrossFilter: newAllowCrossFilter,

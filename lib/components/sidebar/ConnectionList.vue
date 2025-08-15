@@ -236,7 +236,7 @@ export default {
         }
         delete isErrored.value[id]
       } catch (error) {
-        console.log(error)
+        console.error(error)
         // check if it's an Error
         if (error instanceof Error) {
           isErrored.value[id] = error.message

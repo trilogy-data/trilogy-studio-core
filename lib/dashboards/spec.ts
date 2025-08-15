@@ -210,21 +210,21 @@ export const generateVegaSpec = (
   // Preprocess data - find all columns with 'year' trait and map integer years to dates
   const yearColumns = Array.from(columns.entries())
     .filter(([_, col]) => col.traits?.includes('year'))
-    .map(([colName, _]) => colName);
+    .map(([colName, _]) => colName)
 
   let localData = data ? [...data] : []
   if (yearColumns.length > 0 && localData) {
     localData.forEach((row) => {
       yearColumns.forEach((colName) => {
-        const yearValue = row[colName];
+        const yearValue = row[colName]
         // Check if the value is a number (integer year) and convert to Date
         if (typeof yearValue === 'number' && Number.isInteger(yearValue)) {
           // Create date for January 1st of the given year
           //@ts-ignore
-          row[colName] = new Date(yearValue, 0, 1);
+          row[colName] = new Date(yearValue, 0, 1)
         }
-      });
-    });
+      })
+    })
   }
 
   // Create base spec

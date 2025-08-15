@@ -663,7 +663,6 @@ export default defineComponent({
 
       // Notify parent component if the callback is provided
       if (props.onChartConfigChange) {
-        console.log('Emitting chart config change:', { ...internalConfig.value })
         props.onChartConfigChange({ ...internalConfig.value })
       }
     }

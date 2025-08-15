@@ -134,12 +134,12 @@ export default defineComponent({
         console.error('Editor element is not available')
         return
       }
-      console.log('Creating editor for context:', props.context)
+
       // If editor already exists and is mounted, just update content
       if (editorMap.has(props.context) && mountedMap.get(props.context)) {
         const editorInstance = editorMap.get(props.context)
         if (editorInstance) {
-          console.log('Editor already exists, updating content')
+
           editorInstance.setValue(props.contents)
           editorInstance.layout()
           return

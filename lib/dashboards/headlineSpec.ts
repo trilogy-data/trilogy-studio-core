@@ -1,9 +1,9 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isImageColumn, getFormatHint , getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
+import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
 
-const valueToString = (column:string, value: any): string => {
+const valueToString = (column: string, value: any): string => {
   if (value === null || value === undefined) {
     return 'datum.${column} === null'
   }
@@ -62,7 +62,7 @@ const createHeadlineLayer = (
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
     topMark = {
-      transform: [{ filter: valueToString(column, datum)}],
+      transform: [{ filter: valueToString(column, datum) }],
       mark: {
         type: 'image',
         width: { expr: `width / ${total}` },
@@ -76,7 +76,7 @@ const createHeadlineLayer = (
         url: {
           field: column,
           type: getVegaFieldType(column, columns),
-          ...getFormatHint (column, columns),
+          ...getFormatHint(column, columns),
         },
       },
       params: [
@@ -123,7 +123,7 @@ const createHeadlineLayer = (
         text: {
           field: column,
           type: getVegaFieldType(column, columns),
-          ...getFormatHint (column, columns),
+          ...getFormatHint(column, columns),
         },
         color: {
           condition: { param: `select_${index}`, value: HIGHLIGHT_COLOR, empty: false },

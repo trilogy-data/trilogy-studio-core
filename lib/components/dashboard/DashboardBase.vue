@@ -132,7 +132,7 @@ onMounted(() => {
     let unRun = Object.keys(dashboard.value.gridItems).filter(
       (itemId) => !dashboardObj.gridItems[itemId].results,
     )
-    console.log('Running initial queries for dashboard:', dashboard.value.id)
+
     executor?.runBatch(unRun)
     if (globalCompletion.value.length === 0) {
       populateCompletion()
@@ -499,7 +499,6 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
   }
 
   if (data.results) {
-    console.log('Setting results for item:', itemId)
     dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
   }
 
@@ -606,7 +605,7 @@ function unSelect(itemId: string): void {
 }
 
 function dashboardCreated(id: string): void {
-  console.log('Dashboard created event received:', id)
+
   setActiveDashboard(id)
 }
 
