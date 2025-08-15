@@ -307,6 +307,8 @@ export default defineComponent({
   align-items: stretch;
   position: relative;
   overflow-y: hidden;
+  /* padding-top:15px; */
+  background-color: var(--bg-light);
 }
 
 .loading-overlay {

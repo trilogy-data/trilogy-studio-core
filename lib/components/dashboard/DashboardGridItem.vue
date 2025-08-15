@@ -218,7 +218,9 @@ const filterCount = computed(() => {
     "
   >
     <!-- Edit Controls (styled like control buttons) -->
-    <div class="header-controls" v-if="editMode">
+    <div class="header-controls"
+         :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+    v-if="editMode">
       <button
         @click="increaseHeight"
         class="control-btn"
@@ -422,6 +424,7 @@ const filterCount = computed(() => {
   right: 0px;
   z-index: 20;
   display: flex;
+  opacity: 0;
   /* gap: 4px; */
 }
 
@@ -587,7 +590,7 @@ const filterCount = computed(() => {
 }
 
 .filters-container.edit-mode {
-  /* background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.9); */
+
   /* backdrop-filter: blur(2px); */
   border-bottom: 1px solid var(--dashboard-border);
   min-height: var(--chart-control-height);
@@ -658,7 +661,7 @@ const filterCount = computed(() => {
   align-items: center;
   padding: 6px 8px;
   cursor: pointer;
-  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.8);
+  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.8);
   backdrop-filter: blur(2px);
   border-radius: 4px;
   margin: 4px;
@@ -680,7 +683,7 @@ const filterCount = computed(() => {
 .filter-details {
   display: flex;
   flex-wrap: wrap;
-  background-color: rgba(var(--sidebar-bg-rgb, 245, 245, 245), 0.9);
+  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.9);
   backdrop-filter: blur(2px);
   animation: fadeIn 0.2s ease;
   border-radius: 4px;
