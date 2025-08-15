@@ -1,6 +1,6 @@
 import { type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { getColumnFormat, createFieldEncoding, createInteractionEncodings } from './helpers'
+import { getFormatHint , createFieldEncoding, createInteractionEncodings } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
 export const createBarHChartSpec = (
@@ -47,7 +47,7 @@ export const createBarHChartSpec = (
         },
       },
       x: createFieldEncoding(config.xField || '', columns, {
-        axis: { format: getColumnFormat(config.xField, columns) },
+        axis: { ...getFormatHint (config.xField, columns) },
       }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,

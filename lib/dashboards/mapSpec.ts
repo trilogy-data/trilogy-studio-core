@@ -1,7 +1,7 @@
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
 import { lookupCountry } from './countryLookup'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { getColumnHasTrait, getColumnFormat, createColorEncoding } from './helpers'
+import { getColumnHasTrait, getFormatHint , createColorEncoding } from './helpers'
 import { computeMercatorProjectionFactors } from './d3utility'
 
 /**
@@ -121,7 +121,7 @@ const createTooltipField = (field: string, type: string, columns: Map<string, Re
   title: snakeCaseToCapitalizedWords(
     field && columns.get(field)?.description ? columns.get(field)?.description : field,
   ),
-  format: getColumnFormat(field, columns),
+  format: getFormatHint (field, columns),
 })
 
 /**
@@ -599,13 +599,13 @@ export const createMapSpec = (
                 field: config.geoField,
                 type: 'nominal',
                 title: snakeCaseToCapitalizedWords(config.geoField),
-                format: getColumnFormat(config.geoField, columns),
+                ...getFormatHint (config.geoField, columns),
               },
               {
                 field: config.colorField,
                 type: 'quantitative',
                 title: snakeCaseToCapitalizedWords(config.colorField),
-                format: getColumnFormat(config.colorField, columns),
+                ...getFormatHint (config.colorField, columns),
               },
             ],
             stroke: {

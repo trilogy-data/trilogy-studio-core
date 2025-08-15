@@ -32,7 +32,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) {}
+  constructor(private eventHandlers: ChartEventHandlers) { }
 
   /**
    * Downloads the chart as a PNG file
@@ -83,12 +83,17 @@ export class ChromaChartHelpers {
       if (!timeField) return
 
       let dateLookup = config.xField
+      let isYear = columns.get(config.xField)?.traits?.includes('year') ?? false
       if (DATETIME_COLS.includes(timeField?.type)) {
         dateLookup = 'yearmonthdate_' + config.xField
       }
+      else if (isYear) {
+        dateLookup = 'year_' + config.xField
+      }
+
 
       const values = item[dateLookup as keyof typeof item] ?? []
-
+      console.log(item)
       // Check if values exists and has elements
       if (!values || !Array.isArray(values) || values.length === 0) {
         // Brush is being cleared - record the time and schedule a background click
@@ -124,30 +129,39 @@ export class ChromaChartHelpers {
           append: false,
         })
       } else if ([ColumnType.NUMBER, ColumnType.INTEGER].includes(timeField?.type)) {
-        this.eventHandlers.onDimensionClick({
-          filters: { [timeAddress]: [start, end] },
-          chart: { [config.xField]: [start, end] },
-          append: false,
-        })
+        if (isYear) {
+          this.eventHandlers.onDimensionClick({
+            filters: { [timeAddress]: [convertTimestampToISODate(start).getFullYear(), convertTimestampToISODate(end).getFullYear()] },
+            chart: { [config.xField]: [start, end] },
+            append: false,
+          })
+        }
+        else {
+          this.eventHandlers.onDimensionClick({
+            filters: { [timeAddress]: [start, end] },
+            chart: { [config.xField]: [start, end] },
+            append: false,
+          })
+        }
       }
-    } else {
-      this.eventHandlers.onBackgroundClick()
+      } else {
+        this.eventHandlers.onBackgroundClick()
+      }
     }
-  }
 
-  /**
-   * Handles point click events for all chart types
-   */
-  handlePointClick(
-    event: ScenegraphEvent,
-    item: any,
-    config: ChartConfig,
-    columns: Map<string, ResultColumn>,
-  ): void {
-    const currentTime = Date.now()
+    /**
+     * Handles point click events for all chart types
+     */
+    handlePointClick(
+      event: ScenegraphEvent,
+      item: any,
+      config: ChartConfig,
+      columns: Map<string, ResultColumn>,
+    ): void {
+      const currentTime = Date.now()
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
-    if (!item || !item.datum) {
+    if(!item || !item.datum) {
       this.eventHandlers.onBackgroundClick()
       return
     }

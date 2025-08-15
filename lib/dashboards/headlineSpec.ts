@@ -1,20 +1,23 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isImageColumn, getColumnFormat, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
+import { isImageColumn, getFormatHint , getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
 
-const valueToString = (value: any): string => {
+const valueToString = (column:string, value: any): string => {
   if (value === null || value === undefined) {
-    return ''
+    return 'datum.${column} === null'
   }
   if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
+    return `datum.${column} === ${String(value)}`
   }
   if (typeof value === 'string') {
-    return `'${value}'` // Escape single quotes for string literals
+    return `datum.${column} === '${value}'` // Escape single quotes for string literals
+  }
+  if (value instanceof Date) {
+    return `time(datum.${column}) === time(datetime(${value.getFullYear()}, ${value.getMonth()}, ${value.getDate()}))`
   }
   // Handle arrays and objects by converting to JSON string
-  return JSON.stringify(value)
+  return `time(datum.${column}) === ${JSON.stringify(value)}`
 }
 
 const createHeadlineLayer = (
@@ -59,7 +62,7 @@ const createHeadlineLayer = (
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
     topMark = {
-      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
+      transform: [{ filter: valueToString(column, datum)}],
       mark: {
         type: 'image',
         width: { expr: `width / ${total}` },
@@ -73,7 +76,7 @@ const createHeadlineLayer = (
         url: {
           field: column,
           type: getVegaFieldType(column, columns),
-          format: getColumnFormat(column, columns),
+          ...getFormatHint (column, columns),
         },
       },
       params: [
@@ -93,7 +96,7 @@ const createHeadlineLayer = (
         mark: {
           type: 'rect',
           stroke: {
-            expr: `vlSelectionTest('select_${index}_store', datum) && datum['${column}'] === ${valueToString(datum)} ? '#FF7F7F' : 'transparent'`,
+            expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
           },
           strokeWidth: 5,
           width: 1,
@@ -106,7 +109,7 @@ const createHeadlineLayer = (
     ]
   } else {
     topMark = {
-      transform: [{ filter: `datum.${column} === ${valueToString(datum)}` }],
+      transform: [{ filter: `${valueToString(column, datum)}` }],
       mark: {
         type: 'text',
         fontSize: { expr: fontSizeFormula },
@@ -120,7 +123,7 @@ const createHeadlineLayer = (
         text: {
           field: column,
           type: getVegaFieldType(column, columns),
-          format: getColumnFormat(column, columns),
+          ...getFormatHint (column, columns),
         },
         color: {
           condition: { param: `select_${index}`, value: HIGHLIGHT_COLOR, empty: false },
