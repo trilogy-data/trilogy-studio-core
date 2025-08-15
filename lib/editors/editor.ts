@@ -30,6 +30,7 @@ export interface EditorInterface {
   deleted: boolean
   chartConfig?: ChartConfig | null
   chatInteraction?: ChatInteraction | null
+  scrollPosition?: { line: number; column: number } | null
 }
 
 export default class Editor implements EditorInterface {
@@ -54,6 +55,7 @@ export default class Editor implements EditorInterface {
   chartConfig?: ChartConfig | null
   completionSymbols: CompletionItem[]
   chatInteraction?: ChatInteraction | null
+  scrollPosition?: { line: number; column: number } | null
 
   defaultContents(type: string) {
     switch (type) {

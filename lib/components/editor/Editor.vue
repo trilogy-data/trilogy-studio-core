@@ -26,8 +26,10 @@
           :context="context"
           :contents="editorData.contents"
           :editor-type="editorData.type"
+          :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme"
           @contents-change="handleContentsChange"
+          @scroll-change="handlePositionChange"
           @run-query="runQuery"
           @validate-query="validateQuery"
           @format-query="formatQuery"
@@ -257,6 +259,10 @@ export default defineComponent({
     // New method to handle content changes from the CodeEditor
     handleContentsChange(content: string): void {
       this.editorStore.setEditorContents(this.editorId, content)
+    },
+
+    handlePositionChange(scrollPosition: { line: number; column: number }): void {
+      this.editorStore.setEditorScrollPosition(this.editorId, scrollPosition)
     },
 
     async validateQuery(

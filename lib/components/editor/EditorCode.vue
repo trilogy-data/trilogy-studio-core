@@ -17,6 +17,7 @@ interface Props {
   contents: string
   editorType: string
   theme: string
+  scrollPosition?: { line: number; column: number } | null
 }
 
 interface IModelContentChange {
@@ -58,6 +59,10 @@ export default defineComponent({
       type: String,
       default: 'light',
     },
+    scrollPosition: {
+      type: Object as () => { line: number; column: number } | null,
+      default: null,
+    },
   },
 
   emits: [
@@ -66,6 +71,7 @@ export default defineComponent({
     'validate-query',
     'format-query',
     'save',
+    'scroll-change',
     'generate-llm-query',
   ],
 
@@ -141,6 +147,10 @@ export default defineComponent({
         if (editorInstance) {
 
           editorInstance.setValue(props.contents)
+          editorInstance.setScrollPosition({
+            scrollTop: props.scrollPosition?.line || 1,
+            scrollLeft: props.scrollPosition?.column || 1,
+          })
           editorInstance.layout()
           return
         }
@@ -207,6 +217,13 @@ export default defineComponent({
       let keywordDebounceTimer: number | null = null
       const keywordsToWatch: string[] = [';']
       const keywordDebounceDelay: number = 500
+
+      editorInstance.onDidScrollChange((event) => {
+        emit('scroll-change', {
+          line: event.scrollTop,
+          column: 1,
+        })
+      })
 
       editorInstance.onDidChangeModelContent((event: IModelContentChangedEvent) => {
         // Emit current content

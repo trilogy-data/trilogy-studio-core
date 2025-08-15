@@ -65,6 +65,13 @@ const useEditorStore = defineStore('editors', {
         return false
       }
     },
+    setEditorScrollPosition(id: string, scrollPosition: { line: number; column: number }) {
+      if (this.editors[id]) {
+        this.editors[id].scrollPosition = scrollPosition
+      } else {
+        throw new Error(`Editor with id "${id}" not found.`)
+      }
+    },
     setEditorContents(id: string, contents: string) {
       if (this.editors[id]) {
         this.editors[id].setContent(contents)
