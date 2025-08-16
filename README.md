@@ -1,30 +1,37 @@
 # Trilogy Studio Core
 
-A open-source, web-based IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
+A open-source IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
 
-Try it here [here](https://trilogydata.dev/trilogy-studio-core/).
+Try a hosted studio instance here [here](https://trilogydata.dev/trilogy-studio-core/).
 
 Supports
 - DuckDB
 - BigQuery
 - Snowflake
 
-Read more about Trilogy [here](https://trilogydata.dev/).
+Read more about Trilogy, the language [here](https://trilogydata.dev/).
+
+
+### Flexible Visualization
+
+Explore data with easy, interactive visuals. Polish and share - and users can make the dashboard their own to drill deeper. 
+
+<p align="center">
+<img src="docs/dashboard.png" width="515" height="599" alt="Dashboard View">
+</p>
 
 ### Rich Query Editing
+
+All the modern IDE features you expect, and a built in semantic auto-complete. 
+
 <p align="center">
 <img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="515" height="559" alt="Editor View">
 </p>
 
-### Flexible Visualization
-
-<p align="center">
-<img src="https://github.com/user-attachments/assets/699ad66a-9be3-4ab4-b236-ddc20046d9fd" width="515" height="599" alt="Dashboard View">
-</p>
 
 ## This Repo
 
-This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server that can run queries.
+This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server example that can run queries.
 
 ## Run MCP Locally
 
@@ -83,7 +90,7 @@ You can build a production copy and serve as a static website. Github Pages is a
 Contributions loved! See contributing guide for details.
 
 ### Inspiration
-There are lots of good IDEs out here. Trilogy Studio is probably only best if you want to use Trilogy. Takes inspiration from:
+There are lots of good IDEs out here. Trilogy Studio is probably only best if you want to use Trilogy. Some sources of inspiration:
 
 - Dbeaver
 - SQL Server Management Studio
@@ -94,7 +101,7 @@ There are lots of good IDEs out here. Trilogy Studio is probably only best if yo
 
 ### Tech Stack
 
-Appreciative of the following:
+Exists thanks to the following:
 
 Frontend
 - Vue
@@ -104,9 +111,3 @@ Frontend
 Backend
 - Lark (python)
 
-
-### LLM Benchmarking
-
-```bash
-npx tsx scripts/benchmark-llm.ts  
-```

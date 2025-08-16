@@ -605,7 +605,6 @@ function unSelect(itemId: string): void {
 }
 
 function dashboardCreated(id: string): void {
-
   setActiveDashboard(id)
 }
 
