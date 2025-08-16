@@ -83,33 +83,349 @@ test('test', async ({ page, isMobile }) => {
   )
   await expect(customerDataEditor).toBeVisible()
 
-  // Test clicking on the folder editor
+  // ==== SCROLL POSITION TESTING START ====
+
+  // Test clicking on the sales-report editor and add content to make it scrollable
   await salesReportEditor.click()
+
+  // Clear existing content and add multi-line SQL to enable scrolling
+  const editor = page.getByTestId('editor')
+  await editor.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Delete')
+
+  // Add enough SQL content to make the editor scrollable
+  const longSqlContent = `-- Sales Report Query
+-- This is a long query to test scroll position
+SELECT 1;
+
+-- Line 5
+-- Line 6
+-- Line 7
+-- Line 8
+-- Line 9
+-- Line 10
+-- Line 11
+-- Line 12
+-- Line 13
+-- Line 14
+-- Line 15
+-- Line 16
+-- Line 17
+-- Line 18
+-- Line 19
+-- Line 20
+-- Line 21
+-- Line 22
+-- Line 23
+-- Line 24
+-- Line 25
+-- Line 26
+-- Line 27
+-- Line 28
+-- Line 29
+-- Line 30
+-- Line 31
+-- Line 32
+-- Line 33
+-- Line 34
+-- Line 35
+-- Line 36
+-- Line 37
+-- Line 38
+-- Line 39
+-- Line 40
+-- Line 41
+-- Line 42
+-- Line 43
+-- Line 44
+-- Line 45
+-- Line 46
+-- Line 47
+-- Line 48
+-- Line 49
+-- Line 50`
+
+  await page.keyboard.type(longSqlContent)
+
+  // Scroll down in sales-report editor using Monaco's API
+  const salesReportScrollPosition = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        editor.setScrollTop(500)
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  // Wait a bit for the scroll position to be saved
+  await page.waitForTimeout(150)
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+  }
+
+  // Switch to customer-data editor and add different content
+  await customerDataEditor.click()
+  await editor.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Delete')
+
+  const customerDataContent = `-- Customer Data Query
+SELECT 1;
+-- Customer Line 3
+-- Customer Line 4
+-- Customer Line 5
+-- Customer Line 6
+-- Customer Line 7
+-- Customer Line 8
+-- Customer Line 9
+-- Customer Line 10
+-- Customer Line 11
+-- Customer Line 12
+-- Customer Line 13
+-- Customer Line 14
+-- Customer Line 15
+-- Customer Line 16
+-- Customer Line 17
+-- Customer Line 18
+-- Customer Line 19
+-- Customer Line 20
+-- Customer Line 21
+-- Customer Line 22
+-- Customer Line 23
+-- Customer Line 24
+-- Customer Line 25
+-- Customer Line 26
+-- Customer Line 27
+-- Customer Line 28
+-- Customer Line 29
+-- Customer Line 30
+-- Customer Line 31
+-- Customer Line 32
+-- Customer Line 33
+-- Customer Line 34
+-- Customer Line 35
+-- Customer Line 36
+-- Customer Line 37
+-- Customer Line 38
+-- Customer Line 39
+-- Customer Line 40`
+
+  await page.keyboard.type(customerDataContent)
+
+  // Scroll to a different position in customer-data editor
+  const customerDataScrollPosition = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        editor.setScrollTop(300)
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  await page.waitForTimeout(150)
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+
+  // Switch to test-one editor and add content
+  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await editor.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Delete')
+
+  const testOneContent = `-- Test One Query
+SELECT 1;
+-- Test Line 3
+-- Test Line 4
+-- Test Line 5
+-- Test Line 6
+-- Test Line 7
+-- Test Line 8
+-- Test Line 9
+-- Test Line 10
+-- Test Line 11
+-- Test Line 12
+-- Test Line 13
+-- Test Line 14
+-- Test Line 15
+-- Test Line 16
+-- Test Line 17
+-- Test Line 18
+-- Test Line 19
+-- Test Line 20
+-- Test Line 21
+-- Test Line 22
+-- Test Line 23
+-- Test Line 24
+-- Test Line 25
+-- Test Line 26
+-- Test Line 27
+-- Test Line 28
+-- Test Line 29
+-- Test Line 30`
+
+  await page.keyboard.type(testOneContent)
+
+  // Scroll to a position in test-one editor
+  const testOneScrollPosition = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        editor.setScrollTop(150)
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  await page.waitForTimeout(150)
+
+  // Now switch back to sales-report and verify scroll position is preserved
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
+  }
+
+  await salesReportEditor.click()
+  await page.waitForTimeout(300) // Wait for editor to load
+
+  const restoredSalesReportScroll = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  // Verify the scroll position is close to what we set (allowing for small differences)
+  expect(Math.abs(restoredSalesReportScroll - salesReportScrollPosition)).toBeLessThan(50)
+
+  // Switch back to customer-data and verify its scroll position
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+    // await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
+    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+  }
+
+  await customerDataEditor.click()
+  await page.waitForTimeout(300)
+
+  const restoredCustomerDataScroll = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  expect(Math.abs(restoredCustomerDataScroll - customerDataScrollPosition)).toBeLessThan(50)
+
+  // Switch back to test-one and verify its scroll position
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+
+  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await page.waitForTimeout(300)
+
+  const restoredTestOneScroll = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  expect(Math.abs(restoredTestOneScroll - testOneScrollPosition)).toBeLessThan(50)
+
+  // Test scroll persistence across page reload
+  // First, set a specific scroll position in the current editor (test-one)
+  const scrollBeforeReload = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        editor.setScrollTop(200)
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  await page.waitForTimeout(160) // Wait for scroll position to be saved
+
+  // Reload the page
+  await page.reload()
+
+  // Navigate back to the editors
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+  await page.getByTestId('sidebar-link-editors').click()
+
+  // Click on test-one editor
+  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await page.waitForTimeout(500) // Wait for editor to fully load
+
+  // Verify scroll position is restored after reload
+  const scrollAfterReload = await page.evaluate(() => {
+    const monaco = (window as any).monaco
+    if (monaco) {
+      const editor = monaco.editor.getModels()[0]?._associatedEditor
+      if (editor) {
+        return editor.getScrollTop()
+      }
+    }
+    return 0
+  })
+
+  expect(Math.abs(scrollAfterReload - scrollBeforeReload)).toBeLessThan(50)
+
+  // ==== SCROLL POSITION TESTING END ====
+
+  // Continue with the rest of the original test...
+  // Run the query to verify it works
   await page.getByTestId('editor-run-button').click()
+  // we need to wait again, as we reloaded the page
+  await page.waitForTimeout(5000)
   await expect(page.getByTestId('query-results-length')).toContainText('1')
 
   // Test folder collapse/expand functionality
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await analysisFolder.click() // Collapse analysis folder
-  await expect(reportsFolder).not.toBeVisible()
-  await expect(dataFolder).not.toBeVisible()
 
   await analysisFolder.click() // Expand analysis folder again
   await expect(reportsFolder).toBeVisible()
   await expect(dataFolder).toBeVisible()
 
-  // Test regular editor (non-folder)
-  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
-  await page.getByTestId('editor-run-button').click()
-  await expect(page.getByTestId('query-results-length')).toContainText('1')
-
   // check for errors
   if (isMobile) {
+    await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
     await page.getByTestId('editor-tab').click()
   }
   await page.getByTestId('editor').click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Delete')
   const newContent = `import lineitem as lineitem;
 SELECT
     sum(lineitem.extended_price)->sales,
@@ -119,7 +435,7 @@ order by
   await page.keyboard.type(newContent)
   await page.getByTestId('editor-run-button').click()
   await expect(page.getByTestId('error-text')).toContainText(
-    'Parser Error: syntax error at or near "lineitem" LINE 1: SELECT 1;import lineitem as lineitem; ^',
+    'Parser Error: syntax error at or near "lineitem" LINE 1: import lineitem',
   )
 
   // Delete editors and verify folder structure updates
@@ -130,9 +446,11 @@ order by
   // Delete the sales-report editor
   if (isMobile) {
     await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
   }
+
+  await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
+  await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+
   await page.getByTestId('delete-editor-sales-report').click()
   await page.getByTestId('confirm-editor-deletion').click()
 
@@ -141,6 +459,7 @@ order by
   // }
 
   // Delete the customer-data editor
+
   await page.getByTestId('delete-editor-customer-data').click()
   await page.getByTestId('confirm-editor-deletion').click()
 

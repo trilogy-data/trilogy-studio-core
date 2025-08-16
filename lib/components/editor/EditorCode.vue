@@ -145,7 +145,6 @@ export default defineComponent({
       if (editorMap.has(props.context) && mountedMap.get(props.context)) {
         const editorInstance = editorMap.get(props.context)
         if (editorInstance) {
-
           editorInstance.setValue(props.contents)
           editorInstance.setScrollPosition({
             scrollTop: props.scrollPosition?.line || 1,

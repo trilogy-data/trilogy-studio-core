@@ -218,9 +218,11 @@ const filterCount = computed(() => {
     "
   >
     <!-- Edit Controls (styled like control buttons) -->
-    <div class="header-controls"
-         :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
-    v-if="editMode">
+    <div
+      class="header-controls"
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+      v-if="editMode"
+    >
       <button
         @click="increaseHeight"
         class="control-btn"
@@ -590,7 +592,6 @@ const filterCount = computed(() => {
 }
 
 .filters-container.edit-mode {
-
   /* backdrop-filter: blur(2px); */
   border-bottom: 1px solid var(--dashboard-border);
   min-height: var(--chart-control-height);
