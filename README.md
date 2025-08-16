@@ -1,15 +1,15 @@
 # Trilogy Studio Core
 
-A open-source, web-based IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
+A open-source IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
 
-Try it here [here](https://trilogydata.dev/trilogy-studio-core/).
+Try a hosted studio instance here [here](https://trilogydata.dev/trilogy-studio-core/).
 
 Supports
 - DuckDB
 - BigQuery
 - Snowflake
 
-Read more about Trilogy [here](https://trilogydata.dev/).
+Read more about Trilogy, the language [here](https://trilogydata.dev/).
 
 
 ### Flexible Visualization
