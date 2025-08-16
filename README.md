@@ -13,11 +13,17 @@ Read more about Trilogy [here](https://trilogydata.dev/).
 
 
 ### Flexible Visualization
+
+Explore data with easy, interactive visuals. Polish and share - and users can make the dashboard their own to drill deeper. 
+
 <p align="center">
 <img src="docs/dashboard.png" width="515" height="599" alt="Dashboard View">
 </p>
 
 ### Rich Query Editing
+
+All the modern IDE features you expect, and a built in semantic auto-complete. 
+
 <p align="center">
 <img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="515" height="559" alt="Editor View">
 </p>
