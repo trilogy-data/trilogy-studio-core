@@ -255,6 +255,12 @@ describe('Line and Area Chart Specs', (): void => {
 
         expect(filteredLayer.encoding.color).toEqual({
           field: 'category',
+          legend: {
+            direction: 'vertical',
+            orient: 'right',
+            titleFontSize: 12,
+            titleOrient: 'top',
+          },
           type: 'nominal',
           scale: { scheme: 'category20' },
           title: 'Category',

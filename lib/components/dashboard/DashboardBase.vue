@@ -84,7 +84,7 @@ const layout = computed(() => {
 const sortedLayout = computed(() => {
   if (!dashboard.value) return []
   // Sort layout items by y coordinate for mobile vertical order
-  return [...dashboard.value.layout].sort((a, b) => a.y - b.y)
+  return [...dashboard.value.layout].sort((a, b) => (a.y + a.y + a.h) / 2 - (b.y + b.y + b.h) / 2)
 })
 
 const selectedConnection = computed(() => {

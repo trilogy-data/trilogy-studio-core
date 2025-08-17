@@ -83,6 +83,9 @@ export default defineComponent({
 
 .rendered-markdown strong {
   font-weight: 600;
+}
+
+.rendered-markdown variable {
   color: var(--special-text);
 }
 

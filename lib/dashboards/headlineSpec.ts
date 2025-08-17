@@ -61,7 +61,7 @@ const createHeadlineLayer = (
   let selectMarks: object[] = []
   if (isImageColumn(columns.get(column) as ResultColumn)) {
     includeLabel = false // Don't show label for image columns
-    let align = isMobile? 'center' : 'center'
+    let align = isMobile ? 'center' : 'center'
     topMark = {
       transform: [{ filter: valueToString(column, datum) }],
       mark: {
@@ -70,8 +70,10 @@ const createHeadlineLayer = (
         height: isMobile ? { expr: `height / 3` } : { expr: `height` },
         align,
         baseline: 'middle',
-        x: isMobile ? { expr: `width/2 + (${xOffset} / 100) * width` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        y: isMobile ? { expr: `${yOffset*1.5}`} : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
+        x: isMobile
+          ? { expr: `width/2 + (${xOffset} / 100) * width` }
+          : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+        y: isMobile ? { expr: `${yOffset * 1.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         url: {
@@ -92,22 +94,26 @@ const createHeadlineLayer = (
         },
       ],
     }
-    selectMarks = isMobile? [
-      {
-        mark: {
-          type: 'rect',
-          stroke: {
-            expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+    selectMarks = isMobile
+      ? []
+      : [
+          {
+            mark: {
+              type: 'rect',
+              stroke: {
+                expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+              },
+              strokeWidth: 5,
+              width: 1,
+              height: 1,
+              fillOpacity: 0,
+              x: isMobile
+                ? { expr: `width/2+ (${xOffset} / 100) * width` }
+                : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+              y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
+            },
           },
-          strokeWidth: 5,
-          width: 1,
-          height: 1,
-          fillOpacity: 0,
-          x: isMobile ?  { expr: `width/2+ (${xOffset} / 100) * width` } : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-          y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
-        },
-      },
-    ] : []
+        ]
   } else {
     topMark = {
       transform: [{ filter: `${valueToString(column, datum)}` }],

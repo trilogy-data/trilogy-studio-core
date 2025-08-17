@@ -9,10 +9,10 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers.css'
 import 'prismjs'
 import 'prismjs/components/prism-sql'
 import './prism.css'
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
 self.MonacoEnvironment = {
   getWorker: async function (_, label) {
     switch (label) {

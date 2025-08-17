@@ -38,13 +38,18 @@
       >
         {{ tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
       </loading-button>
-      <button class="action-item" @click="$emit('save')">Save</button>
+      <button class="action-item" @click="$emit('save')">
+        <i class="mdi mdi-content-save-outline icon"></i>
+        Save
+      </button>
       <loading-button
         v-if="editorType !== 'sql'"
         :useDefaultStyle="false"
         class="action-item"
         :action="() => $emit('validate')"
-        >Parse
+        >
+        <i class="mdi mdi-code-braces icon"></i>
+        Parse
       </loading-button>
       <loading-button
         v-if="editorType !== 'sql'"
@@ -52,7 +57,9 @@
         class="action-item"
         :action="() => $emit('generate')"
         data-testid="editor-generate-button"
-        >Assistant
+        >
+        <i class="mdi mdi-creation-outline icon"></i>
+        AI
       </loading-button>
       <button
         @click="() => (loading ? $emit('cancel') : $emit('run'))"
@@ -60,6 +67,8 @@
         :class="{ 'button-cancel': loading }"
         data-testid="editor-run-button"
       >
+        <i v-if="loading" class="mdi mdi-stop-circle-outline icon"></i>
+        <i v-else class="mdi mdi-play-outline icon"></i>
         {{ loading ? 'Cancel' : 'Run' }}
       </button>
     </div>
@@ -150,7 +159,8 @@ export default defineComponent({
 .action-item {
   height: 25px;
   width: 80px;
-  font-weight: 500;
+  font-weight: 300;
+  font-size: 12px;
   cursor: pointer;
   border-radius: 0px;
   border: 1px solid var(--border-color);
@@ -158,6 +168,14 @@ export default defineComponent({
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.icon {
+  font-size: 14px;
 }
 
 .menu-left {

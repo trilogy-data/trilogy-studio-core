@@ -467,10 +467,10 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Step 2: Process other markdown elements (headers, lists, etc.) on text without code blocks
 
-  // Convert headers
-  html = html.replace(/^### (.*$)/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
-  html = html.replace(/^## (.*$)/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
-  html = html.replace(/^# (.*$)/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
+  // Convert headers - capture only up to the last non-whitespace character
+  html = html.replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
+  html = html.replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
+  html = html.replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
 
   // Process lists
   html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
@@ -492,7 +492,6 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Process paragraphs
   html = html.replace(/\n\n/g, '</p><p>')
-  html = html.replace(/\n/g, '<br>')
   html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
   html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
 

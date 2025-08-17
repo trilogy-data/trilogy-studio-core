@@ -42,6 +42,9 @@
         :key="index"
         class="symbol-item"
         @click="$emit('select-symbol', symbol)"
+        @mouseenter="showTooltip($event, symbol)"
+        @mouseleave="hideTooltip"
+        @mousemove="updateTooltipPosition($event)"
       >
         <div class="symbol-icon" :class="getIconClass(symbol)" :title="getIconTooltip(symbol)">
           <i v-if="getIconType(symbol) === 'mdi'" :class="getIconMdiClass(symbol)"></i>
@@ -55,11 +58,72 @@
       </div>
       <div v-if="filteredSymbols.length === 0" class="no-symbols">No matching symbols found</div>
     </div>
+
+    <!-- Custom Tooltip -->
+    <div
+      v-if="tooltip.visible"
+      class="custom-tooltip"
+      :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+    >
+      <div class="tooltip-header">
+        <div class="tooltip-icon" :class="getIconClass(tooltip.symbol)">
+          <i v-if="getIconType(tooltip.symbol) === 'mdi'" :class="getIconMdiClass(tooltip.symbol)"></i>
+          <template v-else>{{ getSymbolChar(tooltip.symbol) }}</template>
+        </div>
+        <div class="tooltip-title">{{ tooltip.symbol.label }}</div>
+      </div>
+      
+      <div class="tooltip-content">
+        <div v-if="tooltip.symbol.type" class="tooltip-row">
+          <span class="tooltip-label">Type:</span>
+          <!-- <span class="tooltip-value type-value">{{ tooltip.symbol.type }}</span> -->
+          <span v-if="tooltip.symbol.datatype && tooltip.symbol.datatype !== tooltip.symbol.type" class="tooltip-datatype">
+            {{ tooltip.symbol.datatype }}
+          </span>
+        </div>
+        
+        <!-- <div v-if="tooltip.symbol.trilogyType" class="tooltip-row">
+          <span class="tooltip-label">Trilogy:</span>
+          <span class="tooltip-value trilogy-value">{{ tooltip.symbol.trilogyType }}</span>
+        </div> -->
+        
+        <div v-if="tooltip.symbol.trilogySubType" class="tooltip-row">
+          <span class="tooltip-label">Category:</span>
+          <span class="tooltip-value category-value" :class="tooltip.symbol.trilogySubType">
+            {{ tooltip.symbol.trilogySubType }}
+          </span>
+        </div>
+        
+        <div v-if="tooltip.symbol.description && tooltip.symbol.description.trim()" class="tooltip-row description-row">
+          <span class="tooltip-label">Description:</span>
+          <div class="tooltip-value description-value">{{ tooltip.symbol.description }}</div>
+        </div>
+        
+        <div v-if="tooltip.symbol.calculation && tooltip.symbol.calculation.trim()" class="tooltip-row calculation-row">
+          <span class="tooltip-label">Calculation:</span>
+          <div class="tooltip-value calculation-value">{{ tooltip.symbol.calculation }}</div>
+        </div>
+        
+        <div v-if="tooltip.symbol.keys && tooltip.symbol.keys.length > 0" class="tooltip-row">
+          <span class="tooltip-label">Keys:</span>
+          <div class="tooltip-value keys-value">
+            <span v-for="(key, idx) in tooltip.symbol.keys" :key="idx" class="key-tag">
+              {{ key }}
+            </span>
+          </div>
+        </div>
+        
+        <div v-if="tooltip.symbol.insertText && tooltip.symbol.insertText !== tooltip.symbol.label" class="tooltip-row">
+          <span class="tooltip-label">Insert:</span>
+          <code class="tooltip-value insert-value">{{ tooltip.symbol.insertText }}</code>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType, watch, computed } from 'vue'
+import { defineComponent, ref, type PropType, watch, computed, reactive } from 'vue'
 import type { CompletionItem } from '../stores/resolver'
 
 // Centralized icon configuration for easier management
@@ -107,6 +171,16 @@ export default defineComponent({
       properties: true,
       metrics: true,
     })
+
+    // Tooltip state
+    const tooltip = reactive({
+      visible: false,
+      x: 0,
+      y: 0,
+      symbol: {} as CompletionItem,
+    })
+
+    let tooltipTimeout: NodeJS.Timeout | null = null
 
     // Computed property to check if any filters are applied
     const isFiltering = computed(() => {
@@ -156,6 +230,60 @@ export default defineComponent({
 
       const type = symbol.type.toLowerCase() as keyof typeof ICON_CONFIG.standard
       return ICON_CONFIG.standard[type]?.tooltip || ICON_CONFIG.standard.default.tooltip
+    }
+
+    // Show custom tooltip
+    const showTooltip = (event: MouseEvent, symbol: CompletionItem) => {
+      if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout)
+      }
+      
+      tooltipTimeout = setTimeout(() => {
+        tooltip.symbol = symbol
+        tooltip.visible = true
+        updateTooltipPosition(event)
+      }, 500) // 500ms delay before showing tooltip
+    }
+
+    // Hide custom tooltip
+    const hideTooltip = () => {
+      if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout)
+        tooltipTimeout = null
+      }
+      tooltip.visible = false
+    }
+
+    // Update tooltip position
+    const updateTooltipPosition = (event: MouseEvent) => {
+      if (!tooltip.visible) return
+      
+      const offset = 10
+      const tooltipEl = document.querySelector('.custom-tooltip') as HTMLElement
+      
+      if (tooltipEl) {
+        const rect = tooltipEl.getBoundingClientRect()
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+        
+        let x = event.clientX + offset
+        let y = event.clientY + offset
+        
+        // Adjust if tooltip would go off-screen
+        if (x + rect.width > viewportWidth) {
+          x = event.clientX - rect.width - offset
+        }
+        
+        if (y + rect.height > viewportHeight) {
+          y = event.clientY - rect.height - offset
+        }
+        
+        tooltip.x = Math.max(0, x)
+        tooltip.y = Math.max(0, y)
+      } else {
+        tooltip.x = event.clientX + offset
+        tooltip.y = event.clientY + offset
+      }
     }
 
     // Filter symbols based on search query and checkbox filters
@@ -246,6 +374,7 @@ export default defineComponent({
       symbolSearchInput,
       filters,
       isFiltering,
+      tooltip,
       clearFilters,
       filterSymbols,
       getIconType,
@@ -253,6 +382,9 @@ export default defineComponent({
       getSymbolChar,
       getIconClass,
       getIconTooltip,
+      showTooltip,
+      hideTooltip,
+      updateTooltipPosition,
       focusSearch,
     }
   },
@@ -269,6 +401,7 @@ export default defineComponent({
   background-color: var(--sidebar-bg, #252525);
   font-size: 12px;
   overflow-y: scroll;
+  position: relative;
 
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
@@ -465,12 +598,201 @@ export default defineComponent({
   text-align: center;
 }
 
+/* Custom Tooltip Styles */
+.custom-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--result-window-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-color);
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 6px 6px 0 0;
+}
+
+.tooltip-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-size: 12px;
+  border-radius: 3px;
+  background-color: var(--button-bg);
+}
+
+.tooltip-icon.function { color: #dcdcaa; }
+.tooltip-icon.variable { color: #9cdcfe; }
+.tooltip-icon.class { color: #4ec9b0; }
+.tooltip-icon.interface { color: #b8d7a3; }
+.tooltip-icon.method { color: #dcdcaa; }
+.tooltip-icon.property { color: #9cdcfe; }
+.tooltip-icon.field { color: #9cdcfe; }
+.tooltip-icon.constant { color: #4fc1ff; }
+.tooltip-icon.enum { color: #b8d7a3; }
+.tooltip-icon.keyword { color: #569cd6; }
+.tooltip-icon.key { color: #f8c555; }
+.tooltip-icon.metric { color: #75beff; }
+
+.tooltip-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-color);
+}
+
+.tooltip-content {
+  padding: 8px 10px;
+}
+
+.tooltip-row {
+  display: flex;
+  margin-bottom: 6px;
+  align-items: flex-start;
+}
+
+.tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-label {
+  min-width: 80px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 500;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  flex: 1;
+  font-size: 11px;
+  word-break: break-word;
+}
+
+.type-value {
+  color: #4ec9b0;
+  font-weight: 500;
+}
+
+.tooltip-datatype {
+  color: var(--text-faint);
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.trilogy-value {
+  color: #b8d7a3;
+  font-weight: 500;
+}
+
+.category-value {
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.category-value.key {
+  background-color: rgba(248, 197, 85, 0.2);
+  color: #f8c555;
+}
+
+.category-value.property {
+  background-color: rgba(156, 220, 254, 0.2);
+  color: #9cdcfe;
+}
+
+.category-value.metric {
+  background-color: rgba(117, 190, 255, 0.2);
+  color: #75beff;
+}
+
+.description-row,
+.calculation-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.description-row .tooltip-label,
+.calculation-row .tooltip-label {
+  margin-bottom: 4px;
+}
+
+.description-value {
+  color: var(--text-color);
+  line-height: 1.4;
+}
+
+.calculation-value {
+  color: #dcdcaa;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  /* background-color: var(--button-bg); */
+  padding: 4px 6px;
+  border-radius: 3px;
+  line-height: 1.3;
+}
+
+.keys-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.key-tag {
+  background-color: rgba(248, 197, 85, 0.15);
+  color: #f8c555;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.insert-value {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background-color: var(--button-bg);
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #9cdcfe;
+  font-size: 10px;
+}
+
 @media screen and (max-width: 768px) {
   .symbols-pane {
     width: 100%;
     height: 150px;
     border-left: none;
     border-top: 1px solid var(--border-color, #444);
+  }
+  
+  .custom-tooltip {
+    max-width: 280px;
+    font-size: 11px;
   }
 }
 </style>

@@ -393,7 +393,6 @@ Use Ctrl+Enter to apply`
 }
 
 .filter-container label {
-  margin-right: 10px;
   font-weight: 400;
   color: var(--text-color);
   white-space: nowrap;
@@ -695,7 +694,6 @@ Use Ctrl+Enter to apply`
   .filter-container {
     flex: 1;
     margin-top: 5px;
-    padding-right: 10px;
   }
 
   .sparkle-button {

@@ -302,7 +302,7 @@ export class ChromaChartHelpers {
       }
     }
     // config set
-    const configKeys: BoolFieldKey[] = ['hideLegend', 'showDebug', 'showTitle']
+    const configKeys: BoolFieldKey[] = ['hideLegend', 'showTitle']
     let anyConfigSet = false
     for (const key of configKeys) {
       if (config[key] === true) {

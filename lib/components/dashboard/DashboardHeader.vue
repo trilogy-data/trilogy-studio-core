@@ -63,9 +63,9 @@ function handleFilterApply(newValue: string) {
 }
 
 const availableImports: Ref<DashboardImport[]> = computed(() => {
-  const imports = Object.values(editorStore.editors).filter(
-    (editor) => editor.connection === props.selectedConnection,
-  )
+  const imports = Object.values(editorStore.editors)
+    .filter((editor) => editor.connection === props.selectedConnection)
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   return imports.map((importItem) => ({
     id: importItem.id,
@@ -118,11 +118,7 @@ function handleRefresh() {
         >
           {{ editMode ? 'View Mode' : 'Edit' }}
         </button>
-        <button
-          @click="handleRefresh"
-          class="btn btn-primary"
-          data-testid="refresh-button"
-        >
+        <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
           ⟳ Refresh
         </button>
       </div>
@@ -131,23 +127,25 @@ function handleRefresh() {
     <div class="controls-row top-row" v-if="editMode">
       <div class="dashboard-left-controls">
         <div class="connection-selector">
-          <label for="connection">Connection</label>
-          <select
-            id="connection"
-            data-testid="connection-selector"
-            @change="$emit('connection-change', $event)"
-            :value="selectedConnection"
-          >
-            <option
-              v-for="conn in Object.values(connectionStore.connections).filter(
-                (conn) => conn.model,
-              )"
-              :key="conn.name"
-              :value="conn.name"
+          <div class="select-wrapper">
+            <i class="mdi mdi-database-outline select-icon"></i>
+            <select
+              id="connection"
+              data-testid="connection-selector"
+              @change="$emit('connection-change', $event)"
+              :value="selectedConnection"
             >
-              {{ conn.name }}
-            </option>
-          </select>
+              <option
+                v-for="conn in Object.values(connectionStore.connections).filter(
+                  (conn) => conn.model,
+                )"
+                :key="conn.name"
+                :value="conn.name"
+              >
+                {{ conn.name }}
+              </option>
+            </select>
+          </div>
         </div>
         <DashboardImportSelector
           :available-imports="availableImports"
@@ -214,17 +212,54 @@ function handleRefresh() {
 
 .connection-selector label {
   margin-right: 10px;
-  font-weight: bold;
   color: var(--text-color);
+  font-size: 20px;
   white-space: nowrap;
 }
 
-.connection-selector select {
-  padding: 8px;
+.select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-color);
+  font-size: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.select-wrapper select:focus {
+  border-color: var(--special-text); /* Keep same border as unfocused */
+  box-shadow: none;
+}
+
+.select-wrapper select {
+  padding: 8px 12px 8px 36px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
   font-size: var(--font-size);
   background-color: var(--bg-color);
+  appearance: none;
+  cursor: pointer;
+  min-width: 150px;
+  outline: none;
+  border-radius: 0; /* Remove rounded corners */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Add dropdown arrow */
+.select-wrapper::after {
+  content: '▼';
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: var(--text-color);
+  pointer-events: none;
 }
 
 .filter-row {
@@ -234,6 +269,8 @@ function handleRefresh() {
 
 .grid-actions {
   display: flex;
+  gap: 5px;
+  padding-left: 10px;
 }
 
 /* Unified button styles */
@@ -244,7 +281,6 @@ function handleRefresh() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 5px;
   margin-top: 5px;
   border: 1px solid var(--border-light);
   font-weight: 250;
@@ -325,7 +361,7 @@ function handleRefresh() {
     gap: 10px;
   }
 
-  .connection-selector select {
+  .select-wrapper select {
     min-width: 120px;
   }
 }
@@ -364,9 +400,14 @@ function handleRefresh() {
     margin-bottom: 0;
   }
 
-  .connection-selector select {
+  .select-wrapper {
+    width: 100%;
+  }
+
+  .select-wrapper select {
     width: 100%;
     text-align: center;
+    padding-left: 36px;
   }
 
   .grid-actions {
@@ -389,22 +430,23 @@ function handleRefresh() {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .dashboard-left-controls {
     align-items: center;
   }
 
   .connection-selector {
-    max-width: 280px;
+    max-width: 100%;
   }
 
-  .connection-selector select {
+  .select-wrapper select {
     min-width: unset;
   }
 
   .grid-actions {
     gap: 4px;
     max-width: 100%;
+    padding-left: 0px;
   }
 
   .btn {
@@ -419,7 +461,7 @@ function handleRefresh() {
 /* Extra small screen size handling */
 @media (max-width: 360px) {
   .connection-selector {
-    max-width: 250px;
+    max-width: 100%;
   }
 
   .btn {
