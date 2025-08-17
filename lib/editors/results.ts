@@ -60,7 +60,7 @@ export type FieldKey =
   | 'groupField'
   | 'trellisField'
 
-export type BoolFieldKey = 'hideLegend' | 'showDebug' | 'showTitle'
+export type BoolFieldKey = 'hideLegend' | 'showTitle'
 
 // Chart configuration interface
 export interface ChartConfig {
@@ -87,7 +87,6 @@ export interface ChartConfig {
   geoField?: string
   annotationField?: string
   hideLegend?: boolean
-  showDebug?: boolean
   showTitle?: boolean
 }
 

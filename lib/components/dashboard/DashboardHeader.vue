@@ -105,14 +105,14 @@ function handleRefresh() {
       <div class="grid-actions">
         <button
           @click="toggleSharePopup"
-          class="share-button generic-button"
+          class="btn btn-secondary"
           data-testid="share-dashboard-button"
         >
           Export
         </button>
         <button
           @click="$emit('toggle-edit-mode')"
-          class="toggle-mode-button generic-button"
+          class="btn btn-secondary"
           data-testid="toggle-edit-mode-button"
           :disabled="editsLocked"
         >
@@ -120,7 +120,7 @@ function handleRefresh() {
         </button>
         <button
           @click="handleRefresh"
-          class="refresh-button generic-button"
+          class="btn btn-primary"
           data-testid="refresh-button"
         >
           ⟳ Refresh
@@ -159,7 +159,7 @@ function handleRefresh() {
       <div class="grid-actions">
         <button
           @click="$emit('add-item')"
-          class="add-button generic-button"
+          class="btn btn-success"
           v-if="editMode"
           data-testid="add-item-button"
         >
@@ -167,7 +167,7 @@ function handleRefresh() {
         </button>
         <button
           @click="$emit('clear-items')"
-          class="clear-button generic-button"
+          class="btn btn-danger"
           v-if="editMode"
           data-testid="clear-items-button"
         >
@@ -232,52 +232,91 @@ function handleRefresh() {
   align-items: center;
 }
 
-.grid-actions button {
-  border: 1px solid var(--border-light);
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--text-color);
-  font-size: var(--button-font-size);
-}
-
 .grid-actions {
   display: flex;
 }
 
-.generic-button {
+/* Unified button styles */
+.btn {
   width: 85px;
   height: 32px;
+  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   margin-left: 5px;
-  font-size: 12px;
   margin-top: 5px;
+  border: 1px solid var(--border-light);
+  font-weight: 250;
+  color: var(--text-color);
+  font-size: var(--button-font-size);
+  background-color: transparent;
+  transition: all 0.2s ease;
+  text-align: center;
 }
 
-.add-button {
-  background-color: var(--special-text) !important;
-  color: white !important;
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.refresh-button {
-  border: 1px solid var(--special-text) !important;
-  color: var(--special-text) !important;
-  background-color: transparent !important;
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.clear-button {
-  background-color: var(--delete-color) !important;
-  color: white !important;
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.share-button {
-  background-color: transparent !important;
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
-.toggle-mode-button {
-  background-color: transparent !important;
-  color: var(--text-color) !important;
+/* Button variants */
+.btn-primary {
+  border-color: var(--special-text);
+  color: var(--special-text);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--special-text);
+  color: white;
+}
+
+.btn-secondary {
+  border-color: var(--border-light);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--text-color);
+  color: var(--bg-color);
+  border-color: var(--text-color);
+}
+
+.btn-success {
+  border-color: var(--special-text);
+  color: var(--special-text);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: var(--special-text);
+  color: white;
+}
+
+.btn-danger {
+  border-color: var(--delete-color);
+  color: var(--delete-color);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--delete-color);
+  color: white;
 }
 
 /* Media queries for responsiveness */
@@ -305,20 +344,41 @@ function handleRefresh() {
   }
 
   .dashboard-left-controls {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
     gap: 15px;
+  }
+
+  .connection-selector {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    max-width: 300px;
+    gap: 8px;
+  }
+
+  .connection-selector label {
+    margin-right: 0;
+    margin-bottom: 0;
+  }
+
+  .connection-selector select {
+    width: 100%;
+    text-align: center;
   }
 
   .grid-actions {
     flex-wrap: nowrap;
-    justify-content: space-between;
+    justify-content: center;
     width: 100%;
+    gap: 8px;
   }
 
-  .grid-actions button {
+  .btn {
     padding: 3px 4px;
     font-size: calc(var(--button-font-size) - 1px);
-    text-align: center;
     flex: 1;
     min-width: 0;
     white-space: nowrap;
@@ -330,27 +390,24 @@ function handleRefresh() {
 }
 
 @media (max-width: 480px) {
-  .connection-selector,
-  .dashboard-left-controls > div {
-    width: 100%;
+  .dashboard-left-controls {
+    align-items: center;
   }
 
   .connection-selector {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    max-width: 280px;
   }
 
   .connection-selector select {
-    width: 100%;
     min-width: unset;
   }
 
   .grid-actions {
     gap: 4px;
+    max-width: 100%;
   }
 
-  .grid-actions button {
+  .btn {
     min-width: 0;
     font-size: calc(var(--button-font-size) - 2px);
     padding: 6px 4px;
@@ -361,7 +418,11 @@ function handleRefresh() {
 
 /* Extra small screen size handling */
 @media (max-width: 360px) {
-  .grid-actions button {
+  .connection-selector {
+    max-width: 250px;
+  }
+
+  .btn {
     font-size: calc(var(--button-font-size) - 3px);
     padding: 5px 3px;
   }

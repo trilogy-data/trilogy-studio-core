@@ -76,13 +76,22 @@ function calculateMobileHeight(item: any): number | string {
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
     return 300 // Default height if we can't calculate
   }
-
-  if (getItemData(item.i, dashboard.value.id).type === CELL_TYPES.MARKDOWN) {
+  let itemData = getItemData(item.i, dashboard.value.id)
+  if (itemData.type === CELL_TYPES.MARKDOWN) {
     return '100%' // Full height for markdown items
   }
 
-  const gridItem = dashboard.value.gridItems[item.i]
+  if (itemData.type === CELL_TYPES.CHART) {
+    if (itemData.chartConfig?.chartType === 'headline') {
+      // return the width as height for a headline chart
+      if (itemData.width) {
+        return itemData.width / 2
+      }
 
+    }
+  }
+  const gridItem = dashboard.value.gridItems[item.i]
+  let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
   if (gridItem.width && gridItem.height) {
     const aspectRatio = gridItem.height / gridItem.width
@@ -91,13 +100,13 @@ function calculateMobileHeight(item: any): number | string {
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
     const calculatedHeight = viewportWidth * aspectRatio
-    return Math.max(Math.min(calculatedHeight, 400), 400)
+    return Math.max(Math.min(calculatedHeight, maxHeight), 400)
   }
 
   // If no stored dimensions, use the grid layout's width and height
   const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return Math.max(Math.min(aspectRatio * 12 * 30, 600), 400)
+  return Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), 400)
 }
 
 // Handle edit mode toggle for mobile
@@ -112,35 +121,17 @@ function handleToggleEditMode() {
 </script>
 
 <template>
-  <DashboardBase
-    ref="dashboardBase"
-    :key="name"
-    :name="name"
-    :connection-id="connectionId"
-    :view-mode="viewMode"
-    :is-mobile="true"
-    @dimensions-update="updateItemDimensions"
-    @trigger-resize="triggerResize"
-  />
+  <DashboardBase ref="dashboardBase" :key="name" :name="name" :connection-id="connectionId" :view-mode="viewMode"
+    :is-mobile="true" @dimensions-update="updateItemDimensions" @trigger-resize="triggerResize" />
 
   <div class="dashboard-mobile-container" v-if="dashboard">
-    <DashboardHeader
-      :dashboard="dashboard"
-      :edit-mode="editMode"
-      :edits-locked="dashboard.state === 'locked'"
-      :selected-connection="selectedConnection"
-      :filterError="filterError"
-      :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter"
-      @connection-change="dashboardBase?.onConnectionChange"
-      @filter-change="dashboardBase?.handleFilterChange"
-      @import-change="dashboardBase?.handleImportChange"
-      @add-item="dashboardBase?.openAddItemModal"
-      @clear-items="dashboardBase?.clearItems"
-      @toggle-edit-mode="handleToggleEditMode"
-      @refresh="dashboardBase?.handleRefresh"
-      @clear-filter="dashboardBase?.handleFilterClear"
-    />
+    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :edits-locked="dashboard.state === 'locked'"
+      :selected-connection="selectedConnection" :filterError="filterError" :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter" @connection-change="dashboardBase?.onConnectionChange"
+      @filter-change="dashboardBase?.handleFilterChange" @import-change="dashboardBase?.handleImportChange"
+      @add-item="dashboardBase?.openAddItemModal" @clear-items="dashboardBase?.clearItems"
+      @toggle-edit-mode="handleToggleEditMode" @refresh="dashboardBase?.handleRefresh"
+      @clear-filter="dashboardBase?.handleFilterClear" />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
@@ -148,62 +139,37 @@ function handleToggleEditMode() {
 
     <div v-else class="mobile-container">
       <!-- Mobile layout - vertically stacked grid items -->
-      <div
-        v-for="item in sortedLayout"
-        :key="item.i"
-        :data-i="item.i"
-        class="mobile-item"
-        :style="{ height: `${calculateMobileHeight(item)}px` }"
-      >
-        <DashboardGridItem
-          v-if="dashboardBase"
-          :dashboard-id="dashboard.id"
-          :item="item"
-          :edit-mode="editMode"
-          :filter="filter"
-          :get-item-data="getItemData"
+      <div v-for="item in sortedLayout" :key="item.i" :data-i="item.i" class="mobile-item"
+        :style="{ height: `${calculateMobileHeight(item)}px` }">
+        <DashboardGridItem v-if="dashboardBase" :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode"
+          :filter="filter" :get-item-data="getItemData"
           :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
-          @dimension-click="dashboardBase?.setCrossFilter"
-          :set-item-data="setItemData"
-          @edit-content="dashboardBase?.openEditor"
-          @remove-filter="dashboardBase?.removeFilter"
-          @background-click="dashboardBase?.unSelect"
-          @update-dimensions="updateItemDimensions"
-          @remove-item="dashboardBase?.removeItem"
-          @copy-item="dashboardBase?.copyItem"
-        />
+          @dimension-click="dashboardBase?.setCrossFilter" :set-item-data="setItemData"
+          @edit-content="dashboardBase?.openEditor" @remove-filter="dashboardBase?.removeFilter"
+          @background-click="dashboardBase?.unSelect" @update-dimensions="updateItemDimensions"
+          @remove-item="dashboardBase?.removeItem" @copy-item="dashboardBase?.copyItem" />
       </div>
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal
-      :show="showAddItemModal"
-      @add="dashboardBase?.addItem"
-      @close="dashboardBase?.closeAddModal"
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="dashboardBase?.addItem"
+      @close="dashboardBase?.closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor
-        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
-      />
+        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor"
+        @save="dashboardBase?.saveContent" @cancel="dashboardBase?.closeEditors" />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor
-        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <MarkdownEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).structured_content"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
-      />
+        :content="getItemData(editingItem.i, dashboard.id).structured_content" @save="dashboardBase?.saveContent"
+        @cancel="dashboardBase?.closeEditors" />
     </Teleport>
   </div>
 
@@ -214,11 +180,8 @@ function handleToggleEditMode() {
     </template>
     <template v-else>
       <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
-      <dashboard-creator-inline
-        class="inline-creator"
-        :visible="true"
-        @dashboard-created="dashboardBase?.dashboardCreated"
-      ></dashboard-creator-inline>
+      <dashboard-creator-inline class="inline-creator" :visible="true"
+        @dashboard-created="dashboardBase?.dashboardCreated"></dashboard-creator-inline>
     </template>
   </div>
 </template>

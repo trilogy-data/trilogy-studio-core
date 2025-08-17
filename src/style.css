@@ -1,5 +1,5 @@
 :root {
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   border-radius: 0px;
@@ -99,7 +99,7 @@
   --font-size: 14px;
   --big-font-size: 18px;
   --small-font-size: 12px;
-  --button-font-size: .70em;
+  --button-font-size: .90em;
 
   --icon-size: 16px;
 
@@ -268,7 +268,7 @@ button {
 }
 
 .hover-icon {
-  opacity: 0 ;
+  opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
 

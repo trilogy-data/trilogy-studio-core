@@ -373,4 +373,60 @@ onUnmounted(() => {
 .remove-import-button:hover {
   opacity: 1;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .import-selector {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    max-width: 300px;
+    min-width: unset;
+  }
+
+  .import-selector-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .import-selector-header label {
+    margin-right: 0;
+    margin-bottom: 0;
+  }
+
+  .import-summary {
+    width: 100%;
+    text-align: center;
+    min-width: unset;
+  }
+
+  .import-dropdown {
+    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 480px) {
+  .import-selector {
+    max-width: 280px;
+  }
+
+  .import-dropdown {
+    width: 280px;
+  }
+}
+
+@media (max-width: 360px) {
+  .import-selector {
+    max-width: 250px;
+  }
+
+  .import-dropdown {
+    width: 250px;
+  }
+}
 </style>
