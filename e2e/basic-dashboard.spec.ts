@@ -144,7 +144,9 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
-  await page.getByTestId('vega-chart-container-2').hover()
+  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
+  // await page.getByTestId('vega-chart-container-2').click();
+  await page.getByTestId('vega-chart-container-2').hover({force: true})
   await page.getByTestId('toggle-chart-controls-btn').click()
   await page.getByTestId('chart-type-usa-map').click()
 
@@ -153,7 +155,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   await page.getByTestId('toggle-chart-controls-btn').click()
   await page.waitForTimeout(1000)
-  await page.waitForSelector(vegaSelector, { state: 'visible' })
+  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
 
   // Get canvas dimensions
   const canvas = await page.locator(vegaSelector)
