@@ -144,6 +144,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
+  await page.getByTestId('vega-chart-container-2').hover()
   await page.getByTestId('toggle-chart-controls-btn').click()
   await page.getByTestId('chart-type-usa-map').click()
 
