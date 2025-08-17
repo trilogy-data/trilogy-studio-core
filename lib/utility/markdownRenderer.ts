@@ -445,7 +445,7 @@ export function convertMarkdownToHtml(text: string): string {
       const lang = language.trim() || 'text'
       const escapedCode = escapeHtml(code.trim())
 
-      const codeBlockHtml = `<div class="code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
+      const codeBlockHtml = `<div class="md-code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
       <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
       <button class="markdown-copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
         <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

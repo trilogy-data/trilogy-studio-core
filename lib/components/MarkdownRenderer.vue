@@ -130,7 +130,7 @@ export default defineComponent({
   vertical-align: middle;
 }
 
-.code-container {
+.md-code-container {
   position: relative;
   overflow: hidden;
   padding-bottom: 2px;
