@@ -208,12 +208,16 @@ def generate_query_core(
 
         # Time imports processing
         import_start = time.time()
+        import_strings = []
         for imp in query.imports:
             if imp.alias:
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
+            import_strings.append(imp_string)
+        if import_strings:
+            full_imp_string = "\n".join(import_strings)
+            parse_text(full_imp_string, env, parse_config=PARSE_CONFIG)
         import_time = time.time() - import_start
 
         # Time query generation
@@ -233,12 +237,16 @@ def generate_query_core(
         return result
     else:
         env = parse_env_from_full_model(query.full_model.sources)
+        import_strings = []
         for imp in query.imports:
             if imp.alias:
                 imp_string = f"import {imp.name} as {imp.alias};"
             else:
                 imp_string = f"import {imp.name};"
-            parse_text(imp_string, env, parse_config=PARSE_CONFIG)
+            import_strings.append(imp_string)
+        if import_strings:
+            full_imp_string = "\n".join(import_strings)
+            parse_text(full_imp_string, env, parse_config=PARSE_CONFIG)
         return generate_single_query(
             query.query, env, dialect, query.extra_filters, query.parameters
         )

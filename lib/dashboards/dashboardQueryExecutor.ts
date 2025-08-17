@@ -319,7 +319,7 @@ export class DashboardQueryExecutor {
         }
       },
       onProgress: (_: any) => {
-        ;() => {}
+        ; () => { }
       },
     }
 
@@ -425,7 +425,7 @@ export class DashboardQueryExecutor {
           }
         },
         onProgress: (_: any) => {
-          ;() => {}
+          ; () => { }
         },
       }
 
@@ -546,9 +546,9 @@ export class DashboardQueryExecutor {
         queuedQuery.dashboardId === request.dashboardId &&
         queuedQuery.queryInput.text === request.queryInput.text &&
         JSON.stringify(queuedQuery.queryInput.extraFilters) ===
-          JSON.stringify(request.queryInput.extraFilters) &&
+        JSON.stringify(request.queryInput.extraFilters) &&
         JSON.stringify(queuedQuery.queryInput.parameters) ===
-          JSON.stringify(request.queryInput.parameters)
+        JSON.stringify(request.queryInput.parameters)
       ) {
         return queuedQuery
       }
@@ -598,10 +598,179 @@ export class DashboardQueryExecutor {
     const availableSlots = this.maxConcurrentQueries - this.activeQueries.size
     const queriesToExecute = sortedQueries.slice(0, availableSlots)
 
-    queriesToExecute.forEach((query) => {
-      this.executeQuery(query.id)
-    })
+    this.executeBatchQueries(queriesToExecute)
+    // queriesToExecute.forEach((query) => {
+    //   this.executeQuery(query.id)
+    // })
   }
+
+  private async executeBatchQueries(queries: QueuedQuery[]): Promise<void> {
+    if (queries.length === 0) return;
+
+    try {
+      await this.ensureConnection();
+      const conn = this.connectionStore.connections[this.connectionName];
+      if (!conn) {
+        throw new Error(`Connection "${this.connectionName}" not found!`);
+      }
+
+      // Double-check connection is still active
+      if (!conn.connected) {
+        throw new Error(`Connection "${this.connectionName}" is not connected`);
+      }
+
+      const dashboardData = this.getDashboardData(this.dashboardId);
+
+      // Build query arguments and move queries from queue to active
+      const queryArgsList: any[] = [];
+      const validQueries: QueuedQuery[] = [];
+
+      for (const queuedQuery of queries) {
+        const queryId = queuedQuery.id;
+
+        // Skip if already active (shouldn't happen but safety check)
+        if (this.activeQueries.has(queryId)) {
+          continue;
+        }
+
+        // Check if still in queue (might have been cancelled)
+        if (!this.queryQueue.has(queryId)) {
+          continue;
+        }
+
+        // Move from queue to active
+        this.queryQueue.delete(queryId);
+        this.activeQueries.add(queryId);
+
+        // Build query arguments
+        queryArgsList.push({
+          ...queuedQuery.queryInput,
+
+        });
+
+        validQueries.push(queuedQuery);
+      }
+
+      // If no valid queries after filtering, return
+      if (queryArgsList.length === 0) {
+        return;
+      }
+
+      // Execute batch query
+      const { resultPromise } = await this.queryExecutionService.executeQueriesBatch(
+        this.connectionName,
+        queryArgsList,
+        'trilogy',
+         dashboardData.imports,
+         [],
+        () => { }, // Progress callback for connection issues
+        (message: QueryUpdate, index: number) => {
+          // Progress callback for individual queries
+          if (index >= 0 && index < validQueries.length) {
+            const query = validQueries[index];
+            if (message.error) {
+              query.onProgress(message);
+            }
+          }
+        },
+      );
+
+      // Handle batch results
+      const results = await resultPromise;
+
+      // Process each result
+      results.forEach((result: any, index: number) => {
+        if (index >= validQueries.length) return;
+
+        const queuedQuery = validQueries[index];
+        const queryId = queuedQuery.id;
+
+        try {
+          if (result.success && result.results) {
+            // Success case
+            queuedQuery.onSuccess(result);
+
+            // Resolve any waiting promises
+            const waiter = this.queryWaiters.get(queryId);
+            if (waiter) {
+              waiter.resolve(result);
+              this.queryWaiters.delete(queryId);
+            }
+          } else if (result.error) {
+            // Error case
+            this.handleQueryError(queuedQuery, result.error);
+          }
+        } finally {
+          // Clean up this specific query
+          this.activeQueries.delete(queryId);
+          this.cleanupQueryTracking(queryId);
+        }
+      });
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+
+      // If this was a connection error, reset connection state
+      if (errorMessage.includes('connection') || errorMessage.includes('connect')) {
+        this.connectionChecked = false;
+        this.connectionPromise = null;
+      }
+
+      // Handle error for all queries in the batch
+      for (const queuedQuery of queries) {
+        const queryId = queuedQuery.id;
+
+        // Only process if it was moved to active
+        if (!this.activeQueries.has(queryId)) {
+          continue;
+        }
+
+        // Retry logic
+        if (queuedQuery.retryCount < this.retryAttempts) {
+          console.log(`Retrying query ${queryId} (attempt ${queuedQuery.retryCount + 1})`);
+          queuedQuery.retryCount++;
+          queuedQuery.timestamp = Date.now(); // Update timestamp for retry
+
+          // Move back to queue for retry
+          this.activeQueries.delete(queryId);
+          this.queryQueue.set(queryId, queuedQuery);
+
+          // Schedule individual retry after delay
+          setTimeout(() => {
+            if (this.queryQueue.has(queryId)) {
+              this.executeQuery(queryId);
+            }
+          }, 1000 * queuedQuery.retryCount); // Exponential backoff
+        } else {
+          // Max retries reached
+          this.handleQueryError(queuedQuery, errorMessage);
+          this.activeQueries.delete(queryId);
+          this.cleanupQueryTracking(queryId);
+        }
+      }
+    } finally {
+      // Process next batch if there are more queries
+      this.processBatch();
+    }
+  }
+
+  /**
+   * Helper method to handle query errors consistently
+   */
+  private handleQueryError(queuedQuery: QueuedQuery, errorMessage: string): void {
+    const queryId = queuedQuery.id;
+
+    // Call error callback
+    queuedQuery.onError(errorMessage);
+
+    // Reject any waiting promises
+    const waiter = this.queryWaiters.get(queryId);
+    if (waiter) {
+      waiter.reject(errorMessage);
+      this.queryWaiters.delete(queryId);
+    }
+  }
+
 
   private async executeQuery(queryId: string): Promise<void> {
     const queuedQuery = this.queryQueue.get(queryId)
@@ -637,7 +806,7 @@ export class DashboardQueryExecutor {
       const { resultPromise } = await this.queryExecutionService.executeQuery(
         this.connectionName,
         queryArgs,
-        () => {}, // Progress callback for connection issues
+        () => { }, // Progress callback for connection issues
         (message: any) => {
           if (message.error) {
             queuedQuery.onProgress(message)
