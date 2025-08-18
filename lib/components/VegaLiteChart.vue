@@ -287,7 +287,6 @@ export default defineComponent({
     // Cleanup on unmount
     onUnmounted(() => {
       renderManager.cleanup()
-      controlsManager.cleanup()
     })
 
     return {
