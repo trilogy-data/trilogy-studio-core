@@ -120,6 +120,9 @@ const createInteractiveLayer = (
       y: createFieldEncoding(config.yField2, columns),
       tooltip: tooltipFields,
       ...encoding,
+      ...  {
+          color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+        },
     },
     params: !filtered
       ? [

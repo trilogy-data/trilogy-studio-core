@@ -562,12 +562,17 @@ export const createInteractionEncodings = () => {
   }
 }
 
-export const getLegendOrientation = (field: string, isMobile: boolean) => {
+export const getLegendOrientation = (field: string, isMobile: boolean, fieldType: string) => {
+  let labelRight =false
+  if (fieldType === 'quantitative') {
+    labelRight = true
+  }
   if (field && field.length > 10) {
     return {
       orient: isMobile ? 'bottom' : 'right',
-      titleOrient: isMobile ? 'center' : 'right',
-      titleFontSize: isMobile ? 10 : 12,
+      titleOrient: isMobile ? 'center' : labelRight? 'right' : 'top',
+      direction: isMobile ? 'horizontal' : 'vertical',
+      titleFontSize: isMobile ? 10 : 10,
     }
   }
   return {
@@ -589,9 +594,10 @@ export const createColorEncoding = (
   let legendConfig = {}
 
   if (colorField) {
+    const fieldType = getVegaFieldType(colorField, columns)
     legendConfig = {
       ...legendConfig,
-      ...getLegendOrientation(colorField, isMobile),
+      ...getLegendOrientation(colorField, isMobile, fieldType),
     }
   }
 

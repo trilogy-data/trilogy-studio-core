@@ -2,10 +2,11 @@ import { test, expect } from '@playwright/test'
 
 // use this if debug menus is on
 // const vegaSelector = '.vega-container .chart-wrapper canvas'
-const vegaSelector = '.vega-container canvas'
+const vegaSelector = '.vega-active canvas'
 
 async function getRelativePixelColor(page, relX, relY) {
-  const canvasBounds = await page.locator('.vega-container canvas').boundingBox()
+  // these cannot use vegaSelector constant as evaluated in the browser context
+  const canvasBounds = await page.locator( '.vega-active canvas').boundingBox()
   if (!canvasBounds) {
     throw new Error('Could not get canvas bounds')
   }
@@ -20,7 +21,8 @@ async function getRelativePixelColor(page, relX, relY) {
 async function getPixelColor(page, x, y) {
   return page.evaluate(
     ({ x, y }) => {
-      const canvas = document.querySelector('.vega-container canvas') as HTMLCanvasElement
+      // these cannot use vegaSelector constant as evaluated in the browser context
+      const canvas = document.querySelector( '.vega-active canvas') as HTMLCanvasElement
       if (!canvas) return null
 
       // Get the canvas's CSS dimensions (how it appears on screen)
