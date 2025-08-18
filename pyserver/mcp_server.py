@@ -10,6 +10,7 @@ from trilogy.core.models.core import (
     MapType,
     NumericType,
     DataTyped,
+    StructComponent,
 )
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
@@ -93,6 +94,7 @@ def datatype_to_str_datatype(
         | MapType
         | NumericType
         | DataTyped
+        | StructComponent
     ),
 ) -> str:
     """Convert a TraitDataType to a string representation"""
@@ -113,6 +115,8 @@ def datatype_to_str_datatype(
         return f"Numeric<{datatype.precision},{datatype.scale}>"
     if isinstance(datatype, DataTyped):
         return datatype_to_str_datatype(datatype.output_datatype)
+    if isinstance(datatype, StructComponent):
+        return f"{datatype.name}:{datatype_to_str_datatype(datatype.type)}>"
     return str(datatype.name)
 
 

@@ -1,7 +1,7 @@
 // DashboardBase.vue - Shared logic for both mobile and desktop dashboards
 <script lang="ts" setup>
 import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
-import { useDashboardStore } from '../../stores/dashboardStore'
+import { useDashboardStore, stripAllWhitespace } from '../../stores/dashboardStore'
 import {
   type LayoutItem,
   type GridItemDataResponse,
@@ -84,7 +84,7 @@ const layout = computed(() => {
 const sortedLayout = computed(() => {
   if (!dashboard.value) return []
   // Sort layout items by y coordinate for mobile vertical order
-  return [...dashboard.value.layout].sort((a, b) => a.y - b.y)
+  return [...dashboard.value.layout].sort((a, b) => (a.y + a.y + a.h) / 2 - (b.y + b.y + b.h) / 2)
 })
 
 const selectedConnection = computed(() => {
@@ -162,10 +162,6 @@ onBeforeUnmount(() => {
   }
 })
 
-// Utility functions
-const stripAllWhitespace = (str: string): string => {
-  return str.replace(/\s+/g, '')
-}
 
 // Filter management
 async function handleFilterClear() {
@@ -181,7 +177,7 @@ async function handleFilterChange(newFilter: string) {
   if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
-      dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+      dashboardStore.updateDashboardFilter(dashboard.value.id, stripAllWhitespace(newFilter))
     }
     return
   }

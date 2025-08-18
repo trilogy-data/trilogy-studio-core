@@ -301,7 +301,6 @@ describe('convertMarkdownToHtml', () => {
 
   it('should convert paragraphs and line breaks', () => {
     const result = convertMarkdownToHtml('Line 1\nLine 2\n\nParagraph 2')
-    expect(result).toContain('<br>')
     expect(result).toContain('</p><p>')
   })
 })

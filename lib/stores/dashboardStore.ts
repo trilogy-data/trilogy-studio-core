@@ -19,6 +19,10 @@ interface ContentPlaceholder {
   content: string
 }
 
+export const stripAllWhitespace = (str: string): string => {
+  return str.replace(/\s+/g, '')
+}
+
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
     dashboards: {} as Record<string, DashboardModel>,
@@ -256,6 +260,9 @@ export const useDashboardStore = defineStore('dashboards', {
 
     updateDashboardFilter(id: string, filter: string) {
       if (this.dashboards[id]) {
+        if (!filter || stripAllWhitespace(filter) === '') {
+          this.dashboards[id].filter = null
+        }
         this.dashboards[id].filter = filter
       } else {
         throw new Error(`Dashboard with ID "${id}" not found.`)

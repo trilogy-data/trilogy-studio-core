@@ -34,7 +34,7 @@ const createInteractiveLayer = (
     ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
     mark: {
       type: config.chartType === 'line' ? 'line' : 'area',
-      ...(config.chartType === 'area' ? { line: true } : {}),
+      ...(config.chartType === 'area' ? { line: filtered ? true : { color: "darkgray" } } : {}),
       ...(filtered ? { color: markColor } : { color: 'lightgray' }),
     },
     data: { values: data },
@@ -93,7 +93,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-            intChart.filter((obj) => config.xField in obj)
+          intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -120,18 +120,21 @@ const createInteractiveLayer = (
       y: createFieldEncoding(config.yField2, columns),
       tooltip: tooltipFields,
       ...encoding,
+      ...  {
+          color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+        },
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+      ]
       : [],
   }
 

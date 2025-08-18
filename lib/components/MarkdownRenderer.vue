@@ -83,6 +83,9 @@ export default defineComponent({
 
 .rendered-markdown strong {
   font-weight: 600;
+}
+
+.rendered-markdown variable {
   color: var(--special-text);
 }
 
@@ -130,7 +133,7 @@ export default defineComponent({
   vertical-align: middle;
 }
 
-.code-container {
+.md-code-container {
   position: relative;
   overflow: hidden;
   padding-bottom: 2px;

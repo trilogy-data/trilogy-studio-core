@@ -445,7 +445,7 @@ export function convertMarkdownToHtml(text: string): string {
       const lang = language.trim() || 'text'
       const escapedCode = escapeHtml(code.trim())
 
-      const codeBlockHtml = `<div class="code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
+      const codeBlockHtml = `<div class="md-code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
       <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
       <button class="markdown-copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
         <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -467,10 +467,10 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Step 2: Process other markdown elements (headers, lists, etc.) on text without code blocks
 
-  // Convert headers
-  html = html.replace(/^### (.*$)/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
-  html = html.replace(/^## (.*$)/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
-  html = html.replace(/^# (.*$)/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
+  // Convert headers - capture only up to the last non-whitespace character
+  html = html.replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
+  html = html.replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
+  html = html.replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
 
   // Process lists
   html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
@@ -492,7 +492,6 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Process paragraphs
   html = html.replace(/\n\n/g, '</p><p>')
-  html = html.replace(/\n/g, '<br>')
   html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
   html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
 

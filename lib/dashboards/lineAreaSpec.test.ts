@@ -255,6 +255,12 @@ describe('Line and Area Chart Specs', (): void => {
 
         expect(filteredLayer.encoding.color).toEqual({
           field: 'category',
+          legend: {
+            direction: 'vertical',
+            orient: 'right',
+            titleFontSize: 12,
+            titleOrient: 'top',
+          },
           type: 'nominal',
           scale: { scheme: 'category20' },
           title: 'Category',
@@ -407,7 +413,7 @@ describe('Line and Area Chart Specs', (): void => {
 
         // Base layer
         expect(layers[0].mark.type).toBe('area')
-        expect(layers[0].mark.line).toBe(true)
+        expect(layers[0].mark.line.color).toBe("darkgray")
 
         // Filtered layer
         expect(layers[1].mark.type).toBe('area')

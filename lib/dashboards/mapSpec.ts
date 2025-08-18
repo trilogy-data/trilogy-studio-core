@@ -391,6 +391,9 @@ const createWorldScatterMapSpec = (
                 type: 'quantitative',
                 title: snakeCaseToCapitalizedWords(config.sizeField),
                 scale: { type: 'sqrt' },
+                legend: {
+                  orient: isMobile ? 'bottom' : 'right',
+                },
               }
             : undefined,
           color: config.colorField

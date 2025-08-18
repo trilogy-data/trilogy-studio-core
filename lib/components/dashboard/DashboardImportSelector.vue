@@ -77,15 +77,17 @@ onUnmounted(() => {
 <template>
   <div class="import-selector">
     <div class="import-selector-header" @click="toggleDropdown">
-      <label>Data</label>
       <div
         class="import-summary"
         :class="{ 'has-imports': activeCount > 0 }"
         data-testid="dashboard-import-selector"
       >
-        <span v-if="activeCount === 0">No imports</span>
-        <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
-        <span v-else>{{ activeImports.length }} import(s) selected</span>
+        <div class="summary-content">
+          <i class="mdi mdi-file-document-edit-outline summary-icon"></i>
+          <span v-if="activeCount === 0">No imports</span>
+          <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
+          <span v-else>{{ activeImports.length }} import(s) selected</span>
+        </div>
         <svg
           class="dropdown-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -204,39 +206,59 @@ onUnmounted(() => {
   align-items: center;
   cursor: pointer;
   user-select: none;
-}
-
-.import-selector-header label {
-  margin-right: 10px;
-  font-weight: bold;
-  color: var(--text-color);
-  white-space: nowrap;
+  width: 100%;
 }
 
 .import-summary {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
-  min-width: 150px;
+  /* min-width: 150px; */
   justify-content: space-between;
+  width: 100%;
+}
+
+.import-summary {
+  padding: 6px 12px 6px 36px;
+  border: 1px solid var(--border);
+  color: var(--sidebar-selector-font);
+  font-size: var(--font-size);
+  background-color: var(--bg-color);
+  appearance: none;
+  cursor: pointer;
+  min-width: 150px;
+  outline: none;
+  border-radius: 0; /* Remove rounded corners */
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .import-summary.has-imports {
   color: var(--text-color);
-  border-color: var(--special-text);
+}
+
+.summary-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 18px;
+  color: var(--text-color);
 }
 
 .dropdown-icon {
-  margin-left: 8px;
+  margin: 0px 8px;
 }
 
 .import-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
   z-index: 100;
   width: 300px;
   background-color: var(--bg-color);
@@ -300,6 +322,7 @@ onUnmounted(() => {
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
+  text-align: left;
 }
 
 .import-item {
@@ -372,5 +395,43 @@ onUnmounted(() => {
 
 .remove-import-button:hover {
   opacity: 1;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .import-selector {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    /* max-width: 300px; */
+    /* min-width: unset; */
+  }
+
+  .import-selector-header {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .import-summary {
+    padding: 4px 0px;
+    text-align: center;
+  }
+
+  .summary-content {
+    justify-content: center;
+    flex: 1;
+  }
+
+  .import-dropdown {
+    width: 90vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .import-selector {
+    max-width: 100%;
+  }
 }
 </style>

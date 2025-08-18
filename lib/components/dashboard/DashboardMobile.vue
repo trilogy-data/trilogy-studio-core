@@ -76,13 +76,21 @@ function calculateMobileHeight(item: any): number | string {
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
     return 300 // Default height if we can't calculate
   }
-
-  if (getItemData(item.i, dashboard.value.id).type === CELL_TYPES.MARKDOWN) {
+  let itemData = getItemData(item.i, dashboard.value.id)
+  if (itemData.type === CELL_TYPES.MARKDOWN) {
     return '100%' // Full height for markdown items
   }
 
+  if (itemData.type === CELL_TYPES.CHART) {
+    if (itemData.chartConfig?.chartType === 'headline') {
+      // return the width as height for a headline chart
+      if (itemData.width) {
+        return itemData.width / 2
+      }
+    }
+  }
   const gridItem = dashboard.value.gridItems[item.i]
-
+  let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
   if (gridItem.width && gridItem.height) {
     const aspectRatio = gridItem.height / gridItem.width
@@ -91,13 +99,13 @@ function calculateMobileHeight(item: any): number | string {
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
     const calculatedHeight = viewportWidth * aspectRatio
-    return Math.max(Math.min(calculatedHeight, 400), 400)
+    return Math.max(Math.min(calculatedHeight, maxHeight), 400)
   }
 
   // If no stored dimensions, use the grid layout's width and height
   const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return Math.max(Math.min(aspectRatio * 12 * 30, 600), 400)
+  return Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), 400)
 }
 
 // Handle edit mode toggle for mobile

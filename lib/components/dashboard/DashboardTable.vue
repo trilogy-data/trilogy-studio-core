@@ -3,6 +3,8 @@
     ref="chartContainer"
     class="chart-placeholder no-drag"
     :class="{ 'chart-placeholder-edit-mode': editMode }"
+    @mouseenter="onChartMouseEnter"
+    @mouseleave="onChartMouseLeave"
   >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <data-table
@@ -22,7 +24,11 @@
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
 
-    <div v-if="!loading && editMode" class="controls-toggle">
+    <div 
+      v-if="!loading && editMode" 
+      class="controls-toggle"
+      :class="{ 'controls-visible': controlsVisible }"
+    >
       <button
         @click="handleLocalRefresh"
         class="control-btn"
@@ -96,6 +102,16 @@ export default defineComponent({
     const currentQueryId = ref<string | null>(null)
     const showLoading = ref(false)
     const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
+    const controlsVisible = ref(false)
+
+    // Mouse event handlers for hover controls
+    const onChartMouseEnter = () => {
+      controlsVisible.value = true
+    }
+
+    const onChartMouseLeave = () => {
+      controlsVisible.value = false
+    }
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -292,6 +308,9 @@ export default defineComponent({
       startTime,
       handleDimensionClick,
       handleBackgroundClick,
+      controlsVisible,
+      onChartMouseEnter,
+      onChartMouseLeave,
     }
   },
 })
@@ -334,7 +353,14 @@ export default defineComponent({
   z-index: 10;
   display: flex;
   flex-direction: column;
-  /* gap: 4px; */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+}
+
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 .control-btn {
@@ -344,12 +370,12 @@ export default defineComponent({
   width: 28px;
   height: 28px;
   border: 1px solid var(--border-light);
-  background-color: transparent;
+  background-color: rgba(var(--bg-color), 0.9);
   color: var(--text-color);
   cursor: pointer;
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
-  /* border-radius: 4px; */
+  backdrop-filter: blur(4px);
 }
 
 .control-btn:hover {
@@ -369,5 +395,18 @@ export default defineComponent({
 .control-btn.active {
   background-color: var(--special-text);
   color: white;
+}
+
+/* Mobile responsiveness - always show controls on mobile */
+@media (max-width: 768px) {
+  .controls-toggle {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
 }
 </style>

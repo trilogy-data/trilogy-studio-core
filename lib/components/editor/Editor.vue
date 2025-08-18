@@ -715,9 +715,9 @@ export default defineComponent({
             return true
           }
           // detect if the user had a highlighted range or the entire editor
-          let initMessage = `How can I help? I've been loaded with context on Trilogy and this file.`
+          let initMessage = `How can I help? I've been loaded with context on Trilogy and this file. `
           if (range) {
-            initMessage += `I'll focus on the highlighted text: ${text}. Press enter if you want me to go ahead with this.`
+            initMessage += `Based on selection, focused on editing this text:\n\`\`\`${text}\n\`\`\`. If the text includes a prompt, hit enter and I'll go ahead and get working - or you can give me some more instructions.`
           }
           this.editorData.setChatInteraction({
             messages: [

@@ -178,7 +178,6 @@ export const determineDefaultConfig = (
     | 'donut',
 ): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {
-    showDebug: false,
     showTitle: true,
     hideLegend: false,
   }
@@ -563,15 +562,25 @@ export const createInteractionEncodings = () => {
   }
 }
 
-export const getLegendOrientation = (field: string) => {
+export const getLegendOrientation = (field: string, isMobile: boolean, fieldType: string) => {
+  let labelRight =false
+  if (fieldType === 'quantitative') {
+    labelRight = true
+  }
   if (field && field.length > 10) {
     return {
-      orient: 'right',
-      titleOrient: 'right',
-      titleFontSize: 10,
+      orient: isMobile ? 'bottom' : 'right',
+      titleOrient: isMobile ? 'center' : labelRight? 'right' : 'top',
+      direction: isMobile ? 'horizontal' : 'vertical',
+      titleFontSize: isMobile ? 10 : 10,
     }
   }
-  return {}
+  return {
+    orient: isMobile ? 'bottom' : 'right',
+    titleOrient: isMobile ? 'bottom' : 'top',
+    direction: isMobile ? 'horizontal' : 'vertical',
+    titleFontSize: isMobile ? 10 : 12,
+  }
 }
 
 export const createColorEncoding = (
@@ -583,19 +592,12 @@ export const createColorEncoding = (
   hideLegend: boolean = false,
 ) => {
   let legendConfig = {}
-  if (isMobile) {
+
+  if (colorField) {
+    const fieldType = getVegaFieldType(colorField, columns)
     legendConfig = {
       ...legendConfig,
-      ...{
-        orient: 'bottom',
-        direction: 'horizontal',
-      },
-    }
-  }
-  if (colorField && colorField.length > 10) {
-    legendConfig = {
-      ...legendConfig,
-      ...getLegendOrientation(colorField),
+      ...getLegendOrientation(colorField, isMobile, fieldType),
     }
   }
 

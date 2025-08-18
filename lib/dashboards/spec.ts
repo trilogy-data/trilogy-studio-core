@@ -360,20 +360,6 @@ export const generateVegaSpec = (
 
   // Add mobile-specific configurations
   if (isMobile) {
-    spec.point = {
-      size: 80, // Larger hit area for touch targets
-    }
-    spec.signals = [
-      {
-        name: 'touchSignal',
-        on: [
-          {
-            events: 'touchend',
-            update: 'datum', // This is crucial for touch events
-          },
-        ],
-      },
-    ]
   }
 
   if (config.yField2) {
