@@ -8,7 +8,6 @@ export class ChartControlsManager {
   // Controls visibility state
   public controlsVisible = ref(false)
   public showingControls = ref(false)
-  private hoverTimeout = ref<number | null>(null)
 
   // Internal configuration that merges provided config with defaults
   public internalConfig = ref<ChartConfig>({
@@ -30,20 +29,12 @@ export class ChartControlsManager {
 
   // Hover event handlers
   onChartMouseEnter(): void {
-    if (this.hoverTimeout.value) {
-      clearTimeout(this.hoverTimeout.value)
-      this.hoverTimeout.value = null
-    }
-    console.log('Chart mouse enter - showing controls')
     this.controlsVisible.value = true
   }
 
   onChartMouseLeave(): void {
     this.controlsVisible.value = false
-    // Add a small delay before hiding controls to prevent flickering
-    this.hoverTimeout.value = window.setTimeout(() => {
-      this.hoverTimeout.value = null
-    }, 300)
+
   }
 
   // Toggle controls visible/hidden
@@ -128,11 +119,5 @@ export class ChartControlsManager {
     return true
   }
 
-  // Cleanup resources
-  cleanup(): void {
-    // Clear any pending timeout
-    if (this.hoverTimeout.value) {
-      clearTimeout(this.hoverTimeout.value)
-    }
-  }
+
 }

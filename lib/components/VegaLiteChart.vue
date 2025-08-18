@@ -273,9 +273,7 @@ export default defineComponent({
       (showing) => {
         // If switching to chart view, need to render chart after toggle
         if (!showing) {
-          setTimeout(() => {
-            renderChart()
-          }, 250) // Short delay to allow DOM to update
+          nextTick(() => renderChart(true))
         }
       },
     )

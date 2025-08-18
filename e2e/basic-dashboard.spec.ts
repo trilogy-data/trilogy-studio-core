@@ -61,7 +61,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('sidebar-link-community-models').click()
+  await page.getByTestId('sidebar-link-community-models').click({force:true})
   await page.getByTestId('community-model-search').click()
   await page.getByTestId('community-model-search').press('ControlOrMeta+a')
   await page.getByTestId('community-model-search').fill('faa')
