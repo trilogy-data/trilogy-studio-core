@@ -149,13 +149,13 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
   // await page.getByTestId('vega-chart-container-2').click();
   await page.getByTestId('vega-chart-container-2').hover({force: true})
-  await page.getByTestId('toggle-chart-controls-btn').click()
+  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.getByTestId('chart-type-usa-map').click()
 
   await page.getByLabel('Geo Field').selectOption('origin_state')
   await page.getByLabel('Color Scale').selectOption('count')
 
-  await page.getByTestId('toggle-chart-controls-btn').click()
+  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.waitForTimeout(1000)
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
 
