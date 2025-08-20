@@ -1,6 +1,6 @@
 import { QueryExecutionService } from '../stores'
 import type { Dashboard, GridItemDataResponse } from '../dashboards/base'
-import type { ContentInput } from '../stores/resolver'
+import type { ContentInput, MultiQueryComponent } from '../stores/resolver'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 
@@ -93,7 +93,7 @@ export class DashboardQueryExecutor {
     this.connectionStore = connectionStore
     this.editorStore = editorStore
     this.connectionName = connectionName
-    this.maxConcurrentQueries = options.maxConcurrentQueries || 6
+    this.maxConcurrentQueries = options.maxConcurrentQueries || 10
     this.retryAttempts = options.retryAttempts || 2
     this.batchDelay = options.batchDelay || 0
     this.dashboardId = dashboardId
@@ -369,7 +369,6 @@ export class DashboardQueryExecutor {
    * Queue multiple queries for batch execution with prioritization
    */
   public runBatch(itemIds: string[]): string[] {
-    console.log(`Running batch for ${itemIds.length} items`)
     const queryIds: string[] = []
 
     // Clear any pending batch timeout
@@ -380,9 +379,17 @@ export class DashboardQueryExecutor {
     // Process each itemId similar to runSingle
     itemIds.forEach((itemId) => {
       let inputs = this.getItemData(itemId, this.dashboardId)
-      let filters = (this.getItemData(itemId, this.dashboardId).filters || []).map(
+      let filters = (inputs.filters || []).map(
         (filter) => filter.value,
       )
+      let query = inputs.structured_content.query
+      if (query.trim().length === 0) {
+        this.setItemData(itemId, this.dashboardId, {
+          error: null,
+          loading: false,
+        })
+        return
+      }
       let dashboard = this.getDashboardData(this.dashboardId)
       this.setItemData(itemId, this.dashboardId, {
         loading: true,
@@ -622,7 +629,7 @@ export class DashboardQueryExecutor {
       const dashboardData = this.getDashboardData(this.dashboardId);
 
       // Build query arguments and move queries from queue to active
-      const queryArgsList: any[] = [];
+      const queryArgsList: MultiQueryComponent[] = [];
       const validQueries: QueuedQuery[] = [];
 
       for (const queuedQuery of queries) {
@@ -642,11 +649,12 @@ export class DashboardQueryExecutor {
         this.queryQueue.delete(queryId);
         this.activeQueries.add(queryId);
 
-        // Build query arguments
         queryArgsList.push({
-          ...queuedQuery.queryInput,
-
-        });
+          query:queuedQuery.queryInput.text,
+          label: queryId,
+          extra_filters: queuedQuery.queryInput.extraFilters,
+          parameters: queuedQuery.queryInput.parameters,
+        })
 
         validQueries.push(queuedQuery);
       }
@@ -661,26 +669,22 @@ export class DashboardQueryExecutor {
         this.connectionName,
         queryArgsList,
         'trilogy',
-         dashboardData.imports,
-         [],
-        () => { }, // Progress callback for connection issues
-        (message: QueryUpdate, index: number) => {
-          // Progress callback for individual queries
-          if (index >= 0 && index < validQueries.length) {
-            const query = validQueries[index];
-            if (message.error) {
-              query.onProgress(message);
-            }
-          }
+        dashboardData.imports,
+        [],
+        () => { }, 
+        () => {
+
         },
       );
 
       // Handle batch results
       const results = await resultPromise;
 
+      console.log(`Batch query executed successfully with ${results.results.length} results`);
+
       // Process each result
-      results.forEach((result: any, index: number) => {
-        if (index >= validQueries.length) return;
+      results.results.forEach((result: any, index: number) => {
+        // if (index >= validQueries.length) return;
 
         const queuedQuery = validQueries[index];
         const queryId = queuedQuery.id;
@@ -708,6 +712,7 @@ export class DashboardQueryExecutor {
       });
 
     } catch (err) {
+      throw err;
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
 
       // If this was a connection error, reset connection state

@@ -55,6 +55,7 @@ from io_models import (
     ValidateQueryInSchema,
     ValidateItem,
     MultiQueryInSchema,
+    MultiQueryOutSchema,
 )
 
 # ruff: noqa: E402
@@ -222,12 +223,11 @@ def generate_queries(queries: MultiQueryInSchema):
             statements_time = time.time() - statements_start
             output_start = time.time()
 
-        result = {
-            "queries": [
+        result = MultiQueryOutSchema(queries= [
                 query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
                 for target, columns in statements
             ]
-        }
+        )
 
         if ENABLE_PERF_LOGGING:
             output_time = time.time() - output_start

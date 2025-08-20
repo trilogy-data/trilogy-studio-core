@@ -18,6 +18,8 @@ from trilogy.authoring import (
     Parenthetical,
     Conditional,
     BooleanOperator,
+    WhereClause,
+    PersistStatement
 )
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
@@ -63,6 +65,43 @@ def get_traits(concept: Concept) -> list[str]:
     return []
 
 
+def get_variable_string_prefix(variables: dict[str, str | int | float]) -> str:
+    variable_prefix = ""
+    for key, variable in variables.items():
+        if isinstance(variable, str):
+            if "'''" in variable:
+                raise ValueError("cannot safely parse strings with triple quotes")
+            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
+        else:
+            variable_prefix += f"\n const {key[1:]} <- {variable};"
+    return variable_prefix
+
+
+def filters_to_conditional(
+    extra_filters: list[str], parameters: dict[str, str | int | float], env: Environment, base_filter_idx: int = 0
+) -> WhereClause | None:
+    base = ""
+    variable_prefix = get_variable_string_prefix(parameters)
+    final = []
+    for idx, filter_string in enumerate(extra_filters):
+        if not filter_string.strip():
+            continue
+        base = "" + variable_prefix
+        for v in parameters:
+            # remove the prefix
+            filter_string = filter_string.replace(v[0], v[0][1:])
+        final.append(f"({filter_string})")
+    if not final:
+        return None
+    final_conditions = " AND ".join(final)
+    _, fparsed = parse_text(
+        f"{base}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
+        env,
+        parse_config=PARSE_CONFIG,
+    )
+    return fparsed[-1].where_clause if fparsed else None
+
+
 def generate_single_query(
     query: str,
     env: Environment,
@@ -70,6 +109,8 @@ def generate_single_query(
     extra_filters: list[str] | None = None,
     parameters: dict[str, str | int | float] | None = None,
     enable_performance_logging: bool = True,
+    extra_conditional: WhereClause | None = None,
+    base_filter_idx: int = 0,
 ):
     start_time = time.time()
 
@@ -88,18 +129,6 @@ def generate_single_query(
     final = parsed[-1]
     variables = parameters or {}
 
-    # Process variables
-    var_start = time.time()
-    variable_prefix = ""
-    for key, variable in variables.items():
-        if isinstance(variable, str):
-            if "'''" in variable:
-                raise ValueError("cannot safely parse strings with triple quotes")
-            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
-        else:
-            variable_prefix += f"\n const {key[1:]} <- {variable};"
-    var_time = time.time() - var_start
-
     # Handle different statement types
     if isinstance(final, RawSQLStatement):
         if enable_performance_logging:
@@ -107,21 +136,19 @@ def generate_single_query(
             perf_logger.debug(
                 f"Raw SQL generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
-                f"Variables: {var_time:.4f}s"
             )
         return ProcessedRawSQLStatement(text=final.text), []
 
-    if not isinstance(final, (SelectStatement, MultiSelectStatement)):
+    if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
         if enable_performance_logging:
             total_time = time.time() - start_time
             perf_logger.debug(
                 f"Non-query generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
-                f"Variables: {var_time:.4f}s"
             )
         return None, columns
-
+    final_select = final.select if isinstance(final, PersistStatement) else final
     # Process columns
     col_start = time.time()
     columns = [
@@ -132,38 +159,34 @@ def generate_single_query(
             traits=get_traits(env.concepts[x.address]),
             description=env.concepts[x.address].metadata.description,
         )
-        for x in final.output_components
+        for x in final_select.output_components
     ]
     col_time = time.time() - col_start
 
     # Set limits and process filters
     limit_filter_start = time.time()
-    if not final.limit:
-        final.limit = STATEMENT_LIMIT
+    if not final_select.limit:
+        final_select.limit = STATEMENT_LIMIT
 
     if extra_filters:
-        for idx, filter_string in enumerate(extra_filters):
-            base = "" + variable_prefix
-            for v in variables:
-                # remove the prefix
-                filter_string = filter_string.replace(v[0], v[0][1:])
-            _, fparsed = parse_text(
-                f"{base}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};",
-                env,
-                parse_config=PARSE_CONFIG,
+        conditional = filters_to_conditional(extra_filters, variables, env, base_filter_idx=base_filter_idx)
+        if not final_select.where_clause:
+            final_select.where_clause = conditional
+        else:
+            final_select.where_clause.conditional = Conditional(
+                left=Parenthetical(content=final_select.where_clause.conditional),
+                right=Parenthetical(content=conditional.conditional),
+                operator=BooleanOperator.AND,
             )
-
-            filterQuery: SelectStatement = fparsed[-1]  # type: ignore
-            if not filterQuery.where_clause:
-                continue
-            if not final.where_clause:
-                final.where_clause = filterQuery.where_clause
-            else:
-                final.where_clause.conditional = Conditional(
-                    left=Parenthetical(content=final.where_clause.conditional),
-                    right=Parenthetical(content=filterQuery.where_clause.conditional),
-                    operator=BooleanOperator.AND,
-                )
+    if extra_conditional:
+        if not final_select.where_clause:
+            final_select.where_clause = extra_conditional
+        else:
+            final_select.where_clause.conditional = Conditional(
+                left=Parenthetical(content=final_select.where_clause.conditional),
+                right=Parenthetical(content=extra_conditional.conditional),
+                operator=BooleanOperator.AND,
+            )
 
     limit_filter_time = time.time() - limit_filter_start
 
@@ -174,10 +197,9 @@ def generate_single_query(
 
     if enable_performance_logging:
         total_time = time.time() - start_time
-        perf_logger.debug(
+        perf_logger.info(
             f"Query generation details - Total: {total_time:.4f}s | "
             f"Parse: {parse_time:.4f}s ({safe_percentage(parse_time, total_time):.1f}%) | "
-            f"Variables: {var_time:.4f}s ({safe_percentage(var_time, total_time):.1f}%) | "
             f"Columns: {col_time:.4f}s ({safe_percentage(col_time, total_time):.1f}%) | "
             f"Filters: {limit_filter_time:.4f}s ({safe_percentage(limit_filter_time, total_time):.1f}%) | "
             f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
@@ -296,11 +318,21 @@ def generate_multi_query_core(
             list[QueryOutColumn],
         ]
     ] = []
-    for subquery in query.queries:
-        generated, columns = generate_single_query(
-            subquery.query, env, dialect, subquery.extra_filters, subquery.parameters
-        )
-        all.append((generated, columns))
+    extra_filters = query.extra_filters
+    variables = query.parameters or {}
+    conditional = None
+    if extra_filters:
+        conditional = filters_to_conditional(extra_filters, variables, env)
+    for idx, subquery in enumerate(query.queries):
+        try:
+            generated, columns = generate_single_query(
+                    subquery.query, env, dialect, extra_filters=subquery.extra_filters, parameters=subquery.parameters, enable_performance_logging=enable_performance_logging, extra_conditional=conditional,
+                    base_filter_idx = idx
+                )
+            all.append((generated, columns))
+        except Exception as e:
+            perf_logger.error(f"Error generating query '{subquery.query}': {e}")
+            all.append((e, []))
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start
@@ -328,8 +360,13 @@ def query_to_output(
                 f"Empty output generation: {time.time() - start_time:.4f}s"
             )
         return QueryOut(generated_sql=None, columns=columns)
-
-    if isinstance(target, RawSQLStatement):
+    if isinstance(target, Exception):
+        return {
+            "generated_sql": None,
+            "columns": [],
+            "error": str(target),
+        }
+    elif isinstance(target, RawSQLStatement):
         output = QueryOut(generated_sql=target.text, columns=columns)
         if enable_performance_logging:
             perf_logger.debug(

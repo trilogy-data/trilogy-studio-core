@@ -130,7 +130,7 @@ onMounted(() => {
     let executor = getDashboardQueryExecutor(dashboard.value.id)
     // filter gridItems and get the KEYS belonging to VALUEs with no results
     let unRun = Object.keys(dashboard.value.gridItems).filter(
-      (itemId) => !dashboardObj.gridItems[itemId].results,
+      (itemId) => !dashboardObj.gridItems[itemId].results
     )
 
     executor?.runBatch(unRun)

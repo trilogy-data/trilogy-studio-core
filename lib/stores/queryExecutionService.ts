@@ -1,6 +1,6 @@
 import { Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
-import type { Import, MultiQueryComponent, QueryResponse, ValidateResponse } from './resolver'
+import type { Import, MultiQueryComponent, QueryResponse, BatchQueryResponse, ValidateResponse } from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
@@ -32,6 +32,13 @@ export interface QueryResult {
   resultSize: number
   columnCount: number
 }
+
+export interface BatchQueryResult {
+  success: boolean
+  results: QueryResult[]
+  executionTime: number
+}
+
 
 interface QueryCancellation {
   cancel: () => void
@@ -65,13 +72,14 @@ export default class QueryExecutionService {
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraFilters?: string[],
+    parameters: Record<string, any> = {},
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
     onFailure?: (message: QueryUpdate) => void,
     onSuccess?: (message: any) => void,
     dryRun: boolean = false,
   ): Promise<{
-    resultPromise: Promise<any>
+    resultPromise: Promise<BatchQueryResult>
     cancellation: QueryCancellation
   }> {
     const startTime = new Date().getTime()
@@ -93,6 +101,7 @@ export default class QueryExecutionService {
         editorType,
         imports,
         extraFilters || [],
+        parameters,
         startTime,
         controller,
         onStarted,
@@ -110,6 +119,7 @@ export default class QueryExecutionService {
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraFilters: string[],
+    parameters: Record<string, any> = {},
     startTime: number,
     controller: AbortController,
     onStarted?: () => void,
@@ -118,7 +128,7 @@ export default class QueryExecutionService {
     onSuccess?: (message: any) => void,
     dryRun: boolean = false,
     extraContent?: ContentInput[],
-  ): Promise<any> {
+  ): Promise<BatchQueryResult> {
     // Notify query started if callback provided
     if (onStarted) onStarted()
 
@@ -127,13 +137,39 @@ export default class QueryExecutionService {
     if (!conn) {
       return {
         success: false,
-        error: `Connection ${connectionId} not found.`,
-        executionTime: 0,
-        results: [],
+        executionTime: new Date().getTime() - startTime,
+        results: queries.map((query) => ({
+          success: false,
+          generated_sql: '',
+          columns: [],
+          error: `Connection ${connectionId} not found.`,
+          executionTime: 0,
+          results: new Results(new Map(), []),
+          resultSize: 0,
+          columnCount: 0,
+        })),
       }
+
     }
 
-    if (!conn.connected && !dryRun) {
+    if (dryRun) {
+      return {
+        success: true,
+        results: queries.map((query) => ({
+          success: true,
+          generated_sql: query.query,
+          columns: [],
+          executionTime: new Date().getTime() - startTime,
+          results: new Results(new Map(), []),
+          resultSize: 0,
+          columnCount: 0,
+        })),
+        executionTime: new Date().getTime() - startTime,
+      }
+
+    }
+
+    if (!conn.connected) {
       try {
         if (onProgress)
           onProgress({
@@ -152,9 +188,18 @@ export default class QueryExecutionService {
         }
         return {
           success: false,
-          error: 'Connection is not active.',
-          executionTime: 0,
-          results: [],
+          executionTime: new Date().getTime() - startTime,
+          results: queries.map((query) => ({
+            success: false,
+            generated_sql: '',
+            columns: [],
+            error: `Connection ${connectionId} not active, failed to reconnect.`,
+            executionTime: new Date().getTime() - startTime,
+            results: new Results(new Map(), []),
+            columnCount: 0,
+            resultSize: 0,
+          })),
+
         }
       }
     }
@@ -162,11 +207,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     if (extraContent) {
       sources = sources.concat(extraContent)
@@ -174,7 +219,7 @@ export default class QueryExecutionService {
     try {
       // Resolve batch queries
       //@ts-ignore
-      const batchResponse: QueryResponse[] = await Promise.race([
+      const batchResponse: BatchQueryResponse = await Promise.race([
         this.trilogyResolver.resolve_queries_batch(
           queries,
           conn.query_type,
@@ -189,34 +234,21 @@ export default class QueryExecutionService {
         }),
       ])
 
-      if (!batchResponse || dryRun) {
-        if (onSuccess) {
-          onSuccess({
-            success: true,
-            results: [],
-            executionTime: new Date().getTime() - startTime,
-          })
-        }
-        return {
-          success: true,
-          results: [],
-          executionTime: new Date().getTime() - startTime,
-        }
-      }
+
 
       // If we have SQL queries to execute, process them
       const results = []
 
       // Only execute if not in dry run mode
-      if (!dryRun && batchResponse && Array.isArray(batchResponse)) {
-        for (let i = 0; i < batchResponse.length; i++) {
-          const queryResult = batchResponse[i].data
+      if (batchResponse && Array.isArray(batchResponse.data.queries)) {
+        for (let i = 0; i < batchResponse.data.queries.length; i++) {
+          const queryResult = batchResponse.data.queries[i]
           if (queryResult.generated_sql) {
             // Execute each SQL query
             try {
               //@ts-ignore
               const sqlResponse: Results = await Promise.race([
-                conn.query(queryResult.generated_sql, queries[i].parameters),
+                conn.query(queryResult.generated_sql, parameters),
                 new Promise((_, reject) => {
                   controller.signal.addEventListener('abort', () =>
                     reject(new Error('Query execution cancelled by user')),
@@ -236,6 +268,7 @@ export default class QueryExecutionService {
                 results: sqlResponse,
                 resultSize: sqlResponse.data.length,
                 columnCount: sqlResponse.headers.size,
+                executionTime: new Date().getTime() - startTime,
               })
 
               // Record query in history
@@ -262,6 +295,11 @@ export default class QueryExecutionService {
                 success: false,
                 error: errorMessage,
                 generatedSql: queryResult.generated_sql,
+                results: new Results(new Map(), []),
+                resultSize: 0,
+                columnCount: 0,
+                executionTime: new Date().getTime() - startTime,
+
               })
 
               // Record error in history
@@ -278,12 +316,33 @@ export default class QueryExecutionService {
                 })
               }
             }
-          } else {
+          } 
+          else if (queryResult.error) {
+            // Query resolution error
+            results.push({
+              success: false,
+              error: queryResult.error,
+              generatedSql: '',
+              executionTime: new Date().getTime() - startTime,
+              results: new Results(new Map(), []),
+              resultSize: 0,
+              columnCount: 0,
+
+            })
+
+          }
+          
+          else {
             // No SQL was generated for this query
             results.push({
               success: false,
               error: 'No SQL was generated for this query',
               generatedSql: '',
+              executionTime: new Date().getTime() - startTime,
+              results: new Results(new Map(), []),
+              resultSize: 0,
+              columnCount: 0,
+
             })
           }
         }
@@ -317,12 +376,12 @@ export default class QueryExecutionService {
 
       return {
         success: false,
-        error: errorMessage,
         executionTime: new Date().getTime() - startTime,
         results: [],
       }
     }
   }
+
   async generateQuery(
     connectionId: string,
     queryInput: QueryInput,
@@ -333,11 +392,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     }
 
@@ -382,11 +441,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     }
     if (queryInput.extraContent) {
@@ -501,9 +560,9 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]?.contents || '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]?.contents || '',
+        }))
         : []
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
