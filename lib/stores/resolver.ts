@@ -60,6 +60,7 @@ export interface QueryAtom {
   generated_sql: string
   columns: any[]
   error: string | null
+  label?: string
 }
 
 export interface QueryResponse {

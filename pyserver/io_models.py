@@ -130,6 +130,7 @@ class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
     error: str | None = None
+    label: str | None = None
 
 class MultiQueryOutSchema(BaseModel):
     queries: List[QueryOut] = Field(default_factory=list)

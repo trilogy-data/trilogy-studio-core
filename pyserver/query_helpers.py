@@ -19,7 +19,7 @@ from trilogy.authoring import (
     Conditional,
     BooleanOperator,
     WhereClause,
-    PersistStatement
+    PersistStatement,
 )
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
@@ -78,7 +78,10 @@ def get_variable_string_prefix(variables: dict[str, str | int | float]) -> str:
 
 
 def filters_to_conditional(
-    extra_filters: list[str], parameters: dict[str, str | int | float], env: Environment, base_filter_idx: int = 0
+    extra_filters: list[str],
+    parameters: dict[str, str | int | float],
+    env: Environment,
+    base_filter_idx: int = 0,
 ) -> WhereClause | None:
     base = ""
     variable_prefix = get_variable_string_prefix(parameters)
@@ -169,7 +172,9 @@ def generate_single_query(
         final_select.limit = STATEMENT_LIMIT
 
     if extra_filters:
-        conditional = filters_to_conditional(extra_filters, variables, env, base_filter_idx=base_filter_idx)
+        conditional = filters_to_conditional(
+            extra_filters, variables, env, base_filter_idx=base_filter_idx
+        )
         if not final_select.where_clause:
             final_select.where_clause = conditional
         else:
@@ -280,6 +285,7 @@ def generate_multi_query_core(
     enable_performance_logging: bool = True,
 ) -> list[
     tuple[
+        str,
         ProcessedQuery
         | ProcessedQueryPersist
         | ProcessedShowStatement
@@ -326,13 +332,19 @@ def generate_multi_query_core(
     for idx, subquery in enumerate(query.queries):
         try:
             generated, columns = generate_single_query(
-                    subquery.query, env, dialect, extra_filters=subquery.extra_filters, parameters=subquery.parameters, enable_performance_logging=enable_performance_logging, extra_conditional=conditional,
-                    base_filter_idx = idx
-                )
-            all.append((generated, columns))
+                subquery.query,
+                env,
+                dialect,
+                extra_filters=subquery.extra_filters,
+                parameters=subquery.parameters,
+                enable_performance_logging=enable_performance_logging,
+                extra_conditional=conditional,
+                base_filter_idx=idx,
+            )
+            all.append((subquery.label, generated, columns))
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
-            all.append((e, []))
+            all.append((subquery.label, e, []))
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start
@@ -349,7 +361,11 @@ def generate_multi_query_core(
 
 
 def query_to_output(
-    target, columns, dialect: BaseDialect, enable_performance_logging: bool = True
+    target,
+    columns,
+    label: str,
+    dialect: BaseDialect,
+    enable_performance_logging: bool = True,
 ) -> QueryOut:
     if enable_performance_logging:
         start_time = time.time()
@@ -359,15 +375,12 @@ def query_to_output(
             perf_logger.debug(
                 f"Empty output generation: {time.time() - start_time:.4f}s"
             )
-        return QueryOut(generated_sql=None, columns=columns)
+        return QueryOut(generated_sql=None, columns=columns, label=label)
     if isinstance(target, Exception):
-        return {
-            "generated_sql": None,
-            "columns": [],
-            "error": str(target),
-        }
+        return QueryOut(generated_sql=None, columns=[], error=str(target), label=label)
+
     elif isinstance(target, RawSQLStatement):
-        output = QueryOut(generated_sql=target.text, columns=columns)
+        output = QueryOut(generated_sql=target.text, columns=columns, label=label)
         if enable_performance_logging:
             perf_logger.debug(
                 f"Raw SQL output generation: {time.time() - start_time:.4f}s"
@@ -378,7 +391,7 @@ def query_to_output(
         sql = dialect.compile_statement(target)
         compile_time = time.time() - compile_start
 
-        output = QueryOut(generated_sql=sql, columns=columns)
+        output = QueryOut(generated_sql=sql, columns=columns, label=label)
 
         if enable_performance_logging:
             total_time = time.time() - start_time

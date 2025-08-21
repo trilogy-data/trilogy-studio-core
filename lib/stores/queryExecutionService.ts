@@ -80,8 +80,8 @@ export default class QueryExecutionService {
     parameters: Record<string, any> = {},
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
-    onFailure?: (message: QueryUpdate) => void,
-    onSuccess?: (message: any) => void,
+    onFailure?: Record<string, (message: any) => void>,
+    onSuccess?: Record<string, (message: any) => void>,
     dryRun: boolean = false,
   ): Promise<{
     resultPromise: Promise<BatchQueryResult>
@@ -129,8 +129,8 @@ export default class QueryExecutionService {
     controller: AbortController,
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
-    onFailure?: (message: QueryUpdate) => void,
-    onSuccess?: (message: any) => void,
+    onFailure?: Record<string, (message: any) => void>,
+    onSuccess?: Record<string, (message: any) => void>,
     dryRun: boolean = false,
     extraContent?: ContentInput[],
   ): Promise<BatchQueryResult> {
@@ -183,11 +183,13 @@ export default class QueryExecutionService {
         if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
       } catch (connectionError) {
         if (onFailure) {
-          onFailure({
-            message: 'Connection failed to reconnect.',
-            error: true,
-            running: false,
-          })
+          Object.values(onFailure).forEach((callback) =>
+            callback({
+              message: 'Connection failed to reconnect.',
+              error: true,
+              running: false,
+            }),
+          )
         }
         return {
           success: false,
@@ -262,15 +264,19 @@ export default class QueryExecutionService {
               }
 
               // Add to results
-              results.push({
+              let resultObj = {
                 success: true,
                 generatedSql: queryResult.generated_sql,
                 results: sqlResponse,
                 resultSize: sqlResponse.data.length,
                 columnCount: sqlResponse.headers.size,
                 executionTime: new Date().getTime() - startTime,
-              })
+              }
 
+              if (onSuccess && queryResult.label && onSuccess[queryResult.label]) {
+                onSuccess[queryResult.label](resultObj)
+              }
+              results.push(resultObj)
               // Record query in history
               if (this.storeHistory) {
                 useQueryHistoryService(connectionId).recordQuery({
@@ -290,8 +296,7 @@ export default class QueryExecutionService {
                 : error instanceof Error
                   ? error.message
                   : 'Unknown error occurred during execution'
-
-              results.push({
+              let resultObj = {
                 success: false,
                 error: errorMessage,
                 generatedSql: queryResult.generated_sql,
@@ -299,7 +304,12 @@ export default class QueryExecutionService {
                 resultSize: 0,
                 columnCount: 0,
                 executionTime: new Date().getTime() - startTime,
-              })
+              }
+              results.push(resultObj)
+              console.error('Error callback for ', queryResult.label, onFailure)
+              if (onFailure && queryResult.label && onFailure[queryResult.label]) {
+                onFailure[queryResult.label](resultObj)
+              }
 
               // Record error in history
               if (this.storeHistory) {
@@ -317,7 +327,7 @@ export default class QueryExecutionService {
             }
           } else if (queryResult.error) {
             // Query resolution error
-            results.push({
+            let resultObj = {
               success: false,
               error: queryResult.error,
               generatedSql: '',
@@ -325,10 +335,15 @@ export default class QueryExecutionService {
               results: new Results(new Map(), []),
               resultSize: 0,
               columnCount: 0,
+            }
+            results.push(resultObj)
+
+            Object.values(onFailure || {}).forEach((callback) => {
+              callback(resultObj)
             })
           } else {
             // No SQL was generated for this query
-            results.push({
+            let resultObj = {
               success: false,
               error: 'No SQL was generated for this query',
               generatedSql: '',
@@ -336,6 +351,10 @@ export default class QueryExecutionService {
               results: new Results(new Map(), []),
               resultSize: 0,
               columnCount: 0,
+            }
+            results.push(resultObj)
+            Object.values(onFailure || {}).forEach((callback) => {
+              callback(resultObj)
             })
           }
         }
@@ -347,9 +366,9 @@ export default class QueryExecutionService {
         executionTime: new Date().getTime() - startTime,
       }
 
-      if (onSuccess) {
-        onSuccess(finalResult)
-      }
+      // if (onSuccess) {
+      //   onSuccess(finalResult)
+      // }
 
       return finalResult
     } catch (error) {
@@ -360,11 +379,13 @@ export default class QueryExecutionService {
           : 'Unknown error occurred'
 
       if (onFailure) {
-        onFailure({
-          message: errorMessage,
-          error: true,
-          running: false,
-        })
+        Object.values(onFailure).forEach((callback) =>
+          callback({
+            message: errorMessage,
+            error: true,
+            running: false,
+          }),
+        )
       }
 
       return {

@@ -224,8 +224,8 @@ def generate_queries(queries: MultiQueryInSchema):
             output_start = time.time()
 
         result = MultiQueryOutSchema(queries= [
-                query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
-                for target, columns in statements
+                query_to_output(target, columns, label, dialect, ENABLE_PERF_LOGGING)
+                for label, target, columns in statements
             ]
         )
 
@@ -274,7 +274,7 @@ def generate_query(query: QueryInSchema):
 
         # Time the output formatting
         output_start = time.perf_counter()
-        result = query_to_output(target, columns, dialect, ENABLE_PERF_LOGGING)
+        result = query_to_output(target, columns, 'default', dialect, ENABLE_PERF_LOGGING)
         output_time = time.perf_counter() - output_start
 
         if ENABLE_PERF_LOGGING:

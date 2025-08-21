@@ -3,6 +3,7 @@ import type { Dashboard, GridItemDataResponse } from '../dashboards/base'
 import type { ContentInput, MultiQueryComponent } from '../stores/resolver'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
+import type { Results } from '../editors/results'
 
 export interface QueryExecutorDependencies {
   queryExecutionService: QueryExecutionService
@@ -661,7 +662,34 @@ export class DashboardQueryExecutor {
       if (queryArgsList.length === 0) {
         return
       }
-
+      let callbacks = Object.fromEntries(
+        queryArgsList.map((queryArgs) => [
+          queryArgs.label,
+          (results: Results) => {
+            validQueries.find((q) => q.id === queryArgs.label)?.onSuccess(results)
+            const waiter = this.queryWaiters.get(queryArgs.label)
+            if (waiter) {
+              waiter.resolve(results)
+              this.queryWaiters.delete(queryArgs.label)
+            }
+            this.activeQueries.delete(queryArgs.label)
+            this.cleanupQueryTracking(queryArgs.label)
+          },
+        ]),
+      )
+      let errorCallbacks = Object.fromEntries(
+        queryArgsList.map((queryArgs) => [
+          queryArgs.label,
+          (error: string) => {
+            let matched = validQueries.find((q) => q.id === queryArgs.label)
+            if (matched) {
+              this.handleQueryError(matched, error)
+            }
+            this.activeQueries.delete(queryArgs.label)
+            this.cleanupQueryTracking(queryArgs.label)
+          },
+        ]),
+      )
       // Execute batch query
       const { resultPromise } = await this.queryExecutionService.executeQueriesBatch(
         this.connectionName,
@@ -669,43 +697,17 @@ export class DashboardQueryExecutor {
         'trilogy',
         dashboardData.imports,
         [],
+        {},
         () => {},
         () => {},
+        errorCallbacks,
+        callbacks,
       )
 
       // Handle batch results
       const results = await resultPromise
 
       console.log(`Batch query executed successfully with ${results.results.length} results`)
-
-      // Process each result
-      results.results.forEach((result: any, index: number) => {
-        // if (index >= validQueries.length) return;
-
-        const queuedQuery = validQueries[index]
-        const queryId = queuedQuery.id
-
-        try {
-          if (result.success && result.results) {
-            // Success case
-            queuedQuery.onSuccess(result)
-
-            // Resolve any waiting promises
-            const waiter = this.queryWaiters.get(queryId)
-            if (waiter) {
-              waiter.resolve(result)
-              this.queryWaiters.delete(queryId)
-            }
-          } else if (result.error) {
-            // Error case
-            this.handleQueryError(queuedQuery, result.error)
-          }
-        } finally {
-          // Clean up this specific query
-          this.activeQueries.delete(queryId)
-          this.cleanupQueryTracking(queryId)
-        }
-      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
 
