@@ -1,6 +1,12 @@
 import { Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
-import type { Import, MultiQueryComponent, QueryResponse, BatchQueryResponse, ValidateResponse } from './resolver'
+import type {
+  Import,
+  MultiQueryComponent,
+  QueryResponse,
+  BatchQueryResponse,
+  ValidateResponse,
+} from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
@@ -38,7 +44,6 @@ export interface BatchQueryResult {
   results: QueryResult[]
   executionTime: number
 }
-
 
 interface QueryCancellation {
   cancel: () => void
@@ -138,7 +143,7 @@ export default class QueryExecutionService {
       return {
         success: false,
         executionTime: new Date().getTime() - startTime,
-        results: queries.map((query) => ({
+        results: queries.map((_) => ({
           success: false,
           generated_sql: '',
           columns: [],
@@ -149,7 +154,6 @@ export default class QueryExecutionService {
           columnCount: 0,
         })),
       }
-
     }
 
     if (dryRun) {
@@ -166,7 +170,6 @@ export default class QueryExecutionService {
         })),
         executionTime: new Date().getTime() - startTime,
       }
-
     }
 
     if (!conn.connected) {
@@ -189,7 +192,7 @@ export default class QueryExecutionService {
         return {
           success: false,
           executionTime: new Date().getTime() - startTime,
-          results: queries.map((query) => ({
+          results: queries.map((_) => ({
             success: false,
             generated_sql: '',
             columns: [],
@@ -199,7 +202,6 @@ export default class QueryExecutionService {
             columnCount: 0,
             resultSize: 0,
           })),
-
         }
       }
     }
@@ -207,11 +209,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     if (extraContent) {
       sources = sources.concat(extraContent)
@@ -233,8 +235,6 @@ export default class QueryExecutionService {
           )
         }),
       ])
-
-
 
       // If we have SQL queries to execute, process them
       const results = []
@@ -299,7 +299,6 @@ export default class QueryExecutionService {
                 resultSize: 0,
                 columnCount: 0,
                 executionTime: new Date().getTime() - startTime,
-
               })
 
               // Record error in history
@@ -316,8 +315,7 @@ export default class QueryExecutionService {
                 })
               }
             }
-          } 
-          else if (queryResult.error) {
+          } else if (queryResult.error) {
             // Query resolution error
             results.push({
               success: false,
@@ -327,12 +325,8 @@ export default class QueryExecutionService {
               results: new Results(new Map(), []),
               resultSize: 0,
               columnCount: 0,
-
             })
-
-          }
-          
-          else {
+          } else {
             // No SQL was generated for this query
             results.push({
               success: false,
@@ -342,7 +336,6 @@ export default class QueryExecutionService {
               results: new Results(new Map(), []),
               resultSize: 0,
               columnCount: 0,
-
             })
           }
         }
@@ -392,11 +385,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     }
 
@@ -441,11 +434,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     }
     if (queryInput.extraContent) {
@@ -560,9 +553,9 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]?.contents || '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]?.contents || '',
+          }))
         : []
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)

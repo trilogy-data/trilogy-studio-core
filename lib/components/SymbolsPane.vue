@@ -67,43 +67,55 @@
     >
       <div class="tooltip-header">
         <div class="tooltip-icon" :class="getIconClass(tooltip.symbol)">
-          <i v-if="getIconType(tooltip.symbol) === 'mdi'" :class="getIconMdiClass(tooltip.symbol)"></i>
+          <i
+            v-if="getIconType(tooltip.symbol) === 'mdi'"
+            :class="getIconMdiClass(tooltip.symbol)"
+          ></i>
           <template v-else>{{ getSymbolChar(tooltip.symbol) }}</template>
         </div>
         <div class="tooltip-title">{{ tooltip.symbol.label }}</div>
       </div>
-      
+
       <div class="tooltip-content">
         <div v-if="tooltip.symbol.type" class="tooltip-row">
           <span class="tooltip-label">Type:</span>
           <!-- <span class="tooltip-value type-value">{{ tooltip.symbol.type }}</span> -->
-          <span v-if="tooltip.symbol.datatype && tooltip.symbol.datatype !== tooltip.symbol.type" class="tooltip-datatype">
+          <span
+            v-if="tooltip.symbol.datatype && tooltip.symbol.datatype !== tooltip.symbol.type"
+            class="tooltip-datatype"
+          >
             {{ tooltip.symbol.datatype }}
           </span>
         </div>
-        
+
         <!-- <div v-if="tooltip.symbol.trilogyType" class="tooltip-row">
           <span class="tooltip-label">Trilogy:</span>
           <span class="tooltip-value trilogy-value">{{ tooltip.symbol.trilogyType }}</span>
         </div> -->
-        
+
         <div v-if="tooltip.symbol.trilogySubType" class="tooltip-row">
           <span class="tooltip-label">Category:</span>
           <span class="tooltip-value category-value" :class="tooltip.symbol.trilogySubType">
             {{ tooltip.symbol.trilogySubType }}
           </span>
         </div>
-        
-        <div v-if="tooltip.symbol.description && tooltip.symbol.description.trim()" class="tooltip-row description-row">
+
+        <div
+          v-if="tooltip.symbol.description && tooltip.symbol.description.trim()"
+          class="tooltip-row description-row"
+        >
           <span class="tooltip-label">Description:</span>
           <div class="tooltip-value description-value">{{ tooltip.symbol.description }}</div>
         </div>
-        
-        <div v-if="tooltip.symbol.calculation && tooltip.symbol.calculation.trim()" class="tooltip-row calculation-row">
+
+        <div
+          v-if="tooltip.symbol.calculation && tooltip.symbol.calculation.trim()"
+          class="tooltip-row calculation-row"
+        >
           <span class="tooltip-label">Calculation:</span>
           <div class="tooltip-value calculation-value">{{ tooltip.symbol.calculation }}</div>
         </div>
-        
+
         <div v-if="tooltip.symbol.keys && tooltip.symbol.keys.length > 0" class="tooltip-row">
           <span class="tooltip-label">Keys:</span>
           <div class="tooltip-value keys-value">
@@ -112,8 +124,11 @@
             </span>
           </div>
         </div>
-        
-        <div v-if="tooltip.symbol.insertText && tooltip.symbol.insertText !== tooltip.symbol.label" class="tooltip-row">
+
+        <div
+          v-if="tooltip.symbol.insertText && tooltip.symbol.insertText !== tooltip.symbol.label"
+          class="tooltip-row"
+        >
           <span class="tooltip-label">Insert:</span>
           <code class="tooltip-value insert-value">{{ tooltip.symbol.insertText }}</code>
         </div>
@@ -237,7 +252,7 @@ export default defineComponent({
       if (tooltipTimeout) {
         clearTimeout(tooltipTimeout)
       }
-      
+
       tooltipTimeout = setTimeout(() => {
         tooltip.symbol = symbol
         tooltip.visible = true
@@ -257,27 +272,27 @@ export default defineComponent({
     // Update tooltip position
     const updateTooltipPosition = (event: MouseEvent) => {
       if (!tooltip.visible) return
-      
+
       const offset = 10
       const tooltipEl = document.querySelector('.custom-tooltip') as HTMLElement
-      
+
       if (tooltipEl) {
         const rect = tooltipEl.getBoundingClientRect()
         const viewportWidth = window.innerWidth
         const viewportHeight = window.innerHeight
-        
+
         let x = event.clientX + offset
         let y = event.clientY + offset
-        
+
         // Adjust if tooltip would go off-screen
         if (x + rect.width > viewportWidth) {
           x = event.clientX - rect.width - offset
         }
-        
+
         if (y + rect.height > viewportHeight) {
           y = event.clientY - rect.height - offset
         }
-        
+
         tooltip.x = Math.max(0, x)
         tooltip.y = Math.max(0, y)
       } else {
@@ -647,18 +662,42 @@ export default defineComponent({
   background-color: var(--button-bg);
 }
 
-.tooltip-icon.function { color: #dcdcaa; }
-.tooltip-icon.variable { color: #9cdcfe; }
-.tooltip-icon.class { color: #4ec9b0; }
-.tooltip-icon.interface { color: #b8d7a3; }
-.tooltip-icon.method { color: #dcdcaa; }
-.tooltip-icon.property { color: #9cdcfe; }
-.tooltip-icon.field { color: #9cdcfe; }
-.tooltip-icon.constant { color: #4fc1ff; }
-.tooltip-icon.enum { color: #b8d7a3; }
-.tooltip-icon.keyword { color: #569cd6; }
-.tooltip-icon.key { color: #f8c555; }
-.tooltip-icon.metric { color: #75beff; }
+.tooltip-icon.function {
+  color: #dcdcaa;
+}
+.tooltip-icon.variable {
+  color: #9cdcfe;
+}
+.tooltip-icon.class {
+  color: #4ec9b0;
+}
+.tooltip-icon.interface {
+  color: #b8d7a3;
+}
+.tooltip-icon.method {
+  color: #dcdcaa;
+}
+.tooltip-icon.property {
+  color: #9cdcfe;
+}
+.tooltip-icon.field {
+  color: #9cdcfe;
+}
+.tooltip-icon.constant {
+  color: #4fc1ff;
+}
+.tooltip-icon.enum {
+  color: #b8d7a3;
+}
+.tooltip-icon.keyword {
+  color: #569cd6;
+}
+.tooltip-icon.key {
+  color: #f8c555;
+}
+.tooltip-icon.metric {
+  color: #75beff;
+}
 
 .tooltip-title {
   font-weight: 600;
@@ -789,7 +828,7 @@ export default defineComponent({
     border-left: none;
     border-top: 1px solid var(--border-color, #444);
   }
-  
+
   .custom-tooltip {
     max-width: 280px;
     font-size: 11px;

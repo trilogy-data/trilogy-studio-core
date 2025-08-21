@@ -258,19 +258,20 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    updateDashboardFilter(id: string, filter: string) {
+    updateDashboardFilter(id: string, filter: string): string[] {
       if (this.dashboards[id]) {
-        let filterFirst = this.dashboards[id].filter;
+        let filterFirst = this.dashboards[id].filter
         if (!filter || stripAllWhitespace(filter) === '') {
           this.dashboards[id].filter = null
           if (filterFirst != null) {
-            return Object.keys(this.dashboards[id].gridItems)
+            return Object.entries(this.dashboards[id].gridItems).map(([itemId, _]) => itemId)
           }
         }
         this.dashboards[id].filter = filter
         if (filterFirst !== filter) {
-          return Object.keys(this.dashboards[id].gridItems)
+          return Object.entries(this.dashboards[id].gridItems).map(([itemId, _]) => itemId)
         }
+        return []
       } else {
         throw new Error(`Dashboard with ID "${id}" not found.`)
       }
@@ -394,7 +395,12 @@ export const useDashboardStore = defineStore('dashboards', {
     ): string[] {
       // add/remove the filter to all items in the dashboard who do not match the itemId
       if (this.dashboards[dashboardId]) {
-        return this.dashboards[dashboardId].updateItemCrossFilters(itemId, conceptMap, chartMap, operation)
+        return this.dashboards[dashboardId].updateItemCrossFilters(
+          itemId,
+          conceptMap,
+          chartMap,
+          operation,
+        )
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
@@ -635,9 +641,9 @@ export const useDashboardStore = defineStore('dashboards', {
           current.connection,
           queryInput,
           // Starter callback (empty for now)
-          () => { },
+          () => {},
           // Progress callback
-          () => { },
+          () => {},
           // Failure callback
           onError,
           // Success callback

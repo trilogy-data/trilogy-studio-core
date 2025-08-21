@@ -6,7 +6,7 @@ const vegaSelector = '.vega-active canvas'
 
 async function getRelativePixelColor(page, relX, relY) {
   // these cannot use vegaSelector constant as evaluated in the browser context
-  const canvasBounds = await page.locator( '.vega-active canvas').boundingBox()
+  const canvasBounds = await page.locator('.vega-active canvas').boundingBox()
   if (!canvasBounds) {
     throw new Error('Could not get canvas bounds')
   }
@@ -22,7 +22,7 @@ async function getPixelColor(page, x, y) {
   return page.evaluate(
     ({ x, y }) => {
       // these cannot use vegaSelector constant as evaluated in the browser context
-      const canvas = document.querySelector( '.vega-active canvas') as HTMLCanvasElement
+      const canvas = document.querySelector('.vega-active canvas') as HTMLCanvasElement
       if (!canvas) return null
 
       // Get the canvas's CSS dimensions (how it appears on screen)
@@ -63,7 +63,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('sidebar-link-community-models').click({force:true})
+  await page.getByTestId('sidebar-link-community-models').click({ force: true })
   await page.getByTestId('community-model-search').click()
   await page.getByTestId('community-model-search').press('ControlOrMeta+a')
   await page.getByTestId('community-model-search').fill('faa')
@@ -148,7 +148,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   // toggle it
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
   // await page.getByTestId('vega-chart-container-2').click();
-  await page.getByTestId('vega-chart-container-2').hover({force: true})
+  await page.getByTestId('vega-chart-container-2').hover({ force: true })
   await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.getByTestId('chart-type-usa-map').click()
 

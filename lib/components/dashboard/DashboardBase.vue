@@ -130,7 +130,7 @@ onMounted(() => {
     let executor = getDashboardQueryExecutor(dashboard.value.id)
     // filter gridItems and get the KEYS belonging to VALUEs with no results
     let unRun = Object.keys(dashboard.value.gridItems).filter(
-      (itemId) => !dashboardObj.gridItems[itemId].results
+      (itemId) => !dashboardObj.gridItems[itemId].results,
     )
 
     executor?.runBatch(unRun)
@@ -162,7 +162,6 @@ onBeforeUnmount(() => {
   }
 })
 
-
 // Filter management
 async function handleFilterClear() {
   if (dashboard.value && dashboard.value.id) {
@@ -171,7 +170,6 @@ async function handleFilterClear() {
     filterError.value = ''
     let updated = dashboardStore.removeAllFilters(dashboard.value.id)
     await dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
-
   }
 }
 
@@ -179,7 +177,10 @@ async function handleFilterChange(newFilter: string) {
   if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
-      let updated = dashboardStore.updateDashboardFilter(dashboard.value.id, stripAllWhitespace(newFilter))
+      let updated = dashboardStore.updateDashboardFilter(
+        dashboard.value.id,
+        stripAllWhitespace(newFilter),
+      )
       await dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
     }
     return
@@ -199,7 +200,9 @@ async function handleFilterChange(newFilter: string) {
       .then(() => {
         filterError.value = ''
         if (dashboard.value && dashboard.value.id) {
-          dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+          let updated = dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+          console.log('Updated filter:', updated)
+          dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
         }
       })
       .catch((error) => {

@@ -15,8 +15,8 @@
       :loading="loading"
     />
 
-    <div 
-      v-if="!loading && editMode" 
+    <div
+      v-if="!loading && editMode"
       class="controls-toggle"
       :class="{ 'controls-visible': controlsVisible }"
     >
@@ -33,7 +33,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, computed, watch, ref, onMounted, type PropType } from 'vue'
+import { defineComponent, inject, computed, ref, onMounted, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { Results } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
@@ -158,12 +158,6 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
-    const filters = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
-        (filter) => filter.value,
-      )
-    })
-
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
       const itemData = props.getItemData(props.itemId, props.dashboardId)
@@ -216,7 +210,6 @@ export default defineComponent({
         executeQuery()
       }
     }
-
 
     return {
       chartContainer,
@@ -275,7 +268,9 @@ export default defineComponent({
   flex-direction: column;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
 }
 
 .controls-toggle.controls-visible {
@@ -323,7 +318,7 @@ export default defineComponent({
     opacity: 1;
     visibility: visible;
   }
-  
+
   .control-btn {
     width: 32px;
     height: 32px;

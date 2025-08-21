@@ -47,7 +47,7 @@
         :useDefaultStyle="false"
         class="action-item"
         :action="() => $emit('validate')"
-        >
+      >
         <i class="mdi mdi-code-braces icon"></i>
         Parse
       </loading-button>
@@ -57,7 +57,7 @@
         class="action-item"
         :action="() => $emit('generate')"
         data-testid="editor-generate-button"
-        >
+      >
         <i class="mdi mdi-creation-outline icon"></i>
         AI
       </loading-button>

@@ -421,10 +421,9 @@ export class DashboardModel implements Dashboard {
   }
 
   removeItemCrossFilterSource(itemId: string): string[] {
-    // remove the filter from all items in the dashboard who DOmatch the itemId
+    // remove the filter from all items in the dashboard who DO match the itemId
     let updated = []
     for (const id in this.gridItems) {
-
       if (id === itemId) {
         const gridItem = this.gridItems[id]
         gridItem.filters = gridItem.filters || []
@@ -432,14 +431,16 @@ export class DashboardModel implements Dashboard {
       }
       if (id !== itemId) {
         const gridItem = this.gridItems[id]
-        let hasFilter = gridItem.conceptFilters && gridItem.conceptFilters.length > 0 && gridItem.conceptFilters.some((f) => f.source === itemId)
+        let hasFilter =
+          gridItem.conceptFilters &&
+          gridItem.conceptFilters.length > 0 &&
+          gridItem.conceptFilters.some((f) => f.source === itemId)
         gridItem.conceptFilters = gridItem.conceptFilters || []
         gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
         if (hasFilter) {
           this.updateItemFilters(id)
           updated.push(id)
         }
-        
       }
     }
     return updated
@@ -450,7 +451,10 @@ export class DashboardModel implements Dashboard {
     let updated = []
     for (const id in this.gridItems) {
       const gridItem = this.gridItems[id]
-      if ((gridItem.conceptFilters && gridItem.conceptFilters.length > 0) || (gridItem.filters && gridItem.filters.length > 0)) {
+      if (
+        (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) ||
+        (gridItem.filters && gridItem.filters.length > 0)
+      ) {
         updated.push(id)
       }
       gridItem.conceptFilters = []

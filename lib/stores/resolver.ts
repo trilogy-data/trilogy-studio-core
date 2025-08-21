@@ -57,11 +57,9 @@ class LRUCache<T> {
 }
 
 export interface QueryAtom {
-
   generated_sql: string
   columns: any[]
   error: string | null
-
 }
 
 export interface QueryResponse {
