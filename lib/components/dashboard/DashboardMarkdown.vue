@@ -217,15 +217,6 @@ export default defineComponent({
       }
     }
 
-    // Watch for changes and re-execute query
-    watch([filters], (newVal, oldVal) => {
-      // Check if arrays have the same content
-      const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
-
-      if (contentChanged) {
-        executeQuery()
-      }
-    })
 
     return {
       chartContainer,
