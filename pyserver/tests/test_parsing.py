@@ -5,13 +5,11 @@ from env_helpers import parse_env_from_full_model
 from trilogy.render import get_dialect_generator
 from main import generate_query_core
 from io_models import MultiQueryInSchema
-from trilogy.render import get_dialect_generator
-from main import generate_multi_query_core, perf_logger
+from main import generate_multi_query_core
 from trilogy.authoring import ArrayType, StructType
 from trilogy.core.models.core import MapType
 from trilogy.core.statements.execute import ProcessedQuery, ProcessedQueryPersist
 from trilogy.core.exceptions import UndefinedConceptException
-from pytest import raises
 
 RAW_PAYLOAD = {
     "imports": [{"name": "game_event", "alias": None}],
@@ -313,13 +311,13 @@ address flight;
     assert len(results) == 3
 
     # Each result should have generated SQL and columns
-    for result, columns in results:
+    for label, result, columns in results:
         assert result is not None
         assert len(columns) > 0
 
     # Check first query returns count
-    assert results[0][1][0].name == "flight_count"
-    assert "count" in dialect.compile_statement(results[0][0]).lower()
+    assert results[0][2][0].name == "flight_count"
+    assert "count" in dialect.compile_statement(results[0][1]).lower()
 
 
 def test_multi_query_with_filters_and_params():
@@ -379,15 +377,15 @@ address `bigquery-public-data.ncaa_basketball.mbb_games_sr`;
     assert len(results) == 3
 
     # First query should have season filter
-    sql1 = dialect.compile_statement(results[0][0])
+    sql1 = dialect.compile_statement(results[0][1])
     assert "2023" in sql1
 
     # Second query should have parameter
-    sql2 = dialect.compile_statement(results[1][0])
+    sql2 = dialect.compile_statement(results[1][1])
     assert ":team_name" in sql2 or "Duke" in sql2
 
     # Third query should have multiple filters
-    sql3 = dialect.compile_statement(results[2][0])
+    sql3 = dialect.compile_statement(results[2][1])
     assert "2023" in sql3
 
 
@@ -440,7 +438,10 @@ address airport;
             ],
         },
         "queries": [
-            {"query": "SELECT f.origin.city, count(f.id2) as flight_count;", "label": "using_alias"},
+            {
+                "query": "SELECT f.origin.city, count(f.id2) as flight_count;",
+                "label": "using_alias",
+            },
             {"query": "SELECT city, state;", "label": "direct_import"},
             {
                 "query": "SELECT f.destination.state, sum(f.distance) as total_distance_2;",
@@ -456,7 +457,7 @@ address airport;
     assert len(results) == 3
 
     # All queries should successfully compile
-    for result, columns in results:
+    for label, result, columns in results:
         assert result is not None
         sql = dialect.compile_statement(result)
         assert sql is not None
@@ -511,14 +512,14 @@ SELECT
     assert len(results) == 3
 
     # Check constants are properly handled
-    assert results[0][1][0].name == "price"
-    assert results[0][1][1].name == "tax"
-    assert results[0][1][2].name == "total"
+    assert results[0][2][0].name == "price"
+    assert results[0][2][1].name == "tax"
+    assert results[0][2][2].name == "total"
 
-    assert results[1][1][0].name == "state"
+    assert results[1][2][0].name == "state"
 
-    assert results[2][1][0].name == "max_val"
-    assert results[2][1][1].name == "min_val"
+    assert results[2][2][0].name == "max_val"
+    assert results[2][2][1].name == "min_val"
 
 
 def test_multi_query_mixed_statement_types():
@@ -570,18 +571,20 @@ WHERE flight.distance > 500;
     assert len(results) == 2
 
     # First should be a regular query
-    assert isinstance(results[0][0], ProcessedQuery)
+    assert isinstance(results[0][1], ProcessedQuery)
 
-    assert isinstance(results[1][0], ProcessedQueryPersist)
+    assert isinstance(results[1][1], ProcessedQueryPersist)
 
 
 def test_multi_query_error_handling():
     """Test that errors in one query don't affect others"""
     multi_query = {
-        "imports": [{
-            "name": "test",
-            "alias": None,
-        }],
+        "imports": [
+            {
+                "name": "test",
+                "alias": None,
+            }
+        ],
         "dialect": "duckdb",
         "full_model": {
             "name": "",
@@ -615,9 +618,10 @@ address test_table;
     query = MultiQueryInSchema.model_validate(multi_query)
     dialect = get_dialect_generator(query.dialect)
 
-    with raises(UndefinedConceptException):
-        results = generate_multi_query_core(query, dialect)
-
+    results = generate_multi_query_core(query, dialect)
+    assert isinstance(
+        results[1][1], UndefinedConceptException
+    )  # The invalid query should not return a result
 
 
 def test_multi_query_performance_logging():
@@ -671,10 +675,12 @@ def test_multi_query_empty_queries():
 def test_multi_query_complex_datatypes():
     """Test multi-query with complex datatypes like arrays and structs"""
     multi_query = {
-        "imports": [{
-            "name": "complex",
-            "alias": "complex",
-        }],
+        "imports": [
+            {
+                "name": "complex",
+                "alias": "complex",
+            }
+        ],
         "dialect": "duckdb",
         "full_model": {
             "name": "",
@@ -713,13 +719,13 @@ address complex_table;
     assert len(results) == 3
 
     # Check array type
-    assert isinstance(results[0][1][0].datatype, ArrayType)
+    assert isinstance(results[0][2][0].datatype, ArrayType)
 
     # Check struct type
-    assert isinstance(results[1][1][0].datatype, StructType)
+    assert isinstance(results[1][2][0].datatype, StructType)
 
     # Check map type
-    assert isinstance(results[2][1][0].datatype, MapType)
+    assert isinstance(results[2][2][0].datatype, MapType)
 
 
 def test_multi_query_with_calculations():
@@ -799,11 +805,11 @@ order by count desc;
     assert len(results) == 3
 
     # Check aggregation query
-    assert "event_count" in [col.name for col in results[0][1]]
-    assert "total_points" in [col.name for col in results[0][1]]
+    assert "event_count" in [col.name for col in results[0][2]]
+    assert "total_points" in [col.name for col in results[0][2]]
 
     # Check calculated percentage query
-    assert "percentage" in [col.name for col in results[1][1]]
+    assert "percentage" in [col.name for col in results[1][2]]
 
     # Check case statement query
-    assert "shot_type" in [col.name for col in results[2][1]]
+    assert "shot_type" in [col.name for col in results[2][2]]

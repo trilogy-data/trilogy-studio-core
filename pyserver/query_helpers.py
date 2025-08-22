@@ -1,9 +1,5 @@
 import time
 
-from dataclasses import dataclass
-
-from uvicorn.config import LOGGING_CONFIG
-
 
 from trilogy.constants import Parsing
 from trilogy import Environment
@@ -31,7 +27,6 @@ from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 
 from env_helpers import parse_env_from_full_model
-from trilogy import __version__
 
 
 from io_models import (
@@ -102,7 +97,13 @@ def filters_to_conditional(
         env,
         parse_config=PARSE_CONFIG,
     )
-    return fparsed[-1].where_clause if fparsed else None
+    return (
+        fparsed[-1].where_clause
+        if isinstance(
+            fparsed, (SelectStatement, MultiSelectStatement, PersistStatement)
+        )
+        else None
+    )
 
 
 def generate_single_query(
@@ -121,13 +122,13 @@ def generate_single_query(
     parse_start = time.time()
     _, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
     parse_time = time.time() - parse_start
-
+    default_return: list[QueryOutColumn] = []
     if not parsed:
         if enable_performance_logging:
             perf_logger.debug(
                 f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
             )
-        return None, []
+        return None, default_return
 
     final = parsed[-1]
     variables = parameters or {}
@@ -140,7 +141,7 @@ def generate_single_query(
                 f"Raw SQL generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return ProcessedRawSQLStatement(text=final.text), []
+        return ProcessedRawSQLStatement(text=final.text), default_return
 
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
@@ -177,7 +178,7 @@ def generate_single_query(
         )
         if not final_select.where_clause:
             final_select.where_clause = conditional
-        else:
+        elif conditional:
             final_select.where_clause.conditional = Conditional(
                 left=Parenthetical(content=final_select.where_clause.conditional),
                 right=Parenthetical(content=conditional.conditional),
@@ -290,6 +291,7 @@ def generate_multi_query_core(
         | ProcessedQueryPersist
         | ProcessedShowStatement
         | ProcessedRawSQLStatement
+        | Exception
         | None,
         list[QueryOutColumn],
     ],
@@ -316,14 +318,17 @@ def generate_multi_query_core(
 
     all: list[
         tuple[
+            str,
             ProcessedQuery
             | ProcessedQueryPersist
             | ProcessedShowStatement
             | ProcessedRawSQLStatement
+            | Exception
             | None,
             list[QueryOutColumn],
         ]
     ] = []
+    default_return: list[QueryOutColumn] = []
     extra_filters = query.extra_filters
     variables = query.parameters or {}
     conditional = None
@@ -341,10 +346,10 @@ def generate_multi_query_core(
                 extra_conditional=conditional,
                 base_filter_idx=idx,
             )
-            all.append((subquery.label, generated, columns))
+            all.append((subquery.label, generated, columns))  # type: ignore
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
-            all.append((subquery.label, e, []))
+            all.append((subquery.label, e, default_return))  # type: ignore
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start

@@ -14,7 +14,7 @@ from trilogy.core.models.core import (
 )
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
-from trilogy.core.statements.execute import ProcessedQuery, ProcessedRawSQLStatement
+from trilogy.core.statements.execute import ProcessedRawSQLStatement
 from functools import wraps
 
 

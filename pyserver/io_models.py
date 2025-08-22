@@ -89,7 +89,7 @@ class MultiQueryComponent(BaseModel):
     label: str | None = None
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
-    
+
 
 class MultiQueryInSchema(BaseModel):
     imports: List[Import]
@@ -98,7 +98,6 @@ class MultiQueryInSchema(BaseModel):
     queries: List[MultiQueryComponent]
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
-    
 
 
 class QueryInSchema(BaseModel):
@@ -132,8 +131,10 @@ class QueryOut(BaseModel):
     error: str | None = None
     label: str | None = None
 
+
 class MultiQueryOutSchema(BaseModel):
     queries: List[QueryOut] = Field(default_factory=list)
+
 
 class Severity(Enum):
     Error = 8

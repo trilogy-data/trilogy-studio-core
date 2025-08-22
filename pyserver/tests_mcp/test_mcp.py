@@ -20,7 +20,7 @@ select
 
 
 def test_list_connection_fields():
-    c = create_model_connection("test_duckdb_faa", "faa")
+    create_model_connection("test_duckdb_faa", "faa")
     fields = list_connection_fields("test_duckdb_faa")
 
     assert len(fields) > 0
@@ -30,7 +30,7 @@ def test_list_connection_fields():
 
 
 def test_run_trilogy_query():
-    c = create_model_connection("test_duckdb_faa", "faa")
+    create_model_connection("test_duckdb_faa", "faa")
     results = run_trilogy_query(
         """select
     origin.city,
