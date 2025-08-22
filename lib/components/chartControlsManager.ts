@@ -34,7 +34,6 @@ export class ChartControlsManager {
 
   onChartMouseLeave(): void {
     this.controlsVisible.value = false
-
   }
 
   // Toggle controls visible/hidden
@@ -118,6 +117,4 @@ export class ChartControlsManager {
     }
     return true
   }
-
-
 }

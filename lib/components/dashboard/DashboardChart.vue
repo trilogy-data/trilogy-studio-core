@@ -170,12 +170,6 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
-    const filters = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).filters || []).map(
-        (filter) => filter.value,
-      )
-    })
-
     const chartSelection = computed(() => {
       return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map(
         (filter) => filter.value,
@@ -272,15 +266,6 @@ export default defineComponent({
     const handleBackgroundClick = () => {
       emit('background-click')
     }
-
-    watch([filters], (newVal, oldVal) => {
-      // Check if arrays have the same content
-      const contentChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal)
-
-      if (contentChanged) {
-        executeQuery()
-      }
-    })
 
     return {
       chartContainer,

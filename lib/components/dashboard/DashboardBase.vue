@@ -162,14 +162,14 @@ onBeforeUnmount(() => {
   }
 })
 
-
 // Filter management
 async function handleFilterClear() {
   if (dashboard.value && dashboard.value.id) {
     filter.value = ''
     filterInput.value = ''
     filterError.value = ''
-    dashboardStore.removeAllFilters(dashboard.value.id)
+    let updated = dashboardStore.removeAllFilters(dashboard.value.id)
+    await dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
   }
 }
 
@@ -177,7 +177,11 @@ async function handleFilterChange(newFilter: string) {
   if (!newFilter || stripAllWhitespace(newFilter) === '') {
     filterError.value = ''
     if (dashboard.value && dashboard.value.id) {
-      dashboardStore.updateDashboardFilter(dashboard.value.id, stripAllWhitespace(newFilter))
+      let updated = dashboardStore.updateDashboardFilter(
+        dashboard.value.id,
+        stripAllWhitespace(newFilter),
+      )
+      await dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
     }
     return
   }
@@ -196,7 +200,9 @@ async function handleFilterChange(newFilter: string) {
       .then(() => {
         filterError.value = ''
         if (dashboard.value && dashboard.value.id) {
-          dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+          let updated = dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
+          console.log('Updated filter:', updated)
+          dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
         }
       })
       .catch((error) => {
@@ -581,23 +587,26 @@ function setCrossFilter(info: DimensionClick): void {
     return
   }
 
-  dashboardStore.updateItemCrossFilters(
+  let updated = dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
     info.source,
     finalFilters,
     info.chart,
     info.append ? 'append' : 'add',
   )
+  dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
 }
 
 function removeFilter(itemId: string, filterSource: string): void {
   if (!dashboard.value || !dashboard.value.id) return
   dashboardStore.removeItemCrossFilter(dashboard.value.id, itemId, filterSource)
+  dashboardStore.getQueryExecutor(dashboard.value.id)?.runSingle(itemId)
 }
 
 function unSelect(itemId: string): void {
   if (!dashboard.value || !dashboard.value.id) return
-  dashboardStore.removeItemCrossFilterSource(dashboard.value.id, itemId)
+  let updated = dashboardStore.removeItemCrossFilterSource(dashboard.value.id, itemId)
+  dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
 }
 
 function dashboardCreated(id: string): void {

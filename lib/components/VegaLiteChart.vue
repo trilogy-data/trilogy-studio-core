@@ -1,45 +1,89 @@
 <template>
-  <div class="vega-lite-chart no-drag" :class="{ 'overflow-hidden': !controlsManager.showingControls.value }"
-    @mouseenter="controlsManager.onChartMouseEnter" @mouseleave="controlsManager.onChartMouseLeave">
+  <div
+    class="vega-lite-chart no-drag"
+    :class="{ 'overflow-hidden': !controlsManager.showingControls.value }"
+    @mouseenter="controlsManager.onChartMouseEnter"
+    @mouseleave="controlsManager.onChartMouseLeave"
+  >
     <!-- Controls positioned based on container height -->
-    <div class="controls-toggle" :class="{
-      'bottom-controls': isShortContainer,
-      'controls-visible': controlsManager.controlsVisible.value,
-    }" v-if="showControls">
-      <button @click="downloadChart" class="control-btn" data-testid="download-chart-btn" title="Download chart as PNG">
+    <div
+      class="controls-toggle"
+      :class="{
+        'bottom-controls': isShortContainer,
+        'controls-visible': controlsManager.controlsVisible.value,
+      }"
+      v-if="showControls"
+    >
+      <button
+        @click="downloadChart"
+        class="control-btn"
+        data-testid="download-chart-btn"
+        title="Download chart as PNG"
+      >
         <i class="mdi mdi-download-outline icon"></i>
       </button>
-      <button @click="refreshChart" class="control-btn" data-testid="refresh-chart-btn" title="Refresh chart">
+      <button
+        @click="refreshChart"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh chart"
+      >
         <i class="mdi mdi-refresh icon"></i>
       </button>
-      <button @click="controlsManager.toggleControls" class="control-btn"
-        :class="{ active: controlsManager.showingControls.value }" data-testid="toggle-chart-controls-btn"
-        :title="controlsManager.showingControls.value ? 'View Chart' : 'Edit Chart'">
-        <i :class="controlsManager.showingControls.value ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'
-          " class="icon"></i>
+      <button
+        @click="controlsManager.toggleControls"
+        class="control-btn"
+        :class="{ active: controlsManager.showingControls.value }"
+        data-testid="toggle-chart-controls-btn"
+        :title="controlsManager.showingControls.value ? 'View Chart' : 'Edit Chart'"
+      >
+        <i
+          :class="
+            controlsManager.showingControls.value ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'
+          "
+          class="icon"
+        ></i>
       </button>
     </div>
 
     <!-- Content area with conditional rendering -->
-    <div class="chart-content-area" :class="{ 'with-bottom-controls': isShortContainer && showControls }">
+    <div
+      class="chart-content-area"
+      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
+    >
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
-        <div ref="vegaContainer1" class="vega-container" :class="{
-          'vega-active': renderManager.activeContainer.value === 1,
-          'vega-transitioning':
-            renderManager.transitioning.value && renderManager.activeContainer.value === 1,
-        }" data-testid="vega-chart-container-1"></div>
-        <div ref="vegaContainer2" class="vega-container" :class="{
-          'vega-active': renderManager.activeContainer.value === 2,
-          'vega-transitioning':
-            renderManager.transitioning.value && renderManager.activeContainer.value === 2,
-        }" data-testid="vega-chart-container-2"></div>
+        <div
+          ref="vegaContainer1"
+          class="vega-container"
+          :class="{
+            'vega-active': renderManager.activeContainer.value === 1,
+            'vega-transitioning':
+              renderManager.transitioning.value && renderManager.activeContainer.value === 1,
+          }"
+          data-testid="vega-chart-container-1"
+        ></div>
+        <div
+          ref="vegaContainer2"
+          class="vega-container"
+          :class="{
+            'vega-active': renderManager.activeContainer.value === 2,
+            'vega-transitioning':
+              renderManager.transitioning.value && renderManager.activeContainer.value === 2,
+          }"
+          data-testid="vega-chart-container-2"
+        ></div>
       </div>
 
       <!-- Controls panel - only show when toggled -->
-      <ChartControlPanel v-if="controlsManager.showingControls.value" :config="controlsManager.internalConfig.value"
-        :charts="charts" :filtered-columns="filteredColumnsInternal" @update-config="updateConfig"
-        @open-vega-editor="openInVegaEditor" />
+      <ChartControlPanel
+        v-if="controlsManager.showingControls.value"
+        :config="controlsManager.internalConfig.value"
+        :charts="charts"
+        :filtered-columns="filteredColumnsInternal"
+        @update-config="updateConfig"
+        @open-vega-editor="openInVegaEditor"
+      />
     </div>
   </div>
 </template>
@@ -94,11 +138,11 @@ export default defineComponent({
     containerWidth: Number,
     onChartConfigChange: {
       type: Function as PropType<(config: ChartConfig) => void>,
-      default: () => { },
+      default: () => {},
     },
     chartSelection: {
       type: Array as PropType<Object[]>,
-      default: () => { },
+      default: () => {},
     },
     chartTitle: {
       type: String,

@@ -1,6 +1,12 @@
 import { Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
-import type { Import, MultiQueryComponent, QueryResponse, ValidateResponse } from './resolver'
+import type {
+  Import,
+  MultiQueryComponent,
+  QueryResponse,
+  BatchQueryResponse,
+  ValidateResponse,
+} from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
 import type { ModelConfigStoreType } from './modelStore'
 import type { EditorStoreType } from './editorStore'
@@ -31,6 +37,12 @@ export interface QueryResult {
   executionTime: number
   resultSize: number
   columnCount: number
+}
+
+export interface BatchQueryResult {
+  success: boolean
+  results: QueryResult[]
+  executionTime: number
 }
 
 interface QueryCancellation {
@@ -65,13 +77,14 @@ export default class QueryExecutionService {
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraFilters?: string[],
+    parameters: Record<string, any> = {},
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
-    onFailure?: (message: QueryUpdate) => void,
-    onSuccess?: (message: any) => void,
+    onFailure?: Record<string, (message: any) => void>,
+    onSuccess?: Record<string, (message: any) => void>,
     dryRun: boolean = false,
   ): Promise<{
-    resultPromise: Promise<any>
+    resultPromise: Promise<BatchQueryResult>
     cancellation: QueryCancellation
   }> {
     const startTime = new Date().getTime()
@@ -93,6 +106,7 @@ export default class QueryExecutionService {
         editorType,
         imports,
         extraFilters || [],
+        parameters,
         startTime,
         controller,
         onStarted,
@@ -110,15 +124,16 @@ export default class QueryExecutionService {
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraFilters: string[],
+    parameters: Record<string, any> = {},
     startTime: number,
     controller: AbortController,
     onStarted?: () => void,
     onProgress?: (message: QueryUpdate) => void,
-    onFailure?: (message: QueryUpdate) => void,
-    onSuccess?: (message: any) => void,
+    onFailure?: Record<string, (message: any) => void>,
+    onSuccess?: Record<string, (message: any) => void>,
     dryRun: boolean = false,
     extraContent?: ContentInput[],
-  ): Promise<any> {
+  ): Promise<BatchQueryResult> {
     // Notify query started if callback provided
     if (onStarted) onStarted()
 
@@ -127,13 +142,37 @@ export default class QueryExecutionService {
     if (!conn) {
       return {
         success: false,
-        error: `Connection ${connectionId} not found.`,
-        executionTime: 0,
-        results: [],
+        executionTime: new Date().getTime() - startTime,
+        results: queries.map((_) => ({
+          success: false,
+          generated_sql: '',
+          columns: [],
+          error: `Connection ${connectionId} not found.`,
+          executionTime: 0,
+          results: new Results(new Map(), []),
+          resultSize: 0,
+          columnCount: 0,
+        })),
       }
     }
 
-    if (!conn.connected && !dryRun) {
+    if (dryRun) {
+      return {
+        success: true,
+        results: queries.map((query) => ({
+          success: true,
+          generated_sql: query.query,
+          columns: [],
+          executionTime: new Date().getTime() - startTime,
+          results: new Results(new Map(), []),
+          resultSize: 0,
+          columnCount: 0,
+        })),
+        executionTime: new Date().getTime() - startTime,
+      }
+    }
+
+    if (!conn.connected) {
       try {
         if (onProgress)
           onProgress({
@@ -144,17 +183,27 @@ export default class QueryExecutionService {
         if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
       } catch (connectionError) {
         if (onFailure) {
-          onFailure({
-            message: 'Connection failed to reconnect.',
-            error: true,
-            running: false,
-          })
+          Object.values(onFailure).forEach((callback) =>
+            callback({
+              message: 'Connection failed to reconnect.',
+              error: true,
+              running: false,
+            }),
+          )
         }
         return {
           success: false,
-          error: 'Connection is not active.',
-          executionTime: 0,
-          results: [],
+          executionTime: new Date().getTime() - startTime,
+          results: queries.map((_) => ({
+            success: false,
+            generated_sql: '',
+            columns: [],
+            error: `Connection ${connectionId} not active, failed to reconnect.`,
+            executionTime: new Date().getTime() - startTime,
+            results: new Results(new Map(), []),
+            columnCount: 0,
+            resultSize: 0,
+          })),
         }
       }
     }
@@ -174,7 +223,7 @@ export default class QueryExecutionService {
     try {
       // Resolve batch queries
       //@ts-ignore
-      const batchResponse: QueryResponse[] = await Promise.race([
+      const batchResponse: BatchQueryResponse = await Promise.race([
         this.trilogyResolver.resolve_queries_batch(
           queries,
           conn.query_type,
@@ -189,34 +238,19 @@ export default class QueryExecutionService {
         }),
       ])
 
-      if (!batchResponse || dryRun) {
-        if (onSuccess) {
-          onSuccess({
-            success: true,
-            results: [],
-            executionTime: new Date().getTime() - startTime,
-          })
-        }
-        return {
-          success: true,
-          results: [],
-          executionTime: new Date().getTime() - startTime,
-        }
-      }
-
       // If we have SQL queries to execute, process them
       const results = []
 
       // Only execute if not in dry run mode
-      if (!dryRun && batchResponse && Array.isArray(batchResponse)) {
-        for (let i = 0; i < batchResponse.length; i++) {
-          const queryResult = batchResponse[i].data
+      if (batchResponse && Array.isArray(batchResponse.data.queries)) {
+        for (let i = 0; i < batchResponse.data.queries.length; i++) {
+          const queryResult = batchResponse.data.queries[i]
           if (queryResult.generated_sql) {
             // Execute each SQL query
             try {
               //@ts-ignore
               const sqlResponse: Results = await Promise.race([
-                conn.query(queryResult.generated_sql, queries[i].parameters),
+                conn.query(queryResult.generated_sql, parameters),
                 new Promise((_, reject) => {
                   controller.signal.addEventListener('abort', () =>
                     reject(new Error('Query execution cancelled by user')),
@@ -230,14 +264,19 @@ export default class QueryExecutionService {
               }
 
               // Add to results
-              results.push({
+              let resultObj = {
                 success: true,
                 generatedSql: queryResult.generated_sql,
                 results: sqlResponse,
                 resultSize: sqlResponse.data.length,
                 columnCount: sqlResponse.headers.size,
-              })
+                executionTime: new Date().getTime() - startTime,
+              }
 
+              if (onSuccess && queryResult.label && onSuccess[queryResult.label]) {
+                onSuccess[queryResult.label](resultObj)
+              }
+              results.push(resultObj)
               // Record query in history
               if (this.storeHistory) {
                 useQueryHistoryService(connectionId).recordQuery({
@@ -257,12 +296,20 @@ export default class QueryExecutionService {
                 : error instanceof Error
                   ? error.message
                   : 'Unknown error occurred during execution'
-
-              results.push({
+              let resultObj = {
                 success: false,
                 error: errorMessage,
                 generatedSql: queryResult.generated_sql,
-              })
+                results: new Results(new Map(), []),
+                resultSize: 0,
+                columnCount: 0,
+                executionTime: new Date().getTime() - startTime,
+              }
+              results.push(resultObj)
+              console.error('Error callback for ', queryResult.label, onFailure)
+              if (onFailure && queryResult.label && onFailure[queryResult.label]) {
+                onFailure[queryResult.label](resultObj)
+              }
 
               // Record error in history
               if (this.storeHistory) {
@@ -278,12 +325,36 @@ export default class QueryExecutionService {
                 })
               }
             }
+          } else if (queryResult.error) {
+            // Query resolution error
+            let resultObj = {
+              success: false,
+              error: queryResult.error,
+              generatedSql: '',
+              executionTime: new Date().getTime() - startTime,
+              results: new Results(new Map(), []),
+              resultSize: 0,
+              columnCount: 0,
+            }
+            results.push(resultObj)
+
+            Object.values(onFailure || {}).forEach((callback) => {
+              callback(resultObj)
+            })
           } else {
             // No SQL was generated for this query
-            results.push({
+            let resultObj = {
               success: false,
               error: 'No SQL was generated for this query',
               generatedSql: '',
+              executionTime: new Date().getTime() - startTime,
+              results: new Results(new Map(), []),
+              resultSize: 0,
+              columnCount: 0,
+            }
+            results.push(resultObj)
+            Object.values(onFailure || {}).forEach((callback) => {
+              callback(resultObj)
             })
           }
         }
@@ -295,9 +366,9 @@ export default class QueryExecutionService {
         executionTime: new Date().getTime() - startTime,
       }
 
-      if (onSuccess) {
-        onSuccess(finalResult)
-      }
+      // if (onSuccess) {
+      //   onSuccess(finalResult)
+      // }
 
       return finalResult
     } catch (error) {
@@ -308,21 +379,23 @@ export default class QueryExecutionService {
           : 'Unknown error occurred'
 
       if (onFailure) {
-        onFailure({
-          message: errorMessage,
-          error: true,
-          running: false,
-        })
+        Object.values(onFailure).forEach((callback) =>
+          callback({
+            message: errorMessage,
+            error: true,
+            running: false,
+          }),
+        )
       }
 
       return {
         success: false,
-        error: errorMessage,
         executionTime: new Date().getTime() - startTime,
         results: [],
       }
     }
   }
+
   async generateQuery(
     connectionId: string,
     queryInput: QueryInput,

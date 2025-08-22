@@ -56,10 +56,20 @@ class LRUCache<T> {
   }
 }
 
+export interface QueryAtom {
+  generated_sql: string
+  columns: any[]
+  error: string | null
+  label?: string
+}
+
 export interface QueryResponse {
+  data: QueryAtom
+}
+
+export interface BatchQueryResponse {
   data: {
-    generated_sql: string
-    columns: any[]
+    queries: QueryAtom[]
   }
 }
 
@@ -110,6 +120,8 @@ export interface Import {
 
 export interface MultiQueryComponent {
   query: string
+  label: string
+  extra_filters?: string[]
   parameters?: Record<string, string | number | boolean>
 }
 
@@ -118,6 +130,7 @@ export default class TrilogyResolver {
   private validateCache: LRUCache<ValidateResponse>
   private formatCache: LRUCache<FormatQueryResponse>
   private queryCache: LRUCache<QueryResponse>
+  private batchQueryCache: LRUCache<BatchQueryResponse>
   private modelCache: LRUCache<ModelConfig>
 
   constructor(settingStore: UserSettingsStoreType, cacheSize: number = 100) {
@@ -125,6 +138,7 @@ export default class TrilogyResolver {
     this.validateCache = new LRUCache<ValidateResponse>(cacheSize)
     this.formatCache = new LRUCache<FormatQueryResponse>(cacheSize)
     this.queryCache = new LRUCache<QueryResponse>(cacheSize)
+    this.batchQueryCache = new LRUCache<BatchQueryResponse>(cacheSize)
     this.modelCache = new LRUCache<ModelConfig>(cacheSize)
   }
 
@@ -267,7 +281,7 @@ export default class TrilogyResolver {
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
-      return { data: { generated_sql: query, columns: [] } }
+      return { data: { generated_sql: query, columns: [], error: null } }
     }
 
     const requestParams = {
@@ -311,23 +325,25 @@ export default class TrilogyResolver {
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
-  ): Promise<QueryResponse[]> {
+    parameters: Record<string, string> | null = null,
+  ): Promise<BatchQueryResponse> {
     const requestParams = {
       queries: queries,
       dialect: dialect,
       full_model: { name: '', sources: sources || [] },
       imports: imports || [],
       extra_filters: extraFilters || [],
+      parameters: parameters || {},
     }
 
     // Generate hash of request params
-    // const cacheKey = this.createHash(requestParams)
+    const cacheKey = this.createHash(requestParams)
 
     // // Check if result exists in cache
-    // const cachedResult = this.queryCache.get(cacheKey)
-    // if (cachedResult) {
-    //   return cachedResult
-    // }
+    const cachedResult = this.batchQueryCache.get(cacheKey)
+    if (cachedResult) {
+      return cachedResult
+    }
 
     // Not in cache, make the API call
     const response = await this.fetchWithErrorHandling(
@@ -342,8 +358,8 @@ export default class TrilogyResolver {
     )
 
     // Cache the result
-    // this.queryCache.set(cacheKey, response)
-    console.log('Batch query response:', response)
+    this.batchQueryCache.set(cacheKey, response)
+
     return response
   }
   async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {

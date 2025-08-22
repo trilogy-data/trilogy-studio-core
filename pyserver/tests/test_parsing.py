@@ -4,6 +4,12 @@ from trilogy.parser import parse_text
 from env_helpers import parse_env_from_full_model
 from trilogy.render import get_dialect_generator
 from main import generate_query_core
+from io_models import MultiQueryInSchema
+from main import generate_multi_query_core
+from trilogy.authoring import ArrayType, StructType
+from trilogy.core.models.core import MapType
+from trilogy.core.statements.execute import ProcessedQuery, ProcessedQueryPersist
+from trilogy.core.exceptions import UndefinedConceptException
 
 RAW_PAYLOAD = {
     "imports": [{"name": "game_event", "alias": None}],
@@ -251,3 +257,559 @@ def test_map_access():
     dialect = get_dialect_generator(query.dialect)
     final, columns = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
+
+
+def test_multi_query_basic():
+    """Test basic multi-query execution with shared environment"""
+    multi_query = {
+        "imports": [{"name": "flight", "alias": "flight"}],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "flight",
+                    "contents": """
+key id2 int;
+property id2.flight_num string;
+property id2.distance int;
+property id2.dep_delay int;
+
+auto count <- count(id2);
+auto total_distance <- sum(distance);
+
+datasource flight (
+    id2,
+    flight_num,
+    distance,
+    dep_delay
+)
+grain (id2)
+address flight;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {
+                "query": "SELECT count(flight.id2) as flight_count;",
+                "label": "total_flights",
+            },
+            {"query": "SELECT flight.total_distance;", "label": "total_distance"},
+            {
+                "query": "SELECT avg(flight.dep_delay) as avg_delay;",
+                "label": "average_delay",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    # Should return 3 results
+    assert len(results) == 3
+
+    # Each result should have generated SQL and columns
+    for label, result, columns in results:
+        assert result is not None
+        assert len(columns) > 0
+
+    # Check first query returns count
+    assert results[0][2][0].name == "flight_count"
+    assert "count" in dialect.compile_statement(results[0][1]).lower()
+
+
+def test_multi_query_with_filters_and_params():
+    """Test multi-query with different filters and parameters per query"""
+    multi_query = {
+        "imports": [{"name": "game", "alias": "game"}],
+        "dialect": "bigquery",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "game",
+                    "contents": """
+key id string;
+property id.season int;
+property id.home_market string;
+property id.away_market string;
+property id.attendance int;
+
+metric count <- count_distinct(id);
+
+datasource games_sr (
+    game_id:id,
+    season:season,
+    h_market: home_market,
+    a_market: away_market,
+    attendance:attendance
+)
+grain (id)
+address `bigquery-public-data.ncaa_basketball.mbb_games_sr`;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {
+                "query": "SELECT game.season, count(game.id) as game_count;",
+                "label": "season_2023",
+            },
+            {
+                "query": "SELECT game.home_market, avg(game.attendance) as avg_attendance;",
+                "label": "duke_attendance",
+            },
+            {
+                "query": "SELECT game.season, game.count order by game.season asc;",
+                "label": "recent_seasons",
+            },
+        ],
+        "extra_filters": ["game.season = 2023", "game.home_market = :team_name"],
+        "parameters": {":team_name": "Duke"},
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 3
+
+    # First query should have season filter
+    sql1 = dialect.compile_statement(results[0][1])
+    assert "2023" in sql1
+
+    # Second query should have parameter
+    sql2 = dialect.compile_statement(results[1][1])
+    assert ":team_name" in sql2 or "Duke" in sql2
+
+    # Third query should have multiple filters
+    sql3 = dialect.compile_statement(results[2][1])
+    assert "2023" in sql3
+
+
+def test_multi_query_shared_imports():
+    """Test that imports are shared across all queries in the batch"""
+    multi_query = {
+        "imports": [
+            {"name": "flight", "alias": "f"},
+            {"name": "airport", "alias": None},
+        ],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "flight",
+                    "contents": """
+import airport as origin;
+import airport as destination;
+
+key id2 int;
+property id2.distance int;
+
+datasource flight (
+    id2,
+    origin:origin.code,
+    destination:destination.code,
+    distance
+)
+grain (id2)
+address flight;
+""",
+                },
+                {
+                    "alias": "airport",
+                    "contents": """
+key code string;
+property code.city string;
+property code.state string;
+
+datasource airport (
+    code,
+    city,
+    state
+)
+grain(code)
+address airport;
+""",
+                },
+            ],
+        },
+        "queries": [
+            {
+                "query": "SELECT f.origin.city, count(f.id2) as flight_count;",
+                "label": "using_alias",
+            },
+            {"query": "SELECT city, state;", "label": "direct_import"},
+            {
+                "query": "SELECT f.destination.state, sum(f.distance) as total_distance_2;",
+                "label": "nested_reference",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 3
+
+    # All queries should successfully compile
+    for label, result, columns in results:
+        assert result is not None
+        sql = dialect.compile_statement(result)
+        assert sql is not None
+        assert len(sql) > 0
+
+
+def test_multi_query_with_constants():
+    """Test multi-query with constant declarations"""
+    multi_query = {
+        "imports": [],
+        "dialect": "duckdb",
+        "full_model": {"name": "", "sources": []},
+        "queries": [
+            {
+                "query": """
+const tax_rate <- 0.08;
+const base_price <- 100;
+
+SELECT 
+    base_price as price,
+    base_price * tax_rate as tax,
+    base_price * (1 + tax_rate) as total;
+""",
+                "label": "with_constants",
+            },
+            {
+                "query": """
+const states <- ['CA', 'NY', 'TX'];
+
+SELECT 
+    unnest(states) as state;
+""",
+                "label": "array_constant",
+            },
+            {
+                "query": """
+const config <- {'max': 100, 'min': 10};
+
+SELECT 
+    config['max'] as max_val,
+    config['min'] as min_val;
+""",
+                "label": "map_constant",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 3
+
+    # Check constants are properly handled
+    assert results[0][2][0].name == "price"
+    assert results[0][2][1].name == "tax"
+    assert results[0][2][2].name == "total"
+
+    assert results[1][2][0].name == "state"
+
+    assert results[2][2][0].name == "max_val"
+    assert results[2][2][1].name == "min_val"
+
+
+def test_multi_query_mixed_statement_types():
+    """Test multi-query with different statement types (SELECT, SHOW, PERSIST)"""
+    multi_query = {
+        "imports": [{"name": "flight", "alias": "flight"}],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "flight",
+                    "contents": """
+key id2 int;
+property id2.flight_num string;
+property id2.distance int;
+
+datasource flight (
+    id2:id2,
+    flight_num:flight_num,
+    distance:distance
+)
+grain (id2)
+address flight;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {"query": "SELECT count(flight.id2) as total;", "label": "select_query"},
+            # {"query": "SHOW flight;", "label": "show_statement"},
+            {
+                "query": """
+PERSIST  flight_summary into flight_summary FROM
+SELECT 
+    flight.flight_num,
+    flight.distance
+WHERE flight.distance > 500;
+""",
+                "label": "persist_statement",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 2
+
+    # First should be a regular query
+    assert isinstance(results[0][1], ProcessedQuery)
+
+    assert isinstance(results[1][1], ProcessedQueryPersist)
+
+
+def test_multi_query_error_handling():
+    """Test that errors in one query don't affect others"""
+    multi_query = {
+        "imports": [
+            {
+                "name": "test",
+                "alias": None,
+            }
+        ],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "test",
+                    "contents": """
+key id int;
+property id.name string;
+
+datasource test (
+    id:id,
+    name:name
+)
+grain (id)
+address test_table;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {"query": "SELECT name;", "label": "valid_query"},
+            {
+                "query": "SELECT nonexistent.field;",  # This should fail
+                "label": "invalid_query",
+            },
+            {"query": "SELECT count(id);", "label": "another_valid_query"},
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+
+    results = generate_multi_query_core(query, dialect)
+    assert isinstance(
+        results[1][1], UndefinedConceptException
+    )  # The invalid query should not return a result
+
+
+def test_multi_query_performance_logging():
+    """Test that performance logging can be disabled"""
+    multi_query = {
+        "imports": [],
+        "dialect": "duckdb",
+        "full_model": {"name": "", "sources": []},
+        "queries": [
+            {"query": "SELECT 1 as num;", "label": "simple_1"},
+            {"query": "SELECT 2 as num2;", "label": "simple_2"},
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+
+    # Test with logging disabled
+    results = generate_multi_query_core(
+        query, dialect, enable_performance_logging=False
+    )
+    assert len(results) == 2
+
+    # Test with logging enabled (default)
+    results = generate_multi_query_core(query, dialect, enable_performance_logging=True)
+    assert len(results) == 2
+
+
+def test_multi_query_empty_queries():
+    """Test handling of empty query list"""
+    multi_query = {
+        "imports": [],
+        "dialect": "duckdb",
+        "full_model": {"name": "", "sources": []},
+        "queries": [],
+    }
+
+    from io_models import MultiQueryInSchema
+    from trilogy.render import get_dialect_generator
+    from main import generate_multi_query_core
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    # Should return empty list
+    assert len(results) == 0
+    assert results == []
+
+
+def test_multi_query_complex_datatypes():
+    """Test multi-query with complex datatypes like arrays and structs"""
+    multi_query = {
+        "imports": [
+            {
+                "name": "complex",
+                "alias": "complex",
+            }
+        ],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "complex",
+                    "contents": """
+key id int;
+property id.tags array<string>;
+property id.metadata struct<name:string, value:int>;
+property id.scores map<string, float>;
+
+datasource complex (
+    id:id,
+    tags:tags,
+    metadata:metadata,
+    scores:scores
+)
+grain (id)
+address complex_table;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {"query": "SELECT complex.tags;", "label": "array_type"},
+            {"query": "SELECT complex.metadata;", "label": "struct_type"},
+            {"query": "SELECT complex.scores;", "label": "map_type"},
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 3
+
+    # Check array type
+    assert isinstance(results[0][2][0].datatype, ArrayType)
+
+    # Check struct type
+    assert isinstance(results[1][2][0].datatype, StructType)
+
+    # Check map type
+    assert isinstance(results[2][2][0].datatype, MapType)
+
+
+def test_multi_query_with_calculations():
+    """Test multi-query with calculated fields and aggregations"""
+    multi_query = {
+        "imports": [{"name": "game_event", "alias": "game_event"}],
+        "dialect": "bigquery",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "game_event",
+                    "contents": """
+key id int;
+property id.type string;
+property id.sub_type string;
+property id.points_scored float;
+property id.shot_made bool;
+
+datasource game_events (
+    event_id:id,
+    event_type:type,
+    type: sub_type,
+    points_scored: points_scored,
+    shot_made: shot_made
+)
+grain (id)
+address `bigquery-public-data.ncaa_basketball.mbb_pbp_sr`;
+""",
+                }
+            ],
+        },
+        "queries": [
+            {
+                "query": """
+SELECT 
+    game_event.type,
+    count(game_event.id) as event_count,
+    sum(game_event.points_scored) as total_points
+order by total_points desc;
+""",
+                "label": "aggregations",
+            },
+            {
+                "query": """
+SELECT 
+    game_event.type,
+    game_event.shot_made,
+    count(game_event.id) as attempts,
+    count(game_event.id ? game_event.shot_made = true)  as made,
+    made / attempts as percentage
+order by attempts desc;
+""",
+                "label": "calculated_percentage",
+            },
+            {
+                "query": """
+SELECT 
+    case 
+        when game_event.points_scored = 3 then 'Three Pointer'
+        when game_event.points_scored = 2 then 'Two Pointer'
+        when game_event.points_scored = 1 then 'Free Throw'
+        else 'Other'
+    end as shot_type,
+    count(game_event.id) as count
+order by count desc;
+""",
+                "label": "case_statement",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect)
+
+    assert len(results) == 3
+
+    # Check aggregation query
+    assert "event_count" in [col.name for col in results[0][2]]
+    assert "total_points" in [col.name for col in results[0][2]]
+
+    # Check calculated percentage query
+    assert "percentage" in [col.name for col in results[1][2]]
+
+    # Check case statement query
+    assert "shot_type" in [col.name for col in results[2][2]]

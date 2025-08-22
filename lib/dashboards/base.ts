@@ -420,8 +420,9 @@ export class DashboardModel implements Dashboard {
     }
   }
 
-  removeItemCrossFilterSource(itemId: string) {
-    // remove the filter from all items in the dashboard who DOmatch the itemId
+  removeItemCrossFilterSource(itemId: string): string[] {
+    // remove the filter from all items in the dashboard who DO match the itemId
+    let updated = []
     for (const id in this.gridItems) {
       if (id === itemId) {
         const gridItem = this.gridItems[id]
@@ -430,24 +431,42 @@ export class DashboardModel implements Dashboard {
       }
       if (id !== itemId) {
         const gridItem = this.gridItems[id]
+        let hasFilter =
+          gridItem.conceptFilters &&
+          gridItem.conceptFilters.length > 0 &&
+          gridItem.conceptFilters.some((f) => f.source === itemId)
         gridItem.conceptFilters = gridItem.conceptFilters || []
         gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
-        this.updateItemFilters(id)
+        if (hasFilter) {
+          this.updateItemFilters(id)
+          updated.push(id)
+        }
       }
     }
+    return updated
   }
 
-  removeAllFilters() {
+  removeAllFilters(): string[] {
     // remove the filter from all items in the dashboard
+    let updated = []
     for (const id in this.gridItems) {
       const gridItem = this.gridItems[id]
+      if (
+        (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) ||
+        (gridItem.filters && gridItem.filters.length > 0)
+      ) {
+        updated.push(id)
+      }
       gridItem.conceptFilters = []
       gridItem.chartFilters = []
       gridItem.filters = []
       gridItem.parameters = {}
     }
-    this.updatedAt = new Date()
-    this.changed = true
+    if (updated.length > 0) {
+      this.updatedAt = new Date()
+      this.changed = true
+    }
+    return updated
   }
 
   updateItemCrossFilters(
@@ -455,8 +474,9 @@ export class DashboardModel implements Dashboard {
     conceptMap: Record<string, string>,
     chartMap: Record<string, string>,
     operation: 'add' | 'append' | 'remove',
-  ): void {
+  ): string[] {
     // add/remove the filter to all items in the dashboard who do NOT match the itemId
+    let updated = []
     for (const id in this.gridItems) {
       if (id === itemId) {
         const gridItem = this.gridItems[id]
@@ -500,10 +520,12 @@ export class DashboardModel implements Dashboard {
         }
 
         this.updateItemFilters(id)
+        updated.push(id)
       }
     }
     this.updatedAt = new Date()
     this.changed = true
+    return updated
   }
 
   // Update an item's name

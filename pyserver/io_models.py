@@ -86,9 +86,9 @@ class Import(BaseModel):
 
 class MultiQueryComponent(BaseModel):
     query: str
+    label: str | None = None
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
-    label: str | None = None
 
 
 class MultiQueryInSchema(BaseModel):
@@ -96,6 +96,8 @@ class MultiQueryInSchema(BaseModel):
     full_model: ModelInSchema
     dialect: Dialects
     queries: List[MultiQueryComponent]
+    extra_filters: Optional[list[str]] = None
+    parameters: Optional[dict[str, str | int | float]] = None
 
 
 class QueryInSchema(BaseModel):
@@ -126,6 +128,12 @@ class QueryOutColumn(BaseModel):
 class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
+    error: str | None = None
+    label: str | None = None
+
+
+class MultiQueryOutSchema(BaseModel):
+    queries: List[QueryOut] = Field(default_factory=list)
 
 
 class Severity(Enum):
