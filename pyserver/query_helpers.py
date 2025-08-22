@@ -98,11 +98,7 @@ def filters_to_conditional(
         parse_config=PARSE_CONFIG,
     )
     return (
-        fparsed[-1].where_clause
-        if isinstance(
-            fparsed, (SelectStatement, MultiSelectStatement, PersistStatement)
-        )
-        else None
+        fparsed[-1].where_clause if isinstance(fparsed[-1], SelectStatement) else None
     )
 
 
