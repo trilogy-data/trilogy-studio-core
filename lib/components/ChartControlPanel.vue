@@ -96,7 +96,7 @@ import type { PropType } from 'vue'
 import type { ChartConfig, ResultColumn } from '../editors/results'
 import { Controls, type ChartControl } from '../dashboards/constants'
 
-interface ControlSection {
+interface ChartControlSection {
   name: string
   label: string
   controls: EnhancedChartControl[]
@@ -151,8 +151,8 @@ export default defineComponent({
     })
 
     // Group controls into sections
-    const controlSections = computed((): ControlSection[] => {
-      const sections: Record<string, ControlSection> = {
+    const controlSections = computed((): ChartControlSection[] => {
+      const sections: Record<string, ChartControlSection> = {
         axes: { name: 'axes', label: 'Axes', controls: [] },
         appearance: { name: 'appearance', label: 'Appearance', controls: [] },
         advanced: { name: 'advanced', label: 'Advanced', controls: [] },
