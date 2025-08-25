@@ -274,8 +274,9 @@ describe('generateVegaSpec', () => {
       const spec = generateVegaSpec(testData, config, testColumns, null)
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.mark.type).toBe('point')
-      expect(spec.mark.filled).toBe(true)
+      let pointlayer = spec.layer[0]
+      expect(pointlayer.mark.type).toBe('point')
+      expect(pointlayer.mark.filled).toBe(false)
       expect(spec.encoding.x.field).toBe('sales')
       expect(spec.encoding.y.field).toBe('percent')
     })
@@ -291,7 +292,7 @@ describe('generateVegaSpec', () => {
       const spec = generateVegaSpec(testData, config, testColumns, null)
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.encoding.color.field).toBe('region')
+      expect(spec.layer[0].encoding.color.field).toBe('region')
     })
   })
 
@@ -518,9 +519,9 @@ describe('generateVegaSpec', () => {
       const spec = generateVegaSpec(testData, config, testColumns, null)
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.encoding.tooltip).toBeDefined()
-      expect(Array.isArray(spec.encoding.tooltip)).toBe(true)
-      expect(spec.encoding.tooltip.length).toBe(3) // x, y, color fields
+      expect(spec.layer[0].encoding.tooltip).toBeDefined()
+      expect(Array.isArray(spec.layer[0].encoding.tooltip)).toBe(true)
+      expect(spec.layer[0].encoding.tooltip.length).toBe(3) // x, y, color fields
     })
   })
 

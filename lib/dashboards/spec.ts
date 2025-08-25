@@ -3,13 +3,11 @@ import { type ChartConfig } from '../editors/results'
 import { toRaw } from 'vue'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import {
-  createSizeEncoding,
   createColorEncoding,
   createFieldEncoding,
   getFormatHint,
   getVegaFieldType,
 } from './helpers'
-import { lightDefaultColor, darkDefaultColor } from './constants'
 import { createTreemapSpec } from './treeSpec'
 import { createMapSpec } from './mapSpec'
 import { createHeadlineSpec } from './headlineSpec'
@@ -17,7 +15,7 @@ import { createBarChartSpec } from './barChartSpec'
 import { createDonutChartSpec } from './donutSpec'
 import { createBarHChartSpec } from './barHChartSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
-
+import { createPointChartSpec } from './pointSpec'
 /**
  * Create a field encoding for Vega-Lite
  */
@@ -44,6 +42,9 @@ const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultC
   if (config.sizeField && columns.get(config.sizeField)) {
     fields.push(createFieldEncoding(config.sizeField, columns, {}, false))
   }
+  if (config.annotationField) {
+    fields.push(createFieldEncoding(config.annotationField, columns, {}, false))
+  }
   return fields
 }
 
@@ -60,61 +61,6 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
       scale: {
         bandPaddingInner: 0.2,
       },
-    },
-  }
-}
-
-/**
- * Create chart specification for point chart
- */
-const createPointChartSpec = (
-  config: ChartConfig,
-  columns: Map<string, ResultColumn>,
-  tooltipFields: any[],
-  encoding: any,
-  intChart: Array<Partial<ChartConfig>>,
-  currentTheme: string = 'light',
-) => {
-  const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
-  return {
-    params: [
-      {
-        name: 'highlight',
-        select: {
-          type: 'point',
-          on: 'mouseover',
-          clear: 'mouseout',
-        },
-      },
-      {
-        name: 'select',
-        select: {
-          type: 'point',
-          on: 'click,touchend',
-        },
-        value: intChart,
-        nearest: true,
-      },
-    ],
-    mark: {
-      type: 'point',
-      filled: true,
-      color: color,
-    },
-    encoding: {
-      x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField || '', columns),
-      color: createColorEncoding(
-        config,
-        config.colorField,
-        columns,
-        false,
-        currentTheme,
-        config.hideLegend,
-      ),
-      size: createSizeEncoding(config.sizeField, columns),
-      tooltip: tooltipFields,
-      ...encoding,
     },
   }
 }
@@ -239,6 +185,7 @@ export const generateVegaSpec = (
     isMobile,
     currentTheme,
     config.hideLegend,
+    localData,
   )
 
   // Handle trellis (facet) layout if specified
@@ -324,9 +271,10 @@ export const generateVegaSpec = (
         config,
         columns,
         tooltipFields,
-        encoding,
         intChart,
         currentTheme,
+        isMobile,
+        localData,
       )
       break
 

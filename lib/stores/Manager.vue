@@ -10,18 +10,20 @@
       @confirm-bypass="confirmBypass"
       @cancel-bypass="cancelBypass"
     />
-    <Suspense>
+    <Suspense v-if="isMobile">
       <template #default>
-        <div>
-          <IDE v-if="!isMobile" />
-          <MobileIDE v-if="isMobile" />
-        </div>
+        <MobileIDE />
       </template>
       <template #fallback>
-        <div>
-          <IDEPlaceholder v-if="!isMobile" />
-          <MobileIDEPlaceholder v-if="isMobile" />
-        </div>
+        <MobileIDEPlaceholder />
+      </template>
+    </Suspense>
+    <Suspense v-else>
+      <template #default>
+        <IDE />
+      </template>
+      <template #fallback>
+        <IDEPlaceholder />
       </template>
     </Suspense>
   </div>
@@ -616,7 +618,18 @@ provide('saveLLMConnections', saveLLMConnections)
 provide('saveDashboards', saveDashboards)
 provide('saveAll', saveAll)
 provide('unSaved', unSaved)
-const isMobile = computed(() => loaded.value && windowWidth.value <= 768)
+
+// Initial mobile detection - available immediately on mount
+const initialIsMobile = window.innerWidth <= 768
+
+// Coalesced mobile value - uses initial detection until loaded, then switches to responsive
+const isMobile = computed(() => {
+  if (!loaded.value) {
+    return initialIsMobile
+  }
+  return windowWidth.value <= 768
+})
+
 const handleResize = () => {
   windowWidth.value = window.innerWidth
 }

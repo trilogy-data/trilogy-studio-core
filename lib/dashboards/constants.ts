@@ -8,6 +8,7 @@ export interface ChartControl {
   allowEmpty: boolean
   visibleFor: string[] // Array of chart types where this control should be visible
   filterGroup: 'axes' | 'appearance'
+  options?: string[] // For fields with predefined options (like scale types)
 }
 
 export const Controls: ChartControl[] = [
@@ -92,54 +93,20 @@ export const Controls: ChartControl[] = [
     visibleFor: ['heatmap', 'usa-map'],
     filterGroup: 'appearance',
   },
+  // this is the numeric version
   {
     id: 'color-by',
-    label: 'Color By (optional)',
+    label: 'Color By',
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
     visibleFor: ['bar', 'barh', 'point', 'donut'],
     filterGroup: 'appearance',
   },
-  {
-    id: 'annotation',
-    label: 'Annotation (optional)',
-    field: 'annotationField',
-    columnFilter: 'all',
-    allowEmpty: true,
-    visibleFor: ['usa-map'],
-    filterGroup: 'appearance',
-  },
-  {
-    id: 'hide-legend',
-    label: 'Hide Legend',
-    field: 'hideLegend',
-    columnFilter: 'all',
-    allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
-    filterGroup: 'appearance',
-  },
-  {
-    id: 'hide-label',
-    label: 'Hide Label',
-    field: 'hideLegend',
-    columnFilter: 'all',
-    allowEmpty: true,
-    visibleFor: ['headline'],
-    filterGroup: 'appearance',
-  },
-  {
-    id: 'show-title',
-    label: 'Show Title',
-    field: 'showTitle',
-    columnFilter: 'all',
-    allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline'],
-    filterGroup: 'appearance',
-  },
+  //categorical only
   {
     id: 'color-by',
-    label: 'Color By (optional)',
+    label: 'Color By',
     field: 'colorField',
     columnFilter: 'categorical',
     allowEmpty: true,
@@ -148,7 +115,7 @@ export const Controls: ChartControl[] = [
   },
   {
     id: 'size',
-    label: 'Size (optional)',
+    label: 'Size',
     field: 'sizeField',
     columnFilter: 'numeric',
     allowEmpty: true,
@@ -199,6 +166,71 @@ export const Controls: ChartControl[] = [
     allowEmpty: false,
     columnFilter: 'categorical',
     filterGroup: 'axes',
+  },
+  {
+    id: 'annotation',
+    label: 'Annotation',
+    field: 'annotationField',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['usa-map', 'point'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'scale-x',
+    label: 'X Axis Scale',
+    field: 'scaleX',
+    columnFilter: 'numeric',
+    allowEmpty: true,
+    visibleFor: ['point'],
+    options: ['linear', 'log'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'scale-y',
+    label: 'Y Axis Scale',
+    field: 'scaleY',
+    columnFilter: 'numeric',
+    allowEmpty: true,
+    visibleFor: ['point'],
+    options: ['linear', 'log'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'hide-legend',
+    label: 'Hide Legend',
+    field: 'hideLegend',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'hide-legend',
+    label: 'Hide Legend',
+    field: 'hideLegend',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'hide-label',
+    label: 'Hide Label',
+    field: 'hideLegend',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['headline'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'show-title',
+    label: 'Show Title',
+    field: 'showTitle',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline'],
+    filterGroup: 'appearance',
   },
 ]
 
