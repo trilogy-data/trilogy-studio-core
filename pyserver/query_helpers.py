@@ -111,11 +111,19 @@ def generate_single_query(
     enable_performance_logging: bool = True,
     extra_conditional: WhereClause | None = None,
     base_filter_idx: int = 0,
+    cleanup_concepts: bool = False,
 ):
     start_time = time.time()
 
     # Parse the query
     parse_start = time.time()
+
+    # this is pretty hacky
+    # TODO: better job
+    if cleanup_concepts:
+        pre_concepts = {k: v for k, v in env.concepts.items() if v.name in query}
+    else:
+        pre_concepts = {}
     _, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
@@ -206,7 +214,13 @@ def generate_single_query(
             f"Filters: {limit_filter_time:.4f}s ({safe_percentage(limit_filter_time, total_time):.1f}%) | "
             f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
         )
-
+    if cleanup_concepts:
+        for k in final_select.locally_derived:
+            perf_logger.info(f"Cleaning up concept: {k}")
+            del env.concepts[k]
+            if k in pre_concepts:
+                env.add_concept(pre_concepts[k])
+                # env.concepts[k] = pre_concepts[k]
     return result, columns
 
 
@@ -280,6 +294,7 @@ def generate_multi_query_core(
     query: MultiQueryInSchema,
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
+    cleanup_concepts: bool = True,
 ) -> list[
     tuple[
         str,
@@ -341,6 +356,7 @@ def generate_multi_query_core(
                 enable_performance_logging=enable_performance_logging,
                 extra_conditional=conditional,
                 base_filter_idx=idx,
+                cleanup_concepts=cleanup_concepts,
             )
             all.append((subquery.label, generated, columns))  # type: ignore
         except Exception as e:

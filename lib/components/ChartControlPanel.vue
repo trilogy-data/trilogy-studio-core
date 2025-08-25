@@ -1,12 +1,13 @@
 <template>
   <div class="chart-controls-panel">
     <div class="inner-padding">
+      <!-- Chart Type Selection -->
       <div class="control-section">
         <div class="chart-type-icons">
           <button
             v-for="type in charts"
             :key="type.value"
-            @click="$emit('update-config', 'chartType', type.value)"
+            @click="updateConfig('chartType', type.value)"
             class="chart-icon"
             :class="{ selected: config.chartType === type.value }"
             :title="type.label"
@@ -19,92 +20,17 @@
         </div>
       </div>
 
-      <!-- Group axes controls  -->
-      <div class="control-section" v-if="visibleControls.some((c) => c.filterGroup === 'axes')">
-        <label class="control-section-label">Axes</label>
-        <div
-          v-for="control in visibleControls.filter((c) => c.filterGroup === 'axes')"
-          :key="control.id"
-          class="control-group no-drag"
-        >
-          <label class="chart-label" :for="control.id">{{ control.label }}</label>
-          <select
-            :id="control.id"
-            :value="config[control.field]"
-            @change="
-              $emit('update-config', control.field, ($event.target as HTMLInputElement).value)
-            "
-            class="form-select no-drag"
-          >
-            <option v-if="control.allowEmpty" value="">None</option>
-            <option
-              v-for="column in filteredColumns(control.columnFilter)"
-              :key="column.name"
-              :value="column.name"
-            >
-              {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Group appearance controls -->
+      <!-- Dynamic Control Sections -->
       <div
+        v-for="section in controlSections"
+        :key="section.name"
         class="control-section"
-        v-if="visibleControls.some((c) => c.filterGroup === 'appearance')"
+        v-show="section.controls.length > 0 || section.name === 'advanced'"
       >
-        <label class="control-section-label">Appearance</label>
-        <div
-          v-for="control in visibleControls.filter((c) => c.filterGroup === 'appearance')"
-          :key="control.id"
-          class="control-group no-drag"
-        >
-          <label class="chart-label" :for="control.id">{{ control.label }}</label>
-
-          <input
-            v-if="['hideLegend', 'hideLabel', 'showTitle'].includes(control.field)"
-            type="checkbox"
-            :id="control.id"
-            :checked="config[control.field] as boolean"
-            @change="
-              $emit(
-                'update-config',
-                control.field,
-                ($event.target as HTMLInputElement).checked ? true : false,
-              )
-            "
-            data-testid="toggle-legend"
-          />
-
-          <select
-            v-else
-            :id="control.id"
-            :value="config[control.field]"
-            @change="
-              $emit('update-config', control.field, ($event.target as HTMLInputElement).value)
-            "
-            class="form-select no-drag"
-          >
-            <option v-if="control.allowEmpty" value="">None</option>
-            <option
-              v-for="column in filteredColumns(control.columnFilter)"
-              :key="column.name"
-              :value="column.name"
-            >
-              {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Group advanced controls -->
-      <div
-        class="control-section"
-        v-if="visibleControls.some((c) => c.id === 'trellis-field') || true"
-      >
-        <label class="control-section-label">Advanced</label>
-        <!-- Open in Vega Editor button -->
-        <div class="control-group no-drag">
+        <label class="control-section-label">{{ section.label }}</label>
+        
+        <!-- Vega Editor Button (special case for Advanced section) -->
+        <div v-if="section.name === 'advanced'" class="control-group no-drag">
           <label class="chart-label">Vega Editor</label>
           <button
             @click="$emit('open-vega-editor')"
@@ -115,29 +41,56 @@
             Open in Editor
           </button>
         </div>
-        <!-- Existing trellis field control -->
+
+        <!-- Dynamic Controls -->
         <div
-          v-for="control in visibleControls.filter((c) => c.id === 'trellis-field')"
+          v-for="control in section.controls"
           :key="control.id"
           class="control-group no-drag"
         >
           <label class="chart-label" :for="control.id">{{ control.label }}</label>
+          
+          <!-- Checkbox Input -->
+          <input
+            v-if="control.inputType === 'checkbox'"
+            type="checkbox"
+            :id="control.id"
+            :checked="config[control.field] as boolean"
+            @change="updateConfig(control.field, ($event.target as HTMLInputElement).checked)"
+            data-testid="toggle-legend"
+          />
+
+          <!-- Select Input -->
           <select
+            v-else
             :id="control.id"
             :value="config[control.field]"
-            @change="
-              $emit('update-config', control.field, ($event.target as HTMLInputElement).value)
-            "
+            @change="updateConfig(control.field, ($event.target as HTMLInputElement).value)"
             class="form-select no-drag"
           >
             <option v-if="control.allowEmpty" value="">None</option>
-            <option
-              v-for="column in filteredColumns(control.columnFilter)"
-              :key="column.name"
-              :value="column.name"
-            >
-              {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
-            </option>
+            
+            <!-- Options from predefined list -->
+            <template v-if="control.options">
+              <option
+                v-for="option in control.options"
+                :key="option"
+                :value="option"
+              >
+                {{ option }}
+              </option>
+            </template>
+            
+            <!-- Options from filtered columns -->
+            <template v-else>
+              <option
+                v-for="column in filteredColumns(control.columnFilter)"
+                :key="column.name"
+                :value="column.name"
+              >
+                {{ column.name }}{{ column.description ? ` - ${column.description}` : '' }}
+              </option>
+            </template>
           </select>
         </div>
       </div>
@@ -150,6 +103,16 @@ import { defineComponent, computed } from 'vue'
 import type { PropType } from 'vue'
 import type { ChartConfig, ResultColumn } from '../editors/results'
 import { Controls, type ChartControl } from '../dashboards/constants'
+
+interface ControlSection {
+  name: string
+  label: string
+  controls: EnhancedChartControl[]
+}
+
+interface EnhancedChartControl extends ChartControl {
+  inputType: 'select' | 'checkbox'
+}
 
 export default defineComponent({
   name: 'ChartControlPanel',
@@ -179,16 +142,51 @@ export default defineComponent({
       required: true,
     },
   },
-  setup(props) {
-    // Computed property to get controls visible for the current chart type
-    const visibleControls = computed((): ChartControl[] => {
-      return Controls.filter((control) => {
-        return control.visibleFor.includes(props.config.chartType)
-      })
+  setup(props, { emit }) {
+    // Helper function to determine input type
+    const getInputType = (field: string): 'select' | 'checkbox' => {
+      return ['hideLegend', 'hideLabel', 'showTitle'].includes(field) ? 'checkbox' : 'select'
+    }
+
+    // Enhanced controls with input type
+    const enhancedControls = computed((): EnhancedChartControl[] => {
+      return Controls
+        .filter((control) => control.visibleFor.includes(props.config.chartType))
+        .map((control) => ({
+          ...control,
+          inputType: getInputType(control.field)
+        }))
     })
 
+    // Group controls into sections
+    const controlSections = computed((): ControlSection[] => {
+      const sections: Record<string, ControlSection> = {
+        axes: { name: 'axes', label: 'Axes', controls: [] },
+        appearance: { name: 'appearance', label: 'Appearance', controls: [] },
+        advanced: { name: 'advanced', label: 'Advanced', controls: [] }
+      }
+
+      enhancedControls.value.forEach((control) => {
+        const sectionName = control.filterGroup || 'advanced'
+        if (sections[sectionName]) {
+          sections[sectionName].controls.push(control)
+        }
+      })
+
+      // Return only sections that have controls or are advanced (which has the editor button)
+      return Object.values(sections).filter(
+        section => section.controls.length > 0 || section.name === 'advanced'
+      )
+    })
+
+    // Centralized update function
+    const updateConfig = (field: string, value: any) => {
+      emit('update-config', field, value)
+    }
+
     return {
-      visibleControls,
+      controlSections,
+      updateConfig
     }
   },
 })
@@ -292,7 +290,6 @@ export default defineComponent({
   font-size: var(--icon-size);
 }
 
-/* Styles for the editor button */
 .editor-btn {
   display: flex;
   align-items: center;
@@ -311,7 +308,6 @@ export default defineComponent({
   background-color: var(--button-mouseover);
 }
 
-/* Mobile responsiveness */
 @media (max-width: 768px) {
   .form-select {
     height: var(--chart-control-height);

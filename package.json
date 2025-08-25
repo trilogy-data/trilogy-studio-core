@@ -58,7 +58,7 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.1-dev266.0",
+    "@duckdb/duckdb-wasm": "^1.29.1-dev269.0",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@fontsource/inter": "^5.2.6",

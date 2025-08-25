@@ -464,6 +464,85 @@ address airport;
         assert len(sql) > 0
 
 
+def test_multi_query_common_def():
+    """Test that in a multibatch, locally derived query concepts don't block other queries."""
+    multi_query = {
+        "imports": [
+            {"name": "flight", "alias": "f"},
+            {"name": "airport", "alias": None},
+        ],
+        "dialect": "duckdb",
+        "full_model": {
+            "name": "",
+            "sources": [
+                {
+                    "alias": "flight",
+                    "contents": """
+import airport as origin;
+import airport as destination;
+
+key id2 int;
+property id2.distance int;
+
+datasource flight (
+    id2,
+    origin:origin.code,
+    destination:destination.code,
+    distance
+)
+grain (id2)
+address flight;
+""",
+                },
+                {
+                    "alias": "airport",
+                    "contents": """
+key code string;
+property code.city string;
+property code.state string;
+
+datasource airport (
+    code,
+    city,
+    state
+)
+grain(code)
+address airport;
+""",
+                },
+            ],
+        },
+        "queries": [
+            {
+                "query": "SELECT f.destination.state, sum(f.distance) as total_distance_2;",
+                "label": "nested_reference",
+            },
+            {"query": "SELECT city, state;", "label": "direct_import"},
+            {
+                "query": "SELECT f.destination.state, sum(f.distance) as total_distance_2;",
+                "label": "nested_reference",
+            },
+            {
+                "query": "SELECT f.destination.state, sum(f.distance) as total_distance_2;",
+                "label": "nested_reference",
+            },
+        ],
+    }
+
+    query = MultiQueryInSchema.model_validate(multi_query)
+    dialect = get_dialect_generator(query.dialect)
+    results = generate_multi_query_core(query, dialect, cleanup_concepts=True)
+
+    assert len(results) == 4
+
+    # All queries should successfully compile
+    for label, result, columns in results:
+        assert result is not None
+        sql = dialect.compile_statement(result)
+        assert sql is not None
+        assert len(sql) > 0
+
+
 def test_multi_query_with_constants():
     """Test multi-query with constant declarations"""
     multi_query = {
