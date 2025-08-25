@@ -28,7 +28,7 @@
         v-show="section.controls.length > 0 || section.name === 'advanced'"
       >
         <label class="control-section-label">{{ section.label }}</label>
-        
+
         <!-- Vega Editor Button (special case for Advanced section) -->
         <div v-if="section.name === 'advanced'" class="control-group no-drag">
           <label class="chart-label">Vega Editor</label>
@@ -43,13 +43,9 @@
         </div>
 
         <!-- Dynamic Controls -->
-        <div
-          v-for="control in section.controls"
-          :key="control.id"
-          class="control-group no-drag"
-        >
+        <div v-for="control in section.controls" :key="control.id" class="control-group no-drag">
           <label class="chart-label" :for="control.id">{{ control.label }}</label>
-          
+
           <!-- Checkbox Input -->
           <input
             v-if="control.inputType === 'checkbox'"
@@ -69,18 +65,14 @@
             class="form-select no-drag"
           >
             <option v-if="control.allowEmpty" value="">None</option>
-            
+
             <!-- Options from predefined list -->
             <template v-if="control.options">
-              <option
-                v-for="option in control.options"
-                :key="option"
-                :value="option"
-              >
+              <option v-for="option in control.options" :key="option" :value="option">
                 {{ option }}
               </option>
             </template>
-            
+
             <!-- Options from filtered columns -->
             <template v-else>
               <option
@@ -150,12 +142,12 @@ export default defineComponent({
 
     // Enhanced controls with input type
     const enhancedControls = computed((): EnhancedChartControl[] => {
-      return Controls
-        .filter((control) => control.visibleFor.includes(props.config.chartType))
-        .map((control) => ({
+      return Controls.filter((control) => control.visibleFor.includes(props.config.chartType)).map(
+        (control) => ({
           ...control,
-          inputType: getInputType(control.field)
-        }))
+          inputType: getInputType(control.field),
+        }),
+      )
     })
 
     // Group controls into sections
@@ -163,7 +155,7 @@ export default defineComponent({
       const sections: Record<string, ControlSection> = {
         axes: { name: 'axes', label: 'Axes', controls: [] },
         appearance: { name: 'appearance', label: 'Appearance', controls: [] },
-        advanced: { name: 'advanced', label: 'Advanced', controls: [] }
+        advanced: { name: 'advanced', label: 'Advanced', controls: [] },
       }
 
       enhancedControls.value.forEach((control) => {
@@ -175,7 +167,7 @@ export default defineComponent({
 
       // Return only sections that have controls or are advanced (which has the editor button)
       return Object.values(sections).filter(
-        section => section.controls.length > 0 || section.name === 'advanced'
+        (section) => section.controls.length > 0 || section.name === 'advanced',
       )
     })
 
@@ -186,7 +178,7 @@ export default defineComponent({
 
     return {
       controlSections,
-      updateConfig
+      updateConfig,
     }
   },
 })

@@ -1,15 +1,15 @@
 import { type ChartConfig } from '../editors/results'
 // Define the control interface
-  export interface ChartControl {
-    id: string
-    label: string
-    field: keyof ChartConfig
-    columnFilter: 'numeric' | 'categorical' | 'temporal' | 'longitude' | 'latitude' | 'all'
-    allowEmpty: boolean
-    visibleFor: string[] // Array of chart types where this control should be visible
-    filterGroup: 'axes' | 'appearance'
-    options?: string[] // For fields with predefined options (like scale types)
-  }
+export interface ChartControl {
+  id: string
+  label: string
+  field: keyof ChartConfig
+  columnFilter: 'numeric' | 'categorical' | 'temporal' | 'longitude' | 'latitude' | 'all'
+  allowEmpty: boolean
+  visibleFor: string[] // Array of chart types where this control should be visible
+  filterGroup: 'axes' | 'appearance'
+  options?: string[] // For fields with predefined options (like scale types)
+}
 
 export const Controls: ChartControl[] = [
   {
@@ -176,7 +176,7 @@ export const Controls: ChartControl[] = [
     visibleFor: ['usa-map', 'point'],
     filterGroup: 'appearance',
   },
-    {
+  {
     id: 'scale-x',
     label: 'X Axis Scale',
     field: 'scaleX',
@@ -186,7 +186,7 @@ export const Controls: ChartControl[] = [
     options: ['linear', 'log'],
     filterGroup: 'appearance',
   },
-      {
+  {
     id: 'scale-y',
     label: 'Y Axis Scale',
     field: 'scaleY',
@@ -196,7 +196,7 @@ export const Controls: ChartControl[] = [
     options: ['linear', 'log'],
     filterGroup: 'appearance',
   },
-    {
+  {
     id: 'hide-legend',
     label: 'Hide Legend',
     field: 'hideLegend',

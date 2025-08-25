@@ -65,7 +65,6 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
   }
 }
 
-
 /**
  * Create chart specification for heatmap
  */

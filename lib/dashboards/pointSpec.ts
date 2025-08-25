@@ -1,4 +1,4 @@
-import { getFormatHint, createFieldEncoding, createColorEncoding, createSizeEncoding } from './helpers'
+import { createFieldEncoding, createColorEncoding, createSizeEncoding } from './helpers'
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { lightDefaultColor, darkDefaultColor } from './constants'
@@ -13,7 +13,7 @@ export const createPointChartSpec = (
   data: readonly Row[] = [],
 ) => {
   const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
-  let base = [{
+  let baseLayer = {
     params: [
       {
         name: 'highlight',
@@ -39,7 +39,6 @@ export const createPointChartSpec = (
       color: color,
     },
     encoding: {
-
       color: createColorEncoding(
         config,
         config.colorField,
@@ -52,7 +51,8 @@ export const createPointChartSpec = (
       size: createSizeEncoding(config.sizeField, columns, isMobile, config.hideLegend),
       tooltip: tooltipFields,
     },
-  }]
+  }
+  let base = [baseLayer] as any[]
   if (config.annotationField && columns.get(config.annotationField)) {
     base.push({
       mark: {
@@ -61,19 +61,18 @@ export const createPointChartSpec = (
         baseline: 'middle',
         dx: 5,
         fontSize: 8,
-        
       },
       encoding: {
         text: { field: config.annotationField, type: 'nominal' },
-        color: { value: currentTheme === 'light' ? '#333333' : '#dddddd', }
+        color: { value: currentTheme === 'light' ? '#333333' : '#dddddd' },
       },
     })
   }
   return {
-    'layer': base,
+    layer: base,
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, {}, true, { scale: config.scaleX }),
       y: createFieldEncoding(config.yField || '', columns, {}, true, { scale: config.scaleY }),
-    }
+    },
   }
 }

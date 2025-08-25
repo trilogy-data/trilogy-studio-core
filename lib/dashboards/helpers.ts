@@ -498,7 +498,10 @@ export const getSortOrder = (
 /**
  * Get Vega field type based on column type
  */
-export const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>): 'nominal' | 'temporal' | 'ordinal' | 'quantitative' => {
+export const getVegaFieldType = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+): 'nominal' | 'temporal' | 'ordinal' | 'quantitative' => {
   if (!fieldName || !columns.get(fieldName)) return 'nominal'
 
   const column = columns.get(fieldName)
@@ -524,9 +527,8 @@ export const createFieldEncoding = (
   axisOptions = {},
   sort: boolean = true,
   options: {
-    scale?: string | undefined,
-  } = {}
-
+    scale?: string | undefined
+  } = {},
 ): any => {
   if (!fieldName) return {}
 
@@ -568,7 +570,12 @@ export const createInteractionEncodings = () => {
   }
 }
 
-export const getLegendOrientation = (field: string, isMobile: boolean, fieldType: string, legendType: 'size' | 'color' = 'color') => {
+export const getLegendOrientation = (
+  field: string,
+  isMobile: boolean,
+  fieldType: string,
+  legendType: 'size' | 'color' = 'color',
+) => {
   let labelRight = false
   if (fieldType === 'quantitative' && legendType === 'color') {
     labelRight = true
@@ -589,7 +596,7 @@ export const getLegendOrientation = (field: string, isMobile: boolean, fieldType
   }
 }
 
-const legendTicks = 10;
+const legendTicks = 10
 
 export const createColorEncoding = (
   config: ChartConfig,
@@ -601,7 +608,7 @@ export const createColorEncoding = (
   data: readonly Row[] = [],
 ) => {
   let legendConfig = { tickCount: legendTicks }
-  let uniqueValues: any[] = [];
+  let uniqueValues: any[] = []
 
   if (colorField) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -612,23 +619,25 @@ export const createColorEncoding = (
 
     // Get unique values first
     if (fieldType === 'nominal' || fieldType === 'ordinal') {
-      uniqueValues = unique(data, (d => d[colorField]));
+      uniqueValues = unique(data, (d) => d[colorField])
       // Sort by size field if it exists, otherwise alphabetically
       if (config.sizeField) {
         // Sort by size field (descending - largest first)
-        uniqueValues = [...uniqueValues].sort((a, b) => (b[config.sizeField!] || 0) - (a[config.sizeField!] || 0));
+        uniqueValues = [...uniqueValues].sort(
+          (a, b) => (b[config.sizeField!] || 0) - (a[config.sizeField!] || 0),
+        )
       } else {
         // Sort alphabetically by the color field value
         uniqueValues = [...uniqueValues].sort((a, b) => {
-          const aValue = String(a[colorField] || '');
-          const bValue = String(b[colorField] || '');
-          return aValue.localeCompare(bValue);
-        });
+          const aValue = String(a[colorField] || '')
+          const bValue = String(b[colorField] || '')
+          return aValue.localeCompare(bValue)
+        })
       }
     }
 
     // Take only the first legendTicks values
-    uniqueValues = uniqueValues.slice(0, legendTicks);
+    uniqueValues = uniqueValues.slice(0, legendTicks)
   }
 
   // Helper function to conditionally add legend
@@ -643,7 +652,13 @@ export const createColorEncoding = (
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
-    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns), ...((fieldType === 'nominal' || fieldType === 'ordinal') ? { values: uniqueValues.map(d => d[colorField]) } : {}) }
+    legendConfig = {
+      ...legendConfig,
+      ...getFormatHint(colorField, columns),
+      ...(fieldType === 'nominal' || fieldType === 'ordinal'
+        ? { values: uniqueValues.map((d) => d[colorField]) }
+        : {}),
+    }
     const rval = {
       field: colorField,
       type: fieldType,
@@ -661,7 +676,6 @@ export const createColorEncoding = (
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
       ...getFormatHint(colorField, columns),
-
     }
     return addLegendIfNeeded(rval)
   }
@@ -675,9 +689,8 @@ export const createSizeEncoding = (
   isMobile: boolean = false,
   hideLegend: boolean = false,
 ): any => {
-
   let legendConfig = {
-    tickCount: 5
+    tickCount: 5,
   }
 
   if (sizeField) {
@@ -700,7 +713,8 @@ export const createSizeEncoding = (
   // "scale": { "rangeMin": 75, "nice": true},
   if (sizeField && columns.get(sizeField)) {
     return addLegendIfNeeded({
-      scale: { rangeMin: 30, nice: true, type: 'linear' }, field: sizeField,
+      scale: { rangeMin: 30, nice: true, type: 'linear' },
+      field: sizeField,
       title: snakeCaseToCapitalizedWords(columns.get(sizeField)?.description || sizeField),
     })
   }
