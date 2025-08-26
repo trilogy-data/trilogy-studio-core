@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineProps, inject, watch } from 'vue'
+import { ref, onMounted, computed, inject, watch } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'

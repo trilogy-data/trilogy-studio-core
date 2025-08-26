@@ -1,3 +1,4 @@
+import { unique } from 'vega-lite'
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
@@ -497,7 +498,10 @@ export const getSortOrder = (
 /**
  * Get Vega field type based on column type
  */
-export const getVegaFieldType = (fieldName: string, columns: Map<string, ResultColumn>): string => {
+export const getVegaFieldType = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+): 'nominal' | 'temporal' | 'ordinal' | 'quantitative' => {
   if (!fieldName || !columns.get(fieldName)) return 'nominal'
 
   const column = columns.get(fieldName)
@@ -522,6 +526,9 @@ export const createFieldEncoding = (
   columns: Map<string, ResultColumn>,
   axisOptions = {},
   sort: boolean = true,
+  options: {
+    scale?: string | undefined
+  } = {},
 ): any => {
   if (!fieldName) return {}
 
@@ -532,6 +539,7 @@ export const createFieldEncoding = (
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
     ...(sort ? getSortOrder(fieldName, columns) : {}),
+    ...(options.scale ? { scale: { type: options.scale } } : {}),
   }
 }
 
@@ -562,9 +570,14 @@ export const createInteractionEncodings = () => {
   }
 }
 
-export const getLegendOrientation = (field: string, isMobile: boolean, fieldType: string) => {
+export const getLegendOrientation = (
+  field: string,
+  isMobile: boolean,
+  fieldType: string,
+  legendType: 'size' | 'color' = 'color',
+) => {
   let labelRight = false
-  if (fieldType === 'quantitative') {
+  if (fieldType === 'quantitative' && legendType === 'color') {
     labelRight = true
   }
   if (field && field.length > 10) {
@@ -583,15 +596,19 @@ export const getLegendOrientation = (field: string, isMobile: boolean, fieldType
   }
 }
 
+const legendTicks = 10
+
 export const createColorEncoding = (
-  _: ChartConfig,
+  config: ChartConfig,
   colorField: string | undefined,
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
   currentTheme: string = 'light',
   hideLegend: boolean = false,
+  data: readonly Row[] = [],
 ) => {
-  let legendConfig = {}
+  let legendConfig = { tickCount: legendTicks }
+  let uniqueValues: any[] = []
 
   if (colorField) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -599,6 +616,28 @@ export const createColorEncoding = (
       ...legendConfig,
       ...getLegendOrientation(colorField, isMobile, fieldType),
     }
+
+    // Get unique values first
+    if (fieldType === 'nominal' || fieldType === 'ordinal') {
+      uniqueValues = unique(data, (d) => d[colorField])
+      // Sort by size field if it exists, otherwise alphabetically
+      if (config.sizeField) {
+        // Sort by size field (descending - largest first)
+        uniqueValues = [...uniqueValues].sort(
+          (a, b) => (b[config.sizeField!] || 0) - (a[config.sizeField!] || 0),
+        )
+      } else {
+        // Sort alphabetically by the color field value
+        uniqueValues = [...uniqueValues].sort((a, b) => {
+          const aValue = String(a[colorField] || '')
+          const bValue = String(b[colorField] || '')
+          return aValue.localeCompare(bValue)
+        })
+      }
+    }
+
+    // Take only the first legendTicks values
+    uniqueValues = uniqueValues.slice(0, legendTicks)
   }
 
   // Helper function to conditionally add legend
@@ -613,7 +652,13 @@ export const createColorEncoding = (
 
   if (colorField && columns.get(colorField)) {
     const fieldType = getVegaFieldType(colorField, columns)
-    legendConfig = { ...legendConfig, ...getFormatHint(colorField, columns) }
+    legendConfig = {
+      ...legendConfig,
+      ...getFormatHint(colorField, columns),
+      ...(fieldType === 'nominal' || fieldType === 'ordinal'
+        ? { values: uniqueValues.map((d) => d[colorField]) }
+        : {}),
+    }
     const rval = {
       field: colorField,
       type: fieldType,
@@ -632,7 +677,6 @@ export const createColorEncoding = (
       ],
       ...getFormatHint(colorField, columns),
     }
-
     return addLegendIfNeeded(rval)
   }
 
@@ -642,9 +686,37 @@ export const createColorEncoding = (
 export const createSizeEncoding = (
   sizeField: string | undefined,
   columns: Map<string, ResultColumn>,
+  isMobile: boolean = false,
+  hideLegend: boolean = false,
 ): any => {
+  let legendConfig = {
+    tickCount: 5,
+  }
+
+  if (sizeField) {
+    const fieldType = getVegaFieldType(sizeField, columns)
+    legendConfig = {
+      ...legendConfig,
+      ...getLegendOrientation(sizeField, isMobile, fieldType, 'size'),
+    }
+  }
+
+  // Helper function to conditionally add legend
+  const addLegendIfNeeded = (obj: any) => {
+    if (!hideLegend && Object.keys(legendConfig).length > 0) {
+      obj.legend = legendConfig
+    } else if (hideLegend) {
+      obj.legend = null
+    }
+    return obj
+  }
+  // "scale": { "rangeMin": 75, "nice": true},
   if (sizeField && columns.get(sizeField)) {
-    return { scale: { type: 'sqrt' }, field: sizeField }
+    return addLegendIfNeeded({
+      scale: { rangeMin: 30, nice: true, type: 'linear' },
+      field: sizeField,
+      title: snakeCaseToCapitalizedWords(columns.get(sizeField)?.description || sizeField),
+    })
   }
   return {}
 }

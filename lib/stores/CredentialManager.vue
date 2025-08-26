@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref } from 'vue'
 
 // Define props for the component - now receiving state from parent
 defineProps({
