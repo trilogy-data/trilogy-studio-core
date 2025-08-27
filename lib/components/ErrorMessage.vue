@@ -39,6 +39,8 @@ export default {
   /* Soft shadow to lift the banner */
   height: 100%;
   vertical-align: middle;
+  overflow-y: scroll;
+  box-sizing:border-box;
 }
 
 .error-icon {
@@ -51,7 +53,6 @@ export default {
   font-weight: bold;
   white-space: pre-line;
   /* This will convert \n to actual line breaks */
-
   /* Handle long words */
 }
 

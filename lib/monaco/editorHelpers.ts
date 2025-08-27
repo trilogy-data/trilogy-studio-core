@@ -62,7 +62,7 @@ export function createMonacoEditor(
  * Get text from the editor, either selected text or all text
  */
 export function getEditorText(
-  editor: editor.IStandaloneCodeEditor | undefined,
+  editor: editor.IStandaloneCodeEditor | null | undefined,
   fallback: string = '',
 ): string {
   if (!editor) return fallback

@@ -206,15 +206,6 @@ export const Controls: ChartControl[] = [
     filterGroup: 'appearance',
   },
   {
-    id: 'hide-legend',
-    label: 'Hide Legend',
-    field: 'hideLegend',
-    columnFilter: 'all',
-    allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
-    filterGroup: 'appearance',
-  },
-  {
     id: 'hide-label',
     label: 'Hide Label',
     field: 'hideLegend',

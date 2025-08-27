@@ -96,7 +96,7 @@ import type { PropType } from 'vue'
 import type { ChartConfig, ResultColumn } from '../editors/results'
 import { Controls, type ChartControl } from '../dashboards/constants'
 
-interface ChartControlSection {
+export interface ChartControlSection {
   name: string
   label: string
   controls: EnhancedChartControl[]
