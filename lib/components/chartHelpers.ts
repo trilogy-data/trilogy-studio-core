@@ -3,12 +3,7 @@ import type { View } from 'vega'
 import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
-import {
-  convertTimestampToISODate,
-  isCategoricalColumn,
-  isGeographicColumn,
-  filteredColumns,
-} from '../dashboards/helpers'
+import { convertTimestampToISODate, filteredColumns } from '../dashboards/helpers'
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
 const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
@@ -32,7 +27,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file
@@ -80,13 +75,9 @@ export class ChromaChartHelpers {
       if (!config.xField || !config.yField) return
       const xField = columns.get(config.xField)
       const yField = columns.get(config.yField)
-      if (!xField || !yField) return
-      const xRange = item[config.xField as keyof typeof item] ?? [
-
-      ]
-      const yRange = item[config.yField as keyof typeof item] ?? [
-
-      ]
+      if (!xField || !yField || !xField.address || !yField.address) return
+      const xRange = item[config.xField as keyof typeof item] ?? []
+      const yRange = item[config.yField as keyof typeof item] ?? []
 
       if (!xRange || !yRange || xRange.length === 0 || yRange.length === 0) {
         // Brush is being cleared - record the time and schedule a background click
@@ -108,15 +99,12 @@ export class ChromaChartHelpers {
       }
 
       this.eventHandlers.onDimensionClick({
-        filters: { [xField?.address]: xRange, [yField?.address]: yRange },
+        filters: { [xField.address]: xRange, [yField.address]: yRange },
         // TODO: be able to set brush ranges properly
         // chart: { [config.xField]: xRange, [config.yField]: yRange },
         append: false,
       })
-
-    }
-
-    else if (item && ['line', 'area',].includes(config.chartType)) {
+    } else if (item && ['line', 'area'].includes(config.chartType)) {
       if (!config.xField) return
 
       const timeField = columns.get(config.xField)

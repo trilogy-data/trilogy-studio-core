@@ -29,8 +29,7 @@ export const createPointChartSpec = (
           type: 'point',
           on: 'click,touchend',
         },
-         value: intChart,
-
+        value: intChart,
       },
       {
         name: 'brush',

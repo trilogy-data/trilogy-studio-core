@@ -211,11 +211,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     if (extraContent) {
       sources = sources.concat(extraContent)
@@ -395,21 +395,20 @@ export default class QueryExecutionService {
       }
     }
   }
-  async formatQuery(text: string,
+  async formatQuery(
+    text: string,
     queryType: string,
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraContent?: ContentInput[],
-
   ) {
-
     try {
       const formatted = await this.trilogyResolver.format_query(
         text,
         queryType,
         editorType,
         extraContent,
-        imports
+        imports,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -419,8 +418,6 @@ export default class QueryExecutionService {
       console.error('Error formatting query:', error)
     }
   }
-
-
 
   async generateQuery(
     connectionId: string,
@@ -432,11 +429,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     }
 
@@ -481,11 +478,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
         : []
     }
     if (queryInput.extraContent) {
@@ -600,9 +597,9 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]?.contents || '',
-        }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]?.contents || '',
+          }))
         : []
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)

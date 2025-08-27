@@ -40,7 +40,7 @@ export default {
   height: 100%;
   vertical-align: middle;
   overflow-y: scroll;
-  box-sizing:border-box;
+  box-sizing: border-box;
 }
 
 .error-icon {
