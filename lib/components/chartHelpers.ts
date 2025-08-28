@@ -3,12 +3,7 @@ import type { View } from 'vega'
 import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
-import {
-  convertTimestampToISODate,
-  isCategoricalColumn,
-  isGeographicColumn,
-  filteredColumns,
-} from '../dashboards/helpers'
+import { convertTimestampToISODate, filteredColumns } from '../dashboards/helpers'
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
 const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
@@ -76,7 +71,40 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
   ): void {
-    if (item && ['line', 'area'].includes(config.chartType)) {
+    if (item && ['point'].includes(config.chartType)) {
+      if (!config.xField || !config.yField) return
+      const xField = columns.get(config.xField)
+      const yField = columns.get(config.yField)
+      if (!xField || !yField || !xField.address || !yField.address) return
+      const xRange = item[config.xField as keyof typeof item] ?? []
+      const yRange = item[config.yField as keyof typeof item] ?? []
+
+      if (!xRange || !yRange || xRange.length === 0 || yRange.length === 0) {
+        // Brush is being cleared - record the time and schedule a background click
+        this.brushState.lastBrushClearTime = Date.now()
+
+        // If the last click time was within the coordination timeout, cancel the background click
+        if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
+          console.log('Cancelling background click due to recent point click')
+          this.brushState.pendingBackgroundClick = false
+          return
+        }
+
+        console.log(
+          'Scheduling background click due to brush clear, elapsed since last point click:',
+          Date.now() - this.brushState.lastClickTime,
+        )
+        this.eventHandlers.onBackgroundClick()
+        return
+      }
+
+      this.eventHandlers.onDimensionClick({
+        filters: { [xField.address]: xRange, [yField.address]: yRange },
+        // TODO: be able to set brush ranges properly
+        // chart: { [config.xField]: xRange, [config.yField]: yRange },
+        append: false,
+      })
+    } else if (item && ['line', 'area'].includes(config.chartType)) {
       if (!config.xField) return
 
       const timeField = columns.get(config.xField)
@@ -212,21 +240,7 @@ export class ChromaChartHelpers {
     let baseFilters = {}
     let baseChart = {}
 
-    // Handle color field clicks
-    if (config.colorField) {
-      const colorField = columns.get(config.colorField)
-      if (colorField && (isCategoricalColumn(colorField) || isGeographicColumn(colorField))) {
-        const colorConcept = colorField?.address
-        if (colorConcept && colorField) {
-          baseFilters = { [colorConcept]: item.datum[config.colorField] }
-          baseChart = {
-            [config.colorField]: item.datum[config.colorField],
-          }
-        }
-      }
-    }
-
-    let baseCols = [config.xField, config.yField]
+    let baseCols = [config.xField, config.yField, config.colorField, config.annotationField]
     if (config.chartType === 'headline') {
       baseCols = [...Object.keys(item.datum)]
     }
@@ -326,7 +340,7 @@ export class ChromaChartHelpers {
     isMobile: boolean,
     debouncedBrushHandler: (name: string, item: SignalValue) => void,
   ): (() => void) | null {
-    if (['area', 'line'].includes(config.chartType)) {
+    if (['area', 'line', 'point'].includes(config.chartType)) {
       // Create a reference to the click handler so we can remove it later
       const clickHandler = (event: any, item: any) => {
         this.handlePointClick(event, item, config, columns)

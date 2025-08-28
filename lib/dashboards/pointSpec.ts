@@ -30,7 +30,13 @@ export const createPointChartSpec = (
           on: 'click,touchend',
         },
         value: intChart,
-        nearest: true,
+      },
+      {
+        name: 'brush',
+        select: {
+          type: 'interval',
+        },
+        // value: intChart,
       },
     ],
     mark: {

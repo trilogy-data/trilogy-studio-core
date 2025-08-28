@@ -395,6 +395,29 @@ export default class QueryExecutionService {
       }
     }
   }
+  async formatQuery(
+    text: string,
+    queryType: string,
+    editorType: 'trilogy' | 'sql' | 'preql',
+    imports: Import[] = [],
+    extraContent?: ContentInput[],
+  ) {
+    try {
+      const formatted = await this.trilogyResolver.format_query(
+        text,
+        queryType,
+        editorType,
+        extraContent,
+        imports,
+      )
+
+      if (formatted.data && formatted.data.text) {
+        return formatted.data.text
+      }
+    } catch (error) {
+      console.error('Error formatting query:', error)
+    }
+  }
 
   async generateQuery(
     connectionId: string,

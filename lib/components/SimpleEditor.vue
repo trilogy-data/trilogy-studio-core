@@ -14,6 +14,14 @@
           Parse
         </button>
         <button
+          v-if="editor.type !== 'sql'"
+          class="action-item"
+          @click="formatQuery"
+          title="Format query"
+        >
+          Format
+        </button>
+        <button
           @click="editor.loading ? cancelQuery() : runQuery()"
           class="action-item"
           :class="{ 'button-cancel': editor.loading }"
@@ -147,6 +155,8 @@ export default defineComponent({
     },
   },
 
+  emits: ['query-started', 'format-query'],
+
   data() {
     return {
       lastOperation: null as OperationState | null,
@@ -270,6 +280,13 @@ export default defineComponent({
       globalEditor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
         this.generateLLMQuery()
       })
+
+      // Format query shortcut: Ctrl+K (not for SQL)
+      if (this.editor.type !== 'sql') {
+        globalEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, () => {
+          this.formatQuery()
+        })
+      }
     },
 
     handleKeyboardShortcuts(event: KeyboardEvent): void {
@@ -281,6 +298,11 @@ export default defineComponent({
       // Ctrl+shift+enter to generate with llm
       if (event.ctrlKey && event.shiftKey && event.key === 'Enter') {
         this.generateLLMQuery()
+        event.preventDefault()
+      }
+      // Ctrl+K to format query (not for SQL)
+      if (event.ctrlKey && event.key === 'k' && this.editor.type !== 'sql') {
+        this.formatQuery()
         event.preventDefault()
       }
     },
@@ -363,6 +385,31 @@ export default defineComponent({
           this.editor.setError('Validation failed')
         }
         return []
+      }
+    },
+
+    async formatQuery(): Promise<void> {
+      const monacoInstance = globalEditor
+
+      const text = getEditorText(monacoInstance, this.editor.contents)
+
+      if (!text || !monacoInstance) return
+      let conn = this.connectionStore?.connections[this.editor.connection]
+      let queryExecutionService = this.queryExecutionService
+      if (!queryExecutionService) return
+      try {
+        const formatted = await queryExecutionService.formatQuery(
+          text,
+          conn ? conn.query_type : '',
+          this.editor.type,
+          this.imports,
+          this.rootContent,
+        )
+        if (formatted) {
+          monacoInstance.setValue(formatted)
+        }
+      } catch (error) {
+        console.error('Error formatting query:', error)
       }
     },
 
@@ -909,8 +956,8 @@ export default defineComponent({
 
   .action-item {
     flex-grow: 1;
-    width: calc(33% - 0.3rem);
-    /* Adjust for 3 buttons instead of 2 */
+    width: calc(25% - 0.3rem);
+    /* Adjust for 4 buttons instead of 3 */
     height: 36px;
     font-size: 0.9rem;
   }
