@@ -59,6 +59,27 @@ def test_generate_query_parallel(
     # Check that all requests succeeded
     assert all(status_code == 200 for status_code in results)
 
+def test_generate_show_query(test_client: TestClient):
+    query_data =  {
+    "query": "show SELECT\r\n    names.state,\r\n    sum(names.total_births) as total_births\r\norder by\r\ntotal_births desc;",
+    "dialect": "bigquery",
+    "full_model": {
+        "name": "",
+        "sources": [
+            {
+                "alias": "names",
+                "contents": "import std.date;\n\nkey id string; # Unique identifier for each row\nproperty id.name string; # Given name of a person at birth \nproperty id.gender string; # Sex (M=male or F=female) \nproperty id.state string; # The common two character abbreviation for a state, such as MA for Massachusetts or CT for Connecticut\nproperty id.year int::year; #\t4-digit year of birth \nproperty id.births int; # Number of occurrences of the name \nauto total_births <- sum(births); # Sum of name count along chosen dimensions\n\ndatasource usa_names(\n    raw('''FARM_FINGERPRINT(CONCAT(CAST(name AS STRING), cast(state as string),  cast(year as string), cast(gender as string)))'''):id,\n    name:name,\n    number:births,\n    year:year,\n    gender:gender,\n    state:state\n)\ngrain(id)\naddress `bigquery-public-data.usa_names.usa_1910_current`;\n",
+            }
+        ],
+    },
+    "imports": [{"name": "names", "alias": "names"}],
+    "extra_filters": ["names.name='''Mary'''"],
+    "parameters": {},
+}
+    query = QueryInSchema(**query_data)
+    query_json = query.model_dump_json()
+    response = test_client.post("/generate_query", data=query_json)
+    response.raise_for_status()
 
 def _scale_worker(query_data):
     """Worker function to execute a single parsing and generation operation"""

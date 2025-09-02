@@ -128,6 +128,7 @@ class QueryOutColumn(BaseModel):
 class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
+    generated_output: str | None = None
     error: str | None = None
     label: str | None = None
 
