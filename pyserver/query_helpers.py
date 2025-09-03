@@ -16,13 +16,17 @@ from trilogy.authoring import (
     BooleanOperator,
     WhereClause,
     PersistStatement,
+    Purpose,
+    DataType,
 )
-from trilogy.core.statements.author import ShowStatement, ValidateStatement
+from trilogy.core.statements.author import ShowStatement
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
     ProcessedQueryPersist,
     ProcessedShowStatement,
     ProcessedQuery,
+    ProcessedCopyStatement,
+    ProcessedValidateStatement,
 )
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
@@ -37,15 +41,14 @@ from io_models import (
     MultiQueryInSchema,
 )
 from trilogy.dialect.metadata import (
-    handle_processed_validate_statement,
     handle_processed_show_statement,
-    handle_show_statement_outputs,
 )
 from utility import safe_percentage
 
 
 perf_logger = getLogger("trilogy.performance")
-STATEMENT_LIMIT = 100_00
+
+STATEMENT_LIMIT = 10_000
 
 PARSE_CONFIG = Parsing(strict_name_shadow_enforcement=True)
 
@@ -122,6 +125,8 @@ def generate_single_query(
     | ProcessedQueryPersist
     | ProcessedShowStatement
     | ProcessedRawSQLStatement
+    | ProcessedCopyStatement
+    | ProcessedValidateStatement
     | None,
     list[QueryOutColumn],
     list[dict] | None,
@@ -140,12 +145,13 @@ def generate_single_query(
     env, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
+    default_values: list[dict] | None = None
     if not parsed:
         if enable_performance_logging:
             perf_logger.debug(
                 f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
             )
-        return None, default_return
+        return None, default_return, default_values
 
     final = parsed[-1]
     variables = parameters or {}
@@ -158,12 +164,28 @@ def generate_single_query(
                 f"Raw SQL generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return ProcessedRawSQLStatement(text=final.text), default_return
+        return ProcessedRawSQLStatement(text=final.text), default_return, default_values
     if isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedShowStatement)
-        results = handle_show_statement_outputs(final, [dialect.compile_statement(x) for x in base.output_values], env, dialect)
-        return base, default_return, results
+        results = handle_processed_show_statement(
+            base,
+            [
+                dialect.compile_statement(x)
+                for x in base.output_values
+                if isinstance(
+                    x, (ProcessedQuery, ProcessedQueryPersist, ProcessedCopyStatement)
+                )
+            ],
+        )
+        return (
+            base,
+            [
+                QueryOutColumn(name=x, datatype=DataType.STRING, purpose=Purpose.KEY)
+                for x in results.columns
+            ],
+            results.as_dict(),
+        )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
         if enable_performance_logging:
@@ -172,7 +194,7 @@ def generate_single_query(
                 f"Non-query generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return None, columns
+        return None, columns, None
     final_select = final.select if isinstance(final, PersistStatement) else final
     # Process columns
     col_start = time.time()
@@ -238,7 +260,7 @@ def generate_single_query(
             if k in pre_concepts:
                 env.add_concept(pre_concepts[k])
                 # env.concepts[k] = pre_concepts[k]
-    return output_statement, columns
+    return output_statement, columns, default_values
 
 
 def generate_query_core(
@@ -250,6 +272,8 @@ def generate_query_core(
     | ProcessedQueryPersist
     | ProcessedShowStatement
     | ProcessedRawSQLStatement
+    | ProcessedCopyStatement
+    | ProcessedValidateStatement
     | None,
     list[QueryOutColumn],
     list[dict] | None,
@@ -312,9 +336,12 @@ def generate_multi_query_core(
         | ProcessedQueryPersist
         | ProcessedShowStatement
         | ProcessedRawSQLStatement
+        | ProcessedCopyStatement
+        | ProcessedValidateStatement
         | Exception
         | None,
         list[QueryOutColumn],
+        list[dict] | None,
     ],
 ]:
     if enable_performance_logging:
@@ -344,9 +371,12 @@ def generate_multi_query_core(
             | ProcessedQueryPersist
             | ProcessedShowStatement
             | ProcessedRawSQLStatement
+            | ProcessedCopyStatement
+            | ProcessedValidateStatement
             | Exception
             | None,
             list[QueryOutColumn],
+            list[dict] | None,
         ]
     ] = []
     default_return: list[QueryOutColumn] = []
@@ -357,7 +387,7 @@ def generate_multi_query_core(
         conditional = filters_to_conditional(extra_filters, variables, env)
     for idx, subquery in enumerate(query.queries):
         try:
-            generated, columns = generate_single_query(
+            generated, columns, values = generate_single_query(
                 subquery.query,
                 env,
                 dialect,
@@ -368,7 +398,7 @@ def generate_multi_query_core(
                 base_filter_idx=idx,
                 cleanup_concepts=cleanup_concepts,
             )
-            all.append((subquery.label, generated, columns))  # type: ignore
+            all.append((subquery.label, generated, columns, values))  # type: ignore
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
             all.append((subquery.label, e, default_return))  # type: ignore

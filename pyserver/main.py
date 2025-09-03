@@ -225,8 +225,10 @@ def generate_queries(queries: MultiQueryInSchema):
 
         result = MultiQueryOutSchema(
             queries=[
-                query_to_output(target, columns, label, dialect, ENABLE_PERF_LOGGING)
-                for label, target, columns in statements
+                query_to_output(
+                    target, columns, values, label, dialect, ENABLE_PERF_LOGGING
+                )
+                for label, target, columns, values in statements
             ]
         )
 
@@ -270,7 +272,9 @@ def generate_query(query: QueryInSchema):
 
         # Time the query core processing
         core_start = time.perf_counter()
-        target, columns, results = generate_query_core(query, dialect, ENABLE_PERF_LOGGING)
+        target, columns, results = generate_query_core(
+            query, dialect, ENABLE_PERF_LOGGING
+        )
         core_time = time.perf_counter() - core_start
 
         # Time the output formatting

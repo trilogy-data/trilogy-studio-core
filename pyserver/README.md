@@ -1,8 +1,12 @@
 
 
-## Fly.IO deployment
+## Fly.io deployment
 
+```bash
 fly deploy
+```
+
+Docker build runs tests. Make sure they pass.
 
 ## Tests
 

@@ -188,7 +188,7 @@ RAW_VARIABLE_REQUEST_TWO = {
 def test_parse_with_variables_two():
     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST_TWO)
     dialect = get_dialect_generator(query.dialect)
-    final, columns = generate_query_core(query, dialect)
+    final, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -230,7 +230,7 @@ INVALID_PARSE_DEBUG = {
 def test_parse_error():
     query = QueryInSchema.model_validate(INVALID_PARSE_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, columns = generate_query_core(query, dialect)
+    final, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -255,7 +255,7 @@ MAP_DEBUG = {
 def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, columns = generate_query_core(query, dialect)
+    final, columns, _ = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
 
 
@@ -311,7 +311,7 @@ address flight;
     assert len(results) == 3
 
     # Each result should have generated SQL and columns
-    for label, result, columns in results:
+    for label, result, columns, values in results:
         assert result is not None
         assert len(columns) > 0
 
@@ -457,7 +457,7 @@ address airport;
     assert len(results) == 3
 
     # All queries should successfully compile
-    for label, result, columns in results:
+    for label, result, columns, _ in results:
         assert result is not None
         sql = dialect.compile_statement(result)
         assert sql is not None
@@ -536,7 +536,7 @@ address airport;
     assert len(results) == 4
 
     # All queries should successfully compile
-    for label, result, columns in results:
+    for label, result, columns, _ in results:
         assert result is not None
         sql = dialect.compile_statement(result)
         assert sql is not None

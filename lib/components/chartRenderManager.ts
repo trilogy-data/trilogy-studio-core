@@ -86,7 +86,7 @@ export class ChartRenderManager {
       console.log('Skipping render - spec unchanged')
       return
     } else {
-      console.log('Rendering new spec on chart:', chartTitle)
+      console.log('Rendering new spec on chart:', chartTitle, 'length', currentSpecString.length)
     }
 
     // Create new render operation
