@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from trilogy.authoring import (
     DataType,
@@ -8,6 +8,7 @@ from trilogy.authoring import (
 )  # , NumericType, TraitDataType
 from trilogy.core.models.core import NumericType, TraitDataType, MapType
 from pydantic import BaseModel, Field
+
 
 from trilogy import Dialects
 from enum import Enum
@@ -128,6 +129,7 @@ class QueryOutColumn(BaseModel):
 class QueryOut(BaseModel):
     generated_sql: str | None
     columns: List[QueryOutColumn] | None
+    generated_output: list[dict[str, Any]] | None = None
     error: str | None = None
     label: str | None = None
 

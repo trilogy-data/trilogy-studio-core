@@ -5,21 +5,21 @@ import { type ChartConfig } from '../editors/results'
 
 const valueToString = (column: string, value: any): string => {
   if (value === null || value === undefined) {
-    return 'datum.${column} === null'
+    return `datum.${column} === null`
   }
   if (typeof value === 'number' || typeof value === 'boolean') {
     return `datum.${column} === ${String(value)}`
   }
   if (typeof value === 'string') {
-    return `datum.${column} === '${value}'` // Escape single quotes for string literals
+    // Use JSON.stringify to properly escape all special characters including newlines
+    return `datum.${column} === ${JSON.stringify(value)}`
   }
   if (value instanceof Date) {
     return `time(datum.${column}) === time(datetime(${value.getFullYear()}, ${value.getMonth()}, ${value.getDate()}))`
   }
   // Handle arrays and objects by converting to JSON string
-  return `time(datum.${column}) === ${JSON.stringify(value)}`
+  return `datum.${column} === ${JSON.stringify(value)}`
 }
-
 const createHeadlineLayer = (
   column: string,
   index: number,

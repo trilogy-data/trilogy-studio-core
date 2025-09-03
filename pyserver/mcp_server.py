@@ -14,7 +14,10 @@ from trilogy.core.models.core import (
 )
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
-from trilogy.core.statements.execute import ProcessedRawSQLStatement
+from trilogy.core.statements.execute import (
+    ProcessedRawSQLStatement,
+    ProcessedValidateStatement,
+)
 from functools import wraps
 
 
@@ -301,7 +304,14 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     executor = CONNECTIONS[connection]
     parsed = executor.parse_text(command)[-1]
     result = executor.execute_query(parsed)
+    if not result:
+        return QueryResult(headers=[], results=[])
     if isinstance(parsed, ProcessedRawSQLStatement):
+        headers = [
+            QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
+            for col in result.keys()
+        ]
+    elif isinstance(parsed, ProcessedValidateStatement):
         headers = [
             QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
             for col in result.keys()
@@ -316,11 +326,13 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
             )
             for col in parsed.output_columns
         ]
+    if not result:
+        values = []
+    else:
+        values = result.fetchall()
     return QueryResult(
         headers=headers,
-        results=[
-            {"_index": idx, **dict(row)} for idx, row in enumerate(result.fetchall())
-        ],
+        results=[{"_index": idx, **dict(row)} for idx, row in enumerate(values)],
     )
 
 

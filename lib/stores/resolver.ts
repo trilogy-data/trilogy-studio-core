@@ -58,6 +58,7 @@ class LRUCache<T> {
 
 export interface QueryAtom {
   generated_sql: string
+  generated_output?: any[]
   columns: any[]
   error: string | null
   label?: string

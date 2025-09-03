@@ -1,4 +1,4 @@
-import { Results } from '../editors/results'
+import { Results, type ResultColumn, ColumnType } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
 import type {
   Import,
@@ -627,23 +627,41 @@ export default class QueryExecutionService {
       ])
 
       // Check if SQL was generated
-      if (!resolveResponse || !resolveResponse.data.generated_sql || dryRun) {
-        if (onSuccess) {
-          onSuccess({
-            success: true,
-            results: new Results(new Map(), []),
-            executionTime: new Date().getTime() - startTime,
-            resultSize: 0,
-            columnCount: 0,
-          })
+      if (resolveResponse && resolveResponse.data.generated_output) {
+        let columns = resolveResponse.data.columns || []
+        let rval = {
+          success: true,
+          // hardcode result types for now
+          results: new Results(
+            new Map(
+              columns.map((col) => [
+                col.name,
+                { name: col.name, type: ColumnType.STRING, purpose: col.purpose } as ResultColumn,
+              ]),
+            ),
+            resolveResponse.data.generated_output,
+          ),
+          executionTime: new Date().getTime() - startTime,
+          resultSize: resolveResponse.data.generated_output.length,
+          columnCount: columns.length,
         }
-        return {
+        console.log(rval)
+        if (onSuccess) {
+          onSuccess(rval)
+        }
+        return rval
+      } else if (!resolveResponse || !resolveResponse.data.generated_sql || dryRun) {
+        let rval = {
           success: true,
           results: new Results(new Map(), []),
           executionTime: new Date().getTime() - startTime,
           resultSize: 0,
           columnCount: 0,
         }
+        if (onSuccess) {
+          onSuccess(rval)
+        }
+        return rval
       }
 
       generatedSql = resolveResponse.data.generated_sql
