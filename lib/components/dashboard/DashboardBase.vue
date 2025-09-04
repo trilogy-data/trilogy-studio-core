@@ -226,10 +226,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => {},
-      () => {},
-      () => {},
-      () => {},
+      () => { },
+      () => { },
+      () => { },
+      () => { },
       true,
     )
 
@@ -436,9 +436,9 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     structured_content: isMarkdownData(item.content)
       ? item.content
       : {
-          markdown: item.type === 'markdown' ? item.content : '',
-          query: item.type !== 'markdown' ? item.content : '',
-        },
+        markdown: item.type === 'markdown' ? item.content : '',
+        query: item.type !== 'markdown' ? item.content : '',
+      },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,
@@ -574,7 +574,11 @@ function setCrossFilter(info: DimensionClick): void {
   const finalFilters = Object.entries(info.filters).reduce(
     (acc, [key, value]) => {
       let lookup = key
-      if (globalFields.includes(lookup)) {
+      let altLookup = null
+      if (lookup.startsWith('local.')) {
+        altLookup = lookup.replace('local.', '')
+      }
+      if (globalFields.includes(lookup) || (altLookup && globalFields.includes(altLookup))) {
         acc[key] = value
       }
       return acc
@@ -583,7 +587,7 @@ function setCrossFilter(info: DimensionClick): void {
   )
 
   if (!finalFilters || Object.keys(finalFilters).length === 0) {
-    console.log('No valid filters to apply from cross-filter event')
+    console.log('No valid filters to apply from cross-filter event, given ', info.filters)
     return
   }
 
