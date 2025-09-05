@@ -18,8 +18,9 @@ from trilogy.authoring import (
     PersistStatement,
     Purpose,
     DataType,
+    ValidateStatement,
+    ShowStatement,
 )
-from trilogy.core.statements.author import ShowStatement
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
     ProcessedQueryPersist,
@@ -42,9 +43,10 @@ from io_models import (
 )
 from trilogy.dialect.metadata import (
     handle_processed_show_statement,
+    handle_processed_validate_statement,
 )
 from utility import safe_percentage
-
+from trilogy.core.validation.environment import validate_environment
 
 perf_logger = getLogger("trilogy.performance")
 
@@ -165,7 +167,7 @@ def generate_single_query(
                 f"Parse: {parse_time:.4f}s | "
             )
         return ProcessedRawSQLStatement(text=final.text), default_return, default_values
-    if isinstance(final, ShowStatement):
+    elif isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedShowStatement)
         results = handle_processed_show_statement(
@@ -185,6 +187,24 @@ def generate_single_query(
                 for x in results.columns
             ],
             results.as_dict(),
+        )
+    elif isinstance(final, (ValidateStatement)):
+        base = dialect.generate_queries(env, [final])[-1]
+        assert isinstance(base, ProcessedValidateStatement)
+        results = handle_processed_validate_statement(
+            base,
+            dialect,
+            validate_environment_func=lambda scope, targets: validate_environment(
+                env, scope=scope, targets=targets, generate_only=True
+            ),
+        )
+        return (
+            base,
+            [
+                QueryOutColumn(name=x, datatype=DataType.STRING, purpose=Purpose.KEY)
+                for x in results.columns
+            ],
+            results.as_dict() if results else None,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
