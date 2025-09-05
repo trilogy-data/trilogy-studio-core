@@ -398,10 +398,10 @@ def generate_multi_query_core(
                 base_filter_idx=idx,
                 cleanup_concepts=cleanup_concepts,
             )
-            all.append((subquery.label, generated, columns, values))  # type: ignore
+            all.append((subquery.label, generated, columns, values))
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
-            all.append((subquery.label, e, default_return))  # type: ignore
+            all.append((subquery.label, e, default_return, None))
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start
