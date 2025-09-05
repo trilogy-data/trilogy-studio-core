@@ -331,7 +331,7 @@ def generate_multi_query_core(
     cleanup_concepts: bool = True,
 ) -> list[
     tuple[
-        str,
+        str | None,
         ProcessedQuery
         | ProcessedQueryPersist
         | ProcessedShowStatement
@@ -366,7 +366,7 @@ def generate_multi_query_core(
 
     all: list[
         tuple[
-            str,
+            str | None,
             ProcessedQuery
             | ProcessedQueryPersist
             | ProcessedShowStatement
@@ -421,7 +421,7 @@ def query_to_output(
     target,
     columns,
     results: list[dict] | None,
-    label: str,
+    label: str | None,
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
 ) -> QueryOut:
