@@ -308,14 +308,16 @@ def generate_query(query: QueryInSchema):
         if ENABLE_PERF_LOGGING:
             error_time = time.perf_counter() - start_time
             perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(e)}"
+                f"Syntax error in query: {error_time:.6f}s: {str(e)}"
             )
         raise HTTPException(status_code=422, detail=e.args[0])
     except Exception as e:
         if ENABLE_PERF_LOGGING:
             error_time = time.perf_counter() - start_time
+            #traceback is
+            tb = traceback.format_exc()
             perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(e)}"
+                f"Query generation failed after {error_time:.6f}s: {str(e)} {tb}"
             )
         raise HTTPException(status_code=422, detail=str(e))
 

@@ -203,7 +203,7 @@ def generate_single_query(
             [
                 QueryOutColumn(name=x, datatype=DataType.STRING, purpose=Purpose.KEY)
                 for x in results.columns
-            ],
+            ] if results else [],
             results.as_dict() if results else None,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
