@@ -40,7 +40,6 @@ def test_show_statement():
     assert len(results) == 1
 
 
-
 def test_validate_statement_empty():
     query = QueryInSchema.model_validate(
         {
@@ -49,26 +48,20 @@ def test_validate_statement_empty():
             "dialect": "bigquery",
             "full_model": {
                 "name": "",
-                "sources": [
-                ],
+                "sources": [],
             },
         }
     )
     dialect = DuckDBDialect()
     target, columns, results = generate_query_core(query, dialect)
     assert not results, results
-    query_to_output(
-        target, columns, results, "default", dialect, False
-    )
-
-
+    query_to_output(target, columns, results, "default", dialect, False)
 
 
 def test_validate_statement():
     query = QueryInSchema.model_validate(
         {
             "imports": [{"name": "game_event", "alias": None}],
-
             "query": "validate all ;",
             "dialect": "bigquery",
             "full_model": {
@@ -101,6 +94,4 @@ def test_validate_statement():
     dialect = DuckDBDialect()
     target, columns, results = generate_query_core(query, dialect)
     assert len(results) == 33, results
-    query_to_output(
-        target, columns, results, "default", dialect, False
-    )
+    query_to_output(target, columns, results, "default", dialect, False)

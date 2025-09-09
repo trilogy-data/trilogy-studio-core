@@ -192,7 +192,7 @@ def generate_single_query(
     elif isinstance(final, (ValidateStatement)):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedValidateStatement)
-        results = handle_processed_validate_statement(
+        validate_results = handle_processed_validate_statement(
             base,
             dialect,
             validate_environment_func=lambda scope, targets: validate_environment(
@@ -206,12 +206,12 @@ def generate_single_query(
                     QueryOutColumn(
                         name=x, datatype=DataType.STRING, purpose=Purpose.KEY
                     )
-                    for x in results.columns
+                    for x in validate_results.columns
                 ]
-                if results
+                if validate_results
                 else []
             ),
-            results.as_dict() if results else None,
+            validate_results.as_dict() if validate_results else None,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
@@ -467,6 +467,7 @@ def query_to_output(
         isinstance(target, ProcessedShowStatement)
         and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
     ):
+        assert results is not None
         return QueryOut(
             generated_sql=results[0][DEFAULT_CONCEPTS["query_text"].safe_address],
             generated_output=results,
