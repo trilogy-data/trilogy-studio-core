@@ -261,7 +261,10 @@ describe('Line and Area Chart Specs', (): void => {
             titleFontSize: 12,
             titleOrient: 'top',
             tickCount: 10,
-            values: [],
+            values: [
+              'A',
+              'B'
+            ],
           },
           type: 'nominal',
           scale: { scheme: 'category20' },

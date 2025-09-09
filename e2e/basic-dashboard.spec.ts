@@ -585,6 +585,10 @@ select rows;
   await page.keyboard.type('select rows;')
 
 
+  await page.locator('.sidebar-icons').click();
+  await page.locator('.sidebar-icons').click();
+  await page.locator('div').filter({ hasText: /^duckdb$/ }).locator('i').click();
+  await page.getByTestId('sidebar-link-editors').click();
   // Save the table
   await page.getByTestId('save-dashboard-chart').click()
 
