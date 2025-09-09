@@ -7,8 +7,7 @@ type Theme = 'light' | 'dark'
 
 describe('Line and Area Chart Specs', (): void => {
   let mockColumns: Map<string, ResultColumn>
-  let 
-  await page.goto('http://localhost:5173/trilogy-studio-core/#screen=editors&editor=test_one&dashboard=custom-editor-dashboard');mockData: Row[]
+    let mockData: Row[]
   let mockConfig: ChartConfig
   let mockTooltipFields: any[]
   let mockEncoding: any
