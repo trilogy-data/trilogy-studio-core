@@ -7,7 +7,8 @@ type Theme = 'light' | 'dark'
 
 describe('Line and Area Chart Specs', (): void => {
   let mockColumns: Map<string, ResultColumn>
-  let mockData: Row[]
+  let 
+  await page.goto('http://localhost:5173/trilogy-studio-core/#screen=editors&editor=test_one&dashboard=custom-editor-dashboard');mockData: Row[]
   let mockConfig: ChartConfig
   let mockTooltipFields: any[]
   let mockEncoding: any
@@ -261,10 +262,7 @@ describe('Line and Area Chart Specs', (): void => {
             titleFontSize: 12,
             titleOrient: 'top',
             tickCount: 10,
-            values: [
-              'A',
-              'B'
-            ],
+            values: ['A', 'B'],
           },
           type: 'nominal',
           scale: { scheme: 'category20' },

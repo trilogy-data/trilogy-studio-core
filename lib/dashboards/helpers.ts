@@ -539,12 +539,14 @@ export const createFieldEncoding = (
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
     ...(sort ? getSortOrder(fieldName, columns) : {}),
-    ...((options.scale !== undefined || options.zero !== undefined) ? { 
-      scale: { 
-        ...(options.scale !== undefined && { type: options.scale }),
-        ...(options.zero !== undefined && { zero: options.zero })
-      } 
-    } : {}),
+    ...(options.scale !== undefined || options.zero !== undefined
+      ? {
+          scale: {
+            ...(options.scale !== undefined && { type: options.scale }),
+            ...(options.zero !== undefined && { zero: options.zero }),
+          },
+        }
+      : {}),
   }
 }
 

@@ -472,8 +472,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 //   expect(componentCount).toBeGreaterThan(3)
 // })
 
-
-
 const connectionName = 'duckdb-test2'
 
 test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
@@ -541,7 +539,9 @@ select rows;
 
   // Navigate to the created dashboard
   if (!isMobile) {
-    const elementExists = await page.isVisible('[data-testid="dashboard-list-id-d-custom-editor-dashboard"]')
+    const elementExists = await page.isVisible(
+      '[data-testid="dashboard-list-id-d-custom-editor-dashboard"]',
+    )
     if (!elementExists) {
       await page.getByTestId('dashboard-list-id-s-local').click()
       await page.getByTestId(`dashboard-list-id-c-local-${connectionName}`).click()
@@ -553,7 +553,9 @@ select rows;
   await expect(page.getByText('An Empty Dashboard')).toBeVisible()
 
   // Add description for the dashboard
-  await page.getByPlaceholder('What is this dashboard for?').fill('Dashboard using custom editor data source')
+  await page
+    .getByPlaceholder('What is this dashboard for?')
+    .fill('Dashboard using custom editor data source')
   await page.getByTestId('dashboard-description-save').click()
 
   // Add a custom item to the dashboard
@@ -584,11 +586,14 @@ select rows;
   await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   await page.keyboard.type('select rows;')
 
-
-  await page.locator('.sidebar-icons').click();
-  await page.locator('.sidebar-icons').click();
-  await page.locator('div').filter({ hasText: /^duckdb$/ }).locator('i').click();
-  await page.getByTestId('sidebar-link-editors').click();
+  await page.locator('.sidebar-icons').click()
+  await page.locator('.sidebar-icons').click()
+  await page
+    .locator('div')
+    .filter({ hasText: /^duckdb$/ })
+    .locator('i')
+    .click()
+  await page.getByTestId('sidebar-link-editors').click()
   // Save the table
   await page.getByTestId('save-dashboard-chart').click()
 
@@ -596,7 +601,6 @@ select rows;
   await expect(page.getByTestId('dashboard-component-0')).toBeVisible()
   await expect(page.getByTestId('dashboard-component-1')).toBeVisible()
 
-
-  await page.getByRole('gridcell', { name: '2' }).click();
+  await page.getByRole('gridcell', { name: '2' }).click()
   console.log('✓ Custom editor dashboard creation test passed')
 })

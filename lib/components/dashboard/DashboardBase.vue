@@ -196,9 +196,7 @@ async function handleFilterChange(newFilter: string) {
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
         extraContent: rootContent.value,
-      },
-
-    )
+      })
       .then(() => {
         filterError.value = ''
         if (dashboard.value && dashboard.value.id) {
@@ -228,10 +226,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => { },
-      () => { },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
+      () => {},
+      () => {},
       true,
     )
 
@@ -438,9 +436,9 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     structured_content: isMarkdownData(item.content)
       ? item.content
       : {
-        markdown: item.type === 'markdown' ? item.content : '',
-        query: item.type !== 'markdown' ? item.content : '',
-      },
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,

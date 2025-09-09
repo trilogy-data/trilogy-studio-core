@@ -263,7 +263,6 @@ export const generateVegaSpec = (
         isMobile,
         intChart,
         currentTheme,
-        
       )
       break
 

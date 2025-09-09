@@ -77,8 +77,14 @@ export const createPointChartSpec = (
   return {
     layer: base,
     encoding: {
-      x: createFieldEncoding(config.xField || '', columns, {}, true, { scale: config.scaleX, zero: false }),
-      y: createFieldEncoding(config.yField || '', columns, {}, true, { scale: config.scaleY, zero: false }),
+      x: createFieldEncoding(config.xField || '', columns, {}, true, {
+        scale: config.scaleX,
+        zero: false,
+      }),
+      y: createFieldEncoding(config.yField || '', columns, {}, true, {
+        scale: config.scaleY,
+        zero: false,
+      }),
     },
   }
 }

@@ -88,7 +88,6 @@ import { completionToModelInput } from '../../llm/utils.ts'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { leadIn } from '../../llm/data/prompts.ts'
 
-
 // Define interfaces for the refs
 interface CodeEditorRef {
   getEditorInstance: () => any
