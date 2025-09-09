@@ -188,7 +188,7 @@ async function handleFilterChange(newFilter: string) {
 
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
-
+    console.log(rootContent.value)
     await queryExecutionService
       ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
@@ -196,7 +196,9 @@ async function handleFilterChange(newFilter: string) {
         extraFilters: [newFilter],
         imports: dashboard.value.imports,
         extraContent: rootContent.value,
-      })
+      },
+
+    )
       .then(() => {
         filterError.value = ''
         if (dashboard.value && dashboard.value.id) {

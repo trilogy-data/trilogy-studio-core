@@ -192,8 +192,8 @@ export const Controls: ChartControl[] = [
     field: 'scaleY',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point'],
-    options: ['linear', 'log'],
+    visibleFor: ['point',  'area', 'line'],
+    options: ['linear', 'log',],
     filterGroup: 'appearance',
   },
   {

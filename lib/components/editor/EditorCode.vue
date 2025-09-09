@@ -202,7 +202,10 @@ export default defineComponent({
 
       // Set up content change handler
       setupContentChangeHandler(editorInstance)
-
+      editorInstance.setScrollPosition({
+        scrollTop: props.scrollPosition?.line || 1,
+        scrollLeft: props.scrollPosition?.column || 1,
+      })
       // Set up keyboard shortcuts
       setupKeyBindings(editorInstance)
 

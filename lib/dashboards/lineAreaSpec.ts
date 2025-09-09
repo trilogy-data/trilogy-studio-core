@@ -44,7 +44,7 @@ const createInteractiveLayer = (
       }),
       y: createFieldEncoding(config.yField || '', columns, {
         axis: { ...getFormatHint(config.yField, columns) },
-      }),
+      }, false, { scale: config.scaleY }),
 
       tooltip: tooltipFields,
     },
@@ -61,7 +61,7 @@ const createInteractiveLayer = (
       mainLayer.encoding = {
         ...mainLayer.encoding,
         ...{
-          color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+          color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme, config.hideLegend, data),
         },
       }
     }
@@ -93,7 +93,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-            intChart.filter((obj) => config.xField in obj)
+          intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -117,24 +117,24 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField2, columns),
+      y: createFieldEncoding(config.yField2, columns, {}, false, { scale: config.scaleY }),
       tooltip: tooltipFields,
       ...encoding,
       ...{
-        color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+        color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme, config.hideLegend, data),
       },
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+      ]
       : [],
   }
 

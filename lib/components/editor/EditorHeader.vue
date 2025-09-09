@@ -192,7 +192,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   white-space: nowrap;
-  overflow: hidden;
+  /* overflow: hidden; */
   text-overflow: ellipsis;
 }
 

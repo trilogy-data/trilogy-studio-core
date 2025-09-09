@@ -47,6 +47,7 @@ from trilogy.dialect.metadata import (
 )
 from utility import safe_percentage
 from trilogy.core.validation.environment import validate_environment
+from trilogy.core.internal import DEFAULT_CONCEPTS
 
 perf_logger = getLogger("trilogy.performance")
 
@@ -200,10 +201,16 @@ def generate_single_query(
         )
         return (
             base,
-            [
-                QueryOutColumn(name=x, datatype=DataType.STRING, purpose=Purpose.KEY)
-                for x in results.columns
-            ] if results else [],
+            (
+                [
+                    QueryOutColumn(
+                        name=x, datatype=DataType.STRING, purpose=Purpose.KEY
+                    )
+                    for x in results.columns
+                ]
+                if results
+                else []
+            ),
             results.as_dict() if results else None,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
@@ -456,6 +463,16 @@ def query_to_output(
         return QueryOut(generated_sql=None, columns=columns, label=label)
     if isinstance(target, Exception):
         return QueryOut(generated_sql=None, columns=[], error=str(target), label=label)
+    elif (
+        isinstance(target, ProcessedShowStatement)
+        and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
+    ):
+        return QueryOut(
+            generated_sql=results[0][DEFAULT_CONCEPTS["query_text"].safe_address],
+            generated_output=results,
+            columns=columns,
+            label=label,
+        )
     else:
         compile_start = time.time()
         sql = dialect.compile_statement(target)

@@ -13,6 +13,7 @@ import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 
+
 export interface QueryInput {
   text: string
   editorType: 'trilogy' | 'sql' | 'preql'
@@ -83,6 +84,7 @@ export default class QueryExecutionService {
     onFailure?: Record<string, (message: any) => void>,
     onSuccess?: Record<string, (message: any) => void>,
     dryRun: boolean = false,
+    extraContent?: ContentInput[],
   ): Promise<{
     resultPromise: Promise<BatchQueryResult>
     cancellation: QueryCancellation
@@ -114,6 +116,7 @@ export default class QueryExecutionService {
         onFailure,
         onSuccess,
         dryRun,
+        extraContent,
       ),
     }
   }
@@ -211,11 +214,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     if (extraContent) {
       sources = sources.concat(extraContent)
@@ -336,11 +339,12 @@ export default class QueryExecutionService {
               resultSize: 0,
               columnCount: 0,
             }
+            if (onFailure && queryResult.label && onFailure[queryResult.label]) {
+              onFailure[queryResult.label](resultObj)
+            }
             results.push(resultObj)
 
-            Object.values(onFailure || {}).forEach((callback) => {
-              callback(resultObj)
-            })
+
           } else {
             // No SQL was generated for this query
             let resultObj = {
@@ -353,9 +357,9 @@ export default class QueryExecutionService {
               columnCount: 0,
             }
             results.push(resultObj)
-            Object.values(onFailure || {}).forEach((callback) => {
-              callback(resultObj)
-            })
+            if (onFailure && queryResult.label && onFailure[queryResult.label]) {
+              onFailure[queryResult.label](resultObj)
+            }
           }
         }
       }
@@ -422,19 +426,21 @@ export default class QueryExecutionService {
   async generateQuery(
     connectionId: string,
     queryInput: QueryInput,
-    sources: ContentInput[] | null = null,
   ): Promise<QueryResponse | null> {
     const conn = this.connectionStore.connections[connectionId]
 
-    if (!sources) {
-      sources = conn.model
-        ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
-        : []
+
+    let sources = conn.model
+      ? this.modelStore.models[conn.model].sources.map((source) => ({
+        alias: source.alias,
+        contents: this.editorStore.editors[source.editor]
+          ? this.editorStore.editors[source.editor].contents
+          : '',
+      }))
+      : []
+
+    if (queryInput.extraContent) {
+      sources = sources.concat(queryInput.extraContent)
     }
 
     return this.trilogyResolver.resolve_query(
@@ -478,11 +484,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     }
     if (queryInput.extraContent) {
@@ -597,10 +603,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]?.contents || '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]?.contents || '',
+        }))
         : []
+    console.log('EXTRA CONTENT', queryInput.extraContent)
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
     }
@@ -632,6 +639,7 @@ export default class QueryExecutionService {
         let rval = {
           success: true,
           // hardcode result types for now
+          generatedSql: resolveResponse.data.generated_sql,
           results: new Results(
             new Map(
               columns.map((col) => [
