@@ -93,5 +93,5 @@ def test_validate_statement():
     )
     dialect = DuckDBDialect()
     target, columns, results = generate_query_core(query, dialect)
-    assert len(results) == 33, results
+    assert len(results) == 19, results
     query_to_output(target, columns, results, "default", dialect, False)

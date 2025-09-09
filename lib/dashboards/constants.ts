@@ -182,8 +182,8 @@ export const Controls: ChartControl[] = [
     field: 'scaleX',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point'],
-    options: ['linear', 'log'],
+    visibleFor: ['point', 'barh'],
+    options: ['linear', 'log',],
     filterGroup: 'appearance',
   },
   {
