@@ -149,6 +149,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
   // await page.getByTestId('vega-chart-container-2').click();
   await page.getByTestId('vega-chart-container-2').hover({ force: true })
+  await page.waitForTimeout(500) // wait for the controls to appear
   await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.getByTestId('chart-type-usa-map').click()
 
@@ -586,14 +587,6 @@ select rows;
   await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   await page.keyboard.type('select rows;')
 
-  await page.locator('.sidebar-icons').click()
-  await page.locator('.sidebar-icons').click()
-  await page
-    .locator('div')
-    .filter({ hasText: /^duckdb$/ })
-    .locator('i')
-    .click()
-  await page.getByTestId('sidebar-link-editors').click()
   // Save the table
   await page.getByTestId('save-dashboard-chart').click()
 
