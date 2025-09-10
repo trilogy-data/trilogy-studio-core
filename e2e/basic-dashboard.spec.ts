@@ -510,8 +510,9 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   // Switch to test_one editor and add content
   await page.getByTestId('editor-list-id-e-local-duckdb-test2-test_one').click()
   const editor = page.getByTestId('editor')
-  await editor.click()
-  await page.keyboard.press('Control+A')
+  await editor.click({ clickCount: 3 })
+  // await page.keyboard.press('Control+A')
+  // 3. Delete the selected content
   await page.keyboard.press('Delete')
   const testOneContent = `
 auto x <- [1,2,3,4,5];
