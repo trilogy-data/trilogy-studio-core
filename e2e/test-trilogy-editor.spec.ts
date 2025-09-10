@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 const connectionName = 'duckdb-test2'
 
-test('test', async ({ page, isMobile }) => {
+test('test', async ({ page, isMobile, browser }) => {
   await page.goto('http://localhost:5173/trilogy-studio-core/')
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -39,8 +39,11 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-list-id-e-local-duckdb-test2-test-one').click()
   const editor = page.getByTestId('editor')
   await editor.click()
-  await page.keyboard.press('Control+A')
-  await page.keyboard.press('Delete')
+  if (browser.browserType().name() === 'webkit') {
+    await page.getByTestId('editor').click({ clickCount: 3 })
+  } else {
+    await page.getByTestId('editor').press('ControlOrMeta+a')
+  }
 
   const testOneContent = `
 auto x <- [1,2,3,4,5];
