@@ -48,7 +48,12 @@ export const createBarHChartSpec = (
       },
       x: createFieldEncoding(config.xField || '', columns, {
         axis: { ...getFormatHint(config.xField, columns) },
-      }),
+      },
+        false,
+        {
+          scale: config.scaleX,
+          zero: false,
+        }),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,

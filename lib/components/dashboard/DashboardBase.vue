@@ -188,7 +188,7 @@ async function handleFilterChange(newFilter: string) {
 
   if (dashboard.value && dashboard.value.id) {
     filter.value = newFilter
-
+    console.log(rootContent.value)
     await queryExecutionService
       ?.generateQuery(dashboard.value.connection, {
         text: 'select 1 as test;',
@@ -226,10 +226,10 @@ const validateFilter = async (filter: string) => {
         extraFilters: [filterWithoutWhere],
         extraContent: rootContent.value,
       },
-      () => { },
-      () => { },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
+      () => {},
+      () => {},
       true,
     )
 
@@ -436,9 +436,9 @@ function getItemData(itemId: string, dashboardId: string): GridItemDataResponse 
     structured_content: isMarkdownData(item.content)
       ? item.content
       : {
-        markdown: item.type === 'markdown' ? item.content : '',
-        query: item.type !== 'markdown' ? item.content : '',
-      },
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        },
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,

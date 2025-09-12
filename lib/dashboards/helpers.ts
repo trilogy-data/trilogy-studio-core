@@ -528,10 +528,10 @@ export const createFieldEncoding = (
   sort: boolean = true,
   options: {
     scale?: string | undefined
+    zero?: boolean | undefined
   } = {},
 ): any => {
   if (!fieldName) return {}
-
   return {
     field: fieldName,
     type: getVegaFieldType(fieldName, columns),
@@ -539,7 +539,14 @@ export const createFieldEncoding = (
     ...getFormatHint(fieldName, columns),
     ...axisOptions,
     ...(sort ? getSortOrder(fieldName, columns) : {}),
-    ...(options.scale ? { scale: { type: options.scale } } : {}),
+    ...(options.scale !== undefined || options.zero !== undefined
+      ? {
+          scale: {
+            ...(options.scale !== undefined && { type: options.scale }),
+            ...(options.zero !== undefined && { zero: options.zero }),
+          },
+        }
+      : {}),
   }
 }
 
@@ -605,10 +612,11 @@ export const createColorEncoding = (
   isMobile: boolean = false,
   currentTheme: string = 'light',
   hideLegend: boolean = false,
-  data: readonly Row[] = [],
+  data: readonly Row[] | null = [],
 ) => {
   let legendConfig = { tickCount: legendTicks }
   let uniqueValues: any[] = []
+  let localData = data || []
 
   if (colorField) {
     const fieldType = getVegaFieldType(colorField, columns)
@@ -619,7 +627,7 @@ export const createColorEncoding = (
 
     // Get unique values first
     if (fieldType === 'nominal' || fieldType === 'ordinal') {
-      uniqueValues = unique(data, (d) => d[colorField])
+      uniqueValues = unique(localData, (d) => d[colorField])
       // Sort by size field if it exists, otherwise alphabetically
       if (config.sizeField) {
         // Sort by size field (descending - largest first)
@@ -655,7 +663,7 @@ export const createColorEncoding = (
     legendConfig = {
       ...legendConfig,
       ...getFormatHint(colorField, columns),
-      ...(fieldType === 'nominal' || fieldType === 'ordinal'
+      ...((fieldType === 'nominal' || fieldType === 'ordinal') && uniqueValues.length > 0
         ? { values: uniqueValues.map((d) => d[colorField]) }
         : {}),
     }

@@ -156,10 +156,7 @@ def format_query(query: QueryInSchema):
     except Exception as e:
         raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
     renderer = Renderer()
-    output = FormatQueryOutSchema(
-        text="\n\n".join([renderer.to_string(x) for x in parsed])
-    )
-    return output
+    return FormatQueryOutSchema(text=renderer.render_statement_string(parsed))
 
 
 @router.post("/validate_query")
@@ -307,15 +304,15 @@ def generate_query(query: QueryInSchema):
     except InvalidSyntaxException as e:
         if ENABLE_PERF_LOGGING:
             error_time = time.perf_counter() - start_time
-            perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(e)}"
-            )
+            perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {str(e)}")
         raise HTTPException(status_code=422, detail=e.args[0])
     except Exception as e:
         if ENABLE_PERF_LOGGING:
             error_time = time.perf_counter() - start_time
+            # traceback is
+            tb = traceback.format_exc()
             perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(e)}"
+                f"Query generation failed after {error_time:.6f}s: {str(e)} {tb}"
             )
         raise HTTPException(status_code=422, detail=str(e))
 

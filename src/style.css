@@ -99,7 +99,7 @@ border-radius: 0px;
   --font-size: 14px;
   --big-font-size: 18px;
   --small-font-size: 12px;
-  --button-font-size: .90em;
+  --button-font-size: .80em;
 
   --icon-size: 16px;
 
@@ -178,7 +178,7 @@ button {
   /* padding: 0.6em 1.2em; */
   /* font-size: .70em; */
   font-size: var(--button-font-size);
-  font-weight: 500;
+  font-weight: 300;
   font-family: inherit;
   background-color: var(--button-bg);
   cursor: pointer;

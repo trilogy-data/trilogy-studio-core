@@ -702,6 +702,15 @@ export class DashboardQueryExecutor {
         () => {},
         errorCallbacks,
         callbacks,
+        false,
+        dashboardData.imports.map((imp) => ({
+          alias: imp.name,
+          // legacy handling
+          contents:
+            this.editorStore.editors[imp.id]?.contents ||
+            this.editorStore.editors[imp.name]?.contents ||
+            '',
+        })),
       )
 
       // Handle batch results
@@ -741,7 +750,7 @@ export class DashboardQueryExecutor {
             if (this.queryQueue.has(queryId)) {
               this.executeQuery(queryId)
             }
-          }, 1000 * queuedQuery.retryCount) // Exponential backoff
+          }, 1000 * queuedQuery.retryCount)
         } else {
           // Max retries reached
           this.handleQueryError(queuedQuery, errorMessage)

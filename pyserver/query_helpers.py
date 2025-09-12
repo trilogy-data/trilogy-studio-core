@@ -18,8 +18,9 @@ from trilogy.authoring import (
     PersistStatement,
     Purpose,
     DataType,
+    ValidateStatement,
+    ShowStatement,
 )
-from trilogy.core.statements.author import ShowStatement
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
     ProcessedQueryPersist,
@@ -42,9 +43,11 @@ from io_models import (
 )
 from trilogy.dialect.metadata import (
     handle_processed_show_statement,
+    handle_processed_validate_statement,
 )
 from utility import safe_percentage
-
+from trilogy.core.validation.environment import validate_environment
+from trilogy.core.internal import DEFAULT_CONCEPTS
 
 perf_logger = getLogger("trilogy.performance")
 
@@ -165,7 +168,7 @@ def generate_single_query(
                 f"Parse: {parse_time:.4f}s | "
             )
         return ProcessedRawSQLStatement(text=final.text), default_return, default_values
-    if isinstance(final, ShowStatement):
+    elif isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedShowStatement)
         results = handle_processed_show_statement(
@@ -185,6 +188,30 @@ def generate_single_query(
                 for x in results.columns
             ],
             results.as_dict(),
+        )
+    elif isinstance(final, (ValidateStatement)):
+        base = dialect.generate_queries(env, [final])[-1]
+        assert isinstance(base, ProcessedValidateStatement)
+        validate_results = handle_processed_validate_statement(
+            base,
+            dialect,
+            validate_environment_func=lambda scope, targets: validate_environment(
+                env, scope=scope, targets=targets, generate_only=True
+            ),
+        )
+        return (
+            base,
+            (
+                [
+                    QueryOutColumn(
+                        name=x, datatype=DataType.STRING, purpose=Purpose.KEY
+                    )
+                    for x in validate_results.columns
+                ]
+                if validate_results
+                else []
+            ),
+            validate_results.as_dict() if validate_results else None,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
@@ -331,7 +358,7 @@ def generate_multi_query_core(
     cleanup_concepts: bool = True,
 ) -> list[
     tuple[
-        str,
+        str | None,
         ProcessedQuery
         | ProcessedQueryPersist
         | ProcessedShowStatement
@@ -366,7 +393,7 @@ def generate_multi_query_core(
 
     all: list[
         tuple[
-            str,
+            str | None,
             ProcessedQuery
             | ProcessedQueryPersist
             | ProcessedShowStatement
@@ -398,10 +425,10 @@ def generate_multi_query_core(
                 base_filter_idx=idx,
                 cleanup_concepts=cleanup_concepts,
             )
-            all.append((subquery.label, generated, columns, values))  # type: ignore
+            all.append((subquery.label, generated, columns, values))
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
-            all.append((subquery.label, e, default_return))  # type: ignore
+            all.append((subquery.label, e, default_return, None))
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start
@@ -421,7 +448,7 @@ def query_to_output(
     target,
     columns,
     results: list[dict] | None,
-    label: str,
+    label: str | None,
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
 ) -> QueryOut:
@@ -436,6 +463,17 @@ def query_to_output(
         return QueryOut(generated_sql=None, columns=columns, label=label)
     if isinstance(target, Exception):
         return QueryOut(generated_sql=None, columns=[], error=str(target), label=label)
+    elif (
+        isinstance(target, ProcessedShowStatement)
+        and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
+    ):
+        assert results is not None
+        return QueryOut(
+            generated_sql=results[0][DEFAULT_CONCEPTS["query_text"].safe_address],
+            generated_output=results,
+            columns=columns,
+            label=label,
+        )
     else:
         compile_start = time.time()
         sql = dialect.compile_statement(target)

@@ -42,9 +42,15 @@ const createInteractiveLayer = (
       x: createFieldEncoding(config.xField || '', columns, {
         axis: { ...getFormatHint(config.xField, columns) },
       }),
-      y: createFieldEncoding(config.yField || '', columns, {
-        axis: { ...getFormatHint(config.yField, columns) },
-      }),
+      y: createFieldEncoding(
+        config.yField || '',
+        columns,
+        {
+          axis: { ...getFormatHint(config.yField, columns) },
+        },
+        false,
+        { scale: config.scaleY },
+      ),
 
       tooltip: tooltipFields,
     },
@@ -61,7 +67,15 @@ const createInteractiveLayer = (
       mainLayer.encoding = {
         ...mainLayer.encoding,
         ...{
-          color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+          color: createColorEncoding(
+            config,
+            config.colorField,
+            columns,
+            isMobile,
+            currentTheme,
+            config.hideLegend,
+            data,
+          ),
         },
       }
     }
@@ -117,11 +131,19 @@ const createInteractiveLayer = (
     data: { values: data },
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField2, columns),
+      y: createFieldEncoding(config.yField2, columns, {}, false, { scale: config.scaleY }),
       tooltip: tooltipFields,
       ...encoding,
       ...{
-        color: createColorEncoding(config, config.colorField, columns, isMobile, currentTheme),
+        color: createColorEncoding(
+          config,
+          config.colorField,
+          columns,
+          isMobile,
+          currentTheme,
+          config.hideLegend,
+          data,
+        ),
       },
     },
     params: !filtered
