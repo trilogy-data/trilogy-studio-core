@@ -17,12 +17,14 @@ const connectionTimeout = 60000 // 60 seconds - includes startup time;
 
 async function runStartup(connection: Connection) {
   let editors = useEditorStore()
-  return editors
-    .getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT])
-    .forEach(async (editor) => {
+  const startupEditors = editors.getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT])
+
+  await Promise.all(
+    startupEditors.map(async (editor) => {
       console.log(`running startup script ${editor.name}`)
       await connection.query(editor.contents)
     })
+  )
 }
 
 const useConnectionStore = defineStore('connections', {
@@ -100,10 +102,14 @@ const useConnectionStore = defineStore('connections', {
       })
 
       // The actual reset operation
-      const resetPromise = this.connections[name].reset().then(() => {
-        return runStartup(this.connections[name])
+      const resetPromise = this.connections[name].reset().then(async () => {
+        try {
+          await runStartup(this.connections[name])
+        } catch (error) {
+          this.connections[name].setError((error as Error).message)
+          throw error
+        }
       })
-
       // Use Promise.race to implement timeout
       const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {
         // Clean up when operation completes, fails, OR times out

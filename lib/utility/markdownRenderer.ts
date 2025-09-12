@@ -1,6 +1,29 @@
 import DOMPurify from 'dompurify'
 import type { Results } from '../editors/results'
 
+// ============================================================================
+// TYPES AND INTERFACES
+// ============================================================================
+
+interface TemplateContext {
+  queryResults: Results | null
+  loading: boolean
+  currentRow?: any
+}
+
+interface CodeBlockPlaceholder {
+  [key: string]: string
+}
+
+interface FallbackExpression {
+  mainExpr: string
+  fallbackExpr: string
+}
+
+// ============================================================================
+// SECURITY AND VALIDATION
+// ============================================================================
+
 /**
  * HTML escaping function for security
  */
@@ -14,51 +37,19 @@ export function escapeHtml(text: string): string {
   return div.innerHTML
 }
 
+/**
+ * Sanitize HTML with predefined safe tags and attributes
+ */
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
-      'h1',
-      'h2',
-      'h3',
-      'p',
-      'ul',
-      'li',
-      'strong',
-      'em',
-      'a',
-      'br',
-      'span',
-      'pre',
-      'code',
-      'div',
-      'button',
-      'svg',
-      'rect',
-      'path',
-      'polyline',
+      'h1', 'h2', 'h3', 'p', 'ul', 'li', 'strong', 'em', 'a', 'br',
+      'span', 'pre', 'code', 'div', 'button', 'svg', 'rect', 'path', 'polyline',
     ],
     ALLOWED_ATTR: [
-      'href',
-      'title',
-      'class',
-      'style',
-      'data-language',
-      'data-content',
-      'xmlns',
-      'width',
-      'height',
-      'viewBox',
-      'fill',
-      'stroke',
-      'stroke-width',
-      'stroke-linecap',
-      'stroke-linejoin',
-      'x',
-      'y',
-      'rx',
-      'ry',
-      'd',
-      'points',
+      'href', 'title', 'class', 'style', 'data-language', 'data-content',
+      'xmlns', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
+      'stroke-linecap', 'stroke-linejoin', 'x', 'y', 'rx', 'ry', 'd', 'points',
     ],
     ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'object', 'embed', 'iframe', 'form', 'input'],
@@ -67,24 +58,71 @@ export function sanitizeHtml(html: string): string {
 }
 
 /**
+ * Validate expression to prevent code injection
+ */
+function isExpressionSafe(expression: string): boolean {
+  const safePatterns = [
+    /^data\[\d+\]\.\w+$/, // data[0].field
+    /^data\.length$/, // data.length
+    /^\w+$/, // simple field names
+  ]
+  return safePatterns.some(pattern => pattern.test(expression))
+}
+
+/**
+ * Validate field expression for template loops
+ */
+function isFieldExpressionSafe(expression: string): boolean {
+  return /^[\w\s|'"\.\-]+$/.test(expression)
+}
+
+/**
+ * Validate URL to prevent XSS
+ */
+function isUrlSafe(url: string): boolean {
+  const dangerousProtocols = ['javascript:', 'data:', 'vbscript:']
+  return !dangerousProtocols.some(protocol => url.startsWith(protocol))
+}
+
+// ============================================================================
+// LOADING STATE HELPERS
+// ============================================================================
+
+/**
  * Create a loading pill based on fallback text length
  */
 function createLoadingPill(fallbackText: string = 'Loading'): string {
   const length = fallbackText.length
   let width: string
 
-  if (length <= 5) {
-    width = '60px'
-  } else if (length <= 10) {
-    width = '80px'
-  } else if (length <= 20) {
-    width = '120px'
-  } else {
-    width = '160px'
-  }
+  if (length <= 5) width = '60px'
+  else if (length <= 10) width = '80px'
+  else if (length <= 20) width = '120px'
+  else width = '160px'
 
   return `<span class="loading-pill" style="display: inline-block; width: ${width}; height: 1em; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; filter: blur(0.5px);"></span>`
 }
+
+/**
+ * Generate CSS for loading animations
+ */
+function generateLoadingCSS(): string {
+  return `
+    <style>
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .loading-pill {
+        animation: shimmer 1.5s infinite linear;
+      }
+    </style>
+  `
+}
+
+// ============================================================================
+// DATA ACCESS HELPERS
+// ============================================================================
 
 /**
  * Helper function to safely get nested object values
@@ -105,31 +143,65 @@ export function getNestedValue(obj: any, path: string): any {
 }
 
 /**
- * Helper function to evaluate individual expressions with security
+ * Get array from query results or current row context
+ */
+function getArrayFromContext(arrayPath: string, queryResults: Results | null, currentRow?: any): any[] {
+  // If we have a current row context (nested loop), check there first
+  if (currentRow && currentRow[arrayPath] && Array.isArray(currentRow[arrayPath])) {
+    return currentRow[arrayPath]
+  }
+
+  // Otherwise, check if it's a field in the data
+  if (queryResults && queryResults.data && queryResults.data.length > 0) {
+    const firstRow = queryResults.data[0]
+    if (firstRow && firstRow[arrayPath] && Array.isArray(firstRow[arrayPath])) {
+      return firstRow[arrayPath]
+    }
+  }
+
+  return []
+}
+
+// ============================================================================
+// EXPRESSION EVALUATION
+// ============================================================================
+
+/**
+ * Parse fallback expression into main and fallback parts
+ */
+function parseFallbackExpression(expression: string): FallbackExpression | null {
+  const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
+  if (!fallbackMatch) return null
+  
+  const [, mainExpr, fallbackExpr] = fallbackMatch
+  return { mainExpr: mainExpr.trim(), fallbackExpr: fallbackExpr.trim() }
+}
+
+/**
+ * Extract string literal value from quoted expression
+ */
+function extractStringLiteral(expression: string): string | null {
+  if ((expression.startsWith("'") && expression.endsWith("'")) ||
+      (expression.startsWith('"') && expression.endsWith('"'))) {
+    return expression.slice(1, -1)
+  }
+  return null
+}
+
+/**
+ * Evaluate individual expressions with security
  */
 export function evaluateExpression(
   expression: string,
   queryResults: Results | null,
   loading: boolean = false,
 ): any {
-  if (loading) {
-    return undefined // Will trigger loading pill creation
-  }
-
-  if (!queryResults || !queryResults.data) {
+  if (loading || !queryResults || !queryResults.data) {
     return undefined
   }
 
   // Validate expression to prevent code injection
-  // Only allow safe patterns
-  const safePatterns = [
-    /^data\[\d+\]\.\w+$/, // data[0].field
-    /^data\.length$/, // data.length
-    /^\w+$/, // simple field names
-  ]
-
-  const isSafe = safePatterns.some((pattern) => pattern.test(expression))
-  if (!isSafe) {
+  if (!isExpressionSafe(expression)) {
     console.warn('Potentially unsafe expression blocked:', expression)
     return undefined
   }
@@ -162,7 +234,7 @@ export function evaluateExpression(
 }
 
 /**
- * Helper function to evaluate fallback expressions with security
+ * Evaluate fallback expressions with security
  */
 export function evaluateFallback(
   expression: string,
@@ -170,38 +242,27 @@ export function evaluateFallback(
   loading: boolean = false,
 ): string {
   try {
-    const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-    if (fallbackMatch) {
-      const [, mainExpr, fallbackExpr] = fallbackMatch
-      const mainValue = evaluateExpression(mainExpr.trim(), queryResults, loading)
-
+    const fallback = parseFallbackExpression(expression)
+    
+    if (fallback) {
+      const { mainExpr, fallbackExpr } = fallback
+      
       if (loading) {
-        // Extract fallback text for loading pill sizing
-        const fallback = fallbackExpr.trim()
-        let fallbackText = 'Loading'
-        if (
-          (fallback.startsWith("'") && fallback.endsWith("'")) ||
-          (fallback.startsWith('"') && fallback.endsWith('"'))
-        ) {
-          fallbackText = fallback.slice(1, -1)
-        } else {
-          fallbackText = fallback
-        }
+        const fallbackText = extractStringLiteral(fallbackExpr) || fallbackExpr
         return createLoadingPill(fallbackText)
       }
 
+      const mainValue = evaluateExpression(mainExpr, queryResults, loading)
+      
       if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-        return String(mainValue) // Return raw value
+        return String(mainValue)
       } else {
-        const fallback = fallbackExpr.trim()
-        if (
-          (fallback.startsWith("'") && fallback.endsWith("'")) ||
-          (fallback.startsWith('"') && fallback.endsWith('"'))
-        ) {
-          return fallback.slice(1, -1)
+        const stringLiteral = extractStringLiteral(fallbackExpr)
+        if (stringLiteral !== null) {
+          return stringLiteral
         } else {
-          const fallbackValue = evaluateExpression(fallback, queryResults, loading)
-          return fallbackValue !== undefined ? String(fallbackValue) : fallback
+          const fallbackValue = evaluateExpression(fallbackExpr, queryResults, loading)
+          return fallbackValue !== undefined ? String(fallbackValue) : fallbackExpr
         }
       }
     } else {
@@ -220,6 +281,239 @@ export function evaluateFallback(
   }
 }
 
+// ============================================================================
+// TEMPLATE PROCESSING
+// ============================================================================
+
+/**
+ * Process field expressions within loop templates
+ */
+function processFieldExpression(
+  fieldExpr: string,
+  item: any,
+  index: number,
+  allowNestedAccess: boolean = true
+): string {
+  const trimmed = fieldExpr.trim()
+
+  if (trimmed === '@index') {
+    return String(index)
+  }
+
+  if (!isFieldExpressionSafe(trimmed)) {
+    console.warn('Potentially unsafe field expression blocked:', trimmed)
+    return `{{${trimmed}}}`
+  }
+
+  const fallback = parseFallbackExpression(trimmed)
+  if (fallback) {
+    const { mainExpr, fallbackExpr } = fallback
+    let mainValue: any
+
+    if (allowNestedAccess && mainExpr.includes('.')) {
+      mainValue = getNestedValue(item, mainExpr)
+    } else {
+      mainValue = item[mainExpr]
+    }
+
+    if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
+      return String(mainValue)
+    } else {
+      const stringLiteral = extractStringLiteral(fallbackExpr)
+      if (stringLiteral !== null) {
+        return stringLiteral
+      } else {
+        let fallbackValue: any
+        if (allowNestedAccess && fallbackExpr.includes('.')) {
+          fallbackValue = getNestedValue(item, fallbackExpr)
+        } else {
+          fallbackValue = item[fallbackExpr]
+        }
+        return fallbackValue !== undefined ? String(fallbackValue) : fallbackExpr
+      }
+    }
+  } else {
+    let value: any
+    if (allowNestedAccess && trimmed.includes('.')) {
+      value = getNestedValue(item, trimmed)
+    } else {
+      value = item[trimmed]
+    }
+    return value !== undefined ? String(value) : `{{${trimmed}}}`
+  }
+}
+
+/**
+ * Process loading state for loops
+ */
+function processLoadingLoop(template: string, limit: number = 3): string {
+  let loopContent = ''
+  const actualLimit = Math.min(limit, 3) // Max 3 loading items
+  
+  for (let i = 0; i < actualLimit; i++) {
+    let itemContent = template
+    itemContent = itemContent.replace(
+      /\{\{([^}]+)\}\}/g,
+      (_fieldMatch: string, fieldExpr: string) => {
+        const trimmed = fieldExpr.trim()
+        if (trimmed === '@index') {
+          return createLoadingPill('0')
+        }
+        return createLoadingPill(trimmed)
+      },
+    )
+    loopContent += itemContent
+  }
+  
+  return loopContent
+}
+
+/**
+ * Process data loops (main query results)
+ */
+function processDataLoop(
+  template: string,
+  queryResults: Results,
+  limit?: number,
+  processNestedLoops: (content: string, row?: any) => string = (content) => content
+): string {
+  let loopContent = ''
+  const data = limit ? queryResults.data.slice(0, limit) : queryResults.data
+  
+  data.forEach((row: any, index: number) => {
+    let itemContent = template
+    itemContent = itemContent.replace(
+      /\{\{([^}]+)\}\}/g,
+      (_fieldMatch: string, fieldExpr: string) => 
+        processFieldExpression(fieldExpr, row, index, false)
+    )
+    
+    // Process any nested loops within this iteration
+    itemContent = processNestedLoops(itemContent, row)
+    loopContent += itemContent
+  })
+  
+  return loopContent
+}
+
+/**
+ * Process array field loops
+ */
+function processArrayLoop(
+  arrayPath: string,
+  template: string,
+  context: TemplateContext,
+  limit?: number,
+  processNestedLoops: (content: string, row?: any) => string = (content) => content
+): string {
+  const arrayData = getArrayFromContext(arrayPath, context.queryResults, context.currentRow)
+  
+  if (!Array.isArray(arrayData) || arrayData.length === 0) {
+    return ''
+  }
+
+  let loopContent = ''
+  const data = limit ? arrayData.slice(0, limit) : arrayData
+  
+  data.forEach((item: any, index: number) => {
+    let itemContent = template
+    itemContent = itemContent.replace(
+      /\{\{([^}]+)\}\}/g,
+      (_fieldMatch: string, fieldExpr: string) => 
+        processFieldExpression(fieldExpr, item, index, true)
+    )
+    
+    // Process any nested loops within this iteration
+    itemContent = processNestedLoops(itemContent, item)
+    loopContent += itemContent
+  })
+  
+  return loopContent
+}
+
+/**
+ * Process template loops with recursive support
+ */
+function processLoops(htmlContent: string, context: TemplateContext): string {
+  // Recursive function to handle nested loops
+  function processNestedLoops(content: string, currentRow?: any): string {
+    const nestedContext = { ...context, currentRow }
+    return processLoops(content, nestedContext)
+  }
+
+  // Handle standard loops: {{#each array_field}} content {{/each}}
+  htmlContent = htmlContent.replace(
+    /\{\{#each ([\w_]+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
+    (_match: string, arrayPath: string, template: string) => {
+      if (context.loading) {
+        return processLoadingLoop(template)
+      }
+
+      if (!context.queryResults || !context.queryResults.data) {
+        return ''
+      }
+
+      if (arrayPath === 'data') {
+        return processDataLoop(template, context.queryResults, undefined, processNestedLoops)
+      } else {
+        return processArrayLoop(arrayPath, template, context, undefined, processNestedLoops)
+      }
+    }
+  )
+
+  // Handle loops with limits: {{#each array_field limit=5}} content {{/each}}
+  htmlContent = htmlContent.replace(
+    /\{\{#each ([\w_]+) limit=(\d+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
+    (_match: string, arrayPath: string, limitStr: string, template: string) => {
+      const limit = parseInt(limitStr)
+      
+      if (isNaN(limit) || limit < 0 || limit > 1000) {
+        console.warn('Invalid or unsafe limit value:', limitStr)
+        return _match
+      }
+
+      if (context.loading) {
+        return processLoadingLoop(template, limit)
+      }
+
+      if (!context.queryResults || !context.queryResults.data) {
+        return ''
+      }
+
+      if (arrayPath === 'data') {
+        return processDataLoop(template, context.queryResults, limit, processNestedLoops)
+      } else {
+        return processArrayLoop(arrayPath, template, context, limit, processNestedLoops)
+      }
+    }
+  )
+
+  return htmlContent
+}
+
+/**
+ * Process simple template substitutions {expression}
+ */
+function processSimpleSubstitutions(text: string, context: TemplateContext): string {
+  return text.replace(/\{([^}]+)\}/g, (_match: string, expression: string) => {
+    if (context.loading) {
+      return evaluateFallback(expression, context.queryResults, context.loading)
+    }
+
+    if (!context.queryResults || !context.queryResults.data) {
+      // Handle fallbacks for empty data
+      const fallback = parseFallbackExpression(expression)
+      if (fallback) {
+        const stringLiteral = extractStringLiteral(fallback.fallbackExpr)
+        return stringLiteral !== null ? stringLiteral : fallback.fallbackExpr
+      }
+      return _match
+    }
+
+    return evaluateFallback(expression, context.queryResults, context.loading)
+  })
+}
+
 /**
  * Process template substitutions in markdown text
  */
@@ -228,196 +522,18 @@ export function processTemplateSubstitutions(
   queryResults: Results | null,
   loading: boolean = false,
 ): string {
-  let html = text
-
-  if (loading) {
-    // Replace {expression || fallback} patterns with loading pills
-    html = html.replace(/\{([^}]+)\}/g, (_match: string, expression: string) => {
-      return evaluateFallback(expression, queryResults, loading)
-    })
-
-    // Handle loops with loading pills
-    html = html.replace(
-      /\{\{#each data\}\}([\s\S]*?)\{\{\/each\}\}/g,
-      (_match: string, template: string) => {
-        // Show 3 loading items for loops
-        let loopContent = ''
-        for (let i = 0; i < 3; i++) {
-          let itemContent = template
-          itemContent = itemContent.replace(
-            /\{\{([^}]+)\}\}/g,
-            (_fieldMatch: string, fieldExpr: string) => {
-              const trimmed = fieldExpr.trim()
-              if (trimmed === '@index') {
-                return createLoadingPill('0')
-              }
-              return createLoadingPill(trimmed)
-            },
-          )
-          loopContent += itemContent
-        }
-        return loopContent
-      },
-    )
-
-    // Handle conditional loops with limit
-    html = html.replace(
-      /\{\{#each data limit=(\d+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
-      (_match: string, limitStr: string, template: string) => {
-        const limit = Math.min(parseInt(limitStr) || 3, 3) // Show max 3 loading items
-        let loopContent = ''
-        for (let i = 0; i < limit; i++) {
-          let itemContent = template
-          itemContent = itemContent.replace(
-            /\{\{([^}]+)\}\}/g,
-            (_fieldMatch: string, fieldExpr: string) => {
-              const trimmed = fieldExpr.trim()
-              if (trimmed === '@index') {
-                return createLoadingPill('0')
-              }
-              return createLoadingPill(trimmed)
-            },
-          )
-          loopContent += itemContent
-        }
-        return loopContent
-      },
-    )
-  } else if (queryResults && queryResults.data) {
-    // Replace {expression || fallback} patterns
-    html = html.replace(/\{([^}]+)\}/g, (_match: string, expression: string) => {
-      return evaluateFallback(expression, queryResults, loading)
-    })
-
-    // Handle loops: {{#each data}} content {{field_name}} {{/each}}
-    html = html.replace(
-      /\{\{#each data\}\}([\s\S]*?)\{\{\/each\}\}/g,
-      (_match: string, template: string) => {
-        let loopContent = ''
-        queryResults.data.forEach((row: any, index: number) => {
-          let itemContent = template
-          itemContent = itemContent.replace(
-            /\{\{([^}]+)\}\}/g,
-            (_fieldMatch: string, fieldExpr: string) => {
-              const trimmed = fieldExpr.trim()
-
-              if (trimmed === '@index') {
-                return String(index) // Don't escape yet
-              }
-
-              // Validate field expression
-              if (!/^[\w\s|'"]+$/.test(trimmed)) {
-                console.warn('Potentially unsafe field expression blocked:', trimmed)
-                return `{{${trimmed}}}`
-              }
-
-              // Handle fallback syntax
-              const fallbackMatch = trimmed.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-              if (fallbackMatch) {
-                const [, mainField, fallbackExpr] = fallbackMatch
-                const mainValue = row[mainField.trim()]
-
-                if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-                  return String(mainValue) // Don't escape yet
-                } else {
-                  const fallback = fallbackExpr.trim()
-                  if (
-                    (fallback.startsWith("'") && fallback.endsWith("'")) ||
-                    (fallback.startsWith('"') && fallback.endsWith('"'))
-                  ) {
-                    return fallback.slice(1, -1) // Don't escape yet
-                  } else {
-                    return row[fallback] !== undefined ? String(row[fallback]) : fallback
-                  }
-                }
-              } else {
-                return row[trimmed] !== undefined ? String(row[trimmed]) : `{{${trimmed}}}`
-              }
-            },
-          )
-          loopContent += itemContent
-        })
-        return loopContent
-      },
-    )
-
-    // Handle conditional loops with limit
-    html = html.replace(
-      /\{\{#each data limit=(\d+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
-      (_match: string, limitStr: string, template: string) => {
-        const limit = parseInt(limitStr)
-        if (isNaN(limit) || limit < 0 || limit > 1000) {
-          console.warn('Invalid or unsafe limit value:', limitStr)
-          return _match
-        }
-
-        let loopContent = ''
-        const limitedData = queryResults.data.slice(0, limit)
-        limitedData.forEach((row: any, index: number) => {
-          let itemContent = template
-          itemContent = itemContent.replace(
-            /\{\{([^}]+)\}\}/g,
-            (_fieldMatch: string, fieldExpr: string) => {
-              const trimmed = fieldExpr.trim()
-
-              if (trimmed === '@index') {
-                return String(index)
-              }
-
-              if (!/^[\w\s|'"]+$/.test(trimmed)) {
-                console.warn('Potentially unsafe field expression blocked:', trimmed)
-                return `{{${trimmed}}}`
-              }
-
-              const fallbackMatch = trimmed.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-              if (fallbackMatch) {
-                const [, mainField, fallbackExpr] = fallbackMatch
-                const mainValue = row[mainField.trim()]
-
-                if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
-                  return String(mainValue)
-                } else {
-                  const fallback = fallbackExpr.trim()
-                  if (
-                    (fallback.startsWith("'") && fallback.endsWith("'")) ||
-                    (fallback.startsWith('"') && fallback.endsWith('"'))
-                  ) {
-                    return fallback.slice(1, -1)
-                  } else {
-                    return row[fallback] !== undefined ? String(row[fallback]) : fallback
-                  }
-                }
-              } else {
-                return row[trimmed] !== undefined ? String(row[trimmed]) : `{{${trimmed}}}`
-              }
-            },
-          )
-          loopContent += itemContent
-        })
-        return loopContent
-      },
-    )
-  } else {
-    // Handle fallbacks for empty data
-    html = html.replace(/\{([^}]+)\}/g, (_match: string, expression: string) => {
-      const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
-      if (fallbackMatch) {
-        const [, , fallbackExpr] = fallbackMatch
-        const fallback = fallbackExpr.trim()
-        if (
-          (fallback.startsWith("'") && fallback.endsWith("'")) ||
-          (fallback.startsWith('"') && fallback.endsWith('"'))
-        ) {
-          return fallback.slice(1, -1)
-        }
-        return fallback
-      }
-      return _match
-    })
-  }
-
+  const context: TemplateContext = { queryResults, loading }
+  
+  // Process loops first, then simple substitutions
+  let html = processLoops(text, context)
+  html = processSimpleSubstitutions(html, context)
+  
   return html
 }
+
+// ============================================================================
+// MARKDOWN CONVERSION
+// ============================================================================
 
 /**
  * Generate unique ID for code blocks
@@ -427,81 +543,136 @@ function generateCodeBlockId(): string {
 }
 
 /**
- * Convert markdown syntax to HTML
+ * Create HTML for code blocks with copy functionality
  */
-/**
- * Convert markdown syntax to HTML
- */
-export function convertMarkdownToHtml(text: string): string {
-  let html = text
-  const codeBlockPlaceholders: { [key: string]: string } = {}
+function createCodeBlockHtml(language: string, code: string, blockId: string): string {
+  const lang = language.trim() || 'text'
+  const escapedCode = escapeHtml(code.trim())
 
-  // Step 1: Extract and replace fenced code blocks with placeholders
+  return `<div class="md-code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
+    <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
+    <button class="markdown-copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
+      <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <svg class="check-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </button>
+  </div>`
+}
+
+/**
+ * Extract and replace fenced code blocks with placeholders
+ */
+function extractCodeBlocks(html: string): { html: string; placeholders: CodeBlockPlaceholder } {
+  const codeBlockPlaceholders: CodeBlockPlaceholder = {}
   let codeBlockCounter = 0
-  html = html.replace(
+
+  const processedHtml = html.replace(
     /```(\w+)?\n?([\s\S]*?)```/g,
     (_match: string, language: string = '', code: string) => {
       const blockId = generateCodeBlockId()
-      const lang = language.trim() || 'text'
-      const escapedCode = escapeHtml(code.trim())
-
-      const codeBlockHtml = `<div class="md-code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">
-      <pre class="code-block"><code class="language-${lang}">${escapedCode}</code></pre>
-      <button class="markdown-copy-button" title="Copy code" onclick="copyCodeBlock('${blockId}')">
-        <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <svg class="check-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </button>
-    </div>`
+      const codeBlockHtml = createCodeBlockHtml(language, code, blockId)
 
       const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
       codeBlockPlaceholders[placeholder] = codeBlockHtml
       codeBlockCounter++
       return placeholder
-    },
+    }
   )
 
-  // Step 2: Process other markdown elements (headers, lists, etc.) on text without code blocks
+  return { html: processedHtml, placeholders: codeBlockPlaceholders }
+}
 
-  // Convert headers - capture only up to the last non-whitespace character
-  html = html.replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
-  html = html.replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
-  html = html.replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
+/**
+ * Process markdown headers
+ */
+function processHeaders(html: string): string {
+  return html
+    .replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
+    .replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
+    .replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
+}
 
-  // Process lists
-  html = html.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
-  html = html.replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
-  html = html.replace(/<\/ul>\s*<ul>/g, '')
+/**
+ * Process markdown lists
+ */
+function processLists(html: string): string {
+  return html
+    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
+    .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+}
 
-  // Process bold and italic
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>')
+/**
+ * Process markdown emphasis (bold and italic)
+ */
+function processEmphasis(html: string): string {
+  return html
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+}
 
-  // Process links (with basic URL validation but no escaping yet)
-  html = html.replace(/\[(.*?)\]\((.*?)\)/gim, (_match: string, text: string, url: string) => {
-    // Validate URL to prevent XSS
-    if (url.startsWith('javascript:') || url.startsWith('data:') || url.startsWith('vbscript:')) {
+/**
+ * Process markdown links with URL validation
+ */
+function processLinks(html: string): string {
+  return html.replace(/\[(.*?)\]\((.*?)\)/gim, (_match: string, text: string, url: string) => {
+    if (!isUrlSafe(url)) {
       return text // Just return the text without link
     }
     return `<a href="${url}">${text}</a>`
   })
+}
 
-  // Process paragraphs
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = html.replace(/<\/p><p><\/p><p>/g, '</p><p>')
-  html = html.replace(/^<p><\/p>/, '').replace(/<p><\/p>$/, '')
+/**
+ * Process markdown paragraphs
+ */
+function processParagraphs(html: string): string {
+  return html
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/<\/p><p><\/p><p>/g, '</p><p>')
+    .replace(/^<p><\/p>/, '')
+    .replace(/<p><\/p>$/, '')
+}
 
-  // Step 3: Restore code blocks by replacing placeholders
-  Object.keys(codeBlockPlaceholders).forEach((placeholder) => {
-    html = html.replace(placeholder, codeBlockPlaceholders[placeholder])
+/**
+ * Restore code blocks by replacing placeholders
+ */
+function restoreCodeBlocks(html: string, placeholders: CodeBlockPlaceholder): string {
+  let result = html
+  Object.keys(placeholders).forEach((placeholder) => {
+    result = result.replace(placeholder, placeholders[placeholder])
   })
+  return result
+}
 
+/**
+ * Convert markdown syntax to HTML
+ */
+export function convertMarkdownToHtml(text: string): string {
+  // Extract code blocks first to protect them from other processing
+  const { html: htmlWithoutCode, placeholders } = extractCodeBlocks(text)
+  
+  // Process other markdown elements
+  let html = htmlWithoutCode
+  html = processHeaders(html)
+  html = processLists(html)
+  html = processEmphasis(html)
+  html = processLinks(html)
+  html = processParagraphs(html)
+  
+  // Restore code blocks
+  html = restoreCodeBlocks(html, placeholders)
+  
   return html
 }
+
+// ============================================================================
+// MAIN RENDERER
+// ============================================================================
 
 /**
  * Enhanced markdown renderer with templating support, fallbacks, loading state, and security
@@ -513,29 +684,18 @@ export function renderMarkdown(
 ): string {
   if (!text) return ''
 
-  // 1. FIRST: Handle template substitutions on raw text (with loading support)
+  // 1. Handle template substitutions on raw text (with loading support)
   let html = processTemplateSubstitutions(text, queryResults, loading)
 
-  // 2. SECOND: Convert markdown to HTML (still working with potentially unsafe content)
+  // 2. Convert markdown to HTML
   html = convertMarkdownToHtml(html)
 
-  // 3. FINALLY: Sanitize the complete HTML
+  // 3. Sanitize the complete HTML
   const sanitized = sanitizeHtml(html)
 
   // 4. Add CSS for loading animation if in loading state
   if (loading) {
-    const css = `
-      <style>
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .loading-pill {
-          animation: shimmer 1.5s infinite linear;
-        }
-      </style>
-    `
-    return css + sanitized
+    return generateLoadingCSS() + sanitized
   }
 
   return sanitized

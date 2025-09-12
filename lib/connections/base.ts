@@ -305,6 +305,11 @@ export default abstract class BaseConnection {
     }
   }
 
+  async setError(error: string) {
+    this.error = error
+    this.connected = false
+  }
+
   abstract toJSON(): object
 
   // @ts-ignore
