@@ -249,7 +249,6 @@ export default class DuckDBConnection extends BaseConnection {
     data.forEach((row) => {
       finalData.push(this.processRow(row, headers))
     })
-    console.log(finalData)
     return new Results(headers, finalData)
   }
 

@@ -47,15 +47,17 @@ const createHeadlineLayer = (
         ? (((index - 1) / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of width
         : 0 // Center if only one value
   }
-
+  
+  const labelText = snakeCaseToCapitalizedWords(column)
   // Scale font size based on number of metrics and layout
-  const fontSizeFormula = isMobile
-    ? `min(24, max(height, 120)/${Math.max(6, total * 2)})` // Use height for mobile
-    : `min(30, max(width, 150)/${Math.max(8, total * 2)})` // Use width for desktop
+ const fontSizeFormula = isMobile
+    ? `min(32, max(12, (height * 0.8) / (${total} * max(1, sqrt(length(datum['${column}']))))))` // Mobile: scale with height
+    : `min(40, max(14, (width * 0.6) / (${total} * max(1, sqrt(length(datum['${column}']) * 1.5)))))` // Desktop: scale with width
 
   const labelFontSizeFormula = isMobile
-    ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
-    : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
+    ? `min(16, max(10, (height * 0.4) / (${total} * max(1, sqrt(${labelText.length})))))` // Mobile labels
+    : `min(20, max(12, (width * 0.3) / (${total} * max(1, sqrt(${labelText.length} * 1.2)))))` // Desktop labels
+
   let topMark = {}
   let includeLabel = includeLabelSetting
   let selectMarks: object[] = []
