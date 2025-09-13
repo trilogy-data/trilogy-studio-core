@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
-import type { Results } from '../editors/results'
-
+import type { Results, Row } from '../editors/results'
+import { ARRAY_IMPLICIT_COLUMN } from '../connections/constants'
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -43,13 +43,48 @@ export function escapeHtml(text: string): string {
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
-      'h1', 'h2', 'h3', 'p', 'ul', 'li', 'strong', 'em', 'a', 'br',
-      'span', 'pre', 'code', 'div', 'button', 'svg', 'rect', 'path', 'polyline',
+      'h1',
+      'h2',
+      'h3',
+      'p',
+      'ul',
+      'li',
+      'strong',
+      'em',
+      'a',
+      'br',
+      'span',
+      'pre',
+      'code',
+      'div',
+      'button',
+      'svg',
+      'rect',
+      'path',
+      'polyline',
     ],
     ALLOWED_ATTR: [
-      'href', 'title', 'class', 'style', 'data-language', 'data-content',
-      'xmlns', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
-      'stroke-linecap', 'stroke-linejoin', 'x', 'y', 'rx', 'ry', 'd', 'points',
+      'href',
+      'title',
+      'class',
+      'style',
+      'data-language',
+      'data-content',
+      'xmlns',
+      'width',
+      'height',
+      'viewBox',
+      'fill',
+      'stroke',
+      'stroke-width',
+      'stroke-linecap',
+      'stroke-linejoin',
+      'x',
+      'y',
+      'rx',
+      'ry',
+      'd',
+      'points',
     ],
     ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'object', 'embed', 'iframe', 'form', 'input'],
@@ -61,18 +96,24 @@ export function sanitizeHtml(html: string): string {
  * Validate expression to prevent code injection
  */
 function isExpressionSafe(expression: string): boolean {
+  const unsafePatterns = [/\_\_proto\_\_/]
   const safePatterns = [
-    /^data\[\d+\]\.\w+$/, // data[0].field
+    /^data\[\d+\]\.[\w.]+$/, // data[0].field or data[0].field.subfield
     /^data\.length$/, // data.length
     /^\w+$/, // simple field names
+    /^[\w.]+$/, // nested field names with dots
   ]
-  return safePatterns.some(pattern => pattern.test(expression))
+  if (unsafePatterns.some((pattern) => pattern.test(expression))) {
+    return false
+  }
+  return safePatterns.some((pattern) => pattern.test(expression))
 }
 
 /**
  * Validate field expression for template loops
  */
 function isFieldExpressionSafe(expression: string): boolean {
+  expression = expression.split('||')[0]
   return /^[\w\s|'"\.\-]+$/.test(expression)
 }
 
@@ -81,7 +122,7 @@ function isFieldExpressionSafe(expression: string): boolean {
  */
 function isUrlSafe(url: string): boolean {
   const dangerousProtocols = ['javascript:', 'data:', 'vbscript:']
-  return !dangerousProtocols.some(protocol => url.startsWith(protocol))
+  return !dangerousProtocols.some((protocol) => url.startsWith(protocol))
 }
 
 // ============================================================================
@@ -142,26 +183,6 @@ export function getNestedValue(obj: any, path: string): any {
   }, obj)
 }
 
-/**
- * Get array from query results or current row context
- */
-function getArrayFromContext(arrayPath: string, queryResults: Results | null, currentRow?: any): any[] {
-  // If we have a current row context (nested loop), check there first
-  if (currentRow && currentRow[arrayPath] && Array.isArray(currentRow[arrayPath])) {
-    return currentRow[arrayPath]
-  }
-
-  // Otherwise, check if it's a field in the data
-  if (queryResults && queryResults.data && queryResults.data.length > 0) {
-    const firstRow = queryResults.data[0]
-    if (firstRow && firstRow[arrayPath] && Array.isArray(firstRow[arrayPath])) {
-      return firstRow[arrayPath]
-    }
-  }
-
-  return []
-}
-
 // ============================================================================
 // EXPRESSION EVALUATION
 // ============================================================================
@@ -172,7 +193,7 @@ function getArrayFromContext(arrayPath: string, queryResults: Results | null, cu
 function parseFallbackExpression(expression: string): FallbackExpression | null {
   const fallbackMatch = expression.match(/^(.+?)\s*\|\|\s*(.+?)$/)
   if (!fallbackMatch) return null
-  
+
   const [, mainExpr, fallbackExpr] = fallbackMatch
   return { mainExpr: mainExpr.trim(), fallbackExpr: fallbackExpr.trim() }
 }
@@ -181,8 +202,10 @@ function parseFallbackExpression(expression: string): FallbackExpression | null 
  * Extract string literal value from quoted expression
  */
 function extractStringLiteral(expression: string): string | null {
-  if ((expression.startsWith("'") && expression.endsWith("'")) ||
-      (expression.startsWith('"') && expression.endsWith('"'))) {
+  if (
+    (expression.startsWith("'") && expression.endsWith("'")) ||
+    (expression.startsWith('"') && expression.endsWith('"'))
+  ) {
     return expression.slice(1, -1)
   }
   return null
@@ -193,12 +216,14 @@ function extractStringLiteral(expression: string): string | null {
  */
 export function evaluateExpression(
   expression: string,
-  queryResults: Results | null,
+  data: Row[] | null,
   loading: boolean = false,
 ): any {
-  if (loading || !queryResults || !queryResults.data) {
+  if (loading || !data || !data.length) {
     return undefined
   }
+
+  // Handle data[index].nested.field patterns
 
   // Validate expression to prevent code injection
   if (!isExpressionSafe(expression)) {
@@ -207,24 +232,25 @@ export function evaluateExpression(
   }
 
   // Handle data[index].field patterns
-  const dataIndexMatch = expression.match(/^data\[(\d+)\]\.(\w+)$/)
+  const dataIndexMatch = expression.match(/^data\[(\d+)\]\.(.+)$/)
   if (dataIndexMatch) {
-    const [, index, field] = dataIndexMatch
+    const [, index, fieldPath] = dataIndexMatch
     const rowIndex = parseInt(index)
-    if (queryResults.data[rowIndex] && queryResults.data[rowIndex][field] !== undefined) {
-      return queryResults.data[rowIndex][field]
+
+    if (data[rowIndex]) {
+      return getNestedValue(data[rowIndex], fieldPath)
     }
     return undefined
   }
 
   // Handle data.length
   if (expression === 'data.length') {
-    return queryResults.data.length
+    return data.length
   }
 
   // Handle simple field access (uses first row)
-  if (queryResults.data.length > 0) {
-    const firstRow = queryResults.data[0]
+  if (data.length > 0) {
+    const firstRow = data[0]
     if (firstRow && firstRow[expression] !== undefined) {
       return firstRow[expression]
     }
@@ -238,22 +264,22 @@ export function evaluateExpression(
  */
 export function evaluateFallback(
   expression: string,
-  queryResults: Results | null,
+  data: Row[],
   loading: boolean = false,
 ): string {
   try {
     const fallback = parseFallbackExpression(expression)
-    
+
     if (fallback) {
       const { mainExpr, fallbackExpr } = fallback
-      
+
       if (loading) {
         const fallbackText = extractStringLiteral(fallbackExpr) || fallbackExpr
         return createLoadingPill(fallbackText)
       }
 
-      const mainValue = evaluateExpression(mainExpr, queryResults, loading)
-      
+      const mainValue = evaluateExpression(mainExpr, data, loading)
+
       if (mainValue !== undefined && mainValue !== null && mainValue !== '') {
         return String(mainValue)
       } else {
@@ -261,7 +287,7 @@ export function evaluateFallback(
         if (stringLiteral !== null) {
           return stringLiteral
         } else {
-          const fallbackValue = evaluateExpression(fallbackExpr, queryResults, loading)
+          const fallbackValue = evaluateExpression(fallbackExpr, data, loading)
           return fallbackValue !== undefined ? String(fallbackValue) : fallbackExpr
         }
       }
@@ -269,7 +295,7 @@ export function evaluateFallback(
       if (loading) {
         return createLoadingPill(expression)
       }
-      const value = evaluateExpression(expression, queryResults, loading)
+      const value = evaluateExpression(expression, data, loading)
       return value !== undefined ? String(value) : `{${expression}}`
     }
   } catch (error) {
@@ -292,7 +318,7 @@ function processFieldExpression(
   fieldExpr: string,
   item: any,
   index: number,
-  allowNestedAccess: boolean = true
+  allowNestedAccess: boolean = true,
 ): string {
   const trimmed = fieldExpr.trim()
 
@@ -300,9 +326,15 @@ function processFieldExpression(
     return String(index)
   }
 
+  if (trimmed === '.') {
+    return String(item)
+  }
+
+  console.log('Processing field expression:', trimmed, 'with item:', item)
+
   if (!isFieldExpressionSafe(trimmed)) {
     console.warn('Potentially unsafe field expression blocked:', trimmed)
-    return `{{${trimmed}}}`
+    return `unsafe{${trimmed}}`
   }
 
   const fallback = parseFallbackExpression(trimmed)
@@ -339,17 +371,17 @@ function processFieldExpression(
     } else {
       value = item[trimmed]
     }
-    return value !== undefined ? String(value) : `{{${trimmed}}}`
+    return value !== undefined ? String(value) : ``
   }
 }
 
 /**
  * Process loading state for loops
  */
-function processLoadingLoop(template: string, limit: number = 3): string {
+function processLoadingLoop(template: string, limit?: number): string {
   let loopContent = ''
-  const actualLimit = Math.min(limit, 3) // Max 3 loading items
-  
+  const actualLimit = Math.min(limit ?? 3, 3) // Max 3 loading items
+
   for (let i = 0; i < actualLimit; i++) {
     let itemContent = template
     itemContent = itemContent.replace(
@@ -364,35 +396,7 @@ function processLoadingLoop(template: string, limit: number = 3): string {
     )
     loopContent += itemContent
   }
-  
-  return loopContent
-}
 
-/**
- * Process data loops (main query results)
- */
-function processDataLoop(
-  template: string,
-  queryResults: Results,
-  limit?: number,
-  processNestedLoops: (content: string, row?: any) => string = (content) => content
-): string {
-  let loopContent = ''
-  const data = limit ? queryResults.data.slice(0, limit) : queryResults.data
-  
-  data.forEach((row: any, index: number) => {
-    let itemContent = template
-    itemContent = itemContent.replace(
-      /\{\{([^}]+)\}\}/g,
-      (_fieldMatch: string, fieldExpr: string) => 
-        processFieldExpression(fieldExpr, row, index, false)
-    )
-    
-    // Process any nested loops within this iteration
-    itemContent = processNestedLoops(itemContent, row)
-    loopContent += itemContent
-  })
-  
   return loopContent
 }
 
@@ -400,104 +404,127 @@ function processDataLoop(
  * Process array field loops
  */
 function processArrayLoop(
-  arrayPath: string,
   template: string,
-  context: TemplateContext,
+  arrayData: Row[],
   limit?: number,
-  processNestedLoops: (content: string, row?: any) => string = (content) => content
+  processNestedLoops: (content: string, data: Row[]) => string = (content) => content,
 ): string {
-  const arrayData = getArrayFromContext(arrayPath, context.queryResults, context.currentRow)
-  
   if (!Array.isArray(arrayData) || arrayData.length === 0) {
     return ''
   }
 
   let loopContent = ''
-  const data = limit ? arrayData.slice(0, limit) : arrayData
-  
+
+  // need to fix this to check if limit is undefined
+  const data = limit !== undefined ? arrayData.slice(0, limit) : arrayData
+
   data.forEach((item: any, index: number) => {
+    item = item[ARRAY_IMPLICIT_COLUMN] !== undefined ? item[ARRAY_IMPLICIT_COLUMN] : item
     let itemContent = template
-    itemContent = itemContent.replace(
-      /\{\{([^}]+)\}\}/g,
-      (_fieldMatch: string, fieldExpr: string) => 
-        processFieldExpression(fieldExpr, item, index, true)
+    console.log('Processing loop item:', item, 'at index:', index)
+    itemContent = processNestedLoops(itemContent, [item])
+    console.log('After processing nested loops:', itemContent)
+    itemContent = itemContent.replace(/\{([^}]+)\}/g, (_fieldMatch: string, fieldExpr: string) =>
+      processFieldExpression(fieldExpr, item, index, true),
     )
-    
-    // Process any nested loops within this iteration
-    itemContent = processNestedLoops(itemContent, item)
+    console.log('After processing field expressions:', itemContent)
     loopContent += itemContent
   })
-  
+
   return loopContent
 }
 
 /**
  * Process template loops with recursive support
  */
-function processLoops(htmlContent: string, context: TemplateContext): string {
-  // Recursive function to handle nested loops
-  function processNestedLoops(content: string, currentRow?: any): string {
-    const nestedContext = { ...context, currentRow }
-    return processLoops(content, nestedContext)
+function processLoops(htmlContent: string, context: TemplateContext, data: Row[]): string {
+  function findMatchingEach(content: string, startPos: number): number {
+    let depth = 1
+    let pos = startPos
+
+    while (pos < content.length && depth > 0) {
+      const eachStart = content.indexOf('{{#each', pos)
+      const eachEnd = content.indexOf('{{/each}}', pos)
+
+      if (eachEnd === -1) break
+
+      if (eachStart !== -1 && eachStart < eachEnd) {
+        depth++
+        pos = eachStart + 7 // Move past '{{#each'
+      } else {
+        depth--
+        if (depth === 0) return eachEnd
+        pos = eachEnd + 9 // Move past '{{/each}}'
+      }
+    }
+
+    return -1 // No matching {{/each}} found
   }
 
-  // Handle standard loops: {{#each array_field}} content {{/each}}
-  htmlContent = htmlContent.replace(
-    /\{\{#each ([\w_]+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match: string, arrayPath: string, template: string) => {
-      if (context.loading) {
-        return processLoadingLoop(template)
-      }
+  function processNestedLoops(content: string, data: Row[]): string {
+    return processLoops(content, context, data)
+  }
 
-      if (!context.queryResults || !context.queryResults.data) {
-        return ''
-      }
+  let result = htmlContent
+  let searchPos = 0
 
+  while (true) {
+    const eachMatch = result.match(/\{\{#each ([\w_\[\]\.]+)(?: limit=(\d+))?\}\}/)
+    if (!eachMatch) break
+
+    const matchStart = result.indexOf(eachMatch[0], searchPos)
+    if (matchStart === -1) break
+
+    const contentStart = matchStart + eachMatch[0].length
+    const matchingEnd = findMatchingEach(result, contentStart)
+
+    if (matchingEnd === -1) {
+      console.warn('No matching {{/each}} found')
+      break
+    }
+
+    const arrayPath = eachMatch[1]
+    const limitStr = eachMatch[2]
+    const template = result.substring(contentStart, matchingEnd)
+
+    const limit = limitStr ? parseInt(limitStr) : undefined
+    if (limit !== undefined && (isNaN(limit) || limit < 0 || limit > 1000)) {
+      console.warn('Invalid or unsafe limit value:', limitStr)
+      searchPos = matchingEnd + 9
+      continue
+    }
+
+    let replacement = ''
+    if (context.loading) {
+      replacement = processLoadingLoop(template, limit)
+    } else {
       if (arrayPath === 'data') {
-        return processDataLoop(template, context.queryResults, undefined, processNestedLoops)
+        replacement = processArrayLoop(template, data, limit, processNestedLoops)
       } else {
-        return processArrayLoop(arrayPath, template, context, undefined, processNestedLoops)
+        let data2 = evaluateExpression(arrayPath, data, context.loading)
+        console.log('Accessed array data for path:', arrayPath, data2)
+        replacement = processArrayLoop(template, data2, limit, processNestedLoops)
       }
     }
-  )
 
-  // Handle loops with limits: {{#each array_field limit=5}} content {{/each}}
-  htmlContent = htmlContent.replace(
-    /\{\{#each ([\w_]+) limit=(\d+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match: string, arrayPath: string, limitStr: string, template: string) => {
-      const limit = parseInt(limitStr)
-      
-      if (isNaN(limit) || limit < 0 || limit > 1000) {
-        console.warn('Invalid or unsafe limit value:', limitStr)
-        return _match
-      }
+    result = result.substring(0, matchStart) + replacement + result.substring(matchingEnd + 9)
+    searchPos = matchStart + replacement.length
+  }
 
-      if (context.loading) {
-        return processLoadingLoop(template, limit)
-      }
-
-      if (!context.queryResults || !context.queryResults.data) {
-        return ''
-      }
-
-      if (arrayPath === 'data') {
-        return processDataLoop(template, context.queryResults, limit, processNestedLoops)
-      } else {
-        return processArrayLoop(arrayPath, template, context, limit, processNestedLoops)
-      }
-    }
-  )
-
-  return htmlContent
+  return result
 }
 
 /**
  * Process simple template substitutions {expression}
  */
 function processSimpleSubstitutions(text: string, context: TemplateContext): string {
-  return text.replace(/\{([^}]+)\}/g, (_match: string, expression: string) => {
+  return text.replace(/\{([^{}]+)\}/g, (_match: string, expression: string) => {
     if (context.loading) {
-      return evaluateFallback(expression, context.queryResults, context.loading)
+      return evaluateFallback(
+        expression,
+        context.queryResults ? [...context.queryResults.data] : [],
+        context.loading,
+      )
     }
 
     if (!context.queryResults || !context.queryResults.data) {
@@ -510,7 +537,11 @@ function processSimpleSubstitutions(text: string, context: TemplateContext): str
       return _match
     }
 
-    return evaluateFallback(expression, context.queryResults, context.loading)
+    return evaluateFallback(
+      expression,
+      context.queryResults ? [...context.queryResults.data] : [],
+      context.loading,
+    )
   })
 }
 
@@ -523,11 +554,11 @@ export function processTemplateSubstitutions(
   loading: boolean = false,
 ): string {
   const context: TemplateContext = { queryResults, loading }
-  
+
   // Process loops first, then simple substitutions
-  let html = processLoops(text, context)
+  let html = processLoops(text, context, queryResults ? [...(queryResults.data || [])] : [])
   html = processSimpleSubstitutions(html, context)
-  
+
   return html
 }
 
@@ -566,21 +597,27 @@ function createCodeBlockHtml(language: string, code: string, blockId: string): s
 /**
  * Extract and replace fenced code blocks with placeholders
  */
-function extractCodeBlocks(html: string): { html: string; placeholders: CodeBlockPlaceholder } {
+function extractCodeBlocks(
+  html: string,
+  processTemplates?: (text: string) => string,
+): { html: string; placeholders: CodeBlockPlaceholder } {
   const codeBlockPlaceholders: CodeBlockPlaceholder = {}
   let codeBlockCounter = 0
 
   const processedHtml = html.replace(
     /```(\w+)?\n?([\s\S]*?)```/g,
     (_match: string, language: string = '', code: string) => {
+      // Process templates inside code blocks if function provided
+      const processedCode = processTemplates ? processTemplates(code) : code
+
       const blockId = generateCodeBlockId()
-      const codeBlockHtml = createCodeBlockHtml(language, code, blockId)
+      const codeBlockHtml = createCodeBlockHtml(language, processedCode, blockId)
 
       const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
       codeBlockPlaceholders[placeholder] = codeBlockHtml
       codeBlockCounter++
       return placeholder
-    }
+    },
   )
 
   return { html: processedHtml, placeholders: codeBlockPlaceholders }
@@ -611,10 +648,10 @@ function processLists(html: string): string {
  */
 function processEmphasis(html: string): string {
   return html
-    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    .replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>') // Bold + italic first
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>') // Then bold
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>') // Then italic
 }
-
 /**
  * Process markdown links with URL validation
  */
@@ -655,7 +692,7 @@ function restoreCodeBlocks(html: string, placeholders: CodeBlockPlaceholder): st
 export function convertMarkdownToHtml(text: string): string {
   // Extract code blocks first to protect them from other processing
   const { html: htmlWithoutCode, placeholders } = extractCodeBlocks(text)
-  
+
   // Process other markdown elements
   let html = htmlWithoutCode
   html = processHeaders(html)
@@ -663,10 +700,10 @@ export function convertMarkdownToHtml(text: string): string {
   html = processEmphasis(html)
   html = processLinks(html)
   html = processParagraphs(html)
-  
+
   // Restore code blocks
   html = restoreCodeBlocks(html, placeholders)
-  
+
   return html
 }
 
@@ -684,8 +721,22 @@ export function renderMarkdown(
 ): string {
   if (!text) return ''
 
+  const codeBlockPlaceholders: { [key: string]: string } = {}
+  let codeBlockCounter = 0
+  const textWithoutCode = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match: string) => {
+    const placeholder = `__CODEBLOCK_${codeBlockCounter}__`
+    codeBlockPlaceholders[placeholder] = match
+    codeBlockCounter++
+    return placeholder
+  })
+
   // 1. Handle template substitutions on raw text (with loading support)
-  let html = processTemplateSubstitutions(text, queryResults, loading)
+  let html = processTemplateSubstitutions(textWithoutCode, queryResults, loading)
+
+  // Restore code blocks
+  Object.keys(codeBlockPlaceholders).forEach((placeholder) => {
+    html = html.replace(placeholder, codeBlockPlaceholders[placeholder])
+  })
 
   // 2. Convert markdown to HTML
   html = convertMarkdownToHtml(html)

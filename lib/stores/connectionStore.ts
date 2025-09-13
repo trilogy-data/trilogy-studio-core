@@ -23,7 +23,7 @@ async function runStartup(connection: Connection) {
     startupEditors.map(async (editor) => {
       console.log(`running startup script ${editor.name}`)
       await connection.query(editor.contents)
-    })
+    }),
   )
 }
 

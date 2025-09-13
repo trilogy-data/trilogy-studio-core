@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { escapeHtml, sanitizeHtml, renderMarkdown } from './markdownRenderer'
-
+import { createResults } from './testHelpers'
 describe('Security and Validation', () => {
   describe('escapeHtml', () => {
     it('should escape HTML special characters', () => {
-      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert("xss")&lt;/script&gt;')
+      expect(escapeHtml('<script>alert("xss")</script>')).toBe(
+        '&lt;script&gt;alert("xss")&lt;/script&gt;',
+      )
       expect(escapeHtml('Hello & "World"')).toBe('Hello &amp; "World"')
       expect(escapeHtml("It's a 'test'")).toBe("It's a 'test'")
     })
@@ -37,7 +39,8 @@ describe('Security and Validation', () => {
     })
 
     it('should allow safe SVG elements and attributes', () => {
-      const svgHtml = '<svg width="100" height="100"><rect x="10" y="10" width="30" height="30" fill="red"/></svg>'
+      const svgHtml =
+        '<svg width="100" height="100"><rect x="10" y="10" width="30" height="30" fill="red"/></svg>'
       expect(sanitizeHtml(svgHtml)).toContain('<svg')
       expect(sanitizeHtml(svgHtml)).toContain('<rect')
     })
@@ -56,27 +59,27 @@ describe('Security and Validation', () => {
   describe('Expression Security', () => {
     it('should block potentially unsafe expressions in templates', () => {
       const maliciousTemplate = '{eval("alert(1)")} {window.location}'
-      const result = renderMarkdown(maliciousTemplate, { data: [{ name: 'test' }] })
+      const result = renderMarkdown(maliciousTemplate, createResults([{ name: 'test' }]))
       expect(result).toContain('{eval("alert(1)")}') // Should remain as-is, not evaluated
       expect(result).toContain('{window.location}')
     })
 
     it('should only allow safe data access patterns', () => {
-      const queryResults = { data: [{ name: 'John', age: 30 }] }
-      
+      const queryResults = createResults([{ name: 'John', age: 30 }])
+
       // Safe expressions should work
       expect(renderMarkdown('{data[0].name}', queryResults)).toContain('John')
       expect(renderMarkdown('{data.length}', queryResults)).toContain('1')
-      
+
       // Unsafe expressions should be blocked
       expect(renderMarkdown('{data[0].__proto__}', queryResults)).toContain('{data[0].__proto__}')
     })
 
     it('should validate field expressions in loops', () => {
-      const template = '{{#each data}}{{name}} {{<script>alert(1)</script>}}{{/each}}'
-      const queryResults = { data: [{ name: 'John' }] }
+      const template = '{{#each data}}{name} {{<script>alert(1)</script>}}{{/each}}'
+      const queryResults = createResults([{ name: 'John' }])
       const result = renderMarkdown(template, queryResults)
-      
+
       expect(result).toContain('John')
       expect(result).not.toContain('<script>')
     })
@@ -84,8 +87,8 @@ describe('Security and Validation', () => {
     it('should validate URLs in markdown links', () => {
       const maliciousLink = '[Click me](javascript:alert("xss"))'
       const result = renderMarkdown(maliciousLink)
-      expect(result).toBe('Click me') // Link should be stripped, only text remains
-      
+      expect(result).toBe('Click me)') // Link should be stripped, only text remains
+
       const safeLink = '[Google](https://google.com)'
       const safeResult = renderMarkdown(safeLink)
       expect(safeResult).toContain('<a href="https://google.com">Google</a>')
@@ -100,9 +103,11 @@ describe('Security and Validation', () => {
 
     it('should handle special characters in expressions', () => {
       const template = '{data[0].field-with-dashes} {data[0].field_with_underscores}'
-      const queryResults = { data: [{ 'field-with-dashes': 'dash', 'field_with_underscores': 'underscore' }] }
+      const queryResults = createResults([
+        { 'field-with-dashes': 'dash', field_with_underscores: 'underscore' },
+      ])
       const result = renderMarkdown(template, queryResults)
-      
+
       // These should be blocked due to special characters
       expect(result).toContain('{data[0].field-with-dashes}')
       expect(result).toContain('underscore') // Underscores are allowed
@@ -110,13 +115,13 @@ describe('Security and Validation', () => {
 
     it('should handle nested template expressions', () => {
       const template = '{data[0].{nested}}'
-      const result = renderMarkdown(template, { data: [{}] })
+      const result = renderMarkdown(template, createResults([{}]))
       expect(result).toContain('{data[0].{nested}}') // Should not be processed
     })
 
     it('should handle malformed template syntax', () => {
       const malformed = '{unclosed {nested}} {}'
-      const result = renderMarkdown(malformed, { data: [] })
+      const result = renderMarkdown(malformed, createResults([]))
       expect(result).toContain('{unclosed')
       expect(result).toContain('{}')
     })

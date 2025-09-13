@@ -7,7 +7,7 @@ type Theme = 'light' | 'dark'
 
 describe('Line and Area Chart Specs', (): void => {
   let mockColumns: Map<string, ResultColumn>
-    let mockData: Row[]
+  let mockData: Row[]
   let mockConfig: ChartConfig
   let mockTooltipFields: any[]
   let mockEncoding: any

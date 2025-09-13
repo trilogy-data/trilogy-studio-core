@@ -183,7 +183,7 @@ export const Controls: ChartControl[] = [
     columnFilter: 'numeric',
     allowEmpty: true,
     visibleFor: ['point'],
-    options: ['linear', 'log',],
+    options: ['linear', 'log'],
     filterGroup: 'appearance',
   },
   {

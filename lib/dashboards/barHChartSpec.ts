@@ -46,14 +46,18 @@ export const createBarHChartSpec = (
             : 'datum.label',
         },
       },
-      x: createFieldEncoding(config.xField || '', columns, {
-        axis: { ...getFormatHint(config.xField, columns) },
-      },
+      x: createFieldEncoding(
+        config.xField || '',
+        columns,
+        {
+          axis: { ...getFormatHint(config.xField, columns) },
+        },
         false,
         {
           scale: config.scaleX,
           zero: false,
-        }),
+        },
+      ),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
       ...encoding,

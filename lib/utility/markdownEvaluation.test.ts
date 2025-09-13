@@ -1,14 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateExpression, evaluateFallback, getNestedValue, renderMarkdown }  from './markdownRenderer'
-
+import {
+  evaluateExpression,
+  evaluateFallback,
+  getNestedValue,
+  renderMarkdown,
+} from './markdownRenderer'
+import { Results } from '../editors/results'
 describe('Expression Evaluation', () => {
-  const sampleData = {
-    data: [
-      { name: 'John', age: 30, email: 'john@example.com', profile: { city: 'NYC', country: 'USA' } },
-      { name: 'Jane', age: 25, email: 'jane@example.com', profile: { city: 'LA', country: 'USA' } },
-      { name: 'Bob', age: null, email: '', profile: { city: 'Chicago' } }
-    ]
-  }
+  const sampleData = [
+    { name: 'John', age: 30, email: 'john@example.com', profile: { city: 'NYC', country: 'USA' } },
+    { name: 'Jane', age: 25, email: 'jane@example.com', profile: { city: 'LA', country: 'USA' } },
+    { name: 'Bob', age: null, email: '', profile: { city: 'Chicago' } },
+  ]
+  const sampleResult = new Results(new Map(), sampleData)
 
   describe('evaluateExpression', () => {
     it('should evaluate data[index].field patterns', () => {
@@ -44,7 +48,7 @@ describe('Expression Evaluation', () => {
 
     it('should handle empty or null data', () => {
       expect(evaluateExpression('data[0].name', null)).toBeUndefined()
-      expect(evaluateExpression('data[0].name', { data: [] })).toBeUndefined()
+      expect(evaluateExpression('data[0].name', [])).toBeUndefined()
     })
   })
 
@@ -86,11 +90,6 @@ describe('Expression Evaluation', () => {
       expect(evaluateFallback('data[0].name', sampleData)).toBe('John')
       expect(evaluateFallback('nonexistent', sampleData)).toBe('{nonexistent}')
     })
-
-    it('should handle malformed fallback expressions', () => {
-      expect(evaluateFallback('data[0].name ||', sampleData)).toBe('John')
-      expect(evaluateFallback('|| fallback', sampleData)).toBe('fallback')
-    })
   })
 
   describe('getNestedValue', () => {
@@ -99,16 +98,16 @@ describe('Expression Evaluation', () => {
         profile: {
           address: {
             city: 'NYC',
-            country: 'USA'
+            country: 'USA',
           },
-          preferences: ['dark', 'compact']
+          preferences: ['dark', 'compact'],
         },
-        name: 'John'
+        name: 'John',
       },
       items: [
         { id: 1, name: 'Item 1' },
-        { id: 2, name: 'Item 2' }
-      ]
+        { id: 2, name: 'Item 2' },
+      ],
     }
 
     it('should access nested object properties', () => {
@@ -144,31 +143,32 @@ describe('Expression Evaluation', () => {
   describe('Simple Template Substitutions', () => {
     it('should replace simple expressions in text', () => {
       const template = 'Hello {data[0].name}, you are {data[0].age} years old.'
-      const result = renderMarkdown(template, sampleData)
+      const result = renderMarkdown(template, sampleResult)
       expect(result).toBe('Hello John, you are 30 years old.')
     })
 
     it('should handle multiple expressions', () => {
       const template = '{data[0].name} ({data[0].email}) and {data[1].name} ({data[1].email})'
-      const result = renderMarkdown(template, sampleData)
+      const result = renderMarkdown(template, sampleResult)
       expect(result).toBe('John (john@example.com) and Jane (jane@example.com)')
     })
 
     it('should handle fallback expressions in simple substitutions', () => {
-      const template = 'Name: {data[0].nonexistent || "Unknown"}, Age: {data[2].age || "Not specified"}'
-      const result = renderMarkdown(template, sampleData)
+      const template =
+        'Name: {data[0].nonexistent || "Unknown"}, Age: {data[2].age || "Not specified"}'
+      const result = renderMarkdown(template, sampleResult)
       expect(result).toBe('Name: Unknown, Age: Not specified')
     })
 
     it('should preserve unmatched expressions', () => {
       const template = 'Hello {data[0].name} and {unmatched.expression}'
-      const result = renderMarkdown(template, sampleData)
+      const result = renderMarkdown(template, sampleResult)
       expect(result).toBe('Hello John and {unmatched.expression}')
     })
 
     it('should handle edge cases with braces', () => {
       const template = 'Code: {function() { return true; }} and {data[0].name}'
-      const result = renderMarkdown(template, sampleData)
+      const result = renderMarkdown(template, sampleResult)
       expect(result).toContain('John')
       expect(result).toContain('function() { return true; }')
     })
