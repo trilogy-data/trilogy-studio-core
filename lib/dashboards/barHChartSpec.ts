@@ -39,7 +39,7 @@ export const createBarHChartSpec = (
     encoding: {
       y: {
         ...createFieldEncoding(config.yField || '', columns),
-        sort: '-x',
+        sort: { field: config.xField, op: "sum", order: "descending" },
         axis: {
           labelExpr: isMobile
             ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
@@ -60,6 +60,11 @@ export const createBarHChartSpec = (
       ),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
+      order: {
+        field: config.xField,
+        type: "quantitative",
+        sort: "descending"
+      },
       ...encoding,
     },
   }
