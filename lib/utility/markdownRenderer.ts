@@ -330,7 +330,6 @@ function processFieldExpression(
     return String(item)
   }
 
-  console.log('Processing field expression:', trimmed, 'with item:', item)
 
   if (!isFieldExpressionSafe(trimmed)) {
     console.warn('Potentially unsafe field expression blocked:', trimmed)
@@ -421,13 +420,10 @@ function processArrayLoop(
   data.forEach((item: any, index: number) => {
     item = item[ARRAY_IMPLICIT_COLUMN] !== undefined ? item[ARRAY_IMPLICIT_COLUMN] : item
     let itemContent = template
-    console.log('Processing loop item:', item, 'at index:', index)
     itemContent = processNestedLoops(itemContent, [item])
-    console.log('After processing nested loops:', itemContent)
     itemContent = itemContent.replace(/\{([^}]+)\}/g, (_fieldMatch: string, fieldExpr: string) =>
       processFieldExpression(fieldExpr, item, index, true),
     )
-    console.log('After processing field expressions:', itemContent)
     loopContent += itemContent
   })
 
@@ -502,7 +498,6 @@ function processLoops(htmlContent: string, context: TemplateContext, data: Row[]
         replacement = processArrayLoop(template, data, limit, processNestedLoops)
       } else {
         let data2 = evaluateExpression(arrayPath, data, context.loading)
-        console.log('Accessed array data for path:', arrayPath, data2)
         replacement = processArrayLoop(template, data2, limit, processNestedLoops)
       }
     }

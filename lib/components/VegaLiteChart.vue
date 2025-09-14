@@ -49,7 +49,11 @@
     <!-- Content area with conditional rendering -->
     <div
       class="chart-content-area"
-      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
+      :class="{ 
+        'with-bottom-controls': isShortContainer && showControls,
+        'with-side-controls': !isShortContainer && showControls,
+        'no-controls': !showControls
+      }"
     >
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
@@ -439,11 +443,21 @@ export default defineComponent({
 
 .chart-content-area {
   flex: 1;
-  width: calc(100% - 28px);
   height: 100%;
   position: relative;
 }
 
+/* Default: no controls - full width */
+.chart-content-area.no-controls {
+  width: 100%;
+}
+
+/* Side controls for normal height containers */
+.chart-content-area.with-side-controls {
+  width: calc(100% - 28px);
+}
+
+/* Bottom controls for short containers */
 .chart-content-area.with-bottom-controls {
   width: 100%;
   height: calc(100% - 36px);
