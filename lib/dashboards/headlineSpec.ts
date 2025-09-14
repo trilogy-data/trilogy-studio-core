@@ -50,7 +50,7 @@ const createHeadlineLayer = (
         ? (((index - 1) / (total - 1)) * 0.7 + 0.15) * 100 - 50 // Values from -35% to +35% of width
         : 0 // Center if only one value
   }
-  
+
   // Use the maximum lengths for consistent sizing across all layers
   const fontSizeFormula = isMobile
     ? `min(32, max(12, (height * 0.8) / (${total} * max(1, sqrt(${maxValueLength})))))` // Mobile: scale with height
@@ -220,7 +220,7 @@ export const createHeadlineSpec = (
   // Map each column to its visualization layers with proper index
   let size = columnsArray.length * dataFull.length
   let columnLayers = []
-  
+
   // if we have no data, we create label layers only
   if (dataFull.length === 0) {
     columnLayers = [
