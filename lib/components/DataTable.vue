@@ -1,25 +1,30 @@
 <template>
-  <div class="result-table row pa-0 ba-0">
+  <div 
+    class="result-table row pa-0 ba-0"
+    @mouseenter="controlsVisible = true"
+    @mouseleave="controlsVisible = false"
+  >
     <div class="table-container">
-      <!-- Action buttons -->
-      <div class="table-actions">
+      <!-- Minimal floating action buttons -->
+      <div
+        class="controls-toggle"
+        :class="{ 'controls-visible': controlsVisible }"
+      >
         <button 
-          class="action-button copy-button" 
+          class="control-btn" 
           @click="copyToClipboard"
           :disabled="!tableData || tableData.length === 0"
           title="Copy table data to clipboard"
         >
-          <span class="button-icon">📋</span>
-          Copy
+          <i class="mdi mdi-content-copy icon"></i>
         </button>
         <button 
-          class="action-button download-button" 
+          class="control-btn" 
           @click="downloadData"
           :disabled="!tableData || tableData.length === 0"
           title="Download table data as CSV"
         >
-          <span class="button-icon">⬇️</span>
-          Download CSV
+          <i class="mdi mdi-download-outline icon"></i>
         </button>
       </div>
       
@@ -41,6 +46,7 @@
   width: 100%;
   height: 100%;
   background-color: var(--result-window-bg);
+  position: relative;
 }
 
 .table-container {
@@ -48,58 +54,64 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
+  position: relative;
 }
 
-.table-actions {
+.controls-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  z-index: 10;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background-color: var(--table-header-bg, #f5f5f5);
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
 }
 
-.action-button {
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border: 1px solid var(--border-color, #d0d0d0);
-  border-radius: 4px;
-  background-color: var(--button-bg, #ffffff);
-  color: var(--button-text, #333333);
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light, #d0d0d0);
+  background-color: rgba(var(--bg-color, 255, 255, 255), 0.9);
+  color: var(--text-color, #333333);
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  backdrop-filter: blur(4px);
+  border-radius: 0; /* Sharp corners */
 }
 
-.action-button:hover:not(:disabled) {
-  background-color: var(--button-hover-bg, #f0f0f0);
-  border-color: var(--button-hover-border, #b0b0b0);
+.control-btn:hover:not(:disabled) {
+  background-color: var(--button-mouseover, #f0f0f0);
 }
 
-.action-button:disabled {
-  opacity: 0.5;
+.control-btn:disabled {
+  background-color: var(--border-light, #d0d0d0);
+  color: var(--text-color-muted, #999999);
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-.button-icon {
+.control-btn:disabled:hover {
+  background-color: var(--border-light, #d0d0d0);
+}
+
+.icon {
   font-size: 14px;
   line-height: 1;
-}
-
-.copy-button:hover:not(:disabled) {
-  background-color: var(--copy-button-hover, #e3f2fd);
-  border-color: var(--copy-button-border, #2196f3);
-  color: var(--copy-button-text, #1976d2);
-}
-
-.download-button:hover:not(:disabled) {
-  background-color: var(--download-button-hover, #e8f5e8);
-  border-color: var(--download-button-border, #4caf50);
-  color: var(--download-button-text, #388e3c);
 }
 
 .tabulator .tabulator-tableholder .tabulator-table {
@@ -130,32 +142,19 @@
 }
 
 /* Dark theme support */
-.dark-theme-table .table-actions {
-  background-color: var(--dark-table-header-bg, #2a2a2a);
-  border-bottom-color: var(--dark-border-color, #404040);
-}
-
-.dark-theme-table .action-button {
-  background-color: var(--dark-button-bg, #3a3a3a);
-  color: var(--dark-button-text, #e0e0e0);
+.dark-theme-table .control-btn {
+  background-color: rgba(var(--dark-bg-color, 42, 42, 42), 0.9);
+  color: var(--dark-text-color, #e0e0e0);
   border-color: var(--dark-border-color, #555555);
 }
 
-.dark-theme-table .action-button:hover:not(:disabled) {
+.dark-theme-table .control-btn:hover:not(:disabled) {
   background-color: var(--dark-button-hover-bg, #4a4a4a);
-  border-color: var(--dark-button-hover-border, #666666);
 }
 
-.dark-theme-table .copy-button:hover:not(:disabled) {
-  background-color: var(--dark-copy-button-hover, #1a237e);
-  border-color: var(--dark-copy-button-border, #3f51b5);
-  color: var(--dark-copy-button-text, #9fa8da);
-}
-
-.dark-theme-table .download-button:hover:not(:disabled) {
-  background-color: var(--dark-download-button-hover, #1b5e20);
-  border-color: var(--dark-download-button-border, #4caf50);
-  color: var(--dark-download-button-text, #a5d6a7);
+.dark-theme-table .control-btn:disabled {
+  background-color: var(--dark-border-color, #555555);
+  color: var(--dark-text-color-muted, #999999);
 }
 
 /* Highlighted cell styling */
@@ -167,6 +166,19 @@
 .dark-theme-table .highlighted-cell {
   background-color: var(--dark-highlight-bg, #3e2723) !important;
   border-color: var(--dark-highlight-border, #ff9800) !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .controls-toggle {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 </style>
 
@@ -384,6 +396,7 @@ export default {
     return {
       tabulator: null as ShallowRef<Tabulator> | null,
       selectedCell: null,
+      controlsVisible: false,
     }
   },
   props: {
@@ -436,7 +449,7 @@ export default {
       handler() {
         this.$nextTick(() => {
           if (this.tabulator && this.containerHeight) {
-            this.tabulator.setHeight(this.containerHeight - 50) // Account for button bar height
+            this.tabulator.setHeight(this.containerHeight)
           }
         })
       },
@@ -480,11 +493,11 @@ export default {
       }
 
       try {
-        // Get data as TSV (Tab Separated Values) which works well in Excel and other apps
         const data = this.tabulator.getData()
         const headers = this.tableColumns.map(col => col.title).join('\t')
         const rows = data.map(row => 
           this.tableColumns.map(col => {
+            //@ts-ignore
             const value = row[col.field]
             // Handle complex data types by converting to string
             if (typeof value === 'object' && value !== null) {
@@ -536,10 +549,10 @@ export default {
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 12px 20px;
-        border-radius: 4px;
+        padding: 6px 10px;
+        border-radius: 0px;
         color: white;
-        font-weight: 500;
+        font-weight: 250;
         z-index: 10000;
         background-color: ${type === 'success' ? '#4caf50' : '#f44336'};
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
