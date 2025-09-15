@@ -603,7 +603,7 @@ export const getLegendOrientation = (
   }
 }
 
-const legendTicks = 10
+const legendTicks = 15
 
 export const createColorEncoding = (
   config: ChartConfig,
