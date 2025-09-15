@@ -541,11 +541,11 @@ export const createFieldEncoding = (
     ...(sort ? getSortOrder(fieldName, columns) : {}),
     ...(options.scale !== undefined || options.zero !== undefined
       ? {
-          scale: {
-            ...(options.scale !== undefined && { type: options.scale }),
-            ...(options.zero !== undefined && { zero: options.zero }),
-          },
-        }
+        scale: {
+          ...(options.scale !== undefined && { type: options.scale }),
+          ...(options.zero !== undefined && { zero: options.zero }),
+        },
+      }
       : {}),
   }
 }
@@ -617,7 +617,9 @@ export const createColorEncoding = (
   let legendConfig = { tickCount: legendTicks }
   let uniqueValues: any[] = []
   let localData = data || []
-
+  const hexfields = Array.from(columns.entries())
+    .filter(([_, col]) => col.traits?.includes('hex'))
+    .map(([colName, _]) => colName)
   if (colorField) {
     const fieldType = getVegaFieldType(colorField, columns)
     legendConfig = {
@@ -667,14 +669,24 @@ export const createColorEncoding = (
         ? { values: uniqueValues.map((d) => d[colorField]) }
         : {}),
     }
+    let scale = fieldType === 'quantitative'
+      ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
+      : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' }
+
+    if (hexfields.length > 0) {
+      scale = {
+        //@ts-ignore
+        range: { field: hexfields[0] },
+      }
+    }
+
+
     const rval = {
       field: colorField,
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
-      scale:
-        fieldType === 'quantitative'
-          ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
-          : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' },
+      scale: scale,
+
       condition: [
         {
           param: 'highlight',

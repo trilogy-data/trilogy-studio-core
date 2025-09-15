@@ -9,7 +9,7 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'It aspires to be good out of the box, with progressive disclosure of capability. It does not yet allow pixel-perfect customization, but it is designed to be extensible and feature requests are welcome.',
+      'It aspires to be good out of the box, with progressive disclosure of capability. It is designed to be extensible and feature requests are welcome.',
     ),
     new Paragraph(
       'Purpose',

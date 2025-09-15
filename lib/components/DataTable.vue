@@ -1,28 +1,108 @@
 <template>
   <div class="result-table row pa-0 ba-0">
-    <div ref="tabulator"></div>
+    <div class="table-container">
+      <!-- Action buttons -->
+      <div class="table-actions">
+        <button 
+          class="action-button copy-button" 
+          @click="copyToClipboard"
+          :disabled="!tableData || tableData.length === 0"
+          title="Copy table data to clipboard"
+        >
+          <span class="button-icon">📋</span>
+          Copy
+        </button>
+        <button 
+          class="action-button download-button" 
+          @click="downloadData"
+          :disabled="!tableData || tableData.length === 0"
+          title="Download table data as CSV"
+        >
+          <span class="button-icon">⬇️</span>
+          Download CSV
+        </button>
+      </div>
+      
+      <!-- Table container -->
+      <div ref="tabulator"></div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .result-table {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-basis: 100%;
   flex-grow: 1;
   flex-shrink: 1;
   flex: 1 1 100%;
   flex-wrap: nowrap;
   width: 100%;
-  /* align to left */
-  justify-content: flex-start;
-  margin-right: auto;
   height: 100%;
   background-color: var(--result-window-bg);
 }
 
+.table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background-color: var(--table-header-bg, #f5f5f5);
+  flex-shrink: 0;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 4px;
+  background-color: var(--button-bg, #ffffff);
+  color: var(--button-text, #333333);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover:not(:disabled) {
+  background-color: var(--button-hover-bg, #f0f0f0);
+  border-color: var(--button-hover-border, #b0b0b0);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.copy-button:hover:not(:disabled) {
+  background-color: var(--copy-button-hover, #e3f2fd);
+  border-color: var(--copy-button-border, #2196f3);
+  color: var(--copy-button-text, #1976d2);
+}
+
+.download-button:hover:not(:disabled) {
+  background-color: var(--download-button-hover, #e8f5e8);
+  border-color: var(--download-button-border, #4caf50);
+  color: var(--download-button-text, #388e3c);
+}
+
 .tabulator .tabulator-tableholder .tabulator-table {
-  /* background-color: transparent; */
   color: var(--text);
 }
 
@@ -35,20 +115,58 @@
 }
 
 .tabulator-row {
-  /* background: transparent; */
   width: min-content;
-  /* min-width: 100%; */
 }
 
 .tabulator {
   position: relative;
   border: 0;
   width: 100%;
-  /* background: transparent; */
+  flex-grow: 1;
 }
 
 .tabulator-cell {
   border: 0;
+}
+
+/* Dark theme support */
+.dark-theme-table .table-actions {
+  background-color: var(--dark-table-header-bg, #2a2a2a);
+  border-bottom-color: var(--dark-border-color, #404040);
+}
+
+.dark-theme-table .action-button {
+  background-color: var(--dark-button-bg, #3a3a3a);
+  color: var(--dark-button-text, #e0e0e0);
+  border-color: var(--dark-border-color, #555555);
+}
+
+.dark-theme-table .action-button:hover:not(:disabled) {
+  background-color: var(--dark-button-hover-bg, #4a4a4a);
+  border-color: var(--dark-button-hover-border, #666666);
+}
+
+.dark-theme-table .copy-button:hover:not(:disabled) {
+  background-color: var(--dark-copy-button-hover, #1a237e);
+  border-color: var(--dark-copy-button-border, #3f51b5);
+  color: var(--dark-copy-button-text, #9fa8da);
+}
+
+.dark-theme-table .download-button:hover:not(:disabled) {
+  background-color: var(--dark-download-button-hover, #1b5e20);
+  border-color: var(--dark-download-button-border, #4caf50);
+  color: var(--dark-download-button-text, #a5d6a7);
+}
+
+/* Highlighted cell styling */
+.highlighted-cell {
+  background-color: var(--highlight-bg, #fff3cd) !important;
+  border: 2px solid var(--highlight-border, #ffc107) !important;
+}
+
+.dark-theme-table .highlighted-cell {
+  background-color: var(--dark-highlight-bg, #3e2723) !important;
+  border-color: var(--dark-highlight-border, #ff9800) !important;
 }
 </style>
 
@@ -95,32 +213,26 @@ function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   let lookup: string | undefined = columns.keys().next().value
 
   if (!lookup) {
-    // If no columns, return empty table
     return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
   let fieldInfo = columns.get(lookup)
   if (!fieldInfo) {
-    // If no field info found, return empty table
     return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
-  // Add body rows
+  
   tableHtml += '<tbody >'
   data.forEach((row) => {
     let val = row[lookup]
-    // Check if the value is an array or object and handle accordingly
     if (fieldInfo.type == ColumnType.STRUCT && fieldInfo.children) {
       val = renderStructTable(val, fieldInfo.children)
     } else if (fieldInfo.type === ColumnType.ARRAY) {
-      // If it's an array, call renderBasicTable recursively
-      val = renderBasicTable(val, columns) // Pass the array data and columns to renderBasicTable
+      val = renderBasicTable(val, columns)
     }
     tableHtml += '<tr class="tabulator-sub-row">'
     tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
     tableHtml += '</tr>'
   })
   tableHtml += '</tbody>'
-
-  // Close table
   tableHtml += '</table>'
 
   return tableHtml
@@ -132,7 +244,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   }
   let tableHtml = '<table class="tabulator-sub-table">'
 
-  // Add body rows
   tableHtml += '<tbody >'
   columns.forEach((col, _) => {
     let val = data[col.name]
@@ -140,7 +251,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
       val = renderBasicTable(val, col.children)
     }
     if (col.type === ColumnType.STRUCT && col.children) {
-      // If it's a struct, call the renderStructTable recursively
       val = renderStructTable(val, col.children)
     }
 
@@ -151,8 +261,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   })
 
   tableHtml += '</tbody>'
-
-  // Close table
   tableHtml += '</table>'
 
   return tableHtml
@@ -306,12 +414,10 @@ export default {
     },
   },
   setup() {
-    // Inject the store that has been provided elsewhere in the app
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
-    // Create a computed property for the current theme
     const currentTheme = computed(() => settingsStore.settings.theme)
 
     return {
@@ -330,7 +436,7 @@ export default {
       handler() {
         this.$nextTick(() => {
           if (this.tabulator && this.containerHeight) {
-            this.tabulator.setHeight(this.containerHeight)
+            this.tabulator.setHeight(this.containerHeight - 50) // Account for button bar height
           }
         })
       },
@@ -341,22 +447,14 @@ export default {
       return this.results
     },
     tableColumns(): ColumnDefinition[] {
-      // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
       const calculated: ColumnDefinition[] = []
       this.headers.forEach((details, _) => {
         let formatting = typeToFormatter(details)
         const result = {
           title: this.prettyPrint ? snakeCaseToCapitalizedWords(details.name) : details.name,
-
-          // titleFormatter: 'plaintext',
           field: details.name,
           formatter: formatting.formatter,
           formatterParams: formatting.formatterParams,
-          // formatter: this.cellFormatter,
-          // tooltip: this.cellTooltip,
-          // contextMenu: this.cellContextMenu,
-          // headerContextMenu: this.headerContextMenu,
-          // cellClick: this.cellClick.bind(this)
         }
         // @ts-ignore
         calculated.push(result)
@@ -376,26 +474,101 @@ export default {
     }
   },
   methods: {
+    async copyToClipboard() {
+      if (!this.tabulator || !this.tableData || this.tableData.length === 0) {
+        return
+      }
+
+      try {
+        // Get data as TSV (Tab Separated Values) which works well in Excel and other apps
+        const data = this.tabulator.getData()
+        const headers = this.tableColumns.map(col => col.title).join('\t')
+        const rows = data.map(row => 
+          this.tableColumns.map(col => {
+            const value = row[col.field]
+            // Handle complex data types by converting to string
+            if (typeof value === 'object' && value !== null) {
+              return JSON.stringify(value)
+            }
+            return String(value || '')
+          }).join('\t')
+        ).join('\n')
+        
+        const tsvContent = headers + '\n' + rows
+        
+        await navigator.clipboard.writeText(tsvContent)
+        
+        // Show feedback (you might want to replace this with your app's notification system)
+        this.showNotification('Table data copied to clipboard!', 'success')
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err)
+        this.showNotification('Failed to copy data to clipboard', 'error')
+      }
+    },
+
+    downloadData() {
+      if (!this.tabulator || !this.tableData || this.tableData.length === 0) {
+        return
+      }
+
+      try {
+        // Use Tabulator's built-in download functionality
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+        const filename = `table-data-${timestamp}.csv`
+        
+        this.tabulator.download('csv', filename, {
+          delimiter: ',',
+          bom: true, // Add BOM for Excel compatibility
+        })
+        
+        this.showNotification('Download started!', 'success')
+      } catch (err) {
+        console.error('Failed to download data:', err)
+        this.showNotification('Failed to download data', 'error')
+      }
+    },
+
+    showNotification(message: string, type: 'success' | 'error') {
+      // Simple notification - you might want to replace this with your app's notification system
+      const notification = document.createElement('div')
+      notification.textContent = message
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 4px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        background-color: ${type === 'success' ? '#4caf50' : '#f44336'};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: opacity 0.3s ease;
+      `
+      
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        notification.style.opacity = '0'
+        setTimeout(() => {
+          document.body.removeChild(notification)
+        }, 300)
+      }, 3000)
+    },
+
     create() {
       let target = this.$refs.tabulator as HTMLElement
-      let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData' // Use fitDataFill if fitParent is true, otherwise fitData
+      let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
 
       let tab = new Tabulator(target, {
-        // data: this.tableData, //link data to table
-        pagination: this.tableData.length > 1000, //enable pagination
-        // paginationMode: 'remote', //enable remote pagination
-        // reactiveData: true,
+        pagination: this.tableData.length > 1000,
         renderHorizontal: 'virtual',
-        // columns: this.tableColumns, //define table columns
         maxHeight: '100%',
         minHeight: '100%',
         minWidth: '100%',
-        // dynamic rowheights required for struct/array
-        // rowHeight: 30,
         //@ts-ignore
         data: this.tableData,
         columns: this.tableColumns,
-        // height: this.actualTableHeight,
         nestedFieldSeparator: false,
         clipboard: 'copy',
         keybindings: {
@@ -423,10 +596,8 @@ export default {
         }
         let value = cell.getValue()
 
-        // Check if cell is already highlighted
         const element = cell.getElement()
         if (element.classList.contains('highlighted-cell')) {
-          // If already highlighted, remove all highlighting and emit background-click
           const highlightedCells = target.querySelectorAll('.highlighted-cell')
           highlightedCells.forEach((highlightedCell) => {
             highlightedCell.classList.remove('highlighted-cell')
@@ -439,12 +610,10 @@ export default {
             filters: { [field]: value },
             append: true,
           })
-          // If not highlighted yet, find all cells with the same value in this column and highlight them
-          // Get all cells in this column with the same value
+          
           const column = tab.getColumn(cell.getField())
           const cells = column.getCells()
 
-          // Highlight all matching cells
           cells.forEach((cellInColumn) => {
             if (cellInColumn.getValue() === value) {
               cellInColumn.getElement().classList.add('highlighted-cell')
@@ -452,11 +621,12 @@ export default {
           })
         }
       })
+      
       // @ts-ignore
       this.tabulator = shallowRef(tab)
-
       this.updateTableTheme()
     },
+
     updateTable() {
       if (this.tabulator) {
         this.tabulator.destroy()
@@ -464,6 +634,7 @@ export default {
       }
       this.create()
     },
+
     updateTableTheme() {
       if (!this.tabulator) return
 
@@ -471,11 +642,9 @@ export default {
       const theme = this.currentTheme
 
       if (theme === 'dark') {
-        // Apply dark theme styles
         table.element.classList.remove('light-theme-table')
         table.element.classList.add('dark-theme-table')
       } else {
-        // Apply light theme styles
         table.element.classList.remove('dark-theme-table')
         table.element.classList.add('light-theme-table')
       }
