@@ -304,6 +304,11 @@ function addItem(type: CellType = CELL_TYPES.CHART): void {
   })
 }
 
+function updateTitle(newTitle: string): void {
+  if (!dashboard.value || !dashboard.value.id) return
+  dashboardStore.updateDashboardTitle(dashboard.value.id, newTitle)
+}
+
 function clearItems(): void {
   if (!dashboard.value || !dashboard.value.id) return
   dashboardStore.clearDashboardItems(dashboard.value.id)
@@ -660,6 +665,7 @@ defineExpose({
   removeFilter,
   unSelect,
   dashboardCreated,
+  updateTitle,
 })
 </script>
 

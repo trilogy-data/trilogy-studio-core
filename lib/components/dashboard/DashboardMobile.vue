@@ -71,6 +71,17 @@ function triggerResize(): void {
   })
 }
 
+function calculateMobileWidth(item: any): number | string {
+  // let itemData = getItemData(item.i, dashboard.value.id)
+  // if (itemData.type === CELL_TYPES.CHART) {
+  //   if (itemData.chartConfig?.chartType === 'headline') {
+  //     return `${Math.max(itemData.width || window.innerWidth - 30, 300)}px`
+  //   }
+  // }
+  
+  return '100%' // Full width for mobile items
+}
+
 // Calculate approximate height for mobile items based on original proportions
 function calculateMobileHeight(item: any): number | string {
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
@@ -84,28 +95,29 @@ function calculateMobileHeight(item: any): number | string {
   if (itemData.type === CELL_TYPES.CHART) {
     if (itemData.chartConfig?.chartType === 'headline') {
       // return the width as height for a headline chart
+      console.log('gridItem.width', itemData.width)
       if (itemData.width) {
-        return itemData.width / 2
+        return `${Math.max(itemData.width / 2, 300)}px`
       }
     }
   }
-  const gridItem = dashboard.value.gridItems[item.i]
+  
   let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
-  if (gridItem.width && gridItem.height) {
-    const aspectRatio = gridItem.height / gridItem.width
+  if (itemData.width && itemData.height) {
+    const aspectRatio = itemData.height / itemData.width
     const viewportWidth = window.innerWidth - 30 // Adjust for padding
 
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
     const calculatedHeight = viewportWidth * aspectRatio
-    return Math.max(Math.min(calculatedHeight, maxHeight), 400)
+    return '100%'
   }
 
   // If no stored dimensions, use the grid layout's width and height
   const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), 400)
+  return `${Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), 400)}px`
 }
 
 // Handle edit mode toggle for mobile
@@ -161,7 +173,7 @@ function handleToggleEditMode() {
         :key="item.i"
         :data-i="item.i"
         class="mobile-item"
-        :style="{ height: `${calculateMobileHeight(item)}px` }"
+        :style="{ height: `${calculateMobileHeight(item)}`, width: `${calculateMobileWidth(item)}` }"
       >
         <DashboardGridItem
           v-if="dashboardBase"

@@ -71,13 +71,13 @@ const createHeadlineLayer = (
       mark: {
         type: 'image',
         width: isMobile ? { expr: `width` } : { expr: `width / ${total}` },
-        height: isMobile ? { expr: `height / 3` } : { expr: `height` },
+        height: isMobile ? { expr: `height / ${total}` } : { expr: `height` },
         align,
         baseline: 'middle',
         x: isMobile
           ? { expr: `width/2 + (${xOffset} / 100) * width` }
           : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        y: isMobile ? { expr: `${yOffset * 1.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
+        y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         url: {

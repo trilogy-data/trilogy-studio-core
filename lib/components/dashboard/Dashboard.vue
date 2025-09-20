@@ -148,6 +148,7 @@ function handleToggleEditMode() {
       @toggle-edit-mode="handleToggleEditMode"
       @refresh="dashboardBase?.handleRefresh"
       @clear-filter="dashboardBase?.handleFilterClear"
+      @title-update="dashboardBase?.updateTitle"
     />
 
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">

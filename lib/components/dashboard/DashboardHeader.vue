@@ -39,6 +39,7 @@ const emit = defineEmits([
   'clear-filter',
   'toggle-edit-mode',
   'refresh',
+  'title-update',
 ])
 
 const connectionStore = useConnectionStore()
@@ -46,6 +47,11 @@ const editorStore = useEditorStore()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
+
+// Title editing state
+const isEditingTitle = ref(false)
+const editableTitle = ref('')
+const titleInput = ref<HTMLInputElement | null>(null)
 
 // Toggle share popup visibility
 function toggleSharePopup() {
@@ -60,6 +66,29 @@ function closeSharePopup() {
 // Handle filter apply from FilterInputComponent
 function handleFilterApply(newValue: string) {
   emit('filter-change', newValue)
+}
+
+// Title editing methods
+function startEditingTitle() {
+  if (props.editsLocked) return
+  
+  isEditingTitle.value = true
+  editableTitle.value = props.dashboard?.name || 'Untitled Dashboard'
+  
+  // Focus the input on next tick
+  setTimeout(() => {
+    titleInput.value?.focus()
+  }, 0)
+}
+
+function finishEditingTitle() {
+  isEditingTitle.value = false
+  emit('title-update', editableTitle.value)
+}
+
+function cancelEditingTitle() {
+  isEditingTitle.value = false
+  editableTitle.value = props.dashboard?.name || 'Untitled Dashboard'
 }
 
 const availableImports: Ref<DashboardImport[]> = computed(() => {
@@ -90,6 +119,105 @@ function handleRefresh() {
 
 <template>
   <div class="dashboard-controls" data-testid="dashboard-controls">
+    <!-- Title and Edit Controls row -->
+    <div class="controls-row title-row" v-if="editMode">
+      <div class="dashboard-title" @click="startEditingTitle">
+        <span v-if="!isEditingTitle" class="editable-text">
+          {{ dashboard?.name || 'Untitled Dashboard' }}
+          <span 
+            class="edit-indicator" 
+            data-testid="edit-dashboard-title"
+            v-if="!editsLocked"
+          >
+            ✎
+          </span>
+        </span>
+        <input
+          v-else
+          ref="titleInput"
+          data-testid="dashboard-title-input"
+          v-model="editableTitle"
+          @blur="finishEditingTitle"
+          @keyup.enter="finishEditingTitle"
+          @keyup.esc="cancelEditingTitle"
+          class="title-input"
+          type="text"
+        />
+      </div>
+
+      <div class="dashboard-right-controls">
+        <div class="connection-selector">
+          <div class="select-wrapper">
+            <i class="mdi mdi-database-outline select-icon"></i>
+            <select
+              id="connection"
+              data-testid="connection-selector"
+              @change="$emit('connection-change', $event)"
+              :value="selectedConnection"
+            >
+              <option
+                v-for="conn in Object.values(connectionStore.connections).filter(
+                  (conn) => conn.model,
+                )"
+                :key="conn.name"
+                :value="conn.name"
+              >
+                {{ conn.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <DashboardImportSelector
+          :available-imports="availableImports"
+          :active-imports="activeImports"
+          @update:imports="handleImportsChange"
+        />
+        <div class="grid-actions">
+          <button
+            @click="$emit('add-item')"
+            class="btn btn-success"
+            data-testid="add-item-button"
+          >
+            Add Item
+          </button>
+          <button
+            @click="$emit('clear-items')"
+            class="btn btn-danger"
+            data-testid="clear-items-button"
+          >
+            Clear All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Title only row for view mode -->
+    <div class="controls-row title-only-row" v-else>
+      <div class="dashboard-title" @click="startEditingTitle">
+        <span v-if="!isEditingTitle" class="editable-text">
+          {{ dashboard?.name || 'Untitled Dashboard' }}
+          <span 
+            class="edit-indicator" 
+            data-testid="edit-dashboard-title"
+            v-if="!editsLocked"
+          >
+            ✎
+          </span>
+        </span>
+        <input
+          v-else
+          ref="titleInput"
+          data-testid="dashboard-title-input"
+          v-model="editableTitle"
+          @blur="finishEditingTitle"
+          @keyup.enter="finishEditingTitle"
+          @keyup.esc="cancelEditingTitle"
+          class="title-input"
+          type="text"
+        />
+      </div>
+    </div>
+
     <!-- Filter row - now showing the extracted FilterInputComponent -->
     <div class="controls-row filter-row">
       <FilterInputComponent
@@ -123,56 +251,6 @@ function handleRefresh() {
         </button>
       </div>
     </div>
-
-    <div class="controls-row top-row" v-if="editMode">
-      <div class="dashboard-left-controls">
-        <div class="connection-selector">
-          <div class="select-wrapper">
-            <i class="mdi mdi-database-outline select-icon"></i>
-            <select
-              id="connection"
-              data-testid="connection-selector"
-              @change="$emit('connection-change', $event)"
-              :value="selectedConnection"
-            >
-              <option
-                v-for="conn in Object.values(connectionStore.connections).filter(
-                  (conn) => conn.model,
-                )"
-                :key="conn.name"
-                :value="conn.name"
-              >
-                {{ conn.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <DashboardImportSelector
-          :available-imports="availableImports"
-          :active-imports="activeImports"
-          @update:imports="handleImportsChange"
-        />
-      </div>
-
-      <div class="grid-actions">
-        <button
-          @click="$emit('add-item')"
-          class="btn btn-success"
-          v-if="editMode"
-          data-testid="add-item-button"
-        >
-          Add Item
-        </button>
-        <button
-          @click="$emit('clear-items')"
-          class="btn btn-danger"
-          v-if="editMode"
-          data-testid="clear-items-button"
-        >
-          Clear All
-        </button>
-      </div>
-    </div>
     <DashboardSharePopup
       :dashboard="dashboard"
       :is-open="isSharePopupOpen"
@@ -193,16 +271,73 @@ function handleRefresh() {
   padding: 5px 10px;
 }
 
-.top-row {
+.title-row {
   justify-content: space-between;
+  align-items: center;
+  padding: 10px;
   border-bottom: 1px solid var(--border-light);
 }
 
-.dashboard-left-controls {
+.title-only-row {
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dashboard-title {
+  font-weight: 500;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+}
+
+.dashboard-title:hover .edit-indicator {
+  opacity: 1;
+}
+
+.dashboard-right-controls {
   display: flex;
   gap: 20px;
   align-items: center;
-  flex: 1;
+  flex-shrink: 0;
+}
+
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-indicator {
+  opacity: 0;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+  color: var(--text-color);
+}
+
+.title-input {
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  font-size: 18px;
+  font-weight: 500;
+  width: auto;
+  min-width: 250px;
+  color: var(--text-color);
+}
+
+.title-input:focus {
+  outline: none;
+  border-color: var(--special-text);
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
 }
 
 .connection-selector {
@@ -357,7 +492,7 @@ function handleRefresh() {
 
 /* Media queries for responsiveness */
 @media (max-width: 900px) {
-  .dashboard-left-controls {
+  .dashboard-right-controls {
     gap: 10px;
   }
 
@@ -367,23 +502,36 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
-  .controls-row {
-    flex-wrap: wrap;
-  }
-
-  .top-row {
+  .title-row {
     flex-direction: column;
     gap: 15px;
-    border-top: 1px solid var(--border-light);
-    padding-top: 10px;
-    margin-top: 5px;
+    align-items: stretch;
   }
 
-  .dashboard-left-controls {
+  .title-only-row {
+    justify-content: center;
+    padding: 8px 10px;
+  }
+
+  .dashboard-title {
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .title-input {
+    font-size: 16px;
+    min-width: 200px;
+  }
+
+  .dashboard-right-controls {
     flex-direction: column;
     align-items: center;
     width: 100%;
     gap: 15px;
+  }
+
+  .controls-row {
+    flex-wrap: wrap;
   }
 
   .connection-selector {
@@ -414,14 +562,14 @@ function handleRefresh() {
     flex-wrap: nowrap;
     justify-content: center;
     width: 100%;
-    gap: 8px;
+    gap: 4px;
   }
 
   .btn {
-    padding: 3px 4px;
+    padding: 6px 4px;
     font-size: calc(var(--button-font-size) - 1px);
     flex: 1;
-    min-width: 0;
+    min-width: 60px;
     white-space: nowrap;
   }
 
@@ -431,10 +579,6 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
-  .dashboard-left-controls {
-    align-items: center;
-  }
-
   .connection-selector {
     max-width: 100%;
   }
@@ -443,18 +587,34 @@ function handleRefresh() {
     min-width: unset;
   }
 
+  /* Default grid-actions styling for filter row */
   .grid-actions {
-    gap: 4px;
+    gap: 5px;
     max-width: 100%;
     padding-left: 0px;
   }
 
+  /* Default btn styling for filter row */
   .btn {
     min-width: 0;
-    font-size: calc(var(--button-font-size) - 2px);
-    padding: 6px 4px;
+    font-size: calc(var(--button-font-size) - 1px);
+    padding: 6px 8px;
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Override for edit mode buttons only */
+  .dashboard-right-controls .grid-actions {
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .dashboard-right-controls .btn {
+    min-width: 60px;
+    font-size: calc(var(--button-font-size) - 2px);
+    padding: 6px 3px;
+    flex: 1;
   }
 }
 
@@ -462,6 +622,10 @@ function handleRefresh() {
 @media (max-width: 360px) {
   .connection-selector {
     max-width: 100%;
+  }
+
+  .title-input {
+    min-width: 150px;
   }
 
   .btn {

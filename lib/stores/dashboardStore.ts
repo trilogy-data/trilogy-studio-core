@@ -325,6 +325,15 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    updateDashboardTitle(dashboardId: string, newTitle: string) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].name = newTitle
+        this.dashboards[dashboardId].updatedAt = new Date()
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
     // Update item content
     updateItemContent(dashboardId: string, itemId: string, content: string) {
       if (this.dashboards[dashboardId]) {
