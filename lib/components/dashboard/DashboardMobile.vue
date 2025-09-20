@@ -95,7 +95,6 @@ function calculateMobileHeight(item: any): number | string {
   if (itemData.type === CELL_TYPES.CHART) {
     if (itemData.chartConfig?.chartType === 'headline') {
       // return the width as height for a headline chart
-      console.log('gridItem.width', itemData.width)
       if (itemData.width) {
         return `${Math.max(itemData.width / 2, 300)}px`
       }
@@ -111,7 +110,7 @@ function calculateMobileHeight(item: any): number | string {
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
     const calculatedHeight = viewportWidth * aspectRatio
-    return '100%'
+    return `${Math.max(Math.min(calculatedHeight, maxHeight), 400)}px`
   }
 
   // If no stored dimensions, use the grid layout's width and height
