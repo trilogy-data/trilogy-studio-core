@@ -71,14 +71,14 @@ function triggerResize(): void {
   })
 }
 
-function calculateMobileWidth(item: any): number | string {
+function calculateMobileWidth(_: any): number | string {
   // let itemData = getItemData(item.i, dashboard.value.id)
   // if (itemData.type === CELL_TYPES.CHART) {
   //   if (itemData.chartConfig?.chartType === 'headline') {
   //     return `${Math.max(itemData.width || window.innerWidth - 30, 300)}px`
   //   }
   // }
-  
+
   return '100%' // Full width for mobile items
 }
 
@@ -100,7 +100,7 @@ function calculateMobileHeight(item: any): number | string {
       }
     }
   }
-  
+
   let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
   if (itemData.width && itemData.height) {
@@ -172,7 +172,10 @@ function handleToggleEditMode() {
         :key="item.i"
         :data-i="item.i"
         class="mobile-item"
-        :style="{ height: `${calculateMobileHeight(item)}`, width: `${calculateMobileWidth(item)}` }"
+        :style="{
+          height: `${calculateMobileHeight(item)}`,
+          width: `${calculateMobileWidth(item)}`,
+        }"
       >
         <DashboardGridItem
           v-if="dashboardBase"

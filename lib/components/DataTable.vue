@@ -1,25 +1,22 @@
 <template>
-  <div 
+  <div
     class="result-table row pa-0 ba-0"
     @mouseenter="controlsVisible = true"
     @mouseleave="controlsVisible = false"
   >
     <div class="table-container">
       <!-- Minimal floating action buttons -->
-      <div
-        class="controls-toggle"
-        :class="{ 'controls-visible': controlsVisible }"
-      >
-        <button 
-          class="control-btn" 
+      <div class="controls-toggle" :class="{ 'controls-visible': controlsVisible }">
+        <button
+          class="control-btn"
           @click="copyToClipboard"
           :disabled="!tableData || tableData.length === 0"
           title="Copy table data to clipboard"
         >
           <i class="mdi mdi-content-copy icon"></i>
         </button>
-        <button 
-          class="control-btn" 
+        <button
+          class="control-btn"
           @click="downloadData"
           :disabled="!tableData || tableData.length === 0"
           title="Download table data as CSV"
@@ -27,7 +24,7 @@
           <i class="mdi mdi-download-outline icon"></i>
         </button>
       </div>
-      
+
       <!-- Table container -->
       <div ref="tabulator"></div>
     </div>
@@ -231,7 +228,7 @@ function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   if (!fieldInfo) {
     return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
-  
+
   tableHtml += '<tbody >'
   data.forEach((row) => {
     let val = row[lookup]
@@ -494,23 +491,27 @@ export default {
 
       try {
         const data = this.tabulator.getData()
-        const headers = this.tableColumns.map(col => col.title).join('\t')
-        const rows = data.map(row => 
-          this.tableColumns.map(col => {
-            //@ts-ignore
-            const value = row[col.field]
-            // Handle complex data types by converting to string
-            if (typeof value === 'object' && value !== null) {
-              return JSON.stringify(value)
-            }
-            return String(value || '')
-          }).join('\t')
-        ).join('\n')
-        
+        const headers = this.tableColumns.map((col) => col.title).join('\t')
+        const rows = data
+          .map((row) =>
+            this.tableColumns
+              .map((col) => {
+                //@ts-ignore
+                const value = row[col.field]
+                // Handle complex data types by converting to string
+                if (typeof value === 'object' && value !== null) {
+                  return JSON.stringify(value)
+                }
+                return String(value || '')
+              })
+              .join('\t'),
+          )
+          .join('\n')
+
         const tsvContent = headers + '\n' + rows
-        
+
         await navigator.clipboard.writeText(tsvContent)
-        
+
         // Show feedback (you might want to replace this with your app's notification system)
         this.showNotification('Table data copied to clipboard!', 'success')
       } catch (err) {
@@ -528,12 +529,12 @@ export default {
         // Use Tabulator's built-in download functionality
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
         const filename = `table-data-${timestamp}.csv`
-        
+
         this.tabulator.download('csv', filename, {
           delimiter: ',',
           bom: true, // Add BOM for Excel compatibility
         })
-        
+
         this.showNotification('Download started!', 'success')
       } catch (err) {
         console.error('Failed to download data:', err)
@@ -558,9 +559,9 @@ export default {
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         transition: opacity 0.3s ease;
       `
-      
+
       document.body.appendChild(notification)
-      
+
       setTimeout(() => {
         notification.style.opacity = '0'
         setTimeout(() => {
@@ -623,7 +624,7 @@ export default {
             filters: { [field]: value },
             append: true,
           })
-          
+
           const column = tab.getColumn(cell.getField())
           const cells = column.getCells()
 
@@ -634,7 +635,7 @@ export default {
           })
         }
       })
-      
+
       // @ts-ignore
       this.tabulator = shallowRef(tab)
       this.updateTableTheme()

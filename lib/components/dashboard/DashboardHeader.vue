@@ -71,10 +71,10 @@ function handleFilterApply(newValue: string) {
 // Title editing methods
 function startEditingTitle() {
   if (props.editsLocked) return
-  
+
   isEditingTitle.value = true
   editableTitle.value = props.dashboard?.name || 'Untitled Dashboard'
-  
+
   // Focus the input on next tick
   setTimeout(() => {
     titleInput.value?.focus()
@@ -124,11 +124,7 @@ function handleRefresh() {
       <div class="dashboard-title" @click="startEditingTitle">
         <span v-if="!isEditingTitle" class="editable-text">
           {{ dashboard?.name || 'Untitled Dashboard' }}
-          <span 
-            class="edit-indicator" 
-            data-testid="edit-dashboard-title"
-            v-if="!editsLocked"
-          >
+          <span class="edit-indicator" data-testid="edit-dashboard-title" v-if="!editsLocked">
             ✎
           </span>
         </span>
@@ -173,11 +169,7 @@ function handleRefresh() {
           @update:imports="handleImportsChange"
         />
         <div class="grid-actions">
-          <button
-            @click="$emit('add-item')"
-            class="btn btn-success"
-            data-testid="add-item-button"
-          >
+          <button @click="$emit('add-item')" class="btn btn-success" data-testid="add-item-button">
             Add Item
           </button>
           <button
@@ -196,11 +188,7 @@ function handleRefresh() {
       <div class="dashboard-title" @click="startEditingTitle">
         <span v-if="!isEditingTitle" class="editable-text">
           {{ dashboard?.name || 'Untitled Dashboard' }}
-          <span 
-            class="edit-indicator" 
-            data-testid="edit-dashboard-title"
-            v-if="!editsLocked"
-          >
+          <span class="edit-indicator" data-testid="edit-dashboard-title" v-if="!editsLocked">
             ✎
           </span>
         </span>

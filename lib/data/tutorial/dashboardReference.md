@@ -7,10 +7,14 @@ Most dashboard features rely on a semantic model enriched with appropriate metad
 
 It's particularly critical to have dates/datetimes labeled appropriately.
 
-For geography, states/countries and lat/long are important.
+For geography, states/countries and lat/long are required to unlock geographic visualization.
 
-For precise visuals, hex fields
 
-### Implicit Behavior
+### Coloring
 
-If any hex field is the results, it will be used as the color domain.
+For precise visuals, a field with a hex color type will always be used for coloration if available.
+
+:::tip
+Hex field assignments must be unique per dimensional value. Vega will not map the domain properly if not
+:::
+

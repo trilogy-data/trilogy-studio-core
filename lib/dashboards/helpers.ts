@@ -541,11 +541,11 @@ export const createFieldEncoding = (
     ...(sort ? getSortOrder(fieldName, columns) : {}),
     ...(options.scale !== undefined || options.zero !== undefined
       ? {
-        scale: {
-          ...(options.scale !== undefined && { type: options.scale }),
-          ...(options.zero !== undefined && { zero: options.zero }),
-        },
-      }
+          scale: {
+            ...(options.scale !== undefined && { type: options.scale }),
+            ...(options.zero !== undefined && { zero: options.zero }),
+          },
+        }
       : {}),
   }
 }
@@ -669,9 +669,10 @@ export const createColorEncoding = (
         ? { values: uniqueValues.map((d) => d[colorField]) }
         : {}),
     }
-    let scale = fieldType === 'quantitative'
-      ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
-      : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' }
+    let scale =
+      fieldType === 'quantitative'
+        ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
+        : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' }
 
     if (hexfields.length > 0) {
       scale = {
@@ -679,7 +680,6 @@ export const createColorEncoding = (
         range: { field: hexfields[0] },
       }
     }
-
 
     const rval = {
       field: colorField,

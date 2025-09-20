@@ -49,10 +49,10 @@
     <!-- Content area with conditional rendering -->
     <div
       class="chart-content-area"
-      :class="{ 
+      :class="{
         'with-bottom-controls': isShortContainer && showControls,
         'with-side-controls': !isShortContainer && showControls,
-        'no-controls': !showControls
+        'no-controls': !showControls,
       }"
     >
       <!-- Dual chart visualization containers for smooth hot-swapping -->

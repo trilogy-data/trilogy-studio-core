@@ -330,7 +330,6 @@ function processFieldExpression(
     return String(item)
   }
 
-
   if (!isFieldExpressionSafe(trimmed)) {
     console.warn('Potentially unsafe field expression blocked:', trimmed)
     return `unsafe{${trimmed}}`
