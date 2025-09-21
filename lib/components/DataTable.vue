@@ -1,28 +1,117 @@
 <template>
-  <div class="result-table row pa-0 ba-0">
-    <div ref="tabulator"></div>
+  <div
+    class="result-table row pa-0 ba-0"
+    @mouseenter="controlsVisible = true"
+    @mouseleave="controlsVisible = false"
+  >
+    <div class="table-container">
+      <!-- Minimal floating action buttons -->
+      <div class="controls-toggle" :class="{ 'controls-visible': controlsVisible }">
+        <button
+          class="control-btn"
+          @click="copyToClipboard"
+          :disabled="!tableData || tableData.length === 0"
+          title="Copy table data to clipboard"
+        >
+          <i class="mdi mdi-content-copy icon"></i>
+        </button>
+        <button
+          class="control-btn"
+          @click="downloadData"
+          :disabled="!tableData || tableData.length === 0"
+          title="Download table data as CSV"
+        >
+          <i class="mdi mdi-download-outline icon"></i>
+        </button>
+      </div>
+
+      <!-- Table container -->
+      <div ref="tabulator"></div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .result-table {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-basis: 100%;
   flex-grow: 1;
   flex-shrink: 1;
   flex: 1 1 100%;
   flex-wrap: nowrap;
   width: 100%;
-  /* align to left */
-  justify-content: flex-start;
-  margin-right: auto;
   height: 100%;
   background-color: var(--result-window-bg);
+  position: relative;
+}
+
+.table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.controls-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
+}
+
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light, #d0d0d0);
+  background-color: rgba(var(--bg-color, 255, 255, 255), 0.9);
+  color: var(--text-color, #333333);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  backdrop-filter: blur(4px);
+  border-radius: 0; /* Sharp corners */
+}
+
+.control-btn:hover:not(:disabled) {
+  background-color: var(--button-mouseover, #f0f0f0);
+}
+
+.control-btn:disabled {
+  background-color: var(--border-light, #d0d0d0);
+  color: var(--text-color-muted, #999999);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.control-btn:disabled:hover {
+  background-color: var(--border-light, #d0d0d0);
+}
+
+.icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .tabulator .tabulator-tableholder .tabulator-table {
-  /* background-color: transparent; */
   color: var(--text);
 }
 
@@ -35,20 +124,58 @@
 }
 
 .tabulator-row {
-  /* background: transparent; */
   width: min-content;
-  /* min-width: 100%; */
 }
 
 .tabulator {
   position: relative;
   border: 0;
   width: 100%;
-  /* background: transparent; */
+  flex-grow: 1;
 }
 
 .tabulator-cell {
   border: 0;
+}
+
+/* Dark theme support */
+.dark-theme-table .control-btn {
+  background-color: rgba(var(--dark-bg-color, 42, 42, 42), 0.9);
+  color: var(--dark-text-color, #e0e0e0);
+  border-color: var(--dark-border-color, #555555);
+}
+
+.dark-theme-table .control-btn:hover:not(:disabled) {
+  background-color: var(--dark-button-hover-bg, #4a4a4a);
+}
+
+.dark-theme-table .control-btn:disabled {
+  background-color: var(--dark-border-color, #555555);
+  color: var(--dark-text-color-muted, #999999);
+}
+
+/* Highlighted cell styling */
+.highlighted-cell {
+  background-color: var(--highlight-bg, #fff3cd) !important;
+  border: 2px solid var(--highlight-border, #ffc107) !important;
+}
+
+.dark-theme-table .highlighted-cell {
+  background-color: var(--dark-highlight-bg, #3e2723) !important;
+  border-color: var(--dark-highlight-border, #ff9800) !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .controls-toggle {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 </style>
 
@@ -95,32 +222,26 @@ function renderBasicTable(data: Row[], columns: Map<string, ResultColumn>) {
   let lookup: string | undefined = columns.keys().next().value
 
   if (!lookup) {
-    // If no columns, return empty table
     return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
   let fieldInfo = columns.get(lookup)
   if (!fieldInfo) {
-    // If no field info found, return empty table
     return '<table class="tabulator-sub-table"><tbody><tr><td>No data</td></tr></tbody></table>'
   }
-  // Add body rows
+
   tableHtml += '<tbody >'
   data.forEach((row) => {
     let val = row[lookup]
-    // Check if the value is an array or object and handle accordingly
     if (fieldInfo.type == ColumnType.STRUCT && fieldInfo.children) {
       val = renderStructTable(val, fieldInfo.children)
     } else if (fieldInfo.type === ColumnType.ARRAY) {
-      // If it's an array, call renderBasicTable recursively
-      val = renderBasicTable(val, columns) // Pass the array data and columns to renderBasicTable
+      val = renderBasicTable(val, columns)
     }
     tableHtml += '<tr class="tabulator-sub-row">'
     tableHtml += `<td class="tabulator-sub-cell">${val}</td>`
     tableHtml += '</tr>'
   })
   tableHtml += '</tbody>'
-
-  // Close table
   tableHtml += '</table>'
 
   return tableHtml
@@ -132,7 +253,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   }
   let tableHtml = '<table class="tabulator-sub-table">'
 
-  // Add body rows
   tableHtml += '<tbody >'
   columns.forEach((col, _) => {
     let val = data[col.name]
@@ -140,7 +260,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
       val = renderBasicTable(val, col.children)
     }
     if (col.type === ColumnType.STRUCT && col.children) {
-      // If it's a struct, call the renderStructTable recursively
       val = renderStructTable(val, col.children)
     }
 
@@ -151,8 +270,6 @@ function renderStructTable(data: Row, columns: Map<string, ResultColumn>) {
   })
 
   tableHtml += '</tbody>'
-
-  // Close table
   tableHtml += '</table>'
 
   return tableHtml
@@ -276,6 +393,7 @@ export default {
     return {
       tabulator: null as ShallowRef<Tabulator> | null,
       selectedCell: null,
+      controlsVisible: false,
     }
   },
   props: {
@@ -306,12 +424,10 @@ export default {
     },
   },
   setup() {
-    // Inject the store that has been provided elsewhere in the app
     const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     if (!settingsStore) {
       throw new Error('userSettingsStore not provided')
     }
-    // Create a computed property for the current theme
     const currentTheme = computed(() => settingsStore.settings.theme)
 
     return {
@@ -341,22 +457,14 @@ export default {
       return this.results
     },
     tableColumns(): ColumnDefinition[] {
-      // const columnWidth = this.result.fields.length > 30 ? globals.bigTableColumnWidth : undefined
       const calculated: ColumnDefinition[] = []
       this.headers.forEach((details, _) => {
         let formatting = typeToFormatter(details)
         const result = {
           title: this.prettyPrint ? snakeCaseToCapitalizedWords(details.name) : details.name,
-
-          // titleFormatter: 'plaintext',
           field: details.name,
           formatter: formatting.formatter,
           formatterParams: formatting.formatterParams,
-          // formatter: this.cellFormatter,
-          // tooltip: this.cellTooltip,
-          // contextMenu: this.cellContextMenu,
-          // headerContextMenu: this.headerContextMenu,
-          // cellClick: this.cellClick.bind(this)
         }
         // @ts-ignore
         calculated.push(result)
@@ -376,26 +484,105 @@ export default {
     }
   },
   methods: {
+    async copyToClipboard() {
+      if (!this.tabulator || !this.tableData || this.tableData.length === 0) {
+        return
+      }
+
+      try {
+        const data = this.tabulator.getData()
+        const headers = this.tableColumns.map((col) => col.title).join('\t')
+        const rows = data
+          .map((row) =>
+            this.tableColumns
+              .map((col) => {
+                //@ts-ignore
+                const value = row[col.field]
+                // Handle complex data types by converting to string
+                if (typeof value === 'object' && value !== null) {
+                  return JSON.stringify(value)
+                }
+                return String(value || '')
+              })
+              .join('\t'),
+          )
+          .join('\n')
+
+        const tsvContent = headers + '\n' + rows
+
+        await navigator.clipboard.writeText(tsvContent)
+
+        // Show feedback (you might want to replace this with your app's notification system)
+        this.showNotification('Table data copied to clipboard!', 'success')
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err)
+        this.showNotification('Failed to copy data to clipboard', 'error')
+      }
+    },
+
+    downloadData() {
+      if (!this.tabulator || !this.tableData || this.tableData.length === 0) {
+        return
+      }
+
+      try {
+        // Use Tabulator's built-in download functionality
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+        const filename = `table-data-${timestamp}.csv`
+
+        this.tabulator.download('csv', filename, {
+          delimiter: ',',
+          bom: true, // Add BOM for Excel compatibility
+        })
+
+        this.showNotification('Download started!', 'success')
+      } catch (err) {
+        console.error('Failed to download data:', err)
+        this.showNotification('Failed to download data', 'error')
+      }
+    },
+
+    showNotification(message: string, type: 'success' | 'error') {
+      // Simple notification - you might want to replace this with your app's notification system
+      const notification = document.createElement('div')
+      notification.textContent = message
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 6px 10px;
+        border-radius: 0px;
+        color: white;
+        font-weight: 250;
+        z-index: 10000;
+        background-color: ${type === 'success' ? '#4caf50' : '#f44336'};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: opacity 0.3s ease;
+      `
+
+      document.body.appendChild(notification)
+
+      setTimeout(() => {
+        notification.style.opacity = '0'
+        setTimeout(() => {
+          document.body.removeChild(notification)
+        }, 300)
+      }, 3000)
+    },
+
     create() {
       let target = this.$refs.tabulator as HTMLElement
-      let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData' // Use fitDataFill if fitParent is true, otherwise fitData
+      let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
 
       let tab = new Tabulator(target, {
-        // data: this.tableData, //link data to table
-        pagination: this.tableData.length > 1000, //enable pagination
-        // paginationMode: 'remote', //enable remote pagination
-        // reactiveData: true,
+        pagination: this.tableData.length > 1000,
         renderHorizontal: 'virtual',
-        // columns: this.tableColumns, //define table columns
         maxHeight: '100%',
         minHeight: '100%',
         minWidth: '100%',
-        // dynamic rowheights required for struct/array
-        // rowHeight: 30,
         //@ts-ignore
         data: this.tableData,
         columns: this.tableColumns,
-        // height: this.actualTableHeight,
         nestedFieldSeparator: false,
         clipboard: 'copy',
         keybindings: {
@@ -423,10 +610,8 @@ export default {
         }
         let value = cell.getValue()
 
-        // Check if cell is already highlighted
         const element = cell.getElement()
         if (element.classList.contains('highlighted-cell')) {
-          // If already highlighted, remove all highlighting and emit background-click
           const highlightedCells = target.querySelectorAll('.highlighted-cell')
           highlightedCells.forEach((highlightedCell) => {
             highlightedCell.classList.remove('highlighted-cell')
@@ -439,12 +624,10 @@ export default {
             filters: { [field]: value },
             append: true,
           })
-          // If not highlighted yet, find all cells with the same value in this column and highlight them
-          // Get all cells in this column with the same value
+
           const column = tab.getColumn(cell.getField())
           const cells = column.getCells()
 
-          // Highlight all matching cells
           cells.forEach((cellInColumn) => {
             if (cellInColumn.getValue() === value) {
               cellInColumn.getElement().classList.add('highlighted-cell')
@@ -452,11 +635,12 @@ export default {
           })
         }
       })
+
       // @ts-ignore
       this.tabulator = shallowRef(tab)
-
       this.updateTableTheme()
     },
+
     updateTable() {
       if (this.tabulator) {
         this.tabulator.destroy()
@@ -464,6 +648,7 @@ export default {
       }
       this.create()
     },
+
     updateTableTheme() {
       if (!this.tabulator) return
 
@@ -471,11 +656,9 @@ export default {
       const theme = this.currentTheme
 
       if (theme === 'dark') {
-        // Apply dark theme styles
         table.element.classList.remove('light-theme-table')
         table.element.classList.add('dark-theme-table')
       } else {
-        // Apply light theme styles
         table.element.classList.remove('dark-theme-table')
         table.element.classList.add('light-theme-table')
       }

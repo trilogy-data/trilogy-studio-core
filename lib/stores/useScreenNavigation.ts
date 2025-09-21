@@ -24,7 +24,7 @@ interface NavigationState {
   activeCommunityModelFilter: Ref<string>
 }
 
-interface NavigationStore {
+export interface NavigationStore {
   readonly activeScreen: Ref<string>
   readonly activeEditor: Ref<string>
   readonly activeDashboard: Ref<string>

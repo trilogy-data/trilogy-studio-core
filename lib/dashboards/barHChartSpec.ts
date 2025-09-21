@@ -39,23 +39,32 @@ export const createBarHChartSpec = (
     encoding: {
       y: {
         ...createFieldEncoding(config.yField || '', columns),
-        sort: '-x',
+        sort: { field: config.xField, op: 'sum', order: 'descending' },
         axis: {
           labelExpr: isMobile
             ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
             : 'datum.label',
         },
       },
-      x: createFieldEncoding(config.xField || '', columns, {
-        axis: { ...getFormatHint(config.xField, columns) },
-      },
+      x: createFieldEncoding(
+        config.xField || '',
+        columns,
+        {
+          axis: { ...getFormatHint(config.xField, columns) },
+        },
         false,
         {
           scale: config.scaleX,
           zero: false,
-        }),
+        },
+      ),
       ...createInteractionEncodings(),
       tooltip: tooltipFields,
+      order: {
+        field: config.xField,
+        type: 'quantitative',
+        sort: 'descending',
+      },
       ...encoding,
     },
   }

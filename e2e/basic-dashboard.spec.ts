@@ -92,7 +92,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
       await page.getByTestId('dashboard-list-id-c-local-faa-connection').click()
     }
 
-    await page.getByText('faa-test').click()
+    await page.getByTestId('dashboard-list-id-d-faa-test').click()
   }
 
   // set up the source
@@ -389,11 +389,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   // Wait for the cross-filtering to take effect
   await page.waitForTimeout(1000)
 
-  // Find the table element using the xpath pattern you provided
-  // Adjusting to be more flexible since the exact ID might vary
-  const tableContainer = page
-    .locator('//*[contains(@id, "faa-test")]/div/div[2]/div/div[2]/div[1]')
-    .first()
 
   // Alternative selector in case xpath doesn't work in all browsers
   const tableContainerAlt = page.locator('[data-testid="simple-editor-results"]').nth(1)
@@ -548,7 +543,7 @@ select rows;
       await page.getByTestId('dashboard-list-id-s-local').click()
       await page.getByTestId(`dashboard-list-id-c-local-${connectionName}`).click()
     }
-    await page.getByText('custom-editor-dashboard').click()
+    await page.getByTestId('dashboard-list-id-c-local-duckdb-test2').click()
   }
 
   // Verify dashboard is using custom editor as source

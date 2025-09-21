@@ -36,7 +36,6 @@
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
-    "axios": "^1.7.9",
     "buffer": "^6.0.3",
     "gapi": "^0.0.3",
     "jsdom": "^26.1.0",

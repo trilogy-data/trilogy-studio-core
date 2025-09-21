@@ -20,6 +20,7 @@ const valueToString = (column: string, value: any): string => {
   // Handle arrays and objects by converting to JSON string
   return `datum.${column} === ${JSON.stringify(value)}`
 }
+
 const createHeadlineLayer = (
   column: string,
   index: number,
@@ -30,6 +31,8 @@ const createHeadlineLayer = (
   datum: any = null,
   includeLabelSetting = true,
   intChart: { [key: string]: string | number | Array<any> }[],
+  maxValueLength: number = 10, // New parameter for max value text length
+  maxLabelLength: number = 10, // New parameter for max label text length
 ) => {
   let xOffset = 0
   let yOffset = 0
@@ -48,14 +51,15 @@ const createHeadlineLayer = (
         : 0 // Center if only one value
   }
 
-  // Scale font size based on number of metrics and layout
+  // Use the maximum lengths for consistent sizing across all layers
   const fontSizeFormula = isMobile
-    ? `min(24, max(height, 120)/${Math.max(6, total * 2)})` // Use height for mobile
-    : `min(30, max(width, 150)/${Math.max(8, total * 2)})` // Use width for desktop
+    ? `min(32, max(12, (height * 0.8) / (${total} * max(1, sqrt(${maxValueLength})))))` // Mobile: scale with height
+    : `min(40, max(14, (width * 0.6) / (${total} * max(1, sqrt(${maxValueLength} * 1.5)))))` // Desktop: scale with width
 
   const labelFontSizeFormula = isMobile
-    ? `min(12, max(height, 150)/${Math.max(4, total * 2.5)})` // Use height for mobile
-    : `min(14, max(width, 200)/${Math.max(6, total * 3)})` // Use width for desktop
+    ? `min(10 , max(8, (height * 0.4) / (${total} * max(1, sqrt(${maxLabelLength})))))` // Mobile labels
+    : `min(14, max(10, (width * 0.3) / (${total} * max(1, sqrt(${maxLabelLength} * 1.2)))))` // Desktop labels
+
   let topMark = {}
   let includeLabel = includeLabelSetting
   let selectMarks: object[] = []
@@ -67,13 +71,13 @@ const createHeadlineLayer = (
       mark: {
         type: 'image',
         width: isMobile ? { expr: `width` } : { expr: `width / ${total}` },
-        height: isMobile ? { expr: `height / 3` } : { expr: `height` },
+        height: isMobile ? { expr: `height / ${total}` } : { expr: `height` },
         align,
         baseline: 'middle',
         x: isMobile
           ? { expr: `width/2 + (${xOffset} / 100) * width` }
           : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        y: isMobile ? { expr: `${yOffset * 1.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
+        y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         url: {
@@ -187,13 +191,36 @@ export const createHeadlineSpec = (
   isMobile: boolean = false,
   intChart: { [key: string]: string | number | Array<any> }[],
 ) => {
-  // get all columns that are isNumericColumn using isNumericColumn
   let columnsArray = Array.from(columns.values())
   let dataFull = data ? data : []
+
+  // Calculate maximum text lengths for consistent sizing
+  let maxValueLength = 1
+  let maxLabelLength = 1
+
+  // Find max label length
+  columnsArray.forEach((column) => {
+    const labelLength = snakeCaseToCapitalizedWords(column.name).length
+    maxLabelLength = Math.max(maxLabelLength, labelLength)
+  })
+
+  // Find max value length
+  if (dataFull.length > 0) {
+    dataFull.forEach((row) => {
+      columnsArray.forEach((column) => {
+        const value = row ? row[column.name] : null
+        if (value !== null && value !== undefined) {
+          const valueLength = String(value).length
+          maxValueLength = Math.max(maxValueLength, valueLength)
+        }
+      })
+    })
+  }
 
   // Map each column to its visualization layers with proper index
   let size = columnsArray.length * dataFull.length
   let columnLayers = []
+
   // if we have no data, we create label layers only
   if (dataFull.length === 0) {
     columnLayers = [
@@ -217,6 +244,8 @@ export const createHeadlineSpec = (
           datum,
           !(config.hideLegend === true),
           filtered_display,
+          maxValueLength,
+          maxLabelLength,
         )
       }),
     ]
@@ -244,6 +273,8 @@ export const createHeadlineSpec = (
           datum,
           !(config.hideLegend === true),
           filtered_display,
+          maxValueLength,
+          maxLabelLength,
         )
       })
     })

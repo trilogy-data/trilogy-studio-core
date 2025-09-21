@@ -19,6 +19,8 @@ defineProps<{
 // Use the base dashboard logic
 const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 
+const mobileMinHeight = 400; // Minimum height for mobile items
+
 // Computed properties from base with proper fallbacks
 const dashboard = computed(() => dashboardBase.value?.dashboard)
 const sortedLayout = computed(() => dashboardBase.value?.sortedLayout || [])
@@ -71,11 +73,25 @@ function triggerResize(): void {
   })
 }
 
+function calculateMobileWidth(_: any): number | string {
+  // let itemData = getItemData(item.i, dashboard.value.id)
+  // if (itemData.type === CELL_TYPES.CHART) {
+  //   if (itemData.chartConfig?.chartType === 'headline') {
+  //     return `${Math.max(itemData.width || window.innerWidth - 30, 300)}px`
+  //   }
+  // }
+
+  return '100%' // Full width for mobile items
+}
+
 // Calculate approximate height for mobile items based on original proportions
 function calculateMobileHeight(item: any): number | string {
+
+  let minHeight = Math.min(window.innerWidth, 400)
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
-    return 300 // Default height if we can't calculate
+    return minHeight // Default height if we can't calculate
   }
+
   let itemData = getItemData(item.i, dashboard.value.id)
   if (itemData.type === CELL_TYPES.MARKDOWN) {
     return '100%' // Full height for markdown items
@@ -85,27 +101,32 @@ function calculateMobileHeight(item: any): number | string {
     if (itemData.chartConfig?.chartType === 'headline') {
       // return the width as height for a headline chart
       if (itemData.width) {
-        return itemData.width / 2
+        return `${Math.max(itemData.width / 2, minHeight)}px`
       }
     }
   }
-  const gridItem = dashboard.value.gridItems[item.i]
+
   let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
-  if (gridItem.width && gridItem.height) {
-    const aspectRatio = gridItem.height / gridItem.width
-    const viewportWidth = window.innerWidth - 30 // Adjust for padding
+  if (itemData.width && itemData.height) {
+    let aspectRatio = item.h / (item.w*2)
+    const viewportWidth = window.innerWidth-50 // Adjust for padding
+
+    if (['point', 'barh'].includes(itemData.chartConfig?.chartType || '')) {
+      aspectRatio = aspectRatio * 1.2 // make these a bit taller
+    }
 
     // Calculate new height based on aspect ratio and full width
     // With min and max constraints for usability
     const calculatedHeight = viewportWidth * aspectRatio
-    return Math.max(Math.min(calculatedHeight, maxHeight), 400)
+
+    return `${Math.max(Math.min(calculatedHeight, maxHeight), minHeight)}px`
   }
 
   // If no stored dimensions, use the grid layout's width and height
   const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), 400)
+  return `${Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), mobileMinHeight)}px`
 }
 
 // Handle edit mode toggle for mobile
@@ -161,7 +182,10 @@ function handleToggleEditMode() {
         :key="item.i"
         :data-i="item.i"
         class="mobile-item"
-        :style="{ height: `${calculateMobileHeight(item)}px` }"
+        :style="{
+          height: `${calculateMobileHeight(item)}`,
+          width: `${calculateMobileWidth(item)}`,
+        }"
       >
         <DashboardGridItem
           v-if="dashboardBase"

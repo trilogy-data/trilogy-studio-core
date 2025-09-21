@@ -170,7 +170,7 @@ describe('generateVegaSpec', () => {
       expect(spec.mark.type).toBe('bar')
       expect(spec.encoding.x.field).toBe('sales')
       expect(spec.encoding.y.field).toBe('region')
-      expect(spec.encoding.y.sort).toBe('-x') // Sorted by x value
+      expect(spec.encoding.y.sort).toStrictEqual({ field: 'sales', op: 'sum', order: 'descending' }) // Sorted by x value
     })
 
     it('should truncate long labels on mobile', () => {

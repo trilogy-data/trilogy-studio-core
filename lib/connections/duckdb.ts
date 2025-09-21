@@ -4,6 +4,7 @@ import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
+import { ARRAY_IMPLICIT_COLUMN } from './constants'
 
 // Select a bundle based on browser checks
 function isFirefox(): boolean {
@@ -184,8 +185,8 @@ export default class DuckDBConnection extends BaseConnection {
           case ColumnType.ARRAY:
             const arrayData = Array.from(row[key].toArray())
             const newv = arrayData.map((item: any) => {
-              // l i sthe constant returned by duckdb for the array
-              return this.processRow({ l: item }, column.children!)
+              // l is the constant returned by duckdb for the array
+              return this.processRow({ [ARRAY_IMPLICIT_COLUMN]: item }, column.children!)
             })
             processedRow[key] = newv
             break

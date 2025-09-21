@@ -600,7 +600,7 @@ export default class QueryExecutionService {
             contents: this.editorStore.editors[source.editor]?.contents || '',
           }))
         : []
-    console.log('EXTRA CONTENT', queryInput.extraContent)
+
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
     }

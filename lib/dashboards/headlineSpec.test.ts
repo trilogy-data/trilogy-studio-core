@@ -285,8 +285,8 @@ describe('createHeadlineSpec', (): void => {
       const mobileFontExpr: string = (mobileSpec.layer[0] as any).mark.fontSize?.expr || ''
       const desktopFontExpr: string = (desktopSpec.layer[0] as any).mark.fontSize?.expr || ''
 
-      expect(mobileFontExpr).toContain('min(24')
-      expect(desktopFontExpr).toContain('min(30')
+      expect(mobileFontExpr).toContain('min(32')
+      expect(desktopFontExpr).toContain('min(40')
     })
   })
 
