@@ -19,7 +19,7 @@ defineProps<{
 // Use the base dashboard logic
 const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 
-const mobileMinHeight = 400; // Minimum height for mobile items
+const mobileMinHeight = 400 // Minimum height for mobile items
 
 // Computed properties from base with proper fallbacks
 const dashboard = computed(() => dashboardBase.value?.dashboard)
@@ -86,7 +86,6 @@ function calculateMobileWidth(_: any): number | string {
 
 // Calculate approximate height for mobile items based on original proportions
 function calculateMobileHeight(item: any): number | string {
-
   let minHeight = Math.min(window.innerWidth, 400)
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
     return minHeight // Default height if we can't calculate
@@ -109,8 +108,8 @@ function calculateMobileHeight(item: any): number | string {
   let maxHeight = itemData.type === CELL_TYPES.CHART ? 1200 : 600
   // If we have stored width and height, use that to calculate ratio
   if (itemData.width && itemData.height) {
-    let aspectRatio = item.h / (item.w*2)
-    const viewportWidth = window.innerWidth-50 // Adjust for padding
+    let aspectRatio = item.h / (item.w * 2)
+    const viewportWidth = window.innerWidth - 50 // Adjust for padding
 
     if (['point', 'barh'].includes(itemData.chartConfig?.chartType || '')) {
       aspectRatio = aspectRatio * 1.2 // make these a bit taller

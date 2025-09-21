@@ -95,6 +95,19 @@ const validateVegaLiteSpec = (spec: any): boolean => {
   }
 }
 
+const validateVegaSpec = (spec: any): boolean => {
+  try {
+    // Basic structural validation
+    expect(spec).toHaveProperty('$schema')
+    expect(spec.$schema).toContain('vega')
+
+    return true
+  } catch (error) {
+    console.error('Vega spec validation failed:', error)
+    return false
+  }
+}
+
 describe('generateVegaSpec', () => {
   let testData: readonly Row[]
   let testColumns: Map<string, ResultColumn>
@@ -273,12 +286,25 @@ describe('generateVegaSpec', () => {
 
       const spec = generateVegaSpec(testData, config, testColumns, null)
 
-      expect(validateVegaLiteSpec(spec)).toBe(true)
-      let pointlayer = spec.layer[0]
-      expect(pointlayer.mark.type).toBe('point')
-      expect(pointlayer.mark.filled).toBe(false)
-      expect(spec.encoding.x.field).toBe('sales')
-      expect(spec.encoding.y.field).toBe('percent')
+      // Find the point mark (equivalent to layer[0] in Vega-Lite)
+      const pointMark = spec.marks?.find(
+        (mark: any) => mark.name === 'layer_0_marks' && mark.type === 'symbol',
+      )
+
+      expect(pointMark).toBeDefined()
+      expect(pointMark.type).toBe('symbol') // 'point' becomes 'symbol' in compiled Vega
+      expect(pointMark.style).toContain('point')
+
+      // Check mark properties - filled becomes a stroke/fill encoding
+      const updateEncoding = pointMark.encode?.update
+      expect(updateEncoding?.fill).toBeDefined()
+      expect(updateEncoding?.stroke).toBeDefined()
+
+      // Check x and y field mappings in the mark encoding
+      expect(updateEncoding?.x?.scale).toBe('x')
+      expect(updateEncoding?.x?.field).toBe('sales')
+      expect(updateEncoding?.y?.scale).toBe('y')
+      expect(updateEncoding?.y?.field).toBe('percent')
     })
 
     it('should handle point chart with color encoding', () => {
@@ -291,8 +317,25 @@ describe('generateVegaSpec', () => {
 
       const spec = generateVegaSpec(testData, config, testColumns, null)
 
-      expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.layer[0].encoding.color.field).toBe('region')
+      expect(validateVegaSpec(spec)).toBe(true)
+      // Find the point mark (equivalent to layer[0] in Vega-Lite)
+      // Find the point mark - look for layer_0_marks specifically
+      const pointMark = spec.marks?.find(
+        (mark: any) => mark.name === 'layer_0_marks' && mark.type === 'symbol',
+      )
+
+      expect(pointMark).toBeDefined()
+
+      // Check stroke encoding (points use stroke for color, not fill)
+      const strokeEncoding = pointMark.encode?.update?.stroke
+      expect(strokeEncoding).toBeDefined()
+      expect(Array.isArray(strokeEncoding)).toBe(true)
+
+      // The color scale reference is typically the last element in the stroke array
+      // (after conditional highlight/select logic)
+      const colorEncoding = strokeEncoding[strokeEncoding.length - 1]
+      expect(colorEncoding.scale).toBe('color')
+      expect(colorEncoding.field).toBe('region')
     })
   })
 
@@ -426,7 +469,7 @@ describe('generateVegaSpec', () => {
 
       const spec = generateVegaSpec(testData, config, testColumns, null, true) // mobile = true
 
-      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(validateVegaSpec(spec)).toBe(true)
       // expect(spec.point.size).toBe(80) // Larger touch targets
       // expect(spec.signals).toBeDefined()
       // expect(spec.signals[0].name).toBe('touchSignal')
@@ -517,11 +560,22 @@ describe('generateVegaSpec', () => {
       }
 
       const spec = generateVegaSpec(testData, config, testColumns, null)
+      // Find the point mark (equivalent to layer[0] in Vega-Lite)
+      const pointMark = spec.marks?.find(
+        (mark: any) => mark.name === 'layer_0_marks' && mark.type === 'symbol',
+      )
 
-      expect(validateVegaLiteSpec(spec)).toBe(true)
-      expect(spec.layer[0].encoding.tooltip).toBeDefined()
-      expect(Array.isArray(spec.layer[0].encoding.tooltip)).toBe(true)
-      expect(spec.layer[0].encoding.tooltip.length).toBe(3) // x, y, color fields
+      expect(pointMark).toBeDefined()
+      expect(pointMark.encode?.update?.tooltip).toBeDefined()
+
+      // In compiled Vega, tooltip is a signal expression string
+      const tooltipSignal = pointMark.encode.update.tooltip.signal
+      expect(tooltipSignal).toBeDefined()
+
+      // Verify the tooltip signal contains references to all 3 expected fields
+      expect(tooltipSignal).toContain('sales') // x field
+      expect(tooltipSignal).toContain('percent') // y field
+      expect(tooltipSignal).toContain('region') // color field
     })
   })
 

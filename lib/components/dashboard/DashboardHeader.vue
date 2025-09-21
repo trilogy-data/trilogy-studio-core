@@ -40,6 +40,7 @@ const emit = defineEmits([
   'toggle-edit-mode',
   'refresh',
   'title-update',
+  'export-image',
 ])
 
 const connectionStore = useConnectionStore()
@@ -66,6 +67,11 @@ function closeSharePopup() {
 // Handle filter apply from FilterInputComponent
 function handleFilterApply(newValue: string) {
   emit('filter-change', newValue)
+}
+
+// Handle download button click
+function handleDownload() {
+  emit('export-image')
 }
 
 // Title editing methods
@@ -219,6 +225,9 @@ function handleRefresh() {
       />
 
       <div class="grid-actions">
+        <button @click="handleDownload" class="btn btn-secondary" data-testid="download-button">
+          Download
+        </button>
         <button
           @click="toggleSharePopup"
           class="btn btn-secondary"

@@ -389,7 +389,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   // Wait for the cross-filtering to take effect
   await page.waitForTimeout(1000)
 
-
   // Alternative selector in case xpath doesn't work in all browsers
   const tableContainerAlt = page.locator('[data-testid="simple-editor-results"]').nth(1)
 

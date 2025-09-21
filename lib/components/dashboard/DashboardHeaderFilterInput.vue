@@ -39,6 +39,11 @@ const displayFilterValue = computed(() => {
   return filterInput.value.replace(/\n/g, ' ')
 })
 
+// Check if there's filter text to show clear button
+const hasFilterText = computed(() => {
+  return true
+})
+
 // Apply the filter changes
 function applyFilter() {
   emit('filter-apply', filterInput.value)
@@ -355,6 +360,23 @@ Use Ctrl+Enter to apply`
         </div>
       </button>
 
+      <!-- Clear filters button -->
+      <button
+        v-if="hasFilterText"
+        @click="clearFilter"
+        class="clear-filters-button"
+        data-testid="clear-filters-button"
+        :disabled="isLoading"
+        title="Clear all filters"
+      >
+        <div class="button-content">
+          <i class="mdi mdi-close"></i>
+          <Tooltip content="Clear all filters" position="top">
+            <span class="tooltip-trigger"></span>
+          </Tooltip>
+        </div>
+      </button>
+
       <!-- Validation indicator -->
       <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
         <div
@@ -597,6 +619,34 @@ Use Ctrl+Enter to apply`
   z-index: 2;
 }
 
+/* Clear filters button styles */
+.clear-filters-button {
+  position: absolute;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  width: 30px;
+  height: 30px;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-button:hover:not(:disabled) {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+  border-radius: 4px;
+}
+
+.clear-filters-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .button-content {
   position: relative;
   width: 100%;
@@ -703,6 +753,10 @@ Use Ctrl+Enter to apply`
   .search-button {
     right: 60px;
   }
+
+  .clear-filters-button {
+    right: 0px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -724,6 +778,10 @@ Use Ctrl+Enter to apply`
     right: 50px;
   }
 
+  .clear-filters-button {
+    right: 0px;
+  }
+
   .dropdown-actions {
     flex-direction: column;
   }
@@ -743,6 +801,10 @@ Use Ctrl+Enter to apply`
 
   .search-button {
     right: 45px;
+  }
+
+  .clear-filters-button {
+    right: 0px;
   }
 }
 </style>

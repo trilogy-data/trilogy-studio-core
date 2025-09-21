@@ -166,6 +166,7 @@ export class ChromaChartHelpers {
             append: false,
           })
         } else {
+          console.log('setting not year')
           this.eventHandlers.onDimensionClick({
             filters: { [timeAddress]: [start, end] },
             chart: { [config.xField]: [start, end] },
@@ -260,13 +261,23 @@ export class ChromaChartHelpers {
         let filterValue = item.datum[field]
 
         if (DATETIME_COLS.includes(columns.get(field)?.type as ColumnType)) {
+          if (config.chartType === 'area') {
+            return
+          }
           filterValue = convertTimestampToISODate(item.datum[field])
+        } else if (columns.get(field)?.traits?.includes('year')) {
+          if (config.chartType === 'area') {
+            return
+          }
+          filterValue = convertTimestampToISODate(item.datum[field]).getFullYear()
         }
 
         baseFilters = { ...baseFilters, [fieldAddress]: filterValue }
         baseChart = { ...baseChart, [field]: item.datum[field] }
       }
     })
+    console.log('Point click filters:', baseFilters)
+
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
       chart: baseChart,

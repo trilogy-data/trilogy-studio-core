@@ -1,4 +1,3 @@
-import { unique } from 'vega-lite'
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
@@ -602,11 +601,10 @@ export const getLegendOrientation = (
     titleFontSize: isMobile ? 10 : 12,
   }
 }
-
 const legendTicks = 15
 
 export const createColorEncoding = (
-  config: ChartConfig,
+  _: ChartConfig,
   colorField: string | undefined,
   columns: Map<string, ResultColumn>,
   isMobile: boolean = false,
@@ -616,10 +614,14 @@ export const createColorEncoding = (
 ) => {
   let legendConfig = { tickCount: legendTicks }
   let uniqueValues: any[] = []
-  let localData = data || []
+  let allCategories: string[] = []
+  const localData = data || []
+
+  // Find any hex fields in the columns
   const hexfields = Array.from(columns.entries())
     .filter(([_, col]) => col.traits?.includes('hex'))
     .map(([colName, _]) => colName)
+
   if (colorField) {
     const fieldType = getVegaFieldType(colorField, columns)
     legendConfig = {
@@ -627,27 +629,16 @@ export const createColorEncoding = (
       ...getLegendOrientation(colorField, isMobile, fieldType),
     }
 
-    // Get unique values first
+    // Compute all unique values for the domain (full dataset)
+
     if (fieldType === 'nominal' || fieldType === 'ordinal') {
-      uniqueValues = unique(localData, (d) => d[colorField])
-      // Sort by size field if it exists, otherwise alphabetically
-      if (config.sizeField) {
-        // Sort by size field (descending - largest first)
-        uniqueValues = [...uniqueValues].sort(
-          (a, b) => (b[config.sizeField!] || 0) - (a[config.sizeField!] || 0),
-        )
-      } else {
-        // Sort alphabetically by the color field value
-        uniqueValues = [...uniqueValues].sort((a, b) => {
-          const aValue = String(a[colorField] || '')
-          const bValue = String(b[colorField] || '')
-          return aValue.localeCompare(bValue)
-        })
-      }
+      allCategories = Array.from(new Set(localData.map((r) => String(r[colorField] ?? '')))).sort(
+        (a, b) => a.localeCompare(b),
+      )
     }
 
-    // Take only the first legendTicks values
-    uniqueValues = uniqueValues.slice(0, legendTicks)
+    // Slice for legend display
+    uniqueValues = allCategories.slice(0, legendTicks)
   }
 
   // Helper function to conditionally add legend
@@ -665,20 +656,29 @@ export const createColorEncoding = (
     legendConfig = {
       ...legendConfig,
       ...getFormatHint(colorField, columns),
+      // Only legend shows top `legendTicks` values
       ...((fieldType === 'nominal' || fieldType === 'ordinal') && uniqueValues.length > 0
-        ? { values: uniqueValues.map((d) => d[colorField]) }
+        ? { values: uniqueValues }
         : {}),
     }
+
+    // default scale choices
     let scale =
       fieldType === 'quantitative'
         ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
         : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' }
 
+    // HEX mapping logic: create full domain/range arrays
     if (hexfields.length > 0) {
-      scale = {
-        //@ts-ignore
-        range: { field: hexfields[0] },
-      }
+      const hexField = hexfields[0]
+
+      // Map each unique category to the first found hex, fallback if missing
+      const range = allCategories.map((cat) => {
+        const foundRow = localData.find((r) => String(r[colorField]) === cat && r[hexField] != null)
+        return foundRow ? String(foundRow[hexField]) : '#999999'
+      })
+      // @ts-ignore
+      scale = { domain: allCategories, range }
     }
 
     const rval = {
@@ -686,17 +686,13 @@ export const createColorEncoding = (
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
       scale: scale,
-
       condition: [
-        {
-          param: 'highlight',
-          empty: false,
-          value: HIGHLIGHT_COLOR,
-        },
+        { param: 'highlight', empty: false, value: HIGHLIGHT_COLOR },
         { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
       ],
       ...getFormatHint(colorField, columns),
     }
+
     return addLegendIfNeeded(rval)
   }
 

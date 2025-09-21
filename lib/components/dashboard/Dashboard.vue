@@ -10,6 +10,8 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
 
+import html2canvas from 'html2canvas'
+
 defineProps<{
   name: string
   connectionId?: string
@@ -28,6 +30,7 @@ const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
 const editable = computed(() => dashboard.value?.state === 'editing' || false)
 
 const loaded = ref(false)
+const isExportingImage = ref(false)
 
 // Computed properties from base with proper fallbacks
 const dashboard = computed(() => dashboardBase.value?.dashboard)
@@ -114,6 +117,62 @@ function handleToggleEditMode() {
     triggerResize()
   })
 }
+
+// Image Export functionality
+async function exportToImage() {
+  if (!dashboard.value) return
+
+  isExportingImage.value = true
+
+  try {
+    // Find the dashboard content element
+    const dashboardElement = document.querySelector('.grid-content')
+    if (!dashboardElement) {
+      throw new Error('Dashboard content not found')
+    }
+
+    // Temporarily disable any hover effects and transitions for cleaner capture
+    dashboardElement.classList.add('image-export-mode')
+
+    // Wait a moment for any pending renders
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Capture the dashboard as canvas
+    const canvas = await html2canvas(dashboardElement as HTMLElement, {
+      backgroundColor: '#ffffff',
+      scale: 2, // Higher scale for better quality
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      width: dashboardElement.scrollWidth,
+      height: dashboardElement.scrollHeight,
+    })
+
+    // Convert canvas to image and download
+    const imgData = canvas.toDataURL('image/png')
+
+    // Create download link
+    const link = document.createElement('a')
+    link.download = `${dashboard.value.name || 'dashboard'}_${new Date().toISOString().split('T')[0]}.png`
+    link.href = imgData
+
+    // Trigger download
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('Error exporting image:', error)
+    alert('Failed to export image. Please try again.')
+  } finally {
+    // Remove export mode class
+    const dashboardElement = document.querySelector('.grid-content')
+    if (dashboardElement) {
+      dashboardElement.classList.remove('image-export-mode')
+    }
+    isExportingImage.value = false
+  }
+}
 </script>
 
 <template>
@@ -140,6 +199,7 @@ function handleToggleEditMode() {
       :filterError="filterError"
       :globalCompletion="globalCompletion"
       :validateFilter="validateFilter"
+      :is-exporting-image="isExportingImage"
       @connection-change="dashboardBase?.onConnectionChange"
       @filter-change="dashboardBase?.handleFilterChange"
       @import-change="dashboardBase?.handleImportChange"
@@ -149,6 +209,7 @@ function handleToggleEditMode() {
       @refresh="dashboardBase?.handleRefresh"
       @clear-filter="dashboardBase?.handleFilterClear"
       @title-update="dashboardBase?.updateTitle"
+      @export-image="exportToImage"
     />
 
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
@@ -282,6 +343,16 @@ function handleToggleEditMode() {
 .grid-content {
   width: 100%;
   height: 100%;
+}
+
+/* Image export mode styles to clean up the appearance */
+.grid-content.image-export-mode * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.grid-content.image-export-mode .vue-grid-item:hover {
+  transform: none !important;
 }
 
 .vue-grid-layout {
