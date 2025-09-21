@@ -115,9 +115,7 @@
 		// Function to detect user's color scheme preference
 		function detectColorScheme() {
 			// Check if user has explicitly set a preference in localStorage
-			console.log(localStorage.getItem('userSettings'))
 			const savedTheme = JSON.parse(localStorage.getItem('userSettings') || '{}').theme;
-			console.log(savedTheme)
 			if (savedTheme) {
 				return savedTheme === 'dark' ? 'dark' : 'light';
 			}
