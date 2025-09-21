@@ -19,7 +19,7 @@ Valid types:
 For any response to the user, use this format -> put your actual response within triple double quotes with thinking and justification before it, in this format (replace placeholders with relevant content): Reasoning: {{reasoning}} """{{ response }}"""
 `
 
-function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
+export function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
     .map(
       (field) =>

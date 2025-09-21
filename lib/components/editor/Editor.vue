@@ -86,7 +86,7 @@ import { extractLastTripleQuotedText } from '../../stores/llmStore.ts'
 import { Range } from 'monaco-editor'
 import { completionToModelInput } from '../../llm/utils.ts'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
-import { leadIn } from '../../llm/data/prompts.ts'
+import { leadIn, conceptsToFieldPrompt } from '../../llm/data/prompts.ts'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -725,7 +725,7 @@ export default defineComponent({
               { role: 'system', content: leadIn, hidden: true },
               {
                 role: 'user',
-                content: `Here is a file I'm editing in the Trilogy language. ${targetEditor.contents}.`,
+                content: `Here is a file I'm editing in the Trilogy language. ${targetEditor.contents}. Here are the available concepts in the environment: ${conceptsToFieldPrompt(concepts)}`,
                 hidden: true,
               },
               { role: 'system', content: initMessage },
