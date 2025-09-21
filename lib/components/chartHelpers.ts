@@ -166,7 +166,6 @@ export class ChromaChartHelpers {
             append: false,
           })
         } else {
-          console.log('setting not year')
           this.eventHandlers.onDimensionClick({
             filters: { [timeAddress]: [start, end] },
             chart: { [config.xField]: [start, end] },
