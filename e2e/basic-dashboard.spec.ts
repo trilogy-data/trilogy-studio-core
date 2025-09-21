@@ -543,7 +543,7 @@ select rows;
       await page.getByTestId('dashboard-list-id-s-local').click()
       await page.getByTestId(`dashboard-list-id-c-local-${connectionName}`).click()
     }
-    await page.getByText('custom-editor-dashboard').click()
+    await page.getByTestId('dashboard-list-id-c-local-duckdb-test2').click()
   }
 
   // Verify dashboard is using custom editor as source
