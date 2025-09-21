@@ -4,6 +4,7 @@ import { useConnectionStore, useEditorStore } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
+import LoadingButton from '../LoadingButton.vue' 
 import { type CompletionItem } from '../../stores/resolver'
 import { type DashboardImport } from '../../dashboards/base'
 import { type Dashboard } from '../../dashboards/base'
@@ -69,9 +70,16 @@ function handleFilterApply(newValue: string) {
   emit('filter-change', newValue)
 }
 
-// Handle download button click
-function handleDownload() {
+// Handle download button click with 5 second delay
+async function handleDownloadAction() {
+  // Emit the export-image event immediately
   emit('export-image')
+  
+  // Add a 5-second delay to simulate processing
+  await new Promise(resolve => setTimeout(resolve, 5000))
+  
+  // The action completes successfully after the delay
+  return Promise.resolve()
 }
 
 // Title editing methods
@@ -225,9 +233,17 @@ function handleRefresh() {
       />
 
       <div class="grid-actions">
-        <button @click="handleDownload" class="btn btn-secondary" data-testid="download-button">
+        <!-- Replace the regular download button with LoadingButton -->
+        <LoadingButton
+          :action="handleDownloadAction"
+          :use-default-style="false"
+          class="btn btn-secondary"
+          data-testid="download-button"
+          test-id="download-button"
+        >
           Download
-        </button>
+        </LoadingButton>
+        
         <button
           @click="toggleSharePopup"
           class="btn btn-secondary"

@@ -98,7 +98,7 @@ const performImport = async () => {
     if (!modelUrl.value || !dashboardName.value || !modelName.value) {
       throw new Error('Missing required import parameters')
     }
-
+    emit('fullScreen', true)
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -158,7 +158,7 @@ const performImport = async () => {
     importSuccess.value = true
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
-    emit('fullScreen', true)
+    
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 

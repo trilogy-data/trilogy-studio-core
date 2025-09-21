@@ -10,7 +10,6 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
 
-import html2canvas from 'html2canvas'
 
 defineProps<{
   name: string
@@ -121,10 +120,13 @@ function handleToggleEditMode() {
 // Image Export functionality
 async function exportToImage() {
   if (!dashboard.value) return
-
+  
   isExportingImage.value = true
-
+  
   try {
+    // Dynamically import html2canvas only when needed
+    const { default: html2canvas } = await import('html2canvas')
+    
     // Find the dashboard content element
     const dashboardElement = document.querySelector('.grid-content')
     if (!dashboardElement) {
@@ -133,10 +135,10 @@ async function exportToImage() {
 
     // Temporarily disable any hover effects and transitions for cleaner capture
     dashboardElement.classList.add('image-export-mode')
-
+    
     // Wait a moment for any pending renders
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // Capture the dashboard as canvas
     const canvas = await html2canvas(dashboardElement as HTMLElement, {
@@ -151,16 +153,17 @@ async function exportToImage() {
 
     // Convert canvas to image and download
     const imgData = canvas.toDataURL('image/png')
-
+    
     // Create download link
     const link = document.createElement('a')
     link.download = `${dashboard.value.name || 'dashboard'}_${new Date().toISOString().split('T')[0]}.png`
     link.href = imgData
-
+    
     // Trigger download
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
   } catch (error) {
     console.error('Error exporting image:', error)
     alert('Failed to export image. Please try again.')

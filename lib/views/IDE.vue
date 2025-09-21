@@ -5,7 +5,12 @@
       <template v-if="activeScreen === 'dashboard'">
         <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
-      <!-- Add other full screen views as needed -->
+      <template v-else-if="activeScreen === 'dashboard-import'">
+        <dashboard-auto-importer
+          @import-complete="handleImportComplete"
+          @full-screen="toggleFullScreen"
+        />
+      </template>
     </div>
 
     <!-- Normal mode with sidebar -->
