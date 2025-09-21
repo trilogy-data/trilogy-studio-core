@@ -40,6 +40,7 @@
     "tabulator-tables": "^6.3.1",
     "vega-embed": "^7.0.2",
     "vega-lite": "^6.1.0",
-    "vue3-grid-layout-next": "^1.0.7"
+    "vue3-grid-layout-next": "^1.0.7",
+    "html2canvas": "^1.4.1"
   }
 }

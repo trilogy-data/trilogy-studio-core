@@ -3,6 +3,80 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
+interface VegaTransform {
+  type: string
+  [key: string]: any
+}
+
+interface VegaMark {
+  name?: string
+  type: string
+  transform?: VegaTransform[]
+  [key: string]: any
+}
+
+interface VegaSpec {
+  marks?: VegaMark[]
+  [key: string]: any
+}
+
+export function addLabelTransformToTextMarks(
+  spec: VegaSpec,
+  labelTransform?: VegaTransform,
+): VegaSpec {
+  // Default label transform
+  const defaultLabelTransform: VegaTransform = {
+    type: 'label',
+    anchor: ['right', 'left', 'top', 'bottom'],
+    offset: [1],
+    size: { signal: '[width + 60, height]' },
+  }
+
+  // Use provided transform or default
+  const transformToAdd = labelTransform || defaultLabelTransform
+
+  // Deep clone the spec to avoid mutating the original
+  const modifiedSpec: VegaSpec = JSON.parse(JSON.stringify(spec))
+
+  // Check if marks array exists
+  if (!modifiedSpec.marks || !Array.isArray(modifiedSpec.marks)) {
+    return modifiedSpec
+  }
+
+  // Process each mark
+  modifiedSpec.marks = modifiedSpec.marks.map((mark: VegaMark) => {
+    // Check if this is a text mark
+    if (mark.type === 'text') {
+      // Clone the mark to avoid mutation
+      const modifiedMark = { ...mark }
+
+      // Check if transform already exists
+      if (!modifiedMark.transform) {
+        modifiedMark.transform = []
+      } else {
+        // Clone existing transforms
+        modifiedMark.transform = [...modifiedMark.transform]
+      }
+
+      // Check if label transform already exists
+      const hasLabelTransform = modifiedMark.transform.some(
+        (transform: VegaTransform) => transform.type === 'label',
+      )
+
+      // Add label transform if it doesn't exist
+      if (!hasLabelTransform) {
+        modifiedMark.transform.push(transformToAdd)
+      }
+
+      return modifiedMark
+    }
+
+    return mark
+  })
+
+  return modifiedSpec
+}
+
 export const createPointChartSpec = (
   config: ChartConfig,
   columns: Map<string, ResultColumn>,

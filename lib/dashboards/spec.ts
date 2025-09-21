@@ -15,7 +15,7 @@ import { createBarChartSpec } from './barChartSpec'
 import { createDonutChartSpec } from './donutSpec'
 import { createBarHChartSpec } from './barHChartSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
-import { createPointChartSpec } from './pointSpec'
+import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 /**
  * Create a field encoding for Vega-Lite
  */
@@ -140,6 +140,7 @@ const createBoxplotSpec = (
 /**
  * Generate Vega-Lite specification for visualization
  */
+import { compile } from 'vega-lite'
 export const generateVegaSpec = (
   data: readonly Row[] | null,
   config: ChartConfig,
@@ -335,6 +336,15 @@ export const generateVegaSpec = (
       // fontWeight: 'bold',
       color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
     }
+  }
+  if (config.chartType === 'point') {
+    const customLabelTransform = {
+      type: 'label',
+      anchor: ['right', 'top', 'bottom', 'left'],
+      offset: [2],
+      size: { signal: '[width + 100, height]' },
+    }
+    return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
   }
   return spec
 }

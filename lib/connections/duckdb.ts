@@ -183,7 +183,11 @@ export default class DuckDBConnection extends BaseConnection {
             processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
             break
           case ColumnType.ARRAY:
-            const arrayData = Array.from(row[key].toArray())
+            const arrayData = row[key] ? Array.from(row[key].toArray()) : null
+            if (!arrayData) {
+              processedRow[key] = null
+              break
+            }
             const newv = arrayData.map((item: any) => {
               // l is the constant returned by duckdb for the array
               return this.processRow({ [ARRAY_IMPLICIT_COLUMN]: item }, column.children!)
