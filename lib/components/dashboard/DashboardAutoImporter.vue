@@ -43,6 +43,11 @@ const error = ref<string | null>(null)
 const importSuccess = ref<boolean>(false)
 const importedDashboardId = ref<string>('')
 
+// Progress tracking
+const currentStep = ref<'importing' | 'connecting' | 'preparing'>('importing')
+const minDisplayTime = 1500 // Minimum 1.5 seconds per step
+const stepStartTime = ref<number>(Date.now())
+
 // Loading timer state
 const startTime = ref<number>(Date.now())
 const elapsedTime = ref('0 ms')
@@ -118,6 +123,20 @@ const stopTimer = () => {
   }
 }
 
+// Step transition helper
+const transitionToStep = async (step: 'importing' | 'connecting' | 'preparing') => {
+  const elapsedSinceStep = Date.now() - stepStartTime.value
+  const remainingTime = Math.max(0, minDisplayTime - elapsedSinceStep)
+  
+  // Wait for minimum time if needed
+  if (remainingTime > 0 && currentStep.value !== 'importing') {
+    await new Promise(resolve => setTimeout(resolve, remainingTime))
+  }
+  
+  currentStep.value = step
+  stepStartTime.value = Date.now()
+}
+
 // Validation function
 function validateForm() {
   if (!connectionType.value) {
@@ -145,11 +164,14 @@ const performImport = async () => {
     
     // Reset timer for import process
     startTime.value = Date.now()
+    stepStartTime.value = Date.now()
+    currentStep.value = 'importing'
     isLoading.value = true
     if (timeout) clearTimeout(timeout)
     updateElapsedTime()
     
     emit('fullScreen', true)
+    
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -168,17 +190,19 @@ const performImport = async () => {
       })
     }
 
-    // Initialize ModelImportService
-
     // Import model (this will also import any dashboards included in the model)
     let imports = await modelImportService.importModel(
       modelName.value,
       modelUrl.value,
       connectionName,
     )
+    
+    // Transition to connecting step
+    await transitionToStep('connecting')
+    
     connectionStore.connections[connectionName].setModel(modelName.value)
+    
     // Find the imported dashboard by name and connection
-
     let lookup = dashboardName.value
     let matched = imports?.dashboards.get(dashboardName.value)
     if (matched) {
@@ -189,8 +213,6 @@ const performImport = async () => {
     )
 
     if (!importedDashboard) {
-      // look by file name
-
       let connectionDashboards = Object.values(dashboardStore.dashboards)
         .filter((dashboard) => dashboard.connection === connectionName)
         .map((d) => d.name)
@@ -205,11 +227,15 @@ const performImport = async () => {
     // Save changes
     await saveAll()
 
+    // Ensure connection is valid
+    await connectionStore.resetConnection(connectionName)
+    
+    // Transition to preparing step
+    await transitionToStep('preparing')
+    
     // Show success
     isLoading.value = false
     importSuccess.value = true
-    // Ensure connection is valid
-    await connectionStore.resetConnection(connectionName)
     
     // Keep timer running for success state briefly
     if (timeout) clearTimeout(timeout)
@@ -223,12 +249,13 @@ const performImport = async () => {
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 
-    // Auto-redirect after short delay
+        // Auto-redirect after short delay
     setTimeout(() => {
       screenNavigation.setActiveModel(null)
       screenNavigation.setActiveDashboard(importedDashboard.id)
       screenNavigation.setActiveScreen('dashboard')
     }, 500)
+
   } catch (err) {
     console.error('Import failed:', err)
     error.value = err instanceof Error ? err.message : 'Import failed'
@@ -249,6 +276,7 @@ onMounted(async () => {
   try {
     // Start the timer
     startTime.value = Date.now()
+    stepStartTime.value = Date.now()
     updateElapsedTime()
     
     // Get URL parameters
@@ -315,39 +343,58 @@ const switchToManualImport = () => {
 
 <template>
   <div class="auto-import-container">
-    <!-- Loading State (with spinning trilogy logo and timer) -->
-    <div v-if="isLoading" class="import-state loading-state">
+    <!-- Unified Loading/Success State (with step indicators) -->
+    <div v-if="isLoading || importSuccess" class="import-state loading-state">
       <div class="loading-content">
         <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Loading" />
-        <h2 class ="import-headline">Importing your dashboard...</h2>
-        <!-- <div class="import-details">
-          <p><strong>Dashboard:</strong> {{ dashboardName }}</p>
-          <p class="import-source"><strong>From:</strong> {{ modelUrl }}</p>
-        </div> -->
-                <p class="import-details">
-          This may take a few seconds.
-        </p>
-      </div>
-    </div>
-
-    <!-- Success State (with spinning trilogy logo briefly) -->
-    <div v-else-if="importSuccess" class="import-state success-state">
-      <div class="success-content">
-        <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Success" />
-        <!-- <div class="success-icon">✅</div> -->
-        <h2 class ="import-headline">Preparing your dashboard...</h2>
-        <p class="import-details">
-          This may take a few seconds.
-        </p>
-        <!-- <p class="redirect-message">Initiating {{ connectionName }} connection, then redirecting to dashboard... Please wait while we reticulate the splines.</p> -->
-        <!-- <div class="loading-timer">({{ elapsedTime }})</div> -->
+        <h2 class="import-headline">Setting up your dashboard...</h2>
+        
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          <div class="step" :class="{ 
+            active: currentStep === 'importing',
+            completed: currentStep !== 'importing' && (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess)
+          }">
+            <div class="step-icon">
+              <span v-if="currentStep === 'importing'">⟳</span>
+              <span v-else>✓</span>
+            </div>
+            <span class="step-text">Importing model</span>
+          </div>
+          
+          <div class="step" :class="{ 
+            active: currentStep === 'connecting',
+            completed: currentStep === 'preparing' || importSuccess
+          }">
+            <div class="step-icon">
+              <span v-if="currentStep === 'connecting'">⟳</span>
+              <span v-else-if="currentStep === 'preparing' || importSuccess">✓</span>
+              <span v-else>○</span>
+            </div>
+            <span class="step-text">Establishing connection</span>
+          </div>
+          
+          <div class="step" :class="{ 
+            active: currentStep === 'preparing' || importSuccess,
+            completed: importSuccess
+          }">
+            <div class="step-icon">
+              <span v-if="currentStep === 'preparing' ">⟳</span>
+              <span v-else-if="importSuccess">✓</span>
+              <span v-else>○</span>
+            </div>
+            <span class="step-text">Preparing data</span>
+          </div>
+        </div>
+        
+        <p class="import-details">This may take a few seconds.</p>
       </div>
     </div>
 
     <!-- Error State (no spinning logo) -->
     <div v-else-if="error" class="import-state error-state">
       <div class="error-icon">⚠️</div>
-      <h2 class ="import-headline">Dashboard Load Failed</h2>
+      <h2 class="import-headline">Dashboard Load Failed</h2>
       <p class="error-message">{{ error }}</p>
       <div class="error-actions">
         <button @click="switchToManualImport" class="manual-import-button">
@@ -359,7 +406,7 @@ const switchToManualImport = () => {
     <!-- Connection Setup Required (no spinning logo - user input needed) -->
     <div v-else-if="requiresFields" class="import-form">
       <div class="import-header">
-        <h2 class ="import-headline">Import Model & Dashboard</h2>
+        <h2 class="import-headline">Import Model & Dashboard</h2>
         <div class="import-details">
           <p><strong>Model:</strong> {{ modelName }}</p>
           <p><strong>Dashboard:</strong> {{ dashboardName }}</p>
@@ -460,7 +507,6 @@ const switchToManualImport = () => {
   background-color: var(--bg-color);
 }
 
-
 .import-form {
   max-width: 600px;
   padding: 30px;
@@ -487,32 +533,71 @@ const switchToManualImport = () => {
   }
 }
 
-/* Loading state specific styles */
-
-
+/* Loading content styles */
 .loading-content {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.success-content {
+/* Step indicator styles */
+.step-indicator {
+  margin: 30px 0 20px 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 300px;
 }
 
-.loading-timer {
-  margin-top: 15px;
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  background-color: var(--special-text);
+  border-color: var(--special-text);
+  color: white;
+}
+
+.step.active .step-text {
+  font-weight: 500;
+}
+
+.step.completed:not(.active) {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--text-color);
+}
+
+.step-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.step.active .step-icon span {
+  animation: spin 1s linear infinite;
+}
+
+.step-text {
   font-size: 14px;
-  color: var(--text-muted);
-  font-style: italic;
+  flex: 1;
 }
 
 .import-header {
   margin-bottom: 30px;
   margin-top: 30px;
-
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
 }
@@ -520,18 +605,20 @@ const switchToManualImport = () => {
 .import-header h2 {
   margin: 0 0 15px 0;
   color: var(--text-color);
-  
 }
 
 .import-details {
-  text-align: left;
+  text-align: center;
   margin-top: 15px;
   color: var(--text-faint);
 }
 
+.import-form .import-details {
+  text-align: left;
+}
+
 .import-details p {
   margin: 8px 0;
-  
 }
 
 .import-source {
@@ -565,7 +652,6 @@ const switchToManualImport = () => {
 .import-headline {
   font-weight: 500;
   margin-top: 30px;
-
 }
 
 .connection-input {
@@ -638,12 +724,7 @@ const switchToManualImport = () => {
   border-right: 4px solid #ef4444;
 }
 
-.success-state {
-  border: 1px solid var(--border);
-}
-
-.error-icon,
-.success-icon {
+.error-icon {
   font-size: 48px;
   margin-bottom: 20px;
 }
@@ -651,11 +732,6 @@ const switchToManualImport = () => {
 .error-message {
   color: #ef4444;
   margin-bottom: 20px;
-}
-
-.redirect-message {
-  color: var(--text-muted);
-  font-style: italic;
 }
 
 /* Responsive design */
@@ -675,6 +751,14 @@ const switchToManualImport = () => {
 
   .import-source {
     font-size: 12px;
+  }
+
+  .step-indicator {
+    max-width: 280px;
+  }
+  
+  .step {
+    padding: 10px 12px;
   }
 }
 </style>
