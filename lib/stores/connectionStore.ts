@@ -27,6 +27,16 @@ async function runStartup(connection: Connection) {
   )
 }
 
+export const connectionTypes = [
+  { label: 'DuckDB', value: 'duckdb' },
+  { label: 'BigQuery (OAuth)', value: 'bigquery-oauth' },
+  { label: 'BigQuery (Service Account)', value: 'bigquery' },
+  // { label: 'Snowflake (Basic Auth)', value: 'snowflake-basic' },
+  { label: 'Snowflake (Key Pair Auth)', value: 'snowflake' },
+  { label: 'MotherDuck (Token)', value: 'motherduck' },
+  // { label: 'SQL Server (Basic Auth)', value: 'sqlserver' },
+]
+
 const useConnectionStore = defineStore('connections', {
   state: () => ({
     connections: {} as Record<string, Connection>,

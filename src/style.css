@@ -74,7 +74,8 @@ border-radius: 0px;
   --result-window-bg: white;
   --result-window-font: #3C3C3C;
 
-  --border: #7171715e;
+  /* --border: #7171715e; */
+  --border: #bababa5e;
   --dashboard-border: transparent;
   --dashboard-background: #FBFBFB;
   --border-light: #E5E5E5;

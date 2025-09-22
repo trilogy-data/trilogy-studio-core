@@ -251,7 +251,6 @@ export default {
       activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'results',
-      isFullScreen: false,
     }
   },
   components: {
@@ -277,6 +276,7 @@ export default {
   setup() {
     // Create a ref for the editor component
     const editorRef = ref<typeof Editor | null>(null)
+    const isFullScreen = ref(false)
     type ResolverType = typeof TrilogyResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -331,6 +331,7 @@ export default {
       // If we have import parameters, trigger auto-import mode
       if (importUrl && connectionType) {
         setActiveScreen('dashboard-import')
+        isFullScreen.value = true
       }
     })
 
@@ -352,6 +353,7 @@ export default {
       activeDashboard,
       setActiveDashboard,
       editorRef,
+      isFullScreen,
     }
   },
   methods: {
