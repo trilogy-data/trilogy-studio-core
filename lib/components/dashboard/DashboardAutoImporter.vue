@@ -249,7 +249,7 @@ const performImport = async () => {
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 
-        // Auto-redirect after short delay
+    // Auto-redirect after short delay
     setTimeout(() => {
       screenNavigation.setActiveModel(null)
       screenNavigation.setActiveDashboard(importedDashboard.id)
@@ -379,7 +379,7 @@ const switchToManualImport = () => {
             completed: importSuccess
           }">
             <div class="step-icon">
-              <span v-if="currentStep === 'preparing' ">⟳</span>
+              <span v-if="currentStep === 'preparing'">⟳</span>
               <span v-else-if="importSuccess">✓</span>
               <span v-else>○</span>
             </div>
