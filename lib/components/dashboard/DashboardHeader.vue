@@ -4,7 +4,7 @@ import { useConnectionStore, useEditorStore } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
-import LoadingButton from '../LoadingButton.vue' 
+import LoadingButton from '../LoadingButton.vue'
 import { type CompletionItem } from '../../stores/resolver'
 import { type DashboardImport } from '../../dashboards/base'
 import { type Dashboard } from '../../dashboards/base'
@@ -74,10 +74,10 @@ function handleFilterApply(newValue: string) {
 async function handleDownloadAction() {
   // Emit the export-image event immediately
   emit('export-image')
-  
+
   // Add a 5-second delay to simulate processing
-  await new Promise(resolve => setTimeout(resolve, 5000))
-  
+  await new Promise((resolve) => setTimeout(resolve, 5000))
+
   // The action completes successfully after the delay
   return Promise.resolve()
 }
@@ -243,7 +243,7 @@ function handleRefresh() {
         >
           Download
         </LoadingButton>
-        
+
         <button
           @click="toggleSharePopup"
           class="btn btn-secondary"

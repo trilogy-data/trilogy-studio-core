@@ -1,9 +1,6 @@
 <template>
   <div class="ide-placeholder">
-    <div 
-      v-if="!isDashboardImport" 
-      class="ide-placeholder__sidebar"
-    ></div>
+    <div v-if="!isDashboardImport" class="ide-placeholder__sidebar"></div>
     <div class="ide-placeholder__main">
       <div class="ide-placeholder__editor"></div>
       <!-- <div class="ide-placeholder__output">

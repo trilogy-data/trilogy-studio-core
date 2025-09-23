@@ -108,7 +108,7 @@ const updateElapsedTime = () => {
     elapsedTime.value =
       remainingSeconds !== '0.0' ? `${minutes} min ${remainingSeconds} sec` : `${minutes} min`
   }
-  
+
   // Only continue timer if still loading or importing
   if (isLoading.value || importSuccess.value) {
     const nextInterval = getUpdateInterval(ms)
@@ -127,12 +127,12 @@ const stopTimer = () => {
 const transitionToStep = async (step: 'importing' | 'connecting' | 'preparing') => {
   const elapsedSinceStep = Date.now() - stepStartTime.value
   const remainingTime = Math.max(0, minDisplayTime - elapsedSinceStep)
-  
+
   // Wait for minimum time if needed
   if (remainingTime > 0 && currentStep.value !== 'importing') {
-    await new Promise(resolve => setTimeout(resolve, remainingTime))
+    await new Promise((resolve) => setTimeout(resolve, remainingTime))
   }
-  
+
   currentStep.value = step
   stepStartTime.value = Date.now()
 }
@@ -161,7 +161,7 @@ const performImport = async () => {
     if (!modelUrl.value || !dashboardName.value || !modelName.value) {
       throw new Error('Missing required import parameters')
     }
-    
+
     // Reset timer for import process
     startTime.value = Date.now()
     stepStartTime.value = Date.now()
@@ -169,9 +169,9 @@ const performImport = async () => {
     isLoading.value = true
     if (timeout) clearTimeout(timeout)
     updateElapsedTime()
-    
+
     emit('fullScreen', true)
-    
+
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -196,12 +196,12 @@ const performImport = async () => {
       modelUrl.value,
       connectionName,
     )
-    
+
     // Transition to connecting step
     await transitionToStep('connecting')
-    
+
     connectionStore.connections[connectionName].setModel(modelName.value)
-    
+
     // Find the imported dashboard by name and connection
     let lookup = dashboardName.value
     let matched = imports?.dashboards.get(dashboardName.value)
@@ -229,23 +229,23 @@ const performImport = async () => {
 
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
-    
+
     // Transition to preparing step
     await transitionToStep('preparing')
-    
+
     // Show success
     isLoading.value = false
     importSuccess.value = true
-    
+
     // Keep timer running for success state briefly
     if (timeout) clearTimeout(timeout)
     updateElapsedTime()
-    
+
     // Stop timer after success message is shown
     setTimeout(() => {
       stopTimer()
     }, 2000)
-    
+
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 
@@ -255,7 +255,6 @@ const performImport = async () => {
       screenNavigation.setActiveDashboard(importedDashboard.id)
       screenNavigation.setActiveScreen('dashboard')
     }, 500)
-
   } catch (err) {
     console.error('Import failed:', err)
     error.value = err instanceof Error ? err.message : 'Import failed'
@@ -278,7 +277,7 @@ onMounted(async () => {
     startTime.value = Date.now()
     stepStartTime.value = Date.now()
     updateElapsedTime()
-    
+
     // Get URL parameters
     const modelUrlParam = getDefaultValueFromHash('model', '')
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '')
@@ -348,24 +347,32 @@ const switchToManualImport = () => {
       <div class="loading-content">
         <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Loading" />
         <h2 class="import-headline">Setting up your dashboard...</h2>
-        
+
         <!-- Step indicator -->
         <div class="step-indicator">
-          <div class="step" :class="{ 
-            active: currentStep === 'importing',
-            completed: currentStep !== 'importing' && (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess)
-          }">
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'importing',
+              completed:
+                currentStep !== 'importing' &&
+                (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess),
+            }"
+          >
             <div class="step-icon">
               <span v-if="currentStep === 'importing'">⟳</span>
               <span v-else>✓</span>
             </div>
             <span class="step-text">Importing model</span>
           </div>
-          
-          <div class="step" :class="{ 
-            active: currentStep === 'connecting',
-            completed: currentStep === 'preparing' || importSuccess
-          }">
+
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'connecting',
+              completed: currentStep === 'preparing' || importSuccess,
+            }"
+          >
             <div class="step-icon">
               <span v-if="currentStep === 'connecting'">⟳</span>
               <span v-else-if="currentStep === 'preparing' || importSuccess">✓</span>
@@ -373,11 +380,14 @@ const switchToManualImport = () => {
             </div>
             <span class="step-text">Establishing connection</span>
           </div>
-          
-          <div class="step" :class="{ 
-            active: currentStep === 'preparing' || importSuccess,
-            completed: importSuccess
-          }">
+
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'preparing' || importSuccess,
+              completed: importSuccess,
+            }"
+          >
             <div class="step-icon">
               <span v-if="currentStep === 'preparing'">⟳</span>
               <span v-else-if="importSuccess">✓</span>
@@ -386,7 +396,7 @@ const switchToManualImport = () => {
             <span class="step-text">Preparing data</span>
           </div>
         </div>
-        
+
         <p class="import-details">This may take a few seconds.</p>
       </div>
     </div>
@@ -415,9 +425,7 @@ const switchToManualImport = () => {
       </div>
 
       <div class="connection-setup">
-        <h3>
-          {{ connectionName }} Connection Setup
-        </h3>
+        <h3>{{ connectionName }} Connection Setup</h3>
         <p class="setup-description">
           This model requires a {{ connectionType }} connection. Please provide the required
           configuration:
@@ -756,7 +764,7 @@ const switchToManualImport = () => {
   .step-indicator {
     max-width: 280px;
   }
-  
+
   .step {
     padding: 10px 12px;
   }
