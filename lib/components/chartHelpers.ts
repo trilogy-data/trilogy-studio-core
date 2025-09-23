@@ -7,6 +7,7 @@ import { convertTimestampToISODate, filteredColumns } from '../dashboards/helper
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
 const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
+const BACKGROUND_CLICK_SUPPRESSION_TIMEOUT = 100 // ms to suppress background clicks after a point click
 
 export interface ChartEventHandlers {
   onDimensionClick: (data: any) => void
@@ -80,8 +81,15 @@ export class ChromaChartHelpers {
       const yRange = item[config.yField as keyof typeof item] ?? []
 
       if (!xRange || !yRange || xRange.length === 0 || yRange.length === 0) {
-        // Brush is being cleared - record the time and schedule a background click
+        // Brush is being cleared - record the time and check if we should suppress background click
         this.brushState.lastBrushClearTime = Date.now()
+
+        // Suppress background click if it's within 100ms of the last point click
+        if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
+          console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
+          this.brushState.pendingBackgroundClick = false
+          return
+        }
 
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
@@ -121,8 +129,15 @@ export class ChromaChartHelpers {
       const values = item[dateLookup as keyof typeof item] ?? []
       // Check if values exists and has elements
       if (!values || !Array.isArray(values) || values.length === 0) {
-        // Brush is being cleared - record the time and schedule a background click
+        // Brush is being cleared - record the time and check if we should suppress background click
         this.brushState.lastBrushClearTime = Date.now()
+
+        // Suppress background click if it's within 100ms of the last point click
+        if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
+          console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
+          this.brushState.pendingBackgroundClick = false
+          return
+        }
 
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
@@ -174,6 +189,11 @@ export class ChromaChartHelpers {
         }
       }
     } else {
+      // Check if we should suppress background click
+      if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
+        console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
+        return
+      }
       this.eventHandlers.onBackgroundClick()
     }
   }
@@ -191,7 +211,13 @@ export class ChromaChartHelpers {
     this.brushState.lastClickTime = currentTime
     const append = event.shiftKey
     if (!item || !item.datum) {
+      // Check if we should suppress background click
+      if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
+        console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
+        return
+      }
       this.eventHandlers.onBackgroundClick()
+
       return
     }
 
