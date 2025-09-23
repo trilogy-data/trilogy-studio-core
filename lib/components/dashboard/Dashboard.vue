@@ -10,8 +10,6 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardBase from './DashboardBase.vue'
 
-import html2canvas from 'html2canvas'
-
 defineProps<{
   name: string
   connectionId?: string
@@ -125,6 +123,9 @@ async function exportToImage() {
   isExportingImage.value = true
 
   try {
+    // Dynamically import html2canvas only when needed
+    const { default: html2canvas } = await import('html2canvas')
+
     // Find the dashboard content element
     const dashboardElement = document.querySelector('.grid-content')
     if (!dashboardElement) {

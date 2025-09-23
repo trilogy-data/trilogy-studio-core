@@ -82,7 +82,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
         tokenClient.requestAccessToken()
       } catch (error) {
         console.error('Error connecting to BigQuery with OAuth', error)
-        return false
+        throw error
       }
     })
   }

@@ -493,11 +493,30 @@ const filterCount = computed(() => {
 }
 
 /* Make sure non-drag-handle content doesn't trigger dragging */
-.grid-item-content *:not(.grid-item-drag-handle) {
-  /* touch-action: auto !important; */
-  touch-action: none;
+@media (min-width: 769px) {
+  .grid-item-content *:not(.grid-item-drag-handle) {
+    touch-action: none;
+  }
+
+  .item-title-container {
+    flex: 1;
+    min-width: 0;
+    touch-action: none;
+  }
 }
 
+/* Mobile/tablet - allow normal touch behavior */
+@media (max-width: 768px) {
+  .grid-item-content *:not(.grid-item-drag-handle) {
+    touch-action: auto;
+  }
+
+  .item-title-container {
+    flex: 1;
+    min-width: 0;
+    touch-action: auto;
+  }
+}
 .content-area {
   flex: 1;
   display: flex;
@@ -505,12 +524,6 @@ const filterCount = computed(() => {
   width: 100%;
   height: 100%;
   /* Content now takes full height */
-}
-
-.item-title-container {
-  flex: 1;
-  min-width: 0;
-  touch-action: none;
 }
 
 .item-title {

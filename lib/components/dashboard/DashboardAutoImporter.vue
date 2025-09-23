@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, inject, onMounted, computed } from 'vue'
+import { ref, inject, onMounted, computed, onBeforeUnmount } from 'vue'
 import { type DashboardStoreType } from '../../stores/dashboardStore'
-import { type ConnectionStoreType } from '../../stores/connectionStore'
+import { type ConnectionStoreType, connectionTypes } from '../../stores/connectionStore'
 import { type EditorStoreType } from '../../stores/editorStore'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 import { ModelImportService } from '../../models/helpers'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
+import trilogyIcon from '../../static/trilogy.png'
 
 const emit = defineEmits<{
   importComplete: [dashboardId: string]
@@ -42,6 +43,16 @@ const error = ref<string | null>(null)
 const importSuccess = ref<boolean>(false)
 const importedDashboardId = ref<string>('')
 
+// Progress tracking
+const currentStep = ref<'importing' | 'connecting' | 'preparing'>('importing')
+const minDisplayTime = 1500 // Minimum 1.5 seconds per step
+const stepStartTime = ref<number>(Date.now())
+
+// Loading timer state
+const startTime = ref<number>(Date.now())
+const elapsedTime = ref('0 ms')
+let timeout: ReturnType<typeof setTimeout> | null = null
+
 // Connection options for new connections
 const connectionOptions = ref({
   mdToken: '',
@@ -74,6 +85,58 @@ const requiredFields = computed(() => {
   return req ? req.fields : []
 })
 
+const connectionName = computed(() => {
+  const conn = connectionTypes.find((c) => c.value === connectionType.value)
+  return conn ? conn.label : connectionType.value
+})
+
+// Timer functions
+const getUpdateInterval = (_: number): number => {
+  return 100
+}
+
+const updateElapsedTime = () => {
+  const ms = Date.now() - startTime.value
+  if (ms < 1000) {
+    elapsedTime.value = `${ms} ms`
+  } else if (ms < 60000) {
+    const seconds = (ms / 1000).toFixed(1)
+    elapsedTime.value = `${seconds} sec`
+  } else {
+    const minutes = Math.floor(ms / 60000)
+    const remainingSeconds = ((ms % 60000) / 1000).toFixed(1)
+    elapsedTime.value =
+      remainingSeconds !== '0.0' ? `${minutes} min ${remainingSeconds} sec` : `${minutes} min`
+  }
+
+  // Only continue timer if still loading or importing
+  if (isLoading.value || importSuccess.value) {
+    const nextInterval = getUpdateInterval(ms)
+    timeout = setTimeout(updateElapsedTime, nextInterval)
+  }
+}
+
+const stopTimer = () => {
+  if (timeout) {
+    clearTimeout(timeout)
+    timeout = null
+  }
+}
+
+// Step transition helper
+const transitionToStep = async (step: 'importing' | 'connecting' | 'preparing') => {
+  const elapsedSinceStep = Date.now() - stepStartTime.value
+  const remainingTime = Math.max(0, minDisplayTime - elapsedSinceStep)
+
+  // Wait for minimum time if needed
+  if (remainingTime > 0 && currentStep.value !== 'importing') {
+    await new Promise((resolve) => setTimeout(resolve, remainingTime))
+  }
+
+  currentStep.value = step
+  stepStartTime.value = Date.now()
+}
+
 // Validation function
 function validateForm() {
   if (!connectionType.value) {
@@ -99,6 +162,16 @@ const performImport = async () => {
       throw new Error('Missing required import parameters')
     }
 
+    // Reset timer for import process
+    startTime.value = Date.now()
+    stepStartTime.value = Date.now()
+    currentStep.value = 'importing'
+    isLoading.value = true
+    if (timeout) clearTimeout(timeout)
+    updateElapsedTime()
+
+    emit('fullScreen', true)
+
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`
     const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
@@ -117,17 +190,19 @@ const performImport = async () => {
       })
     }
 
-    // Initialize ModelImportService
-
     // Import model (this will also import any dashboards included in the model)
     let imports = await modelImportService.importModel(
       modelName.value,
       modelUrl.value,
       connectionName,
     )
-    connectionStore.connections[connectionName].setModel(modelName.value)
-    // Find the imported dashboard by name and connection
 
+    // Transition to connecting step
+    await transitionToStep('connecting')
+
+    connectionStore.connections[connectionName].setModel(modelName.value)
+
+    // Find the imported dashboard by name and connection
     let lookup = dashboardName.value
     let matched = imports?.dashboards.get(dashboardName.value)
     if (matched) {
@@ -138,8 +213,6 @@ const performImport = async () => {
     )
 
     if (!importedDashboard) {
-      // look by file name
-
       let connectionDashboards = Object.values(dashboardStore.dashboards)
         .filter((dashboard) => dashboard.connection === connectionName)
         .map((d) => d.name)
@@ -154,11 +227,25 @@ const performImport = async () => {
     // Save changes
     await saveAll()
 
-    // Show success
-    importSuccess.value = true
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
-    emit('fullScreen', true)
+
+    // Transition to preparing step
+    await transitionToStep('preparing')
+
+    // Show success
+    isLoading.value = false
+    importSuccess.value = true
+
+    // Keep timer running for success state briefly
+    if (timeout) clearTimeout(timeout)
+    updateElapsedTime()
+
+    // Stop timer after success message is shown
+    setTimeout(() => {
+      stopTimer()
+    }, 2000)
+
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
 
@@ -171,6 +258,8 @@ const performImport = async () => {
   } catch (err) {
     console.error('Import failed:', err)
     error.value = err instanceof Error ? err.message : 'Import failed'
+    isLoading.value = false
+    stopTimer()
   }
 }
 
@@ -184,6 +273,11 @@ const autoImport = async () => {
 // Initialize auto-import
 onMounted(async () => {
   try {
+    // Start the timer
+    startTime.value = Date.now()
+    stepStartTime.value = Date.now()
+    updateElapsedTime()
+
     // Get URL parameters
     const modelUrlParam = getDefaultValueFromHash('model', '')
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '')
@@ -193,6 +287,7 @@ onMounted(async () => {
     if (!modelUrlParam || !dashboardNameParam || !modelNameParam || !connectionParam) {
       error.value = 'Missing required import parameters (model, dashboard, modelName, connection)'
       isLoading.value = false
+      stopTimer()
       return
     }
 
@@ -205,15 +300,17 @@ onMounted(async () => {
     if (!connectionRequirements[connectionType.value as keyof typeof connectionRequirements]) {
       error.value = `Unsupported connection type: ${connectionType.value}`
       isLoading.value = false
+      stopTimer()
       return
     }
 
-    isLoading.value = false
-
-    // Auto-import if no fields required (DuckDB)
+    // Auto-import if no fields required (DuckDB) - keep loading/timer running
     if (!requiresFields.value) {
       await autoImport()
     } else {
+      // Stop loading for form input - user needs to provide data
+      isLoading.value = false
+      stopTimer()
       // Validate form for required fields
       validateForm()
     }
@@ -221,7 +318,12 @@ onMounted(async () => {
     console.error('Auto-import initialization failed:', err)
     error.value = err instanceof Error ? err.message : 'Failed to initialize import'
     isLoading.value = false
+    stopTimer()
   }
+})
+
+onBeforeUnmount(() => {
+  stopTimer()
 })
 
 // Manual import for connections requiring fields
@@ -240,19 +342,69 @@ const switchToManualImport = () => {
 
 <template>
   <div class="auto-import-container">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="import-state">
-      <div class="loading-spinner"></div>
-      <h2>Importing Model & Dashboard...</h2>
-      <p>Model: {{ modelName }}</p>
-      <p>Dashboard: {{ dashboardName }}</p>
-      <p class="import-source">From: {{ modelUrl }}</p>
+    <!-- Unified Loading/Success State (with step indicators) -->
+    <div v-if="isLoading || importSuccess" class="import-state loading-state">
+      <div class="loading-content">
+        <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Loading" />
+        <h2 class="import-headline">Setting up your dashboard...</h2>
+
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'importing',
+              completed:
+                currentStep !== 'importing' &&
+                (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess),
+            }"
+          >
+            <div class="step-icon">
+              <span v-if="currentStep === 'importing'">⟳</span>
+              <span v-else>✓</span>
+            </div>
+            <span class="step-text">Importing model</span>
+          </div>
+
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'connecting',
+              completed: currentStep === 'preparing' || importSuccess,
+            }"
+          >
+            <div class="step-icon">
+              <span v-if="currentStep === 'connecting'">⟳</span>
+              <span v-else-if="currentStep === 'preparing' || importSuccess">✓</span>
+              <span v-else>○</span>
+            </div>
+            <span class="step-text">Establishing connection</span>
+          </div>
+
+          <div
+            class="step"
+            :class="{
+              active: currentStep === 'preparing' || importSuccess,
+              completed: importSuccess,
+            }"
+          >
+            <div class="step-icon">
+              <span v-if="currentStep === 'preparing'">⟳</span>
+              <span v-else-if="importSuccess">✓</span>
+              <span v-else>○</span>
+            </div>
+            <span class="step-text">Preparing data</span>
+          </div>
+        </div>
+
+        <p class="import-details">This may take a few seconds.</p>
+      </div>
     </div>
 
-    <!-- Error State -->
+    <!-- Error State (no spinning logo) -->
     <div v-else-if="error" class="import-state error-state">
       <div class="error-icon">⚠️</div>
-      <h2>Dashboard Load Failed</h2>
+      <h2 class="import-headline">Dashboard Load Failed</h2>
       <p class="error-message">{{ error }}</p>
       <div class="error-actions">
         <button @click="switchToManualImport" class="manual-import-button">
@@ -261,20 +413,10 @@ const switchToManualImport = () => {
       </div>
     </div>
 
-    <!-- Success State -->
-    <div v-else-if="importSuccess" class="import-state success-state">
-      <div class="success-icon">✅</div>
-      <h2>Import Successful!</h2>
-      <p>
-        Model "{{ modelName }}" and dashboard "{{ dashboardName }}" have been imported successfully.
-      </p>
-      <p class="redirect-message">Initiating connection, then redirecting to dashboard...</p>
-    </div>
-
-    <!-- Connection Setup Required -->
+    <!-- Connection Setup Required (no spinning logo - user input needed) -->
     <div v-else-if="requiresFields" class="import-form">
       <div class="import-header">
-        <h2>Import Model & Dashboard</h2>
+        <h2 class="import-headline">Import Model & Dashboard</h2>
         <div class="import-details">
           <p><strong>Model:</strong> {{ modelName }}</p>
           <p><strong>Dashboard:</strong> {{ dashboardName }}</p>
@@ -283,9 +425,7 @@ const switchToManualImport = () => {
       </div>
 
       <div class="connection-setup">
-        <h3>
-          {{ connectionType.charAt(0).toUpperCase() + connectionType.slice(1) }} Connection Setup
-        </h3>
+        <h3>{{ connectionName }} Connection Setup</h3>
         <p class="setup-description">
           This model requires a {{ connectionType }} connection. Please provide the required
           configuration:
@@ -375,23 +515,97 @@ const switchToManualImport = () => {
   background-color: var(--bg-color);
 }
 
-.import-state {
-  text-align: center;
-  max-width: 500px;
-  padding: 40px;
-  background-color: var(--sidebar-bg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
 .import-form {
   max-width: 600px;
   padding: 30px;
   background-color: var(--sidebar-bg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
+}
+
+/* Trilogy icon styles */
+.trilogy-icon {
+  height: 60px;
+  width: 60px;
+}
+
+.trilogy-icon.spinning {
+  animation: spin 1.25s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading content styles */
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Step indicator styles */
+.step-indicator {
+  margin: 30px 0 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  background-color: var(--special-text);
+  border-color: var(--special-text);
+  color: white;
+}
+
+.step.active .step-text {
+  font-weight: 500;
+}
+
+.step.completed:not(.active) {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--text-color);
+}
+
+.step-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.step.active .step-icon span {
+  animation: spin 1s linear infinite;
+}
+
+.step-text {
+  font-size: 14px;
+  flex: 1;
 }
 
 .import-header {
   margin-bottom: 30px;
+  margin-top: 30px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
 }
@@ -402,12 +616,17 @@ const switchToManualImport = () => {
 }
 
 .import-details {
+  text-align: center;
+  margin-top: 15px;
+  color: var(--text-faint);
+}
+
+.import-form .import-details {
   text-align: left;
 }
 
 .import-details p {
   margin: 8px 0;
-  color: var(--text-color);
 }
 
 .import-source {
@@ -436,6 +655,11 @@ const switchToManualImport = () => {
   margin-bottom: 8px;
   font-weight: 500;
   color: var(--text-color);
+}
+
+.import-headline {
+  font-weight: 500;
+  margin-top: 30px;
 }
 
 .connection-input {
@@ -467,7 +691,6 @@ const switchToManualImport = () => {
   color: white;
   border: none;
   padding: 12px 24px;
-
   cursor: pointer;
   font-weight: 500;
 }
@@ -482,7 +705,6 @@ const switchToManualImport = () => {
   border: 1px solid var(--border);
   color: var(--text-color);
   padding: 12px 24px;
-
   cursor: pointer;
 }
 
@@ -491,22 +713,26 @@ const switchToManualImport = () => {
   color: white;
   border: none;
   padding: 12px 24px;
-
   cursor: pointer;
   font-weight: 500;
 }
 
 /* State-specific styling */
+.import-state {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px;
+  background-color: var(--editor-bg);
+  border: 1px solid var(--border);
+}
+
 .error-state {
+  border: 1px solid var(--border);
   border-left: 4px solid #ef4444;
+  border-right: 4px solid #ef4444;
 }
 
-.success-state {
-  border-left: 4px solid #10b981;
-}
-
-.error-icon,
-.success-icon {
+.error-icon {
   font-size: 48px;
   margin-bottom: 20px;
 }
@@ -514,31 +740,6 @@ const switchToManualImport = () => {
 .error-message {
   color: #ef4444;
   margin-bottom: 20px;
-}
-
-.redirect-message {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--border);
-  border-top: 4px solid var(--special-text);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 /* Responsive design */
@@ -558,6 +759,14 @@ const switchToManualImport = () => {
 
   .import-source {
     font-size: 12px;
+  }
+
+  .step-indicator {
+    max-width: 280px;
+  }
+
+  .step {
+    padding: 10px 12px;
   }
 }
 </style>
