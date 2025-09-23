@@ -86,7 +86,7 @@ export class ChromaChartHelpers {
 
         // Suppress background click if it's within 100ms of the last point click
         if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
-          console.log('Suppressing background click - within 100ms of point click')
+          console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
           this.brushState.pendingBackgroundClick = false
           return
         }
@@ -134,7 +134,7 @@ export class ChromaChartHelpers {
 
         // Suppress background click if it's within 100ms of the last point click
         if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
-          console.log('Suppressing background click - within 100ms of point click')
+          console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
           this.brushState.pendingBackgroundClick = false
           return
         }
@@ -191,7 +191,7 @@ export class ChromaChartHelpers {
     } else {
       // Check if we should suppress background click
       if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
-        console.log('Suppressing background click - within 100ms of point click')
+        console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
         return
       }
       this.eventHandlers.onBackgroundClick()
@@ -213,7 +213,7 @@ export class ChromaChartHelpers {
     if (!item || !item.datum) {
       // Check if we should suppress background click
       if (Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
-        console.log('Suppressing background click - within 100ms of point click')
+        console.log(`Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`)
         return
       }
       this.eventHandlers.onBackgroundClick()
