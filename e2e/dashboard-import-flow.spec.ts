@@ -76,17 +76,6 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
     }
   }
 
-  // After import completes, we should either be:
-  // 1. On the success state of the autoimport component
-  // 2. Already navigated to the dashboard
-
-  // Check for success state first
-  try {
-    await expect(page.getByText('Dashboard Ready!')).toBeVisible({ timeout: 5000 })
-    console.log('Autoimport showed success state')
-  } catch {
-    console.log('Autoimport may have directly navigated to dashboard')
-  }
 
   // Wait for navigation to the actual dashboard
   // The autoimport component should emit importComplete and navigate us to the dashboard
@@ -98,34 +87,32 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  try {
-    await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
 
-    // Should see the iris_data-connection or similar
-    const connectionExists =
-      (await page.isVisible('[data-testid*="iris_data"]')) ||
-      (await page.isVisible('[data-testid*="connection"]'))
+  await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
 
-    if (connectionExists) {
-      console.log('✓ Connection was successfully created during autoimport')
-    }
+  // Should see the iris_data-connection or similar
+  const connectionExists =
+    (await page.isVisible('[data-testid*="iris_data"]')) ||
+    (await page.isVisible('[data-testid*="connection"]'))
 
-    // Check models too
-    // if (isMobile) {
-    //   await page.getByTestId('mobile-menu-toggle').click()
-    // }
-    await page.getByTestId('sidebar-link-community-models').click()
-
-    const modelExists =
-      (await page.isVisible('[data-testid*="iris_data"]')) ||
-      (await page.getByText('iris_data').isVisible())
-
-    if (modelExists) {
-      console.log('✓ Model was successfully imported during autoimport')
-    }
-  } catch (error) {
-    console.log('Could not verify connections/models, but dashboard import appears successful')
+  if (connectionExists) {
+    console.log('✓ Connection was successfully created during autoimport')
   }
+
+  // Check models too
+  // if (isMobile) {
+  //   await page.getByTestId('mobile-menu-toggle').click()
+  // }
+  await page.getByTestId('sidebar-link-community-models').click()
+
+  const modelExists =
+    (await page.isVisible('[data-testid*="iris_data"]')) ||
+    (await page.getByText('iris_data').isVisible())
+
+  if (modelExists) {
+    console.log('✓ Model was successfully imported during autoimport')
+  }
+
 
   // Navigate back to dashboard to ensure we can access it
   if (isMobile) {
@@ -133,51 +120,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   }
   await page.getByTestId('sidebar-link-dashboard').click()
 
-  // Should be able to see and access our imported dashboard
-  const dashboardListItem = page
-    .locator('[data-testid*="overview"]')
-    .or(page.locator('[data-testid*="iris"]'))
-    .or(page.getByText('overview'))
-    .first()
 
-  try {
-    await expect(dashboardListItem).toBeVisible({ timeout: 5000 })
-    await dashboardListItem.click()
-    console.log('✓ Successfully navigated to imported dashboard')
-  } catch {
-    console.log('Dashboard list navigation may differ, but import was successful')
-  }
-
-  // Final verification - ensure we have a working dashboard with data
-  try {
-    // Look for any visualization or table content that would indicate successful data loading
-    const dataElements = [
-      page.locator('canvas'), // Charts/visualizations
-      page.locator('table'), // Data tables
-      page.locator('[data-testid*="vega"]'), // Vega charts
-      page.locator('[data-testid*="chart"]'), // Chart containers
-    ]
-
-    let hasData = false
-    for (const element of dataElements) {
-      if (
-        await element
-          .first()
-          .isVisible({ timeout: 3000 })
-          .catch(() => false)
-      ) {
-        hasData = true
-        console.log('✓ Dashboard contains data visualizations')
-        break
-      }
-    }
-
-    if (!hasData) {
-      console.log('No immediate data visualizations found, but dashboard structure exists')
-    }
-  } catch (error) {
-    console.log('Data verification completed with some limitations')
-  }
 
   console.log('✓ Iris data autoimport test completed successfully')
 })
