@@ -21,22 +21,17 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
 
   // Wait for the import to complete - this might take a while
   // We expect to see the active step changing during the process
-  let currentStep = 0
   let maxWaitTime = 30000 // 30 seconds max wait
   let startTime = Date.now()
-
+  let dashboardFound = false
   while (Date.now() - startTime < maxWaitTime) {
+
     try {
-      let foundDashboard = false
       // Check if we've moved to success state or error state
       const dashboardElements = [
-        page.locator('[data-testid^="dashboard-component-"]'),
-        page.locator('.dashboard-container'),
-        page.locator('[data-testid="dashboard-description"]'),
-        page.getByText('iris_data'), // Should show the model name somewhere
+        page.getByTestId('refresh-button'),
       ]
 
-      let dashboardFound = false
       for (const element of dashboardElements) {
         try {
           await expect(element.first()).toBeVisible({ timeout: 5000 })
@@ -45,13 +40,12 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
             'Found dashboard element:',
             (await element.first().getAttribute('data-testid')) || 'dashboard element',
           )
-          foundDashboard = true
           break
         } catch {
           continue
         }
       }
-      if (foundDashboard) {
+      if (dashboardFound) {
         break
       }
 
@@ -74,17 +68,20 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
         throw error
       }
     }
+
   }
 
-
-  // Wait for navigation to the actual dashboard
-  // The autoimport component should emit importComplete and navigate us to the dashboard
-  await page.waitForTimeout(2000) // Allow time for navigation
+  if (!dashboardFound) {
+    throw new Error('Import process timed out without completing')
+  }
 
   // Verify that the imported model and connection exist
   // Navigate to check if the connection was created
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
+  }
+  else {
+    await page.getByTestId('toggle-edit-mode-button').click()
   }
 
 
@@ -103,22 +100,15 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // if (isMobile) {
   //   await page.getByTestId('mobile-menu-toggle').click()
   // }
-  await page.getByTestId('sidebar-link-community-models').click()
+  await page.getByTestId('sidebar-link-models').click()
 
   const modelExists =
     (await page.isVisible('[data-testid*="iris_data"]')) ||
-    (await page.getByText('iris_data').isVisible())
+    (await page.getByTestId('model-sidebar-item-iris_data').isVisible())
 
   if (modelExists) {
     console.log('✓ Model was successfully imported during autoimport')
   }
-
-
-  // Navigate back to dashboard to ensure we can access it
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-dashboard').click()
 
 
 
