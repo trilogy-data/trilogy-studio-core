@@ -263,7 +263,6 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     append: boolean,
   ): void {
-    console.log('Handling standard chart click for item:', item)
     let baseFilters = {}
     let baseChart = {}
 
