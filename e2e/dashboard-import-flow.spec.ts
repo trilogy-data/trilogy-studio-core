@@ -25,12 +25,9 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   let startTime = Date.now()
   let dashboardFound = false
   while (Date.now() - startTime < maxWaitTime) {
-
     try {
       // Check if we've moved to success state or error state
-      const dashboardElements = [
-        page.getByTestId('refresh-button'),
-      ]
+      const dashboardElements = [page.getByTestId('refresh-button')]
 
       for (const element of dashboardElements) {
         try {
@@ -68,7 +65,6 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
         throw error
       }
     }
-
   }
 
   if (!dashboardFound) {
@@ -79,11 +75,9 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to check if the connection was created
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-  }
-  else {
+  } else {
     await page.getByTestId('toggle-edit-mode-button').click()
   }
-
 
   await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
 
@@ -109,8 +103,6 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   if (modelExists) {
     console.log('✓ Model was successfully imported during autoimport')
   }
-
-
 
   console.log('✓ Iris data autoimport test completed successfully')
 })

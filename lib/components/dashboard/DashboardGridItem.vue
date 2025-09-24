@@ -251,7 +251,9 @@ const filterCount = computed(() => {
         @click="toggleCrossFilterEligible"
         class="control-btn"
         :data-testid="`toggle-crossfilter-item-content-${item.i}`"
-        title="Toggle cross-filtering eligibility"
+        :title="
+          itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
+        "
       >
         <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
         <i v-else class="mdi mdi-filter-outline icon"></i>
@@ -517,6 +519,7 @@ const filterCount = computed(() => {
     touch-action: auto;
   }
 }
+
 .content-area {
   flex: 1;
   display: flex;
@@ -595,13 +598,15 @@ const filterCount = computed(() => {
   left: 0;
   right: 0;
   z-index: 7;
-  pointer-events: none; /* Allow clicks to pass through to content below */
+  pointer-events: none;
+  /* Allow clicks to pass through to content below */
 }
 
 .filters-container {
   display: flex;
   flex-wrap: wrap;
-  pointer-events: auto; /* Re-enable pointer events for filter elements */
+  pointer-events: auto;
+  /* Re-enable pointer events for filter elements */
 }
 
 .filters-container.edit-mode {
@@ -612,7 +617,8 @@ const filterCount = computed(() => {
 
 .filters-container.view-mode {
   background-color: transparent;
-  justify-content: flex-end; /* Move filter summary to the right */
+  justify-content: flex-end;
+  /* Move filter summary to the right */
 }
 
 .filter-tag {
@@ -679,8 +685,10 @@ const filterCount = computed(() => {
   backdrop-filter: blur(2px);
   border-radius: 4px;
   margin: 4px;
-  margin-right: 16px; /* Add some space on the right */
-  margin-left: auto; /* Push to the right side */
+  margin-right: 16px;
+  /* Add some space on the right */
+  margin-left: auto;
+  /* Push to the right side */
 }
 
 .filter-icon {
@@ -702,8 +710,10 @@ const filterCount = computed(() => {
   animation: fadeIn 0.2s ease;
   border-radius: 4px;
   margin: 4px;
-  margin-left: auto; /* Align with filter summary on the right */
-  max-width: 300px; /* Prevent it from being too wide */
+  margin-left: auto;
+  /* Align with filter summary on the right */
+  max-width: 300px;
+  /* Prevent it from being too wide */
 }
 
 @keyframes fadeIn {

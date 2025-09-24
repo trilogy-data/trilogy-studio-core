@@ -21,7 +21,11 @@
       class="sidebar-item"
       :class="{ 'sidebar-item-selected': activeModelKey === item.id }"
     >
-      <div class="sidebar-content" @click="handleClick(item.id)" data-testid="`model-sidebar-item-${item.id}`">
+      <div
+        class="sidebar-content"
+        @click="handleClick(item.id)"
+        data-testid="`model-sidebar-item-${item.id}`"
+      >
         <!-- headericons  -->
         <div
           v-for="(_, index) in Array.from({ length: item.indent }, () => 0)"

@@ -173,7 +173,7 @@ export const Controls: ChartControl[] = [
     field: 'annotationField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'point'],
+    visibleFor: ['usa-map', 'point', 'heatmap'],
     filterGroup: 'appearance',
   },
   {
