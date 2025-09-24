@@ -14,7 +14,7 @@ import { createHeadlineSpec } from './headlineSpec'
 import { createBarChartSpec } from './barChartSpec'
 import { createDonutChartSpec } from './donutSpec'
 import { createBarHChartSpec } from './barHChartSpec'
-import {createHeatmapSpec} from './heatmapSpec'
+import { createHeatmapSpec } from './heatmapSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 /**
@@ -69,7 +69,6 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
 /**
  * Create chart specification for heatmap
  */
-
 
 /**
  * Create chart specification for boxplot

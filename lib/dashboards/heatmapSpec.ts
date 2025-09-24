@@ -1,9 +1,7 @@
-
-import { type Row, type ResultColumn } from '../editors/results'
+import { type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR, createFieldEncoding } from './helpers'
+import { getFormatHint, getVegaFieldType, createFieldEncoding } from './helpers'
 import { type ChartConfig } from '../editors/results'
-
 
 export const createHeatmapSpec = (
   config: ChartConfig,
