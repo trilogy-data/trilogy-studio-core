@@ -373,19 +373,27 @@ def generate_multi_query_core(
 ]:
     if enable_performance_logging:
         start_time = time.time()
-
-    env = parse_env_from_full_model(query.full_model.sources)
-
+    extra_filters = query.extra_filters
     if enable_performance_logging:
         env_time = time.time() - start_time
         import_start = time.time()
 
-    for imp in query.imports:
-        if imp.alias:
-            imp_string = f"import {imp.name} as {imp.alias};"
-        else:
-            imp_string = f"import {imp.name};"
-        parse_text(imp_string, env, parse_config=PARSE_CONFIG)
+    def build_env():
+        benv = parse_env_from_full_model(query.full_model.sources)
+        imports = []
+        for imp in query.imports:
+            if imp.alias:
+                imports.append(f"import {imp.name} as {imp.alias};")
+            else:
+                imports.append(f"import {imp.name};")
+        imp_string = "\n".join(imports)
+        parse_text(imp_string, benv, parse_config=PARSE_CONFIG)
+        conditional = None
+        if extra_filters:
+            conditional = filters_to_conditional(extra_filters, variables, benv)
+        return benv, conditional
+
+    env, conditional = build_env()
 
     if enable_performance_logging:
         import_time = time.time() - import_start
@@ -407,11 +415,9 @@ def generate_multi_query_core(
         ]
     ] = []
     default_return: list[QueryOutColumn] = []
-    extra_filters = query.extra_filters
+
     variables = query.parameters or {}
-    conditional = None
-    if extra_filters:
-        conditional = filters_to_conditional(extra_filters, variables, env)
+
     for idx, subquery in enumerate(query.queries):
         try:
             generated, columns, values = generate_single_query(
@@ -429,6 +435,9 @@ def generate_multi_query_core(
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
             all.append((subquery.label, e, default_return, None))
+            # rebuild env, as we assume that cleanup might not have happened
+
+            env, conditional = build_env()
 
     if enable_performance_logging:
         queries_time = time.time() - queries_start

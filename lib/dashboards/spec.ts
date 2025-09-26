@@ -242,7 +242,7 @@ export const generateVegaSpec = (
       break
 
     case 'heatmap':
-      chartSpec = createHeatmapSpec(config, columns, tooltipFields, intChart)
+      chartSpec = createHeatmapSpec(config, columns, tooltipFields, currentTheme, isMobile, data, intChart)
       break
 
     case 'usa-map':

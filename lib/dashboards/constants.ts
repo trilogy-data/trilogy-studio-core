@@ -202,7 +202,7 @@ export const Controls: ChartControl[] = [
     field: 'hideLegend',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area'],
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'heatmap'],
     filterGroup: 'appearance',
   },
   {
