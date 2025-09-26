@@ -1,6 +1,5 @@
 import { type ResultColumn, type Row } from '../editors/results'
-import { snakeCaseToCapitalizedWords } from './formatting'
-import { getFormatHint, getVegaFieldType, createFieldEncoding, createColorEncoding } from './helpers'
+import { createFieldEncoding, createColorEncoding } from './helpers'
 import { type ChartConfig } from '../editors/results'
 
 export const createHeatmapSpec = (
@@ -43,17 +42,8 @@ export const createHeatmapSpec = (
         isMobile,
         currentTheme,
         config.hideLegend,
-        data
+        data,
       ),
-      // color: {
-      //   field: config.colorField,
-      //   type: getVegaFieldType(config.colorField || '', columns),
-      //   title: snakeCaseToCapitalizedWords(
-      //     columns.get(config.colorField || '')?.description || config.colorField,
-      //   ),
-      //   scale: { scheme: 'viridis' },
-      //   ...getFormatHint(config.colorField || '', columns),
-      // },
       tooltip: tooltipFields,
     },
   }

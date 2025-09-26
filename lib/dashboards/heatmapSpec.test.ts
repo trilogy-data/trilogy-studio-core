@@ -1,12 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 import { createHeatmapSpec } from './heatmapSpec'
-import { type ResultColumn, type ChartConfig, ColumnType } from '../editors/results'
+import { type ResultColumn, type Row, type ChartConfig, ColumnType } from '../editors/results'
+import { createFieldEncoding, createColorEncoding } from './helpers'
+
+// Mock the helper functions
+vi.mock('./helpers', () => ({
+  createFieldEncoding: vi.fn(),
+  createColorEncoding: vi.fn(),
+}))
 
 describe('createHeatmapSpec', (): void => {
   let mockColumns: Map<string, ResultColumn>
   let mockConfig: ChartConfig
   let mockTooltipFields: any[]
   let mockIntChart: Array<Partial<ChartConfig>>
+  let mockData: readonly Row[] | null
+  let currentTheme: '' | 'light' | 'dark'
+  let isMobile: boolean
 
   beforeEach((): void => {
     mockColumns = new Map<string, ResultColumn>([
@@ -36,24 +46,6 @@ describe('createHeatmapSpec', (): void => {
           traits: ['usd'],
         } as ResultColumn,
       ],
-      [
-        'profit_margin',
-        {
-          name: 'profit_margin',
-          type: ColumnType.FLOAT,
-          description: 'Profit Margin',
-          traits: ['percent'],
-        } as ResultColumn,
-      ],
-      [
-        'year',
-        {
-          name: 'year',
-          type: ColumnType.INTEGER,
-          description: 'Year',
-          traits: ['year'],
-        } as ResultColumn,
-      ],
     ])
 
     mockConfig = {
@@ -61,6 +53,7 @@ describe('createHeatmapSpec', (): void => {
       xField: 'category',
       yField: 'region',
       colorField: 'sales',
+      hideLegend: false,
     } as ChartConfig
 
     mockTooltipFields = [
@@ -70,11 +63,38 @@ describe('createHeatmapSpec', (): void => {
     ]
 
     mockIntChart = []
+    mockData = null
+    currentTheme = 'light'
+    isMobile = false
+
+    // Reset mocks
+    vi.clearAllMocks()
+
+    // Setup default mock returns
+    ;(createFieldEncoding as Mock).mockReturnValue({
+      field: 'test',
+      type: 'nominal',
+      title: 'Test Field',
+    })
+    ;(createColorEncoding as Mock).mockReturnValue({
+      field: 'sales',
+      type: 'quantitative',
+      title: 'Total Sales',
+      scale: { scheme: 'viridis' },
+    })
   })
 
   describe('basic functionality', (): void => {
     it('should create a valid heatmap spec with required fields', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       expect(spec).toHaveProperty('params')
       expect(spec).toHaveProperty('mark')
@@ -83,13 +103,29 @@ describe('createHeatmapSpec', (): void => {
     })
 
     it('should create heatmap with rect mark type', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       expect(spec.mark).toBe('rect')
     })
 
     it('should include required encoding fields', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       expect(spec.encoding).toHaveProperty('x')
       expect(spec.encoding).toHaveProperty('y')
@@ -100,7 +136,15 @@ describe('createHeatmapSpec', (): void => {
 
   describe('parameter configuration', (): void => {
     it('should include highlight and select parameters', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       expect(spec.params).toHaveLength(2)
       expect(spec.params[0].name).toBe('highlight')
@@ -108,7 +152,15 @@ describe('createHeatmapSpec', (): void => {
     })
 
     it('should configure highlight parameter correctly', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       const highlightParam = spec.params.find((p: any) => p.name === 'highlight')
       expect(highlightParam).toBeDefined()
@@ -118,7 +170,15 @@ describe('createHeatmapSpec', (): void => {
     })
 
     it('should configure select parameter correctly', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
       const selectParam = spec.params.find((p: any) => p.name === 'select')
       expect(selectParam).toBeDefined()
@@ -131,7 +191,15 @@ describe('createHeatmapSpec', (): void => {
       const intChartWithData: Array<Partial<ChartConfig>> = [
         { xField: 'category', yField: 'region' },
       ]
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, intChartWithData)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        intChartWithData,
+      )
 
       const selectParam = spec.params.find((p: any) => p.name === 'select')
       expect(selectParam).toBeDefined()
@@ -139,7 +207,15 @@ describe('createHeatmapSpec', (): void => {
     })
 
     it('should handle empty intChart', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, [])
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        [],
+      )
 
       const selectParam = spec.params.find((p: any) => p.name === 'select')
       expect(selectParam).toBeDefined()
@@ -148,415 +224,336 @@ describe('createHeatmapSpec', (): void => {
   })
 
   describe('encoding configuration', (): void => {
-    describe('x-axis encoding', (): void => {
-      it('should create x-axis encoding from xField', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+    describe('helper function integration', (): void => {
+      it('should call createFieldEncoding for x-axis with correct parameters', (): void => {
+        createHeatmapSpec(
+          mockConfig,
+          mockColumns,
+          mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
+          mockIntChart,
+        )
 
-        expect(spec.encoding.x.field).toBe('category')
-        expect(spec.encoding.x.type).toBe('nominal')
-        expect(spec.encoding.x.title).toBe('Product Category')
+        expect(createFieldEncoding).toHaveBeenCalledWith('category', mockColumns)
       })
 
-      it('should handle missing xField gracefully', (): void => {
+      it('should call createFieldEncoding for y-axis with correct parameters', (): void => {
+        createHeatmapSpec(
+          mockConfig,
+          mockColumns,
+          mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
+          mockIntChart,
+        )
+
+        expect(createFieldEncoding).toHaveBeenCalledWith('region', mockColumns)
+      })
+
+      it('should call createColorEncoding with correct parameters', (): void => {
+        createHeatmapSpec(
+          mockConfig,
+          mockColumns,
+          mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
+          mockIntChart,
+        )
+
+        expect(createColorEncoding).toHaveBeenCalledWith(
+          mockConfig,
+          'sales',
+          mockColumns,
+          isMobile,
+          currentTheme,
+          mockConfig.hideLegend,
+          mockData,
+        )
+      })
+
+      it('should handle missing xField', (): void => {
         const configWithoutX = { ...mockConfig, xField: undefined }
-        const spec = createHeatmapSpec(configWithoutX, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.x).toEqual({})
-      })
-
-      it('should handle xField not in columns', (): void => {
-        const configWithInvalidX = { ...mockConfig, xField: 'nonexistent' }
-        const spec = createHeatmapSpec(
-          configWithInvalidX,
+        createHeatmapSpec(
+          configWithoutX,
           mockColumns,
           mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
           mockIntChart,
         )
 
-        expect(spec.encoding.x.field).toBe('nonexistent')
-        expect(spec.encoding.x.type).toBe('nominal')
-        expect(spec.encoding.x.title).toBe('Nonexistent')
-      })
-    })
-
-    describe('y-axis encoding', (): void => {
-      it('should create y-axis encoding from yField', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.y.field).toBe('region')
-        expect(spec.encoding.y.type).toBe('nominal')
-        expect(spec.encoding.y.title).toBe('Sales Region')
+        expect(createFieldEncoding).toHaveBeenCalledWith('', mockColumns)
       })
 
-      it('should handle missing yField gracefully', (): void => {
+      it('should handle missing yField', (): void => {
         const configWithoutY = { ...mockConfig, yField: undefined }
-        const spec = createHeatmapSpec(configWithoutY, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.y).toEqual({})
-      })
-
-      it('should handle yField not in columns', (): void => {
-        const configWithInvalidY = { ...mockConfig, yField: 'nonexistent' }
-        const spec = createHeatmapSpec(
-          configWithInvalidY,
+        createHeatmapSpec(
+          configWithoutY,
           mockColumns,
           mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
           mockIntChart,
         )
 
-        expect(spec.encoding.y.field).toBe('nonexistent')
-        expect(spec.encoding.y.type).toBe('nominal')
-        expect(spec.encoding.y.title).toBe('Nonexistent')
-      })
-    })
-
-    describe('color encoding', (): void => {
-      it('should create color encoding with viridis scale for numeric field', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.color.field).toBe('sales')
-        expect(spec.encoding.color.type).toBe('quantitative')
-        expect(spec.encoding.color.title).toBe('Total Sales')
-        expect(spec.encoding.color.scale.scheme).toBe('viridis')
-      })
-
-      it('should apply formatting hints for USD fields', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.color.format).toBe('$,.2f')
-      })
-
-      it('should apply formatting hints for percentage fields', (): void => {
-        const configWithPercent = { ...mockConfig, colorField: 'profit_margin' }
-        const spec = createHeatmapSpec(
-          configWithPercent,
-          mockColumns,
-          mockTooltipFields,
-          mockIntChart,
-        )
-
-        expect(spec.encoding.color.format).toBe('.1%')
-      })
-
-      it('should handle categorical color field', (): void => {
-        const configWithCategorical = { ...mockConfig, colorField: 'category' }
-        const spec = createHeatmapSpec(
-          configWithCategorical,
-          mockColumns,
-          mockTooltipFields,
-          mockIntChart,
-        )
-
-        expect(spec.encoding.color.field).toBe('category')
-        expect(spec.encoding.color.type).toBe('nominal')
-        expect(spec.encoding.color.scale.scheme).toBe('viridis')
-      })
-
-      it('should handle temporal color field with year formatting', (): void => {
-        const configWithYear = { ...mockConfig, colorField: 'year' }
-        const spec = createHeatmapSpec(configWithYear, mockColumns, mockTooltipFields, mockIntChart)
-
-        expect(spec.encoding.color.field).toBe('year')
-        expect(spec.encoding.color.type).toBe('temporal')
-        expect(spec.encoding.color.format).toBe('%Y')
-        expect(spec.encoding.color.timeUnit).toBe('year')
-        expect(spec.encoding.color.labelAngle).toBe(-45)
+        expect(createFieldEncoding).toHaveBeenCalledWith('', mockColumns)
       })
 
       it('should handle missing colorField', (): void => {
         const configWithoutColor = { ...mockConfig, colorField: undefined }
-        const spec = createHeatmapSpec(
+        createHeatmapSpec(
           configWithoutColor,
           mockColumns,
           mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
           mockIntChart,
         )
 
-        expect(spec.encoding.color.field).toBeUndefined()
-        expect(spec.encoding.color.type).toBe('nominal')
-        expect(spec.encoding.color.title).toBe('')
-        expect(spec.encoding.color.scale.scheme).toBe('viridis')
-      })
-
-      it('should handle colorField not in columns', (): void => {
-        const configWithInvalidColor = { ...mockConfig, colorField: 'nonexistent' }
-        const spec = createHeatmapSpec(
-          configWithInvalidColor,
+        expect(createColorEncoding).toHaveBeenCalledWith(
+          configWithoutColor,
+          '',
           mockColumns,
-          mockTooltipFields,
-          mockIntChart,
+          isMobile,
+          currentTheme,
+          configWithoutColor.hideLegend,
+          mockData,
         )
-
-        expect(spec.encoding.color.field).toBe('nonexistent')
-        expect(spec.encoding.color.type).toBe('nominal')
-        expect(spec.encoding.color.title).toBe('Nonexistent')
       })
     })
 
     describe('tooltip encoding', (): void => {
       it('should pass through tooltip fields', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+        const spec = createHeatmapSpec(
+          mockConfig,
+          mockColumns,
+          mockTooltipFields,
+          currentTheme,
+          isMobile,
+          mockData,
+          mockIntChart,
+        )
 
         expect(spec.encoding.tooltip).toEqual(mockTooltipFields)
       })
 
       it('should handle empty tooltip fields', (): void => {
-        const spec = createHeatmapSpec(mockConfig, mockColumns, [], mockIntChart)
+        const spec = createHeatmapSpec(
+          mockConfig,
+          mockColumns,
+          [],
+          currentTheme,
+          isMobile,
+          mockData,
+          mockIntChart,
+        )
 
         expect(spec.encoding.tooltip).toEqual([])
       })
     })
   })
 
-  describe('field type detection', (): void => {
-    beforeEach((): void => {
-      mockColumns = new Map<string, ResultColumn>([
-        [
-          'date_field',
-          {
-            name: 'date_field',
-            type: ColumnType.DATE,
-            description: 'Date Field',
-          } as ResultColumn,
-        ],
-        [
-          'datetime_field',
-          {
-            name: 'datetime_field',
-            type: ColumnType.DATETIME,
-            description: 'DateTime Field',
-          } as ResultColumn,
-        ],
-        [
-          'time_field',
-          {
-            name: 'time_field',
-            type: ColumnType.TIME,
-            description: 'Time Field',
-          } as ResultColumn,
-        ],
-        [
-          'timestamp_field',
-          {
-            name: 'timestamp_field',
-            type: ColumnType.TIMESTAMP,
-            description: 'Timestamp Field',
-          } as ResultColumn,
-        ],
-        [
-          'integer_field',
-          {
-            name: 'integer_field',
-            type: ColumnType.INTEGER,
-            description: 'Integer Field',
-          } as ResultColumn,
-        ],
-        [
-          'float_field',
-          {
-            name: 'float_field',
-            type: ColumnType.FLOAT,
-            description: 'Float Field',
-          } as ResultColumn,
-        ],
-        [
-          'number_field',
-          {
-            name: 'number_field',
-            type: ColumnType.NUMBER,
-            description: 'Number Field',
-          } as ResultColumn,
-        ],
-        [
-          'string_field',
-          {
-            name: 'string_field',
-            type: ColumnType.STRING,
-            description: 'String Field',
-          } as ResultColumn,
-        ],
-        [
-          'boolean_field',
-          {
-            name: 'boolean_field',
-            type: ColumnType.BOOLEAN,
-            description: 'Boolean Field',
-          } as ResultColumn,
-        ],
-      ])
+  describe('theme and mobile parameters', (): void => {
+    it('should pass theme parameter to createColorEncoding', (): void => {
+      const darkTheme = 'dark' as const
+      createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        darkTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
+
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        mockColumns,
+        isMobile,
+        darkTheme,
+        mockConfig.hideLegend,
+        mockData,
+      )
     })
 
-    it('should correctly identify temporal field types', (): void => {
-      const dateConfig = { ...mockConfig, xField: 'date_field' }
-      const spec = createHeatmapSpec(dateConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec.encoding.x.type).toBe('temporal')
+    it('should pass mobile parameter to createColorEncoding', (): void => {
+      const mobileTrue = true
+      createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        mobileTrue,
+        mockData,
+        mockIntChart,
+      )
 
-      const datetimeConfig = { ...mockConfig, xField: 'datetime_field' }
-      const spec2 = createHeatmapSpec(datetimeConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec2.encoding.x.type).toBe('temporal')
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        mockColumns,
+        mobileTrue,
+        currentTheme,
+        mockConfig.hideLegend,
+        mockData,
+      )
     })
 
-    it('should correctly identify quantitative field types', (): void => {
-      const intConfig = { ...mockConfig, colorField: 'integer_field' }
-      const spec = createHeatmapSpec(intConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec.encoding.color.type).toBe('quantitative')
+    it('should handle empty theme', (): void => {
+      const emptyTheme = '' as const
+      createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        emptyTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
-      const floatConfig = { ...mockConfig, colorField: 'float_field' }
-      const spec2 = createHeatmapSpec(floatConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec2.encoding.color.type).toBe('quantitative')
-    })
-
-    it('should correctly identify nominal field types', (): void => {
-      const stringConfig = { ...mockConfig, xField: 'string_field' }
-      const spec = createHeatmapSpec(stringConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec.encoding.x.type).toBe('nominal')
-
-      const boolConfig = { ...mockConfig, yField: 'boolean_field' }
-      const spec2 = createHeatmapSpec(boolConfig, mockColumns, mockTooltipFields, mockIntChart)
-      expect(spec2.encoding.y.type).toBe('nominal')
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        mockColumns,
+        isMobile,
+        emptyTheme,
+        mockConfig.hideLegend,
+        mockData,
+      )
     })
   })
 
-  describe('column traits handling', (): void => {
-    beforeEach((): void => {
-      mockColumns = new Map<string, ResultColumn>([
-        [
-          'usd_field',
-          {
-            name: 'usd_field',
-            type: ColumnType.NUMBER,
-            description: 'USD Field',
-            traits: ['usd'],
-          } as ResultColumn,
-        ],
-        [
-          'percent_field',
-          {
-            name: 'percent_field',
-            type: ColumnType.FLOAT,
-            description: 'Percent Field',
-            traits: ['percent'],
-          } as ResultColumn,
-        ],
-        [
-          'year_field',
-          {
-            name: 'year_field',
-            type: ColumnType.INTEGER,
-            description: 'Year Field',
-            traits: ['year'],
-          } as ResultColumn,
-        ],
-        [
-          'day_of_week_field',
-          {
-            name: 'day_of_week_field',
-            type: ColumnType.STRING,
-            description: 'Day Of Week Field',
-            traits: ['day_of_week_name'],
-          } as ResultColumn,
-        ],
-      ])
+  describe('data parameter', (): void => {
+    it('should pass data parameter to createColorEncoding', (): void => {
+      const testData: readonly Row[] = [
+        { category: 'A', region: 'North', sales: 100 },
+        { category: 'B', region: 'South', sales: 200 },
+      ]
+
+      createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        testData,
+        mockIntChart,
+      )
+
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        mockColumns,
+        isMobile,
+        currentTheme,
+        mockConfig.hideLegend,
+        testData,
+      )
     })
 
-    it('should apply USD formatting', (): void => {
-      const config = { ...mockConfig, colorField: 'usd_field' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
+    it('should handle null data', (): void => {
+      createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        null,
+        mockIntChart,
+      )
 
-      expect(spec.encoding.color.format).toBe('$,.2f')
-    })
-
-    it('should apply percentage formatting', (): void => {
-      const config = { ...mockConfig, colorField: 'percent_field' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.color.format).toBe('.1%')
-    })
-
-    it('should apply year formatting and sorting', (): void => {
-      const config = { ...mockConfig, xField: 'year_field' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.x.format).toBe('%Y')
-      expect(spec.encoding.x.timeUnit).toBe('year')
-      expect(spec.encoding.x.labelAngle).toBe(-45)
-    })
-
-    it('should apply day of week sorting', (): void => {
-      const config = { ...mockConfig, xField: 'day_of_week_field' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.x.sort).toEqual([
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-      ])
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        mockColumns,
+        isMobile,
+        currentTheme,
+        mockConfig.hideLegend,
+        null,
+      )
     })
   })
 
-  describe('title formatting', (): void => {
-    it('should convert snake_case to Capitalized Words', (): void => {
-      mockColumns.set('snake_case_field', {
-        name: 'snake_case_field',
-        type: ColumnType.STRING,
-        description: undefined,
-      } as ResultColumn)
+  describe('hideLegend parameter', (): void => {
+    it('should pass hideLegend parameter to createColorEncoding', (): void => {
+      const configWithHiddenLegend = { ...mockConfig, hideLegend: true }
+      createHeatmapSpec(
+        configWithHiddenLegend,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
-      const config = { ...mockConfig, xField: 'snake_case_field' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.x.title).toBe('Snake Case Field')
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        configWithHiddenLegend,
+        'sales',
+        mockColumns,
+        isMobile,
+        currentTheme,
+        true,
+        mockData,
+      )
     })
 
-    it('should use description when available', (): void => {
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, mockIntChart)
+    it('should handle undefined hideLegend', (): void => {
+      const configWithoutHideLegend = { ...mockConfig, hideLegend: undefined }
+      createHeatmapSpec(
+        configWithoutHideLegend,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
-      expect(spec.encoding.x.title).toBe('Product Category')
-      expect(spec.encoding.y.title).toBe('Sales Region')
-      expect(spec.encoding.color.title).toBe('Total Sales')
-    })
-
-    it('should fallback to field name when description is missing', (): void => {
-      mockColumns.set('field_without_desc', {
-        name: 'field_without_desc',
-        type: ColumnType.STRING,
-        description: undefined,
-      } as ResultColumn)
-
-      const config = { ...mockConfig, xField: 'field_without_desc' }
-      const spec = createHeatmapSpec(config, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.x.title).toBe('Field Without Desc')
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        configWithoutHideLegend,
+        'sales',
+        mockColumns,
+        isMobile,
+        currentTheme,
+        undefined,
+        mockData,
+      )
     })
   })
 
   describe('edge cases', (): void => {
     it('should handle empty columns map', (): void => {
       const emptyColumns = new Map<string, ResultColumn>()
-      const spec = createHeatmapSpec(mockConfig, emptyColumns, mockTooltipFields, mockIntChart)
+      createHeatmapSpec(
+        mockConfig,
+        emptyColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        mockIntChart,
+      )
 
-      expect(spec.encoding.x.type).toBe('nominal')
-      expect(spec.encoding.y.type).toBe('nominal')
-      expect(spec.encoding.color.type).toBe('nominal')
-    })
-
-    it('should handle null/undefined config fields', (): void => {
-      const nullConfig = {
-        chartType: 'heatmap',
-        xField: null,
-        yField: null,
-        colorField: null,
-      } as any
-
-      const spec = createHeatmapSpec(nullConfig, mockColumns, mockTooltipFields, mockIntChart)
-
-      expect(spec.encoding.x).toEqual({})
-      expect(spec.encoding.y).toEqual({})
-      expect(spec.encoding.color.field).toBeNull()
+      expect(createFieldEncoding).toHaveBeenCalledWith('category', emptyColumns)
+      expect(createFieldEncoding).toHaveBeenCalledWith('region', emptyColumns)
+      expect(createColorEncoding).toHaveBeenCalledWith(
+        mockConfig,
+        'sales',
+        emptyColumns,
+        isMobile,
+        currentTheme,
+        mockConfig.hideLegend,
+        mockData,
+      )
     })
 
     it('should handle large intChart array', (): void => {
@@ -565,7 +562,15 @@ describe('createHeatmapSpec', (): void => {
         yField: `region${i}`,
       }))
 
-      const spec = createHeatmapSpec(mockConfig, mockColumns, mockTooltipFields, largeIntChart)
+      const spec = createHeatmapSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        currentTheme,
+        isMobile,
+        mockData,
+        largeIntChart,
+      )
 
       const selectParam = spec.params.find((p: any) => p.name === 'select')
       expect(selectParam).toBeDefined()

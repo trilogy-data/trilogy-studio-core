@@ -373,10 +373,13 @@ def generate_multi_query_core(
 ]:
     if enable_performance_logging:
         start_time = time.time()
-    extra_filters = query.extra_filters
+
     if enable_performance_logging:
         env_time = time.time() - start_time
         import_start = time.time()
+
+    extra_filters = query.extra_filters
+    variables = query.parameters or {}
 
     def build_env():
         benv = parse_env_from_full_model(query.full_model.sources)
@@ -415,8 +418,6 @@ def generate_multi_query_core(
         ]
     ] = []
     default_return: list[QueryOutColumn] = []
-
-    variables = query.parameters or {}
 
     for idx, subquery in enumerate(query.queries):
         try:
