@@ -73,9 +73,10 @@ const useConnectionStore = defineStore('connections', {
       })
 
       // The actual connection operation
-      const resetPromise = this.connections[name].reset().then(() => {
-        return runStartup(this.connections[name])
-      })
+      const resetPromise = async () => {
+        await this.connections[name].reset()
+        await runStartup(this.connections[name])
+      }
 
       // Use Promise.race to implement timeout
       const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {

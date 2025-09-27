@@ -83,11 +83,10 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async connect() {
-    return createDuckDB(this.name).then((conn) => {
-      this.connection = conn.connection
-      this.db = conn.db
-      return true
-    })
+    const conn = await createDuckDB(this.name)
+    this.connection = conn.connection
+    this.db = conn.db
+    return true
   }
 
   constructor(name: string, model?: string) {

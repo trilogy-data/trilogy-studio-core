@@ -33,8 +33,13 @@
           :activeDashboardKey="activeDashboard"
         />
       </template>
+      <template v-if="showingCredentialPrompt">
 
-      <template v-if="activeScreen && ['editors'].includes(activeScreen)">
+        <div class="credentials-prompt">
+          <h2>Please complete the credential prompt to continue.</h2>
+        </div>
+      </template>
+      <template v-else-if="activeScreen && ['editors'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
             <editor
@@ -252,6 +257,13 @@ export default {
       activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'results',
     }
+  },
+  //add an argument for if the credential prompt is up
+  props: {
+    showingCredentialPrompt: {
+      type: Boolean,
+      default: false,
+    },
   },
   components: {
     Sidebar,
