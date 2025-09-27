@@ -20,7 +20,7 @@
     </Suspense>
     <Suspense v-else>
       <template #default>
-        <IDE />
+        <IDE :showingCredentialPrompt="showCredentialPrompt" />
       </template>
       <template #fallback>
         <IDEPlaceholder />

@@ -33,8 +33,10 @@
           :activeDashboardKey="activeDashboard"
         />
       </template>
-
-      <template v-if="activeScreen && ['editors'].includes(activeScreen)">
+      <template v-if="showingCredentialPrompt">
+        <CredentialBackgroundPage />
+      </template>
+      <template v-else-if="activeScreen && ['editors'].includes(activeScreen)">
         <vertical-split-layout>
           <template #editor v-if="activeEditor && activeEditorData">
             <editor
@@ -230,6 +232,7 @@ import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
+import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -253,6 +256,13 @@ export default {
       activeTab: 'results',
     }
   },
+  //add an argument for if the credential prompt is up
+  props: {
+    showingCredentialPrompt: {
+      type: Boolean,
+      default: false,
+    },
+  },
   components: {
     Sidebar,
     Editor,
@@ -272,6 +282,7 @@ export default {
     ConnectionView,
     ResultsView,
     DashboardAutoImporter,
+    CredentialBackgroundPage,
   },
   setup() {
     // Create a ref for the editor component
