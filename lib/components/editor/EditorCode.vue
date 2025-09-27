@@ -86,10 +86,10 @@ export default defineComponent({
       const selected = editorInstance.getSelection()
       let text: string | undefined =
         selected &&
-        !(
-          selected.startColumn === selected.endColumn &&
-          selected.startLineNumber === selected.endLineNumber
-        )
+          !(
+            selected.startColumn === selected.endColumn &&
+            selected.startLineNumber === selected.endLineNumber
+          )
           ? editorInstance.getModel()?.getValueInRange(selected)
           : editorInstance.getValue()
 
@@ -142,21 +142,48 @@ export default defineComponent({
       }
 
       // If editor already exists and is mounted, just update content
+      // If editor already exists and is mounted, check if it's still valid
       if (editorMap.has(props.context) && mountedMap.get(props.context)) {
+        console.log('Editor already mounted, checking validity')
         const editorInstance = editorMap.get(props.context)
-        if (editorInstance) {
-          editorInstance.setValue(props.contents)
-          editorInstance.setScrollPosition({
-            scrollTop: props.scrollPosition?.line || 1,
-            scrollLeft: props.scrollPosition?.column || 1,
-          })
-          editorInstance.layout()
-          return
+
+        if (editorInstance && editorInstance.getModel()) {
+          const editorContainer = editorInstance.getContainerDomNode()
+          const currentElement = editorElement.value
+
+          // Check if the editor is attached to the current DOM element
+          if (editorContainer === currentElement) {
+            console.log('Editor instance is valid and properly attached, updating content')
+            try {
+              editorInstance.setValue(props.contents)
+              editorInstance.setScrollPosition({
+                scrollTop: props.scrollPosition?.line || 1,
+                scrollLeft: props.scrollPosition?.column || 1,
+              })
+              editorInstance.layout()
+              return
+            } catch (error) {
+              console.warn('Error updating existing editor, will recreate:', error)
+            }
+          } else {
+            console.log('Editor is valid but DOM attachment is wrong, disposing and recreating')
+            try {
+              editorInstance.dispose()
+            } catch (error) {
+              console.warn('Error disposing editor:', error)
+            }
+            editorMap.delete(props.context)
+            mountedMap.delete(props.context)
+          }
+        } else {
+          console.log('Editor instance is invalid or disposed, cleaning up')
+          editorMap.delete(props.context)
+          mountedMap.delete(props.context)
         }
       }
 
-      // Create theme
 
+      console.log('Creating new editor instance')
       // Create editor
       const editorInstance = editor.create(editorElement.value, {
         value: props.contents,
