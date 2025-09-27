@@ -28,7 +28,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) {}
+  constructor(private eventHandlers: ChartEventHandlers) { }
 
   /**
    * Downloads the chart as a PNG file
@@ -84,18 +84,6 @@ export class ChromaChartHelpers {
         // Brush is being cleared - record the time and check if we should suppress background click
         this.brushState.lastBrushClearTime = Date.now()
 
-        // Suppress background click if it's within 100ms of the last point click
-        if (
-          config.chartType === 'headline' &&
-          Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT
-        ) {
-          console.log(
-            `Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`,
-          )
-          this.brushState.pendingBackgroundClick = false
-          return
-        }
-
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
           console.log('Cancelling background click due to recent point click')
@@ -137,17 +125,6 @@ export class ChromaChartHelpers {
         // Brush is being cleared - record the time and check if we should suppress background click
         this.brushState.lastBrushClearTime = Date.now()
 
-        // Suppress background click if it's within 100ms of the last point click
-        if (
-          config.chartType === 'headline' &&
-          Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT
-        ) {
-          console.log(
-            `Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`,
-          )
-          this.brushState.pendingBackgroundClick = false
-          return
-        }
 
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
@@ -222,25 +199,21 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
   ): void {
-    const currentTime = Date.now()
-    this.brushState.lastClickTime = currentTime
+    
     const append = event.shiftKey
     if (!item || !item.datum) {
-      // Check if we should suppress background click
-      if (
-        config.chartType === 'headline' &&
-        Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT
-      ) {
-        console.log(
-          `Suppressing background click - within ${BACKGROUND_CLICK_SUPPRESSION_TIMEOUT}ms of point click`,
-        )
+      if (config.chartType === 'headline'  &&
+        Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
+        console.log(`suppressing background click - within timeout of point click ${Date.now() - this.brushState.lastClickTime}ms`)
         return
       }
+
       this.eventHandlers.onBackgroundClick()
 
       return
     }
-
+    const currentTime = Date.now()
+    this.brushState.lastClickTime = currentTime
     // Handle geographic charts
     if (config.geoField) {
       this.handleGeographicClick(item, config, columns, append)

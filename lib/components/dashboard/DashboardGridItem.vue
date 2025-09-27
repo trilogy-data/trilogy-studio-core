@@ -94,7 +94,6 @@ function toggleCrossFilterEligible(): void {
 
   // Update the allowCrossFilter property
   props.setItemData(props.item.i, props.dashboardId, {
-    ...itemData,
     allowCrossFilter: newAllowCrossFilter,
   })
 }

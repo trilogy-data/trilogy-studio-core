@@ -487,6 +487,7 @@ function setItemData(itemId: string, dashboardId: string, data: any): void {
     executor?.runSingle(itemId)
   }
 
+
   if (data.dimensions) {
     dashboardStore.updateItemLayoutDimensions(
       dashboard.value.id,

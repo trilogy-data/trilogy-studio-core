@@ -493,6 +493,10 @@ export class DashboardModel implements Dashboard {
         if (!gridItem.allowCrossFilter) {
           continue // Skip items that do not allow cross-filtering
         }
+
+        // Store the original state to check for changes
+        const originalConceptFilters = JSON.stringify(gridItem.conceptFilters || [])
+
         gridItem.conceptFilters = gridItem.conceptFilters || []
         let shouldAppend = true
         if (operation !== 'append') {
@@ -519,8 +523,14 @@ export class DashboardModel implements Dashboard {
           gridItem.conceptFilters.push({ source: itemId, value: conceptMap })
         }
 
-        this.updateItemFilters(id)
-        updated.push(id)
+        // Check if the conceptFilters actually changed
+        const newConceptFilters = JSON.stringify(gridItem.conceptFilters)
+        const filtersChanged = originalConceptFilters !== newConceptFilters
+
+        if (filtersChanged) {
+          this.updateItemFilters(id)
+          updated.push(id)
+        }
       }
     }
     this.updatedAt = new Date()
