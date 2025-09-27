@@ -35,9 +35,7 @@
       </template>
       <template v-if="showingCredentialPrompt">
 
-        <div class="credentials-prompt">
-          <h2>Please complete the credential prompt to continue.</h2>
-        </div>
+        <CredentialBackgroundPage />
       </template>
       <template v-else-if="activeScreen && ['editors'].includes(activeScreen)">
         <vertical-split-layout>
@@ -235,6 +233,7 @@ import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
+import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -284,6 +283,7 @@ export default {
     ConnectionView,
     ResultsView,
     DashboardAutoImporter,
+    CredentialBackgroundPage,
   },
   setup() {
     // Create a ref for the editor component
