@@ -148,18 +148,11 @@ export default defineComponent({
         const editorInstance = editorMap.get(props.context)
 
         if (editorInstance && editorInstance.getModel()) {
-          // CRITICAL: Check if the editor is still attached to the correct DOM element
           const editorContainer = editorInstance.getContainerDomNode()
           const currentElement = editorElement.value
 
-          console.log('Editor container:', editorContainer)
-          console.log('Current element:', currentElement)
-          console.log('Elements match:', editorContainer === currentElement)
-          console.log('Container parent:', editorContainer?.parentNode)
-          console.log('Current parent:', currentElement?.parentNode)
-
           // Check if the editor is attached to the current DOM element
-          if (editorContainer === currentElement && currentElement.contains(editorContainer)) {
+          if (editorContainer === currentElement) {
             console.log('Editor instance is valid and properly attached, updating content')
             try {
               editorInstance.setValue(props.contents)
@@ -191,8 +184,6 @@ export default defineComponent({
 
 
       console.log('Creating new editor instance')
-      // Create theme
-
       // Create editor
       const editorInstance = editor.create(editorElement.value, {
         value: props.contents,
