@@ -34,7 +34,6 @@
         />
       </template>
       <template v-if="showingCredentialPrompt">
-
         <CredentialBackgroundPage />
       </template>
       <template v-else-if="activeScreen && ['editors'].includes(activeScreen)">

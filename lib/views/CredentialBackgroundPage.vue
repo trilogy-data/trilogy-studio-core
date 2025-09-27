@@ -2,16 +2,21 @@
   <div class="credentials-prompt">
     <div class="credentials-card">
       <div class="credentials-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <circle cx="12" cy="16" r="1"></circle>
           <path d="m7 11 V7a5 5 0 0 1 10 0v4"></path>
         </svg>
       </div>
       <h2 class="credentials-title">Credential response required</h2>
-      <p class="credentials-message">
-        Complete credential prompt to continue.
-      </p>
+      <p class="credentials-message">Complete credential prompt to continue.</p>
       <div class="credentials-loading">
         <div class="spinner"></div>
         <span>Waiting for authentication...</span>
@@ -79,7 +84,11 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
