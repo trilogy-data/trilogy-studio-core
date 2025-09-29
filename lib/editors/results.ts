@@ -88,8 +88,8 @@ export interface ChartConfig {
   annotationField?: string
   hideLegend?: boolean
   showTitle?: boolean
-  scaleX?: 'linear' | 'log'
-  scaleY?: 'linear' | 'log'
+  scaleX?: 'linear' | 'log' | 'sqrt'
+  scaleY?: 'linear' | 'log' | 'sqrt'
 }
 
 type SerializableValue =

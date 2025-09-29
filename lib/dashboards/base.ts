@@ -347,9 +347,12 @@ export class DashboardModel implements Dashboard {
       if (item.chartFilters && item.chartFilters.length > 0) {
         // if any chart filter values are not static strings, ignore
 
-        let allStaticStrings = item.chartFilters.every((filter) =>
-          Object.values(filter.value).every((value) => typeof value === 'string'),
-        )
+        let allStaticStrings =
+          item.chartFilters?.every((filter) =>
+            filter?.value && typeof filter.value === 'object'
+              ? Object.values(filter.value).every((value) => typeof value === 'string')
+              : false,
+          ) ?? false
         if (!allStaticStrings) {
           console.warn(
             `Cross filter values in item ${itemId} are not static strings, skipping cross filter check.`,

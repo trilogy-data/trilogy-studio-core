@@ -28,7 +28,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file
@@ -98,11 +98,10 @@ export class ChromaChartHelpers {
         this.eventHandlers.onBackgroundClick()
         return
       }
-
       this.eventHandlers.onDimensionClick({
         filters: { [xField.address]: xRange, [yField.address]: yRange },
         // TODO: be able to set brush ranges properly
-        // chart: { [config.xField]: xRange, [config.yField]: yRange },
+        chart: { [config.xField]: xRange, [config.yField]: yRange },
         append: false,
       })
     } else if (item && ['line', 'area'].includes(config.chartType)) {
@@ -124,7 +123,6 @@ export class ChromaChartHelpers {
       if (!values || !Array.isArray(values) || values.length === 0) {
         // Brush is being cleared - record the time and check if we should suppress background click
         this.brushState.lastBrushClearTime = Date.now()
-
 
         // If the last click time was within the coordination timeout, cancel the background click
         if (Date.now() - this.brushState.lastClickTime < COORDINATION_TIMEOUT) {
@@ -199,12 +197,15 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
   ): void {
-    
     const append = event.shiftKey
     if (!item || !item.datum) {
-      if (config.chartType === 'headline'  &&
-        Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT) {
-        console.log(`suppressing background click - within timeout of point click ${Date.now() - this.brushState.lastClickTime}ms`)
+      if (
+        config.chartType === 'headline' &&
+        Date.now() - this.brushState.lastClickTime < BACKGROUND_CLICK_SUPPRESSION_TIMEOUT
+      ) {
+        console.log(
+          `suppressing background click - within timeout of point click ${Date.now() - this.brushState.lastClickTime}ms`,
+        )
         return
       }
 
