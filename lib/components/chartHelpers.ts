@@ -98,7 +98,6 @@ export class ChromaChartHelpers {
         this.eventHandlers.onBackgroundClick()
         return
       }
-      console.log('Brush selection ranges:', { [config.xField]: xRange, [config.yField]: yRange })
       this.eventHandlers.onDimensionClick({
         filters: { [xField.address]: xRange, [yField.address]: yRange },
         // TODO: be able to set brush ranges properly
