@@ -15,7 +15,7 @@ interface VegaMark {
   [key: string]: any
 }
 
-interface VegaSpec {
+export interface VegaSpec {
   marks?: VegaMark[]
   [key: string]: any
 }
@@ -77,16 +77,46 @@ export function addLabelTransformToTextMarks(
   return modifiedSpec
 }
 
+const createBrushParam = (intChart: Array<Partial<ChartConfig>>, config: ChartConfig) => {
+  let value = {}
+
+  if (intChart.length === 0) {
+    return {
+      name: 'brush',
+      select: {
+        type: 'interval',
+
+        // value: intChart
+      },
+    }
+  }
+
+  value = {
+    x: intChart[0][config.xField as keyof typeof config],
+    y: intChart[0][config.yField as keyof typeof config],
+  }
+  return {
+    name: 'brush',
+    select: {
+      type: 'interval',
+
+      // value: intChart
+    },
+    value,
+  }
+}
+
 export const createPointChartSpec = (
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
-  intChart: Array<Partial<ChartConfig>>,
+  intChart: { [key: string]: string | number | Array<any> }[],
   currentTheme: string = 'light',
   isMobile: boolean = false,
   data: readonly Row[] = [],
 ) => {
   const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
+
   let baseLayer = {
     params: [
       {
@@ -105,13 +135,14 @@ export const createPointChartSpec = (
         },
         value: intChart,
       },
-      {
-        name: 'brush',
-        select: {
-          type: 'interval',
-        },
-        // value: intChart,
-      },
+      createBrushParam(
+        // @ts-ignore
+        intChart.filter((obj) => obj && (obj[config.xField] || obj[config.yField])).length > 0
+          ? // @ts-ignore
+            intChart.filter((obj) => obj[config.xField] || obj[config.yField])
+          : [],
+        config,
+      ),
     ],
     mark: {
       type: 'point',

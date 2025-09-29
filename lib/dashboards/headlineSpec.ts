@@ -93,49 +93,48 @@ const createHeadlineLayer = (
         },
         {
           name: `select_${index}`,
-          select: {type: "point", clear: false},
+          select: { type: 'point', clear: false },
           value: intChart,
-
         },
       ],
     }
     selectMarks = isMobile
       ? [
-        {
-          mark: {
-            type: 'rect',
-            stroke: {
-              expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+          {
+            mark: {
+              type: 'rect',
+              stroke: {
+                expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+              },
+              strokeWidth: 5,
+              width: 1,
+              height: 1,
+              fillOpacity: 0,
+              x: isMobile
+                ? { expr: `width/2 + (${xOffset} / 100) * width` }
+                : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+              y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
             },
-            strokeWidth: 5,
-            width: 1,
-            height: 1,
-            fillOpacity: 0,
-            x: isMobile
-              ? { expr: `width/2 + (${xOffset} / 100) * width` }
-              : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-            y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
           },
-        },
-      ]
+        ]
       : [
-        {
-          mark: {
-            type: 'rect',
-            stroke: {
-              expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+          {
+            mark: {
+              type: 'rect',
+              stroke: {
+                expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
+              },
+              strokeWidth: 5,
+              width: 1,
+              height: 1,
+              fillOpacity: 0,
+              x: isMobile
+                ? { expr: `width/2+ (${xOffset} / 100) * width` }
+                : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+              y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
             },
-            strokeWidth: 5,
-            width: 1,
-            height: 1,
-            fillOpacity: 0,
-            x: isMobile
-              ? { expr: `width/2+ (${xOffset} / 100) * width` }
-              : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-            y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
           },
-        },
-      ]
+        ]
   } else {
     topMark = {
       transform: [{ filter: `${valueToString(column, datum)}` }],
@@ -166,7 +165,7 @@ const createHeadlineLayer = (
         },
         {
           name: `select_${index}`,
-          select: {type: "point", clear: false},
+          select: { type: 'point', clear: false },
           value: intChart,
         },
       ],

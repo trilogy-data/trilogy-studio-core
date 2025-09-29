@@ -86,10 +86,10 @@ export default defineComponent({
       const selected = editorInstance.getSelection()
       let text: string | undefined =
         selected &&
-          !(
-            selected.startColumn === selected.endColumn &&
-            selected.startLineNumber === selected.endLineNumber
-          )
+        !(
+          selected.startColumn === selected.endColumn &&
+          selected.startLineNumber === selected.endLineNumber
+        )
           ? editorInstance.getModel()?.getValueInRange(selected)
           : editorInstance.getValue()
 
@@ -181,7 +181,6 @@ export default defineComponent({
           mountedMap.delete(props.context)
         }
       }
-
 
       console.log('Creating new editor instance')
       // Create editor

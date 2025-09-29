@@ -309,6 +309,7 @@ export default class QueryExecutionService {
               }
               results.push(resultObj)
               console.error('Error callback for ', queryResult.label, onFailure)
+              console.error('Error details:', error)
               if (onFailure && queryResult.label && onFailure[queryResult.label]) {
                 onFailure[queryResult.label](resultObj)
               }
