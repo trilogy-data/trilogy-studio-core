@@ -35,6 +35,7 @@ const TEST_CONSTANTS = {
 const mockDashboardStore = {
   dashboards: {} as Record<string, any>,
   addDashboard: vi.fn(),
+  warmDashboardQueries: vi.fn(), // Add this line
 }
 
 const mockConnectionStore = {
@@ -84,6 +85,9 @@ vi.mock('../../models/helpers', () => ({
   ModelImportService: vi.fn(() => mockModelImportService),
 }))
 
+const mockQueryExecutionService = {
+}
+
 describe('AutoImportComponent', () => {
   let wrapper: VueWrapper<any>
   let mockFetch: any
@@ -127,27 +131,28 @@ describe('AutoImportComponent', () => {
     ...overrides,
   })
 
-  const createWrapper = (urlParams: Record<string, string> = {}) => {
-    // Setup URL parameter mocks
-    vi.mocked(getDefaultValueFromHash).mockImplementation(
-      (key: string, defaultValue?: string | null) => {
-        return urlParams[key] || defaultValue || null
-      },
-    )
+const createWrapper = (urlParams: Record<string, string> = {}) => {
+  // Setup URL parameter mocks
+  vi.mocked(getDefaultValueFromHash).mockImplementation(
+    (key: string, defaultValue?: string | null) => {
+      return urlParams[key] || defaultValue || null
+    },
+  )
 
-    return mount(AutoImportComponent, {
-      global: {
-        provide: {
-          dashboardStore: mockDashboardStore,
-          connectionStore: mockConnectionStore,
-          editorStore: mockEditorStore,
-          modelStore: mockModelStore,
-          saveDashboards: mockSaveDashboards,
-          saveAll: mockSaveAll,
-        },
+  return mount(AutoImportComponent, {
+    global: {
+      provide: {
+        dashboardStore: mockDashboardStore,
+        connectionStore: mockConnectionStore,
+        editorStore: mockEditorStore,
+        modelStore: mockModelStore,
+        queryExecutionService: mockQueryExecutionService, 
+        saveDashboards: mockSaveDashboards,
+        saveAll: mockSaveAll,
       },
-    })
-  }
+    },
+  })
+}
 
   const setupSuccessfulImport = (connectionType: string = TEST_CONSTANTS.CONNECTIONS.DUCKDB) => {
     mockModelImportService.importModel.mockResolvedValue({
