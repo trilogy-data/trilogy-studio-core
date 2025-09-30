@@ -4,6 +4,7 @@ import { type DashboardStoreType } from '../../stores/dashboardStore'
 import { type ConnectionStoreType, connectionTypes } from '../../stores/connectionStore'
 import { type EditorStoreType } from '../../stores/editorStore'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
+import QueryExecutionService from '../../stores/queryExecutionService'
 import { ModelImportService } from '../../models/helpers'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
@@ -18,6 +19,7 @@ const dashboardStore = inject<DashboardStoreType>('dashboardStore')
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const editorStore = inject<EditorStoreType>('editorStore')
 const modelStore = inject<ModelConfigStoreType>('modelStore')
+const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 const saveDashboards = inject<Function>('saveDashboards')
 const saveAll = inject<Function>('saveAll')
 const screenNavigation = useScreenNavigation()
@@ -28,6 +30,7 @@ if (
   !editorStore ||
   !modelStore ||
   !saveDashboards ||
+  !queryExecutionService ||
   !saveAll
 ) {
   throw new Error('Required stores not provided')
@@ -223,6 +226,9 @@ const performImport = async () => {
     }
 
     importedDashboardId.value = importedDashboard.id
+
+
+    dashboardStore.warmDashboardQueries(importedDashboard.id, queryExecutionService, editorStore)
 
     // Save changes
     await saveAll()
