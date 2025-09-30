@@ -149,6 +149,26 @@ export default class TrilogyResolver {
     return crypto.createHash('md5').update(stringified).digest('hex')
   }
 
+  // Create normalized query cache key that's consistent between single and batch queries
+  private createQueryCacheKey(
+    query: string,
+    dialect: string,
+    sources: ContentInput[] | null,
+    imports: Import[] | null,
+    extraFilters: string[] | null,
+    parameters: Record<string, string | number | boolean> | null,
+  ): string {
+    const normalizedParams = {
+      query: query,
+      dialect: dialect,
+      full_model: { name: '', sources: sources || [] },
+      imports: imports || [],
+      extra_filters: extraFilters || [],
+      parameters: parameters || {},
+    }
+    return this.createHash(normalizedParams)
+  }
+
   getErrorMessage(error: any): string {
     let base = 'An error occurred.'
     if (error instanceof Error) {
@@ -278,11 +298,20 @@ export default class TrilogyResolver {
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
-    parameters: Record<string, string> | null = null,
+    parameters: Record<string, string | number | boolean> | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
       return { data: { generated_sql: query, columns: [], error: null } }
+    }
+
+    // Use the normalized cache key
+    const cacheKey = this.createQueryCacheKey(query, dialect, sources, imports, extraFilters, parameters)
+
+    // Check if result exists in cache
+    const cachedResult = this.queryCache.get(cacheKey)
+    if (cachedResult) {
+      return cachedResult
     }
 
     const requestParams = {
@@ -292,15 +321,6 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
-    }
-
-    // Generate hash of request params
-    const cacheKey = this.createHash(requestParams)
-
-    // Check if result exists in cache
-    const cachedResult = this.queryCache.get(cacheKey)
-    if (cachedResult) {
-      return cachedResult
     }
 
     // Not in cache, make the API call
@@ -326,9 +346,10 @@ export default class TrilogyResolver {
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
-    parameters: Record<string, string> | null = null,
+    parameters: Record<string, string | number | boolean> | null = null,
   ): Promise<BatchQueryResponse> {
-    const requestParams = {
+    // Check batch cache first
+    const batchRequestParams = {
       queries: queries,
       dialect: dialect,
       full_model: { name: '', sources: sources || [] },
@@ -336,33 +357,132 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
     }
-
-    // Generate hash of request params
-    const cacheKey = this.createHash(requestParams)
-
-    // // Check if result exists in cache
-    const cachedResult = this.batchQueryCache.get(cacheKey)
-    if (cachedResult) {
-      return cachedResult
+    const batchCacheKey = this.createHash(batchRequestParams)
+    const cachedBatchResult = this.batchQueryCache.get(batchCacheKey)
+    if (cachedBatchResult) {
+      return cachedBatchResult
     }
 
-    // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
+    // Check individual query cache and separate cached vs uncached queries
+    const cachedQueries: Array<{ index: number; result: QueryAtom }> = []
+    const uncachedQueries: Array<{ index: number; component: MultiQueryComponent }> = []
+
+    queries.forEach((queryComponent, index) => {
+      // Merge component-level filters and parameters with global ones
+      const mergedExtraFilters = [
+        ...(extraFilters || []),
+        ...(queryComponent.extra_filters || []),
+      ]
+      const mergedParameters = {
+        ...(parameters || {}),
+        ...(queryComponent.parameters || {}),
+      }
+
+      const cacheKey = this.createQueryCacheKey(
+        queryComponent.query,
+        dialect,
+        sources,
+        imports,
+        mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
+        Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
+      )
+
+      const cachedResult = this.queryCache.get(cacheKey)
+      if (cachedResult) {
+        cachedQueries.push({
+          index,
+          result: { ...cachedResult.data, label: queryComponent.label },
+        })
+      } else {
+        uncachedQueries.push({ index, component: queryComponent })
+      }
+    })
+
+    // If all queries are cached, return immediately
+    if (uncachedQueries.length === 0) {
+      const orderedResults = cachedQueries
+        .sort((a, b) => a.index - b.index)
+        .map((item) => item.result)
+
+      const response: BatchQueryResponse = {
+        data: { queries: orderedResults },
+      }
+
+      // Cache the full batch result
+      this.batchQueryCache.set(batchCacheKey, response)
+
+      return response
+    }
+
+    // Make API call for uncached queries only
+    const batchApiRequest = {
+      queries: uncachedQueries.map((item) => item.component),
+      dialect: dialect,
+      full_model: { name: '', sources: sources || [] },
+      imports: imports || [],
+      extra_filters: extraFilters || [],
+      parameters: parameters || {},
+    }
+
+    const apiResponse = await this.fetchWithErrorHandling(
       `${this.settingStore.settings.trilogyResolver}/generate_queries`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestParams),
+        body: JSON.stringify(batchApiRequest),
       },
     )
 
-    // Cache the result
-    this.batchQueryCache.set(cacheKey, response)
+    // Cache each newly fetched query individually
+    apiResponse.data.queries.forEach((queryAtom: QueryAtom, apiIndex: number) => {
+      const originalIndex = uncachedQueries[apiIndex].index
+      const queryComponent = uncachedQueries[apiIndex].component
 
-    return response
+      // Merge component-level filters and parameters with global ones
+      const mergedExtraFilters = [
+        ...(extraFilters || []),
+        ...(queryComponent.extra_filters || []),
+      ]
+      const mergedParameters = {
+        ...(parameters || {}),
+        ...(queryComponent.parameters || {}),
+      }
+
+      const cacheKey = this.createQueryCacheKey(
+        queryComponent.query,
+        dialect,
+        sources,
+        imports,
+        mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
+        Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
+      )
+
+      this.queryCache.set(cacheKey, { data: queryAtom })
+
+      // Add to cached queries with original index
+      cachedQueries.push({
+        index: originalIndex,
+        result: { ...queryAtom, label: queryComponent.label },
+      })
+    })
+
+    // Combine and order results
+    const orderedResults = cachedQueries
+      .sort((a, b) => a.index - b.index)
+      .map((item) => item.result)
+
+    const finalResponse: BatchQueryResponse = {
+      data: { queries: orderedResults },
+    }
+
+    // Cache the full batch result
+    this.batchQueryCache.set(batchCacheKey, finalResponse)
+
+    return finalResponse
   }
+
   async resolveModel(name: string, sources: ContentInput[]): Promise<ModelConfig> {
     const requestParams = {
       name: name,
@@ -403,14 +523,22 @@ export default class TrilogyResolver {
     this.validateCache.clear()
     this.formatCache.clear()
     this.queryCache.clear()
+    this.batchQueryCache.clear()
     this.modelCache.clear()
   }
 
-  getCacheStats(): { validate: number; format: number; query: number; model: number } {
+  getCacheStats(): { 
+    validate: number
+    format: number
+    query: number
+    batchQuery: number
+    model: number
+  } {
     return {
       validate: this.validateCache.size(),
       format: this.formatCache.size(),
       query: this.queryCache.size(),
+      batchQuery: this.batchQueryCache.size(),
       model: this.modelCache.size(),
     }
   }
