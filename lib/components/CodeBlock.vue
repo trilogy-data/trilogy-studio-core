@@ -39,35 +39,54 @@
 import { defineComponent, ref, onMounted, onUpdated, type PropType } from 'vue'
 import Prism from 'prismjs'
 
-// Define your extended SQL language (e.g., "MySQLExtension")
-Prism.languages.trilogy = {
-  // Inherit all properties from the SQL language definition
-  ...Prism.languages.sql,
+// Function to ensure SQL language is loaded
+const ensureSqlLanguage = async () => {
+  if (!Prism.languages.sql) {
+    // Dynamically import SQL if not already loaded
+    //@ts-ignore
+    await import('prismjs/components/prism-sql')
+  }
+}
 
-  // Override or add new keywords
-  keyword: [
-    // Include original SQL keywords (if using an array)
-    ...(Array.isArray(Prism.languages.sql.keyword)
-      ? Prism.languages.sql.keyword
-      : Prism.languages.sql.keyword
-        ? [Prism.languages.sql.keyword]
-        : []),
-    /\b(?:DATASOURCE)\b/i,
-    /\b(?:GRAIN)\b/i,
-    /\b(?:ADDRESS)\b/i,
-    /\b(?:DEF)\b/i,
-    /\b(?:IMPORT)\b/i,
-    /\b(?:MERGE)\b/i,
-    /\b(?:HAVING_CLAUSE)\b/i,
-    /\b(?:WHERE_CLAUSE)\b/i,
-    /\b(?:SELECT_LIST)\b/i,
-    /\b(?:ORDER_BY)\b/i,
-    /\b(?:SELECT_STATEMENT)\b/i,
-    /\b(?:SELECT_ITEM)\b/i,
-    /\b(?:ALIGN_CLAUSE)\b/i,
-    /\b(?:ALIGN_ITEM)\b/i,
-    /\b(?:IDENTIFIER)\b/i,
-  ],
+// Function to define trilogy language
+const defineTrilogyLanguage = () => {
+  if (!Prism.languages.trilogy && Prism.languages.sql) {
+    Prism.languages.trilogy = {
+      // Inherit all properties from the SQL language definition
+      ...Prism.languages.sql,
+
+      // Override or add new keywords
+      keyword: [
+        // Include original SQL keywords (if using an array)
+        ...(Array.isArray(Prism.languages.sql.keyword)
+          ? Prism.languages.sql.keyword
+          : Prism.languages.sql.keyword
+            ? [Prism.languages.sql.keyword]
+            : []),
+        /\b(?:DATASOURCE)\b/i,
+        /\b(?:GRAIN)\b/i,
+        /\b(?:ADDRESS)\b/i,
+        /\b(?:DEF)\b/i,
+        /\b(?:IMPORT)\b/i,
+        /\b(?:MERGE)\b/i,
+        /\b(?:HAVING_CLAUSE)\b/i,
+        /\b(?:WHERE_CLAUSE)\b/i,
+        /\b(?:SELECT_LIST)\b/i,
+        /\b(?:ORDER_BY)\b/i,
+        /\b(?:SELECT_STATEMENT)\b/i,
+        /\b(?:SELECT_ITEM)\b/i,
+        /\b(?:ALIGN_CLAUSE)\b/i,
+        /\b(?:ALIGN_ITEM)\b/i,
+        /\b(?:IDENTIFIER)\b/i,
+      ],
+    }
+  }
+}
+
+// Function to ensure both SQL and trilogy languages are ready
+const ensureLanguagesReady = async () => {
+  await ensureSqlLanguage()
+  defineTrilogyLanguage()
 }
 
 export default defineComponent({
@@ -91,6 +110,7 @@ export default defineComponent({
     const codeBlock = ref<HTMLElement | null>(null)
     const copied = ref(false)
     const codeClass = ref(`language-${props.language}`)
+    const languagesReady = ref(false)
 
     // Method to copy code to clipboard
     const copyCode = async () => {
@@ -113,7 +133,13 @@ export default defineComponent({
       }
     }
 
-    const updateRefs = () => {
+    const updateRefs = async () => {
+      // Block until languages are ready
+      if (!languagesReady.value) {
+        await ensureLanguagesReady()
+        languagesReady.value = true
+      }
+
       if (codeBlock.value) {
         if (Array.isArray(codeBlock.value)) {
           codeBlock.value.forEach((block) => {
@@ -125,7 +151,9 @@ export default defineComponent({
       }
     }
 
-    onMounted(() => {
+    onMounted(async () => {
+      await ensureLanguagesReady()
+      languagesReady.value = true
       updateRefs()
     })
 

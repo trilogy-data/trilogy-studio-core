@@ -5,22 +5,23 @@ import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
 import { ARRAY_IMPLICIT_COLUMN } from './constants'
+import * as arrow from 'apache-arrow'
 
 // Select a bundle based on browser checks
 function isFirefox(): boolean {
   return typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('firefox')
 }
+
 interface DuckDBType {
   typeId: number
   precision?: number
 }
 
-// use a singleton pattern to help avoid memoery issues
+// use a singleton pattern to help avoid memory issues
 const connectionCache: Record<
   string,
   { db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }
 > = {}
-
 async function createDuckDB(
   connectionName: string = 'default',
 ): Promise<{ db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }> {
@@ -46,11 +47,11 @@ async function createDuckDB(
   await db.open(
     isFirefox()
       ? {
-          filesystem: {
-            reliableHeadRequests: false,
-            allowFullHTTPReads: true,
-          },
-        }
+        filesystem: {
+          reliableHeadRequests: false,
+          allowFullHTTPReads: true,
+        },
+      }
       : {},
   )
   const connection = await db.connect()
@@ -60,12 +61,14 @@ async function createDuckDB(
 
   return { db, connection }
 }
-// @ts-ignore
+
 export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
   private connection: duckdb.AsyncDuckDBConnection
   // @ts-ignore
   public db: duckdb.AsyncDuckDB
+  private currentQueryIdentifier: string | null = null
+
   static fromJSON(fields: { name: string; model: string | null }): DuckDBConnection {
     let base = new DuckDBConnection(fields.name)
     if (fields.model) {
@@ -94,13 +97,189 @@ export default class DuckDBConnection extends BaseConnection {
     this.query_type = 'duckdb'
   }
 
+  // FILE PROCESSING METHODS
+
+  private sanitizeTableName(name: string): string {
+    // Replace non-alphanumeric characters with underscores
+    const sanitized = name.replace(/[^a-zA-Z0-9]/g, '_')
+    // Ensure the name doesn't start with a number
+    return /^\d/.test(sanitized) ? `t_${sanitized}` : sanitized
+  }
+
+  private getFileType(file: File): 'csv' | 'parquet' | 'db' {
+    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+      return 'csv'
+    } else if (file.name.endsWith('.parquet')) {
+      return 'parquet'
+    } else {
+      return 'db'
+    }
+  }
+
+  private mapArrowTypeToDuckDB(arrowType: arrow.DataType): string {
+    const typeId = arrowType.typeId
+
+    switch (typeId) {
+      case arrow.Type.Int8:
+      case arrow.Type.Int16:
+      case arrow.Type.Int32:
+      case arrow.Type.Uint8:
+      case arrow.Type.Uint16:
+      case arrow.Type.Uint32:
+        return 'INTEGER'
+      case arrow.Type.Int64:
+      case arrow.Type.Uint64:
+        return 'BIGINT'
+      case arrow.Type.Float:
+        return 'DOUBLE'
+      case arrow.Type.Timestamp:
+        return 'TIMESTAMP'
+      case arrow.Type.Date:
+        return 'DATE'
+      case arrow.Type.Bool:
+        return 'BOOLEAN'
+      case arrow.Type.Utf8:
+      case arrow.Type.Binary:
+      default:
+        return 'VARCHAR'
+    }
+  }
+
+  async processCSV(file: File, tableName: string, onProgress?: (message: string) => void) {
+    const tempConnection = await this.db.connect()
+
+    try {
+      onProgress?.(`Analyzing CSV structure...`)
+
+      // First, peek at the file to determine headers and types
+      const sampleQuery = await tempConnection.query(`
+        SELECT * FROM read_csv_auto('${file.name}', AUTO_DETECT=TRUE, SAMPLE_SIZE=1000) LIMIT 5
+      `)
+
+      // Get column names and types from the sample
+      const columnInfo = sampleQuery.schema.fields.map((field) => ({
+        name: field.name,
+        type: this.mapArrowTypeToDuckDB(field.type),
+      }))
+
+      if (columnInfo.length === 0) {
+        throw new Error('CSV file has no columns')
+      }
+
+      // Create the table with the detected schema
+      const columns = columnInfo
+        .map((col) => `"${col.name.replace(/[^a-zA-Z0-9_]/g, '_')}" ${col.type}`)
+        .join(', ')
+
+      await tempConnection.query(`CREATE TABLE ${tableName} (${columns})`)
+
+      // Insert the data using DuckDB's native CSV reader
+      onProgress?.(`Importing CSV data...`)
+
+      await tempConnection.query(`
+        INSERT INTO ${tableName} 
+        SELECT * FROM read_csv_auto('${file.name}', 
+          AUTO_DETECT=TRUE, 
+          HEADER=TRUE,
+          SAMPLE_SIZE=-1)
+      `)
+    } finally {
+      await tempConnection.close()
+    }
+  }
+
+  async processParquet(file: File, tableName: string, onProgress?: (message: string) => void) {
+    const tempConnection = await this.db.connect()
+
+    try {
+      onProgress?.(`Analyzing Parquet structure...`)
+
+      // For Parquet, we can directly create a table from the file
+      await tempConnection.query(`
+        CREATE TABLE ${tableName} AS 
+        SELECT * FROM read_parquet('${file.name}')
+      `)
+    } finally {
+      await tempConnection.close()
+    }
+  }
+
+  async processDuckDBFile(file: File, onProgress?: (message: string) => void): Promise<string> {
+    onProgress?.(`Attaching database ${file.name}...`)
+
+    // Generate database alias from file name
+    const fileName = file.name.replace('.db', '')
+    const dbAlias = this.sanitizeTableName(fileName)
+
+    // Register the file in DuckDB's virtual file system
+    await this.db.registerFileHandle(
+      file.name,
+      file,
+      duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
+      true,
+    )
+
+    const tempConnection = await this.db.connect()
+
+    try {
+      // Attach the database
+      await tempConnection.query(`ATTACH '${file.name}' AS ${dbAlias}`)
+
+      // Update databases
+      await this.getDatabases()
+      await this.refreshDatabase(dbAlias)
+
+      return dbAlias
+    } finally {
+      await tempConnection.close()
+    }
+  }
+
+  async importFile(file: File, onProgress?: (message: string) => void): Promise<{ type: 'table' | 'database', name: string }> {
+    onProgress?.(`Processing ${file.name}...`)
+
+    const fileType = this.getFileType(file)
+
+    if (fileType === 'db') {
+      const dbAlias = await this.processDuckDBFile(file, onProgress)
+      return { type: 'database', name: dbAlias }
+    } else {
+      // Generate table name from file name
+      const fileName = file.name.replace(`.${fileType}`, '')
+      const tableName = this.sanitizeTableName(fileName)
+
+      onProgress?.(`Creating table ${tableName}...`)
+
+      // Register the file in DuckDB's virtual file system
+      await this.db.registerFileHandle(
+        file.name,
+        file,
+        duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
+        true,
+      )
+
+      if (fileType === 'csv') {
+        await this.processCSV(file, tableName, onProgress)
+      } else {
+        await this.processParquet(file, tableName, onProgress)
+      }
+
+      // Refresh the memory database
+      await this.refreshDatabase('memory')
+
+      return { type: 'table', name: tableName }
+    }
+  }
+
+  // EXISTING METHODS
+
   processSchema(schema: any): Map<string, ResultColumn> {
     const headers = new Map<string, ResultColumn>()
     schema.forEach((field: any) => {
       headers.set(field.name, {
         name: field.name,
         type: this.mapDuckDBTypeToColumnType(field.type),
-        description: '', // Add a description if necessary
+        description: '',
         scale: field.type.scale,
         precision: field.type.precision,
         children: field.type.children ? this.processSchema(field.type.children) : undefined,
@@ -114,8 +293,6 @@ export default class DuckDBConnection extends BaseConnection {
       throw new Error('Expected Uint32Array of length 4')
     }
 
-    // Convert each 32-bit chunk to BigInt and combine
-    // arr[0] is least significant, arr[3] is most significant
     const chunk0 = BigInt(arr[0])
     const chunk1 = BigInt(arr[1]) << 32n
     const chunk2 = BigInt(arr[2]) << 64n
@@ -125,11 +302,9 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   handleNumber(value: any): number {
-    // Check if it's a Uint32Array from DuckDB
     if (value instanceof Uint32Array && value.length === 4) {
       const bigIntValue = this.parseUint32ArrayToBigInt(value)
 
-      // If it fits in JavaScript's safe integer range, return as number
       if (
         bigIntValue <= BigInt(Number.MAX_SAFE_INTEGER) &&
         bigIntValue >= BigInt(Number.MIN_SAFE_INTEGER)
@@ -137,16 +312,13 @@ export default class DuckDBConnection extends BaseConnection {
         return Number(bigIntValue)
       }
 
-      // Otherwise return as BigInt
       return Number(bigIntValue)
     }
 
-    // Handle other types normally
     if (typeof value === 'number' || typeof value === 'bigint') {
       return Number(value)
     }
 
-    // Try to parse as number
     const numValue = Number(value)
     if (Number.isFinite(numValue)) {
       return numValue
@@ -154,6 +326,7 @@ export default class DuckDBConnection extends BaseConnection {
 
     throw new Error(`Cannot parse value: ${value}`)
   }
+
   processRow(row: any, headers: Map<string, ResultColumn>): any {
     let processedRow: Record<string, any> = {}
     Object.keys(row).forEach((key) => {
@@ -167,13 +340,10 @@ export default class DuckDBConnection extends BaseConnection {
             break
           case ColumnType.FLOAT:
             const scale = column.scale || 0
-            // Convert integer to float by dividing by 10^scale
             if (row[key] !== null && row[key] !== undefined) {
               const top = this.handleNumber(row[key])
-              // if it's a bigint, convert scaleFactor to bigint
               processedRow[key] = top / Math.pow(10, scale)
             }
-            // else is only for null/undefined
             break
           case ColumnType.DATE:
             processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
@@ -188,7 +358,6 @@ export default class DuckDBConnection extends BaseConnection {
               break
             }
             const newv = arrayData.map((item: any) => {
-              // l is the constant returned by duckdb for the array
               return this.processRow({ [ARRAY_IMPLICIT_COLUMN]: item }, column.children!)
             })
             processedRow[key] = newv
@@ -196,8 +365,6 @@ export default class DuckDBConnection extends BaseConnection {
           case ColumnType.STRUCT:
             processedRow[key] = row[key] ? this.processRow(row[key], column.children!) : null
             break
-          // row[key] = row[key] ? this.processRow(row[key], column.children!) : null
-          // break
           default:
             processedRow[key] = row[key]
             break
@@ -209,53 +376,53 @@ export default class DuckDBConnection extends BaseConnection {
     return processedRow
   }
 
-  async query_core(sql: string, parameters: Record<string, any> | null = null): Promise<Results> {
-    console.log('Executing duckdb query')
-    let result
-    if (parameters) {
-      let params = []
-      // duckdb uses ? for parameter placehodlers
-      // for each name, value pair in the parameters object, in the right order,
-      // replace one instance of the variable name with ? and inject a value into our params list
-      // for example select :test, :test2 where :test = 1 would need to interleave [test.value, test2.value, test.value]
+  async query_core(sql: string, parameters: Record<string, any> | null = null, identifier: string | null = null): Promise<Results> {
+    console.log('Executing duckdb query', identifier)
 
-      // Create a regex to find all parameter placeholders in the format :paramName
-      const paramRegex = /(:[\w]+)/g
-      let modifiedSql = sql
+    // Track the currently executing query
+    this.currentQueryIdentifier = identifier
 
-      // Find all parameter placeholders in the SQL query
-      const matches = Array.from(sql.matchAll(paramRegex))
+    try {
+      let result
+      if (parameters) {
+        let params = []
+        const paramRegex = /(:[\w]+)/g
+        let modifiedSql = sql
 
-      // For each match, replace the parameter with ? and add its value to the params array
-      for (const match of matches) {
-        const paramName = match[1] // Extract the parameter name without the colon
-        if (paramName in parameters) {
-          // Replace only the first occurrence of the parameter with ?
-          modifiedSql = modifiedSql.replace(`:${paramName}`, '?')
-          // Add the parameter value to the params array
-          params.push(parameters[paramName])
+        const matches = Array.from(sql.matchAll(paramRegex))
+
+        for (const match of matches) {
+          const paramName = match[1]
+          if (paramName in parameters) {
+            modifiedSql = modifiedSql.replace(`:${paramName}`, '?')
+            params.push(parameters[paramName])
+          }
         }
+
+        let prepared = await this.connection.prepare(modifiedSql)
+        result = await prepared.query(...params)
+        await prepared.close()
+      } else {
+        result = await this.connection.query(sql)
       }
 
-      let prepared = await this.connection.prepare(modifiedSql)
-      result = await prepared.query(...params)
-      await prepared.close()
-    } else {
-      result = await this.connection.query(sql)
-    }
+      const schema = result.schema.fields
+      const headers = this.processSchema(schema)
+      const data = result.toArray().map((row) => row.toJSON())
+      const finalData: any[] = []
+      data.forEach((row) => {
+        finalData.push(this.processRow(row, headers))
+      })
 
-    const schema = result.schema.fields
-    const headers = this.processSchema(schema)
-    // Map data rows
-    const data = result.toArray().map((row) => row.toJSON())
-    const finalData: any[] = []
-    data.forEach((row) => {
-      finalData.push(this.processRow(row, headers))
-    })
-    return new Results(headers, finalData)
+      return new Results(headers, finalData)
+    } finally {
+      // Clear the identifier when query completes (successfully or with error)
+      if (this.currentQueryIdentifier === identifier) {
+        this.currentQueryIdentifier = null
+      }
+    }
   }
 
-  // Helper to map DuckDB column types to your ColumnType enum
   private mapDuckDBTypeToColumnType(duckDBType: DuckDBType): ColumnType {
     switch (duckDBType.typeId) {
       case 5:
@@ -278,13 +445,13 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.ARRAY
       default:
         console.log('Unknown DuckDB int type:', duckDBType)
-        return ColumnType.UNKNOWN // Use a fallback if necessary
+        return ColumnType.UNKNOWN
     }
   }
 
   private mapDuckDBStringTypeToColumnType(duckDBType: string): ColumnType {
     if (duckDBType.startsWith('DECIMAL')) {
-      return ColumnType.NUMERIC // or ColumnType.DECIMAL if you have one
+      return ColumnType.NUMERIC
     }
 
     switch (duckDBType) {
@@ -306,7 +473,56 @@ export default class DuckDBConnection extends BaseConnection {
         return ColumnType.DATETIME
       default:
         console.log('Unknown DuckDB type:', duckDBType)
-        return ColumnType.UNKNOWN // Use a fallback if necessary
+        return ColumnType.UNKNOWN
+    }
+  }
+
+  async getTable(database: string, table: string, schema: string | null): Promise<Table> {
+    const schemaName = schema || 'main'
+
+    // First try to get it from local cache
+    const cachedTable = this.getLocalTable(database, schemaName, table)
+    if (cachedTable) {
+      return cachedTable
+    }
+
+    // If not in cache, fetch it from the database
+    const tables = await this.getTables(database, schemaName)
+    const foundTable = tables.find(t => t.name === table)
+
+    if (!foundTable) {
+      throw new Error(`Table ${table} not found in schema ${schemaName} of database ${database}`)
+    }
+
+    // Fetch columns for the table
+    const columns = await this.getColumns(database, schemaName, table)
+    foundTable.columns = columns
+
+    return foundTable
+  }
+
+  async cancelQuery(identifier: string): Promise<boolean> {
+    // Check if the identifier matches the currently executing query
+    if (this.currentQueryIdentifier !== identifier) {
+      console.warn(
+        `Cannot cancel query ${identifier}: it is not currently executing (current: ${this.currentQueryIdentifier})`
+      )
+      return false
+    }
+
+    try {
+      // DuckDB WASM's cancelSent() cancels the last query sent on this connection
+      const result = await this.connection.cancelSent()
+      if (result) {
+        console.log(`Successfully cancelled query: ${identifier}`)
+        this.currentQueryIdentifier = null
+      } else {
+        console.warn(`Failed to cancel query: ${identifier} (query may have already completed)`)
+      }
+      return result
+    } catch (error) {
+      console.error(`Error cancelling query ${identifier}:`, error)
+      return false
     }
   }
 
@@ -360,7 +576,6 @@ export default class DuckDBConnection extends BaseConnection {
       return new Column(
         name,
         type,
-        // the sql results will be with a string
         this.mapDuckDBStringTypeToColumnType(type),
         nullable,
         key === 'PRI',
@@ -370,6 +585,7 @@ export default class DuckDBConnection extends BaseConnection {
       )
     })
   }
+
   mapShowSchemaResult(showSchemaResult: any[], database: string): Schema[] {
     let tables: Table[] = []
     return showSchemaResult
@@ -378,6 +594,7 @@ export default class DuckDBConnection extends BaseConnection {
         return new Schema(row.schema_name, tables, database)
       })
   }
+
   mapShowTablesResult(showTablesResult: any[], database: string, schema: string): Table[] {
     let columns: Column[] = []
     return showTablesResult.map((row) => {
@@ -393,7 +610,6 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   mapShowDatabasesResult(showDatabaseResult: any[]): Database[] {
-    // Convert map to Database[] array
     let schemas: Schema[] = []
     return showDatabaseResult.map((row) => {
       return new Database(row.database_name, schemas)
