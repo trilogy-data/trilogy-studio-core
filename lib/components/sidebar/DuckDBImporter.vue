@@ -7,15 +7,8 @@
     :class="{ 'drag-active': isDragging }"
   >
     <div class="upload-area">
-      <div v-if="lastImportedTable && !isLoading" class="success-message">
-        <span
-          >Successfully imported <strong>{{ lastImportedTable }}</strong></span
-        >
-      </div>
-      <div v-else-if="lastAttachedDatabase && !isLoading" class="success-message">
-        <span
-          >Successfully attached database <strong>{{ lastAttachedDatabase }}</strong></span
-        >
+      <div v-if="successMessage && !isLoading" class="success-message">
+        <span>{{ successMessage }}</span>
       </div>
       <div v-else-if="!isLoading">
         <div class="truncate-text">
@@ -43,19 +36,13 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import * as duckdb from '@duckdb/duckdb-wasm'
-import * as arrow from 'apache-arrow'
-import BaseConnection from '../../connections/base'
+import DuckDBConnection from '../../connections/duckdb'
 
 export default defineComponent({
   name: 'FileUpload',
   props: {
-    db: {
-      type: (Object as () => duckdb.AsyncDuckDB) || null,
-      required: true,
-    },
     connection: {
-      type: Object as () => BaseConnection,
+      type: Object as () => DuckDBConnection,
       required: true,
     },
   },
@@ -63,8 +50,7 @@ export default defineComponent({
     const isDragging = ref(false)
     const isLoading = ref(false)
     const loadingMessage = ref('Processing file...')
-    const lastImportedTable = ref('')
-    const lastAttachedDatabase = ref('')
+    const successMessage = ref('')
     const fileInput = ref<HTMLInputElement | null>(null)
 
     const handleDragOver = () => {
@@ -105,64 +91,33 @@ export default defineComponent({
       )
     }
 
-    const getFileType = (file: File): 'csv' | 'parquet' | 'db' => {
-      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-        return 'csv'
-      } else if (file.name.endsWith('.parquet')) {
-        return 'parquet'
-      } else {
-        return 'db'
-      }
-    }
-
     const processFile = async (file: File) => {
       try {
         isLoading.value = true
         loadingMessage.value = `Processing ${file.name}...`
 
-        const fileType = getFileType(file)
+        // Use the connection's importFile method
+        const result = await props.connection.importFile(file, (message: string) => {
+          loadingMessage.value = message
+        })
 
-        if (fileType === 'db') {
-          await processDuckDBFile(file)
+        // Update success message based on result type
+        if (result.type === 'database') {
+          successMessage.value = `Successfully attached database <strong>${result.name}</strong>`
         } else {
-          // Generate table name from file name
-          const fileName = file.name.replace(`.${fileType}`, '')
-          const tableName = sanitizeTableName(fileName)
+          successMessage.value = `Successfully imported <strong>${result.name}</strong>`
+        }
 
-          loadingMessage.value = `Creating table ${tableName}...`
+        isLoading.value = false
 
-          // Register the file in DuckDB's virtual file system
-          await props.db.registerFileHandle(
-            file.name,
-            file,
-            duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-            true,
-          )
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          successMessage.value = ''
+        }, 5000)
 
-          // Create a connection
-          const connection = await props.db.connect()
-
-          try {
-            if (fileType === 'csv') {
-              await processCSV(connection, file, tableName)
-            } else {
-              await processParquet(connection, file, tableName)
-            }
-
-            // Update state and notify parent
-            lastImportedTable.value = tableName
-            lastAttachedDatabase.value = ''
-            isLoading.value = false
-            props.connection.refreshDatabase('memory')
-
-            // set a timeout to clear the lastImportedTable
-            setTimeout(() => {
-              lastImportedTable.value = ''
-            }, 5000)
-          } finally {
-            // Always close the connection
-            connection.close()
-          }
+        // Reset file input
+        if (fileInput.value) {
+          fileInput.value.value = ''
         }
       } catch (error) {
         isLoading.value = false
@@ -173,154 +128,11 @@ export default defineComponent({
       }
     }
 
-    const processDuckDBFile = async (file: File) => {
-      try {
-        loadingMessage.value = `Attaching database ${file.name}...`
-
-        // Generate database alias from file name
-        const fileName = file.name.replace('.db', '')
-        const dbAlias = sanitizeTableName(fileName)
-
-        // Register the file in DuckDB's virtual file system
-        await props.db.registerFileHandle(
-          file.name,
-          file,
-          duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-          true,
-        )
-
-        // Create a connection
-        const connection = await props.db.connect()
-
-        try {
-          // Attach the database
-          await connection.query(`ATTACH '${file.name}' AS ${dbAlias}`)
-
-          // Update state and notify parent
-          lastAttachedDatabase.value = dbAlias
-          lastImportedTable.value = ''
-          isLoading.value = false
-          await props.connection.getDatabases()
-          await props.connection.refreshDatabase(dbAlias)
-
-          // set a timeout to clear the lastAttachedDatabase
-          setTimeout(() => {
-            lastAttachedDatabase.value = ''
-          }, 5000)
-        } finally {
-          // Always close the connection
-          connection.close()
-        }
-      } catch (error) {
-        isLoading.value = false
-        console.error(`Error attaching database ${file.name}:`, error)
-        alert(
-          `Error attaching database ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        )
-      }
-    }
-
-    const processCSV = async (
-      connection: duckdb.AsyncDuckDBConnection,
-      file: File,
-      tableName: string,
-    ) => {
-      loadingMessage.value = `Analyzing CSV structure...`
-
-      // First, peek at the file to determine headers and types
-      const sampleQuery = await connection.query(`
-        SELECT * FROM read_csv_auto('${file.name}', AUTO_DETECT=TRUE, SAMPLE_SIZE=1000) LIMIT 5
-      `)
-
-      // Get column names and types from the sample
-      const columnInfo = sampleQuery.schema.fields.map((field) => ({
-        name: field.name,
-        type: mapArrowTypeToDuckDB(field.type),
-      }))
-
-      if (columnInfo.length === 0) {
-        throw new Error('CSV file has no columns')
-      }
-
-      // Create the table with the detected schema
-      const columns = columnInfo
-        .map((col) => `"${col.name.replace(/[^a-zA-Z0-9_]/g, '_')}" ${col.type}`)
-        .join(', ')
-
-      await connection.query(`CREATE TABLE ${tableName} (${columns})`)
-
-      // Insert the data using DuckDB's native CSV reader
-      loadingMessage.value = `Importing CSV data...`
-
-      await connection.query(`
-        INSERT INTO ${tableName} 
-        SELECT * FROM read_csv_auto('${file.name}', 
-          AUTO_DETECT=TRUE, 
-          HEADER=TRUE,
-          SAMPLE_SIZE=-1)
-      `)
-    }
-
-    const processParquet = async (
-      connection: duckdb.AsyncDuckDBConnection,
-      file: File,
-      tableName: string,
-    ) => {
-      loadingMessage.value = `Analyzing Parquet structure...`
-
-      // For Parquet, we can directly create a table from the file
-      await connection.query(`
-        CREATE TABLE ${tableName} AS 
-        SELECT * FROM read_parquet('${file.name}')
-      `)
-    }
-
-    // Helper function to map Arrow types to DuckDB types
-    const mapArrowTypeToDuckDB = (arrowType: arrow.DataType): string => {
-      // Check the type ID instead of instanceof
-      const typeId = arrowType.typeId
-
-      // Use arrow.Type enum for comparison
-      switch (typeId) {
-        case arrow.Type.Int8:
-        case arrow.Type.Int16:
-        case arrow.Type.Int32:
-        case arrow.Type.Uint8:
-        case arrow.Type.Uint16:
-        case arrow.Type.Uint32:
-          return 'INTEGER'
-        case arrow.Type.Int64:
-        case arrow.Type.Uint64:
-          return 'BIGINT'
-        case arrow.Type.Float:
-          return 'DOUBLE'
-        case arrow.Type.Timestamp:
-          return 'TIMESTAMP'
-        case arrow.Type.Date:
-          return 'DATE'
-        case arrow.Type.Bool:
-          return 'BOOLEAN'
-        case arrow.Type.Utf8:
-        case arrow.Type.Binary:
-        default:
-          return 'VARCHAR'
-      }
-    }
-
-    const sanitizeTableName = (name: string): string => {
-      // Replace non-alphanumeric characters with underscores
-      const sanitized = name.replace(/[^a-zA-Z0-9]/g, '_')
-
-      // Ensure the name doesn't start with a number
-      return /^\d/.test(sanitized) ? `t_${sanitized}` : sanitized
-    }
-
     return {
       isDragging,
       isLoading,
       loadingMessage,
-      lastImportedTable,
-      lastAttachedDatabase,
+      successMessage,
       fileInput,
       handleDragOver,
       handleDragLeave,
