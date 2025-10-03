@@ -259,7 +259,7 @@
 
 <script lang="ts">
 import { defineComponent, inject, ref, computed, nextTick } from 'vue'
-import { ModelConfig, ModelSource } from '../../models' // Adjust the import path
+import { ModelConfig, ModelSource } from '../../models' 
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
