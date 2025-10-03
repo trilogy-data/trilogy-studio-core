@@ -209,8 +209,10 @@ export default class DuckDBConnection extends BaseConnection {
 
     // Generate database alias from file name
     const fileName = file.name.replace('.db', '')
+    
     const dbAlias = this.sanitizeTableName(fileName)
-
+    const tempConnection = await this.db.connect()
+    await tempConnection.query(`DETACH DATABASE IF EXISTS ${dbAlias}`)
     // Register the file in DuckDB's virtual file system
     await this.db.registerFileHandle(
       file.name,
@@ -219,7 +221,6 @@ export default class DuckDBConnection extends BaseConnection {
       true,
     )
 
-    const tempConnection = await this.db.connect()
 
     try {
       // Attach the database
@@ -235,41 +236,43 @@ export default class DuckDBConnection extends BaseConnection {
     }
   }
 
-  async importFile(file: File, onProgress?: (message: string) => void): Promise<{ type: 'table' | 'database', name: string }> {
-    onProgress?.(`Processing ${file.name}...`)
-
-    const fileType = this.getFileType(file)
-
-    if (fileType === 'db') {
-      const dbAlias = await this.processDuckDBFile(file, onProgress)
-      return { type: 'database', name: dbAlias }
+  async importFile(
+  file: File, 
+  onProgress?: (message: string) => void
+): Promise<{ type: 'table' | 'database', name: string }> {
+  onProgress?.(`Processing ${file.name}...`)
+  const fileType = this.getFileType(file)
+  
+  if (fileType === 'db') {
+    const dbAlias = await this.processDuckDBFile(file, onProgress)
+    return { type: 'database', name: dbAlias }
+  } else {
+    // Generate table name from file name
+    const fileName = file.name.replace(`.${fileType}`, '')
+    const tableName = this.sanitizeTableName(fileName)
+    onProgress?.(`Creating table ${tableName}...`)
+    
+    // Register the file in DuckDB's virtual file system
+    await this.db.registerFileHandle(
+      file.name,
+      file,
+      duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
+      true,
+    )
+    
+    if (fileType === 'csv') {
+      await this.processCSV(file, tableName, onProgress)
     } else {
-      // Generate table name from file name
-      const fileName = file.name.replace(`.${fileType}`, '')
-      const tableName = this.sanitizeTableName(fileName)
-
-      onProgress?.(`Creating table ${tableName}...`)
-
-      // Register the file in DuckDB's virtual file system
-      await this.db.registerFileHandle(
-        file.name,
-        file,
-        duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-        true,
-      )
-
-      if (fileType === 'csv') {
-        await this.processCSV(file, tableName, onProgress)
-      } else {
-        await this.processParquet(file, tableName, onProgress)
-      }
-
-      // Refresh the memory database
-      await this.refreshDatabase('memory')
-
-      return { type: 'table', name: tableName }
+      await this.processParquet(file, tableName, onProgress)
     }
+    
+    // Refresh the memory database
+    await this.refreshDatabase('memory')
+    return { type: 'table', name: tableName }
   }
+}
+
+
 
   // EXISTING METHODS
 
