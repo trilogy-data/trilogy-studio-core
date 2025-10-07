@@ -185,13 +185,13 @@ export default abstract class BaseConnection {
     identifier: string | null,
   ): Promise<Results>
 
-  async refreshDatabase(database: string): Promise<Database | null> {
+  async refreshDatabase(database: string): Promise<Schema[] | null> {
     let db = this.databases?.find((db) => db.name === database)
 
     let schemas = await this.getSchemas(database)
     if (db) {
       db.schemas = schemas
-      return db
+      return schemas
     }
     return null
   }

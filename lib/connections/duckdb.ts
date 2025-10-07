@@ -211,8 +211,7 @@ export default class DuckDBConnection extends BaseConnection {
     const fileName = file.name.replace('.db', '')
     
     const dbAlias = this.sanitizeTableName(fileName)
-    const tempConnection = await this.db.connect()
-    await tempConnection.query(`DETACH DATABASE IF EXISTS ${dbAlias}`)
+    await this.connection.query(`use memory; DETACH DATABASE IF EXISTS ${dbAlias}`)
     // Register the file in DuckDB's virtual file system
     await this.db.registerFileHandle(
       file.name,
@@ -224,15 +223,17 @@ export default class DuckDBConnection extends BaseConnection {
 
     try {
       // Attach the database
-      await tempConnection.query(`ATTACH '${file.name}' AS ${dbAlias}`)
+      await this.connection.query(`ATTACH '${file.name}' AS ${dbAlias}`)
 
       // Update databases
-      await this.getDatabases()
-      await this.refreshDatabase(dbAlias)
+      let databases = await this.getDatabases()
+      console.log('Databases after attach:', databases)
+      let tables = await this.refreshDatabase(dbAlias)
+      console.log(`Tables after attach:`, tables)
 
       return dbAlias
-    } finally {
-      await tempConnection.close()
+    } catch (error) {
+      throw new Error(`Failed to attach database: ${error}`)
     }
   }
 

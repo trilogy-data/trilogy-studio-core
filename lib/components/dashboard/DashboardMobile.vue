@@ -195,10 +195,11 @@ function handleToggleEditMode() {
           :get-item-data="getItemData"
           :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
           @dimension-click="dashboardBase?.setCrossFilter"
+          @background-click="dashboardBase?.unSelect"
           :set-item-data="setItemData"
           @edit-content="dashboardBase?.openEditor"
           @remove-filter="dashboardBase?.removeFilter"
-          @background-click="dashboardBase?.unSelect"
+
           @update-dimensions="updateItemDimensions"
           @remove-item="dashboardBase?.removeItem"
           @copy-item="dashboardBase?.copyItem"
