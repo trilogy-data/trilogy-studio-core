@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ModelConfig, ModelParseResults, ModelSource } from '../models'
+import type { Editor } from '../editors'
 
 const useModelConfigStore = defineStore('models', {
   state: () => ({
@@ -35,7 +36,7 @@ const useModelConfigStore = defineStore('models', {
       this.models[newName].name = newName
       delete this.models[name]
     },
-    addEditorAsModelSource(model:string, editor): void {
+    addEditorAsModelSource(model:string, editor:Editor): void {
       this.addModelConfigSource(model, new ModelSource(
         editor.id,
         editor.name,

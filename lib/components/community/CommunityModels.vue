@@ -47,7 +47,6 @@ import FeedbackBanner from '../FeedbackBanner.vue'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import { getDefaultConnection as getDefaultConnectionService } from '../../models/githubApiService'
-import MarkdownRenderer from '../MarkdownRenderer.vue'
 import CommunityModelHeader from './CommunityModelHeader.vue'
 import CommunityModelCard from './CommunityModelCard.vue'
 
