@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "npm install ./lib -D && vite",
+    "dev": "pnpm install ./lib -D && vite",
     "local": "node scripts/run_local.js",
     "build": "vue-tsc -b && prettier --write \"./**/*.{js,ts,vue}\" && vite build",
     "preview": "vite preview",

@@ -334,6 +334,7 @@ export default {
         collapsed.value,
         isLoading.value,
         isErrored.value,
+        isMobile,
       )
     })
 

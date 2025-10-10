@@ -112,7 +112,7 @@
           class="submit-button"
           :disabled="!isFormValid"
         >
-          Submit
+          {{ modelDetails.importAddress ? 'Import' : 'Create' }}
         </loading-button>
         <button type="button" @click="close()">Cancel</button>
       </div>
