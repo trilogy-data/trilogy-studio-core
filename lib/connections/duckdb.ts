@@ -47,11 +47,11 @@ async function createDuckDB(
   await db.open(
     isFirefox()
       ? {
-        filesystem: {
-          reliableHeadRequests: false,
-          allowFullHTTPReads: true,
-        },
-      }
+          filesystem: {
+            reliableHeadRequests: false,
+            allowFullHTTPReads: true,
+          },
+        }
       : {},
   )
   const connection = await db.connect()
@@ -209,7 +209,7 @@ export default class DuckDBConnection extends BaseConnection {
 
     // Generate database alias from file name
     const fileName = file.name.replace('.db', '')
-    
+
     const dbAlias = this.sanitizeTableName(fileName)
     await this.connection.query(`use memory; DETACH DATABASE IF EXISTS ${dbAlias}`)
     // Register the file in DuckDB's virtual file system
@@ -219,7 +219,6 @@ export default class DuckDBConnection extends BaseConnection {
       duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
       true,
     )
-
 
     try {
       // Attach the database
@@ -238,42 +237,40 @@ export default class DuckDBConnection extends BaseConnection {
   }
 
   async importFile(
-  file: File, 
-  onProgress?: (message: string) => void
-): Promise<{ type: 'table' | 'database', name: string }> {
-  onProgress?.(`Processing ${file.name}...`)
-  const fileType = this.getFileType(file)
-  
-  if (fileType === 'db') {
-    const dbAlias = await this.processDuckDBFile(file, onProgress)
-    return { type: 'database', name: dbAlias }
-  } else {
-    // Generate table name from file name
-    const fileName = file.name.replace(`.${fileType}`, '')
-    const tableName = this.sanitizeTableName(fileName)
-    onProgress?.(`Creating table ${tableName}...`)
-    
-    // Register the file in DuckDB's virtual file system
-    await this.db.registerFileHandle(
-      file.name,
-      file,
-      duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-      true,
-    )
-    
-    if (fileType === 'csv') {
-      await this.processCSV(file, tableName, onProgress)
+    file: File,
+    onProgress?: (message: string) => void,
+  ): Promise<{ type: 'table' | 'database'; name: string }> {
+    onProgress?.(`Processing ${file.name}...`)
+    const fileType = this.getFileType(file)
+
+    if (fileType === 'db') {
+      const dbAlias = await this.processDuckDBFile(file, onProgress)
+      return { type: 'database', name: dbAlias }
     } else {
-      await this.processParquet(file, tableName, onProgress)
+      // Generate table name from file name
+      const fileName = file.name.replace(`.${fileType}`, '')
+      const tableName = this.sanitizeTableName(fileName)
+      onProgress?.(`Creating table ${tableName}...`)
+
+      // Register the file in DuckDB's virtual file system
+      await this.db.registerFileHandle(
+        file.name,
+        file,
+        duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
+        true,
+      )
+
+      if (fileType === 'csv') {
+        await this.processCSV(file, tableName, onProgress)
+      } else {
+        await this.processParquet(file, tableName, onProgress)
+      }
+
+      // Refresh the memory database
+      await this.refreshDatabase('memory')
+      return { type: 'table', name: tableName }
     }
-    
-    // Refresh the memory database
-    await this.refreshDatabase('memory')
-    return { type: 'table', name: tableName }
   }
-}
-
-
 
   // EXISTING METHODS
 
@@ -380,7 +377,11 @@ export default class DuckDBConnection extends BaseConnection {
     return processedRow
   }
 
-  async query_core(sql: string, parameters: Record<string, any> | null = null, identifier: string | null = null): Promise<Results> {
+  async query_core(
+    sql: string,
+    parameters: Record<string, any> | null = null,
+    identifier: string | null = null,
+  ): Promise<Results> {
     console.log('Executing duckdb query', identifier)
 
     // Track the currently executing query
@@ -492,7 +493,7 @@ export default class DuckDBConnection extends BaseConnection {
 
     // If not in cache, fetch it from the database
     const tables = await this.getTables(database, schemaName)
-    const foundTable = tables.find(t => t.name === table)
+    const foundTable = tables.find((t) => t.name === table)
 
     if (!foundTable) {
       throw new Error(`Table ${table} not found in schema ${schemaName} of database ${database}`)
@@ -509,7 +510,7 @@ export default class DuckDBConnection extends BaseConnection {
     // Check if the identifier matches the currently executing query
     if (this.currentQueryIdentifier !== identifier) {
       console.warn(
-        `Cannot cancel query ${identifier}: it is not currently executing (current: ${this.currentQueryIdentifier})`
+        `Cannot cancel query ${identifier}: it is not currently executing (current: ${this.currentQueryIdentifier})`,
       )
       return false
     }

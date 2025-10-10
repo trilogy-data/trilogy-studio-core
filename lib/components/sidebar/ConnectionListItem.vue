@@ -2,7 +2,10 @@
   <div
     class="sidebar-item"
     @click="handleItemClick"
-    :class="{ 'sidebar-item-selected': isSelected, 'view-queries-button': item.type === 'view-queries' }"
+    :class="{
+      'sidebar-item-selected': isSelected,
+      'view-queries-button': item.type === 'view-queries',
+    }"
   >
     <!-- View Queries Button for Mobile -->
     <template v-if="item.type === 'view-queries'">
@@ -124,7 +127,11 @@
           />
         </form>
       </div>
-      <div v-else-if="item.type === 'snowflake-private-key'" class="bq-project-container" @click.stop>
+      <div
+        v-else-if="item.type === 'snowflake-private-key'"
+        class="bq-project-container"
+        @click.stop
+      >
         <label class="input-label">Private Key</label>
         <span>
           <transition name="fade">
@@ -170,7 +177,11 @@
           />
         </span>
       </div>
-      <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+      <div
+        v-else-if="item.type === 'toggle-save-credential'"
+        class="md-token-container"
+        @click.stop
+      >
         <label class="save-credential-toggle">
           <input
             type="checkbox"
@@ -200,7 +211,10 @@
           @click.stop="handleRefreshDatabaseClick"
           ><i class="mdi mdi-refresh"></i
         ></span>
-        <span v-if="item.type === 'schema'" class="hover-icon" @click.stop="handleRefreshSchemaClick"
+        <span
+          v-if="item.type === 'schema'"
+          class="hover-icon"
+          @click.stop="handleRefreshSchemaClick"
           ><i class="mdi mdi-refresh"></i
         ></span>
       </span>

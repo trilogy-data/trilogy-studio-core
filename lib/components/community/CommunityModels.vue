@@ -9,7 +9,7 @@
         :loading="loading"
         @refresh="refreshData"
       />
-      
+
       <FeedbackBanner />
 
       <div v-if="filteredFiles.length">

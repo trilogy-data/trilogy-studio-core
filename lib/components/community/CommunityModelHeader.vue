@@ -28,8 +28,8 @@
 
         <div class="engine-filter">
           <label class="text-faint filter-label">Model Engine</label>
-          <select 
-            :value="selectedEngine" 
+          <select
+            :value="selectedEngine"
             @change="$emit('update:selectedEngine', ($event.target as HTMLSelectElement)?.value)"
             class="px-3 py-2 border rounded"
           >
@@ -42,8 +42,8 @@
 
         <div class="import-status-filter">
           <label class="text-faint filter-label">Import Status</label>
-          <select 
-            :value="importStatus" 
+          <select
+            :value="importStatus"
             @change="$emit('update:importStatus', ($event.target as HTMLSelectElement)?.value)"
             class="px-3 py-2 border rounded"
           >

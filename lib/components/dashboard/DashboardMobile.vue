@@ -199,7 +199,6 @@ function handleToggleEditMode() {
           :set-item-data="setItemData"
           @edit-content="dashboardBase?.openEditor"
           @remove-filter="dashboardBase?.removeFilter"
-
           @update-dimensions="updateItemDimensions"
           @remove-item="dashboardBase?.removeItem"
           @copy-item="dashboardBase?.copyItem"

@@ -36,13 +36,8 @@ const useModelConfigStore = defineStore('models', {
       this.models[newName].name = newName
       delete this.models[name]
     },
-    addEditorAsModelSource(model:string, editor:Editor): void {
-      this.addModelConfigSource(model, new ModelSource(
-        editor.id,
-        editor.name,
-        [],
-        []
-      ))
+    addEditorAsModelSource(model: string, editor: Editor): void {
+      this.addModelConfigSource(model, new ModelSource(editor.id, editor.name, [], []))
     },
     addModelConfigSource(name: string, contents: ModelSource) {
       if (this.models[name]) {

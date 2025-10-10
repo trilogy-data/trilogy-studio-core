@@ -26,7 +26,7 @@ export default defineConfig({
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
-    nodePolyfills({ include: ['crypto', 'stream'] }),
+    nodePolyfills({ include: ['crypto', 'stream'], exclude: ['prismjs'] }),
     prism({
       languages: ['sql'],
       plugins: ['line-numbers'],
@@ -63,6 +63,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+
       // treeshake: {
       //   //@ts-ignore
       //   moduleSideEffects: (id) => {
@@ -73,7 +74,7 @@ export default defineConfig({
       //     return 'no-external'
       //   },
       // },
-      // external: ['vue'],
+      external: ['prismjs'],
     },
   },
   base: '/trilogy-studio-core/',

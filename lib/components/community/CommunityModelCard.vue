@@ -6,13 +6,7 @@
       :data-testid="`import-${file.name}`"
       class="action-button-topright"
     >
-      {{
-        creatorIsExpanded
-          ? 'Hide'
-          : modelExists(file.name)
-            ? 'Reload'
-            : 'Import'
-      }}
+      {{ creatorIsExpanded ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import' }}
     </button>
 
     <div class="model-item-header">
@@ -37,8 +31,10 @@
         >
           <i class="mdi mdi-chevron-down expand-icon"></i>
           <span class="expand-text"
-            >{{ isComponentsExpanded ? 'Hide' : 'Expand' }}
-            ({{ file.components.length }} items)</span
+            >{{ isComponentsExpanded ? 'Hide' : 'Expand' }} ({{
+              file.components.length
+            }}
+            items)</span
           >
         </button>
       </div>
@@ -64,8 +60,7 @@
             'description-text',
             {
               'description-truncated':
-                !isDescriptionExpanded &&
-                shouldTruncateDescription(file.description),
+                !isDescriptionExpanded && shouldTruncateDescription(file.description),
             },
           ]"
         >
