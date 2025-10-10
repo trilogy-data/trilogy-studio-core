@@ -547,14 +547,10 @@ export const useDashboardStore = defineStore('dashboards', {
       if (dashboard) {
         // loop over all items in the dashboard
         for (const item of Object.values(dashboard.gridItems)) {
-          if (
-            item.type === CELL_TYPES.CHART ||
-            item.type === CELL_TYPES.TABLE
-          ) {
+          if (item.type === CELL_TYPES.CHART || item.type === CELL_TYPES.TABLE) {
             // Type guard: content should have query property for chart/table types
-            const query = typeof item.content === 'string'
-              ? item.content
-              : item.content?.query || ''
+            const query =
+              typeof item.content === 'string' ? item.content : item.content?.query || ''
 
             await queryExecutionService?.generateQuery(dashboard.connection, {
               text: query,
@@ -684,9 +680,9 @@ export const useDashboardStore = defineStore('dashboards', {
           current.connection,
           queryInput,
           // Starter callback (empty for now)
-          () => { },
+          () => {},
           // Progress callback
-          () => { },
+          () => {},
           // Failure callback
           onError,
           // Success callback

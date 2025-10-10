@@ -85,8 +85,7 @@ vi.mock('../../models/helpers', () => ({
   ModelImportService: vi.fn(() => mockModelImportService),
 }))
 
-const mockQueryExecutionService = {
-}
+const mockQueryExecutionService = {}
 
 describe('AutoImportComponent', () => {
   let wrapper: VueWrapper<any>
@@ -131,28 +130,28 @@ describe('AutoImportComponent', () => {
     ...overrides,
   })
 
-const createWrapper = (urlParams: Record<string, string> = {}) => {
-  // Setup URL parameter mocks
-  vi.mocked(getDefaultValueFromHash).mockImplementation(
-    (key: string, defaultValue?: string | null) => {
-      return urlParams[key] || defaultValue || null
-    },
-  )
-
-  return mount(AutoImportComponent, {
-    global: {
-      provide: {
-        dashboardStore: mockDashboardStore,
-        connectionStore: mockConnectionStore,
-        editorStore: mockEditorStore,
-        modelStore: mockModelStore,
-        queryExecutionService: mockQueryExecutionService, 
-        saveDashboards: mockSaveDashboards,
-        saveAll: mockSaveAll,
+  const createWrapper = (urlParams: Record<string, string> = {}) => {
+    // Setup URL parameter mocks
+    vi.mocked(getDefaultValueFromHash).mockImplementation(
+      (key: string, defaultValue?: string | null) => {
+        return urlParams[key] || defaultValue || null
       },
-    },
-  })
-}
+    )
+
+    return mount(AutoImportComponent, {
+      global: {
+        provide: {
+          dashboardStore: mockDashboardStore,
+          connectionStore: mockConnectionStore,
+          editorStore: mockEditorStore,
+          modelStore: mockModelStore,
+          queryExecutionService: mockQueryExecutionService,
+          saveDashboards: mockSaveDashboards,
+          saveAll: mockSaveAll,
+        },
+      },
+    })
+  }
 
   const setupSuccessfulImport = (connectionType: string = TEST_CONSTANTS.CONNECTIONS.DUCKDB) => {
     mockModelImportService.importModel.mockResolvedValue({

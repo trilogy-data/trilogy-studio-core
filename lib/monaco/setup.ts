@@ -61,10 +61,12 @@ export function configureTrilogy() {
       'OVER',
       'LEAD',
       'LAG',
+      'PERSIST',
+      'INTO',
+      '<-',
+      'AS',
     ],
     functions: [
-      'current_date',
-      'current_datetime',
       'cast',
       'sum',
       'max',
@@ -121,6 +123,7 @@ export function configureTrilogy() {
       'substring',
       'strpos',
       'contains',
+      // date functions
       'date',
       'datetime',
       'timestamp',
@@ -141,6 +144,8 @@ export function configureTrilogy() {
       'unix_to_timestamp',
       'current_date',
       'current_datetime',
+      'day_name',
+      'month_name',
     ],
     typeKeywords: [
       'bool',

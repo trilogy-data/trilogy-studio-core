@@ -1,6 +1,6 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-import { GoogleGenAI, type Part } from '@google/genai'
+import { GoogleGenAI, type Content } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
 const MAX_RETRIES = 3
@@ -107,6 +107,8 @@ export class GoogleProvider extends LLMProvider {
     options: LLMRequestOptions,
     history: LLMMessage[] | null = null,
   ): Promise<LLMResponse> {
+    console.log('gemini generating with')
+    console.log(history)
     this.validateRequestOptions(options)
 
     if (!this.genAIClient) {
@@ -117,6 +119,7 @@ export class GoogleProvider extends LLMProvider {
     return await this.withRetry(async () => {
       if (history && history.length > 0) {
         // Create a chat with history
+        console.log(this.convertToGeminiHistory(history))
         const args = {
           // if the model has models/ prefixed, split it
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
@@ -170,15 +173,33 @@ export class GoogleProvider extends LLMProvider {
       }
     })
   }
+  private convertToGeminiHistory(messages: LLMMessage[]): Content[] {
+    const result: Content[] = []
 
-  private convertToGeminiHistory(messages: LLMMessage[]): Array<{ role: string; parts: Part[] }> {
-    return messages.map((message) => {
-      // Map standard roles to Gemini roles (model or user)
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i]
       const role = message.role === 'assistant' ? 'model' : 'user'
-      return {
+
+      result.push({
         parts: [{ text: message.content }],
         role,
+      })
+
+      // If this is a user message and the next message is also a user message (or doesn't exist and we need model response)
+      // OR if this is the last message and it's from the user (shouldn't happen but safety check)
+      const nextMessage = messages[i + 1]
+      if (role === 'user' && nextMessage) {
+        const nextRole = nextMessage.role === 'assistant' ? 'model' : 'user'
+        if (nextRole === 'user') {
+          // Insert a dummy model response
+          result.push({
+            parts: [{ text: 'Thanks!' }],
+            role: 'model',
+          })
+        }
       }
-    })
+    }
+
+    return result
   }
 }
