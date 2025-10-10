@@ -1,7 +1,4 @@
-
-
 name: CI test
-
 on:
   push:
     branches-ignore:
@@ -20,17 +17,21 @@ jobs:
         # Setup gcloud CLI
         - name: Checkout
           uses: actions/checkout@v4
+        - name: Install pnpm
+          uses: pnpm/action-setup@v3
+          with:
+            version: 9
         - name: Set up Node
           uses: actions/setup-node@v4
           with:
             node-version: 22
-            cache: 'npm'
+            cache: 'pnpm'
         - name: Install dependencies
-          run: npm ci
+          run: pnpm install --frozen-lockfile
         - name: Ensure we can build
-          run: npm run build
+          run: pnpm run build
         - name: Run Tests
-          run: npm run test
+          run: pnpm run test
         - name: Install dependencies
           working-directory: ./pyserver
           run: |
@@ -54,14 +55,14 @@ jobs:
           run: |
             # Start the Python server in the background
             nohup python main.py > server.log 2>&1 &
-            
+           
             # Capture the PID immediately
             echo "SERVER_PID=$!" >> $GITHUB_ENV
             echo "Started server with PID: $SERVER_PID"
-        
+       
             # Wait for the server to start
             sleep 10  
-        
+       
             # Ensure the server is running
             if ps -p $(cat $GITHUB_ENV | grep SERVER_PID | cut -d '=' -f2) > /dev/null; then
               echo "Server started successfully!"
@@ -72,9 +73,9 @@ jobs:
             fi
           shell: /usr/bin/bash -e {0}
         - name: Install Playwright Browsers
-          run: npx playwright install --with-deps
+          run: pnpm exec playwright install --with-deps
         - name: Run Playwright tests
-          run: npx playwright test
+          run: pnpm exec playwright test
         - name: Stop Python server
           if: always()
           run: |
