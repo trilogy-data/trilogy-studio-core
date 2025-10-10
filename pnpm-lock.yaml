@@ -20,12 +20,6 @@ importers:
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
-      '@types/prismjs':
-        specifier: ^1.26.5
-        version: 1.26.5
-      '@types/webappsec-credential-management':
-        specifier: ^0.6.9
-        version: 0.6.9
       dompurify:
         specifier: ^3.2.6
         version: 3.2.7
@@ -41,9 +35,15 @@ importers:
       luxon:
         specifier: ^3.5.0
         version: 3.7.2
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
       prismjs:
         specifier: ^1.29.0
         version: 1.30.0
+      tabulator-tables:
+        specifier: ^6.3.1
+        version: 6.3.1
       vega-embed:
         specifier: ^7.0.2
         version: 7.1.0(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0)
@@ -53,6 +53,9 @@ importers:
       vite-plugin-prismjs:
         specifier: ^0.0.11
         version: 0.0.11(prismjs@1.30.0)
+      vue:
+        specifier: ^3.5.19
+        version: 3.5.22(typescript@5.6.3)
       vue3-grid-layout-next:
         specifier: ^1.0.7
         version: 1.0.7(typescript@5.6.3)
@@ -72,9 +75,15 @@ importers:
       '@types/node':
         specifier: ^22.12.0
         version: 22.18.9
+      '@types/prismjs':
+        specifier: ^1.26.5
+        version: 1.26.5
       '@types/tabulator-tables':
         specifier: ^6.2.4
         version: 6.2.11
+      '@types/webappsec-credential-management':
+        specifier: ^0.6.9
+        version: 0.6.9
       '@vitejs/plugin-vue':
         specifier: ^5.2.4
         version: 5.2.4(vite@6.3.6(@types/node@22.18.9))(vue@3.5.22(typescript@5.6.3))
@@ -87,18 +96,9 @@ importers:
       '@vue/tsconfig':
         specifier: ^0.7.0
         version: 0.7.0(typescript@5.6.3)(vue@3.5.22(typescript@5.6.3))
-      buffer:
-        specifier: ^6.0.3
-        version: 6.0.3
-      gapi:
-        specifier: ^0.0.3
-        version: 0.0.3
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
-      monaco-editor:
-        specifier: ^0.52.2
-        version: 0.52.2
       pinia:
         specifier: ^2.3.1
         version: 2.3.1(typescript@5.6.3)(vue@3.5.22(typescript@5.6.3))
@@ -111,9 +111,6 @@ importers:
       split.js:
         specifier: ^1.6.5
         version: 1.6.5
-      tabulator-tables:
-        specifier: ^6.3.1
-        version: 6.3.1
       trilogy-studio-components:
         specifier: link:lib
         version: link:lib
@@ -135,9 +132,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@22.18.9)(@vitest/ui@3.2.4)(jsdom@26.1.0)
-      vue:
-        specifier: ^3.5.19
-        version: 3.5.22(typescript@5.6.3)
       vue-tsc:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.6.3)
@@ -1039,9 +1033,6 @@ packages:
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
-  buffer@6.0.3:
-    resolution: {integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==}
-
   builtin-status-codes@3.0.0:
     resolution: {integrity: sha512-HpGFw18DgFWlncDfjTa2rcQ4W88O1mC8e8yZ2AvQY5KDaktSTwo+KRf6nHK6FRI5FyRyb/5T6+TSxfP7QyGsmQ==}
 
@@ -1091,12 +1082,6 @@ packages:
   cliui@9.0.1:
     resolution: {integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==}
     engines: {node: '>=20'}
-
-  coffee-script@1.12.7:
-    resolution: {integrity: sha512-fLeEhqwymYat/MpTPUjSKHVYYl0ec2mOyALEMLmzr5i1isuG+6jfI2j2d5oBO3VIzgUXgBVIcOT9uH1TFxBckw==}
-    engines: {node: '>=0.8.0'}
-    deprecated: CoffeeScript on NPM has moved to "coffeescript" (no hyphen)
-    hasBin: true
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -1459,10 +1444,6 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
-
-  gapi@0.0.3:
-    resolution: {integrity: sha512-09nvJdQex78sxmMyOUnpr941fdWMJQjhFZi7vsW91zM3RYoCfkKU83UoJckn/GBEMmvYNZ4vL47eZ6lv/Bnavw==}
-    engines: {node: '>= 0.4.0'}
 
   gaxios@6.7.1:
     resolution: {integrity: sha512-LDODD4TMYx7XXdpwxAVRAIAuB0bzv0s+ywFonY46k126qzQHT9ygyoa9tncmOiQmmDrik65UYsEkv3lbfqQ3yQ==}
@@ -3640,11 +3621,6 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
-  buffer@6.0.3:
-    dependencies:
-      base64-js: 1.5.1
-      ieee754: 1.2.1
-
   builtin-status-codes@3.0.0: {}
 
   cac@6.7.14: {}
@@ -3704,8 +3680,6 @@ snapshots:
       string-width: 7.2.0
       strip-ansi: 7.1.2
       wrap-ansi: 9.0.2
-
-  coffee-script@1.12.7: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -4085,10 +4059,6 @@ snapshots:
     optional: true
 
   function-bind@1.1.2: {}
-
-  gapi@0.0.3:
-    dependencies:
-      coffee-script: 1.12.7
 
   gaxios@6.7.1:
     dependencies:

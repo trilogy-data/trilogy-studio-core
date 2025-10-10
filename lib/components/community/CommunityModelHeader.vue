@@ -1,9 +1,8 @@
 <template>
   <div>
-    <div class="model-header">
-      <div class="model-title">Community Models</div>
+    <div class="section-header">
+      Community Models
       <button
-        class="refresh-button"
         @click="$emit('refresh')"
         :disabled="loading"
         data-testid="refresh-models-button"
@@ -82,27 +81,9 @@ defineEmits<{
   margin-bottom: 12px;
 }
 
-.refresh-button {
-  background-color: var(--button-bg, #2563eb);
-  color: var(--text-color);
-  padding: 6px 12px;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 
-.refresh-button:hover:not(:disabled) {
-  background-color: var(--button-hover-bg, #1d4ed8);
-}
 
-.refresh-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+
 
 .model-title {
   font-weight: 500;

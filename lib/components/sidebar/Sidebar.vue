@@ -440,6 +440,7 @@ export default defineComponent({
   color: var(--sidebar-selector-font);
   padding-top: 10px;
   width: var(--sidebar-icon-width);
+  min-width: var(--sidebar-icon-width);
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -1,46 +1,19 @@
 <template>
   <div class="parent">
-    <error-message v-if="!editorData"
-      >An editor by this ID ({{ editorId }}) could not be found.</error-message
-    >
+    <error-message v-if="!editorData">An editor by this ID ({{ editorId }}) could not be found.</error-message>
     <template v-else>
-      <editor-header
-        :name="editorData.name"
-        :editor-type="editorData.type"
-        :tags="editorData.tags"
-        :loading="editorData.loading"
-        :connection-has-model="connectionHasModel"
-        @name-update="updateEditorName"
-        @save="$emit('save-editors')"
-        @validate="validateQuery"
-        @run="runQuery"
-        @cancel="cancelQuery"
-        @toggle-tag="toggleTag"
-        @generate="handleLLMTrigger"
-      />
+      <editor-header :name="editorData.name" :editor-type="editorData.type" :tags="editorData.tags"
+        :loading="editorData.loading" :connection-has-model="connectionHasModel" @name-update="updateEditorName"
+        @save="$emit('save-editors')" @validate="validateQuery" @run="runQuery" @cancel="cancelQuery"
+        @toggle-tag="toggleTag" @generate="handleLLMTrigger" />
       <div class="editor-content">
-        <code-editor
-          ref="codeEditor"
-          :id="context"
-          :editor-id="editorId"
-          :context="context"
-          :contents="editorData.contents"
-          :editor-type="editorData.type"
-          :scroll-position="editorData.scrollPosition"
-          :theme="userSettingsStore.getSettings.theme"
-          @contents-change="handleContentsChange"
-          @scroll-change="handlePositionChange"
-          @run-query="runQuery"
-          @validate-query="validateQuery"
-          @format-query="formatQuery"
-          @generate-llm-query="handleLLMTrigger"
-          @save="$emit('save-editors')"
-        />
-        <SymbolsPane
-          :symbols="editorData.completionSymbols || []"
-          ref="symbolsPane"
-          v-if="!isMobile"
-        />
+        <code-editor ref="codeEditor" :id="context" :editor-id="editorId" :context="context"
+          :contents="editorData.contents" :editor-type="editorData.type" :scroll-position="editorData.scrollPosition"
+          :theme="userSettingsStore.getSettings.theme" @contents-change="handleContentsChange"
+          @scroll-change="handlePositionChange" @run-query="runQuery" @validate-query="validateQuery"
+          @format-query="formatQuery" @generate-llm-query="handleLLMTrigger" @save="$emit('save-editors')" />
+        <SymbolsPane :symbols="editorData.completionSymbols || []" @select-symbol="insertSymbol" ref="symbolsPane"
+          v-if="!isMobile" />
       </div>
     </template>
   </div>
@@ -72,7 +45,7 @@ import { Results } from '../../editors/results.ts'
 import type { QueryInput } from '../../stores/queryExecutionService.ts'
 
 import FetchResolver from '../../stores/resolver.ts'
-import type { Import } from '../../stores/resolver.ts'
+import type { Import, CompletionItem } from '../stores/resolver'
 import LoadingButton from '../LoadingButton.vue'
 import ErrorMessage from '../ErrorMessage.vue'
 import { EditorTag } from '../../editors/index.ts'
@@ -262,6 +235,29 @@ export default defineComponent({
       this.editorStore.setEditorContents(this.editorId, content)
     },
 
+    insertSymbol(symbol: CompletionItem): void {
+      if (!this.$refs.codeEditor) return
+      let codeEditor = this.$refs.codeEditor as CodeEditorRef
+      let instance = codeEditor.getEditorInstance();
+      const position = instance.getPosition()
+      if (position && symbol.insertText) {
+        instance.executeEdits('', [
+          {
+            range: new Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column,
+            ),
+            text: symbol.insertText,
+          },
+        ])
+        instance.focus()
+
+
+      }
+    },
+
     handlePositionChange(scrollPosition: { line: number; column: number }): void {
       this.editorStore.setEditorScrollPosition(this.editorId, scrollPosition)
     },
@@ -296,11 +292,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       }
 
@@ -362,11 +358,11 @@ export default defineComponent({
       const sources: ContentInput[] =
         conn && conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       // Prepare imports
       let imports: Import[] = []
@@ -486,7 +482,7 @@ export default defineComponent({
         this.editorData.connection,
         queryInput,
         // Starter callback (empty for now)
-        () => {},
+        () => { },
         // Progress callback
         onProgress,
         // Failure callback
@@ -613,7 +609,7 @@ export default defineComponent({
             this.editorData.setError(error)
             throw error
           })
-          .finally(() => {})
+          .finally(() => { })
       }
     },
     async generateLLMQuery(): Promise<void> {
@@ -663,9 +659,9 @@ export default defineComponent({
               this.editorData.connection,
               queryInput,
               // Starter callback (empty for now)
-              () => {},
+              () => { },
               // Progress callback
-              () => {},
+              () => { },
               // Failure callback
               onError,
               // Success callback

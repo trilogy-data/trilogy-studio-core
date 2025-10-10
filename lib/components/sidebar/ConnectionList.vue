@@ -5,7 +5,8 @@
         <button
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
-        >
+        >   
+        <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
@@ -17,7 +18,7 @@
         <input
           type="text"
           v-model="searchTerm"
-          placeholder="Filter list..."
+          placeholder="Search objects..."
           class="search-input"
           :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'"
         />
@@ -110,7 +111,7 @@ export default {
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = inject<Ref<boolean>>('isMobile', false)
     if (!connectionStore || !saveConnections || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
@@ -334,7 +335,7 @@ export default {
         collapsed.value,
         isLoading.value,
         isErrored.value,
-        isMobile,
+        isMobile.value,
       )
     })
 
@@ -464,12 +465,14 @@ export default {
 
 .search-input {
   width: 100%;
+  box-sizing: border-box;
   border-radius: 0px;
   border: 1px solid var(--sidebar-border-color, #ccc);
   background-color: transparent;
   color: var(--sidebar-text-color, #333);
   line-height: var(--sidebar-list-item-height);
   font-size: var(--sidebar-font-size, 14px);
+  padding-left: 8px; /* Add this line */
 }
 
 .search-input:focus {
@@ -495,4 +498,5 @@ export default {
 .clear-search-btn:hover {
   color: var(--sidebar-active-text-color, #666);
 }
+
 </style>

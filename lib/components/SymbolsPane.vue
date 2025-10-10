@@ -413,7 +413,7 @@ export default defineComponent({
   border-left: 1px solid var(--border-color, #444);
   display: flex;
   flex-direction: column;
-  background-color: var(--sidebar-bg, #252525);
+  background-color: var(--editor-bg);
   font-size: 12px;
   overflow-y: scroll;
   position: relative;
@@ -438,7 +438,7 @@ export default defineComponent({
 .symbols-search {
   flex: 0.9;
   height: 24px;
-  background-color: var(--sidebar-bg);
+  background-color: var(--editor-bg);
   color: var(--text-color, #d4d4d4);
   border: 1px solid var(--border-color, #444);
   padding: 0 6px;
@@ -457,7 +457,7 @@ export default defineComponent({
   align-items: center;
   padding: 4px 8px;
   border-bottom: 1px solid var(--border-color, #444);
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--editor-bg);
   flex-wrap: wrap;
 }
 

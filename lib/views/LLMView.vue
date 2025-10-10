@@ -515,13 +515,6 @@ pre {
   overflow: hidden;
 }
 
-.section-header {
-  font-size: 1.2em;
-  font-weight: bold;
-  padding: 10px;
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border-color);
-}
 
 .text-small {
   font-size: 0.8em;

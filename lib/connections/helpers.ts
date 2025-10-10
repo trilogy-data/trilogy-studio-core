@@ -32,7 +32,7 @@ export function buildConnectionTree(
   if (isMobile) {
     list.push({
       id: 'mobile-view-queries',
-      name: 'View Current Connection History',
+      name: `View Current Connection History`,
       indent: 0,
       count: 0,
       type: 'view-queries',

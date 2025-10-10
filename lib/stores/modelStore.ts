@@ -32,8 +32,11 @@ const useModelConfigStore = defineStore('models', {
       }
     },
     updateModelName(name: string, newName: string) {
+      if (name === newName) return
+      console.log(`Renaming model from ${name} to ${newName}`)
       this.models[newName] = this.models[name]
       this.models[newName].name = newName
+      this.models[newName].changed = true
       delete this.models[name]
     },
     addEditorAsModelSource(model: string, editor: Editor): void {

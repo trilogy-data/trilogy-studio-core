@@ -151,19 +151,11 @@ defineEmits<{
   position: absolute;
   top: 16px;
   right: 16px;
-  background-color: var(--button-bg, #2563eb);
-  color: var(--text-color);
-  padding: 6px 12px;
-  border: none;
-  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s;
   z-index: 10;
 }
 
-.action-button-topright:hover {
-  background-color: var(--button-hover-bg, #1d4ed8);
-}
+
 
 .model-item-header {
   display: flex;

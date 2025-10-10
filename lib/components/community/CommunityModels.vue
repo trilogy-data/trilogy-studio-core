@@ -1,34 +1,22 @@
 <template>
   <div class="model-page">
+    <community-model-header v-model:searchQuery="searchQuery" v-model:selectedEngine="selectedEngine"
+      v-model:importStatus="importStatus" :availableEngines="availableEngines" :loading="loading"
+      @refresh="refreshData" />
     <div class="model-content">
-      <community-model-header
-        v-model:searchQuery="searchQuery"
-        v-model:selectedEngine="selectedEngine"
-        v-model:importStatus="importStatus"
-        :availableEngines="availableEngines"
-        :loading="loading"
-        @refresh="refreshData"
-      />
+
 
       <FeedbackBanner />
 
       <div v-if="filteredFiles.length">
-        <community-model-card
-          v-for="file in filteredFiles"
-          :key="file.name"
-          :file="file"
-          :modelExists="modelExists"
+        <community-model-card v-for="file in filteredFiles" :key="file.name" :file="file" :modelExists="modelExists"
           :creatorIsExpanded="creatorIsExpanded[file.name] || false"
           :isComponentsExpanded="isExpanded[file.downloadUrl] || false"
-          :isDescriptionExpanded="isDescriptionExpanded(file.name)"
-          :getDefaultConnection="getDefaultConnection"
-          :getComponentIcon="getComponentIcon"
-          :shouldTruncateDescription="shouldTruncateDescription"
+          :isDescriptionExpanded="isDescriptionExpanded(file.name)" :getDefaultConnection="getDefaultConnection"
+          :getComponentIcon="getComponentIcon" :shouldTruncateDescription="shouldTruncateDescription"
           @toggle-creator="creatorIsExpanded[file.name] = !creatorIsExpanded[file.name]"
-          @toggle-components="toggleComponents"
-          @toggle-description="toggleDescription"
-          @copy-dashboard-link="copyDashboardImportLink"
-        />
+          @toggle-components="toggleComponents" @toggle-description="toggleDescription"
+          @copy-dashboard-link="copyDashboardImportLink" />
       </div>
 
       <p v-if="error" class="text-error">{{ error }}</p>
@@ -531,7 +519,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .filter-row > div {
+  .filter-row>div {
     flex: 1 0 100%;
     margin-bottom: 8px;
   }
