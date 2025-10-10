@@ -5,7 +5,7 @@ import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
 import { ARRAY_IMPLICIT_COLUMN } from './constants'
-import * as arrow from 'apache-arrow'
+import {Type, type DataType} from 'apache-arrow'
 
 // Select a bundle based on browser checks
 function isFirefox(): boolean {
@@ -116,30 +116,30 @@ export default class DuckDBConnection extends BaseConnection {
     }
   }
 
-  private mapArrowTypeToDuckDB(arrowType: arrow.DataType): string {
+  private mapArrowTypeToDuckDB(arrowType: DataType): string {
     const typeId = arrowType.typeId
 
     switch (typeId) {
-      case arrow.Type.Int8:
-      case arrow.Type.Int16:
-      case arrow.Type.Int32:
-      case arrow.Type.Uint8:
-      case arrow.Type.Uint16:
-      case arrow.Type.Uint32:
+      case Type.Int8:
+      case Type.Int16:
+      case Type.Int32:
+      case Type.Uint8:
+      case Type.Uint16:
+      case Type.Uint32:
         return 'INTEGER'
-      case arrow.Type.Int64:
-      case arrow.Type.Uint64:
+      case Type.Int64:
+      case Type.Uint64:
         return 'BIGINT'
-      case arrow.Type.Float:
+      case Type.Float:
         return 'DOUBLE'
-      case arrow.Type.Timestamp:
+      case Type.Timestamp:
         return 'TIMESTAMP'
-      case arrow.Type.Date:
+      case Type.Date:
         return 'DATE'
-      case arrow.Type.Bool:
+      case Type.Bool:
         return 'BOOLEAN'
-      case arrow.Type.Utf8:
-      case arrow.Type.Binary:
+      case Type.Utf8:
+      case Type.Binary:
       default:
         return 'VARCHAR'
     }

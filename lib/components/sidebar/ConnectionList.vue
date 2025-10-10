@@ -5,8 +5,8 @@
         <button
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
-        >   
-        <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
+        >
+          <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
@@ -68,7 +68,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { type Ref, ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreatorInline from './ConnectionCreatorInline.vue'
 import LoadingButton from '../LoadingButton.vue'
@@ -111,7 +111,7 @@ export default {
     const saveConnections = inject<Function>('saveConnections')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const isMobile = inject<Ref<boolean>>('isMobile', false)
+    const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
     if (!connectionStore || !saveConnections || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
@@ -498,5 +498,4 @@ export default {
 .clear-search-btn:hover {
   color: var(--sidebar-active-text-color, #666);
 }
-
 </style>

@@ -2,11 +2,7 @@
   <div>
     <div class="section-header">
       Community Models
-      <button
-        @click="$emit('refresh')"
-        :disabled="loading"
-        data-testid="refresh-models-button"
-      >
+      <button @click="$emit('refresh')" :disabled="loading" data-testid="refresh-models-button">
         <span v-if="!loading">Refresh</span>
         <span v-else>Refreshing...</span>
       </button>
@@ -80,10 +76,6 @@ defineEmits<{
   align-items: center;
   margin-bottom: 12px;
 }
-
-
-
-
 
 .model-title {
   font-weight: 500;

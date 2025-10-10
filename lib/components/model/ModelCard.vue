@@ -1,32 +1,29 @@
 <template>
   <div class="section-header">
-      <div class="model-title" @click="startEditing">
-        <span v-if="!isEditing" class="editable-text">
-          {{ config.name }}
-          <span class="edit-icon">✎</span>
-        </span>
-        <input
-          v-else
-          ref="nameInput"
-          v-model="editableName"
-          @blur="finishEditing"
-          @keyup.enter="finishEditing"
-          @keyup.esc="cancelEditing"
-          class="name-input"
-          type="text"
-        />
-      </div>
-      <div class="controls">
-        <loading-button class="btn" :action="() => fetchParseResults(index)">
-          Parse
-        </loading-button>
-        <button class="btn" @click="toggleNewSource(index)">Add Source</button>
-        <button class="btn" @click="clearSources(index)">Clear</button>
-        <button class="btn delete-btn" @click="remove(index)">Delete</button>
-      </div>
+    <div class="model-title" @click="startEditing">
+      <span v-if="!isEditing" class="editable-text">
+        {{ config.name }}
+        <span class="edit-icon">✎</span>
+      </span>
+      <input
+        v-else
+        ref="nameInput"
+        v-model="editableName"
+        @blur="finishEditing"
+        @keyup.enter="finishEditing"
+        @keyup.esc="cancelEditing"
+        class="name-input"
+        type="text"
+      />
     </div>
+    <div class="controls">
+      <loading-button class="btn" :action="() => fetchParseResults(index)"> Parse </loading-button>
+      <button class="btn" @click="toggleNewSource(index)">Add Source</button>
+      <button class="btn" @click="clearSources(index)">Clear</button>
+      <button class="btn delete-btn" @click="remove(index)">Delete</button>
+    </div>
+  </div>
   <section :id="config.name" class="model-section">
-    
     <div v-if="config.description">{{ config.description }}</div>
     <div v-if="newSourceVisible[index]" class="source-form">
       <form @submit.prevent="submitSourceAddition(index)">

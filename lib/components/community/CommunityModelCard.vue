@@ -155,8 +155,6 @@ defineEmits<{
   z-index: 10;
 }
 
-
-
 .model-item-header {
   display: flex;
   justify-content: space-between;

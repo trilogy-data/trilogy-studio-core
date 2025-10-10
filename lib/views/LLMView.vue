@@ -515,7 +515,6 @@ pre {
   overflow: hidden;
 }
 
-
 .text-small {
   font-size: 0.8em;
   font-weight: 500;

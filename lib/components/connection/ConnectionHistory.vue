@@ -209,13 +209,10 @@ onMounted(() => {
   flex-direction: column;
 }
 
-
-
 .query-history-actions {
   display: flex;
   gap: 8px;
 }
-
 
 .refresh-btn {
   padding: 4px 8px;
