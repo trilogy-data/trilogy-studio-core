@@ -3,7 +3,7 @@
     <div class="chat-header">
       <div>Chat</div>
       <button class="close-button" @click="handleClose" data-testid="close-header-button">×</button>
-    </div>  
+    </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
       <div

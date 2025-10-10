@@ -227,7 +227,6 @@ const performImport = async () => {
 
     importedDashboardId.value = importedDashboard.id
 
-
     dashboardStore.warmDashboardQueries(importedDashboard.id, queryExecutionService, editorStore)
 
     // Save changes

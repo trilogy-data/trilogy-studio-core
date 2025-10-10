@@ -67,7 +67,6 @@ export function configureTrilogy() {
       'AS',
     ],
     functions: [
-      
       'cast',
       'sum',
       'max',

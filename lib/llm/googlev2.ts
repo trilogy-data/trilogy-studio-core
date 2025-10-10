@@ -1,6 +1,6 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-import { GoogleGenAI, type Part, type Content } from '@google/genai'
+import { GoogleGenAI, type Content } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
 const MAX_RETRIES = 3

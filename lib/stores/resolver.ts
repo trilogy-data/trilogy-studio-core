@@ -306,7 +306,14 @@ export default class TrilogyResolver {
     }
 
     // Use the normalized cache key
-    const cacheKey = this.createQueryCacheKey(query, dialect, sources, imports, extraFilters, parameters)
+    const cacheKey = this.createQueryCacheKey(
+      query,
+      dialect,
+      sources,
+      imports,
+      extraFilters,
+      parameters,
+    )
 
     // Check if result exists in cache
     const cachedResult = this.queryCache.get(cacheKey)
@@ -369,10 +376,7 @@ export default class TrilogyResolver {
 
     queries.forEach((queryComponent, index) => {
       // Merge component-level filters and parameters with global ones
-      const mergedExtraFilters = [
-        ...(extraFilters || []),
-        ...(queryComponent.extra_filters || []),
-      ]
+      const mergedExtraFilters = [...(extraFilters || []), ...(queryComponent.extra_filters || [])]
       const mergedParameters = {
         ...(parameters || {}),
         ...(queryComponent.parameters || {}),
@@ -441,10 +445,7 @@ export default class TrilogyResolver {
       const queryComponent = uncachedQueries[apiIndex].component
 
       // Merge component-level filters and parameters with global ones
-      const mergedExtraFilters = [
-        ...(extraFilters || []),
-        ...(queryComponent.extra_filters || []),
-      ]
+      const mergedExtraFilters = [...(extraFilters || []), ...(queryComponent.extra_filters || [])]
       const mergedParameters = {
         ...(parameters || {}),
         ...(queryComponent.parameters || {}),
@@ -527,7 +528,7 @@ export default class TrilogyResolver {
     this.modelCache.clear()
   }
 
-  getCacheStats(): { 
+  getCacheStats(): {
     validate: number
     format: number
     query: number
