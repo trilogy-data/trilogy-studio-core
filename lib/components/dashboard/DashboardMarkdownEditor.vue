@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, defineEmits, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, defineEmits, onMounted, onUnmounted, computed, watch } from 'vue'
 import SimpleEditor from '../SimpleEditor.vue'
 import { type Import } from '../../stores/resolver'
 import type { ContentInput } from '../../stores/resolver'
@@ -133,7 +133,7 @@ function handleClickOutside(event: MouseEvent): void {
   if (!popupElement.contains(event.target as Node)) {
     // Calculate distance from popup edges
     const rect = popupElement.getBoundingClientRect()
-    const bufferZone = 100 // pixels buffer around the popup
+    const bufferZone = 50 // pixels buffer around the popup
 
     const isCloseToLeft = event.clientX >= rect.left - bufferZone && event.clientX <= rect.left
     const isCloseToRight = event.clientX >= rect.right && event.clientX <= rect.right + bufferZone
@@ -271,24 +271,26 @@ function stopResize(): void {
 }
 
 onMounted(() => {
-  nextTick(() => {
+
+  setTimeout(() => {
     document.addEventListener('click', handleClickOutside)
-    // Add global mouse event listeners for resizing
-    document.addEventListener('mousemove', handleResize)
-    document.addEventListener('mouseup', (e) => {
-      if (isResizing.value) {
-        stopResize()
+  }, 0)
+  // Add global mouse event listeners for resizing
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', (e) => {
+    if (isResizing.value) {
+      stopResize()
 
-        // Prevent this mouse up from triggering handleClickOutside immediately
-        e.stopPropagation()
+      // Prevent this mouse up from triggering handleClickOutside immediately
+      e.stopPropagation()
 
-        // Reset the click outside protection timer
-        setTimeout(() => {
-          canCloseOnClickOutside.value = true
-        }, 100)
-      }
-    })
+      // Reset the click outside protection timer
+      setTimeout(() => {
+        canCloseOnClickOutside.value = true
+      }, 100)
+    }
   })
+
 })
 
 onUnmounted(() => {
@@ -301,31 +303,19 @@ onUnmounted(() => {
 <template>
   <div class="editor-overlay">
     {{ content }}
-    <div
-      class="content-editor"
-      ref="editorElement"
-      :style="{
-        width: `${editorWidth}px`,
-        height: `${editorHeight}px`,
-        top: `${editorTop}%`,
-        left: `${editorLeft}%`,
-        transform: `translate(-50%, -50%)`,
-      }"
-    >
+    <div class="content-editor" ref="editorElement" :style="{
+      width: `${editorWidth}px`,
+      height: `${editorHeight}px`,
+      top: `${editorTop}%`,
+      left: `${editorLeft}%`,
+      transform: `translate(-50%, -50%)`,
+    }">
       <!-- Tab Navigation -->
       <div class="tab-header">
-        <button
-          @click="switchTab('markdown')"
-          :class="{ active: activeTab === 'markdown' }"
-          class="tab-button"
-        >
+        <button @click="switchTab('markdown')" :class="{ active: activeTab === 'markdown' }" class="tab-button">
           📝 Markdown Template
         </button>
-        <button
-          @click="switchTab('query')"
-          :class="{ active: activeTab === 'query' }"
-          class="tab-button"
-        >
+        <button @click="switchTab('query')" :class="{ active: activeTab === 'query' }" class="tab-button">
           🔍 Data Query
         </button>
       </div>
@@ -345,18 +335,14 @@ onUnmounted(() => {
             </button>
             <button @click="addLoop" title="Insert loop" class="data-button">↻</button>
           </div>
-          <textarea
-            v-model="markdownText"
-            placeholder="Enter markdown content here...
+          <textarea v-model="markdownText" placeholder="Enter markdown content here...
 
 Template examples:
 - {field_name} - First row value
 - {data[0].field_name} - Specific row
 - {data.length} - Total rows
 - {{#each data}} {{field_name}} {{/each}} - Loop all
-- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5"
-            class="markdown-editor"
-          ></textarea>
+- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5" class="markdown-editor"></textarea>
         </div>
 
         <!-- Query Tab -->
@@ -367,14 +353,8 @@ Template examples:
               needed.
             </p>
           </div>
-          <SimpleEditor
-            class="editor-content"
-            :initContent="queryEditorContent"
-            :connectionName="connectionName"
-            :imports="imports"
-            :rootContent="rootContent"
-            ref="editor"
-          ></SimpleEditor>
+          <SimpleEditor class="editor-content" :initContent="queryEditorContent" :connectionName="connectionName"
+            :imports="imports" :rootContent="rootContent" ref="editor"></SimpleEditor>
         </div>
       </div>
 
