@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
+import { ref, defineEmits, onMounted, onUnmounted, nextTick } from 'vue'
 import SimpleEditor from '../SimpleEditor.vue'
 import { type Import } from '../../stores/resolver'
-import { nextTick } from 'process'
 import type { ContentInput } from '../../stores/resolver'
 
 interface EditorRef {
