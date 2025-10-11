@@ -738,10 +738,6 @@ def test_multi_query_empty_queries():
         "queries": [],
     }
 
-    from io_models import MultiQueryInSchema
-    from trilogy.render import get_dialect_generator
-    from main import generate_multi_query_core
-
     query = MultiQueryInSchema.model_validate(multi_query)
     dialect = get_dialect_generator(query.dialect)
     results = generate_multi_query_core(query, dialect)
