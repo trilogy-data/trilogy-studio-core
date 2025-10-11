@@ -4,6 +4,8 @@ import { type ChartConfig } from '../editors/results'
 import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
+const baseDataName = 'base'
+
 export const createBeeSwarmSpec = (
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
@@ -12,8 +14,9 @@ export const createBeeSwarmSpec = (
     isMobile: boolean,
     intChart: Array<Partial<ChartConfig>>,
     currentTheme: string = 'light',
+    currentData: readonly Record<string, any>[] | null = null,
 ) => {
-    return {
+    let spec = {
         "$schema": "https://vega.github.io/schema/vega/v6.json",
         "description": "A beeswarm chart example that uses a force-directed layout to group items by category.",
         "width": 1000,
@@ -21,67 +24,8 @@ export const createBeeSwarmSpec = (
         "padding": { "left": 5, "right": 5, "top": 0, "bottom": 20 },
         "data": [
             {
-                "name": "satellites",
-                "values": [
-                    { "op_orbit": "MEO", "name": "Vanguard III" },
-                    { "op_orbit": "MEO", "name": "Relay 1" },
-                    { "op_orbit": "MEO", "name": "Hitchhiker 1" },
-                    { "op_orbit": "MEO", "name": "Relay 2" },
-                    { "op_orbit": "MEO", "name": "ATS 2" },
-                    { "op_orbit": "MEO", "name": "RAE 1" },
-                    { "op_orbit": "MEO", "name": "AE-C" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1413" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1414" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1415" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1490" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1491" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1492" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1519" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1520" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1521" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1554" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1555" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1556" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1593" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1594" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1595" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1650" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1651" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1652" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1710" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1711" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1712" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1778" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1779" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1780" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1883" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1884" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1885" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1946" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1947" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1948" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1970" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1971" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1972" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1987" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1988" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2022" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2023" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2079" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2080" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2081" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2109" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2110" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2111" },
-                    { "op_orbit": "MEO", "name": "FAST" },
-                    { "op_orbit": "MEO", "name": "USA 144" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC155" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC094" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC224" },
-                    { "op_orbit": "MEO", "name": "IRNSS-R1H" },
-                    { "op_orbit": "MEO", "name": "GSAT-6A" },
-                    { "op_orbit": "MEO", "name": "USA 310" }
-                ]
+                "name": baseDataName,
+                "values": currentData?.slice(0, 1000) || [],
             }
         ],
         "scales": [
@@ -89,8 +33,8 @@ export const createBeeSwarmSpec = (
                 "name": "xscale",
                 "type": "band",
                 "domain": {
-                    "data": "satellites",
-                    "field": "op_orbit",
+                    "data": baseDataName,
+                    "field": config.xField,
                     "sort": true
                 },
                 "range": "width"
@@ -98,7 +42,7 @@ export const createBeeSwarmSpec = (
             {
                 "name": "color",
                 "type": "ordinal",
-                "domain": { "data": "satellites", "field": "op_orbit" },
+                "domain": { "data": baseDataName, "field": config.xField },
                 "range": { "scheme": "category20c" }
             }
         ],
@@ -109,13 +53,16 @@ export const createBeeSwarmSpec = (
             {
                 "name": "nodes",
                 "type": "symbol",
-                "from": { "data": "satellites" },
+                "tooltip": true,
+                "from": { "data": baseDataName },
                 "encode": {
                     "enter": {
-                        "fill": { "scale": "color", "field": "op_orbit" },
-                        "xfocus": { "scale": "xscale", "field": "op_orbit", "band": 0.5 },
+                        "fill": { "scale": "color", "field": config.xField },
+                        "xfocus": { "scale": "xscale", "field": config.xField, "band": 0.5 },
                         "yfocus": { "value": 50 },
-                        "tooltip": { "signal": "{'Satellite': datum.name, 'Orbit': datum.op_orbit}" }
+                        
+                                                // "tooltip": { "signal": `{'${[config.xField]}': datum.${config.xField}, 'Orbit': datum[${config.colorField}]" }` }
+                        // "tooltip": { "signal": "{'Satellite': datum.name, 'Orbit': datum[config.yField]}" }
                     },
                     "update": {
                         "size": { "value": 256 },
@@ -144,4 +91,7 @@ export const createBeeSwarmSpec = (
             }
         ]
     }
+
+    console.log(spec)
+    return spec
 }

@@ -54,7 +54,7 @@ export const Controls: ChartControl[] = [
     field: 'xField',
     columnFilter: 'all',
     allowEmpty: false,
-    visibleFor: ['bar', 'line', 'point', 'area', 'heatmap'],
+    visibleFor: ['bar', 'line', 'point', 'area', 'heatmap', 'beeswarm'],
     filterGroup: 'axes',
   },
   {
@@ -100,7 +100,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['bar', 'barh', 'point', 'donut'],
+    visibleFor: ['bar', 'barh', 'point', 'donut', ],
     filterGroup: 'appearance',
   },
   //categorical only
@@ -110,7 +110,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'categorical',
     allowEmpty: true,
-    visibleFor: ['line', 'area'],
+    visibleFor: ['line', 'area', 'beeswarm'],
     filterGroup: 'appearance',
   },
   {
@@ -173,7 +173,7 @@ export const Controls: ChartControl[] = [
     field: 'annotationField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'point', 'heatmap'],
+    visibleFor: ['usa-map', 'point', 'heatmap', 'beeswarm'],
     filterGroup: 'appearance',
   },
   {
@@ -220,7 +220,7 @@ export const Controls: ChartControl[] = [
     field: 'showTitle',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline'],
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline', 'beeswarm'],
     filterGroup: 'appearance',
   },
 ]

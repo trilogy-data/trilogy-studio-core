@@ -274,7 +274,7 @@ export const generateVegaSpec = (
         isMobile,
         intChart,
         currentTheme,
-        // localData,
+        localData,
       )
       break
   }
