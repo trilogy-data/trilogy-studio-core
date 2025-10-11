@@ -37,15 +37,15 @@ from query_helpers import (
 def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
     """
     Create and configure the Trilogy API router with all endpoints.
-    
+
     Args:
         enable_perf_logging: Whether to enable performance logging for requests
-        
+
     Returns:
         Configured APIRouter instance with all Trilogy endpoints
     """
     router = APIRouter()
-    
+
     # Set up logger
     perf_logger = getLogger("trilogy.performance")
 
@@ -115,7 +115,9 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
                 dialect_time = time.time() - start_time
                 statements_start = time.time()
 
-            statements = generate_multi_query_core(queries, dialect, enable_perf_logging)
+            statements = generate_multi_query_core(
+                queries, dialect, enable_perf_logging
+            )
 
             if enable_perf_logging:
                 statements_time = time.time() - statements_start
@@ -235,7 +237,9 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
         except Exception as e:
             if enable_perf_logging:
                 error_time = time.time() - start_time
-                perf_logger.error(f"Model parsing failed after {error_time:.4f}s: {str(e)}")
+                perf_logger.error(
+                    f"Model parsing failed after {error_time:.4f}s: {str(e)}"
+                )
 
             raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
 
