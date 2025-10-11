@@ -1,17 +1,17 @@
 
-// import { type ResultColumn } from '../editors/results'
-// import { type ChartConfig } from '../editors/results'
-// import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
-// import { lightDefaultColor, darkDefaultColor } from './constants'
+import { type ResultColumn } from '../editors/results'
+import { type ChartConfig } from '../editors/results'
+import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
+import { lightDefaultColor, darkDefaultColor } from './constants'
 
 export const createBeeSwarmSpec = (
-    // config: ChartConfig,
-    // columns: Map<string, ResultColumn>,
-    // tooltipFields: any[],
-    // encoding: any,
-    // isMobile: boolean,
-    // intChart: Array<Partial<ChartConfig>>,
-    // currentTheme: string = 'light',
+    config: ChartConfig,
+    columns: Map<string, ResultColumn>,
+    tooltipFields: any[],
+    encoding: any,
+    isMobile: boolean,
+    intChart: Array<Partial<ChartConfig>>,
+    currentTheme: string = 'light',
 ) => {
     return {
         "$schema": "https://vega.github.io/schema/vega/v6.json",

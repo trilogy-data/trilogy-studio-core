@@ -17,6 +17,7 @@ import { createBarHChartSpec } from './barHChartSpec'
 import { createHeatmapSpec } from './heatmapSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
+import { createBeeSwarmSpec } from './beeSwarmSpec'
 /**
  * Create a field encoding for Vega-Lite
  */
@@ -264,6 +265,18 @@ export const generateVegaSpec = (
     case 'tree':
       chartSpec = createTreemapSpec(config, localData, columns, tooltipFields, encoding)
       break
+    case 'beeswarm':
+      chartSpec = createBeeSwarmSpec(
+        config,
+        columns,
+        tooltipFields,
+        encoding,
+        isMobile,
+        intChart,
+        currentTheme,
+        // localData,
+      )
+      break
   }
 
   // Apply chart spec to main spec
@@ -271,10 +284,6 @@ export const generateVegaSpec = (
     spec.spec = { ...spec.spec, ...chartSpec }
   } else {
     spec = { ...spec, ...chartSpec }
-  }
-
-  // Add mobile-specific configurations
-  if (isMobile) {
   }
 
   if (config.yField2) {

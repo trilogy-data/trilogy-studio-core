@@ -375,11 +375,16 @@ export const determineEligibleChartTypes = (
   const longitudeColumns = filteredColumns('longitude', columns)
   const geoColumns = filteredColumns('geographic', columns)
   const eligibleCharts: string[] = []
-
+  
+  if (categoricalColumns.length >0) {
+    eligibleCharts.push('beeswarm')
+  }
   // If no numeric columns, very limited chart options
   if (numericColumns.length === 0) {
-    return ['headline']
+    eligibleCharts.push('headline')
+    return eligibleCharts
   }
+
 
   // Time series data - line chart
   if (temporalColumns.length > 0 && numericColumns.length > 0) {
