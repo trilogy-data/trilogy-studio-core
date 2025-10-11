@@ -152,7 +152,7 @@ const useConnectionStore = defineStore('connections', {
         return 'disabled'
       }
     },
-    newConnection(name: string, type: string, options: Record<string, any>) {
+    newConnection(name: string, type: string, options: Record<string, any>): Connection {
       if (this.connections[name]) {
         throw new Error(`Connection with name "${name}" already exists.`)
       }
@@ -203,6 +203,7 @@ const useConnectionStore = defineStore('connections', {
         const modelStore = useModelConfigStore()
         this.connections[name].model = modelStore.newModelConfig(name).name
       }
+      return this.connections[name]
     },
   },
 })

@@ -2,7 +2,7 @@
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-border-radius: 0px;
+  border-radius: 0px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -43,7 +43,7 @@ border-radius: 0px;
   --dashboard-background: transparent;
   --border-color: var(--border);
   --border-light: #4b4b4b;
-  --button-bg: #4D4D4D;
+  --button-bg: transparent;
   --button-mouseover: #3C3C3C;
 }
 
@@ -79,7 +79,8 @@ border-radius: 0px;
   --dashboard-border: transparent;
   --dashboard-background: #FBFBFB;
   --border-light: #E5E5E5;
-  --button-bg: #dfdfdff0;
+  --button-bg: transparent;
+  --button-border: #cfcfcf;
   --button-mouseover: #cfcfcf;
 
 
@@ -101,6 +102,8 @@ border-radius: 0px;
   --big-font-size: 18px;
   --small-font-size: 12px;
   --button-font-size: .80em;
+  --button-font-weight: 300;
+  --button-padding: 4px;
 
   --icon-size: 16px;
 
@@ -120,7 +123,10 @@ border-radius: 0px;
     --font-size: 16px;
     --big-font-size: 20px;
     --small-font-size: 14px;
-    --button-font-size: 1.1em;
+    --button-font-size: .9em;
+    --button-font-weight: 200;
+    --button-padding: 6px;
+
 
     --icon-size: 22px;
 
@@ -175,11 +181,12 @@ button:hover {
 }
 
 button {
-  border: 1px solid transparent;
+  border: 1px solid var(--button-border, #cfcfcf);
   /* padding: 0.6em 1.2em; */
   /* font-size: .70em; */
   font-size: var(--button-font-size);
-  font-weight: 300;
+  font-weight: var(--button-font-weight);
+  padding: var(--button-padding);
   font-family: inherit;
   background-color: var(--button-bg);
   cursor: pointer;
@@ -397,4 +404,13 @@ button {
   background-color: hsl(210, 100%, 50%, 0.5);
   border: 1px solid hsl(210, 100%, 50%, 0.75);
   /* Or any other styling you want */
+}
+
+.section-header {
+  padding: 8px 16px;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

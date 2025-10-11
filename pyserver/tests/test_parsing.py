@@ -3,9 +3,9 @@ from trilogy.parser import parse_text
 
 from env_helpers import parse_env_from_full_model
 from trilogy.render import get_dialect_generator
-from main import generate_query_core
+from query_helpers import generate_query_core
 from io_models import MultiQueryInSchema
-from main import generate_multi_query_core
+from query_helpers import generate_multi_query_core
 from trilogy.authoring import ArrayType, StructType
 from trilogy.core.models.core import MapType
 from trilogy.core.statements.execute import ProcessedQuery, ProcessedQueryPersist
@@ -737,10 +737,6 @@ def test_multi_query_empty_queries():
         "full_model": {"name": "", "sources": []},
         "queries": [],
     }
-
-    from io_models import MultiQueryInSchema
-    from trilogy.render import get_dialect_generator
-    from main import generate_multi_query_core
 
     query = MultiQueryInSchema.model_validate(multi_query)
     dialect = get_dialect_generator(query.dialect)

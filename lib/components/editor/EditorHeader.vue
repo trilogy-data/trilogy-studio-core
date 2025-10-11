@@ -137,7 +137,7 @@ export default defineComponent({
 
 <style scoped>
 .menu-bar {
-  background-color: var(--sidebar-bg);
+  background-color: var(--editor-bg);
   display: flex;
   flex-shrink: 0;
   flex-direction: row;
@@ -146,6 +146,7 @@ export default defineComponent({
   justify-content: space-between;
   padding-right: 0.5rem;
   height: 40px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .menu-actions {

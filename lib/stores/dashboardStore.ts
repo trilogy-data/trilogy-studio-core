@@ -129,6 +129,10 @@ export const useDashboardStore = defineStore('dashboards', {
       return statuses
     },
 
+    getDashboardByName(name: string): DashboardModel | null {
+      return Object.values(this.dashboards).find((dashboard) => dashboard.name === name) || null
+    },
+
     // Create a new dashboard
     newDashboard(name: string, connection: string) {
       const id = name

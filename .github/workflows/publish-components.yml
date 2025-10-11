@@ -1,24 +1,31 @@
 name: Publish Trilogy Studio Components
-
 on:
   push:
     branches:
       - main
-
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org/'
+          cache: 'pnpm'
+      
       - name: Install dependencies
-        run: cd lib && npm install
+        run: cd lib && pnpm install --frozen-lockfile
+      
       - name: Build
-        run: cd lib && npm run build
+        run: cd lib && pnpm run build
+      
       - name: Publish
-        run: cd lib && npm publish
+        run: cd lib && pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

@@ -1,8 +1,8 @@
 <!-- QueryHistory.vue -->
 <template>
   <div class="query-history">
-    <div class="query-history-header">
-      <h3>Query History for {{ connectionName }}</h3>
+    <div class="section-header">
+      Query History for {{ connectionName }}
       <div class="query-history-actions">
         <button @click="refreshHistory" class="refresh-btn" title="Refresh history">Refresh</button>
         <button @click="clearHistory" class="clear-btn" title="Clear history">Clear</button>
@@ -200,7 +200,6 @@ onMounted(() => {
     Roboto,
     Arial,
     sans-serif;
-  font-size: 14px;
   color: var(--text-color);
   background-color: var(--bg-color);
   border: 1px solid var(--border);
@@ -210,38 +209,9 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.query-history-header {
-  padding: 8px 16px;
-  background-color: var(--bg-color);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.query-history-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .query-history-actions {
   display: flex;
   gap: 8px;
-}
-
-.query-history-actions button {
-  background-color: var(--bg-color);
-  /* border: 1px solid var(--border); */
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.2s ease;
-}
-
-.query-history-actions button:hover {
-  background-color: var(--bg-color);
 }
 
 .refresh-btn {

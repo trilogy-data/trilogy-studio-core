@@ -1,7 +1,6 @@
 import time
 
 
-from duckdb import query
 from trilogy.constants import Parsing
 from trilogy import Environment
 from trilogy.parser import parse_text

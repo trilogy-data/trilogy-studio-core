@@ -1,31 +1,29 @@
 <template>
-  <section :id="config.name" class="model-section">
-    <div class="model-header">
-      <div class="model-title" @click="startEditing">
-        <span v-if="!isEditing" class="editable-text">
-          {{ config.name }}
-          <span class="edit-icon">✎</span>
-        </span>
-        <input
-          v-else
-          ref="nameInput"
-          v-model="editableName"
-          @blur="finishEditing"
-          @keyup.enter="finishEditing"
-          @keyup.esc="cancelEditing"
-          class="name-input"
-          type="text"
-        />
-      </div>
-      <div class="controls">
-        <loading-button class="btn" :action="() => fetchParseResults(index)">
-          Parse
-        </loading-button>
-        <button class="btn" @click="toggleNewSource(index)">Add Source</button>
-        <button class="btn" @click="clearSources(index)">Clear</button>
-        <button class="btn delete-btn" @click="remove(index)">Delete</button>
-      </div>
+  <div class="section-header">
+    <div class="model-title" @click="startEditing">
+      <span v-if="!isEditing" class="editable-text">
+        {{ config.name }}
+        <span class="edit-icon">✎</span>
+      </span>
+      <input
+        v-else
+        ref="nameInput"
+        v-model="editableName"
+        @blur="finishEditing"
+        @keyup.enter="finishEditing"
+        @keyup.esc="cancelEditing"
+        class="name-input"
+        type="text"
+      />
     </div>
+    <div class="controls">
+      <loading-button class="btn" :action="() => fetchParseResults(index)"> Parse </loading-button>
+      <button class="btn" @click="toggleNewSource(index)">Add Source</button>
+      <button class="btn" @click="clearSources(index)">Clear</button>
+      <button class="btn delete-btn" @click="remove(index)">Delete</button>
+    </div>
+  </div>
+  <section :id="config.name" class="model-section">
     <div v-if="config.description">{{ config.description }}</div>
     <div v-if="newSourceVisible[index]" class="source-form">
       <form @submit.prevent="submitSourceAddition(index)">
@@ -98,8 +96,6 @@
 }
 
 .model-title {
-  font-weight: 500;
-  font-size: 24px;
   cursor: pointer;
   padding: 4px;
 }
@@ -126,6 +122,7 @@
   padding: 4px 8px;
   font-size: inherit;
   font-weight: 500;
+  color: var(--text-color);
   width: auto;
   min-width: 200px;
 }
@@ -259,7 +256,7 @@
 
 <script lang="ts">
 import { defineComponent, inject, ref, computed, nextTick } from 'vue'
-import { ModelConfig, ModelSource } from '../../models' // Adjust the import path
+import { ModelConfig, ModelSource } from '../../models'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'

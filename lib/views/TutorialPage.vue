@@ -1,7 +1,7 @@
 <template>
+  <div v-if="currentData" class="section-header">{{ currentData.title }}</div>
   <div v-if="currentData" class="tutorial-container">
     <section id="navigation" class="tutorial-section">
-      <h2>{{ currentData.title }}</h2>
       <template v-for="paragraph in currentData.paragraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
@@ -60,7 +60,8 @@
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
-                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. The Welcome and Query Tutorial will show you how to create it.`
+                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. The
+            Welcome and Query Tutorial will show you how to create it.`
             }}
           </div>
         </div>

@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
+import { ref, defineEmits, onMounted, onUnmounted} from 'vue'
 import SimpleEditor from '../SimpleEditor.vue'
 import { type Import } from '../../stores/resolver'
-import { nextTick } from 'process'
 import type { ContentInput } from '../../stores/resolver'
 
 interface EditorRef {
@@ -81,14 +80,13 @@ function handleClickOutside(event: MouseEvent): void {
   if (!popupElement.contains(event.target as Node)) {
     // Calculate distance from popup edges
     const rect = popupElement.getBoundingClientRect()
-    const bufferZone = 100 // pixels buffer around the popup
+    const bufferZone = 50 // pixels buffer around the popup
 
     const isCloseToLeft = event.clientX >= rect.left - bufferZone && event.clientX <= rect.left
     const isCloseToRight = event.clientX >= rect.right && event.clientX <= rect.right + bufferZone
     const isCloseToTop = event.clientY >= rect.top - bufferZone && event.clientY <= rect.top
     const isCloseToBottom =
       event.clientY >= rect.bottom && event.clientY <= rect.bottom + bufferZone
-
     // Only close if the click is outside the buffer zone
     if (!(isCloseToLeft || isCloseToRight || isCloseToTop || isCloseToBottom)) {
       emit('cancel')
@@ -171,24 +169,26 @@ function stopResize(): void {
 }
 
 onMounted(() => {
-  nextTick(() => {
+  // Delay to avoid catching the opening click event
+  setTimeout(() => {
     document.addEventListener('click', handleClickOutside)
-    // Add global mouse event listeners for resizing
-    document.addEventListener('mousemove', handleResize)
-    document.addEventListener('mouseup', (e) => {
-      if (isResizing.value) {
-        stopResize()
+  }, 0)
+  // Add global mouse event listeners for resizing
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', (e) => {
+    if (isResizing.value) {
+      stopResize()
 
-        // Prevent this mouse up from triggering handleClickOutside immediately
-        e.stopPropagation()
+      // Prevent this mouse up from triggering handleClickOutside immediately
+      e.stopPropagation()
 
-        // Reset the click outside protection timer
-        setTimeout(() => {
-          canCloseOnClickOutside.value = true
-        }, 100)
-      }
-    })
+      // Reset the click outside protection timer
+      setTimeout(() => {
+        canCloseOnClickOutside.value = true
+      }, 100)
+    }
   })
+
 })
 
 onUnmounted(() => {
@@ -200,26 +200,16 @@ onUnmounted(() => {
 
 <template>
   <div class="editor-overlay">
-    <div
-      class="content-editor"
-      ref="editorElement"
-      :style="{
-        width: `${editorWidth}px`,
-        height: `${editorHeight}px`,
-        top: `${editorTop}%`,
-        left: `${editorLeft}%`,
-        transform: `translate(-50%, -50%)`,
-      }"
-    >
+    <div class="content-editor" ref="editorElement" :style="{
+      width: `${editorWidth}px`,
+      height: `${editorHeight}px`,
+      top: `${editorTop}%`,
+      left: `${editorLeft}%`,
+      transform: `translate(-50%, -50%)`,
+    }">
       <div class="editor-body">
-        <SimpleEditor
-          class="editor-content"
-          :initContent="queryText"
-          :connectionName="connectionName"
-          :imports="imports"
-          :rootContent="rootContent"
-          ref="editor"
-        ></SimpleEditor>
+        <SimpleEditor class="editor-content" :initContent="queryText" :connectionName="connectionName"
+          :imports="imports" :rootContent="rootContent" ref="editor"></SimpleEditor>
       </div>
       <div class="editor-actions">
         <button @click="saveQuery" class="save-button" data-testid="save-dashboard-chart">

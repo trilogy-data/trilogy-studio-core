@@ -38,6 +38,7 @@
         />
         <SymbolsPane
           :symbols="editorData.completionSymbols || []"
+          @select-symbol="insertSymbol"
           ref="symbolsPane"
           v-if="!isMobile"
         />
@@ -72,7 +73,7 @@ import { Results } from '../../editors/results.ts'
 import type { QueryInput } from '../../stores/queryExecutionService.ts'
 
 import FetchResolver from '../../stores/resolver.ts'
-import type { Import } from '../../stores/resolver.ts'
+import type { Import, CompletionItem } from '../../stores/resolver'
 import LoadingButton from '../LoadingButton.vue'
 import ErrorMessage from '../ErrorMessage.vue'
 import { EditorTag } from '../../editors/index.ts'
@@ -260,6 +261,27 @@ export default defineComponent({
     // New method to handle content changes from the CodeEditor
     handleContentsChange(content: string): void {
       this.editorStore.setEditorContents(this.editorId, content)
+    },
+
+    insertSymbol(symbol: CompletionItem): void {
+      if (!this.$refs.codeEditor) return
+      let codeEditor = this.$refs.codeEditor as CodeEditorRef
+      let instance = codeEditor.getEditorInstance()
+      const position = instance.getPosition()
+      if (position && symbol.insertText) {
+        instance.executeEdits('', [
+          {
+            range: new Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column,
+            ),
+            text: symbol.insertText,
+          },
+        ])
+        instance.focus()
+      }
     },
 
     handlePositionChange(scrollPosition: { line: number; column: number }): void {

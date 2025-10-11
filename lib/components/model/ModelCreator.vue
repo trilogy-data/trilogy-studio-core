@@ -112,7 +112,7 @@
           class="submit-button"
           :disabled="!isFormValid"
         >
-          Submit
+          {{ modelDetails.importAddress ? 'Import' : 'Create' }}
         </loading-button>
         <button type="button" @click="close()">Cancel</button>
       </div>
@@ -163,12 +163,7 @@ option {
 .submit-button {
   /* Ensure consistent styling with button */
   border: 1px solid var(--border-color);
-  background-color: var(--bg-color);
-  color: var(--color);
-  cursor: pointer;
-  font-size: var(--small-font-size);
-  height: var(--sidebar-sub-item-height);
-  padding: 0 10px;
+
 }
 </style>
 <script lang="ts">

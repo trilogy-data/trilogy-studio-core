@@ -7,6 +7,7 @@ export function buildConnectionTree(
   collapsed: Record<string, boolean>,
   isLoading: Record<string, boolean>,
   isErrored: Record<string, string>,
+  isMobile: boolean = false,
 ): Array<{
   id: string
   name: string
@@ -26,6 +27,20 @@ export function buildConnectionTree(
     connection: any | undefined
     object?: any
   }> = []
+
+  // Add "View Queries" button at the top for mobile
+  if (isMobile) {
+    list.push({
+      id: 'mobile-view-queries',
+      name: `View Current Connection History`,
+      indent: 0,
+      count: 0,
+      type: 'view-queries',
+      searchPath: '',
+      connection: undefined,
+    })
+  }
+
   const sorted = Object.values(connections).sort((a, b) => {
     if (a.connected && !b.connected) {
       return -1
@@ -281,7 +296,10 @@ export function filterConnectionTree(
   const matchingNodeIds = new Set<string>()
   // Find all nodes that directly match the filter
   treeNodes.forEach((node) => {
-    if (node.searchPath.toLowerCase().includes(normalizedFilter)) {
+    // Keep the view-queries button visible even when filtering
+    if (node.type === 'view-queries') {
+      matchingNodeIds.add(node.id)
+    } else if (node.searchPath.toLowerCase().includes(normalizedFilter)) {
       matchingNodeIds.add(node.id)
     }
   })

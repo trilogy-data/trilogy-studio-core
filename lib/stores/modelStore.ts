@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ModelConfig, ModelParseResults, ModelSource } from '../models'
+import type { Editor } from '../editors'
 
 const useModelConfigStore = defineStore('models', {
   state: () => ({
@@ -31,9 +32,15 @@ const useModelConfigStore = defineStore('models', {
       }
     },
     updateModelName(name: string, newName: string) {
+      if (name === newName) return
+      console.log(`Renaming model from ${name} to ${newName}`)
       this.models[newName] = this.models[name]
       this.models[newName].name = newName
+      this.models[newName].changed = true
       delete this.models[name]
+    },
+    addEditorAsModelSource(model: string, editor: Editor): void {
+      this.addModelConfigSource(model, new ModelSource(editor.id, editor.name, [], []))
     },
     addModelConfigSource(name: string, contents: ModelSource) {
       if (this.models[name]) {
