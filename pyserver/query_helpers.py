@@ -242,27 +242,31 @@ def generate_single_query(
     if not final_select.limit:
         final_select.limit = STATEMENT_LIMIT
 
+    candidates = final_select.selects if isinstance(final_select, MultiSelectStatement) else [final_select]
+
     if extra_filters:
         conditional = filters_to_conditional(
             extra_filters, variables, env, base_filter_idx=base_filter_idx
         )
-        if not final_select.where_clause:
-            final_select.where_clause = conditional
-        elif conditional:
-            final_select.where_clause.conditional = Conditional(
-                left=Parenthetical(content=final_select.where_clause.conditional),
-                right=Parenthetical(content=conditional.conditional),
-                operator=BooleanOperator.AND,
-            )
+        for candidate in candidates:
+            if not candidate.where_clause:
+                candidate.where_clause = conditional
+            elif conditional:
+                candidate.where_clause.conditional = Conditional(
+                    left=Parenthetical(content=candidate.where_clause.conditional),
+                    right=Parenthetical(content=conditional.conditional),
+                    operator=BooleanOperator.AND,
+                )
     if extra_conditional:
-        if not final_select.where_clause:
-            final_select.where_clause = extra_conditional
-        else:
-            final_select.where_clause.conditional = Conditional(
-                left=Parenthetical(content=final_select.where_clause.conditional),
-                right=Parenthetical(content=extra_conditional.conditional),
-                operator=BooleanOperator.AND,
-            )
+        for candidate in candidates:
+            if not candidate.where_clause:
+                candidate.where_clause = extra_conditional
+            else:
+                candidate.where_clause.conditional = Conditional(
+                    left=Parenthetical(content=candidate.where_clause.conditional),
+                    right=Parenthetical(content=extra_conditional.conditional),
+                    operator=BooleanOperator.AND,
+                )
 
     limit_filter_time = time.time() - limit_filter_start
 

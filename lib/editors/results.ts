@@ -59,6 +59,7 @@ export type FieldKey =
   | 'geoField'
   | 'groupField'
   | 'trellisField'
+  | 'annotationField'
 
 export type BoolFieldKey = 'hideLegend' | 'showTitle'
 

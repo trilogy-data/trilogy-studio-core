@@ -438,12 +438,14 @@ export default {
   watch: {
     results: {
       handler() {
+
         this.updateTable()
       },
-      deep: true,
+      // deep: true,
     },
     containerHeight: {
       handler() {
+
         this.$nextTick(() => {
           if (this.tabulator && this.containerHeight) {
             this.tabulator.setHeight(this.containerHeight)
@@ -454,7 +456,7 @@ export default {
   },
   computed: {
     tableData() {
-      return this.results
+      return Object.freeze([...this.results])
     },
     tableColumns(): ColumnDefinition[] {
       const calculated: ColumnDefinition[] = []
@@ -573,13 +575,21 @@ export default {
     create() {
       let target = this.$refs.tabulator as HTMLElement
       let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
-
+      // check if any column is of type ARRAY or STRUCT, if so, use fitData
+      let rowHeight = 30 as number | undefined;
+      for (let col of this.headers.values()) {
+        if (col.type === ColumnType.ARRAY || col.type === ColumnType.STRUCT) {
+          rowHeight = undefined
+          break
+        }
+      }
       let tab = new Tabulator(target, {
         pagination: this.tableData.length > 1000,
         renderHorizontal: 'virtual',
         maxHeight: '100%',
         minHeight: '100%',
         minWidth: '100%',
+        rowHeight: rowHeight,
         //@ts-ignore
         data: this.tableData,
         columns: this.tableColumns,

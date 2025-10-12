@@ -202,6 +202,8 @@ export default defineComponent({
         isMobile.value,
         props.chartTitle,
         currentTheme.value,
+        props.containerHeight,
+        props.containerWidth,
       )
     }
 

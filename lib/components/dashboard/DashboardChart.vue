@@ -151,7 +151,7 @@ export default defineComponent({
     })
 
     const chartWidth = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).width || 300) - 100
+      return (props.getItemData(props.itemId, props.dashboardId).width || 300)
     })
 
     const chartConfig = computed(() => {

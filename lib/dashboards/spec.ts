@@ -108,6 +108,8 @@ export const generateVegaSpec = (
   isMobile: boolean = false,
   title: string = '',
   currentTheme: 'light' | 'dark' | '' = 'light',
+  containerHeight: number = 400,
+  containerWidth: number = 600,
 ) => {
   let intChart: { [key: string]: string | number | Array<any> }[] = chartSelection
     ? (chartSelection.map((x) => toRaw(x)) as { [key: string]: string | number | Array<any> }[])
@@ -275,6 +277,7 @@ export const generateVegaSpec = (
         intChart,
         currentTheme,
         localData,
+        containerHeight, containerWidth,
       )
       break
   }
@@ -321,5 +324,6 @@ export const generateVegaSpec = (
     }
     return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
   }
+  console.log(config)
   return spec
 }
