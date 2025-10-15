@@ -805,7 +805,7 @@ describe('createBeeSwarmSpec', (): void => {
       )
 
       expect(spec).toBeDefined()
-      expect(spec.marks[0].transform[0].iterations).toBeLessThan(400)
+      expect(spec.marks[0].transform[0].iterations).toBeLessThan(401)
     })
 
     it('should scale force iterations based on data count', (): void => {

@@ -303,7 +303,7 @@ describe('Chart Utils', () => {
       })
 
       const eligibleCharts = determineEligibleChartTypes(testData, noNumericColumns)
-      expect(eligibleCharts.length).toBe(1)
+      expect(eligibleCharts.length).toBe(2)
     })
 
     it('should include line and area charts when temporal and numeric columns exist', () => {

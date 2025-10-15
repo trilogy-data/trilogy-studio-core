@@ -612,11 +612,25 @@ describe('AutoImportComponent', () => {
       await nextTick()
 
       // Initially invalid
+      console.log({
+        isLoading: wrapper.vm.isLoading,
+        error: wrapper.vm.error,
+        requiresFields: wrapper.vm.requiresFields,
+        connectionType: wrapper.vm.connectionType,
+      })
+
       expect(wrapper.find('.import-button').attributes('disabled')).toBeDefined()
 
       // Add project ID
       await wrapper.find('#project-id').setValue(TEST_CONSTANTS.FORM_VALUES.PROJECT_ID)
       await nextTick()
+
+      console.log({
+        isLoading: wrapper.vm.isLoading,
+        error: wrapper.vm.error,
+        requiresFields: wrapper.vm.requiresFields,
+        connectionType: wrapper.vm.connectionType,
+      })
 
       // Should be valid now
       expect(wrapper.find('.import-button').attributes('disabled')).toBeUndefined()

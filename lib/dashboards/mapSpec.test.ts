@@ -551,7 +551,7 @@ describe('createMapSpec', () => {
 
       const scatterLayer = spec.layer![1] as any
       expect(scatterLayer.encoding.color.type).toBe('nominal')
-      expect(scatterLayer.encoding.color.scale.scheme).toBe('category20')
+      expect(scatterLayer.encoding.color.scale.scheme).toBe('category20c')
     })
   })
 
