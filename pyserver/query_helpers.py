@@ -287,9 +287,9 @@ def generate_single_query(
     if cleanup_concepts:
         for k in final_select.locally_derived:
             perf_logger.info(f"Cleaning up concept: {k}")
-            del env.concepts[k]
+            env.remove_concept(k)
             if k in pre_concepts:
-                env.add_concept(pre_concepts[k])
+                env.add_concept(pre_concepts[k], force=True)
                 # env.concepts[k] = pre_concepts[k]
     return output_statement, columns, default_values
 
@@ -439,6 +439,10 @@ def generate_multi_query_core(
             all.append((subquery.label, generated, columns, values))
         except Exception as e:
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
+            # log full traceback
+            import traceback
+            traceback_str = traceback.format_exc()
+            perf_logger.error(traceback_str)
             all.append((subquery.label, e, default_return, None))
             # rebuild env, as we assume that cleanup might not have happened
 

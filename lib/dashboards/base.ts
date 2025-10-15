@@ -57,7 +57,7 @@ export interface GridItemData {
 }
 
 export interface GridItemDataResponse {
-  type: 'chart' | 'markdown' | 'table'
+  type: 'chart' | 'markdown' | 'table' | 'filter'
   content: string
   structured_content: MarkdownData
   rootContent: ContentInput[]
@@ -101,6 +101,7 @@ export const CELL_TYPES = {
   CHART: 'chart',
   MARKDOWN: 'markdown',
   TABLE: 'table',
+  FILTER: 'filter',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]

@@ -215,6 +215,15 @@ export const Controls: ChartControl[] = [
     filterGroup: 'appearance',
   },
   {
+    id: 'linky2',
+    label: 'Link Secondary Y Axis',
+    field: 'linkY2',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['line'],
+    filterGroup: 'appearance',
+  },
+  {
     id: 'show-title',
     label: 'Show Title',
     field: 'showTitle',

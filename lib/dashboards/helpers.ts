@@ -671,7 +671,7 @@ export const createColorEncoding = (
     let scale =
       fieldType === 'quantitative'
         ? { scheme: currentTheme === 'light' ? 'viridis' : 'plasma' }
-        : { scheme: currentTheme === 'light' ? 'category20' : 'plasma' }
+        : { scheme: currentTheme === 'light' ? 'category20c' : 'plasma' }
 
     // HEX mapping logic: create full domain/range arrays
     if (hexfields.length > 0) {

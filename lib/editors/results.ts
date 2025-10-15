@@ -81,6 +81,7 @@ export interface ChartConfig {
   showTitle?: boolean
   scaleX?: 'linear' | 'log' | 'sqrt'
   scaleY?: 'linear' | 'log' | 'sqrt'
+  linkY2?: boolean
 }
 
 type SerializableValue =

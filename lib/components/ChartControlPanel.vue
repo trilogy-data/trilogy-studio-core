@@ -137,7 +137,7 @@ export default defineComponent({
   setup(props, { emit }) {
     // Helper function to determine input type
     const getInputType = (field: string): 'select' | 'checkbox' => {
-      return ['hideLegend', 'hideLabel', 'showTitle'].includes(field) ? 'checkbox' : 'select'
+      return ['hideLegend', 'hideLabel', 'showTitle', 'linkY2'].includes(field) ? 'checkbox' : 'select'
     }
 
     // Enhanced controls with input type

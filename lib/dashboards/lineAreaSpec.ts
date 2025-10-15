@@ -36,8 +36,12 @@ const createInteractiveLayer = (
       type: config.chartType === 'line' ? 'line' : 'area',
       ...(config.chartType === 'area' ? { line: filtered ? true : { color: 'darkgray' } } : {}),
       ...(filtered ? { color: markColor } : { color: 'lightgray' }),
+      "interpolate": "step-after"
     },
     data: { values: data },
+    transform: [
+      { filter: `datum.${config.yField} != null` }
+    ],
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, {
         axis: { ...getFormatHint(config.xField, columns) },
@@ -107,7 +111,7 @@ const createInteractiveLayer = (
         // @ts-ignore
         intChart.filter((obj) => config.xField in obj).length > 0
           ? // @ts-ignore
-            intChart.filter((obj) => config.xField in obj)
+          intChart.filter((obj) => config.xField in obj)
           : [],
         config,
       ),
@@ -129,6 +133,9 @@ const createInteractiveLayer = (
       strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
     },
     data: { values: data },
+    transform: [
+      { filter: `datum.${config.yField2} != null` }
+    ],
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
       y: createFieldEncoding(config.yField2, columns, {}, false, { scale: config.scaleY }),
@@ -148,15 +155,15 @@ const createInteractiveLayer = (
     },
     params: !filtered
       ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
+        {
+          name: 'highlight2',
+          select: {
+            type: 'point',
+            on: 'mouseover',
+            clear: 'mouseout',
           },
-        ]
+        },
+      ]
       : [],
   }
 

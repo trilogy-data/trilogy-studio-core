@@ -134,9 +134,13 @@ export const generateVegaSpec = (
       })
     })
   }
-
+  
   // Create base spec
   let spec: any = createBaseSpec(localData)
+
+  if (!localData || localData.length === 0) {
+    return spec
+  }
 
   // Set up color encoding
   let encoding: any = {}
@@ -289,7 +293,7 @@ export const generateVegaSpec = (
     spec = { ...spec, ...chartSpec }
   }
 
-  if (config.yField2) {
+  if (config.yField2 && !config.linkY2) {
     spec.resolve = {
       scale: {
         y: 'independent',
@@ -324,6 +328,5 @@ export const generateVegaSpec = (
     }
     return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
   }
-  console.log(config)
   return spec
 }

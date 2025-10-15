@@ -77,30 +77,26 @@ export function addLabelTransformToTextMarks(
   return modifiedSpec
 }
 
-const createBrushParam = (intChart: Array<Partial<ChartConfig>>, config: ChartConfig) => {
+const createBrushParam = (selectedValues: { [key: string]: string | number | Array<any> }[], config: ChartConfig) => {
   let value = {}
 
-  if (intChart.length === 0) {
+  if (selectedValues.length === 0) {
     return {
       name: 'brush',
       select: {
         type: 'interval',
-
-        // value: intChart
       },
     }
   }
 
   value = {
-    x: intChart[0][config.xField as keyof typeof config],
-    y: intChart[0][config.yField as keyof typeof config],
+    x: selectedValues[0][config.xField as keyof typeof config],
+    y: selectedValues[0][config.yField as keyof typeof config],
   }
   return {
     name: 'brush',
     select: {
       type: 'interval',
-
-      // value: intChart
     },
     value,
   }
@@ -110,7 +106,7 @@ export const createPointChartSpec = (
   config: ChartConfig,
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
-  intChart: { [key: string]: string | number | Array<any> }[],
+  selectedValues: { [key: string]: string | number | Array<any> }[],
   currentTheme: string = 'light',
   isMobile: boolean = false,
   data: readonly Row[] = [],
@@ -133,13 +129,13 @@ export const createPointChartSpec = (
           type: 'point',
           on: 'click,touchend',
         },
-        value: intChart,
+        value: selectedValues,
       },
       createBrushParam(
         // @ts-ignore
-        intChart.filter((obj) => obj && (obj[config.xField] || obj[config.yField])).length > 0
+        selectedValues.filter((obj) => obj && (obj[config.xField] || obj[config.yField])).length > 0
           ? // @ts-ignore
-            intChart.filter((obj) => obj[config.xField] || obj[config.yField])
+            selectedValues.filter((obj) => obj[config.xField] || obj[config.yField])
           : [],
         config,
       ),
