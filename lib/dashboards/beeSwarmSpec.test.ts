@@ -275,9 +275,13 @@ describe('createBeeSwarmSpec', (): void => {
       expect(highlightSignal).toBeDefined()
       expect(highlightSignal!.value).toEqual({})
       expect(highlightSignal!.on).toHaveLength(2)
+      // @ts-ignore
       expect(highlightSignal!.on[0].events).toBe('@nodes:mouseover')
+      // @ts-ignore
       expect(highlightSignal!.on[0].update).toBe('datum')
+      // @ts-ignore
       expect(highlightSignal!.on[1].events).toBe('@nodes:mouseout')
+      // @ts-ignore
       expect(highlightSignal!.on[1].update).toBe('{}')
     })
 
@@ -322,13 +326,13 @@ describe('createBeeSwarmSpec', (): void => {
   })
 
   describe('scales configuration', (): void => {
-    it('should include xscale and color scales', (): void => {
+    it('should include correct scale names for desktop', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
         mockColumns,
         mockTooltipFields,
         mockEncoding,
-        isMobile,
+        false, // isMobile = false
         mockSelectedValues,
         currentTheme,
         mockData,
@@ -341,13 +345,32 @@ describe('createBeeSwarmSpec', (): void => {
       expect(scaleNames).toContain('color')
     })
 
-    it('should configure xscale as band scale', (): void => {
+    it('should include correct scale names for mobile', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
         mockColumns,
         mockTooltipFields,
         mockEncoding,
-        isMobile,
+        true, // isMobile = true
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const scaleNames = spec.scales.map((s: any) => s.name)
+      expect(scaleNames).toContain('yscale')
+      expect(scaleNames).toContain('color')
+    })
+
+    it('should configure scale as band scale for desktop', (): void => {
+      const spec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        false, // isMobile = false
         mockSelectedValues,
         currentTheme,
         mockData,
@@ -362,6 +385,29 @@ describe('createBeeSwarmSpec', (): void => {
       expect(xscale!.domain.field).toBe('category')
       expect(xscale!.domain.sort).toBe(true)
       expect(xscale!.range).toBe('width')
+    })
+
+    it('should configure scale as band scale for mobile', (): void => {
+      const spec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // isMobile = true
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const yscale = spec.scales.find((s: any) => s.name === 'yscale')
+      expect(yscale).toBeDefined()
+      expect(yscale!.type).toBe('band')
+      expect(yscale!.domain.data).toBe('base')
+      expect(yscale!.domain.field).toBe('category')
+      expect(yscale!.domain.sort).toBe(true)
+      expect(yscale!.range).toBe('height')
     })
 
     it('should configure color scale as ordinal', (): void => {
@@ -465,13 +511,13 @@ describe('createBeeSwarmSpec', (): void => {
   })
 
   describe('axes configuration', (): void => {
-    it('should include bottom axis', (): void => {
+    it('should include bottom axis for desktop', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
         mockColumns,
         mockTooltipFields,
         mockEncoding,
-        isMobile,
+        false, // isMobile = false
         mockSelectedValues,
         currentTheme,
         mockData,
@@ -482,6 +528,25 @@ describe('createBeeSwarmSpec', (): void => {
       expect(spec.axes).toHaveLength(1)
       expect(spec.axes[0].orient).toBe('bottom')
       expect(spec.axes[0].scale).toBe('xscale')
+    })
+
+    it('should include left axis for mobile', (): void => {
+      const spec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // isMobile = true
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      expect(spec.axes).toHaveLength(1)
+      expect(spec.axes[0].orient).toBe('left')
+      expect(spec.axes[0].scale).toBe('yscale')
     })
   })
 
@@ -506,13 +571,13 @@ describe('createBeeSwarmSpec', (): void => {
       expect(spec.marks[0].from.data).toBe('base')
     })
 
-    it('should configure enter encoding', (): void => {
+    it('should configure enter encoding for desktop', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
         mockColumns,
         mockTooltipFields,
         mockEncoding,
-        isMobile,
+        false, // isMobile = false
         mockSelectedValues,
         currentTheme,
         mockData,
@@ -526,7 +591,31 @@ describe('createBeeSwarmSpec', (): void => {
       expect(enter.xfocus.scale).toBe('xscale')
       expect(enter.xfocus.field).toBe('category')
       expect(enter.xfocus.band).toBe(0.5)
-      expect(enter.yfocus.value).toBe(50)
+      expect(enter.yfocus.value).toBe(containerHeight / 2)
+      expect(enter.tooltip).toBeDefined()
+    })
+
+    it('should configure enter encoding for mobile', (): void => {
+      const spec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // isMobile = true
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const enter = spec.marks[0].encode.enter
+      expect(enter.fill.scale).toBe('color')
+      expect(enter.fill.field).toBe('color')
+      expect(enter.yfocus.scale).toBe('yscale')
+      expect(enter.yfocus.field).toBe('category')
+      expect(enter.yfocus.band).toBe(0.5)
+      expect(enter.xfocus.value).toBe(containerWidth / 2)
       expect(enter.tooltip).toBeDefined()
     })
 
@@ -591,13 +680,13 @@ describe('createBeeSwarmSpec', (): void => {
       expect(spec.marks[0].transform[0].static).toBe(true)
     })
 
-    it('should configure force transform with correct forces', (): void => {
+    it('should configure force transform with correct forces for desktop', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
         mockColumns,
         mockTooltipFields,
         mockEncoding,
-        isMobile,
+        false, // isMobile = false
         mockSelectedValues,
         currentTheme,
         mockData,
@@ -609,7 +698,32 @@ describe('createBeeSwarmSpec', (): void => {
       expect(forces).toHaveLength(3)
       expect(forces[0].force).toBe('collide')
       expect(forces[1].force).toBe('x')
+      expect(forces[1].strength).toBe(0.2)
       expect(forces[2].force).toBe('y')
+      expect(forces[2].strength).toBe(0.1)
+    })
+
+    it('should configure force transform with correct forces for mobile', (): void => {
+      const spec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // isMobile = true
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const forces = spec.marks[0].transform[0].forces
+      expect(forces).toHaveLength(3)
+      expect(forces[0].force).toBe('collide')
+      expect(forces[1].force).toBe('y')
+      expect(forces[1].strength).toBe(0.2)
+      expect(forces[2].force).toBe('x')
+      expect(forces[2].strength).toBe(0.1)
     })
   })
 
@@ -885,7 +999,8 @@ describe('createBeeSwarmSpec', (): void => {
       )
 
       const collideForce = spec.marks[0].transform[0].forces.find((f: any) => f.force === 'collide')
-      expect(collideForce.radius.expr).toBe('sqrt(datum.size) / 2')
+      // @ts-ignore
+      expect(collideForce?.radius?.expr).toBe('sqrt(datum.size) / 2')
     })
 
     it('should use fixed collide radius when sizeField is not provided', (): void => {
@@ -904,7 +1019,7 @@ describe('createBeeSwarmSpec', (): void => {
       )
 
       const collideForce = spec.marks[0].transform[0].forces.find((f: any) => f.force === 'collide')
-      expect(typeof collideForce.radius).toBe('number')
+      expect(typeof collideForce?.radius).toBe('number')
     })
   })
 
@@ -961,7 +1076,7 @@ describe('createBeeSwarmSpec', (): void => {
     })
   })
 
-  describe('mobile parameter', (): void => {
+  describe('mobile responsiveness', (): void => {
     it('should handle mobile true', (): void => {
       const spec = createBeeSwarmSpec(
         mockConfig,
@@ -977,6 +1092,11 @@ describe('createBeeSwarmSpec', (): void => {
       )
 
       expect(spec).toBeDefined()
+      // Verify mobile-specific configurations
+      const scaleNames = spec.scales.map((s: any) => s.name)
+      expect(scaleNames).toContain('yscale')
+      expect(spec.axes[0].orient).toBe('left')
+      expect(spec.axes[0].scale).toBe('yscale')
     })
 
     it('should handle mobile false', (): void => {
@@ -994,6 +1114,91 @@ describe('createBeeSwarmSpec', (): void => {
       )
 
       expect(spec).toBeDefined()
+      // Verify desktop-specific configurations
+      const scaleNames = spec.scales.map((s: any) => s.name)
+      expect(scaleNames).toContain('xscale')
+      expect(spec.axes[0].orient).toBe('bottom')
+      expect(spec.axes[0].scale).toBe('xscale')
+    })
+
+    it('should swap force strengths for mobile', (): void => {
+      const mobileSpec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // mobile
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const desktopSpec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        false, // desktop
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const mobileForces = mobileSpec.marks[0].transform[0].forces
+      const desktopForces = desktopSpec.marks[0].transform[0].forces
+
+      // Find Y and X force strengths
+      const mobileYForce = mobileForces.find((f: any) => f.force === 'y')
+      const mobileXForce = mobileForces.find((f: any) => f.force === 'x')
+      const desktopYForce = desktopForces.find((f: any) => f.force === 'y')
+      const desktopXForce = desktopForces.find((f: any) => f.force === 'x')
+
+      // Mobile should have stronger Y force, desktop should have stronger X force
+      expect(mobileYForce?.strength).toBe(0.2)
+      expect(mobileXForce?.strength).toBe(0.1)
+      expect(desktopYForce?.strength).toBe(0.1)
+      expect(desktopXForce?.strength).toBe(0.2)
+    })
+
+    it('should invert focus points for mobile', (): void => {
+      const mobileSpec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        true, // mobile
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const desktopSpec = createBeeSwarmSpec(
+        mockConfig,
+        mockColumns,
+        mockTooltipFields,
+        mockEncoding,
+        false, // desktop
+        mockSelectedValues,
+        currentTheme,
+        mockData,
+        containerHeight,
+        containerWidth,
+      )
+
+      const mobileEnter = mobileSpec.marks[0].encode.enter
+      const desktopEnter = desktopSpec.marks[0].encode.enter
+
+      // Mobile should use yscale for categories, desktop should use xscale
+      expect(mobileEnter.yfocus.scale).toBe('yscale')
+      expect(mobileEnter.xfocus.value).toBe(containerWidth / 2)
+      expect(desktopEnter.xfocus.scale).toBe('xscale')
+      expect(desktopEnter.yfocus.value).toBe(containerHeight / 2)
     })
   })
 

@@ -2,46 +2,33 @@
   <div class="result-select row pa-0 ba-0">
     <div class="select-container">
       <div class="search-input-wrapper">
-        <input
-          ref="searchInput"
-          v-model="searchText"
-          type="text"
-          class="search-input"
-          :placeholder="placeholderText"
-          :disabled="!selectOptions || selectOptions.length === 0"
-          @focus="handleFocus"
-          @input="onSearchInput"
-          @blur="handleBlur"
-        />
+        <input ref="searchInput" v-model="searchText" type="text" class="search-input" :placeholder="placeholderText"
+          :disabled="!selectOptions || selectOptions.length === 0" @focus="handleFocus" @input="onSearchInput"
+          @blur="handleBlur" />
         <span class="search-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
         </span>
       </div>
-      
+
       <Teleport to="body">
-        <div 
-          v-if="showDropdown && filteredOptions.length > 0" 
-          class="dropdown-list"
-          :style="dropdownStyle"
-        >
-          <div
-            v-for="(option, index) in filteredOptions"
-            :key="index"
-            class="dropdown-item"
-            :class="{ 'selected': selectedValue === option.value }"
-            @mousedown.prevent="selectOption(option)"
-            v-html="highlightMatch(option.label)"
-          ></div>
+        <div v-if="showDropdown && filteredOptions.length > 0" class="dropdown-list" :style="dropdownStyle">
+          <!-- Select All option -->
+          <div class="dropdown-item select-all" :class="{ 'selected': selectedValue === 'SELECT_ALL' }"
+            @mousedown.prevent="selectAll">
+            Select All
+          </div>
+
+          <div v-for="(option, index) in filteredOptions" :key="index" class="dropdown-item"
+            :class="{ 'selected': selectedValue === option.value }" @mousedown.prevent="selectOption(option)"
+            v-html="highlightMatch(option.label)"></div>
         </div>
-        
-        <div 
-          v-if="showDropdown && searchText && filteredOptions.length === 0" 
-          class="dropdown-list"
-          :style="dropdownStyle"
-        >
+
+        <div v-if="showDropdown && searchText && filteredOptions.length === 0" class="dropdown-list"
+          :style="dropdownStyle">
           <div class="dropdown-item no-results">No matches found</div>
         </div>
       </Teleport>
@@ -60,15 +47,18 @@
   flex-wrap: nowrap;
   background-color: var(--result-window-bg);
   position: relative;
-  overflow: visible; /* Prevent clipping */
+  overflow: visible;
+  /* Prevent clipping */
 }
 
 .select-container {
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: visible; /* Prevent clipping */
-  z-index: 1; /* Base z-index */
+  overflow: visible;
+  /* Prevent clipping */
+  z-index: 1;
+  /* Base z-index */
 }
 
 .search-input-wrapper {
@@ -129,7 +119,8 @@
   background-color: var(--bg-color, #ffffff);
   border: 1px solid var(--border-light, #d0d0d0);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 9999; /* Very high z-index to ensure it appears above everything */
+  z-index: 9999;
+  /* Very high z-index to ensure it appears above everything */
   margin-top: 0;
 }
 
@@ -152,6 +143,20 @@
 .dropdown-item.selected {
   background-color: var(--selected-bg, #e6f2ff);
   font-weight: 500;
+}
+
+.dropdown-item.select-all {
+  font-weight: 600;
+  color: var(--primary-color, #0066cc);
+  border-bottom: 2px solid var(--border-light, #e0e0e0);
+}
+
+.dropdown-item.select-all:hover {
+  background-color: var(--primary-light-bg, #f0f7ff);
+}
+
+.dropdown-item.select-all.selected {
+  background-color: var(--primary-selected-bg, #cce7ff);
 }
 
 .dropdown-item.no-results {
@@ -217,6 +222,19 @@
   background-color: var(--dark-selected-bg, #1a4d7a);
 }
 
+.dark-theme .dropdown-item.select-all {
+  color: var(--dark-primary-color, #4d94ff);
+  border-bottom-color: var(--dark-border-color, #555555);
+}
+
+.dark-theme .dropdown-item.select-all:hover {
+  background-color: var(--dark-primary-light-bg, #1a3366);
+}
+
+.dark-theme .dropdown-item.select-all.selected {
+  background-color: var(--dark-primary-selected-bg, #2d5aa0);
+}
+
 .dark-theme .dropdown-item.no-results {
   color: var(--dark-text-color-muted, #999999);
 }
@@ -233,7 +251,8 @@
   }
 
   .search-input {
-    font-size: 16px; /* Prevent zoom on iOS */
+    font-size: 16px;
+    /* Prevent zoom on iOS */
     padding: 12px 40px 12px 12px;
   }
 
@@ -280,7 +299,7 @@ import type { PropType } from 'vue'
 import { computed, inject } from 'vue'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore.ts'
 
-interface SelectOption {
+export interface SelectOption {
   label: string
   value: any
 }
@@ -307,11 +326,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     backgroundClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     prettyPrint: {
       type: Boolean,
@@ -335,21 +354,14 @@ export default {
     }
   },
   computed: {
+    headersArray() {
+      return Array.from(this.headers.values())
+    },
     firstColumn(): ResultColumn | null {
-      if (!this.headers || this.headers.size === 0) {
-        return null
-      }
-      const firstKey = this.headers.keys().next().value
-      return this.headers.get(firstKey) || null
+      return this.headersArray[0] || null
     },
     secondColumn(): ResultColumn | null {
-      if (!this.headers || this.headers.size < 2) {
-        return null
-      }
-      const iterator = this.headers.keys()
-      iterator.next() // Skip first
-      const secondKey = iterator.next().value
-      return this.headers.get(secondKey) || null
+      return this.headersArray[1] || null
     },
     displayColumn(): ResultColumn | null {
       return this.firstColumn
@@ -370,9 +382,9 @@ export default {
       this.results.forEach((row) => {
         const displayValue = row[displayFieldName]
         const actualValue = row[valueFieldName]
-        
-        if (displayValue !== null && displayValue !== undefined && 
-            actualValue !== null && actualValue !== undefined) {
+
+        if (displayValue !== null && displayValue !== undefined &&
+          actualValue !== null && actualValue !== undefined) {
           const label = this.formatValue(displayValue, this.displayColumn!)
           options.push({
             label: label,
@@ -397,7 +409,7 @@ export default {
       if (!this.selectOptions || this.selectOptions.length === 0) {
         return 'No data available'
       }
-      return this.selectedLabel || 'Search options...'
+      return this.selectedLabel ||  this.firstColumn ? `Select ${this.firstColumn?.name}` : 'Select an option'
     },
     dropdownStyle(): Record<string, string> {
       if (!this.inputElement) {
@@ -424,7 +436,7 @@ export default {
             return `${(Number(value) * 100).toFixed(2)}%`
           }
           return Number(value).toFixed(column.scale || 2)
-        
+
         case ColumnType.DATETIME:
         case ColumnType.TIMESTAMP:
         case ColumnType.DATE:
@@ -434,14 +446,14 @@ export default {
             return value.toLocaleString()
           }
           return String(value)
-        
+
         case ColumnType.BOOLEAN:
           return value ? '✓' : '✗'
-        
+
         case ColumnType.ARRAY:
         case ColumnType.STRUCT:
           return JSON.stringify(value)
-        
+
         default:
           return String(value)
       }
@@ -473,6 +485,17 @@ export default {
       this.searchText = ''
       this.showDropdown = false
       this.handleSelection()
+    },
+
+    selectAll() {
+      this.selectedValue = 'SELECT_ALL'
+      this.selectedLabel = 'Select All'
+      this.searchText = ''
+      this.showDropdown = false
+
+      // Emit backgroundClick event when Select All is chosen
+      this.$emit('background-click')
+      this.backgroundClick()
     },
 
     onSearchInput() {
@@ -515,7 +538,7 @@ export default {
       }
 
       const field = this.valueColumn.address || this.valueColumn.name
-      
+
       // Emit cell-click event with the same structure as the table component
       this.$emit('cell-click', {
         filters: { [field]: this.selectedValue },

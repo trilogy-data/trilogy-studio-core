@@ -138,9 +138,6 @@ export const generateVegaSpec = (
   // Create base spec
   let spec: any = createBaseSpec(localData)
 
-  if (!localData || localData.length === 0) {
-    return spec
-  }
 
   // Set up color encoding
   let encoding: any = {}

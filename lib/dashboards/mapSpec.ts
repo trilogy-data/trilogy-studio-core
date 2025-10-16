@@ -499,6 +499,17 @@ export const createMapSpec = (
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
 ) => {
+
+  if (!data || data.length === 0) {
+    // TODO: return blank map schema
+    return {
+      $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+      width: 'container',
+      height: 'container',
+      layer: [createWorldBaseLayer()],
+    }
+  }
+
   // Handle scatter plot case
   if (config.xField && config.yField) {
     //@ts-ignore

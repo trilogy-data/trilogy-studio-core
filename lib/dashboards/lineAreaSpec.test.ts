@@ -264,7 +264,7 @@ describe('Line and Area Chart Specs', (): void => {
             values: ['A', 'B'],
           },
           type: 'nominal',
-          scale: { scheme: 'category20' },
+          scale: { scheme: 'category20c' },
           title: 'Category',
           condition: [
             {

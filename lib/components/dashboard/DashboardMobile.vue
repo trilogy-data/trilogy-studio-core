@@ -96,6 +96,11 @@ function calculateMobileHeight(item: any): number | string {
     return '100%' // Full height for markdown items
   }
 
+  if (itemData.type === CELL_TYPES.FILTER) {
+    return '100%' // Full height for filter items
+  }
+  
+
   if (itemData.type === CELL_TYPES.CHART) {
     if (itemData.chartConfig?.chartType === 'headline') {
       // return the width as height for a headline chart

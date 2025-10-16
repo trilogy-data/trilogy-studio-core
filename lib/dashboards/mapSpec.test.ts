@@ -569,9 +569,6 @@ describe('createMapSpec', () => {
 
       expect(validateVegaLiteSpec(spec, data)).toBe(true)
 
-      // Should still generate valid structure with empty data
-      const dataLayer = spec.layer[1] as any
-      expect(dataLayer.transform[1].from.data.values).toEqual([])
     })
 
     it('should handle missing required fields gracefully', () => {

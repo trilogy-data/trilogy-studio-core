@@ -1,7 +1,6 @@
 import { type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
-import { lightDefaultColor, darkDefaultColor } from './constants'
+
 
 const baseDataName = 'base'
 
@@ -25,9 +24,13 @@ const createSelectionTest = (selectedValues: { [key: string]: string | number | 
 
 export const createBeeSwarmSpec = (
     config: ChartConfig,
+    //@ts-ignore
     columns: Map<string, ResultColumn>,
+    //@ts-ignore
     tooltipFields: any[],
+    //@ts-ignore
     encoding: any,
+    //@ts-ignore
     isMobile: boolean,
     selectedValues: { [key: string]: string | number | Array<any> }[],
     currentTheme: string = 'light',
@@ -41,17 +44,17 @@ export const createBeeSwarmSpec = (
         ? Math.pow(0.25, Math.floor(Math.log10(dataCount) - 2))
         : 1;
 
-    // Prepare scales array with conditional size scale
+    // Prepare scales array with conditional orientation based on isMobile
     const scales: any[] = [
         {
-            name: "xscale",
+            name: isMobile ? "yscale" : "xscale",
             type: "band",
             domain: {
                 data: baseDataName,
                 field: config.xField,
                 sort: true
             },
-            range: "width"
+            range: isMobile ? "height" : "width"
         },
         {
             name: "color",
@@ -74,8 +77,8 @@ export const createBeeSwarmSpec = (
         const maxRadius = 20 * scalingFactor; // maximum dot radius in pixels (scaled)
 
 
-        const minArea = minRadius * minRadius * Math.PI;
-        const maxArea = maxRadius * maxRadius * Math.PI;
+        const minArea = Math.max(minRadius * minRadius * Math.PI, 1);
+        const maxArea = Math.max(maxRadius * maxRadius * Math.PI, 3);
 
         scales.push({
             name: "size",
@@ -138,7 +141,10 @@ export const createBeeSwarmSpec = (
         ],
         scales: scales,
         axes: [
-            { orient: "bottom", scale: "xscale" }
+            { 
+                orient: isMobile ? "left" : "bottom", 
+                scale: isMobile ? "yscale" : "xscale" 
+            }
         ],
         marks: [
             {
@@ -148,8 +154,13 @@ export const createBeeSwarmSpec = (
                 encode: {
                     enter: {
                         fill: { scale: "color", field: config.colorField },
-                        xfocus: { scale: "xscale", field: config.xField, band: 0.5 },
-                        yfocus: { value: 50 },
+                        ...(isMobile ? {
+                            yfocus: { scale: "yscale", field: config.xField, band: 0.5 },
+                            xfocus: { value: containerWidth / 2 }
+                        } : {
+                            xfocus: { scale: "xscale", field: config.xField, band: 0.5 },
+                            yfocus: { value: containerHeight / 2 }
+                        }),
                         tooltip: { signal: `{${tooltipSignal}}` }
                     },
                     update: {
@@ -166,14 +177,6 @@ export const createBeeSwarmSpec = (
                         stroke: { value: "white" },
                         strokeWidth: [
                             {
-                                test: selectionTest,
-                                value: 2
-                            },
-                            {
-                                test: "highlight && highlight._id === datum._id",
-                                value: 1
-                            },
-                            {
                                 value: 0
                             }
                         ],
@@ -188,12 +191,17 @@ export const createBeeSwarmSpec = (
                 transform: [
                     {
                         type: "force",
-                        iterations: 400 * scalingFactor,
+                        iterations: Math.max(400 * scalingFactor, 100),
                         static: true,
                         forces: [
                             { force: "collide", iterations: 1, radius: collideRadius },
-                            { force: "x", x: "xfocus", strength: 0.2 },
-                            { force: "y", y: "yfocus", strength: 0.1 }
+                            ...(isMobile ? [
+                                { force: "y", y: "yfocus", strength: 0.2 },
+                                { force: "x", x: "xfocus", strength: 0.1 }
+                            ] : [
+                                { force: "x", x: "xfocus", strength: 0.2 },
+                                { force: "y", y: "yfocus", strength: 0.1 }
+                            ])
                         ]
                     }
                 ]
