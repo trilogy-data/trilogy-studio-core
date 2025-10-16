@@ -7,7 +7,7 @@
           v-model="searchText"
           type="text"
           class="search-input"
-          :placeholder="selectOptions && selectOptions.length > 0 ? 'Search options...' : 'No data available'"
+          :placeholder="placeholderText"
           :disabled="!selectOptions || selectOptions.length === 0"
           @focus="handleFocus"
           @input="onSearchInput"
@@ -289,6 +289,7 @@ export default {
   data() {
     return {
       selectedValue: '' as any,
+      selectedLabel: '' as string,
       searchText: '',
       showDropdown: false,
       inputElement: null as HTMLElement | null,
@@ -392,6 +393,12 @@ export default {
         option.label.toLowerCase().includes(searchLower)
       )
     },
+    placeholderText(): string {
+      if (!this.selectOptions || this.selectOptions.length === 0) {
+        return 'No data available'
+      }
+      return this.selectedLabel || 'Search options...'
+    },
     dropdownStyle(): Record<string, string> {
       if (!this.inputElement) {
         return {}
@@ -462,17 +469,27 @@ export default {
 
     selectOption(option: SelectOption) {
       this.selectedValue = option.value
-      this.searchText = option.label
+      this.selectedLabel = option.label
+      this.searchText = ''
       this.showDropdown = false
       this.handleSelection()
     },
 
     onSearchInput() {
+      // Clear selection when user starts typing
+      if (this.searchText && this.selectedLabel) {
+        this.selectedValue = ''
+        this.selectedLabel = ''
+      }
       this.showDropdown = true
       this.updateInputElement()
     },
 
     handleFocus() {
+      // Clear the search text when focused to allow searching
+      if (this.selectedLabel) {
+        this.searchText = ''
+      }
       this.showDropdown = true
       this.updateInputElement()
     },
@@ -485,6 +502,10 @@ export default {
       // Delay to allow click event on dropdown items to fire
       setTimeout(() => {
         this.showDropdown = false
+        // Restore the search text if nothing was selected
+        if (!this.selectedLabel && !this.searchText) {
+          this.searchText = ''
+        }
       }, 200)
     },
 
