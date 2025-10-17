@@ -138,7 +138,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
 
-  await page.keyboard.type('select\n    origin.state,\n    count\norder by count desc;')
+  await page.keyboard.type('select\n    origin.state,\n    count,\norder by count desc;')
   await page.getByTestId('editor-run-button').click()
   await page.getByTestId('simple-editor-results')
 
