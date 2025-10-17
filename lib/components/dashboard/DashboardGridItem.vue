@@ -200,59 +200,108 @@ const filterCount = computed(() => {
 </script>
 
 <template>
-  <div class="grid-item-content" :data-testid="`dashboard-component-${item.i}`" :class="{
-    'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
-      //@ts-ignore
-      itemData.type,
-    ),
-    'grid-item-edit-style': editMode,
-  }" @mouseenter="
+  <div
+    class="grid-item-content"
+    :data-testid="`dashboard-component-${item.i}`"
+    :class="{
+      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
+        //@ts-ignore
+        itemData.type,
+      ),
+      'grid-item-edit-style': editMode,
+    }"
+    @mouseenter="
       () => {
         isHeaderVisible = true
         isFiltersVisible = true
       }
-    " @mouseleave="
+    "
+    @mouseleave="
       () => {
         isHeaderVisible = false
         isFiltersVisible = false
       }
-    ">
+    "
+  >
     <!-- Edit Controls (styled like control buttons) -->
-    <div class="header-controls" :class="{ 'header-visible': isHeaderVisible || editingItemTitle }" v-if="editMode">
-      <button @click="increaseHeight" class="control-btn" :data-testid="`increase-height-item-${item.i}`"
-        title="Increase height">
+    <div
+      class="header-controls"
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+      v-if="editMode"
+    >
+      <button
+        @click="increaseHeight"
+        class="control-btn"
+        :data-testid="`increase-height-item-${item.i}`"
+        title="Increase height"
+      >
         <i class="mdi mdi-plus icon"></i>
       </button>
-      <button @click="decreaseHeight" class="control-btn" :data-testid="`decrease-height-item-${item.i}`"
-        title="Decrease height">
+      <button
+        @click="decreaseHeight"
+        class="control-btn"
+        :data-testid="`decrease-height-item-${item.i}`"
+        title="Decrease height"
+      >
         <i class="mdi mdi-minus icon"></i>
       </button>
-      <button @click="openEditor" class="control-btn" :data-testid="`edit-dashboard-item-content-${item.i}`"
-        title="Edit data">
+      <button
+        @click="openEditor"
+        class="control-btn"
+        :data-testid="`edit-dashboard-item-content-${item.i}`"
+        title="Edit data"
+      >
         <i class="mdi mdi-database-edit-outline icon"></i>
       </button>
-      <button @click="toggleCrossFilterEligible" class="control-btn"
-        :data-testid="`toggle-crossfilter-item-content-${item.i}`" :title="itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
-          ">
+      <button
+        @click="toggleCrossFilterEligible"
+        class="control-btn"
+        :data-testid="`toggle-crossfilter-item-content-${item.i}`"
+        :title="
+          itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
+        "
+      >
         <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
         <i v-else class="mdi mdi-filter-outline icon"></i>
       </button>
-      <button @click="copyItem" class="control-btn" :data-testid="`copy-dashboard-item-${item.i}`" title="Copy item">
+      <button
+        @click="copyItem"
+        class="control-btn"
+        :data-testid="`copy-dashboard-item-${item.i}`"
+        title="Copy item"
+      >
         <i class="mdi mdi-content-copy icon"></i>
       </button>
-      <button @click="removeItem" class="control-btn remove-btn" :data-testid="`remove-dashboard-item-${item.i}`"
-        title="Remove item">
+      <button
+        @click="removeItem"
+        class="control-btn remove-btn"
+        :data-testid="`remove-dashboard-item-${item.i}`"
+        title="Remove item"
+      >
         <i class="mdi mdi-delete-outline icon"></i>
       </button>
     </div>
 
     <!-- Transparent overlay header (only in edit mode) -->
-    <div v-if="editMode" class="grid-item-header overlay-header"
-      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }">
+    <div
+      v-if="editMode"
+      class="grid-item-header overlay-header"
+      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
+    >
       <!-- Drag handle icon -->
       <div class="drag-handle-icon grid-item-drag-handle">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="drag-handle-svg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="drag-handle-svg"
+        >
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -268,18 +317,34 @@ const filterCount = computed(() => {
         </div>
 
         <!-- Edit title input -->
-        <input v-else :id="`title-input-${item.i}`" v-model="editableItemName" @blur="saveTitleEdit"
-          @keyup.enter="saveTitleEdit" @keyup.esc="cancelTitleEdit" class="title-input" type="text"
-          :placeholder="getPlaceholderText" />
+        <input
+          v-else
+          :id="`title-input-${item.i}`"
+          v-model="editableItemName"
+          @blur="saveTitleEdit"
+          @keyup.enter="saveTitleEdit"
+          @keyup.esc="cancelTitleEdit"
+          class="title-input"
+          type="text"
+          :placeholder="getPlaceholderText"
+        />
       </div>
     </div>
 
     <!-- Content area (now full height) -->
     <div class="content-area">
       <!-- Render the appropriate component based on cell type -->
-      <component :is="cellComponent" :dashboardId="props.dashboardId" :itemId="item.i" :setItemData="setItemData"
-        :getItemData="getItemData" :getDashboardQueryExecutor="getDashboardQueryExecutor" :editMode="editMode"
-        @dimension-click="dimensionClick" @background-click="backgroundClick" />
+      <component
+        :is="cellComponent"
+        :dashboardId="props.dashboardId"
+        :itemId="item.i"
+        :setItemData="setItemData"
+        :getItemData="getItemData"
+        :getDashboardQueryExecutor="getDashboardQueryExecutor"
+        :editMode="editMode"
+        @dimension-click="dimensionClick"
+        @background-click="backgroundClick"
+      />
     </div>
 
     <!-- Filters overlay container (positioned over content area) -->
@@ -287,14 +352,24 @@ const filterCount = computed(() => {
       <!-- Edit mode - show filters normally -->
       <template v-if="editMode">
         <div class="filters-container edit-mode">
-          <div class="filter-tag" v-for="(filter, index) in itemData.filters"
-            :key="`${filter.source}-${filter.value}-${index}`" :title="cleanFilterValue(filter.value)">
+          <div
+            class="filter-tag"
+            v-for="(filter, index) in itemData.filters"
+            :key="`${filter.source}-${filter.value}-${index}`"
+            :title="cleanFilterValue(filter.value)"
+          >
             <span class="filter-content">
-              <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
+              <span class="filter-source"
+                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+              >
               <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
             </span>
-            <button class="filter-remove-btn" @click="removeFilter(filter.source)" title="Remove filter"
-              v-if="filter.source !== 'global'">
+            <button
+              class="filter-remove-btn"
+              @click="removeFilter(filter.source)"
+              title="Remove filter"
+              v-if="filter.source !== 'global'"
+            >
               ×
             </button>
           </div>
@@ -311,14 +386,24 @@ const filterCount = computed(() => {
 
           <!-- Show detailed filters when hovering -->
           <div v-if="isFiltersVisible" class="filter-details">
-            <div class="filter-tag" v-for="(filter, index) in itemData.filters"
-              :key="`${filter.source}-${filter.value}-${index}`" :title="cleanFilterValue(filter.value)">
+            <div
+              class="filter-tag"
+              v-for="(filter, index) in itemData.filters"
+              :key="`${filter.source}-${filter.value}-${index}`"
+              :title="cleanFilterValue(filter.value)"
+            >
               <span class="filter-content">
-                <span class="filter-source">{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span>
+                <span class="filter-source"
+                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
+                >
                 <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
               </span>
-              <button class="filter-remove-btn" @click="removeFilter(filter.source)"
-                :title="`Remove ${filter.source} filter`" v-if="filter.source !== 'global'">
+              <button
+                class="filter-remove-btn"
+                @click="removeFilter(filter.source)"
+                :title="`Remove ${filter.source} filter`"
+                v-if="filter.source !== 'global'"
+              >
                 ×
               </button>
             </div>

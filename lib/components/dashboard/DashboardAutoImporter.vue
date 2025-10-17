@@ -99,6 +99,7 @@ const getUpdateInterval = (_: number): number => {
 }
 
 const updateElapsedTime = () => {
+  stopTimer()
   const ms = Date.now() - startTime.value
   if (ms < 1000) {
     elapsedTime.value = `${ms} ms`
@@ -113,7 +114,7 @@ const updateElapsedTime = () => {
   }
 
   // Only continue timer if still loading or importing
-  if (isLoading.value || importSuccess.value) {
+  if (!error.value && (isLoading.value || importSuccess.value)) {
     const nextInterval = getUpdateInterval(ms)
     timeout = setTimeout(updateElapsedTime, nextInterval)
   }
@@ -162,7 +163,8 @@ function validateForm() {
 const performImport = async () => {
   try {
     if (!modelUrl.value || !dashboardName.value || !modelName.value) {
-      throw new Error('Missing required import parameters')
+      error.value = 'Missing required import parameters'
+      return
     }
 
     // Reset timer for import process
@@ -170,7 +172,6 @@ const performImport = async () => {
     stepStartTime.value = Date.now()
     currentStep.value = 'importing'
     isLoading.value = true
-    if (timeout) clearTimeout(timeout)
     updateElapsedTime()
 
     emit('fullScreen', true)
@@ -299,6 +300,7 @@ onMounted(async () => {
     modelUrl.value = decodeURIComponent(modelUrlParam)
     dashboardName.value = decodeURIComponent(dashboardNameParam)
     modelName.value = decodeURIComponent(modelNameParam)
+
     connectionType.value = connectionParam
 
     // Validate connection type
@@ -333,7 +335,11 @@ onBeforeUnmount(() => {
 
 // Manual import for connections requiring fields
 const handleManualImport = async () => {
-  if (!isFormValid.value) return
+  isLoading.value = true
+  if (!isFormValid.value) {
+    throw new Error('Form is not valid')
+  }
+  console.log('performing input')
   await performImport()
 }
 
@@ -364,15 +370,12 @@ const switchToManualImport = () => {
 
         <!-- Step indicator -->
         <div class="step-indicator">
-          <div
-            class="step"
-            :class="{
-              active: currentStep === 'importing',
-              completed:
-                currentStep !== 'importing' &&
-                (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess),
-            }"
-          >
+          <div class="step" :class="{
+            active: currentStep === 'importing',
+            completed:
+              currentStep !== 'importing' &&
+              (currentStep === 'connecting' || currentStep === 'preparing' || importSuccess),
+          }">
             <div class="step-icon">
               <span v-if="currentStep === 'importing'">⟳</span>
               <span v-else>✓</span>
@@ -380,13 +383,10 @@ const switchToManualImport = () => {
             <span class="step-text">Importing model</span>
           </div>
 
-          <div
-            class="step"
-            :class="{
-              active: currentStep === 'connecting',
-              completed: currentStep === 'preparing' || importSuccess,
-            }"
-          >
+          <div class="step" :class="{
+            active: currentStep === 'connecting',
+            completed: currentStep === 'preparing' || importSuccess,
+          }">
             <div class="step-icon">
               <span v-if="currentStep === 'connecting'">⟳</span>
               <span v-else-if="currentStep === 'preparing' || importSuccess">✓</span>
@@ -395,13 +395,10 @@ const switchToManualImport = () => {
             <span class="step-text">Establishing connection</span>
           </div>
 
-          <div
-            class="step"
-            :class="{
-              active: currentStep === 'preparing' || importSuccess,
-              completed: importSuccess,
-            }"
-          >
+          <div class="step" :class="{
+            active: currentStep === 'preparing' || importSuccess,
+            completed: importSuccess,
+          }">
             <div class="step-icon">
               <span v-if="currentStep === 'preparing'">⟳</span>
               <span v-else-if="importSuccess">✓</span>
@@ -438,63 +435,35 @@ const switchToManualImport = () => {
         <!-- MotherDuck Fields -->
         <div v-if="connectionType === 'motherduck'" class="form-group">
           <label for="md-token">MotherDuck Token</label>
-          <input
-            type="text"
-            v-model.trim="connectionOptions.mdToken"
-            id="md-token"
-            placeholder="Enter your MotherDuck token"
-            class="connection-input"
-            @input="validateForm"
-          />
+          <input type="text" v-model.trim="connectionOptions.mdToken" id="md-token"
+            placeholder="Enter your MotherDuck token" class="connection-input" @input="validateForm" />
         </div>
 
-        <!-- BigQuery Fields -->
-        <div v-if="connectionType === 'bigquery'" class="form-group">
-          <label for="project-id">BigQuery Project ID</label>
-          <input
-            type="text"
-            v-model.trim="connectionOptions.projectId"
-            id="project-id"
-            placeholder="Enter your billing project ID"
-            class="connection-input"
-            @input="validateForm"
-          />
-        </div>
 
+        <template v-else-if="connectionType === 'bigquery'">
+          <!-- BigQuery Fields -->
+          <div class="form-group">
+            <label for="project-id">BigQuery Project ID</label>
+            <input type="text" v-model.trim="connectionOptions.projectId" id="project-id"
+              placeholder="Enter your billing project ID" class="connection-input" @input="validateForm" />
+          </div>
+        </template>
         <!-- Snowflake Fields -->
-        <template v-if="connectionType === 'snowflake'">
+        <template v-else-if="connectionType === 'snowflake'">
           <div class="form-group">
             <label for="snowflake-username">Username</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.username"
-              id="snowflake-username"
-              placeholder="Snowflake username"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.username" id="snowflake-username"
+              placeholder="Snowflake username" class="connection-input" @input="validateForm" />
           </div>
           <div class="form-group">
             <label for="snowflake-account">Account</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.account"
-              id="snowflake-account"
-              placeholder="Snowflake account identifier"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.account" id="snowflake-account"
+              placeholder="Snowflake account identifier" class="connection-input" @input="validateForm" />
           </div>
           <div class="form-group">
             <label for="snowflake-key">Private Key</label>
-            <input
-              type="text"
-              v-model.trim="connectionOptions.sshPrivateKey"
-              id="snowflake-key"
-              placeholder="Private key for authentication"
-              class="connection-input"
-              @input="validateForm"
-            />
+            <input type="text" v-model.trim="connectionOptions.sshPrivateKey" id="snowflake-key"
+              placeholder="Private key for authentication" class="connection-input" @input="validateForm" />
           </div>
         </template>
       </div>
@@ -540,6 +509,7 @@ const switchToManualImport = () => {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
