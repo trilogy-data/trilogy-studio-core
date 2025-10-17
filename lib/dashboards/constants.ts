@@ -1,4 +1,4 @@
-import { type ChartConfig } from '../editors/results'
+import { type ChartConfig, type chartTypes } from '../editors/results'
 // Define the control interface
 export interface ChartControl {
   id: string
@@ -6,7 +6,7 @@ export interface ChartControl {
   field: keyof ChartConfig
   columnFilter: 'numeric' | 'categorical' | 'temporal' | 'longitude' | 'latitude' | 'all'
   allowEmpty: boolean
-  visibleFor: string[] // Array of chart types where this control should be visible
+  visibleFor: chartTypes[] // Array of chart types where this control should be visible
   filterGroup: 'axes' | 'appearance'
   options?: string[] // For fields with predefined options (like scale types)
 }
@@ -54,7 +54,7 @@ export const Controls: ChartControl[] = [
     field: 'xField',
     columnFilter: 'all',
     allowEmpty: false,
-    visibleFor: ['bar', 'line', 'point', 'area', 'heatmap'],
+    visibleFor: ['bar', 'line', 'point', 'area', 'heatmap', 'beeswarm'],
     filterGroup: 'axes',
   },
   {
@@ -110,7 +110,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'categorical',
     allowEmpty: true,
-    visibleFor: ['line', 'area'],
+    visibleFor: ['line', 'area', 'beeswarm'],
     filterGroup: 'appearance',
   },
   {
@@ -119,7 +119,7 @@ export const Controls: ChartControl[] = [
     field: 'sizeField',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point', 'usa-map', 'tree'],
+    visibleFor: ['point', 'usa-map', 'tree', 'beeswarm'],
     filterGroup: 'appearance',
   },
   {
@@ -173,7 +173,7 @@ export const Controls: ChartControl[] = [
     field: 'annotationField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'point', 'heatmap'],
+    visibleFor: ['usa-map', 'point', 'heatmap', 'beeswarm', 'line'],
     filterGroup: 'appearance',
   },
   {
@@ -215,12 +215,21 @@ export const Controls: ChartControl[] = [
     filterGroup: 'appearance',
   },
   {
+    id: 'linky2',
+    label: 'Link Secondary Y Axis',
+    field: 'linkY2',
+    columnFilter: 'all',
+    allowEmpty: true,
+    visibleFor: ['line'],
+    filterGroup: 'appearance',
+  },
+  {
     id: 'show-title',
     label: 'Show Title',
     field: 'showTitle',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline'],
+    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline', 'beeswarm'],
     filterGroup: 'appearance',
   },
 ]
@@ -280,6 +289,11 @@ export const Charts = [
     value: 'donut',
     label: 'Donut',
     icon: 'mdi mdi-chart-donut',
+  },
+  {
+    value: 'beeswarm',
+    label: 'Beeswarm',
+    icon: 'mdi mdi-chart-bubble',
   },
 ]
 

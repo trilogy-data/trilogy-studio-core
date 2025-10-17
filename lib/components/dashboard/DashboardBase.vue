@@ -344,6 +344,8 @@ function openEditor(item: LayoutItem): void {
       showMarkdownEditor.value = true
     } else if (itemData.type === CELL_TYPES.TABLE) {
       showQueryEditor.value = true
+    } else if (itemData.type === CELL_TYPES.FILTER) {
+      showQueryEditor.value = true
     }
   }
 }

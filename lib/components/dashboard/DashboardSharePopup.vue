@@ -45,8 +45,8 @@ const filterDashboard = (dashboard: Dashboard): any => {
       delete itemCopy.loadStartTime
       delete itemCopy.filters
       delete itemCopy.error
-      delete itemCopy.chartFilters
-      delete itemCopy.conceptFilters
+      // delete itemCopy.chartFilters
+      // delete itemCopy.conceptFilters
       if (itemCopy.chartConfig) {
         delete itemCopy.chartConfig.showDebug
       }

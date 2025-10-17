@@ -1,147 +1,209 @@
+import { type ResultColumn } from '../editors/results'
+import { type ChartConfig } from '../editors/results'
 
-// import { type ResultColumn } from '../editors/results'
-// import { type ChartConfig } from '../editors/results'
-// import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
-// import { lightDefaultColor, darkDefaultColor } from './constants'
+const baseDataName = 'base'
+
+const createSelectionTest = (selectedValues: { [key: string]: string | number | Array<any> }[]) => {
+  if (!selectedValues || selectedValues.length === 0) {
+    return 'true' // Changed from "false" to "true"
+  }
+
+  const tests = selectedValues.map((selection) => {
+    const conditions = Object.entries(selection).map(([field, value]) => {
+      if (Array.isArray(value)) {
+        return `indexof(${JSON.stringify(value)}, datum.${field}) >= 0`
+      }
+      return `datum.${field} === ${JSON.stringify(value)}`
+    })
+    return conditions.length > 0 ? `(${conditions.join(' && ')})` : 'false'
+  })
+
+  return tests.join(' || ')
+}
 
 export const createBeeSwarmSpec = (
-    // config: ChartConfig,
-    // columns: Map<string, ResultColumn>,
-    // tooltipFields: any[],
-    // encoding: any,
-    // isMobile: boolean,
-    // intChart: Array<Partial<ChartConfig>>,
-    // currentTheme: string = 'light',
+  config: ChartConfig,
+  //@ts-ignore
+  columns: Map<string, ResultColumn>,
+  //@ts-ignore
+  tooltipFields: any[],
+  //@ts-ignore
+  encoding: any,
+  //@ts-ignore
+  isMobile: boolean,
+  selectedValues: { [key: string]: string | number | Array<any> }[],
+  currentTheme: string = 'light',
+  currentData: readonly Record<string, any>[],
+  containerHeight: number,
+  containerWidth: number,
 ) => {
-    return {
-        "$schema": "https://vega.github.io/schema/vega/v6.json",
-        "description": "A beeswarm chart example that uses a force-directed layout to group items by category.",
-        "width": 1000,
-        "height": 600,
-        "padding": { "left": 5, "right": 5, "top": 0, "bottom": 20 },
-        "data": [
-            {
-                "name": "satellites",
-                "values": [
-                    { "op_orbit": "MEO", "name": "Vanguard III" },
-                    { "op_orbit": "MEO", "name": "Relay 1" },
-                    { "op_orbit": "MEO", "name": "Hitchhiker 1" },
-                    { "op_orbit": "MEO", "name": "Relay 2" },
-                    { "op_orbit": "MEO", "name": "ATS 2" },
-                    { "op_orbit": "MEO", "name": "RAE 1" },
-                    { "op_orbit": "MEO", "name": "AE-C" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1413" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1414" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1415" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1490" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1491" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1492" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1519" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1520" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1521" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1554" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1555" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1556" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1593" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1594" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1595" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1650" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1651" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1652" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1710" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1711" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1712" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1778" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1779" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1780" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1883" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1884" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1885" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1946" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1947" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1948" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1970" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1971" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1972" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1987" },
-                    { "op_orbit": "MEO", "name": "Kosmos-1988" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2022" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2023" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2079" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2080" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2081" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2109" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2110" },
-                    { "op_orbit": "MEO", "name": "Kosmos-2111" },
-                    { "op_orbit": "MEO", "name": "FAST" },
-                    { "op_orbit": "MEO", "name": "USA 144" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC155" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC094" },
-                    { "op_orbit": "MEO", "name": "ST-5 SC224" },
-                    { "op_orbit": "MEO", "name": "IRNSS-R1H" },
-                    { "op_orbit": "MEO", "name": "GSAT-6A" },
-                    { "op_orbit": "MEO", "name": "USA 310" }
-                ]
-            }
+  // Calculate scaling factor based on number of data points
+  const dataCount = currentData.length
+  const scalingFactor = dataCount > 100 ? Math.pow(0.25, Math.floor(Math.log10(dataCount) - 2)) : 1
+
+  // Prepare scales array with conditional orientation based on isMobile
+  const scales: any[] = [
+    {
+      name: isMobile ? 'yscale' : 'xscale',
+      type: 'band',
+      domain: {
+        data: baseDataName,
+        field: config.xField,
+        sort: true,
+      },
+      range: isMobile ? 'height' : 'width',
+    },
+    {
+      name: 'color',
+      type: 'ordinal',
+      domain: { data: baseDataName, field: config.colorField },
+      range: { scheme: currentTheme === 'light' ? 'category20c' : 'plasma' },
+    },
+  ]
+
+  // Add size scale if sizeField is provided
+  if (config.sizeField) {
+    // Calculate min/max from actual data
+    //@ts-ignore
+    const sizeValues = currentData.map((d) => d[config.sizeField]).filter((v) => v != null)
+    const minSize = Math.min(...sizeValues)
+    const maxSize = Math.max(...sizeValues)
+
+    // Scale proportionally with reasonable visual bounds
+    const minRadius = 3 * scalingFactor // minimum dot radius in pixels (scaled)
+    const maxRadius = 20 * scalingFactor // maximum dot radius in pixels (scaled)
+
+    const minArea = Math.max(minRadius * minRadius * Math.PI, 1)
+    const maxArea = Math.max(maxRadius * maxRadius * Math.PI, 3)
+
+    scales.push({
+      name: 'size',
+      type: 'linear',
+      domain: [minSize, maxSize], // Use actual data min/max
+      range: [minArea, maxArea],
+      zero: false,
+    })
+  }
+
+  // Determine size encoding and collide radius (scaled)
+  const baseSize = 100 * scalingFactor * scalingFactor // Square the scaling for area
+  const sizeEncoding = config.sizeField
+    ? { scale: 'size', field: config.sizeField }
+    : { value: baseSize }
+
+  const baseCollideRadius = 5 * scalingFactor
+  const collideRadius = config.sizeField ? { expr: 'sqrt(datum.size) / 2' } : baseCollideRadius
+
+  // Build tooltip fields dynamically
+  const tooltipFieldsList = [config.xField, config.annotationField]
+  if (config.colorField) {
+    tooltipFieldsList.push(config.colorField)
+  }
+  if (config.sizeField) {
+    tooltipFieldsList.push(config.sizeField)
+  }
+
+  const tooltipSignal = tooltipFieldsList.map((field) => `'${field}': datum.${field}`).join(', ')
+
+  const selectionTest = createSelectionTest(selectedValues)
+
+  let spec = {
+    $schema: 'https://vega.github.io/schema/vega/v6.json',
+    width: containerWidth,
+    height: containerHeight,
+    padding: 5,
+    data: [
+      {
+        name: baseDataName,
+        values: currentData,
+      },
+    ],
+    signals: [
+      {
+        name: 'highlight',
+        value: {},
+        on: [
+          { events: '@nodes:mouseover', update: 'datum' },
+          { events: '@nodes:mouseout', update: '{}' },
         ],
-        "scales": [
-            {
-                "name": "xscale",
-                "type": "band",
-                "domain": {
-                    "data": "satellites",
-                    "field": "op_orbit",
-                    "sort": true
-                },
-                "range": "width"
-            },
-            {
-                "name": "color",
-                "type": "ordinal",
-                "domain": { "data": "satellites", "field": "op_orbit" },
-                "range": { "scheme": "category20c" }
-            }
+      },
+      {
+        name: 'select',
+        value: selectedValues || [],
+      },
+    ],
+    scales: scales,
+    axes: [
+      {
+        orient: isMobile ? 'left' : 'bottom',
+        scale: isMobile ? 'yscale' : 'xscale',
+      },
+    ],
+    marks: [
+      {
+        name: 'nodes',
+        type: 'symbol',
+        from: { data: baseDataName },
+        encode: {
+          enter: {
+            fill: { scale: 'color', field: config.colorField },
+            ...(isMobile
+              ? {
+                  yfocus: { scale: 'yscale', field: config.xField, band: 0.5 },
+                  xfocus: { value: containerWidth / 2 },
+                }
+              : {
+                  xfocus: { scale: 'xscale', field: config.xField, band: 0.5 },
+                  yfocus: { value: containerHeight / 2 },
+                }),
+            tooltip: { signal: `{${tooltipSignal}}` },
+          },
+          update: {
+            size: sizeEncoding,
+            fillOpacity: [
+              {
+                test: selectionTest,
+                value: 1,
+              },
+              {
+                value: 0.3,
+              },
+            ],
+            stroke: { value: 'white' },
+            strokeWidth: [
+              {
+                value: 0,
+              },
+            ],
+            zindex: { value: 0 },
+          },
+          hover: {
+            stroke: { value: 'blue' },
+            strokeWidth: { value: 1 },
+            zindex: { value: 1 },
+          },
+        },
+        transform: [
+          {
+            type: 'force',
+            iterations: Math.max(400 * scalingFactor, 100),
+            static: true,
+            forces: [
+              { force: 'collide', iterations: 1, radius: collideRadius },
+              ...(isMobile
+                ? [
+                    { force: 'y', y: 'yfocus', strength: 0.2 },
+                    { force: 'x', x: 'xfocus', strength: 0.1 },
+                  ]
+                : [
+                    { force: 'x', x: 'xfocus', strength: 0.2 },
+                    { force: 'y', y: 'yfocus', strength: 0.1 },
+                  ]),
+            ],
+          },
         ],
-        "axes": [
-            { "orient": "bottom", "scale": "xscale" }
-        ],
-        "marks": [
-            {
-                "name": "nodes",
-                "type": "symbol",
-                "from": { "data": "satellites" },
-                "encode": {
-                    "enter": {
-                        "fill": { "scale": "color", "field": "op_orbit" },
-                        "xfocus": { "scale": "xscale", "field": "op_orbit", "band": 0.5 },
-                        "yfocus": { "value": 50 },
-                        "tooltip": { "signal": "{'Satellite': datum.name, 'Orbit': datum.op_orbit}" }
-                    },
-                    "update": {
-                        "size": { "value": 256 },
-                        "stroke": { "value": "white" },
-                        "strokeWidth": { "value": 1 },
-                        "zindex": { "value": 0 }
-                    },
-                    "hover": {
-                        "stroke": { "value": "purple" },
-                        "strokeWidth": { "value": 3 },
-                        "zindex": { "value": 1 }
-                    }
-                },
-                "transform": [
-                    {
-                        "type": "force",
-                        "iterations": 300,
-                        "static": true,
-                        "forces": [
-                            { "force": "collide", "iterations": 1, "radius": 8 },
-                            { "force": "x", "x": "xfocus", "strength": 0.2 },
-                            { "force": "y", "y": "yfocus", "strength": 0.1 }
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+      },
+    ],
+  }
+  return spec
 }

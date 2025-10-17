@@ -546,96 +546,105 @@ export default defineComponent({
         console.error('LLM store or editor data is not available')
         return
       }
+
       if (!this.loading && this.llmStore) {
-        let editorId = this.editorData.id
-        this.editorData.loading = true
-        this.editorData.startTime = Date.now()
-        this.editorData.results = new Results(new Map(), [])
-        this.editorData.setError(null)
-        this.editorData.setChatInteraction(null)
-        const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
-        if (!codeEditorRef) {
-          throw new Error('Code editor reference not found')
-        }
+        try {
+          let editorId = this.editorData.id
 
-        const text = codeEditorRef.getEditorText(this.editorData.contents)
-        let range: Range = codeEditorRef.getEditorRange()
-        let prompt = `Generate a sql query for syntax ${this.editorData.syntax} with prompt ${text}. Return your answer in triple quotes to make it easy to extract.`
-        await this.llmStore
-          .generateSQLQueryCompletion(prompt)
-          .then((query) => {
-            if (query) {
-              // Get the target editor directly
-              let targetEditor = this.editorStore.editors[editorId]
-              if (!targetEditor) {
-                throw new Error('Target editor not found.')
-              }
+          this.editorData.loading = true
+          this.editorData.startTime = Date.now()
+          this.editorData.results = new Results(new Map(), [])
+          this.editorData.setError(null)
+          this.editorData.setChatInteraction(null)
 
-              let replacementLen = 0
-              // Also update the CodeEditor with the new content
-              if (this.editorData.id === editorId && this.$refs.codeEditor) {
-                const mutation = (responseText: string | null) => {
-                  // Split the content into lines
-                  // Determine where to insert the query text
-                  // If we have a range, calculate the insertion position
-                  let insertionPosition = range
-                    ? range.startLineNumber
-                    : targetEditor.contents.split('\n').length
-                  let contentLines = targetEditor.contents.split('\n')
+          let targetEditor = this.editorStore.editors[editorId]
+          if (!targetEditor) {
+            throw new Error('Target editor not found.')
+          }
 
-                  // Insert the query at the appropriate position
-                  contentLines.splice(insertionPosition, replacementLen, responseText || '')
-                  // store our length so we can replace this query if user has more edits
-                  // this is the length of the split array
+          const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+          if (!codeEditorRef) {
+            throw new Error('Code editor reference not found')
+          }
 
-                  // Update the editor contents directly
-                  targetEditor.setContent(contentLines.join('\n'))
-                  // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-                  let op = {
-                    range: range,
-                    text: `${text}\n${responseText}`,
-                    forceMoveMarkers: true,
-                  }
-                  codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+          const text = codeEditorRef.getEditorText(this.editorData.contents)
+          let range: Range = codeEditorRef.getEditorRange()
 
-                  // cache for next time
-                  replacementLen = (responseText || '').split('\n').length
-                  range = new Range(
-                    range.startLineNumber,
-                    range.startColumn,
-                    range.endLineNumber + replacementLen,
-                    range.endColumn,
-                  )
-                  codeEditorRef.getEditorInstance().setSelection(range)
-                  return true
-                }
+          // Define validator function for SQL
+          const validator = async (_: string): Promise<boolean> => {
+            // For SQL, we can attempt to parse or validate syntax
+            // For now, return true as SQL validation may vary by dialect
+            return true
+          }
 
-                mutation(query.content)
-                const validator = async (): Promise<boolean> => {
-                  return true
-                }
-                targetEditor.setChatInteraction({
-                  messages: [
-                    { role: 'user', content: query.prompt },
-                    {
-                      role: 'assistant',
-                      content: query.message,
-                    },
-                  ],
-                  validationFn: validator,
-                  extractionFn: extractLastTripleQuotedText,
-                  mutationFn: mutation,
-                })
-              }
-            } else {
-              throw new Error('LLM could not successfully generate query.')
+          // Define mutation function
+          let replacementLen = 0
+          const mutation = (responseText: string | null) => {
+            // Determine where to insert the query text
+            let insertionPosition = range
+              ? range.startLineNumber
+              : targetEditor.contents.split('\n').length
+            let contentLines = targetEditor.contents.split('\n')
+
+            // Insert the query at the appropriate position
+            contentLines.splice(insertionPosition, replacementLen, responseText || '')
+
+            // Update the editor contents directly
+            targetEditor.setContent(contentLines.join('\n'))
+
+            let op = {
+              range: range,
+              text: `${responseText}`,
+              forceMoveMarkers: true,
             }
+            codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
+
+            // Cache for next time
+            replacementLen = (responseText || '').split('\n').length
+            range = new Range(
+              range.startLineNumber,
+              range.startColumn,
+              range.endLineNumber + replacementLen,
+              range.endColumn,
+            )
+            codeEditorRef.getEditorInstance().setSelection(range)
+            return true
+          }
+
+          // Set up chat interaction similar to generateLLMQuery
+          let initMessage = `How can I help? I'm ready to assist with writing a SQL query.`
+          if (range && text) {
+            initMessage += `Based on selection, focused on editing this text:\n\`\`\`${text}\n\`\`\`. If the text includes a prompt, hit enter and I'll go ahead and get working - or you can give me some more instructions.`
+          }
+
+          this.editorData.setChatInteraction({
+            messages: [
+              {
+                role: 'system',
+                content: `You are a SQL query generation assistant. Generate SQL queries for ${this.editorData.syntax} syntax. Return your answer in triple quotes to make it easy to extract.`,
+                hidden: true,
+              },
+              {
+                role: 'user',
+                content: `Here is a SQL file I'm editing. ${targetEditor.contents}.`,
+                hidden: true,
+              },
+              { role: 'system', content: initMessage },
+            ],
+            validationFn: validator,
+            extractionFn: extractLastTripleQuotedText,
+            mutationFn: mutation,
           })
-          .catch((error) => {
-            this.editorData.setError(error)
-            throw error
-          })
-          .finally(() => {})
+        } catch (error) {
+          if (error instanceof Error) {
+            console.error('Error generating LLM SQL query:', error)
+            this.editorData.setError(error.message)
+          } else {
+            this.editorData.setError('Unknown error occurred')
+          }
+        } finally {
+          this.editorData.loading = false
+        }
       }
     },
     async generateLLMQuery(): Promise<void> {

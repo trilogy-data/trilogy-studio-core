@@ -77,6 +77,15 @@ onUnmounted(() => {
             />
             Markdown
           </label>
+          <label>
+            <input
+              type="radio"
+              v-model="newItemType"
+              :value="CELL_TYPES.FILTER"
+              data-testid="dashboard-add-item-type-filter"
+            />
+            Filter
+          </label>
         </div>
         <div class="editor-actions">
           <button @click="addItem" class="add-button" data-testid="dashboard-add-item-confirm">

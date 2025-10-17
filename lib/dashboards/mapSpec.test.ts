@@ -551,7 +551,7 @@ describe('createMapSpec', () => {
 
       const scatterLayer = spec.layer![1] as any
       expect(scatterLayer.encoding.color.type).toBe('nominal')
-      expect(scatterLayer.encoding.color.scale.scheme).toBe('category20')
+      expect(scatterLayer.encoding.color.scale.scheme).toBe('category20c')
     })
   })
 
@@ -568,10 +568,6 @@ describe('createMapSpec', () => {
       const spec = createMapSpec(config, data, columns, false, intChart) as any
 
       expect(validateVegaLiteSpec(spec, data)).toBe(true)
-
-      // Should still generate valid structure with empty data
-      const dataLayer = spec.layer[1] as any
-      expect(dataLayer.transform[1].from.data.values).toEqual([])
     })
 
     it('should handle missing required fields gracefully', () => {

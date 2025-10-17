@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
+import DashboardFilter from './DashboardFilter.vue'
 import {
   type GridItemDataResponse,
   type LayoutItem,
@@ -163,6 +164,8 @@ const cellComponent = computed(() => {
       return DashboardChart
     case CELL_TYPES.TABLE:
       return DashboardTable
+    case CELL_TYPES.FILTER:
+      return DashboardFilter
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
@@ -176,6 +179,8 @@ const getPlaceholderText = computed(() => {
       return 'Chart Name'
     case CELL_TYPES.TABLE:
       return 'Table Name'
+    case CELL_TYPES.FILTER:
+      return 'Filter Name'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'
@@ -199,8 +204,10 @@ const filterCount = computed(() => {
     class="grid-item-content"
     :data-testid="`dashboard-component-${item.i}`"
     :class="{
-      //@ts-ignore
-      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE].includes(itemData.type),
+      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
+        //@ts-ignore
+        itemData.type,
+      ),
       'grid-item-edit-style': editMode,
     }"
     @mouseenter="

@@ -31,13 +31,19 @@ const createInteractiveLayer = (
   // Create the main layer for the primary y-axis
   const markColor = currentTheme === 'light' ? 'steelblue' : '#4FC3F7'
   const mainLayer = {
-    ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
+    ...(filtered
+      ? {
+          transform: [{ filter: { param: 'brush' } }, { filter: `datum.${config.yField} != null` }],
+        }
+      : { transform: [{ filter: `datum.${config.yField} != null` }] }),
     mark: {
       type: config.chartType === 'line' ? 'line' : 'area',
       ...(config.chartType === 'area' ? { line: filtered ? true : { color: 'darkgray' } } : {}),
       ...(filtered ? { color: markColor } : { color: 'lightgray' }),
+      interpolate: 'step-after',
     },
     data: { values: data },
+
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, {
         axis: { ...getFormatHint(config.xField, columns) },
@@ -129,6 +135,7 @@ const createInteractiveLayer = (
       strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
     },
     data: { values: data },
+    transform: [{ filter: `datum.${config.yField2} != null` }],
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
       y: createFieldEncoding(config.yField2, columns, {}, false, { scale: config.scaleY }),

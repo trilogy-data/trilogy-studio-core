@@ -336,6 +336,7 @@ export class ChromaChartHelpers {
       'groupField',
       'geoField',
       'trellisField',
+      'annotationField',
     ]
 
     for (const field of fieldsToCheck) {

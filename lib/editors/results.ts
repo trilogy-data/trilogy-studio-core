@@ -59,24 +59,28 @@ export type FieldKey =
   | 'geoField'
   | 'groupField'
   | 'trellisField'
+  | 'annotationField'
 
 export type BoolFieldKey = 'hideLegend' | 'showTitle'
 
+export type chartTypes =
+  | 'line'
+  | 'bar'
+  | 'barh'
+  | 'point'
+  | 'usa-map'
+  | 'tree'
+  | 'area'
+  | 'headline'
+  | 'donut'
+  | 'heatmap'
+  | 'boxplot'
+  | 'treemap'
+  | 'beeswarm'
+
 // Chart configuration interface
 export interface ChartConfig {
-  chartType:
-    | 'line'
-    | 'bar'
-    | 'barh'
-    | 'point'
-    | 'usa-map'
-    | 'tree'
-    | 'area'
-    | 'headline'
-    | 'donut'
-    | 'heatmap'
-    | 'boxplot'
-    | 'treemap'
+  chartType: chartTypes
   xField?: string
   yField?: string
   yField2?: string
@@ -90,6 +94,7 @@ export interface ChartConfig {
   showTitle?: boolean
   scaleX?: 'linear' | 'log' | 'sqrt'
   scaleY?: 'linear' | 'log' | 'sqrt'
+  linkY2?: boolean
 }
 
 type SerializableValue =

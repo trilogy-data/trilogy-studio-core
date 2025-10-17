@@ -3,27 +3,41 @@
     ref="chartContainer"
     class="chart-placeholder no-drag"
     :class="{ 'chart-placeholder-edit-mode': editMode }"
+    @mouseenter="onChartMouseEnter"
+    @mouseleave="onChartMouseLeave"
   >
     <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart
-      v-else-if="results && ready"
+    <dashboard-data-selector
+      v-else-if="ready && results"
       :id="`${itemId}-${dashboardId}`"
-      :columns="results.headers"
-      :data="results.data"
-      :showControls="editMode"
-      :initialConfig="chartConfig || undefined"
+      :headers="results.headers"
+      :results="results.data"
       :containerHeight="chartHeight"
-      :container-width="chartWidth"
-      :onChartConfigChange="onChartConfigChange"
-      :chartSelection
-      :chartTitle
-      @dimension-click="handleDimensionClick"
+      :prettyPrint="true"
+      :fitParent="true"
+      @cell-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
-      @refresh-click="handleLocalRefresh"
     />
+
+    <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
+
+    <!-- <div
+      v-if="!loading && editMode"
+      class="controls-toggle"
+      :class="{ 'controls-visible': controlsVisible }"
+    >
+      <button
+        @click="handleLocalRefresh"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh filter"
+      >
+        <i class="mdi mdi-refresh icon"></i>
+      </button>
+    </div> -->
   </div>
 </template>
 
@@ -39,10 +53,10 @@ import {
   type PropType,
 } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
-import type { ChartConfig } from '../../editors/results'
+import type { Results } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
-import VegaLiteChart from '../VegaLiteChart.vue'
+import DashboardDataSelector from './DashboardDataSelector.vue'
 import LoadingView from '../LoadingView.vue'
 import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
 import type { AnalyticsStoreType } from '../../stores/analyticsStore'
@@ -50,7 +64,7 @@ import type { AnalyticsStoreType } from '../../stores/analyticsStore'
 export default defineComponent({
   name: 'DashboardChart',
   components: {
-    VegaLiteChart,
+    DashboardDataSelector,
     ErrorMessage,
     LoadingView,
   },
@@ -69,7 +83,7 @@ export default defineComponent({
       default: () => ({ type: 'CHART', content: '' }),
     },
     setItemData: {
-      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => void>,
+      type: Function as PropType<(itemId: string, dashboardId: string, content: any) => null>,
       required: true,
       default: () => ({ type: 'CHART', content: '' }),
     },
@@ -77,7 +91,6 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
-
     getDashboardQueryExecutor: {
       type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
@@ -89,6 +102,16 @@ export default defineComponent({
     const currentQueryId = ref<string | null>(null)
     const showLoading = ref(false)
     const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
+    const controlsVisible = ref(false)
+
+    // Mouse event handlers for hover controls
+    const onChartMouseEnter = () => {
+      controlsVisible.value = true
+    }
+
+    const onChartMouseLeave = () => {
+      controlsVisible.value = false
+    }
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -111,7 +134,7 @@ export default defineComponent({
     onMounted(() => {
       // Apply position-based delay after DOM is ready
       setTimeout(() => {
-        // this is to delay *rendering* the chart, not query execution
+        // this is to delay *rendering* the component, not query execution
         const delay = getPositionBasedDelay()
 
         if (!results.value) {
@@ -138,24 +161,8 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).content
     })
 
-    const results = computed(() => {
+    const results = computed((): Results | null => {
       return props.getItemData(props.itemId, props.dashboardId).results || null
-    })
-
-    const chartTitle = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).name || ''
-    })
-
-    const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
-    })
-
-    const chartWidth = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).width || 300
-    })
-
-    const chartConfig = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
     const loading = computed(() => {
@@ -170,10 +177,16 @@ export default defineComponent({
       return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
     })
 
-    const chartSelection = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map(
-        (filter) => filter.value,
-      )
+    const chartHeight = computed(() => {
+      return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
+    })
+
+    const chartWidth = computed(() => {
+      return (props.getItemData(props.itemId, props.dashboardId).width || 300) - 100
+    })
+
+    const chartConfig = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
     })
 
     // Get refresh callback from item data if available
@@ -197,7 +210,7 @@ export default defineComponent({
           loadingTimeoutId.value = setTimeout(() => {
             showLoading.value = true
             loadingTimeoutId.value = null
-          }, 250)
+          }, 150)
         } else {
           // Stop loading - hide immediately
           showLoading.value = false
@@ -208,10 +221,6 @@ export default defineComponent({
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
-
-    const onChartConfigChange = (chartConfig: ChartConfig) => {
-      props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
-    }
 
     if (!connectionStore) {
       throw new Error('Connection store not found!')
@@ -227,10 +236,10 @@ export default defineComponent({
 
       try {
         if (analyticsStore) {
-          analyticsStore.log('dashboard-chart-execution', 'CHART', true)
+          analyticsStore.log('dashboard-table-execution', 'TABLE', true)
         }
 
-        // Cancel any existing query for this chart
+        // Cancel any existing query for this table component
         if (currentQueryId.value) {
           dashboardQueryExecutor.cancelQuery(currentQueryId.value)
         }
@@ -245,7 +254,7 @@ export default defineComponent({
       }
     }
 
-    // Handle individual chart refresh button click
+    // Handle individual component refresh button click
     const handleLocalRefresh = () => {
       if (onRefresh.value) {
         onRefresh.value(props.itemId)
@@ -278,14 +287,14 @@ export default defineComponent({
       chartHeight,
       chartWidth,
       chartConfig,
-      chartTitle,
-      onChartConfigChange,
       onRefresh,
       handleLocalRefresh,
-      chartSelection,
       startTime,
       handleDimensionClick,
       handleBackgroundClick,
+      controlsVisible,
+      onChartMouseEnter,
+      onChartMouseLeave,
     }
   },
 })
@@ -297,13 +306,12 @@ export default defineComponent({
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  /* padding: 5px; */
-  color: #666;
+  justify-content: flex-start;
+  align-items: stretch;
   position: relative;
   overflow-y: hidden;
-  padding-top: 5px;
+  /* padding-top:15px; */
+  background-color: var(--bg-light);
 }
 
 .loading-overlay {
@@ -321,55 +329,70 @@ export default defineComponent({
   z-index: 10;
 }
 
-.chart-query {
-  font-family: monospace;
-  font-size: 12px;
-  margin-top: 10px;
-  padding: 8px;
-  background-color: var(--bg-color);
-  border: 1px var(--border);
-  border-radius: 4px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chart-actions {
+.controls-toggle {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 5;
+  top: 50%;
+  right: 0px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
 }
 
-.chart-refresh-button {
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background-color: var(--button-bg, #f5f5f5);
-  border: 1px solid var(--border-light, #ddd);
-  color: var(--text-color, #333);
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  background-color: rgba(var(--bg-color), 0.9);
+  color: var(--text-color);
   cursor: pointer;
-  opacity: 0.7;
-  transition:
-    opacity 0.2s,
-    background-color 0.2s;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  backdrop-filter: blur(4px);
 }
 
-.chart-refresh-button:hover {
-  opacity: 1;
-  background-color: var(--button-hover-bg, #e0e0e0);
+.control-btn:hover {
+  background-color: var(--button-mouseover);
 }
 
-.refresh-icon {
-  font-size: 16px;
-  font-weight: bold;
+.control-btn:disabled {
+  background-color: var(--border-light);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
 }
 
-.chart-placeholder-edit-mode {
-  padding-top: 15px;
+.control-btn:disabled:hover {
+  background-color: var(--border-light);
+}
+
+.control-btn.active {
+  background-color: var(--special-text);
+  color: white;
+}
+
+/* Mobile responsiveness - always show controls on mobile */
+@media (max-width: 768px) {
+  .controls-toggle {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
 }
 </style>

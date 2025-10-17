@@ -269,34 +269,34 @@ export const createHeadlineSpec = (
   }
   // otherwise, loop through row and columns
   else {
-  columnLayers = dataFull.map((row, index1) => {
-    return columnsArray.map((column, index2) => {
-      let datum = row ? (row ? row[column.name] : null) : null
-      let filtered_display = intChart.filter((item) => {
-        return (
-          item[column.name] !== undefined &&
-          item[column.name] !== null &&
-          item[column.name] !== '' &&
-          item[column.name] == datum
+    columnLayers = dataFull.map((row, index1) => {
+      return columnsArray.map((column, index2) => {
+        let datum = row ? (row ? row[column.name] : null) : null
+        let filtered_display = intChart.filter((item) => {
+          return (
+            item[column.name] !== undefined &&
+            item[column.name] !== null &&
+            item[column.name] !== '' &&
+            item[column.name] == datum
+          )
+        })
+        const index = index1 * columnsArray.length + index2 + 1
+        return createHeadlineLayer(
+          column.name,
+          index,
+          size,
+          columns,
+          currentTheme,
+          isMobile,
+          datum,
+          !(config.hideLegend === true),
+          filtered_display,
+          maxValueLength,
+          maxLabelLength,
         )
       })
-      const index = index1 * columnsArray.length + index2 + 1;
-      return createHeadlineLayer(
-        column.name,
-        index,
-        size,
-        columns,
-        currentTheme,
-        isMobile,
-        datum,
-        !(config.hideLegend === true),
-        filtered_display,
-        maxValueLength,
-        maxLabelLength,
-      )
     })
-  })
-}
+  }
 
   // flatten array of arrays of arrays to a single array
   let flatLayers = columnLayers.reduce(

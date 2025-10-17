@@ -24,6 +24,10 @@ export interface LayoutItem {
   static: boolean
 }
 
+export interface DashboardTypes {
+  CellType: 'chart' | 'markdown' | 'table' | 'filter'
+}
+
 export interface Filter {
   source: string
   value: string
@@ -39,7 +43,7 @@ export interface MarkdownData {
   query: string
 }
 export interface GridItemData {
-  type: 'chart' | 'markdown' | 'table'
+  type: DashboardTypes['CellType']
   content: string | MarkdownData
   name: string
   allowCrossFilter: boolean
@@ -57,7 +61,7 @@ export interface GridItemData {
 }
 
 export interface GridItemDataResponse {
-  type: 'chart' | 'markdown' | 'table'
+  type: DashboardTypes['CellType']
   content: string
   structured_content: MarkdownData
   rootContent: ContentInput[]
@@ -101,6 +105,7 @@ export const CELL_TYPES = {
   CHART: 'chart',
   MARKDOWN: 'markdown',
   TABLE: 'table',
+  FILTER: 'filter',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
@@ -381,7 +386,7 @@ export class DashboardModel implements Dashboard {
     }
   }
 
-  updateItemType(itemId: string, type: 'chart' | 'markdown' | 'table'): void {
+  updateItemType(itemId: string, type: DashboardTypes['CellType']): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
