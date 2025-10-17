@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, VueWrapper, flushPromises } from '@vue/test-utils'
-import { nextTick, } from 'vue'
+import { nextTick } from 'vue'
 import AutoImportComponent from './DashboardAutoImporter.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
-import { log } from 'console'
 
 // Test constants
 const TEST_CONSTANTS = {
@@ -46,7 +45,7 @@ const mockDashboardStore = {
 
 const mockConnectionStore = {
   connections: {} as Record<string, any>,
-  newConnection: vi.fn((name: string, type: string, options: any) => {
+  newConnection: vi.fn((name: string, type: string, _: any) => {
     // Actually create the connection when newConnection is called
     mockConnectionStore.connections[name] = createMockConnection(type)
   }),
@@ -197,21 +196,6 @@ describe('AutoImportComponent', () => {
     mockConnectionStore.connections[connectionName] = createMockConnection(connectionType)
   }
 
-  const setupConnectionForManualImport = (connectionType: string) => {
-    const connectionName = TEST_CONSTANTS.CONNECTION_NAME
-    // Pre-setup the connection that will be created during manual import
-    mockConnectionStore.connections[connectionName] = createMockConnection(connectionType)
-
-    mockModelImportService.importModel.mockResolvedValue({
-      dashboards: new Map([[TEST_CONSTANTS.DASHBOARD_NAME, TEST_CONSTANTS.DASHBOARD_NAME]]),
-    })
-
-    const mockDashboard = createMockDashboard(connectionName)
-    mockDashboardStore.dashboards = {
-      [TEST_CONSTANTS.DASHBOARD_ID]: mockDashboard,
-    }
-  }
-
   describe('Component Initialization', () => {
     it('should throw error if required stores are not provided', () => {
       expect(() => {
@@ -226,7 +210,6 @@ describe('AutoImportComponent', () => {
     })
 
     it('should show error if missing required URL parameters', async () => {
-
       vi.useFakeTimers()
       wrapper = await createWrapper({})
       await nextTick()
@@ -252,7 +235,6 @@ describe('AutoImportComponent', () => {
           connection: TEST_CONSTANTS.CONNECTIONS.UNSUPPORTED,
         }),
       )
-
 
       await wrapper.vm.$forceUpdate()
       expect(wrapper.find('.error-state').exists()).toBe(true)
@@ -341,7 +323,8 @@ describe('AutoImportComponent', () => {
       if (steps.length > 0) {
         expect(steps[0].text()).toContain('Importing model')
         // The step might be active or completed depending on timing
-        const hasActiveOrCompleted = steps[0].classes().includes('active') || steps[0].classes().includes('completed')
+        const hasActiveOrCompleted =
+          steps[0].classes().includes('active') || steps[0].classes().includes('completed')
         expect(hasActiveOrCompleted).toBe(true)
       }
 
@@ -446,8 +429,6 @@ describe('AutoImportComponent', () => {
       const disabledAttr = importButton.attributes('disabled')
       expect(disabledAttr).toBeFalsy() // Handle both undefined and empty string
     })
-
-
   })
 
   describe('Import Process', () => {
