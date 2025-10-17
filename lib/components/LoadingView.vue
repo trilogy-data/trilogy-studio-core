@@ -9,7 +9,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount, computed, nextTick, type PropType } from 'vue'
+import {
+  defineComponent,
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  computed,
+  nextTick,
+  type PropType,
+} from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 
 interface Props {
@@ -86,7 +94,7 @@ export default defineComponent({
     onMounted(async () => {
       startTimeInternal.value = props.startTime || Date.now()
       updateElapsedTime() // Start the adaptive timer
-      
+
       // Wait for DOM to be ready
       await nextTick()
       updateContainerHeight()
@@ -145,7 +153,7 @@ export default defineComponent({
 }
 
 /* Compact mode styles */
-.loading-container:has(.loading-text:not([style*="display: none"])) {
+.loading-container:has(.loading-text:not([style*='display: none'])) {
   /* Normal mode - keep existing styles */
 }
 

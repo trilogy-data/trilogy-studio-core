@@ -347,8 +347,17 @@ const switchToManualImport = () => {
 
 <template>
   <div class="auto-import-container">
-    <!-- Unified Loading/Success State (with step indicators) -->
-    <div v-if="isLoading || importSuccess" class="import-state loading-state">
+    <div v-if="error" class="import-state error-state">
+      <div class="error-icon">⚠️</div>
+      <h2 class="import-headline">Dashboard Load Failed</h2>
+      <p class="error-message">{{ error }}</p>
+      <div class="error-actions">
+        <button @click="switchToManualImport" class="manual-import-button">
+          Try Manual Import
+        </button>
+      </div>
+    </div>
+    <div v-else-if="isLoading || importSuccess" class="import-state loading-state">
       <div class="loading-content">
         <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Loading" />
         <h2 class="import-headline">Setting up your dashboard...</h2>
@@ -407,16 +416,6 @@ const switchToManualImport = () => {
     </div>
 
     <!-- Error State (no spinning logo) -->
-    <div v-else-if="error" class="import-state error-state">
-      <div class="error-icon">⚠️</div>
-      <h2 class="import-headline">Dashboard Load Failed</h2>
-      <p class="error-message">{{ error }}</p>
-      <div class="error-actions">
-        <button @click="switchToManualImport" class="manual-import-button">
-          Try Manual Import
-        </button>
-      </div>
-    </div>
 
     <!-- Connection Setup Required (no spinning logo - user input needed) -->
     <div v-else-if="requiresFields" class="import-form">

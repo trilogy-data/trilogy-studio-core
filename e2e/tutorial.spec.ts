@@ -6,7 +6,7 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByTestId('community-model-search').click()
   await page.getByRole('textbox', { name: 'Search by model name...' }).fill('demo-model')
   await page.getByRole('button', { name: 'Import' }).click()
-  await page.getByTestId("model-creation-submit").click()
+  await page.getByTestId('model-creation-submit').click()
   await page.getByRole('button', { name: '󱘖' }).click()
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this testid, so filter to the visible one

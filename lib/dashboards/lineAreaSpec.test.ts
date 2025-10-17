@@ -204,7 +204,10 @@ describe('Line and Area Chart Specs', (): void => {
 
         const filteredLayer = spec.layer[1] as any
 
-        expect(filteredLayer.transform).toEqual([{ filter: { param: 'brush' } }])
+        expect(filteredLayer.transform).toEqual([
+          { filter: { param: 'brush' } },
+          { filter: `datum.${mockConfig.yField} != null` },
+        ])
       })
     })
 

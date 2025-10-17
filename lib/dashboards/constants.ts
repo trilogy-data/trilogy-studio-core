@@ -1,4 +1,4 @@
-import { type ChartConfig, type chartTypes} from '../editors/results'
+import { type ChartConfig, type chartTypes } from '../editors/results'
 // Define the control interface
 export interface ChartControl {
   id: string
@@ -100,7 +100,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['bar', 'barh', 'point', 'donut', ],
+    visibleFor: ['bar', 'barh', 'point', 'donut'],
     filterGroup: 'appearance',
   },
   //categorical only
@@ -294,7 +294,7 @@ export const Charts = [
     value: 'beeswarm',
     label: 'Beeswarm',
     icon: 'mdi mdi-chart-bubble',
-  }
+  },
 ]
 
 export const lightDefaultColor = '#1f77b4'

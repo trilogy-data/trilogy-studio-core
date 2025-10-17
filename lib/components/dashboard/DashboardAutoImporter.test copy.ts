@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
-import AutoImportComponent from './DashboardAutoImporter.vue' 
+import AutoImportComponent from './DashboardAutoImporter.vue' // Adjust path as needed
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 
 // Test constants
@@ -204,11 +204,11 @@ describe('AutoImportComponent', () => {
     })
 
     it('should show error if missing required URL parameters', async () => {
-      vi.useFakeTimers()
       wrapper = createWrapper({})
-      await nextTick()
-      vi.advanceTimersByTime(2000)
-      await nextTick()
+
+      await vi.waitFor(() => {
+        expect(wrapper.find('.error-state').exists()).toBe(true)
+      })
       logDOMState(wrapper, 'Error Form')
       expect(wrapper.find('.error-state').exists()).toBe(true)
       expect(wrapper.text()).toContain('Missing required import parameters')

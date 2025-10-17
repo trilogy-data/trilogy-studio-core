@@ -2,12 +2,27 @@
   <div class="result-select row pa-0 ba-0">
     <div class="select-container">
       <div class="search-input-wrapper">
-        <input ref="searchInput" v-model="searchText" type="text" class="search-input" :placeholder="placeholderText"
-          :disabled="!selectOptions || selectOptions.length === 0" @focus="handleFocus" @input="onSearchInput"
-          @blur="handleBlur" />
+        <input
+          ref="searchInput"
+          v-model="searchText"
+          type="text"
+          class="search-input"
+          :placeholder="placeholderText"
+          :disabled="!selectOptions || selectOptions.length === 0"
+          @focus="handleFocus"
+          @input="onSearchInput"
+          @blur="handleBlur"
+        />
         <span class="search-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
@@ -15,20 +30,35 @@
       </div>
 
       <Teleport to="body">
-        <div v-if="showDropdown && filteredOptions.length > 0" class="dropdown-list" :style="dropdownStyle">
+        <div
+          v-if="showDropdown && filteredOptions.length > 0"
+          class="dropdown-list"
+          :style="dropdownStyle"
+        >
           <!-- Select All option -->
-          <div class="dropdown-item select-all" :class="{ 'selected': selectedValue === 'SELECT_ALL' }"
-            @mousedown.prevent="selectAll">
+          <div
+            class="dropdown-item select-all"
+            :class="{ selected: selectedValue === 'SELECT_ALL' }"
+            @mousedown.prevent="selectAll"
+          >
             Select All
           </div>
 
-          <div v-for="(option, index) in filteredOptions" :key="index" class="dropdown-item"
-            :class="{ 'selected': selectedValue === option.value }" @mousedown.prevent="selectOption(option)"
-            v-html="highlightMatch(option.label)"></div>
+          <div
+            v-for="(option, index) in filteredOptions"
+            :key="index"
+            class="dropdown-item"
+            :class="{ selected: selectedValue === option.value }"
+            @mousedown.prevent="selectOption(option)"
+            v-html="highlightMatch(option.label)"
+          ></div>
         </div>
 
-        <div v-if="showDropdown && searchText && filteredOptions.length === 0" class="dropdown-list"
-          :style="dropdownStyle">
+        <div
+          v-if="showDropdown && searchText && filteredOptions.length === 0"
+          class="dropdown-list"
+          :style="dropdownStyle"
+        >
           <div class="dropdown-item no-results">No matches found</div>
         </div>
       </Teleport>
@@ -76,7 +106,9 @@
   border: 1px solid var(--border-light, #d0d0d0);
   box-sizing: border-box;
   border-radius: 0;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .search-input:hover:not(:disabled) {
@@ -326,11 +358,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
     backgroundClick: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
     prettyPrint: {
       type: Boolean,
@@ -383,8 +415,12 @@ export default {
         const displayValue = row[displayFieldName]
         const actualValue = row[valueFieldName]
 
-        if (displayValue !== null && displayValue !== undefined &&
-          actualValue !== null && actualValue !== undefined) {
+        if (
+          displayValue !== null &&
+          displayValue !== undefined &&
+          actualValue !== null &&
+          actualValue !== undefined
+        ) {
           const label = this.formatValue(displayValue, this.displayColumn!)
           options.push({
             label: label,
@@ -401,15 +437,15 @@ export default {
       }
 
       const searchLower = this.searchText.toLowerCase()
-      return this.selectOptions.filter(option =>
-        option.label.toLowerCase().includes(searchLower)
-      )
+      return this.selectOptions.filter((option) => option.label.toLowerCase().includes(searchLower))
     },
     placeholderText(): string {
       if (!this.selectOptions || this.selectOptions.length === 0) {
         return 'No data available'
       }
-      return this.selectedLabel ||  this.firstColumn ? `Select ${this.firstColumn?.name}` : 'Select an option'
+      return this.selectedLabel || this.firstColumn
+        ? `Select ${this.firstColumn?.name}`
+        : 'Select an option'
     },
     dropdownStyle(): Record<string, string> {
       if (!this.inputElement) {

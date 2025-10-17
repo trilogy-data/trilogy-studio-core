@@ -134,10 +134,9 @@ export const generateVegaSpec = (
       })
     })
   }
-  
+
   // Create base spec
   let spec: any = createBaseSpec(localData)
-
 
   // Set up color encoding
   let encoding: any = {}
@@ -278,7 +277,8 @@ export const generateVegaSpec = (
         intChart,
         currentTheme,
         localData,
-        containerHeight, containerWidth,
+        containerHeight,
+        containerWidth,
       )
       break
   }

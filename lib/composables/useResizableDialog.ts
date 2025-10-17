@@ -10,22 +10,22 @@ export interface ResizableDialogOptions {
 export interface ResizableDialogReturn {
   // Element refs
   editorElement: Ref<HTMLElement | null>
-  
+
   // Dimension state
   editorWidth: Ref<number>
   editorHeight: Ref<number>
   editorTop: Ref<number>
   editorLeft: Ref<number>
-  
+
   // Resize state
   isResizing: Ref<boolean>
-  
+
   // Click outside state
   canCloseOnClickOutside: Ref<boolean>
-  
+
   // Methods
   startResize: (e: MouseEvent, direction: string) => void
-  
+
   // Style object for easy binding
   dialogStyle: Ref<{
     width: string
@@ -61,27 +61,22 @@ function getDefaultDimensions() {
  */
 export function useResizableDialog(
   onCancel: () => void,
-  options: ResizableDialogOptions = {}
+  options: ResizableDialogOptions = {},
 ): ResizableDialogReturn {
-  const {
-    initialWidth,
-    initialHeight,
-    minWidth = 400,
-    minHeight = 200,
-  } = options
+  const { initialWidth, initialHeight, minWidth = 400, minHeight = 200 } = options
 
   // Calculate defaults
   const defaultDimensions = getDefaultDimensions()
-  
+
   // Element ref
   const editorElement = ref<HTMLElement | null>(null)
-  
+
   // Dimension state
   const editorWidth = ref(initialWidth || defaultDimensions.width)
   const editorHeight = ref(initialHeight || defaultDimensions.height)
   const editorTop = ref(50) // % from top
   const editorLeft = ref(50) // % from left
-  
+
   // Resize state
   const isResizing = ref(false)
   const resizeDirection = ref('')
@@ -91,7 +86,7 @@ export function useResizableDialog(
   const startHeight = ref(0)
   const startTop = ref(0)
   const startLeft = ref(0)
-  
+
   // Click outside state
   const canCloseOnClickOutside = ref(true)
 
@@ -190,14 +185,14 @@ export function useResizableDialog(
    */
   function stopResize(e?: MouseEvent): void {
     if (!isResizing.value) return
-    
+
     isResizing.value = false
     resizeDirection.value = ''
-    
+
     if (e) {
       e.stopPropagation()
     }
-    
+
     // Reset click outside protection after a delay
     setTimeout(() => {
       canCloseOnClickOutside.value = true
@@ -221,7 +216,8 @@ export function useResizableDialog(
       const isCloseToLeft = event.clientX >= rect.left - bufferZone && event.clientX <= rect.left
       const isCloseToRight = event.clientX >= rect.right && event.clientX <= rect.right + bufferZone
       const isCloseToTop = event.clientY >= rect.top - bufferZone && event.clientY <= rect.top
-      const isCloseToBottom = event.clientY >= rect.bottom && event.clientY <= rect.bottom + bufferZone
+      const isCloseToBottom =
+        event.clientY >= rect.bottom && event.clientY <= rect.bottom + bufferZone
 
       // Only close if click is outside buffer zone
       if (!(isCloseToLeft || isCloseToRight || isCloseToTop || isCloseToBottom)) {
@@ -245,7 +241,7 @@ export function useResizableDialog(
     setTimeout(() => {
       document.addEventListener('click', handleClickOutside)
     }, 0)
-    
+
     document.addEventListener('mousemove', handleResize)
     document.addEventListener('mouseup', handleMouseUp)
   })

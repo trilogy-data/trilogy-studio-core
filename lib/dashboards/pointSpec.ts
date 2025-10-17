@@ -77,7 +77,10 @@ export function addLabelTransformToTextMarks(
   return modifiedSpec
 }
 
-const createBrushParam = (selectedValues: { [key: string]: string | number | Array<any> }[], config: ChartConfig) => {
+const createBrushParam = (
+  selectedValues: { [key: string]: string | number | Array<any> }[],
+  config: ChartConfig,
+) => {
   let value = {}
 
   if (selectedValues.length === 0) {

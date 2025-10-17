@@ -499,7 +499,6 @@ export const createMapSpec = (
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
 ) => {
-
   if (!data || data.length === 0) {
     // TODO: return blank map schema
     return {

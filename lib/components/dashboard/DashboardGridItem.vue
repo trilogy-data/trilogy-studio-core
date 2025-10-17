@@ -205,7 +205,9 @@ const filterCount = computed(() => {
     :data-testid="`dashboard-component-${item.i}`"
     :class="{
       //@ts-ignore
-      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(itemData.type),
+      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
+        itemData.type,
+      ),
       'grid-item-edit-style': editMode,
     }"
     @mouseenter="

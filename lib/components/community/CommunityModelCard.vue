@@ -358,8 +358,6 @@ defineEmits<{
 
 .copy-import-button {
   background-color: var(--button-bg, #2563eb);
-  color: var(--button-text, white);
-  border: none;
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;

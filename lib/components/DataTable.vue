@@ -438,14 +438,12 @@ export default {
   watch: {
     results: {
       handler() {
-
         this.updateTable()
       },
       // deep: true,
     },
     containerHeight: {
       handler() {
-
         this.$nextTick(() => {
           if (this.tabulator && this.containerHeight) {
             this.tabulator.setHeight(this.containerHeight)
@@ -576,7 +574,7 @@ export default {
       let target = this.$refs.tabulator as HTMLElement
       let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
       // check if any column is of type ARRAY or STRUCT, if so, use fitData
-      let rowHeight = 25 as number | undefined;
+      let rowHeight = 25 as number | undefined
       for (let col of this.headers.values()) {
         if (col.type === ColumnType.ARRAY || col.type === ColumnType.STRUCT) {
           rowHeight = undefined

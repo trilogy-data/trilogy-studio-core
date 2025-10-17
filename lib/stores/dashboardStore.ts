@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { LayoutItem, CellType, DashboardImport } from '../dashboards/base'
-import { CELL_TYPES, DashboardModel } from '../dashboards/base'
+import { CELL_TYPES, DashboardModel, type DashboardTypes } from '../dashboards/base'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
@@ -15,7 +15,7 @@ import {
 } from '../dashboards/dashboardQueryExecutor'
 
 interface ContentPlaceholder {
-  type: 'markdown' | 'chart' | 'table'
+  type: DashboardTypes['CellType']
   content: string
 }
 
@@ -391,7 +391,7 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    updateItemType(dashboardId: string, itemId: string, type: 'markdown' | 'chart' | 'table') {
+    updateItemType(dashboardId: string, itemId: string, type: DashboardTypes['CellType']) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemType(itemId, type)
       } else {

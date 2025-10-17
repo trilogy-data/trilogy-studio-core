@@ -163,7 +163,6 @@ option {
 .submit-button {
   /* Ensure consistent styling with button */
   border: 1px solid var(--border-color);
-
 }
 </style>
 <script lang="ts">

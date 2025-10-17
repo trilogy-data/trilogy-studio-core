@@ -40,17 +40,10 @@ const editor = ref(null as EditorRef | null)
 const activeTab = ref('markdown')
 
 // Use the resizable dialog composable
-const {
-  editorElement,
-  dialogStyle,
-  startResize,
-} = useResizableDialog(
-  () => emit('cancel'),
-  {
-    initialWidth: props.initialWidth,
-    initialHeight: props.initialHeight,
-  }
-)
+const { editorElement, dialogStyle, startResize } = useResizableDialog(() => emit('cancel'), {
+  initialWidth: props.initialWidth,
+  initialHeight: props.initialHeight,
+})
 
 // Update refs when props change
 watch(
@@ -153,16 +146,16 @@ function addLoop(): void {
     <div class="content-editor" ref="editorElement" :style="dialogStyle">
       <!-- Tab Navigation -->
       <div class="tab-header">
-        <button 
-          @click="switchTab('markdown')" 
-          :class="{ active: activeTab === 'markdown' }" 
+        <button
+          @click="switchTab('markdown')"
+          :class="{ active: activeTab === 'markdown' }"
           class="tab-button"
         >
           📝 Markdown Template
         </button>
-        <button 
-          @click="switchTab('query')" 
-          :class="{ active: activeTab === 'query' }" 
+        <button
+          @click="switchTab('query')"
+          :class="{ active: activeTab === 'query' }"
           class="tab-button"
         >
           🔍 Data Query
@@ -184,8 +177,8 @@ function addLoop(): void {
             </button>
             <button @click="addLoop" title="Insert loop" class="data-button">↻</button>
           </div>
-          <textarea 
-            v-model="markdownText" 
+          <textarea
+            v-model="markdownText"
             placeholder="Enter markdown content here...
 
 Template examples:
@@ -193,7 +186,7 @@ Template examples:
 - {data[0].field_name} - Specific row
 - {data.length} - Total rows
 - {{#each data}} {{field_name}} {{/each}} - Loop all
-- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5" 
+- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5"
             class="markdown-editor"
           ></textarea>
         </div>
@@ -206,12 +199,12 @@ Template examples:
               needed.
             </p>
           </div>
-          <SimpleEditor 
-            class="editor-content" 
-            :initContent="queryEditorContent" 
+          <SimpleEditor
+            class="editor-content"
+            :initContent="queryEditorContent"
             :connectionName="connectionName"
-            :imports="imports" 
-            :rootContent="rootContent" 
+            :imports="imports"
+            :rootContent="rootContent"
             ref="editor"
           />
         </div>

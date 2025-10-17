@@ -26,17 +26,10 @@ const imports = ref(props.imports)
 const editor = ref(null as EditorRef | null)
 
 // Use the resizable dialog composable
-const {
-  editorElement,
-  dialogStyle,
-  startResize,
-} = useResizableDialog(
-  () => emit('cancel'),
-  {
-    initialWidth: props.initialWidth,
-    initialHeight: props.initialHeight,
-  }
-)
+const { editorElement, dialogStyle, startResize } = useResizableDialog(() => emit('cancel'), {
+  initialWidth: props.initialWidth,
+  initialHeight: props.initialHeight,
+})
 
 function saveQuery(): void {
   if (editor.value) {
@@ -54,12 +47,12 @@ function cancel(): void {
   <div class="editor-overlay">
     <div class="content-editor" ref="editorElement" :style="dialogStyle">
       <div class="editor-body">
-        <SimpleEditor 
-          class="editor-content" 
-          :initContent="queryText" 
+        <SimpleEditor
+          class="editor-content"
+          :initContent="queryText"
           :connectionName="connectionName"
-          :imports="imports" 
-          :rootContent="rootContent" 
+          :imports="imports"
+          :rootContent="rootContent"
           ref="editor"
         />
       </div>

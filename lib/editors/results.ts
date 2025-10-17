@@ -63,7 +63,20 @@ export type FieldKey =
 
 export type BoolFieldKey = 'hideLegend' | 'showTitle'
 
-export type chartTypes = 'line' | 'bar' | 'barh' | 'point' | 'usa-map' | 'tree' | 'area' | 'headline' | 'donut' | 'heatmap' | 'boxplot' | 'treemap' | 'beeswarm'
+export type chartTypes =
+  | 'line'
+  | 'bar'
+  | 'barh'
+  | 'point'
+  | 'usa-map'
+  | 'tree'
+  | 'area'
+  | 'headline'
+  | 'donut'
+  | 'heatmap'
+  | 'boxplot'
+  | 'treemap'
+  | 'beeswarm'
 
 // Chart configuration interface
 export interface ChartConfig {

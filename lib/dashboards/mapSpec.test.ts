@@ -568,7 +568,6 @@ describe('createMapSpec', () => {
       const spec = createMapSpec(config, data, columns, false, intChart) as any
 
       expect(validateVegaLiteSpec(spec, data)).toBe(true)
-
     })
 
     it('should handle missing required fields gracefully', () => {

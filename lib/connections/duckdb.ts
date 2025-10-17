@@ -5,7 +5,7 @@ import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
 import { DateTime } from 'luxon'
 import { ARRAY_IMPLICIT_COLUMN } from './constants'
-import {Type, type DataType} from 'apache-arrow'
+import { Type, type DataType } from 'apache-arrow'
 
 // Select a bundle based on browser checks
 function isFirefox(): boolean {
