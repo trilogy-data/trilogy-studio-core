@@ -639,7 +639,6 @@ Use Ctrl+Enter to apply`
 .clear-filters-button:hover:not(:disabled) {
   color: #ff3b30;
   background: rgba(255, 59, 48, 0.1);
-  border-radius: 4px;
 }
 
 .clear-filters-button:disabled {

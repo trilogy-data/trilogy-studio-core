@@ -43,10 +43,20 @@ const filterDashboard = (dashboard: Dashboard): any => {
       delete itemCopy.results
       delete itemCopy.loading
       delete itemCopy.loadStartTime
-      delete itemCopy.filters
+
       delete itemCopy.error
-      // delete itemCopy.chartFilters
-      // delete itemCopy.conceptFilters
+      if (!itemCopy.filters) {
+        delete itemCopy.filters
+      }
+      if (!itemCopy.crossFilters) {
+        delete itemCopy.crossFilters
+      }
+      if (!itemCopy.chartFilters) {
+        delete itemCopy.chartFilters
+      }
+      if (!itemCopy.conceptFilters) {
+        delete itemCopy.conceptFilters
+      }
       if (itemCopy.chartConfig) {
         delete itemCopy.chartConfig.showDebug
       }
@@ -120,11 +130,7 @@ const handleClickOutside = (event: MouseEvent): void => {
         </div>
       </div>
       <div class="popup-footer">
-        <button
-          @click="copyToClipboard"
-          class="dashboard-copy-button"
-          data-testid="copy-json-button"
-        >
+        <button @click="copyToClipboard" class="dashboard-copy-button" data-testid="copy-json-button">
           {{ copySuccess ? 'Copied!' : 'Copy' }}
         </button>
       </div>
@@ -144,6 +150,7 @@ const handleClickOutside = (event: MouseEvent): void => {
   align-items: center;
   z-index: 1000;
 }
+
 .popup-content {
   background-color: var(--sidebar-bg);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -153,6 +160,7 @@ const handleClickOutside = (event: MouseEvent): void => {
   display: flex;
   flex-direction: column;
 }
+
 .popup-header {
   display: flex;
   justify-content: space-between;
@@ -160,10 +168,12 @@ const handleClickOutside = (event: MouseEvent): void => {
   padding: 15px;
   border-bottom: 1px solid var(--border);
 }
+
 .popup-header h3 {
   margin: 0;
   color: var(--text-color);
 }
+
 .close-button {
   background: none;
   border: none;
@@ -171,17 +181,20 @@ const handleClickOutside = (event: MouseEvent): void => {
   cursor: pointer;
   color: var(--text-color);
 }
+
 .popup-body {
   padding: 15px;
   flex: 1;
   overflow: auto;
 }
+
 .json-container {
   background-color: var(--sidebar-selector-bg);
   padding: 10px;
   overflow: auto;
   max-height: 50vh;
 }
+
 .json-container pre {
   margin: 0;
   color: var(--sidebar-selector-font);
@@ -189,12 +202,14 @@ const handleClickOutside = (event: MouseEvent): void => {
   font-family: monospace;
   font-size: 14px;
 }
+
 .popup-footer {
   padding: 15px;
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid var(--border);
 }
+
 .dashboard-copy-button {
   background-color: var(--special-text);
   color: white;
@@ -203,28 +218,35 @@ const handleClickOutside = (event: MouseEvent): void => {
   cursor: pointer;
   font-weight: 500;
 }
+
 .dashboard-copy-button:hover {
   opacity: 0.9;
 }
+
 /* Media queries for responsiveness */
 @media (max-width: 768px) {
   .popup-content {
     width: 95%;
   }
+
   .json-container {
     max-height: 40vh;
   }
 }
+
 @media (max-width: 480px) {
   .popup-header {
     padding: 10px;
   }
+
   .popup-body {
     padding: 10px;
   }
+
   .popup-footer {
     padding: 10px;
   }
+
   .json-container {
     max-height: 30vh;
   }
