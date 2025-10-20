@@ -98,7 +98,7 @@
 
 .search-input {
   width: 100%;
-  padding: 7px 40px 6px 12px;
+  padding: 6px 40px 6px 12px;
   font-size: 14px;
   /* line-height: 1.5; */
   color: var(--text-color, #333333);

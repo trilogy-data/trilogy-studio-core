@@ -40,7 +40,7 @@ export class ChartRenderManager {
   private activeRender = ref<RenderOperation | null>(null)
   private lastSpec = ref<string | null>(null)
 
-  constructor(private chartHelpers: ChromaChartHelpers) {}
+  constructor(private chartHelpers: ChromaChartHelpers) { }
 
   // Get the currently active Vega view for operations like download
   getActiveView(): View | null {
@@ -140,6 +140,7 @@ export class ChartRenderManager {
         theme: currentTheme === 'dark' ? 'dark' : undefined,
         renderer: 'canvas',
       })
+
 
       // Check for abort after async operation
       if (renderOp.aborted) {

@@ -52,7 +52,7 @@ export default defineComponent({
     let timeout: ReturnType<typeof setTimeout> | null = null
     let resizeObserver: ResizeObserver | null = null
 
-    const isCompact = computed(() => containerHeight.value < 30)
+    const isCompact = computed(() => containerHeight.value < 45)
 
     const updateContainerHeight = () => {
       if (containerRef.value) {

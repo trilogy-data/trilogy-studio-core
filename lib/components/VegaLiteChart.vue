@@ -48,6 +48,7 @@
 
     <!-- Content area with conditional rendering -->
     <div
+      ref="chartContentArea"
       class="chart-content-area"
       :class="{
         'with-bottom-controls': isShortContainer && showControls,
@@ -173,6 +174,14 @@ export default defineComponent({
     // Container refs
     const vegaContainer1 = ref<HTMLElement | null>(null)
     const vegaContainer2 = ref<HTMLElement | null>(null)
+    const chartContentArea = ref<HTMLElement | null>(null)
+    
+    // Resize observer for beeswarm charts
+    let resizeObserver: ResizeObserver | null = null
+    
+    // Internal dimensions that override props when set (for beeswarm charts)
+    const internalWidth = ref<number | null>(null)
+    const internalHeight = ref<number | null>(null)
 
     // Create chart helpers instance with event handlers
     const eventHandlers: ChartEventHandlers = {
@@ -192,8 +201,19 @@ export default defineComponent({
       chartHelpers.handleBrush(name, item, controlsManager.internalConfig.value, props.columns)
     }, 500)
 
+    // Create debounced resize handler for beeswarm charts
+    const debouncedResizeHandler = debounce(() => {
+      console.log('Resize detected for beeswarm chart, re-rendering')
+      renderChart(true)
+    }, 300)
+
     // Generate Vega-Lite spec based on current configuration
     const generateVegaSpecInternal = () => {
+      // Use internal dimensions if available (for beeswarm charts), otherwise use props
+      // const effectiveHeight = internalHeight.value ?? props.containerHeight
+      const effectiveHeight = props.containerHeight
+      const effectiveWidth = internalWidth.value ?? props.containerWidth
+      
       return generateVegaSpec(
         props.data,
         controlsManager.internalConfig.value,
@@ -202,8 +222,8 @@ export default defineComponent({
         isMobile.value,
         props.chartTitle,
         currentTheme.value,
-        props.containerHeight,
-        props.containerWidth,
+        effectiveHeight,
+        effectiveWidth,
       )
     }
 
@@ -224,6 +244,53 @@ export default defineComponent({
         props.chartTitle,
         force,
       )
+    }
+
+    // Setup resize observer for beeswarm charts
+    const setupResizeObserver = () => {
+      if (controlsManager.internalConfig.value.chartType === 'beeswarm' && chartContentArea.value) {
+        if (resizeObserver) {
+          resizeObserver.disconnect()
+        }
+        
+        resizeObserver = new ResizeObserver(entries => {
+          for (let entry of entries) {
+            const { width, height } = entry.contentRect
+            console.log(`Chart content area resized to ${width}x${height}`)
+            
+            // Store internal dimensions for beeswarm charts
+            internalWidth.value = width
+            internalHeight.value = height
+            
+            debouncedResizeHandler()
+          }
+        })
+        
+        resizeObserver.observe(chartContentArea.value)
+        
+        // Set initial internal dimensions
+        internalWidth.value = chartContentArea.value.clientWidth
+        internalHeight.value = chartContentArea.value.clientHeight
+        
+        console.log('Resize observer set up for beeswarm chart')
+      } else {
+        // Clear internal dimensions for non-beeswarm charts
+        internalWidth.value = null
+        internalHeight.value = null
+      }
+    }
+
+    // Cleanup resize observer
+    const cleanupResizeObserver = () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+        resizeObserver = null
+        console.log('Resize observer cleaned up')
+      }
+      
+      // Clear internal dimensions
+      internalWidth.value = null
+      internalHeight.value = null
     }
 
     // Wrapper functions for operations
@@ -273,7 +340,25 @@ export default defineComponent({
         props.onChartConfigChange,
       )
       renderChart()
+      
+      // Set up resize observer after initial render
+      nextTick(() => {
+        setupResizeObserver()
+      })
     })
+
+    // Watch for chart type changes to setup/cleanup resize observer
+    watch(
+      () => controlsManager.internalConfig.value.chartType,
+      (newChartType, oldChartType) => {
+        if (newChartType !== oldChartType) {
+          cleanupResizeObserver()
+          nextTick(() => {
+            setupResizeObserver()
+          })
+        }
+      }
+    )
 
     // Watch for chart selection changes
     watch(
@@ -290,6 +375,7 @@ export default defineComponent({
     watch(
       () => [props.containerHeight, props.containerWidth],
       () => {
+        console.log('Container size changed, re-rendering chart')
         renderChart(true)
       },
     )
@@ -336,12 +422,14 @@ export default defineComponent({
 
     // Cleanup on unmount
     onUnmounted(() => {
+      cleanupResizeObserver()
       renderManager.cleanup()
     })
 
     return {
       vegaContainer1,
       vegaContainer2,
+      chartContentArea,
       renderManager,
       controlsManager,
       renderChart,
