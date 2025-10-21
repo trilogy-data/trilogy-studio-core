@@ -112,7 +112,7 @@
       </div>
     </div>
 
-    <div class="sidebar-content">
+    <div class="sidebar-content" :style="{ width: containerWidth-40 + 'px' }">
       <EditorList
         :activeEditor="activeEditor"
         v-show="active === 'editors'"
@@ -201,6 +201,11 @@ export default defineComponent({
     activeDashboardKey: {
       type: String,
       default: getDefaultValueFromHash('dashboard'),
+      optional: true,
+    },
+    containerWidth: {
+      type: Number,
+      default: 200,
       optional: true,
     },
   },

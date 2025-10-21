@@ -12,13 +12,14 @@
 
     <!-- Normal mode with sidebar -->
     <sidebar-layout v-else>
-      <template #sidebar>
+      <template #sidebar="{ containerWidth }">
         <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveSidebarScreen"
           @save-editors="saveEditorsCall" @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey" @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey" @dashboard-key-selected="setActiveDashboard"
           :active="activeSidebarScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
           :activeModelKey="activeModelKey" :activeConnectionKey="activeConnectionKey"
+          :containerWidth="containerWidth"
           :activeDashboardKey="activeDashboard" />
       </template>
       <template v-if="showingCredentialPrompt">
@@ -62,7 +63,7 @@
           <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
         </template>
         <template v-else-if="activeScreen === 'community-models'">
-          <community-models />
+          <community-models :activeCommunityModelKey="activeCommunityModelKey" />
         </template>
         <template v-else-if="activeScreen === 'llms'">
           <LLMView />
@@ -293,12 +294,14 @@ export default {
       activeDocumentationKey,
       activeConnectionKey,
       activeLLMConnectionKey,
+      activeCommunityModelKey,
       activeDashboard,
       setActiveScreen,
       setActiveSidebarScreen,
       activeSidebarScreen,
       setActiveEditor,
       setActiveModelKey,
+      setActiveCommunityModelKey,
       setActiveDocumentationKey,
       setActiveConnectionKey,
       setActiveLLMConnectionKey,
@@ -334,6 +337,8 @@ export default {
       activeScreen,
       activeModelKey,
       setActiveModelKey,
+      activeCommunityModelKey,
+      setActiveCommunityModelKey,
       activeDocumentationKey,
       setActiveDocumentationKey,
       activeConnectionKey,

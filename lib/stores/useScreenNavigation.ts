@@ -9,6 +9,7 @@ type ScreenType =
   | 'llms'
   | 'dashboard'
   | 'dashboard-import'
+  | 'models'
   | 'community-models'
   | 'welcome'
   | 'profile'
@@ -23,6 +24,7 @@ interface NavigationState {
   activeDashboard: Ref<string>
   activeConnectionKey: Ref<string>
   activeModelKey: Ref<string>
+  activeCommunityModelKey: Ref<string>
   activeDocumentationKey: Ref<string>
   activeLLMConnectionKey: Ref<string>
   mobileMenuOpen: Ref<boolean>
@@ -50,6 +52,7 @@ export interface NavigationStore {
   readonly activeDashboard: Ref<string>
   readonly activeConnectionKey: Ref<string>
   readonly activeModelKey: Ref<string>
+  readonly activeCommunityModelKey: Ref<string>
   readonly activeDocumentationKey: Ref<string>
   readonly activeLLMConnectionKey: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
@@ -63,6 +66,7 @@ export interface NavigationStore {
   setActiveEditor(editor: string): void
   setActiveDashboard(dashboard: string | null): void
   setActiveModelKey(model: string | null): void
+  setActiveCommunityModelKey(communityModel: string | null): void
   setActiveConnectionKey(connection: string | null): void
   setActiveDocumentationKey(documentation: string | null): void
   setActiveCommunityModelFilter(filter: string | null): void
@@ -83,7 +87,8 @@ const createNavigationStore = (): NavigationStore => {
     activeEditor: ref(getDefaultValueFromHash('editors', '')),
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
     activeConnectionKey: ref(getDefaultValueFromHash('connections', '')),
-    activeModelKey: ref(getDefaultValueFromHash('community-models', '')),
+    activeModelKey: ref(getDefaultValueFromHash('model', '')),
+    activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
     activeDocumentationKey: ref(getDefaultValueFromHash('docs', '')),
     mobileMenuOpen: ref(false),
@@ -147,18 +152,56 @@ const createNavigationStore = (): NavigationStore => {
   const closeTab = (tabId: string): void => {
     const tabIndex = state.tabs.value.findIndex((tab) => tab.id === tabId)
     if (tabIndex !== -1) {
+      const wasActiveTab = state.activeTab.value === tabId
       state.tabs.value.splice(tabIndex, 1)
+      
+      // Handle active tab change if we closed the active tab
+      if (wasActiveTab) {
+        if (state.tabs.value.length > 0) {
+          // Set active to first remaining tab
+          setActiveTab(state.tabs.value[0].id)
+        } else {
+          // No tabs remain, inject welcome tab and make it active
+          openTab('welcome', 'Welcome', 'welcome')
+        }
+      }
     }
   }
 
   const closeOtherTabsExcept = (tabId: string): void => {
+    const wasActiveTab = state.activeTab.value === tabId
     state.tabs.value = state.tabs.value.filter((tab) => tab.id === tabId)
+    
+    // Handle active tab change if the active tab was not the kept tab
+    if (!wasActiveTab) {
+      if (state.tabs.value.length > 0) {
+        // Set active to the remaining tab (which should be the kept tab)
+        setActiveTab(state.tabs.value[0].id)
+      } else {
+        // No tabs remain, inject welcome tab and make it active
+        openTab('welcome', 'Welcome', 'welcome')
+      }
+    }
   }
 
   const closeTabsToRightOf = (tabId: string): void => {
     const tabIndex = state.tabs.value.findIndex((tab) => tab.id === tabId)
     if (tabIndex !== -1) {
+      const activeTabIndex = state.tabs.value.findIndex((tab) => tab.id === state.activeTab.value)
+      const wasActiveTabClosed = activeTabIndex > tabIndex
+      
       state.tabs.value.splice(tabIndex + 1)
+      
+      // Handle active tab change if the active tab was closed
+      if (wasActiveTabClosed) {
+        if (state.tabs.value.length > 0) {
+          // Set active to the last remaining tab (which is the tab we kept to the right of)
+          setActiveTab(state.tabs.value[state.tabs.value.length - 1].id)
+        } else {
+          // No tabs remain, inject welcome tab and make it active
+          openTab('welcome', 'Welcome', 'welcome')
+        }
+      }
     }
   }
 
@@ -237,6 +280,15 @@ const createNavigationStore = (): NavigationStore => {
     pushHashToUrl('community-models', model)
 
     state.mobileMenuOpen.value = false
+  }
+
+  const setActiveCommunityModelKey = (communityModel: string | null): void => {
+    if (communityModel === null) {
+      removeHashFromUrl('community-models')
+      state.activeCommunityModelKey.value = ''
+      return
+    }
+    openTab('community-models', null, communityModel)
   }
 
   const setActiveEditor = (editor: string): void => {
@@ -346,6 +398,9 @@ const createNavigationStore = (): NavigationStore => {
     get activeModelKey() {
       return state.activeModelKey
     },
+    get activeCommunityModelKey() {
+      return state.activeCommunityModelKey
+    },
     get activeDocumentationKey() {
       return state.activeDocumentationKey
     },  
@@ -374,6 +429,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveConnectionKey,
     setActiveDocumentationKey,
     setActiveLLMConnectionKey,
+    setActiveCommunityModelKey,
     toggleMobileMenu,
     setActiveModelKey,
     setActiveCommunityModelFilter,
