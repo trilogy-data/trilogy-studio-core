@@ -229,7 +229,7 @@ export default defineComponent({
       },
       {
         name: 'community-models',
-        tooltip: 'Inspire',
+        tooltip: 'Share & Explore',
         icon: 'mdi mdi-library',
         screen: 'community-models',
       },

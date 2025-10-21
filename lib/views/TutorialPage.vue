@@ -254,9 +254,12 @@ export default {
         return defaultDocumentationTopic
       }
       let fromUrl = this.activeDocumentationKey.split(KeySeparator)[2]
-      return fromUrl || defaultDocumentationTopic
+      return fromUrl
     },
     currentData() {
+      if (!this.currentTopic) {
+        return documentation.find((topic) => topic.title === this.currentNode)?.articles[0]
+      }
       return documentation
         .find((topic) => topic.title === this.currentNode)
         ?.articles.find((article) => article.title === this.currentTopic)
@@ -283,15 +286,13 @@ export default {
 </script>
 
 <style scoped>
-.sidebar-tutorial-container {
-  max-width: 450px;
-}
+
 
 .tutorial-container {
-  padding: 1rem;
+  padding: 5px 20px;
   color: var(--text-color);
   overflow-y: auto;
-  max-width: 800px;
+
 }
 
 .tutorial-section {

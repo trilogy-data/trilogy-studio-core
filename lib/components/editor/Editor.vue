@@ -28,6 +28,7 @@
           :editor-type="editorData.type"
           :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme"
+          :editorHeight="containerHeight"
           @contents-change="handleContentsChange"
           @scroll-change="handlePositionChange"
           @run-query="runQuery"
@@ -52,7 +53,6 @@
   display: flex;
   flex-grow: 1;
   position: relative;
-  min-height: 250px;
 }
 
 .parent {
@@ -140,6 +140,11 @@ export default defineComponent({
     CodeEditor,
   },
   emits: ['save-editors', 'save-models', 'query-started', 'query-finished'],
+  watch: {
+    editorHeight(newHeight) {
+      console.log('Editor height changed in Editor:', newHeight)
+    }
+  },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')

@@ -101,7 +101,8 @@ order by
     sales desc;`,
           hints: [],
           validationFn: (results: Results) => {
-            return results.data?.[0]?.lineitem_supplier_nation_name === 'UNITED STATES'
+            // correct value depends on tpc scale factor
+            return results.data?.[0]?.lineitem_supplier_nation_name === 'CHINA' || results.data?.[0]?.lineitem_supplier_nation_name === 'UNITED STATES'
           },
         },
       ],
