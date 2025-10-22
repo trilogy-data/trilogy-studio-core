@@ -170,7 +170,6 @@ import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
 import { inject, defineAsyncComponent, provide } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -192,13 +191,7 @@ const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 export default {
   name: 'MobileIDEComponent',
   data() {
-    let activeModelKey = getDefaultValueFromHash('modelKey')
-    let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
-    let activeConnectionKey = getDefaultValueFromHash('connection')
     return {
-      activeModelKey: activeModelKey ? activeModelKey : '',
-      activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
-      activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
       activeTab: 'editor',
     }
   },
@@ -260,6 +253,12 @@ export default {
       setActiveScreen,
       setActiveEditor,
       setActiveDashboard,
+      activeConnectionKey,
+      activeModelKey,
+      activeDocumentationKey,
+      setActiveConnectionKey,
+      setActiveModelKey,
+      setActiveDocumentationKey,
       activeCommunityModelKey,
       mobileMenuOpen,
     } = screenNavigation
@@ -279,9 +278,15 @@ export default {
       activeScreen,
       activeEditor,
       activeDashboard,
+      activeConnectionKey,
+      activeModelKey,
+      activeDocumentationKey,
       setActiveScreen,
       setActiveEditor,
       setActiveDashboard,
+      setActiveConnectionKey,
+      setActiveModelKey,
+      setActiveDocumentationKey,
       mobileMenuOpen,
     }
   },
@@ -289,22 +294,8 @@ export default {
     toggleMobileMenu() {
       this.mobileMenuOpen = !this.mobileMenuOpen
     },
-    setActiveModelKey(modelKey: string) {
-      pushHashToUrl('modelKey', modelKey)
-      this.activeModelKey = modelKey
-      this.mobileMenuOpen = false
-    },
-    setActiveDocumentationKey(documentationKey: string) {
-      pushHashToUrl('documentationKey', documentationKey)
-      this.activeDocumentationKey = documentationKey
-      if (documentationKey.startsWith('article')) {
-        this.mobileMenuOpen = false
-      }
-    },
-    setActiveConnectionKey(connectionKey: string) {
-      pushHashToUrl('connection', connectionKey)
-      this.activeConnectionKey = connectionKey
-    },
+
+
     saveEditorsCall() {
       this.saveEditors()
     },

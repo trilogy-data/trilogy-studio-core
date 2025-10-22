@@ -38,7 +38,7 @@ const tooltipContent = computed(() => {
     snowflake: 'Snowflake',
     default: 'Database Connection',
   }
-  return typeMap[props.connectionType || 'default'] || props.connectionType
+  return typeMap[props.connectionType || 'default'] || props.connectionType || ''
 })
 </script>
 

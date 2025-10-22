@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
-import { lastSegment } from '../data/constants'
+import { lastSegment, KeySeparator } from '../data/constants'
 
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
@@ -106,6 +106,11 @@ const createNavigationStore = (): NavigationStore => {
     'profile',
     'settings',
     'dashboard-import',
+    'editors',
+    'connections',
+    'dashboard',
+    'models',
+    'tutorial'
   ]
 
   const getName = (screen: ScreenType, title: string | null, address: string): string => {
@@ -221,7 +226,6 @@ const createNavigationStore = (): NavigationStore => {
   const setActiveTab = (tabId: string): void => {
     // validate the tab exists
     const tabInfo = state.tabs.value.find((tab) => tab.id === tabId)
-    console.log('Setting active tab to:', tabId, tabInfo)
     if (tabInfo) {
       state.activeTab.value = tabId
       setActiveScreen(tabInfo.screen)
@@ -248,7 +252,17 @@ const createNavigationStore = (): NavigationStore => {
       }
       //close if required
       if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
-        state.mobileMenuOpen.value = false
+        if (tabInfo.screen === 'connections') {
+          // count of KeySeparator>1
+          state.mobileMenuOpen.value = (tabInfo.address.split(KeySeparator).length - 1) <3;
+        } 
+        else if (tabInfo.screen === 'models') {
+          state.mobileMenuOpen.value = (tabInfo.address.split(KeySeparator).length - 1) <2;
+        }
+        
+        else {
+          state.mobileMenuOpen.value = false
+        }
       }
     }
   }
