@@ -1,32 +1,26 @@
 <template>
-  <div
-    :class="{
-      'sidebar-item': true,
-      'sidebar-item-selected': activeModel === item.key,
-    }"
-    @click="handleItemClick"
-  >
+  <div :class="{
+    'sidebar-item': true,
+    'sidebar-item-selected': activeModel === item.key,
+  }" @click="handleItemClick">
     <div v-for="_ in item.indent" class="sidebar-padding"></div>
-    
-    <i
-      v-if="!['model'].includes(item.type)"
-      :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-    ></i>
-    
+
+    <i v-if="!['model'].includes(item.type)" :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"></i>
+
     <template v-if="item.type === 'root'">
       <i class="mdi mdi-source-repository sidebar-icon"></i>
 
     </template>
     <template v-else-if="item.type === 'engine'">
-      <i class="mdi mdi-database sidebar-icon"></i>
+      <connection-icon :connection-type="item.label" />
     </template>
-    <template v-else-if="item.type === 'model'">
-      <i class="mdi mdi-file-document-outline sidebar-icon"></i>
-    </template>
+    <!-- <template v-else-if="item.type === 'model'">
+      <i class="mdi mdi-sitemap-outline sidebar-icon"></i>
+    </template> -->
 
-    <span class="truncate-text">
+    <span class="truncate-text title">
       {{ item.label }}
-      
+
       <!-- <span class="text-light" v-if="item.type === 'model' && item.model?.description">
         ({{ item.model.description }})
       </span> -->
@@ -47,7 +41,7 @@
         <!-- Add any root-specific actions here -->
       </span>
     </template>
-<!-- 
+    <!-- 
     <tooltip v-if="item.type === 'model'" :content="item.model.description" position="bottom">
 
       <span
@@ -63,7 +57,7 @@
 
 <script lang="ts">
 import Tooltip from '../Tooltip.vue'
-
+import ConnectionIcon from './ConnectionIcon.vue'
 export default {
   name: 'ModelListItem',
   props: {
@@ -102,16 +96,12 @@ export default {
   },
   components: {
     Tooltip,
+    ConnectionIcon,
   },
 }
 </script>
 
 <style scoped>
-.sidebar-icon {
-  width: var(--icon-size);
-  height: var(--icon-size);
-}
-
 .details-btn {
   margin-left: auto;
   cursor: pointer;
@@ -121,13 +111,13 @@ export default {
 .tag-container {
   margin-left: auto;
   display: flex;
-  padding:4px;
+  padding: 4px;
 }
 
 .tag {
   font-size: 7px;
   border-radius: 3px;
-  margin:2px;
+  margin: 2px;
   padding: 1px;
   background-color: hsla(210, 100%, 50%, 0.516);
   border: 1px solid hsl(210, 100%, 50%, 0.5);
@@ -145,6 +135,14 @@ export default {
   transition: opacity 0.2s;
 }
 
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  width: 100%;
+}
+
+
 .sidebar-item:hover .hover-icon {
   opacity: 1;
 }
@@ -154,9 +152,10 @@ export default {
   flex-shrink: 0;
 }
 
-.truncate-text {
+.title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 3px;
 }
 </style>

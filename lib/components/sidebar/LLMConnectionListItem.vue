@@ -452,15 +452,22 @@ export default defineComponent({
   align-items: center;
 }
 
+/* select {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+} */
 .connection-customize {
   flex-grow: 1;
-  background-color: var(--sidebar-bg);
+  background: transparent;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
   color: var(--text-color);
   margin-left: 8px;
   font-size: 0.8em;
   padding: 4px 8px;
+  max-width:100%;
+  width:100%;
+  min-width: 0;
 }
 
 .api-key-input-wrapper {
@@ -468,6 +475,8 @@ export default defineComponent({
   position: relative;
   display: flex;
   align-items: center;
+  
+  
 }
 
 .api-key-input-wrapper input {
@@ -500,15 +509,15 @@ export default defineComponent({
 .customize-button {
   background-color: var(--primary-color);
   border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
   cursor: pointer;
   font-size: 0.6em;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
+  min-width:60px;
 }
 
 .customize-button:hover {
-  background-color: var(--primary-color-dark);
+  background-color: var( --button-mouseover);
 }
 
 .error-indicator {

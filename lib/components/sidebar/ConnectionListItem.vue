@@ -468,6 +468,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
+  border-radius: 0px;
 }
 
 .connection-customize {
@@ -492,7 +493,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 }
 
 .title-pad-left {
-  padding-left: 5px;
+  padding-left: 3px;
   flex-grow: 1;
   width: 100%;
 }

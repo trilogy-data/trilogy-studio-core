@@ -197,6 +197,9 @@ const useCommunityApiStore = defineStore('communityApi', {
       if (remote) {
         base = this.filesByRoot[remote]
       }
+      if (!base) {
+        return []
+      }
       return filterModelFiles(base, searchQuery, selectedEngine, importStatus, modelExists)
     },
 

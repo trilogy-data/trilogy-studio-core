@@ -83,6 +83,7 @@ import TrilogyResolver from '../../stores/resolver'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { useScreenNavigation } from '../../stores'
 import Tooltip from '../Tooltip.vue'
 
 export default {
@@ -99,9 +100,11 @@ export default {
     const saveModels = inject<Function>('saveModels')
     const editorStore = inject<EditorStoreType>('editorStore')
     const trilogyResolver = inject<TrilogyResolver>('trilogyResolver')
+    const navigationStore = useScreenNavigation()
+  
 
     const creatorVisible = ref(false)
-    const current = getDefaultValueFromHash('modelKey') || ''
+    const current = navigationStore.activeModelKey.value || getDefaultValueFromHash('model') || ''
     const currentType = current.split(KeySeparator)[0]
     let currentModel = ''
     let currentSource = ''
@@ -263,6 +266,7 @@ export default {
       saveModels,
       fetchParseResults,
       trilogyIcon,
+      navigationStore
     }
   },
   methods: {
@@ -271,7 +275,10 @@ export default {
       if (expandOnly) {
         return
       }
-      this.$emit('model-key-selected', id)
+      // get last value
+      const lastIndex = id.lastIndexOf(KeySeparator)
+      const label = lastIndex !== -1 ? id.substring(lastIndex + 1) : id
+      this.navigationStore.openTab('models', label, id)
     },
   },
   components: {

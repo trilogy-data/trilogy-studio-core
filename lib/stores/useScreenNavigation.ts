@@ -29,7 +29,6 @@ interface NavigationState {
   activeLLMConnectionKey: Ref<string>
   mobileMenuOpen: Ref<boolean>
   initialSearch: Ref<string>
-  activeCommunityModelFilter: Ref<string>
   tabs: Ref<Tab[]>
   activeTab: Ref<string | null>
 }
@@ -57,7 +56,7 @@ export interface NavigationStore {
   readonly activeLLMConnectionKey: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
   readonly initialSearch: Ref<string>
-  readonly activeCommunityModelFilter: Ref<string>
+
   readonly tabs: Ref<Tab[]>
   readonly activeTab: Ref<string | null>
   setActiveTab(tabId: string): void
@@ -69,7 +68,7 @@ export interface NavigationStore {
   setActiveCommunityModelKey(communityModel: string | null): void
   setActiveConnectionKey(connection: string | null): void
   setActiveDocumentationKey(documentation: string | null): void
-  setActiveCommunityModelFilter(filter: string | null): void
+
   setActiveLLMConnectionKey(llmConnection: string | null): void
   toggleMobileMenu(): void
   openTab(screen: ScreenType, title: string | null, address: string): void
@@ -93,7 +92,6 @@ const createNavigationStore = (): NavigationStore => {
     activeDocumentationKey: ref(getDefaultValueFromHash('docs', '')),
     mobileMenuOpen: ref(false),
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
-    activeCommunityModelFilter: ref(getDefaultValueFromHash('communityModelFilter', '')),
     tabs: ref<Tab[]>([]),
     activeTab: ref<string | null>(null),
 
@@ -108,7 +106,7 @@ const createNavigationStore = (): NavigationStore => {
     'dashboard-import',
   ]
 
-  const openTab = (screen: ScreenType, title: string | null, address: string ): void => {
+  const openTab = (screen: ScreenType, title: string | null, address: string): void => {
     // check if tab already exists
     const existingTab = state.tabs.value.find((tab) => tab.screen === screen && tab.address === address)
     if (existingTab) {
@@ -138,7 +136,7 @@ const createNavigationStore = (): NavigationStore => {
       }
 
     }
-    let finalTitle =  title || 'Untitled';
+    let finalTitle = title || 'Untitled';
     const tab: Tab = {
       id: `tab-${++tabIdCounter}`,
       title: finalTitle,
@@ -154,7 +152,7 @@ const createNavigationStore = (): NavigationStore => {
     if (tabIndex !== -1) {
       const wasActiveTab = state.activeTab.value === tabId
       state.tabs.value.splice(tabIndex, 1)
-      
+
       // Handle active tab change if we closed the active tab
       if (wasActiveTab) {
         if (state.tabs.value.length > 0) {
@@ -171,7 +169,7 @@ const createNavigationStore = (): NavigationStore => {
   const closeOtherTabsExcept = (tabId: string): void => {
     const wasActiveTab = state.activeTab.value === tabId
     state.tabs.value = state.tabs.value.filter((tab) => tab.id === tabId)
-    
+
     // Handle active tab change if the active tab was not the kept tab
     if (!wasActiveTab) {
       if (state.tabs.value.length > 0) {
@@ -189,9 +187,9 @@ const createNavigationStore = (): NavigationStore => {
     if (tabIndex !== -1) {
       const activeTabIndex = state.tabs.value.findIndex((tab) => tab.id === state.activeTab.value)
       const wasActiveTabClosed = activeTabIndex > tabIndex
-      
+
       state.tabs.value.splice(tabIndex + 1)
-      
+
       // Handle active tab change if the active tab was closed
       if (wasActiveTabClosed) {
         if (state.tabs.value.length > 0) {
@@ -231,8 +229,11 @@ const createNavigationStore = (): NavigationStore => {
       else if (tabInfo.screen === 'tutorial') {
         state.activeDocumentationKey.value = tabInfo.address
       }
-      else if (tabInfo.screen === 'community-models') {
+      else if (tabInfo.screen === 'models') {
         state.activeModelKey.value = tabInfo.address
+      }
+      else if (tabInfo.screen === 'community-models') {
+        state.activeCommunityModelKey.value = tabInfo.address
       }
 
       //close if required
@@ -262,23 +263,15 @@ const createNavigationStore = (): NavigationStore => {
   }
 
 
-  const setActiveCommunityModelFilter = (filter: string | null): void => {
-    if (filter === null) {
-      removeHashFromUrl('communityModelFilter')
-      state.activeCommunityModelFilter.value = ''
-      return
-    }
-    pushHashToUrl('communityModelFilter', filter)
-    state.activeCommunityModelFilter.value = filter
-  }
+
 
   const setActiveModelKey = (model: string | null): void => {
     if (model === null) {
-      removeHashFromUrl('community-models')
+      removeHashFromUrl('model')
       return
     }
-    pushHashToUrl('community-models', model)
-
+    pushHashToUrl('model', model)
+    state.activeModelKey.value = model
     state.mobileMenuOpen.value = false
   }
 
@@ -288,6 +281,7 @@ const createNavigationStore = (): NavigationStore => {
       state.activeCommunityModelKey.value = ''
       return
     }
+    state.activeCommunityModelKey.value = communityModel
     openTab('community-models', null, communityModel)
   }
 
@@ -305,10 +299,10 @@ const createNavigationStore = (): NavigationStore => {
       removeHashFromUrl('docs')
       state.activeDocumentationKey.value = ''
       return
-    } 
+    }
     // last part of the documentation key
     let name = documentation.split('+')
-    openTab('tutorial', name[name.length - 1], documentation)  
+    openTab('tutorial', name[name.length - 1], documentation)
   }
 
   const setActiveDashboard = (dashboard: string | null): void => {
@@ -353,8 +347,11 @@ const createNavigationStore = (): NavigationStore => {
     if (state.activeConnectionKey.value) {
       openTab('connections', null, state.activeConnectionKey.value)
     }
-    if (state.activeModelKey.value) {
-      openTab('community-models', null, state.activeModelKey.value)
+      if (state.activeModelKey.value) {
+      openTab('models', null, state.activeModelKey.value)
+    }
+    if (state.activeCommunityModelKey.value) {
+      openTab('community-models', null, state.activeCommunityModelKey.value)
     }
     if (state.activeDocumentationKey.value) {
       openTab('tutorial', null, state.activeDocumentationKey.value)
@@ -403,7 +400,7 @@ const createNavigationStore = (): NavigationStore => {
     },
     get activeDocumentationKey() {
       return state.activeDocumentationKey
-    },  
+    },
     get activeLLMConnectionKey() {
       return state.activeLLMConnectionKey
     },
@@ -412,9 +409,6 @@ const createNavigationStore = (): NavigationStore => {
     },
     get initialSearch() {
       return state.initialSearch
-    },
-    get activeCommunityModelFilter() {
-      return state.activeCommunityModelFilter
     },
     get tabs() {
       return state.tabs
@@ -432,7 +426,6 @@ const createNavigationStore = (): NavigationStore => {
     setActiveCommunityModelKey,
     toggleMobileMenu,
     setActiveModelKey,
-    setActiveCommunityModelFilter,
     setActiveTab,
     openTab,
     closeTab,
