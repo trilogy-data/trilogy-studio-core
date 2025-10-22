@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, type Ref, ref } from 'vue'
-import { useConnectionStore, useEditorStore, useScreenNavigation  } from '../../stores'
+import { useConnectionStore, useEditorStore, useScreenNavigation } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
@@ -182,7 +182,7 @@ function handleRefresh() {
           :available-imports="availableImports"
           :active-imports="activeImports"
           @update:imports="handleImportsChange"
-          @explore="(e)=> navigationStore.openTab('editors', null, e.id)"
+          @explore="(e) => navigationStore.openTab('editors', null, e.id)"
         />
         <div class="grid-actions">
           <button @click="$emit('add-item')" class="btn btn-success" data-testid="add-item-button">

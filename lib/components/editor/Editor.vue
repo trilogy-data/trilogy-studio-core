@@ -143,7 +143,7 @@ export default defineComponent({
   watch: {
     editorHeight(newHeight) {
       console.log('Editor height changed in Editor:', newHeight)
-    }
+    },
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')

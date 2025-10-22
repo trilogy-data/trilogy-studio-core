@@ -3,14 +3,8 @@ import {
   fetchAllModelFiles,
   filterModelFiles,
   getAvailableEngines,
-
 } from '../remotes/githubApiService'
-import {
-
-  type ModelFile,
-  type ModelRoot,
-  DEFAULT_MODEL_ROOT
-} from '../remotes/models'
+import { type ModelFile, type ModelRoot, DEFAULT_MODEL_ROOT } from '../remotes/models'
 import type { ModelConfigStoreType } from './modelStore'
 
 export interface CommunityApiState {
@@ -19,7 +13,6 @@ export interface CommunityApiState {
   filesByRoot: Record<string, ModelFile[]>
   errors: Record<string, string>
   loading: boolean
-
 
   // Modal state for adding repositories
   showAddRepositoryModal: boolean
@@ -42,15 +35,15 @@ const useCommunityApiStore = defineStore('communityApi', {
       owner: '',
       repo: '',
       branch: 'main',
-      displayName: ''
-    }
+      displayName: '',
+    },
   }),
 
   getters: {
     // Get all files from all repositories
     allFiles: (state): ModelFile[] => {
       const files: ModelFile[] = []
-      Object.values(state.filesByRoot).forEach(rootFiles => {
+      Object.values(state.filesByRoot).forEach((rootFiles) => {
         files.push(...rootFiles)
       })
       return files
@@ -59,13 +52,11 @@ const useCommunityApiStore = defineStore('communityApi', {
     // Get available engines across all repositories
     availableEngines: (state) => {
       const files: ModelFile[] = []
-      Object.values(state.filesByRoot).forEach(rootFiles => {
+      Object.values(state.filesByRoot).forEach((rootFiles) => {
         files.push(...rootFiles)
       })
       return getAvailableEngines(files)
     },
-
-
 
     // Check if any repository has errors
     hasErrors: (state): boolean => {
@@ -73,12 +64,12 @@ const useCommunityApiStore = defineStore('communityApi', {
     },
 
     // Get errors as an array for display
-    errorList: (state): Array<{ root: string, error: string }> => {
+    errorList: (state): Array<{ root: string; error: string }> => {
       return Object.entries(state.errors).map(([rootKey, error]) => ({
         root: rootKey,
-        error
+        error,
       }))
-    }
+    },
   },
 
   actions: {
@@ -120,8 +111,8 @@ const useCommunityApiStore = defineStore('communityApi', {
 
       // Check if repository already exists
       const repoKey = `${newModelRoot.owner}/${newModelRoot.repo}:${newModelRoot.branch}`
-      const exists = this.modelRoots.some(root =>
-        `${root.owner}/${root.repo}:${root.branch}` === repoKey
+      const exists = this.modelRoots.some(
+        (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
       )
 
       if (exists) {
@@ -133,7 +124,9 @@ const useCommunityApiStore = defineStore('communityApi', {
         // Add display name if not provided
         const modelRoot: ModelRoot = {
           ...newModelRoot,
-          displayName: newModelRoot.displayName || `${newModelRoot.owner}/${newModelRoot.repo}:${newModelRoot.branch}`
+          displayName:
+            newModelRoot.displayName ||
+            `${newModelRoot.owner}/${newModelRoot.repo}:${newModelRoot.branch}`,
         }
 
         // Add to the list of model roots
@@ -146,8 +139,8 @@ const useCommunityApiStore = defineStore('communityApi', {
       } catch (error) {
         console.error('Error adding repository:', error)
         // Remove the repository if it was added but failed to fetch
-        const addedIndex = this.modelRoots.findIndex(root =>
-          `${root.owner}/${root.repo}:${root.branch}` === repoKey
+        const addedIndex = this.modelRoots.findIndex(
+          (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
         )
         if (addedIndex > -1) {
           this.modelRoots.splice(addedIndex, 1)
@@ -163,8 +156,8 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     removeRepository(modelRoot: ModelRoot): void {
       const repoKey = `${modelRoot.owner}/${modelRoot.repo}:${modelRoot.branch}`
-      const index = this.modelRoots.findIndex(root =>
-        `${root.owner}/${root.repo}:${root.branch}` === repoKey
+      const index = this.modelRoots.findIndex(
+        (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
       )
 
       if (index > -1) {
@@ -174,11 +167,8 @@ const useCommunityApiStore = defineStore('communityApi', {
         const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
         delete this.filesByRoot[rootKey]
         delete this.errors[rootKey]
-
-
       }
     },
-
 
     /**
      * Filter files across all repositories
@@ -188,7 +178,7 @@ const useCommunityApiStore = defineStore('communityApi', {
       selectedEngine: string,
       importStatus: 'all' | 'imported' | 'not-imported',
       modelStore: ModelConfigStoreType,
-      remote: string | null = null
+      remote: string | null = null,
     ): ModelFile[] {
       const modelExists = (name: string): boolean => {
         return name in modelStore.models
@@ -220,7 +210,7 @@ const useCommunityApiStore = defineStore('communityApi', {
         owner: '',
         repo: '',
         branch: 'main',
-        displayName: ''
+        displayName: '',
       }
     },
 
@@ -230,7 +220,7 @@ const useCommunityApiStore = defineStore('communityApi', {
         owner: '',
         repo: '',
         branch: 'main',
-        displayName: ''
+        displayName: '',
       }
     },
 
@@ -271,7 +261,7 @@ const useCommunityApiStore = defineStore('communityApi', {
     clearRepositoryError(modelRoot: ModelRoot): void {
       const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
       delete this.errors[rootKey]
-    }
+    },
   },
 })
 

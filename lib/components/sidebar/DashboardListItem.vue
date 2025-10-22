@@ -1,12 +1,22 @@
 <!-- DashboardListItem.vue -->
 <template>
-  <div :data-testid="`dashboard-list-id-${item.key}`" :class="{
-    'sidebar-item': item.type !== 'creator',
-    'sidebar-item-selected': isActive,
-  }" @click="handleClick">
-    <div v-if="!['creator'].includes(item.type) && !isMobile" v-for="_ in item.indent" class="sidebar-padding"></div>
-    <i v-if="!['dashboard', 'creator'].includes(item.type)"
-      :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'">
+  <div
+    :data-testid="`dashboard-list-id-${item.key}`"
+    :class="{
+      'sidebar-item': item.type !== 'creator',
+      'sidebar-item-selected': isActive,
+    }"
+    @click="handleClick"
+  >
+    <div
+      v-if="!['creator'].includes(item.type) && !isMobile"
+      v-for="_ in item.indent"
+      class="sidebar-padding"
+    ></div>
+    <i
+      v-if="!['dashboard', 'creator'].includes(item.type)"
+      :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+    >
     </i>
     <template v-if="item.type === 'dashboard'">
       <tooltip content="Dashboard" position="right">
@@ -16,7 +26,8 @@
     <span class="truncate-text title">
       {{ item.label }}
       <span class="text-light connection-model" v-if="item.type === 'connection'">
-        ({{ connectionInfo?.model ? connectionInfo?.model : 'No Model Set' }})</span>
+        ({{ connectionInfo?.model ? connectionInfo?.model : 'No Model Set' }})</span
+      >
     </span>
     <div class="dashboard-actions">
       <template v-if="item.type === 'connection'">
@@ -27,13 +38,20 @@
       </template>
       <template v-if="item.type === 'dashboard'">
         <tooltip content="Clone Dashboard" position="left">
-          <span class="clone-btn hover-icon" @click.stop="handleClone" :data-testid="`clone-dashboard-${item.label}`">
+          <span
+            class="clone-btn hover-icon"
+            @click.stop="handleClone"
+            :data-testid="`clone-dashboard-${item.label}`"
+          >
             <i class="mdi mdi-content-copy"></i>
           </span>
         </tooltip>
         <tooltip content="Delete Dashboard" position="left">
-          <span class="remove-btn hover-icon" @click.stop="handleDelete"
-            :data-testid="`delete-dashboard-${item.label}`">
+          <span
+            class="remove-btn hover-icon"
+            @click.stop="handleDelete"
+            :data-testid="`delete-dashboard-${item.label}`"
+          >
             <i class="mdi mdi-trash-can"></i>
           </span>
         </tooltip>

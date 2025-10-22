@@ -344,11 +344,7 @@ provide('userSettingsStore', props.userSettingsStore)
 provide('llmConnectionStore', props.llmConnectionStore)
 provide('dashboardStore', props.dashboardStore)
 provide('communityApiStore', props.communityApiStore)
-const {
-  setActiveScreen,
-  setActiveEditor,
-  setActiveDashboard,
-} = useScreenNavigation()
+const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)
 provide('setActiveDashboard', setActiveDashboard)

@@ -2,8 +2,7 @@
   <sidebar-list title="Community Models">
     <template #actions>
       <div class="button-container">
-        <button @click="communityStore.refreshData()" :disabled="communityStore.loading"
-        >
+        <button @click="communityStore.refreshData()" :disabled="communityStore.loading">
           {{ communityStore.loading ? 'Refreshing...' : 'Refresh' }}
         </button>
         <!-- <button @click="communityStore.openAddRepositoryModal()" :disabled="communityStore.loading">
@@ -16,7 +15,12 @@
     <div v-if="communityStore.hasErrors" class="error-container">
       <div v-for="error in communityStore.errorList" :key="error.root" class="error-item">
         <span class="error-text">{{ error.root }}: {{ error.error }}</span>
-        <button @click="communityStore.clearRepositoryError(getModelRootByKey(error.root))" class="clear-error">×</button>
+        <button
+          @click="communityStore.clearRepositoryError(getModelRootByKey(error.root))"
+          class="clear-error"
+        >
+          ×
+        </button>
       </div>
     </div>
 
@@ -29,52 +33,62 @@
       @item-click="handleItemClick"
       @model-selected="handleModelSelected"
     />
-    
+
     <!-- Add Repository Modal -->
-    <div v-if="communityStore.showAddRepositoryModal" class="confirmation-overlay" @click="communityStore.closeAddRepositoryModal()">
+    <div
+      v-if="communityStore.showAddRepositoryModal"
+      class="confirmation-overlay"
+      @click="communityStore.closeAddRepositoryModal()"
+    >
       <div class="confirmation-dialog" @click.stop>
         <h3>Add Model Repository</h3>
         <form @submit.prevent="handleAddRepository">
           <div class="form-group">
             <label>Repository Owner: <span class="required">*</span></label>
-            <input 
-              v-model="communityStore.newRepo.owner" 
-              type="text" 
-              placeholder="e.g., trilogy-data" 
-              required 
+            <input
+              v-model="communityStore.newRepo.owner"
+              type="text"
+              placeholder="e.g., trilogy-data"
+              required
             />
           </div>
           <div class="form-group">
             <label>Repository Name: <span class="required">*</span></label>
-            <input 
-              v-model="communityStore.newRepo.repo" 
-              type="text" 
-              placeholder="e.g., trilogy-public-models" 
-              required 
+            <input
+              v-model="communityStore.newRepo.repo"
+              type="text"
+              placeholder="e.g., trilogy-public-models"
+              required
             />
           </div>
           <div class="form-group">
             <label>Branch: <span class="required">*</span></label>
-            <input 
-              v-model="communityStore.newRepo.branch" 
-              type="text" 
-              placeholder="e.g., main" 
-              required 
+            <input
+              v-model="communityStore.newRepo.branch"
+              type="text"
+              placeholder="e.g., main"
+              required
             />
           </div>
           <div class="form-group">
             <label>Display Name (optional):</label>
-            <input 
-              v-model="communityStore.newRepo.displayName" 
-              type="text" 
-              placeholder="e.g., My Custom Models" 
+            <input
+              v-model="communityStore.newRepo.displayName"
+              type="text"
+              placeholder="e.g., My Custom Models"
             />
           </div>
           <div v-if="addError" class="form-error">
             {{ addError }}
           </div>
           <div class="dialog-actions">
-            <button type="button" class="cancel-btn" @click="communityStore.closeAddRepositoryModal()">Cancel</button>
+            <button
+              type="button"
+              class="cancel-btn"
+              @click="communityStore.closeAddRepositoryModal()"
+            >
+              Cancel
+            </button>
             <button type="submit" class="confirm-btn" :disabled="communityStore.addingRepository">
               {{ communityStore.addingRepository ? 'Adding...' : 'Add Repository' }}
             </button>
@@ -88,7 +102,7 @@
 <script lang="ts">
 import { ref, onMounted, computed } from 'vue'
 
-import {useCommunityApiStore, useScreenNavigation} from '../../stores'
+import { useCommunityApiStore, useScreenNavigation } from '../../stores'
 import SidebarList from './SidebarList.vue'
 import CommunityModelListItem from './CommunityModelListItem.vue'
 import type { ModelFile, ModelRoot } from '../../remotes/models'
@@ -102,9 +116,10 @@ export default {
     const navigationStore = useScreenNavigation()
     const collapsed = ref<Record<string, boolean>>({})
 
-
     for (const key in communityStore.modelRoots) {
-      collapsed.value[`${communityStore.modelRoots[key].owner}-${communityStore.modelRoots[key].repo}-${communityStore.modelRoots[key].branch}`] = false
+      collapsed.value[
+        `${communityStore.modelRoots[key].owner}-${communityStore.modelRoots[key].repo}-${communityStore.modelRoots[key].branch}`
+      ] = false
     }
 
     // Local state for error handling in the modal
@@ -118,7 +133,7 @@ export default {
         return {
           owner: match[1],
           repo: match[2],
-          branch: match[3]
+          branch: match[3],
         }
       }
       // Fallback
@@ -148,16 +163,19 @@ export default {
       console.log(collapsed.value)
       // rsplit
 
-      const lastIndex = key.lastIndexOf(type+KeySeparator)
+      const lastIndex = key.lastIndexOf(type + KeySeparator)
       const label = lastIndex !== -1 ? key.substring(lastIndex + type.length) : key
       console.log('Navigating to community model tab with label:', label, 'and key:', key)
       // navigationStore.openTab('community-models', label, key)
       navigationStore.openTab('community-models', label, key)
-
     }
 
     const displayTree = computed(() => {
-      return buildCommunityModelTree(communityStore.modelRoots, communityStore.filesByRoot, collapsed.value)
+      return buildCommunityModelTree(
+        communityStore.modelRoots,
+        communityStore.filesByRoot,
+        collapsed.value,
+      )
     })
 
     // Initialize store on component mount
@@ -173,7 +191,7 @@ export default {
       handleModelSelected,
       handleItemClick,
       collapsed,
-      displayTree
+      displayTree,
     }
   },
   components: {

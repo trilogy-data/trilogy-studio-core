@@ -1,17 +1,21 @@
 <template>
-  <div :class="{
-    'sidebar-item': true,
-    'sidebar-item-selected': activeModel === item.key,
-  }" @click="handleItemClick"
-  :data-testid="item.key"
+  <div
+    :class="{
+      'sidebar-item': true,
+      'sidebar-item-selected': activeModel === item.key,
+    }"
+    @click="handleItemClick"
+    :data-testid="item.key"
   >
     <div v-for="_ in item.indent" class="sidebar-padding"></div>
 
-    <i v-if="!['model'].includes(item.type)" :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"></i>
+    <i
+      v-if="!['model'].includes(item.type)"
+      :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
+    ></i>
 
     <template v-if="item.type === 'root'">
       <i class="mdi mdi-source-repository sidebar-icon"></i>
-
     </template>
     <template v-else-if="item.type === 'engine'">
       <connection-icon :connection-type="item.label" />
@@ -143,7 +147,6 @@ export default {
   cursor: pointer;
   width: 100%;
 }
-
 
 .sidebar-item:hover .hover-icon {
   opacity: 1;

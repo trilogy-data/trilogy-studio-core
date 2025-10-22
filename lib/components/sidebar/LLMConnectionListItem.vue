@@ -465,8 +465,8 @@ export default defineComponent({
   margin-left: 8px;
   font-size: 0.8em;
   padding: 4px 8px;
-  max-width:100%;
-  width:100%;
+  max-width: 100%;
+  width: 100%;
   min-width: 0;
 }
 
@@ -475,8 +475,6 @@ export default defineComponent({
   position: relative;
   display: flex;
   align-items: center;
-  
-  
 }
 
 .api-key-input-wrapper input {
@@ -513,11 +511,11 @@ export default defineComponent({
   font-size: 0.6em;
   border: 1px solid var(--border-color);
   white-space: nowrap;
-  min-width:60px;
+  min-width: 60px;
 }
 
 .customize-button:hover {
-  background-color: var( --button-mouseover);
+  background-color: var(--button-mouseover);
 }
 
 .error-indicator {

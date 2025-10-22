@@ -9,7 +9,7 @@
     <template v-else-if="connectionType === 'bigquery-oauth'">
       <i class="mdi mdi-google"></i>
     </template>
-      <template v-else-if="connectionType === 'bigquery'">
+    <template v-else-if="connectionType === 'bigquery'">
       <i class="mdi mdi-google"></i>
     </template>
     <template v-else>

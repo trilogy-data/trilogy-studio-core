@@ -101,7 +101,6 @@ export default {
     const editorStore = inject<EditorStoreType>('editorStore')
     const trilogyResolver = inject<TrilogyResolver>('trilogyResolver')
     const navigationStore = useScreenNavigation()
-  
 
     const creatorVisible = ref(false)
     const current = navigationStore.activeModelKey.value || getDefaultValueFromHash('model') || ''
@@ -266,7 +265,7 @@ export default {
       saveModels,
       fetchParseResults,
       trilogyIcon,
-      navigationStore
+      navigationStore,
     }
   },
   methods: {

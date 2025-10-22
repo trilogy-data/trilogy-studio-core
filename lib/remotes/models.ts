@@ -27,5 +27,5 @@ export const DEFAULT_MODEL_ROOT: ModelRoot = {
   owner: 'trilogy-data',
   repo: 'trilogy-public-models',
   branch: 'main',
-  displayName: 'Trilogy Public Models'
+  displayName: 'Trilogy Public Models',
 }

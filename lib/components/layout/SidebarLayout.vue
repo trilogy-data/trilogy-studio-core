@@ -81,7 +81,7 @@ export default {
       // @ts-ignore
       let wrapperWidth = this.$refs.wrapper.getBoundingClientRect().width
       console.log('Wrapper width:', wrapperWidth)
-      
+
       if (this.$refs.sidebar) {
         // @ts-ignore
         this.sidebarWidth = wrapperWidth * (sizes[0] / 100)
@@ -109,7 +109,7 @@ export default {
         this.updateSidebarWidth(sizes)
       },
     })
-    
+
     // Initialize the sidebar width
     this.updateSidebarWidth([15, 85])
   },

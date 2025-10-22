@@ -61,7 +61,7 @@ defineProps<{
   availableEngines: string[]
   loading: boolean
   remote: string | null
-  engineDisabled:boolean
+  engineDisabled: boolean
 }>()
 
 defineEmits<{

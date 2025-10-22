@@ -12,7 +12,7 @@ const props = defineProps<ImportSelectorProps>()
 
 const emit = defineEmits<{
   'update:imports': [imports: DashboardImport[]]
-  'explore': [DashboardImport]
+  explore: [DashboardImport]
 }>()
 
 // Show/hide dropdown
@@ -177,8 +177,8 @@ onUnmounted(() => {
           <div class="active-import-item">
             <span>{{ activeImports[0].name }}</span>
             <div class="import-actions">
-              <button 
-                class="explore-import-button" 
+              <button
+                class="explore-import-button"
                 @click.stop="exploreImport(activeImports[0])"
                 title="Explore this data source"
                 data-testid="explore-dashboard-import"

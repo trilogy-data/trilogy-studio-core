@@ -112,7 +112,7 @@
       </div>
     </div>
 
-    <div class="sidebar-content" :style="{ width: containerWidth-40 + 'px' }">
+    <div class="sidebar-content" :style="{ width: containerWidth - 40 + 'px' }">
       <EditorList
         :activeEditor="activeEditor"
         v-show="active === 'editors'"

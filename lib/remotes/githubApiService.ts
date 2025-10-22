@@ -1,5 +1,3 @@
-
-
 import { type ModelRoot, type ModelFile, DEFAULT_MODEL_ROOT } from './models'
 
 export interface GithubBranch {
@@ -15,8 +13,6 @@ export interface GithubContentsItem {
   name: string
   filename: string
 }
-
-
 
 /**
  * Sleep for a specified number of milliseconds
@@ -88,7 +84,9 @@ export const fetchWithBackoff = async (
  * @param modelRoot The model root configuration to fetch branches from
  * @returns Array of branch names
  */
-export const fetchBranches = async (modelRoot: ModelRoot = DEFAULT_MODEL_ROOT): Promise<string[]> => {
+export const fetchBranches = async (
+  modelRoot: ModelRoot = DEFAULT_MODEL_ROOT,
+): Promise<string[]> => {
   try {
     const { owner, repo } = modelRoot
     const response = await fetchWithBackoff(
@@ -109,7 +107,9 @@ export const fetchBranches = async (modelRoot: ModelRoot = DEFAULT_MODEL_ROOT): 
   }
 }
 
-export const fetchModelFiles = async (modelRoot: ModelRoot = DEFAULT_MODEL_ROOT): Promise<{
+export const fetchModelFiles = async (
+  modelRoot: ModelRoot = DEFAULT_MODEL_ROOT,
+): Promise<{
   files: ModelFile[]
   error: string | null
 }> => {
@@ -247,7 +247,7 @@ export const getAvailableEngines = (files: ModelFile[]): string[] => {
  * @returns Object with files organized by root key and any errors
  */
 export const fetchAllModelFiles = async (
-  modelRoots: ModelRoot[] = [DEFAULT_MODEL_ROOT]
+  modelRoots: ModelRoot[] = [DEFAULT_MODEL_ROOT],
 ): Promise<{
   filesByRoot: Record<string, ModelFile[]>
   errors: Record<string, string>
@@ -268,7 +268,7 @@ export const fetchAllModelFiles = async (
         errors[rootKey] = err instanceof Error ? err.message : 'Unknown error'
         filesByRoot[rootKey] = []
       }
-    })
+    }),
   )
 
   return { filesByRoot, errors }

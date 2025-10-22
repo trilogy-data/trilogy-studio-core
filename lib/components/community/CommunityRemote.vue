@@ -1,19 +1,29 @@
 <template>
   <div class="model-page">
-    <community-model-header v-model:searchQuery="searchQuery" v-model:selectedEngine="selectedEngine"
-      v-model:importStatus="importStatus" :availableEngines="availableEngines" :loading="loading" :remote="remote"
-      :engineDisabled="!!props.engine" @refresh="refreshData" />
+    <community-model-header
+      v-model:searchQuery="searchQuery"
+      v-model:selectedEngine="selectedEngine"
+      v-model:importStatus="importStatus"
+      :availableEngines="availableEngines"
+      :loading="loading"
+      :remote="remote"
+      :engineDisabled="!!props.engine"
+      @refresh="refreshData"
+    />
     <div class="model-content">
-
       <div v-if="filteredFiles.length">
-        <community-model-card v-for="file in filteredFiles" :key="file.name" :file="file"
+        <community-model-card
+          v-for="file in filteredFiles"
+          :key="file.name"
+          :file="file"
           :initialCreatorExpanded="creatorIsExpanded[file.name] || false"
           :initialComponentsExpanded="isExpanded[file.downloadUrl] || false"
           :initialDescriptionExpanded="getInitialDescriptionExpanded(file.name)"
           @creator-toggled="creatorIsExpanded[file.name] = $event"
           @components-toggled="isExpanded[file.downloadUrl] = $event"
           @description-toggled="descriptionExpanded[file.name] = $event"
-          @dashboard-link-copied="handleDashboardLinkCopy" />
+          @dashboard-link-copied="handleDashboardLinkCopy"
+        />
       </div>
 
       <p v-if="error" class="text-error">{{ error }}</p>
@@ -43,8 +53,8 @@ const props = defineProps({
   },
   engine: {
     type: [String, null, undefined] as PropType<string | null | undefined>,
-    default: ''
-  }
+    default: '',
+  },
 })
 
 const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
@@ -66,8 +76,7 @@ const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref(props.engine || '')
 const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
 
-const hasInitialSearch = computed(() => !!(props.initialSearch))
-
+const hasInitialSearch = computed(() => !!props.initialSearch)
 
 // Watch for changes to the engine prop and update selectedEngine accordingly
 watch(
@@ -75,7 +84,7 @@ watch(
   (newEngine) => {
     selectedEngine.value = newEngine || ''
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 const loading = computed(() => communityApiStore.loading)
@@ -86,7 +95,7 @@ const filteredFiles = computed(() => {
     selectedEngine.value,
     importStatus.value,
     modelStore,
-    props.remote
+    props.remote,
   )
 })
 
@@ -213,7 +222,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .filter-row>div {
+  .filter-row > div {
     flex: 1 0 100%;
     margin-bottom: 8px;
   }

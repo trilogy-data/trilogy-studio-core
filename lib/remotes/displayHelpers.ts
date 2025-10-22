@@ -22,13 +22,14 @@ export interface TreeNode {
 export const buildCommunityModelTree = (
   modelRoots: ModelRoot[] = [],
   allFiles: Record<string, ModelFile[]> = {},
-  collapsed: Record<string, boolean> = {}
+  collapsed: Record<string, boolean> = {},
 ): TreeNode[] => {
   const tree: TreeNode[] = []
 
   modelRoots.forEach((modelRoot) => {
     const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
-    const rootDisplayName = modelRoot.displayName || `${modelRoot.owner}/${modelRoot.repo}:${modelRoot.branch}`
+    const rootDisplayName =
+      modelRoot.displayName || `${modelRoot.owner}/${modelRoot.repo}:${modelRoot.branch}`
 
     // Add the model root node
     tree.push({
@@ -36,7 +37,7 @@ export const buildCommunityModelTree = (
       label: rootDisplayName,
       key: rootKey,
       indent: 0,
-      modelRoot
+      modelRoot,
     })
 
     // If this root is not collapsed, add its engines and models
@@ -54,31 +55,33 @@ export const buildCommunityModelTree = (
       })
 
       // Add engine nodes
-      Object.keys(engines).sort().forEach((engine) => {
-        const engineKey = `${rootKey}${KeySeparator}${engine}`
-        tree.push({
-          type: 'engine',
-          label: engine,
-          key: engineKey,
-          indent: 1,
-          modelRoot
-        })
-        console.log('Checking collapsed for engineKey:', engineKey, collapsed[engineKey])
-
-        // If this engine is not collapsed, add its models
-        if (!collapsed[engineKey]) {
-          engines[engine].forEach((file) => {
-            tree.push({
-              type: 'model',
-              label: file.name,
-              key: `${engineKey}${KeySeparator}${file.name}`,
-              indent: 2,
-              model: file,
-              modelRoot
-            })
+      Object.keys(engines)
+        .sort()
+        .forEach((engine) => {
+          const engineKey = `${rootKey}${KeySeparator}${engine}`
+          tree.push({
+            type: 'engine',
+            label: engine,
+            key: engineKey,
+            indent: 1,
+            modelRoot,
           })
-        }
-      })
+          console.log('Checking collapsed for engineKey:', engineKey, collapsed[engineKey])
+
+          // If this engine is not collapsed, add its models
+          if (!collapsed[engineKey]) {
+            engines[engine].forEach((file) => {
+              tree.push({
+                type: 'model',
+                label: file.name,
+                key: `${engineKey}${KeySeparator}${file.name}`,
+                indent: 2,
+                model: file,
+                modelRoot,
+              })
+            })
+          }
+        })
     }
   })
 
@@ -112,7 +115,11 @@ export const generateEngineKey = (modelRoot: ModelRoot, engine: string): string 
  * @param modelName The model name
  * @returns Unique string key
  */
-export const generateModelKey = (modelRoot: ModelRoot, engine: string, modelName: string): string => {
+export const generateModelKey = (
+  modelRoot: ModelRoot,
+  engine: string,
+  modelName: string,
+): string => {
   const engineKey = generateEngineKey(modelRoot, engine)
   return `${engineKey}${KeySeparator}${modelName}`
 }
@@ -125,7 +132,7 @@ export const generateModelKey = (modelRoot: ModelRoot, engine: string, modelName
  */
 export const getExpandableKeys = (
   modelRoots: ModelRoot[] = [],
-  allFiles: Record<string, ModelFile[]> = {}
+  allFiles: Record<string, ModelFile[]> = {},
 ): string[] => {
   const expandableKeys: string[] = []
 
@@ -165,7 +172,7 @@ export const isNodeVisible = (
   searchQuery: string = '',
   selectedEngine: string = '',
   importStatus: 'all' | 'imported' | 'not-imported' = 'all',
-  modelExistsFn: (name: string) => boolean = () => false
+  modelExistsFn: (name: string) => boolean = () => false,
 ): boolean => {
   // Root and engine nodes are always visible if they have visible children
   if (node.type === 'root' || node.type === 'engine') {
@@ -174,8 +181,8 @@ export const isNodeVisible = (
 
   // For model nodes, apply filters
   if (node.type === 'model' && node.model) {
-    const nameMatch = searchQuery === '' ||
-      node.model.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const nameMatch =
+      searchQuery === '' || node.model.name.toLowerCase().includes(searchQuery.toLowerCase())
 
     const engineMatch = selectedEngine === '' || node.model.engine === selectedEngine
 
@@ -207,7 +214,7 @@ export const filterTreeNodes = (
   searchQuery: string = '',
   selectedEngine: string = '',
   importStatus: 'all' | 'imported' | 'not-imported' = 'all',
-  modelExistsFn: (name: string) => boolean = () => false
+  modelExistsFn: (name: string) => boolean = () => false,
 ): TreeNode[] => {
   const filteredTree: TreeNode[] = []
   console.log('filteredTreeNodes called with:')
@@ -217,13 +224,27 @@ export const filterTreeNodes = (
 
     if (node.type === 'root') {
       // Check if this root has any visible children
-      const hasVisibleChildren = hasVisibleDescendants(tree, i, searchQuery, selectedEngine, importStatus, modelExistsFn)
+      const hasVisibleChildren = hasVisibleDescendants(
+        tree,
+        i,
+        searchQuery,
+        selectedEngine,
+        importStatus,
+        modelExistsFn,
+      )
       if (hasVisibleChildren) {
         filteredTree.push(node)
       }
     } else if (node.type === 'engine') {
       // Check if this engine has any visible models
-      const hasVisibleModels = hasVisibleDescendants(tree, i, searchQuery, selectedEngine, importStatus, modelExistsFn)
+      const hasVisibleModels = hasVisibleDescendants(
+        tree,
+        i,
+        searchQuery,
+        selectedEngine,
+        importStatus,
+        modelExistsFn,
+      )
       if (hasVisibleModels) {
         filteredTree.push(node)
       }
@@ -254,7 +275,7 @@ const hasVisibleDescendants = (
   searchQuery: string,
   selectedEngine: string,
   importStatus: 'all' | 'imported' | 'not-imported',
-  modelExistsFn: (name: string) => boolean
+  modelExistsFn: (name: string) => boolean,
 ): boolean => {
   const node = tree[nodeIndex]
   const nodeIndent = node.indent
@@ -269,8 +290,10 @@ const hasVisibleDescendants = (
     }
 
     // If this is a model node and it's visible, we found a visible descendant
-    if (descendant.type === 'model' &&
-      isNodeVisible(descendant, searchQuery, selectedEngine, importStatus, modelExistsFn)) {
+    if (
+      descendant.type === 'model' &&
+      isNodeVisible(descendant, searchQuery, selectedEngine, importStatus, modelExistsFn)
+    ) {
       return true
     }
   }

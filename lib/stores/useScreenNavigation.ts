@@ -41,7 +41,6 @@ export interface Tab {
   // the lookup for the component
   address: string
   params?: Record<string, string>
-
 }
 
 export interface NavigationStore {
@@ -82,7 +81,9 @@ const editorStore = useEditorStore()
 const createNavigationStore = (): NavigationStore => {
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
-    activeSidebarScreen: ref(getDefaultValueFromHash('sidebarScreen', 'editors')) as Ref<ScreenType>,
+    activeSidebarScreen: ref(
+      getDefaultValueFromHash('sidebarScreen', 'editors'),
+    ) as Ref<ScreenType>,
     activeEditor: ref(getDefaultValueFromHash('editors', '')),
     activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
     activeConnectionKey: ref(getDefaultValueFromHash('connections', '')),
@@ -94,7 +95,6 @@ const createNavigationStore = (): NavigationStore => {
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
     tabs: ref<Tab[]>([]),
     activeTab: ref<string | null>(null),
-
   }
 
   // Screens that should close mobile menu when activated
@@ -108,7 +108,9 @@ const createNavigationStore = (): NavigationStore => {
 
   const openTab = (screen: ScreenType, title: string | null, address: string): void => {
     // check if tab already exists
-    const existingTab = state.tabs.value.find((tab) => tab.screen === screen && tab.address === address)
+    const existingTab = state.tabs.value.find(
+      (tab) => tab.screen === screen && tab.address === address,
+    )
     if (existingTab) {
       setActiveTab(existingTab.id)
       return
@@ -134,14 +136,13 @@ const createNavigationStore = (): NavigationStore => {
       } else if (screen === 'connections') {
         title = `${address}`
       }
-
     }
-    let finalTitle = title || 'Untitled';
+    let finalTitle = title || 'Untitled'
     const tab: Tab = {
       id: `tab-${++tabIdCounter}`,
       title: finalTitle,
       screen,
-      address
+      address,
     }
     state.tabs.value.push(tab)
     setActiveTab(tab.id)
@@ -222,17 +223,13 @@ const createNavigationStore = (): NavigationStore => {
         dashboardStore.activeDashboardId = tabInfo.address
       } else if (tabInfo.screen === 'connections') {
         state.activeConnectionKey.value = tabInfo.address
-      }
-      else if (tabInfo.screen === 'llms') {
+      } else if (tabInfo.screen === 'llms') {
         state.activeLLMConnectionKey.value = tabInfo.address
-      }
-      else if (tabInfo.screen === 'tutorial') {
+      } else if (tabInfo.screen === 'tutorial') {
         state.activeDocumentationKey.value = tabInfo.address
-      }
-      else if (tabInfo.screen === 'models') {
+      } else if (tabInfo.screen === 'models') {
         state.activeModelKey.value = tabInfo.address
-      }
-      else if (tabInfo.screen === 'community-models') {
+      } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
       }
 
@@ -241,7 +238,6 @@ const createNavigationStore = (): NavigationStore => {
         state.mobileMenuOpen.value = false
       }
     }
-
   }
   const setActiveScreen = (screen: ScreenType): void => {
     pushHashToUrl('screen', screen)
@@ -256,14 +252,10 @@ const createNavigationStore = (): NavigationStore => {
     state.activeSidebarScreen.value = screen
     if (screen == 'settings') {
       openTab('settings', 'Settings', 'settings')
-    }
-    else if (screen == 'profile') {
+    } else if (screen == 'profile') {
       openTab('profile', 'Profile', 'profile')
     }
   }
-
-
-
 
   const setActiveModelKey = (model: string | null): void => {
     if (model === null) {
@@ -337,7 +329,6 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const onInitialLoad = (): void => {
-
     if (state.activeEditor.value) {
       openTab('editors', null, state.activeEditor.value)
     }
@@ -347,7 +338,7 @@ const createNavigationStore = (): NavigationStore => {
     if (state.activeConnectionKey.value) {
       openTab('connections', null, state.activeConnectionKey.value)
     }
-      if (state.activeModelKey.value) {
+    if (state.activeModelKey.value) {
       openTab('models', null, state.activeModelKey.value)
     }
     if (state.activeCommunityModelKey.value) {

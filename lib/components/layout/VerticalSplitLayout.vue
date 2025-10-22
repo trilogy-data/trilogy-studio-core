@@ -73,11 +73,9 @@ export default defineComponent({
       // expandToMin: true,
       gutterSize: 0,
       onDrag: (sizes: number[]) => {
-
         this.updateResultsHeight(sizes)
       },
       onDragEnd: (sizes: number[]) => {
-
         this.updateResultsHeight(sizes)
       },
     })
@@ -90,15 +88,12 @@ export default defineComponent({
       this.split.destroy()
       this.split = null
     }
-
   },
   methods: {
     updateResultsHeight(split: number[]) {
-
       // @ts-ignore
       // 50 is a constant to account for the header
       let resultHeight = this.$refs.wrapper.getBoundingClientRect().height
-
 
       if (this.$refs.results) {
         // @ts-ignore

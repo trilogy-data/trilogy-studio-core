@@ -4,25 +4,47 @@
     <section id="navigation" class="tutorial-section">
       <template v-for="paragraph in currentData.paragraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
-          {{ paragraph.content }}</highlight-component>
+          {{ paragraph.content }}</highlight-component
+        >
         <highlight-component v-else-if="paragraph.type === 'warning'" type="warning">
-          {{ paragraph.content }}</highlight-component>
-        <code-block v-else-if="paragraph.type === 'code'" language="trilogy" :content="paragraph.content"></code-block>
-        <connection-list v-else-if="paragraph.type === 'connections'" :connections="connectionStore.connections"
-          testTag="tutorial" />
+          {{ paragraph.content }}</highlight-component
+        >
+        <code-block
+          v-else-if="paragraph.type === 'code'"
+          language="trilogy"
+          :content="paragraph.content"
+        ></code-block>
+        <connection-list
+          v-else-if="paragraph.type === 'connections'"
+          :connections="connectionStore.connections"
+          testTag="tutorial"
+        />
         <div v-else-if="paragraph.type === 'llm-connections'" class="llm-connections">
           <LLMConnectionList :connections="llmConnectionStore.connections" />
         </div>
-        <editor-list v-else-if="paragraph.type === 'editors'" :connections="editorStore.editors" testTag="tutorial" />
-        <tutorial-prompt v-else-if="paragraph.type === 'tutorial-prompts' && demoEditorCorrect"
-          :prompts="paragraph.data.prompts || []" :context="paragraph.data.context || 'main-trilogy'"
-          editorId="my-first-editor" />
-        <tutorial-function v-else-if="paragraph.type === 'function' && paragraph.data.function" :name="paragraph.title"
-          :description="paragraph.content" :func="paragraph.data.function" />
+        <editor-list
+          v-else-if="paragraph.type === 'editors'"
+          :connections="editorStore.editors"
+          testTag="tutorial"
+        />
+        <tutorial-prompt
+          v-else-if="paragraph.type === 'tutorial-prompts' && demoEditorCorrect"
+          :prompts="paragraph.data.prompts || []"
+          :context="paragraph.data.context || 'main-trilogy'"
+          editorId="my-first-editor"
+        />
+        <tutorial-function
+          v-else-if="paragraph.type === 'function' && paragraph.data.function"
+          :name="paragraph.title"
+          :description="paragraph.content"
+          :func="paragraph.data.function"
+        />
 
         <div v-else-if="paragraph.type === 'connection-validator'">
-          <div :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"
-            data-testid="demo-connection-validator">
+          <div
+            :class="['test-result', demoConnectionCorrect ? 'passed' : 'failed']"
+            data-testid="demo-connection-validator"
+          >
             {{
               demoConnectionCorrect
                 ? `Great work: "${demoConnectionName}" found and connected with right model ✓`
@@ -31,7 +53,10 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'editor-validator'">
-          <div :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']" data-testid="editor-validator">
+          <div
+            :class="['test-result', demoEditorCorrect ? 'passed' : 'failed']"
+            data-testid="editor-validator"
+          >
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
@@ -41,7 +66,10 @@
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
-          <div :class="['test-result', demoModelCorrect ? 'passed' : 'failed']" data-testid="model-validator">
+          <div
+            :class="['test-result', demoModelCorrect ? 'passed' : 'failed']"
+            data-testid="model-validator"
+          >
             {{
               demoModelCorrect
                 ? `Great work: "${demoModelName}" found ✓`
@@ -51,24 +79,45 @@
         </div>
         <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect">
           <div class="editor-top">
-            <editor context="main-trilogy" editorId="my-first-editor" @save-editors="saveEditorsCall" />
+            <editor
+              context="main-trilogy"
+              editorId="my-first-editor"
+              @save-editors="saveEditorsCall"
+            />
           </div>
           <div class="editor-bottom">
-            <results-view :editorData="editorStore.editors['my-first-editor']" :containerHeight="500" />
+            <results-view
+              :editorData="editorStore.editors['my-first-editor']"
+              :containerHeight="500"
+            />
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID" class="dashboard">
-          <dashboard :name="demoDashboardID" connectionId="demo-model-connection" :viewMode="true" />
+        <div
+          v-else-if="paragraph.type === 'dashboard' && demoModelCorrect && demoDashboardID"
+          class="dashboard"
+        >
+          <dashboard
+            :name="demoDashboardID"
+            connectionId="demo-model-connection"
+            :viewMode="true"
+          />
         </div>
-        <community-models v-else-if="paragraph.type === 'community-models'"
-          activeCommunityModelKey="trilogy-data-trilogy-public-models-main" initialSearch="demo" />
+        <community-models
+          v-else-if="paragraph.type === 'community-models'"
+          activeCommunityModelKey="trilogy-data-trilogy-public-models-main"
+          initialSearch="demo"
+        />
         <p v-else v-html="paragraph.content"></p>
       </template>
     </section>
     <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Models'">
       <model-card :config="demoConfig" />
     </section>
-    <section id="navigation" class="tutorial-section" v-if="currentTopic === 'Overview' && currentNode === 'Demo'">
+    <section
+      id="navigation"
+      class="tutorial-section"
+      v-if="currentTopic === 'Overview' && currentNode === 'Demo'"
+    >
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
   </div>
@@ -245,7 +294,6 @@ export default {
   padding: 5px 20px;
   color: var(--text-color);
   overflow-y: auto;
-
 }
 
 .tutorial-section {

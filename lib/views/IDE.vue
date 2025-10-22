@@ -6,21 +6,33 @@
         <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'dashboard-import'">
-        <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
+        <dashboard-auto-importer
+          @import-complete="handleImportComplete"
+          @full-screen="toggleFullScreen"
+        />
       </template>
     </div>
 
     <!-- Normal mode with sidebar -->
     <sidebar-layout v-else>
       <template #sidebar="{ containerWidth }">
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveSidebarScreen"
-          @save-editors="saveEditorsCall" @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey" @connection-key-selected="setActiveConnectionKey"
-          @llm-key-selected="setActiveLLMConnectionKey" @dashboard-key-selected="setActiveDashboard"
-          :active="activeSidebarScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey" :activeConnectionKey="activeConnectionKey"
+        <sidebar
+          @editor-selected="setActiveEditor"
+          @screen-selected="setActiveSidebarScreen"
+          @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey"
+          @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey"
+          @llm-key-selected="setActiveLLMConnectionKey"
+          @dashboard-key-selected="setActiveDashboard"
+          :active="activeSidebarScreen"
+          :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey"
+          :activeModelKey="activeModelKey"
+          :activeConnectionKey="activeConnectionKey"
           :containerWidth="containerWidth"
-          :activeDashboardKey="activeDashboard" />
+          :activeDashboardKey="activeDashboard"
+        />
       </template>
       <template v-if="showingCredentialPrompt">
         <CredentialBackgroundPage />
@@ -29,20 +41,39 @@
         <template v-if="activeScreen && ['editors'].includes(activeScreen)">
           <vertical-split-layout>
             <template #editor="{ containerHeight }" v-if="activeEditor && activeEditorData">
-              <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorId="activeEditor"
-                :containerHeight="containerHeight" @save-editors="saveEditorsCall" @save-models="saveModelsCall"
-                ref="editorRef" />
-              <editor v-else context="main-sql" :containerHeight="containerHeight" :editorId="activeEditor"
-                @save-editors="saveEditorsCall" ref="editorRef" />
+              <editor
+                v-if="activeEditorData.type == 'preql'"
+                context="main-trilogy"
+                :editorId="activeEditor"
+                :containerHeight="containerHeight"
+                @save-editors="saveEditorsCall"
+                @save-models="saveModelsCall"
+                ref="editorRef"
+              />
+              <editor
+                v-else
+                context="main-sql"
+                :containerHeight="containerHeight"
+                :editorId="activeEditor"
+                @save-editors="saveEditorsCall"
+                ref="editorRef"
+              />
             </template>
             <template #results="{ containerHeight }" v-if="activeEditorData">
-              <ResultsView :editorData="activeEditorData" :containerHeight="containerHeight"
-                @llm-query-accepted="runQuery" @refresh-click="runQuery"></ResultsView>
+              <ResultsView
+                :editorData="activeEditorData"
+                :containerHeight="containerHeight"
+                @llm-query-accepted="runQuery"
+                @refresh-click="runQuery"
+              ></ResultsView>
             </template>
           </vertical-split-layout>
         </template>
         <template v-else-if="activeScreen === 'connections'">
-          <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
+          <connection-view
+            :activeConnectionKey="activeConnectionKey"
+            @save-editors="saveEditorsCall"
+          />
         </template>
         <template v-else-if="activeScreen === 'tutorial'">
           <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
@@ -60,7 +91,10 @@
           <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
         </template>
         <template v-else-if="activeScreen === 'dashboard-import'">
-          <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
+          <dashboard-auto-importer
+            @import-complete="handleImportComplete"
+            @full-screen="toggleFullScreen"
+          />
         </template>
         <template v-else-if="activeScreen === 'community-models'">
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
@@ -69,8 +103,11 @@
           <LLMView />
         </template>
         <template v-else>
-          <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo"
-            @documentation-key-selected="setActiveDocumentationKey" />
+          <welcome-page
+            @screen-selected="setActiveScreen"
+            @demo-started="startDemo"
+            @documentation-key-selected="setActiveDocumentationKey"
+          />
         </template>
       </TabbedBrowser>
     </sidebar-layout>
@@ -282,7 +319,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => { }
+      saveEditors = () => {}
     }
 
     const screenNavigation = useScreenNavigation()

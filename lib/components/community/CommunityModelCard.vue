@@ -24,7 +24,7 @@
 
         <!-- Expand button below title -->
         <button
-         v-if ="!initialComponentsExpanded"
+          v-if="!initialComponentsExpanded"
           class="expand-button"
           @click="toggleComponents"
           :class="{ expanded: isComponentsExpanded }"
@@ -60,8 +60,7 @@
           :class="[
             'description-text',
             {
-              'description-truncated':
-                !isDescriptionExpanded && shouldTruncateDescription,
+              'description-truncated': !isDescriptionExpanded && shouldTruncateDescription,
             },
           ]"
         >
@@ -118,8 +117,6 @@ import { getDefaultConnection as getDefaultConnectionService } from '../../remot
 import type { ModelFile } from '../../remotes/models'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 
-
-
 interface Props {
   file: ModelFile
   // Optional overrides for initial state
@@ -131,7 +128,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   initialCreatorExpanded: false,
   initialComponentsExpanded: false,
-  initialDescriptionExpanded: false
+  initialDescriptionExpanded: false,
 })
 
 const emit = defineEmits<{
@@ -228,7 +225,7 @@ defineExpose({
   toggleDescription,
   creatorIsExpanded: () => creatorIsExpanded.value,
   isComponentsExpanded: () => isComponentsExpanded.value,
-  isDescriptionExpanded: () => isDescriptionExpanded.value
+  isDescriptionExpanded: () => isDescriptionExpanded.value,
 })
 </script>
 

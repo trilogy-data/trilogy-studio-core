@@ -1,12 +1,29 @@
 <template>
   <div class="view-container">
-    <CommunityRemote v-if="selectedType === 'root'" :remote="selectedRootKey" :initial-search="initialSearch" />
-    <CommunityRemote v-else-if="selectedType === 'engine'" :engine="selectedEngine" :remote="selectedRootKey" :initial-search="initialSearch" />
+    <CommunityRemote
+      v-if="selectedType === 'root'"
+      :remote="selectedRootKey"
+      :initial-search="initialSearch"
+    />
+    <CommunityRemote
+      v-else-if="selectedType === 'engine'"
+      :engine="selectedEngine"
+      :remote="selectedRootKey"
+      :initial-search="initialSearch"
+    />
     <div v-else-if="selectedType === 'model'" class="single-model-view">
-      <community-model-card v-if="modelFile" :key="modelFile.name" :file="modelFile" :initialCreatorExpanded="false"
-        :initialComponentsExpanded="true" :initialDescriptionExpanded="true" @creator-toggled="handleCreatorToggle"
-        @components-toggled="handleComponentsToggle" @description-toggled="handleDescriptionToggle"
-        @dashboard-link-copied="handleDashboardLinkCopy" />
+      <community-model-card
+        v-if="modelFile"
+        :key="modelFile.name"
+        :file="modelFile"
+        :initialCreatorExpanded="false"
+        :initialComponentsExpanded="true"
+        :initialDescriptionExpanded="true"
+        @creator-toggled="handleCreatorToggle"
+        @components-toggled="handleComponentsToggle"
+        @description-toggled="handleDescriptionToggle"
+        @dashboard-link-copied="handleDashboardLinkCopy"
+      />
       <div v-else class="loading-state">
         <p v-if="isLoading" class="text-loading">Loading model...</p>
         <p v-else class="text-error">Model not found</p>
@@ -23,18 +40,20 @@ import { KeySeparator } from '../../data/constants'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import type { ModelFile } from '../../remotes/models'
 
-
 const props = defineProps<{
   activeCommunityModelKey: string
   initialSearch?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'model-interaction', interaction: {
-    type: 'creator-toggle' | 'components-toggle' | 'description-toggle' | 'dashboard-link-copy'
-    modelName: string
-    data?: any
-  }): void
+  (
+    e: 'model-interaction',
+    interaction: {
+      type: 'creator-toggle' | 'components-toggle' | 'description-toggle' | 'dashboard-link-copy'
+      modelName: string
+      data?: any
+    },
+  ): void
 }>()
 
 // Inject the community API store to get model data
@@ -90,7 +109,7 @@ const modelFile = computed((): ModelFile | null => {
     return null
   }
 
-  return filesForRoot.find(file => file.name === selectedModelName.value) || null
+  return filesForRoot.find((file) => file.name === selectedModelName.value) || null
 })
 
 // Event handlers
@@ -98,7 +117,7 @@ const handleCreatorToggle = (isExpanded: boolean) => {
   emit('model-interaction', {
     type: 'creator-toggle',
     modelName: selectedModelName.value || '',
-    data: { isExpanded }
+    data: { isExpanded },
   })
 }
 
@@ -106,7 +125,7 @@ const handleComponentsToggle = (isExpanded: boolean) => {
   emit('model-interaction', {
     type: 'components-toggle',
     modelName: selectedModelName.value || '',
-    data: { isExpanded }
+    data: { isExpanded },
   })
 }
 
@@ -114,7 +133,7 @@ const handleDescriptionToggle = (isExpanded: boolean) => {
   emit('model-interaction', {
     type: 'description-toggle',
     modelName: selectedModelName.value || '',
-    data: { isExpanded }
+    data: { isExpanded },
   })
 }
 
@@ -122,7 +141,7 @@ const handleDashboardLinkCopy = (component: any) => {
   emit('model-interaction', {
     type: 'dashboard-link-copy',
     modelName: selectedModelName.value || '',
-    data: { component }
+    data: { component },
   })
 }
 
@@ -139,7 +158,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 

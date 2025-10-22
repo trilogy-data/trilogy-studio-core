@@ -1,9 +1,17 @@
 <template>
   <div class="tabbed-container">
     <div class="tab-bar">
-      <div v-for="(tab, index) in tabs" :key="tab.id" :class="['tab', { 'tab-active': activeTab === tab.id }]"
-        @click="selectTab(tab.id)" @dragstart="handleDragStart(index, $event)" @dragover="handleDragOver($event)"
-        @drop="handleDrop(index, $event)" @contextmenu="showContextMenu($event, tab.id, index)" draggable="true">
+      <div
+        v-for="(tab, index) in tabs"
+        :key="tab.id"
+        :class="['tab', { 'tab-active': activeTab === tab.id }]"
+        @click="selectTab(tab.id)"
+        @dragstart="handleDragStart(index, $event)"
+        @dragover="handleDragOver($event)"
+        @drop="handleDrop(index, $event)"
+        @contextmenu="showContextMenu($event, tab.id, index)"
+        draggable="true"
+      >
         <span class="tab-title truncate-text">{{ tab.title }}</span>
         <button class="tab-close-btn" @click.stop="closeTab(tab.id)" v-if="tabs.length > 1">
           ×
@@ -18,12 +26,24 @@
     </div>
 
     <!-- Context Menu -->
-    <div v-if="contextMenu.visible" class="context-menu"
-      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
-      <div class="context-menu-item" @click="closeOtherTabs" :class="{ disabled: tabs.length <= 1 }">
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div
+        class="context-menu-item"
+        @click="closeOtherTabs"
+        :class="{ disabled: tabs.length <= 1 }"
+      >
         Close Other Tabs
       </div>
-      <div class="context-menu-item" @click="closeTabsToRight" :class="{ disabled: !canCloseTabsToRight }">
+      <div
+        class="context-menu-item"
+        @click="closeTabsToRight"
+        :class="{ disabled: !canCloseTabsToRight }"
+      >
         Close Tabs to the Right
       </div>
     </div>
@@ -37,9 +57,7 @@
 import { defineComponent } from 'vue'
 
 import useScreenNavigation from '../../stores/useScreenNavigation'
-import { type ScreenType, } from '../../stores/useScreenNavigation'
-
-
+import { type ScreenType } from '../../stores/useScreenNavigation'
 
 export default defineComponent({
   name: 'TabbedLayout',
@@ -54,7 +72,7 @@ export default defineComponent({
       setActiveTab,
       // Stub methods for new functionality - to be implemented in store
       closeOtherTabsExcept,
-      closeTabsToRightOf
+      closeTabsToRightOf,
     } = navigationStore
     return {
       activeTab,
@@ -75,14 +93,14 @@ export default defineComponent({
         x: 0,
         y: 0,
         targetTabId: '',
-        targetTabIndex: -1
-      }
+        targetTabIndex: -1,
+      },
     }
   },
   computed: {
     canCloseTabsToRight(): boolean {
       return this.contextMenu.targetTabIndex < this.tabs.length - 1
-    }
+    },
   },
   methods: {
     selectTab(tabId: string): void {
