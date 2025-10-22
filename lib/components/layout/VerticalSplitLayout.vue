@@ -17,7 +17,7 @@
   /* flex: 1 1 100%; */
   height: 99.9%;
   background-color: var(--main-bg-color);
-  max-height:100%;
+  max-height: 100%;
 }
 
 .editor-entry {
@@ -73,11 +73,11 @@ export default defineComponent({
       // expandToMin: true,
       gutterSize: 0,
       onDrag: (sizes: number[]) => {
-         console.log(sizes)
+
         this.updateResultsHeight(sizes)
       },
       onDragEnd: (sizes: number[]) => {
-        console.log(sizes)
+
         this.updateResultsHeight(sizes)
       },
     })
@@ -94,28 +94,19 @@ export default defineComponent({
   },
   methods: {
     updateResultsHeight(split: number[]) {
-      console.log('Updating results height')
+
       // @ts-ignore
       // 50 is a constant to account for the header
-      let resultHeight = this.$refs.wrapper.getBoundingClientRect().height 
-      console.log('Wrapper height:', resultHeight)
-
-      let editorSize = split[0]
-      let resultsSize = split[1]
-
-      // let minSize = Math.max(Math.min(editorSize, results) 20)
-      
+      let resultHeight = this.$refs.wrapper.getBoundingClientRect().height
 
 
       if (this.$refs.results) {
         // @ts-ignore
-        this.resultsHeight = resultHeight * (split[1] / 100) 
-        console.log('Results height updated:', this.resultsHeight)
+        this.resultsHeight = resultHeight * (split[1] / 100)
       }
       if (this.$refs.editor) {
         // @ts-ignore
         this.editorHeight = resultHeight * (split[0] / 100) - 50
-        console.log('Editor height updated:', this.editorHeight)
       }
     },
   },

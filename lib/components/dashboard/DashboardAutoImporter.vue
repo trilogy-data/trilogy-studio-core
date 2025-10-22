@@ -257,7 +257,7 @@ const performImport = async () => {
 
     // Auto-redirect after short delay
     setTimeout(() => {
-      screenNavigation.setActiveModel(null)
+      screenNavigation.setActiveModelKey(null)
       screenNavigation.setActiveDashboard(importedDashboard.id)
       screenNavigation.setActiveScreen('dashboard')
     }, 500)

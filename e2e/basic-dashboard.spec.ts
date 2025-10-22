@@ -64,6 +64,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-community-models').click({ force: true })
+  await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   await page.getByTestId('community-model-search').click()
   await page.getByTestId('community-model-search').press('ControlOrMeta+a')
   await page.getByTestId('community-model-search').fill('faa')
@@ -76,11 +77,10 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-dashboard').click()
-  if (isMobile) {
-    await page.getByTestId('dashboard-creator-add').click()
-  }
+  await page.getByTestId('dashboard-creator-add').click({ force: true })
   await page.getByTestId('dashboard-creator-name').click()
   await page.getByTestId('dashboard-creator-name').fill('faa-test')
+  await page.getByTestId('dashboard-creator-connection').selectOption('faa-connection')
   await page.getByTestId('dashboard-creator-import').selectOption('flight')
   await page.getByTestId('dashboard-creator-submit').click()
 

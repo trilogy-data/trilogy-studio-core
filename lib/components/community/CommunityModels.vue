@@ -1,7 +1,7 @@
 <template>
   <div class="view-container">
     <CommunityRemote v-if="selectedType === 'root'" :remote="selectedRootKey" />
-    <CommunityRemote v-else-if="selectedType === 'engine'" :engine="selectedEngine" :remote="selectedRootKey" />
+    <CommunityRemote v-else-if="selectedType === 'engine'" :engine="selectedEngine" :remote="selectedRootKey" :initial-search="initialSearch" />
     <div v-else-if="selectedType === 'model'" class="single-model-view">
       <community-model-card v-if="modelFile" :key="modelFile.name" :file="modelFile" :initialCreatorExpanded="false"
         :initialComponentsExpanded="true" :initialDescriptionExpanded="true" @creator-toggled="handleCreatorToggle"
@@ -26,6 +26,7 @@ import type { ModelFile } from '../../remotes/models'
 
 const props = defineProps<{
   activeCommunityModelKey: string
+  initialSearch?: string
 }>()
 
 const emit = defineEmits<{

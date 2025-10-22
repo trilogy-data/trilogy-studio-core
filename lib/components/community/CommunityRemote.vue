@@ -44,7 +44,7 @@ const props = defineProps({
     required: true,
   },
   engine: {
-    type: String,
+    type: [String, null, undefined] as PropType<string | null | undefined>,
     default: ''
   }
 })

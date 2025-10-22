@@ -2,7 +2,9 @@
   <div :class="{
     'sidebar-item': true,
     'sidebar-item-selected': activeModel === item.key,
-  }" @click="handleItemClick">
+  }" @click="handleItemClick"
+  :data-testid="item.key"
+  >
     <div v-for="_ in item.indent" class="sidebar-padding"></div>
 
     <i v-if="!['model'].includes(item.type)" :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"></i>

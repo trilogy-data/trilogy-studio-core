@@ -18,12 +18,8 @@
     </div>
 
     <!-- Context Menu -->
-    <div 
-      v-if="contextMenu.visible" 
-      class="context-menu" 
-      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
-      @click.stop
-    >
+    <div v-if="contextMenu.visible" class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
       <div class="context-menu-item" @click="closeOtherTabs" :class="{ disabled: tabs.length <= 1 }">
         Close Other Tabs
       </div>
@@ -112,7 +108,7 @@ export default defineComponent({
 
     closeOtherTabs(): void {
       if (this.tabs.length <= 1) return
-      
+
       // Call store method to close all tabs except the target tab
       if (this.closeOtherTabsExcept) {
         this.closeOtherTabsExcept(this.contextMenu.targetTabId)
@@ -125,10 +121,10 @@ export default defineComponent({
 
     closeTabsToRight(): void {
       if (!this.canCloseTabsToRight) return
-      
+
       // Call store method to close tabs to the right of the target tab
       if (this.closeTabsToRightOf) {
-        this.closeTabsToRightOf(this.contextMenu.targetTabIndex)
+        this.closeTabsToRightOf(this.contextMenu.targetTabId)
       } else {
         // Fallback implementation until store method is available
         console.log('closeTabsToRightOf not implemented in store yet')
@@ -176,11 +172,10 @@ export default defineComponent({
       const currentScreen: ScreenType = 'welcome'
       this.openTab(currentScreen, 'Welcome', 'welcome')
     }
-
     // Hide context menu when clicking outside
     document.addEventListener('click', this.hideContextMenu)
-    document.addEventListener('contextmenu', (e) => {
-      if (!e.target?.closest('.tab')) {
+    document.addEventListener('contextmenu', (e: Event) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.tab')) {
         this.hideContextMenu()
       }
     })
@@ -338,7 +333,7 @@ export default defineComponent({
 
 /* Content Area */
 .tab-content {
-  height:100%;
+  height: 100%;
 }
 
 /* Drag and Drop Visual Feedback */
