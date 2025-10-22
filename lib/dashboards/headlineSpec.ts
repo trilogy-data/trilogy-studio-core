@@ -2,6 +2,7 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
+import { DateTime } from 'luxon'
 
 const valueToString = (column: string, value: any): string => {
   if (value === null || value === undefined) {
@@ -16,6 +17,10 @@ const valueToString = (column: string, value: any): string => {
   }
   if (value instanceof Date) {
     return `time(datum.${column}) === time(datetime(${value.getFullYear()}, ${value.getMonth()}, ${value.getDate()}))`
+  }
+  if (value instanceof DateTime) {
+    const iso = value.toUTC().toISO();
+    return `time(datum.${column}) === time(toDate("${iso}"))`
   }
   // Handle arrays and objects by converting to JSON string
   return `datum.${column} === ${JSON.stringify(value)}`
@@ -100,41 +105,41 @@ const createHeadlineLayer = (
     }
     selectMarks = isMobile
       ? [
-          {
-            mark: {
-              type: 'rect',
-              stroke: {
-                expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
-              },
-              strokeWidth: 5,
-              width: 1,
-              height: 1,
-              fillOpacity: 0,
-              x: isMobile
-                ? { expr: `width/2 + (${xOffset} / 100) * width` }
-                : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-              y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
+        {
+          mark: {
+            type: 'rect',
+            stroke: {
+              expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
             },
+            strokeWidth: 5,
+            width: 1,
+            height: 1,
+            fillOpacity: 0,
+            x: isMobile
+              ? { expr: `width/2 + (${xOffset} / 100) * width` }
+              : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+            y: isMobile ? { expr: `${yOffset * 2.5}` } : { expr: `height/2` }, // Vertical offset for mobile, fixed for desktop
           },
-        ]
+        },
+      ]
       : [
-          {
-            mark: {
-              type: 'rect',
-              stroke: {
-                expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
-              },
-              strokeWidth: 5,
-              width: 1,
-              height: 1,
-              fillOpacity: 0,
-              x: isMobile
-                ? { expr: `width/2+ (${xOffset} / 100) * width` }
-                : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
-              y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
+        {
+          mark: {
+            type: 'rect',
+            stroke: {
+              expr: `vlSelectionTest('select_${index}_store', datum) && ${valueToString(column, datum)} ? '#FF7F7F' : 'transparent'`,
             },
+            strokeWidth: 5,
+            width: 1,
+            height: 1,
+            fillOpacity: 0,
+            x: isMobile
+              ? { expr: `width/2+ (${xOffset} / 100) * width` }
+              : { expr: `width/2+ (${xOffset} / 100) * width` }, // Horizontal offset for desktop
+            y: isMobile ? { expr: `(${yOffset} / 100) * height` } : 0,
           },
-        ]
+        },
+      ]
   } else {
     topMark = {
       transform: [{ filter: `${valueToString(column, datum)}` }],
@@ -171,6 +176,8 @@ const createHeadlineLayer = (
       ],
     }
   }
+  console.log('type debug')
+  console.log(valueToString(column, datum))
   let labelMark = {
     mark: {
       type: 'text',

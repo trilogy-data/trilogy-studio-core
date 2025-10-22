@@ -1,5 +1,6 @@
 <template>
-  <div class="symbols-pane">
+  <div class="symbols-pane" :style="{ height: editorHeightCalc }">
+    {{ editorHeight }}
     <div class="search-container">
       <input
         type="text"
@@ -172,6 +173,11 @@ export default defineComponent({
       type: Array as PropType<CompletionItem[]>,
       required: true,
     },
+    editorHeight: {
+      type: Number,
+      required: false,
+      default: null
+    },
   },
   emits: ['select-symbol', 'focus-search'],
 
@@ -179,6 +185,10 @@ export default defineComponent({
     const searchQuery = ref('')
     const filteredSymbols = ref<CompletionItem[]>([])
     const symbolSearchInput = ref<HTMLInputElement | null>(null)
+
+    const editorHeightCalc = computed(() => {
+      return props.editorHeight ? `${props.editorHeight}px` : '100%'
+    })
 
     // Filter checkboxes
     const filters = ref({
@@ -401,6 +411,7 @@ export default defineComponent({
       hideTooltip,
       updateTooltipPosition,
       focusSearch,
+      editorHeightCalc,
     }
   },
 })

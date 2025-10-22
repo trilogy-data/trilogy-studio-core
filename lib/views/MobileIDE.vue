@@ -171,7 +171,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject, defineAsyncComponent } from 'vue'
+import { inject, defineAsyncComponent, provide } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -263,6 +263,8 @@ export default {
       activeCommunityModelKey,
       mobileMenuOpen,
     } = screenNavigation
+
+    provide('navigationStore', screenNavigation)
     return {
       connectionStore,
       editorStore,

@@ -10,6 +10,7 @@ export interface StatusIconProps {
     name: string
     connected: boolean
     error: string | null
+    running: boolean
   }
 }
 
@@ -17,7 +18,8 @@ const props = defineProps<StatusIconProps>()
 
 // Determine status class and message
 const statusClass = computed(() => {
-  if (!props.connection.connected) return 'idle'
+  if (!props.connection.connected) return 'disabled'
+  if (props.connection.running) return 'running'
   return props.connection.error ? 'failed' : 'connected'
 })
 

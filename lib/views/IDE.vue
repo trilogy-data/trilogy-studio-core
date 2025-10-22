@@ -232,7 +232,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import { getDefaultValueFromHash } from '../stores/urlStore'
-import { inject, ref, defineAsyncComponent, onMounted } from 'vue'
+import { inject, ref, defineAsyncComponent, onMounted, provide } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -359,6 +359,8 @@ export default {
         isFullScreen.value = true
       }
     })
+
+  provide('navigationStore', screenNavigation)
 
     return {
       connectionStore,

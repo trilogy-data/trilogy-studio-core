@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
+import { lastSegment } from '../data/constants'
 
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
@@ -70,6 +71,7 @@ export interface NavigationStore {
 
   setActiveLLMConnectionKey(llmConnection: string | null): void
   toggleMobileMenu(): void
+  updateTabName(screen: ScreenType, title: string | null, address: string): void
   openTab(screen: ScreenType, title: string | null, address: string): void
   closeTab(tabId: string): void
   closeOtherTabsExcept(tabId: string): void
@@ -106,6 +108,35 @@ const createNavigationStore = (): NavigationStore => {
     'dashboard-import',
   ]
 
+  const getName = (screen: ScreenType, title: string | null, address: string): string => {
+    if (title) {
+      return title
+    }
+    if (screen === 'dashboard') {
+      let dashboard = dashboardStore.dashboards[address]
+      if (dashboard) {
+        return dashboard.name || 'Untitled Dashboard'
+      }
+    } else if (screen === 'editors') {
+      let editor = editorStore.editors[address]
+      if (editor) {
+        return editor.name || 'Untitled Editor'
+      }
+    } 
+    return lastSegment(address, null)
+  }
+
+  const updateTabName = (screen: ScreenType, title: string | null, address: string): void => {
+    const tab = state.tabs.value.find(
+      (tab) => tab.screen === screen && tab.address === address,
+    )
+    if (tab) {
+      let tabName = getName(screen, title, address)
+      console.log('Updating tab name to:', tabName, 'for tab id:', tab.id)
+      tab.title = tabName
+    }
+  }
+
   const openTab = (screen: ScreenType, title: string | null, address: string): void => {
     // check if tab already exists
     const existingTab = state.tabs.value.find(
@@ -122,22 +153,7 @@ const createNavigationStore = (): NavigationStore => {
     let tabIdCounter = maxTabId
     console.log('Opening tab:', title, 'with id:', `tab-${tabIdCounter + 1}`)
     setActiveScreen(screen)
-    if (title === null) {
-      if (screen === 'dashboard') {
-        let dashboard = dashboardStore.dashboards[address]
-        if (dashboard) {
-          title = dashboard.name || 'Untitled Dashboard'
-        }
-      } else if (screen === 'editors') {
-        let editor = editorStore.editors[address]
-        if (editor) {
-          title = editor.name || 'Untitled Editor'
-        }
-      } else if (screen === 'connections') {
-        title = `${address}`
-      }
-    }
-    let finalTitle = title || 'Untitled'
+    let finalTitle = getName(screen, title, address)
     const tab: Tab = {
       id: `tab-${++tabIdCounter}`,
       title: finalTitle,
@@ -231,8 +247,7 @@ const createNavigationStore = (): NavigationStore => {
         state.activeModelKey.value = tabInfo.address
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
-      }
-
+      } 
       //close if required
       if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
         state.mobileMenuOpen.value = false
@@ -264,7 +279,6 @@ const createNavigationStore = (): NavigationStore => {
     }
     pushHashToUrl('model', model)
     state.activeModelKey.value = model
-    state.mobileMenuOpen.value = false
   }
 
   const setActiveCommunityModelKey = (communityModel: string | null): void => {
@@ -419,6 +433,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveModelKey,
     setActiveTab,
     openTab,
+    updateTabName,
     closeTab,
     closeOtherTabsExcept,
     closeTabsToRightOf,
@@ -432,4 +447,4 @@ export default function useScreenNavigation(): NavigationStore {
   return navigationStore
 }
 
-export type { ScreenType }
+export type { ScreenType, }

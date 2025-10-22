@@ -223,7 +223,7 @@ export default defineComponent({
       {
         name: 'dashboard',
         tooltip: 'Chart',
-        icon: 'mdi mdi-chart-areaspline',
+        icon: 'mdi mdi-chart-multiple',
         screen: 'dashboard',
       },
       {
@@ -235,7 +235,7 @@ export default defineComponent({
       {
         name: 'community-models',
         tooltip: 'Share & Explore',
-        icon: 'mdi mdi-library',
+        icon: 'mdi mdi-library-outline',
         screen: 'community-models',
       },
       {
@@ -249,19 +249,19 @@ export default defineComponent({
       {
         name: 'edit',
         tooltip: 'Query',
-        icon: 'mdi mdi-file-document-edit',
+        icon: 'mdi mdi-file-document-edit-outline',
         screen: 'editors',
       },
       {
         name: 'database',
         tooltip: 'Connect',
-        icon: 'mdi mdi-database',
+        icon: 'mdi mdi-database-outline',
         screen: 'connections',
       },
       {
         name: 'llm',
         tooltip: 'AI',
-        icon: 'mdi mdi-creation',
+        icon: 'mdi mdi-creation-outline',
         screen: 'llms',
       },
 
@@ -436,7 +436,7 @@ export default defineComponent({
 .sidebar-container {
   display: flex;
   height: 100vh;
-  background-color: var(--sidebar-bg);
+  background-color: var(--sidebar-bg-color);
   color: var(--sidebar-font);
 }
 

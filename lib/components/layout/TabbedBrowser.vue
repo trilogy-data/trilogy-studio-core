@@ -12,6 +12,7 @@
         @contextmenu="showContextMenu($event, tab.id, index)"
         draggable="true"
       >
+        <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
         <span class="tab-title truncate-text">{{ tab.title }}</span>
         <button class="tab-close-btn" @click.stop="closeTab(tab.id)" v-if="tabs.length > 1">
           ×
@@ -55,7 +56,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import { type ScreenType } from '../../stores/useScreenNavigation'
 
@@ -95,6 +95,21 @@ export default defineComponent({
         targetTabId: '',
         targetTabIndex: -1,
       },
+      // Icon mapping that matches the sidebar configuration
+      iconMap: {
+        'editors': 'mdi mdi-file-document-edit-outline',
+        'connections': 'mdi mdi-database-outline',
+        'llms': 'mdi mdi-creation-outline',
+        'dashboard': 'mdi mdi-chart-areaspline-outline',
+        'dashboard-import': 'mdi mdi-chart-multiple',
+        'models': 'mdi mdi-set-center',
+        'community-models': 'mdi mdi-library-outline',
+        'tutorial': 'mdi mdi-help',
+        'settings': 'mdi mdi-cog-outline',
+        'profile': 'mdi mdi-account-outline',
+        'welcome': 'mdi mdi-home-outline',
+        '': 'mdi mdi-file-document-outline', // fallback icon
+      } as Record<ScreenType, string>
     }
   },
   computed: {
@@ -103,6 +118,10 @@ export default defineComponent({
     },
   },
   methods: {
+    getTabIcon(screenType: ScreenType): string {
+      return this.iconMap[screenType] || 'mdi mdi-file-document-outline'
+    },
+
     selectTab(tabId: string): void {
       console.log('Selecting tab:', tabId)
       this.setActiveTab(tabId)
@@ -272,11 +291,21 @@ export default defineComponent({
   z-index: 1;
 }
 
+.tab-icon {
+  font-size: 16px;
+  margin-right: 6px;
+  color: var(--text-color);
+  flex-shrink: 0;
+}
+
 .tab-title {
   flex: 1;
   font-size: var(--small-font-size);
   color: var(--text-color);
   margin-right: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .tab-close-btn {
@@ -290,6 +319,7 @@ export default defineComponent({
   border-radius: 2px;
   margin-left: 4px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .tab-close-btn:hover {
@@ -363,12 +393,24 @@ export default defineComponent({
   cursor: grabbing;
 }
 
+/* Utility Classes */
+.truncate-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Responsive Design */
 @media screen and (max-width: 768px) {
   .tab {
     min-width: 100px;
     max-width: 150px;
     padding: 6px 8px;
+  }
+
+  .tab-icon {
+    font-size: 14px;
+    margin-right: 4px;
   }
 
   .tab-title {
@@ -386,6 +428,28 @@ export default defineComponent({
   .context-menu-item {
     padding: 10px 16px;
     font-size: var(--font-size);
+  }
+
+  /* On very small screens, consider hiding tab titles and showing only icons */
+  @media screen and (max-width: 480px) {
+    .tab {
+      min-width: 40px;
+      max-width: 50px;
+      padding: 6px 4px;
+      justify-content: center;
+    }
+
+    .tab-title {
+      display: none;
+    }
+
+    .tab-icon {
+      margin-right: 0;
+    }
+
+    .tab-close-btn {
+      display: none;
+    }
   }
 }
 </style>

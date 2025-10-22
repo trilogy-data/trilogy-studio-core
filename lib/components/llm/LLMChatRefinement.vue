@@ -47,7 +47,7 @@
         ref="inputTextarea"
         data-testid="input-textarea"
       ></textarea>
-      <button @click="sendMessage" :disabled="isLoading" data-testid="send-button">Send</button>
+      <button @click="sendMessage" :disabled="isLoading" data-testid="send-button" class="send-button">Send</button>
     </div>
 
     <!-- Action buttons -->
@@ -403,9 +403,6 @@ export default defineComponent({
 .input-container button {
   margin-left: 10px;
   padding: 0 15px;
-  background-color: var(--button-bg);
-  border: none;
-  color: var(--text-color);
   cursor: pointer;
   align-self: flex-end;
   height: 32px;
@@ -426,20 +423,23 @@ export default defineComponent({
   padding: 10px;
   gap: 10px;
   background-color: var(--sidebar-bg);
-  border-top: 1px solid var(--border-light);
+    
+}
+
+.send-button {
+  border: 1px solid var(--border);
 }
 
 .accept-button {
   padding: 8px 16px;
   background-color: transparent;
-  border: none;
-  border: 1px solid #4caf50;
+  border: 1px solid var(--special-text);
   cursor: pointer;
   font-size: var(--button-font-size);
 }
 
 .accept-button:hover:not(:disabled) {
-  background-color: #3d8b40;
+  background-color: var(--special-text);
   color: white;
 }
 
@@ -452,7 +452,7 @@ export default defineComponent({
 }
 
 .discard-button:hover:not(:disabled) {
-  background-color: #d32f2f;
+  background-color: var(--delete-color);
   color: white;
 }
 

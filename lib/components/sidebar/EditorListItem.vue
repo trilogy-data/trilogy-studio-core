@@ -53,7 +53,7 @@
         <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
         <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
       </span>
-      <status-icon :status="connectionStateToStatus(connectionStore.connections[item.label])" />
+      <connection-status-icon v-if="connectionStore.connections[item.label]" :connection="connectionStore.connections[item.label]"/>
     </template>
     <template v-else-if="item.type === 'folder'">
       <span class="tag-container hover-icon">
@@ -87,8 +87,7 @@
 import { inject } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import Tooltip from '../Tooltip.vue'
-import StatusIcon from '../StatusIcon.vue'
-import type { Connection } from '../../connections'
+import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
 import useModelConfigStore from '../../stores/modelStore'
@@ -124,18 +123,7 @@ export default {
 
     const modelConfigStore = useModelConfigStore()
 
-    const connectionStateToStatus = (connection: Connection | null) => {
-      if (!connection) {
-        return 'disabled'
-      }
-      if (connection.running) {
-        return 'running'
-      } else if (connection.connected) {
-        return 'connected'
-      } else {
-        return 'disabled'
-      }
-    }
+
 
     const createDefaultModel = async (connectionName: string) => {
       try {
@@ -158,13 +146,12 @@ export default {
     return {
       connectionStore,
       trilogyIcon,
-      connectionStateToStatus,
       createDefaultModel,
     }
   },
   components: {
     Tooltip,
-    StatusIcon,
+    ConnectionStatusIcon,
     EditorCreatorIcon,
   },
 }

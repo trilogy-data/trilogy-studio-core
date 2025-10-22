@@ -42,6 +42,7 @@
           @select-symbol="insertSymbol"
           ref="symbolsPane"
           v-if="!isMobile"
+          :editorHeight="containerHeight"
         />
       </div>
     </template>
@@ -69,6 +70,7 @@ import type { EditorStoreType } from '../../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../../stores/modelStore.ts'
 import type { LLMConnectionStoreType } from '../../stores/llmStore.ts'
+import type { NavigationStore} from '../../stores/useScreenNavigation.ts'
 import { Results } from '../../editors/results.ts'
 import type { QueryInput } from '../../stores/queryExecutionService.ts'
 
@@ -156,6 +158,7 @@ export default defineComponent({
     const setActiveEditor = inject<Function>('setActiveEditor')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
+    const navigationStore = inject<NavigationStore>('navigationStore')
     if (!analyticsStore) {
       throw new Error('Analytics store is required')
     }
@@ -185,6 +188,7 @@ export default defineComponent({
       setActiveEditor,
       queryExecutionService,
       analyticsStore,
+      navigationStore,
     }
   },
   computed: {
@@ -233,6 +237,9 @@ export default defineComponent({
           this.modelStore.models[model].updateModelSourceName(this.editorData.id, newName)
           this.$emit('save-models')
         }
+      }
+      if (this.navigationStore) {
+        this.navigationStore.updateTabName('editors', null, this.editorId)
       }
     },
 

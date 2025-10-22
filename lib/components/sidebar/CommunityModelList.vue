@@ -107,7 +107,7 @@ import SidebarList from './SidebarList.vue'
 import CommunityModelListItem from './CommunityModelListItem.vue'
 import type { ModelFile, ModelRoot } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
-import { KeySeparator } from '../../data/constants'
+
 
 export default {
   name: 'CommunityModelList',
@@ -157,17 +157,9 @@ export default {
     }
 
     // Handle item clicks (for collapsing/expanding)
-    const handleItemClick = (type: string, key: string, modelRoot?: ModelRoot) => {
-      console.log('Item clicked:', type, key, modelRoot)
+    const handleItemClick = (_: string, key: string, __: ModelRoot) => {
       collapsed.value[key] = !collapsed.value[key]
-      console.log(collapsed.value)
-      // rsplit
-
-      const lastIndex = key.lastIndexOf(type + KeySeparator)
-      const label = lastIndex !== -1 ? key.substring(lastIndex + type.length) : key
-      console.log('Navigating to community model tab with label:', label, 'and key:', key)
-      // navigationStore.openTab('community-models', label, key)
-      navigationStore.openTab('community-models', label, key)
+      navigationStore.openTab('community-models', null, key)
     }
 
     const displayTree = computed(() => {
