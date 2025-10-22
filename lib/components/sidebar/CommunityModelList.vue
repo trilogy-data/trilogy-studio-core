@@ -108,7 +108,6 @@ import CommunityModelListItem from './CommunityModelListItem.vue'
 import type { ModelFile, ModelRoot } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 
-
 export default {
   name: 'CommunityModelList',
   setup() {

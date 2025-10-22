@@ -47,7 +47,14 @@
         ref="inputTextarea"
         data-testid="input-textarea"
       ></textarea>
-      <button @click="sendMessage" :disabled="isLoading" data-testid="send-button" class="send-button">Send</button>
+      <button
+        @click="sendMessage"
+        :disabled="isLoading"
+        data-testid="send-button"
+        class="send-button"
+      >
+        Send
+      </button>
     </div>
 
     <!-- Action buttons -->
@@ -423,7 +430,6 @@ export default defineComponent({
   padding: 10px;
   gap: 10px;
   background-color: var(--sidebar-bg);
-    
 }
 
 .send-button {

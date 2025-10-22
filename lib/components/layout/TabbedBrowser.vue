@@ -97,19 +97,19 @@ export default defineComponent({
       },
       // Icon mapping that matches the sidebar configuration
       iconMap: {
-        'editors': 'mdi mdi-file-document-edit-outline',
-        'connections': 'mdi mdi-database-outline',
-        'llms': 'mdi mdi-creation-outline',
-        'dashboard': 'mdi mdi-chart-areaspline-outline',
+        editors: 'mdi mdi-file-document-edit-outline',
+        connections: 'mdi mdi-database-outline',
+        llms: 'mdi mdi-creation-outline',
+        dashboard: 'mdi mdi-chart-areaspline-outline',
         'dashboard-import': 'mdi mdi-chart-multiple',
-        'models': 'mdi mdi-set-center',
+        models: 'mdi mdi-set-center',
         'community-models': 'mdi mdi-library-outline',
-        'tutorial': 'mdi mdi-help',
-        'settings': 'mdi mdi-cog-outline',
-        'profile': 'mdi mdi-account-outline',
-        'welcome': 'mdi mdi-home-outline',
+        tutorial: 'mdi mdi-help',
+        settings: 'mdi mdi-cog-outline',
+        profile: 'mdi mdi-account-outline',
+        welcome: 'mdi mdi-home-outline',
         '': 'mdi mdi-file-document-outline', // fallback icon
-      } as Record<ScreenType, string>
+      } as Record<ScreenType, string>,
     }
   },
   computed: {

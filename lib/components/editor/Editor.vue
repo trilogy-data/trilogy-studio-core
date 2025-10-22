@@ -70,7 +70,7 @@ import type { EditorStoreType } from '../../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../../stores/modelStore.ts'
 import type { LLMConnectionStoreType } from '../../stores/llmStore.ts'
-import type { NavigationStore} from '../../stores/useScreenNavigation.ts'
+import type { NavigationStore } from '../../stores/useScreenNavigation.ts'
 import { Results } from '../../editors/results.ts'
 import type { QueryInput } from '../../stores/queryExecutionService.ts'
 

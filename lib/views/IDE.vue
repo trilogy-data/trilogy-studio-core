@@ -360,7 +360,7 @@ export default {
       }
     })
 
-  provide('navigationStore', screenNavigation)
+    provide('navigationStore', screenNavigation)
 
     return {
       connectionStore,

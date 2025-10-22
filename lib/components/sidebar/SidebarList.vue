@@ -30,13 +30,11 @@
   padding-bottom: 5px;
 }
 
-
 .sidebar-header {
   font-weight: 400;
   font-size: 14px;
   margin-top: 5px;
   margin-bottom: 5px;
-
 }
 </style>
 <script lang="ts">

@@ -176,7 +176,7 @@ export default defineComponent({
     editorHeight: {
       type: Number,
       required: false,
-      default: null
+      default: null,
     },
   },
   emits: ['select-symbol', 'focus-search'],

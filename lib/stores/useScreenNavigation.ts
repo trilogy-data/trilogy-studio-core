@@ -122,14 +122,12 @@ const createNavigationStore = (): NavigationStore => {
       if (editor) {
         return editor.name || 'Untitled Editor'
       }
-    } 
+    }
     return lastSegment(address, null)
   }
 
   const updateTabName = (screen: ScreenType, title: string | null, address: string): void => {
-    const tab = state.tabs.value.find(
-      (tab) => tab.screen === screen && tab.address === address,
-    )
+    const tab = state.tabs.value.find((tab) => tab.screen === screen && tab.address === address)
     if (tab) {
       let tabName = getName(screen, title, address)
       console.log('Updating tab name to:', tabName, 'for tab id:', tab.id)
@@ -247,7 +245,7 @@ const createNavigationStore = (): NavigationStore => {
         state.activeModelKey.value = tabInfo.address
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
-      } 
+      }
       //close if required
       if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
         state.mobileMenuOpen.value = false
@@ -447,4 +445,4 @@ export default function useScreenNavigation(): NavigationStore {
   return navigationStore
 }
 
-export type { ScreenType, }
+export type { ScreenType }

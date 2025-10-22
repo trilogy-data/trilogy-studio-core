@@ -53,7 +53,10 @@
         <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
         <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
       </span>
-      <connection-status-icon v-if="connectionStore.connections[item.label]" :connection="connectionStore.connections[item.label]"/>
+      <connection-status-icon
+        v-if="connectionStore.connections[item.label]"
+        :connection="connectionStore.connections[item.label]"
+      />
     </template>
     <template v-else-if="item.type === 'folder'">
       <span class="tag-container hover-icon">
@@ -122,8 +125,6 @@ export default {
     }
 
     const modelConfigStore = useModelConfigStore()
-
-
 
     const createDefaultModel = async (connectionName: string) => {
       try {
