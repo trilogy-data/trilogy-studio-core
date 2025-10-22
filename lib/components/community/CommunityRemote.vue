@@ -32,8 +32,6 @@ import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import CommunityModelHeader from './CommunityModelHeader.vue'
 import CommunityModelCard from './CommunityModelCard.vue'
 
-import useScreenNavigation from '../../stores/useScreenNavigation'
-
 const props = defineProps({
   initialSearch: {
     type: String,
@@ -51,7 +49,6 @@ const props = defineProps({
 
 const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
 const { errors, refreshData, availableEngines } = communityApiStore
-const navigation = useScreenNavigation()
 
 const error = props.remote ? errors[props.remote] : null
 
@@ -65,11 +62,11 @@ const creatorIsExpanded = ref<Record<string, boolean>>({})
 const isExpanded = ref<Record<string, boolean>>({})
 const descriptionExpanded = ref<Record<string, boolean>>({})
 
-const searchQuery = ref(navigation.initialSearch.value || props.initialSearch)
+const searchQuery = ref(props.initialSearch)
 const selectedEngine = ref(props.engine || '')
 const importStatus = ref<'all' | 'imported' | 'not-imported'>('all')
 
-const hasInitialSearch = computed(() => !!(navigation.initialSearch.value || props.initialSearch))
+const hasInitialSearch = computed(() => !!(props.initialSearch))
 
 
 // Watch for changes to the engine prop and update selectedEngine accordingly

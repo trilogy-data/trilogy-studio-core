@@ -348,12 +348,11 @@ const {
   setActiveScreen,
   setActiveEditor,
   setActiveDashboard,
-  setActiveCommunityModelFilter,
 } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)
 provide('setActiveDashboard', setActiveDashboard)
-provide('setActiveCommunityModelFilter', setActiveCommunityModelFilter)
+
 let store = useAnalyticsStore()
 provide('analyticsStore', store)
 provide(

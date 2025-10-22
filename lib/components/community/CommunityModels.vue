@@ -1,6 +1,6 @@
 <template>
   <div class="view-container">
-    <CommunityRemote v-if="selectedType === 'root'" :remote="selectedRootKey" />
+    <CommunityRemote v-if="selectedType === 'root'" :remote="selectedRootKey" :initial-search="initialSearch" />
     <CommunityRemote v-else-if="selectedType === 'engine'" :engine="selectedEngine" :remote="selectedRootKey" :initial-search="initialSearch" />
     <div v-else-if="selectedType === 'model'" class="single-model-view">
       <community-model-card v-if="modelFile" :key="modelFile.name" :file="modelFile" :initialCreatorExpanded="false"
