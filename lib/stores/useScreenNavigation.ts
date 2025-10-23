@@ -154,7 +154,7 @@ const createNavigationStore = (): NavigationStore => {
       return isNaN(idNum) ? maxId : Math.max(maxId, idNum)
     }, 0)
     let tabIdCounter = maxTabId
-    console.log('Opening tab:', title, 'with id:', `tab-${tabIdCounter + 1}`)
+    console.log('Opening tab:', title, `with id: ${address}`, `tab-${tabIdCounter + 1}`)
     setActiveScreen(screen)
     let finalTitle = getName(screen, title, address)
     const tab: Tab = {
@@ -250,14 +250,7 @@ const createNavigationStore = (): NavigationStore => {
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
       }
-      //close if required
-      // if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
-      if (tabInfo.address.split(KeySeparator).length > 1) {
-        // count of KeySeparator>1
-        state.mobileMenuOpen.value = false;
-      }
-
-      // }
+      state.mobileMenuOpen.value = false;
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {

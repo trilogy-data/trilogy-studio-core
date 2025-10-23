@@ -41,6 +41,7 @@
       :isMobile="isMobile"
       :testTag="testTag"
       @toggle="toggleCollapse"
+      @click="handleItemClick"
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
@@ -247,11 +248,11 @@ export default {
       }
       delete isLoading.value[id]
     }
-    const toggleCollapse = async (id: string, connection: string, type: string) => {
+    const handleItemClick = async (id: string, connection: string, type: string) => {
       // if we are expanding a connection, get the databases
-      if (['connection', 'database', 'schema', 'table'].includes(type)) {
-        emit('connection-key-selected', id)
-      }
+      emit('connection-key-selected', id)
+    }
+    const toggleCollapse = async (id: string, connection: string, type: string) => {
 
       if (
         type === 'connection' &&
@@ -352,8 +353,9 @@ export default {
       connectionStore,
       editorStore,
       contentList,
-      filteredContentList, // Use the filtered list instead of the original
+      filteredContentList, 
       toggleCollapse,
+      handleItemClick,
       toggleMobileMenu,
       collapsed,
       saveConnections,
@@ -370,8 +372,8 @@ export default {
       rightSplit,
       creatorVisible,
       isMobile,
-      searchTerm, // Expose search term to template
-      clearSearch, // Expose clear search function
+      searchTerm, 
+      clearSearch, 
     }
   },
   components: {

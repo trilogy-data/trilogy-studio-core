@@ -31,7 +31,7 @@ import { ref, computed, inject } from 'vue'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import { ModelConfig } from '../../models'
-interface ModelSelectorProps {
+export interface ModelSelectorProps {
   connection: {
     name: string
     model: string | null

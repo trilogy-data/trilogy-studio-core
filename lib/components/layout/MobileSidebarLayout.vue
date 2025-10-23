@@ -11,10 +11,10 @@
       <span class="header">{{ screenTitle }}</span>
     </div>
     <div class="interface-wrap">
-      <div v-if="menuOpen" ref="sidebar" class="sidebar">
+      <div v-show="menuOpen" ref="sidebar" class="sidebar">
         <slot name="sidebar"></slot>
       </div>
-      <div v-else ref="content" class="nested-page-content" id="page-content">
+      <div v-show="!menuOpen" ref="content" class="nested-page-content" id="page-content">
         <slot></slot>
       </div>
     </div>

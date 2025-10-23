@@ -1,11 +1,15 @@
 <template>
   <div>
-    <div
-      class="sidebar-item"
+    <sidebar-item
+      :item-id="item.id"
+      :name="getItemName()"
+      :indent="item.indent"
+      :is-selected="isSelected"
+      :is-collapsible="isExpandable"
+      :is-collapsed="isCollapsed"
       @click="handleItemClick"
+      @toggle="toggleCollapse"
       @contextmenu.prevent="showContextMenu"
-      :class="{ 'sidebar-item-selected': isSelected }"
-      :data-testid="`llm-connection-list-item-${item.id}`"
     >
       <!-- Context Menu -->
       <context-menu
@@ -15,137 +19,146 @@
         @item-click="handleContextMenuItemClick"
         @close="contextMenuVisible = false"
       />
-      <!-- Indentation -->
-      <div v-for="_ in item.indent" :key="`indent-${_}`" class="sidebar-padding"></div>
-      <!-- Expandable Item Icons -->
-      <template v-if="isExpandable">
-        <i v-if="isCollapsed === false" class="mdi mdi-menu-down"></i>
-        <i v-else class="mdi mdi-menu-right"></i>
-      </template>
-      <!-- Connection Type Icons -->
-      <LLMProviderIcon
-        v-if="item.type === 'connection'"
-        :provider-type="getProviderType(item.connection)"
-      />
-      <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle"></i>
-      <!-- Item Name -->
-      <div
-        class="refresh title-pad-left truncate-text sidebar-sub-item"
-        v-if="item.type === 'refresh-connection'"
-        @click="handleRefreshConnectionClick"
-      >
-        {{ item.name }}
-      </div>
-      <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
-        <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
-          <button type="submit" class="customize-button">Update API Key</button>
-          <div class="api-key-input-wrapper">
-            <input
-              :type="showApiKey ? 'text' : 'password'"
-              id="api-key"
-              v-model="apiKeyInput"
-              placeholder="API Key"
-              class="connection-customize"
-              :data-testid="`api-key-input-${item.connection.name}`"
-            />
-            <button
-              type="button"
-              class="visibility-toggle"
-              @click="toggleApiKeyVisibility"
-              :data-testid="`toggle-api-key-visibility-${item.connection.name}`"
-              :title="showApiKey ? 'Hide API Key' : 'Show API Key'"
-            >
-              <i :class="showApiKey ? 'mdi mdi-eye-off' : 'mdi mdi-eye'"></i>
-            </button>
-          </div>
-        </form>
-      </div>
-      <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
-        <form
-          @submit.prevent="updateModel(item.connection, selectedModel)"
-          :data-testid="`model-update-form-${item.connection.name}`"
-        >
-          <button
-            type="submit"
-            class="customize-button"
-            :data-testid="`update-model-${item.connection.name}`"
-          >
-            Update Model
-          </button>
-          <select
-            v-model="selectedModel"
-            id="connection-type"
-            required
-            class="connection-customize"
-            :data-testid="`model-select-${item.connection.name}`"
-          >
-            <option
-              v-for="model in item.connection.models"
-              :value="model"
-              :key="model"
-              :data-testid="`model-option-${model}`"
-            >
-              {{ model }}
-            </option>
-          </select>
-        </form>
-      </div>
-      <div
-        v-else-if="item.type === 'toggle-save-credential'"
-        class="md-token-container"
-        @click.stop
-      >
-        <label class="save-credential-toggle">
-          <input
-            type="checkbox"
-            :checked="item.connection.saveCredential"
-            @change="toggleSaveCredential(item.connection)"
-          />
-          <span class="checkbox-label">Save Credentials</span>
-        </label>
-      </div>
-      <span
-        v-else
-        class="title-pad-left truncate-text"
-        :class="{ 'error-indicator': item.type === 'error' }"
-      >
-        {{ item.name }}
-        <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
-      </span>
-      <!-- Connection-specific Actions -->
-      <div class="connection-actions" v-if="item.type === 'connection'">
-        <!-- Set Active Button for Connection -->
-        <i
-          v-if="item.connection && item.connection.isDefault"
-          class="mdi mdi-star loading-button is-active"
-        ></i>
-        <LoadingButton
-          v-else
-          class="loading-button"
-          @click.stop
-          :action="() => setAsActive(item.id)"
-          title="Set as default"
-        >
-          <i class="mdi mdi-star-outline"></i>
-        </LoadingButton>
-        <!-- Refresh Button for Connection -->
-        <connection-refresh
-          v-if="item.connection"
-          :connection="item.connection"
-          type="llm"
-          :is-connected="isConnected(item.connection)"
-          :data-testid="`refresh-llm-connection-${item.connection.name}`"
-        />
 
-        <tooltip class="tacticle-button" content="Delete Connection" position="left">
-          <span class="remove-btn" @click.stop="deleteConnection(item.id)">
-            <i class="mdi mdi-trash-can tactile-button"></i>
-          </span>
-        </tooltip>
-        <!-- Status Indicator -->
-        <connection-status-icon v-if="item.connection" :connection="item.connection" />
-      </div>
-    </div>
+      <!-- Custom icon slot for different item types -->
+      <template #icon>
+        <LLMProviderIcon
+          v-if="item.type === 'connection'"
+          :provider-type="getProviderType(item.connection)"
+        />
+        <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle node-icon"></i>
+      </template>
+
+      <!-- Custom name slot for complex content -->
+      <template #name>
+        <!-- Special handling for different item types -->
+        <div
+          v-if="item.type === 'refresh-connection'"
+          class="refresh title-pad-left truncate-text sidebar-sub-item"
+          @click="handleRefreshConnectionClick"
+        >
+          {{ item.name }}
+        </div>
+        
+        <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
+          <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
+            <button type="submit" class="customize-button">Update API Key</button>
+            <div class="api-key-input-wrapper">
+              <input
+                :type="showApiKey ? 'text' : 'password'"
+                id="api-key"
+                v-model="apiKeyInput"
+                placeholder="API Key"
+                class="connection-customize"
+                :data-testid="`api-key-input-${item.connection.name}`"
+              />
+              <button
+                type="button"
+                class="visibility-toggle"
+                @click="toggleApiKeyVisibility"
+                :data-testid="`toggle-api-key-visibility-${item.connection.name}`"
+                :title="showApiKey ? 'Hide API Key' : 'Show API Key'"
+              >
+                <i :class="showApiKey ? 'mdi mdi-eye-off' : 'mdi mdi-eye'"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
+          <form
+            @submit.prevent="updateModel(item.connection, selectedModel)"
+            :data-testid="`model-update-form-${item.connection.name}`"
+          >
+            <button
+              type="submit"
+              class="customize-button"
+              :data-testid="`update-model-${item.connection.name}`"
+            >
+              Update Model
+            </button>
+            <select
+              v-model="selectedModel"
+              id="connection-type"
+              required
+              class="connection-customize"
+              :data-testid="`model-select-${item.connection.name}`"
+            >
+              <option
+                v-for="model in item.connection.models"
+                :value="model"
+                :key="model"
+                :data-testid="`model-option-${model}`"
+              >
+                {{ model }}
+              </option>
+            </select>
+          </form>
+        </div>
+        
+        <div
+          v-else-if="item.type === 'toggle-save-credential'"
+          class="md-token-container"
+          @click.stop
+        >
+          <label class="save-credential-toggle">
+            <input
+              type="checkbox"
+              :checked="item.connection.saveCredential"
+              @change="toggleSaveCredential(item.connection)"
+            />
+            <span class="checkbox-label">Save Credentials</span>
+          </label>
+        </div>
+        
+        <span
+          v-else
+          class="title-pad-left truncate-text"
+          :class="{ 'error-indicator': item.type === 'error' }"
+        >
+          {{ item.name }}
+          <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
+        </span>
+      </template>
+
+      <!-- Custom extra content slot for connection actions -->
+      <template #extra-content>
+        <div class="connection-actions" v-if="item.type === 'connection'">
+          <!-- Set Active Button for Connection -->
+          <i
+            v-if="item.connection && item.connection.isDefault"
+            class="mdi mdi-star loading-button is-active"
+          ></i>
+          <LoadingButton
+            v-else
+            class="loading-button"
+            @click.stop
+            :action="() => setAsActive(item.id)"
+            title="Set as default"
+          >
+            <i class="mdi mdi-star-outline"></i>
+          </LoadingButton>
+          
+          <!-- Refresh Button for Connection -->
+          <connection-refresh
+            v-if="item.connection"
+            :connection="item.connection"
+            type="llm"
+            :is-connected="isConnected(item.connection)"
+            :data-testid="`refresh-llm-connection-${item.connection.name}`"
+          />
+
+          <tooltip class="tacticle-button" content="Delete Connection" position="left">
+            <span class="remove-btn" @click.stop="deleteConnection(item.id)">
+              <i class="mdi mdi-trash-can tactile-button"></i>
+            </span>
+          </tooltip>
+          
+          <!-- Status Indicator -->
+          <connection-status-icon v-if="item.connection" :connection="item.connection" />
+        </div>
+      </template>
+    </sidebar-item>
   </div>
 </template>
 
@@ -153,6 +166,7 @@
 import { ref, computed, defineComponent, onMounted, watch } from 'vue'
 import type { PropType } from 'vue'
 import { AnthropicProvider, OpenAIProvider, MistralProvider, GoogleProvider } from '../../llm'
+import SidebarItem from './GenericSidebarItem.vue'
 import LLMProviderIcon from './LLMProviderIcon.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
@@ -161,6 +175,7 @@ import ContextMenu from '../ContextMenu.vue'
 import type { Position, ContextMenuItem } from '../ContextMenu.vue'
 import type { LLMProvider } from '../../llm/base'
 import Tooltip from '../Tooltip.vue'
+
 export interface ListItem {
   id: string
   name: string
@@ -180,6 +195,7 @@ export interface ListItem {
 export default defineComponent({
   name: 'LLMConnectionListItem',
   components: {
+    SidebarItem,
     LLMProviderIcon,
     ConnectionRefresh,
     ConnectionStatusIcon,
@@ -256,11 +272,9 @@ export default defineComponent({
       const items: ContextMenuItem[] = []
 
       if (props.item.type === 'connection') {
-        // Add connection-specific menu items
         items.push(
           { id: 'set-default', label: 'Set as Default', icon: 'mdi-star-outline' },
           { id: 'refresh', label: 'Refresh Connection', icon: 'mdi-refresh' },
-          // { id: 'edit-api-key', label: 'Edit API Key', icon: 'mdi-key-outline' },
           { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true },
         )
       }
@@ -269,7 +283,6 @@ export default defineComponent({
     })
 
     const showContextMenu = (event: MouseEvent) => {
-      // Only show context menu for connections
       if (props.item.type === 'connection') {
         contextMenuPosition.value = {
           x: event.clientX,
@@ -290,9 +303,6 @@ export default defineComponent({
         case 'refresh':
           emit('refresh', props.item.id, props.item.connection?.name || '', 'connection')
           break
-        case 'edit-api-key':
-          toggleCollapse(props.item.id)
-          break
       }
     }
 
@@ -300,6 +310,15 @@ export default defineComponent({
     const isExpandable = computed<boolean>(() => {
       return ['connection'].includes(props.item.type)
     })
+
+    // Get item name (for simple cases where name slot isn't needed)
+    const getItemName = () => {
+      // Return empty string for complex items that use the name slot
+      if (['api-key', 'model', 'toggle-save-credential', 'refresh-connection'].includes(props.item.type)) {
+        return ''
+      }
+      return props.item.name
+    }
 
     // Handle item click (toggle collapse)
     const handleItemClick = () => {
@@ -369,6 +388,7 @@ export default defineComponent({
       apiKeyInput,
       selectedModel,
       isExpandable,
+      getItemName,
       handleItemClick,
       handleRefreshConnectionClick,
       getProviderType,
@@ -409,11 +429,6 @@ export default defineComponent({
   color: var(--primary-color);
 }
 
-.sidebar-padding {
-  width: 12px;
-  height: 1px;
-}
-
 .truncate-text {
   white-space: nowrap;
   overflow: hidden;
@@ -452,11 +467,6 @@ export default defineComponent({
   align-items: center;
 }
 
-/* select {
-  min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-} */
 .connection-customize {
   flex-grow: 1;
   background: transparent;
@@ -511,7 +521,7 @@ export default defineComponent({
   font-size: 0.6em;
   border: 1px solid var(--border-color);
   white-space: nowrap;
-  min-width: 60px;
+  min-width: 90px;
 }
 
 .customize-button:hover {
@@ -533,5 +543,26 @@ export default defineComponent({
 
 .set-active-btn:hover {
   color: var(--primary-color);
+}
+
+.save-credential-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.9em;
+  padding-left: 8px;
+}
+
+.save-credential-toggle input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.checkbox-label {
+  white-space: nowrap;
+}
+
+.md-token-container {
+  display: flex;
+  flex-grow: 1;
 }
 </style>

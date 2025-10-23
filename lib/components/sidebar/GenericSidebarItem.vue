@@ -41,7 +41,7 @@
       
       <!-- Item content -->
       <span class="truncate-text">
-        {{ name }}
+        <slot name="name">{{ name }}</slot>
         <span v-if="extraInfo">({{ extraInfo }})</span>
       </span>
 
@@ -144,18 +144,8 @@ export default {
   min-height: 24px;
 }
 
-.chevron-button:hover {
-  background-color: var(--button-mouseover);
-}
 
-.chevron-button:focus {
-  outline: 2px solid var(--focus-color, #007acc);
-  outline-offset: 2px;
-}
 
-.chevron-button:active {
-  background-color: var(--button-active, rgba(0, 0, 0, 0.1));
-}
 
 .chevron-icon {
   font-size: 18px;

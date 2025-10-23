@@ -332,4 +332,10 @@ export default {
   opacity: 0;
   transition: opacity 0.2s;
 }
+/* on mobile, always show hover icons */
+@media (max-width: 768px) {
+  .hover-icon {
+    opacity: 1;
+  }
+}
 </style>

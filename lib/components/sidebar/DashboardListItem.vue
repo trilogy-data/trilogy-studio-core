@@ -1,71 +1,85 @@
-<!-- DashboardListItem.vue -->
 <template>
-  <div
-    :data-testid="`dashboard-list-id-${item.key}`"
-    :class="{
-      'sidebar-item': item.type !== 'creator',
-      'sidebar-item-selected': isActive,
-    }"
+  <sidebar-item
+    v-if="item.type !== 'creator'"
+    :item-id="item.key"
+    :name="item.label"
+    :indent="!isMobile ? item.indent : 0"
+    :is-selected="isActive"
+    :is-collapsible="!['dashboard', 'creator'].includes(item.type)"
+    :is-collapsed="isCollapsed"
     @click="handleClick"
+    @toggle="handleToggle"
   >
-    <div
-      v-if="!['creator'].includes(item.type) && !isMobile"
-      v-for="_ in item.indent"
-      class="sidebar-padding"
-    ></div>
-    <i
-      v-if="!['dashboard', 'creator'].includes(item.type)"
-      :class="isCollapsed ? 'mdi mdi-menu-right' : 'mdi mdi-menu-down'"
-    >
-    </i>
-    <template v-if="item.type === 'dashboard'">
-      <tooltip content="Dashboard" position="right">
-        <i class="mdi mdi-view-dashboard"></i>
-      </tooltip>
+    <!-- Custom icon slot for dashboard items -->
+    <template #icon>
+      <template v-if="item.type === 'dashboard'">
+        <tooltip content="Dashboard" position="right">
+          <i class="mdi mdi-view-dashboard node-icon"></i>
+        </tooltip>
+      </template>
     </template>
-    <span class="truncate-text title">
+
+    <!-- Custom name slot for connection model info -->
+    <template #name>
       {{ item.label }}
       <span class="text-light connection-model" v-if="item.type === 'connection'">
-        ({{ connectionInfo?.model ? connectionInfo?.model : 'No Model Set' }})</span
-      >
-    </span>
-    <div class="dashboard-actions">
-      <template v-if="item.type === 'connection'">
-        <span class="tag-container hover-icon">
-          <dashboard-creator-icon :connection="item.label" title="New Dashboard" />
-        </span>
-        <status-icon :status="connectionStatus" />
-      </template>
-      <template v-if="item.type === 'dashboard'">
-        <tooltip content="Clone Dashboard" position="left">
-          <span
-            class="clone-btn hover-icon"
-            @click.stop="handleClone"
-            :data-testid="`clone-dashboard-${item.label}`"
-          >
-            <i class="mdi mdi-content-copy"></i>
+        ({{ connectionInfo?.model ? connectionInfo?.model : 'No Model Set' }})
+      </span>
+    </template>
+
+    <!-- Custom extra content slot for action buttons -->
+    <template #extra-content>
+      <div class="dashboard-actions">
+        <template v-if="item.type === 'connection'">
+          <span class="tag-container hover-icon">
+            <dashboard-creator-icon :connection="item.label" title="New Dashboard" />
           </span>
-        </tooltip>
-        <tooltip content="Delete Dashboard" position="left">
-          <span
-            class="remove-btn hover-icon"
-            @click.stop="handleDelete"
-            :data-testid="`delete-dashboard-${item.label}`"
-          >
-            <i class="mdi mdi-trash-can"></i>
-          </span>
-        </tooltip>
-      </template>
-    </div>
+          <status-icon :status="connectionStatus" />
+        </template>
+        <template v-if="item.type === 'dashboard'">
+          <tooltip content="Clone Dashboard" position="left">
+            <span
+              class="clone-btn hover-icon"
+              @click.stop="handleClone"
+              :data-testid="`clone-dashboard-${item.label}`"
+            >
+              <i class="mdi mdi-content-copy"></i>
+            </span>
+          </tooltip>
+          <tooltip content="Delete Dashboard" position="left">
+            <span
+              class="remove-btn hover-icon"
+              @click.stop="handleDelete"
+              :data-testid="`delete-dashboard-${item.label}`"
+            >
+              <i class="mdi mdi-trash-can"></i>
+            </span>
+          </tooltip>
+        </template>
+      </div>
+    </template>
+  </sidebar-item>
+
+  <!-- Handle creator items separately if needed -->
+  <div
+    v-else
+    :data-testid="`dashboard-list-id-${item.key}`"
+    class="creator-item"
+    @click="handleClick"
+  >
+    {{ item.label }}
   </div>
 </template>
+
 <script lang="ts">
 import { computed, inject } from 'vue'
+import SidebarItem from './GenericSidebarItem.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import DashboardCreatorIcon from '../dashboard/DashboardCreatorIcon.vue'
 import Tooltip from '../Tooltip.vue'
 import StatusIcon from '../StatusIcon.vue'
+
 export default {
   name: 'DashboardListItem',
   props: {
@@ -82,20 +96,23 @@ export default {
       default: false,
     },
   },
-  emits: ['click', 'delete', 'clone'],
+  emits: ['click', 'delete', 'clone', 'toggle'],
   setup(props) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const isMobile = inject<boolean>('isMobile', false)
+    
     if (!connectionStore || !dashboardStore) {
       throw new Error('Connection/Dashboard stores is not provided!')
     }
+    
     const connectionInfo = computed(() => {
       if (props.item.type === 'connection') {
         return connectionStore.connections[props.item.label] || null
       }
       return null
     })
+    
     const connectionStatus = computed(() => {
       const connection = connectionInfo.value
       if (!connection) {
@@ -109,6 +126,7 @@ export default {
         return 'disabled'
       }
     })
+    
     return {
       isMobile,
       dashboardStore,
@@ -120,6 +138,9 @@ export default {
     handleClick() {
       this.$emit('click', this.item)
     },
+    handleToggle() {
+      this.$emit('click', this.item) // Maintain existing behavior
+    },
     handleDelete() {
       this.$emit('delete', this.item.dashboard)
     },
@@ -128,12 +149,14 @@ export default {
     },
   },
   components: {
+    SidebarItem,
     DashboardCreatorIcon,
     Tooltip,
     StatusIcon,
   },
 }
 </script>
+
 <style scoped>
 .connection-model {
   display: inline-flex;
@@ -178,5 +201,27 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   padding-left: 3px;
+}
+
+.creator-item {
+  padding: 8px;
+  cursor: pointer;
+}
+
+/* Show hover icons when parent sidebar item is hovered */
+:deep(.sidebar-item:hover) .hover-icon {
+  opacity: 1;
+}
+
+.hover-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* on mobile, always show hover icons */
+@media (max-width: 768px) {
+  .hover-icon {
+    opacity: 1;
+  }
 }
 </style>
