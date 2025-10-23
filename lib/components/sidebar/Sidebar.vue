@@ -435,7 +435,7 @@ export default defineComponent({
 
 .sidebar-container {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 40px);
   background-color: var(--sidebar-bg-color);
   color: var(--sidebar-font);
 }

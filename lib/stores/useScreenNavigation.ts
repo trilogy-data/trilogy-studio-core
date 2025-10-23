@@ -251,27 +251,18 @@ const createNavigationStore = (): NavigationStore => {
         state.activeCommunityModelKey.value = tabInfo.address
       }
       //close if required
-      if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
-        if (tabInfo.screen === 'connections') {
-          // count of KeySeparator>1
-          state.mobileMenuOpen.value = (tabInfo.address.split(KeySeparator).length - 1) <3;
-        } 
-        else if (tabInfo.screen === 'models') {
-          state.mobileMenuOpen.value = (tabInfo.address.split(KeySeparator).length - 1) <2;
-        }
-        
-        else {
-          state.mobileMenuOpen.value = false
-        }
+      // if (mobileMenuClosingScreens.includes(tabInfo.screen)) {
+      if (tabInfo.address.split(KeySeparator).length > 1) {
+        // count of KeySeparator>1
+        state.mobileMenuOpen.value = false;
       }
+
+      // }
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {
     pushHashToUrl('screen', screen)
     state.activeScreen.value = screen
-    if (mobileMenuClosingScreens.includes(screen)) {
-      state.mobileMenuOpen.value = false
-    }
   }
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {

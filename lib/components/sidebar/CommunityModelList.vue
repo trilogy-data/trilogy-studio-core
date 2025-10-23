@@ -31,6 +31,7 @@
       :item="item"
       :is-collapsed="collapsed[item.key]"
       @item-click="handleItemClick"
+      @item-toggle="handleItemToggle"
       @model-selected="handleModelSelected"
     />
 
@@ -157,8 +158,11 @@ export default {
 
     // Handle item clicks (for collapsing/expanding)
     const handleItemClick = (_: string, key: string, __: ModelRoot) => {
-      collapsed.value[key] = !collapsed.value[key]
       navigationStore.openTab('community-models', null, key)
+    }
+
+    const handleItemToggle = (_: string, key: string, __: ModelRoot) => {
+      collapsed.value[key] = !collapsed.value[key]
     }
 
     const displayTree = computed(() => {
@@ -166,6 +170,7 @@ export default {
         communityStore.modelRoots,
         communityStore.filesByRoot,
         collapsed.value,
+        
       )
     })
 
@@ -181,6 +186,7 @@ export default {
       handleAddRepository,
       handleModelSelected,
       handleItemClick,
+      handleItemToggle,
       collapsed,
       displayTree,
     }
