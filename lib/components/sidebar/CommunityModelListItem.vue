@@ -117,14 +117,14 @@ export default {
 }
 
 .tag {
-  font-size: 7px;
+  font-size: 6px;
   border-radius: 3px;
-  margin: 2px;
-  padding: 1px;
+  margin-left: 2px;
+  padding: 2px;
   background-color: hsla(210, 100%, 50%, 0.516);
   border: 1px solid hsl(210, 100%, 50%, 0.5);
   color: var(--tag-font);
-  line-height: 10px;
+  line-height: 9px;
   cursor: pointer;
 }
 

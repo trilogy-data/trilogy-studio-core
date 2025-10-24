@@ -1,51 +1,30 @@
 <template>
   <div class="sidebar-item">
-    <div 
-      class="sidebar-content" 
-      :class="{ 'sidebar-item-selected': isSelected }" 
-      :data-testid="itemId"
-      @click="handleClick"
-    >
+    <div class="sidebar-content" :class="{ 'sidebar-item-selected': isSelected }" :data-testid="itemId"
+      @click="handleClick">
       <!-- Indentation -->
-      <div 
-        v-for="(_, index) in Array.from({ length: indent }, () => 0)" 
-        :key="index" 
-        class="sidebar-padding"
-      >
+      <div v-for="(_, index) in Array.from({ length: indent }, () => 0)" :key="index" class="sidebar-padding">
       </div>
-      
       <!-- Toggle button for collapsible items -->
-      <button 
-        v-if="isCollapsible" 
-        @click.stop="handleToggle" 
-        class="chevron-button"
-        :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'"
-      >
-        <i 
-          v-if="!isCollapsed" 
-          class="mdi mdi-menu-down chevron-icon"
-        ></i>
-        <i 
-          v-else 
-          class="mdi mdi-menu-right chevron-icon"
-        ></i>
+      <button v-if="isCollapsible" @click.stop="handleToggle" class="chevron-button"
+        :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'">
+        <i v-if="!isCollapsed" class="mdi mdi-menu-down chevron-icon"></i>
+        <i v-else class="mdi mdi-menu-right chevron-icon"></i>
       </button>
-      
+
       <!-- Custom icon slot or default icon -->
       <slot name="icon">
-        <i 
-          v-if="icon" 
-          :class="`mdi ${icon} node-icon`"
-        ></i>
+        <i v-if="icon" :class="`mdi ${icon} node-icon`"></i>
       </slot>
-      
+
       <!-- Item content -->
       <span class="truncate-text">
         <slot name="name">{{ name }}</slot>
-        <span v-if="extraInfo">({{ extraInfo }})</span>
+        <span v-if="extraInfo"> ({{ extraInfo }})</span>
       </span>
 
       <!-- Custom extra content slot -->
+
       <slot name="extra-content"></slot>
     </div>
   </div>
@@ -140,15 +119,11 @@ export default {
   border: none;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  min-width: 24px;
-  min-height: 24px;
+  min-width: var(--sidebar-item-height);
+  min-height: var(--sidebar-item-height);
 }
 
-
-
-
 .chevron-icon {
-  font-size: 18px;
   color: var(--text-color);
   pointer-events: none;
 }

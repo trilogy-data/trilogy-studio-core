@@ -1,17 +1,14 @@
 <template>
   <div>
-    <!-- Creator items - keep separate as they're fundamentally different -->
+
     <div
       v-if="item.type === 'creator'"
       :data-testid="`editor-list-id-${item.key}`"
       class="creator-item"
       @click="$emit('item-click', item.type, item.objectKey, item.key)"
     >
-         {{ item.ident }} {{ item.label }}
     </div>
 
-    <!-- Regular items using SidebarItem -->
- 
     <sidebar-item
       v-else
       :item-id="item.key"
@@ -38,7 +35,7 @@
       <!-- Custom name slot for connection model info -->
       <template #name>
         {{ item.label }}
-        <span class="text-light" v-if="item.type === 'connection'">
+        <span class="text-light " v-if="item.type === 'connection'">
           <span class="connection-model" v-if="connectionStore.connections[item.label]?.model">
             ({{ connectionStore.connections[item.label].model }})
           </span>
@@ -188,10 +185,7 @@ export default {
 </script>
 
 <style scoped>
-.connection-model {
-  display: inline-flex;
-  max-width: 25px;
-}
+
 
 .sql {
   color: var(--text-color);
