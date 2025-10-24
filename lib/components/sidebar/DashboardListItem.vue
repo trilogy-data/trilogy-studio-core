@@ -7,6 +7,7 @@
     :is-selected="isActive"
     :is-collapsible="!['dashboard', 'creator'].includes(item.type)"
     :is-collapsed="isCollapsed"
+    itemType="dashboard"
     @click="handleClick"
     @toggle="handleToggle"
   >

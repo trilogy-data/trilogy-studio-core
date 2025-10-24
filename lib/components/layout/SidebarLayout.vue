@@ -77,15 +77,12 @@ export default {
       }
     },
     updateSidebarWidth(sizes: number[]) {
-      console.log('Updating sidebar width')
       // @ts-ignore
       let wrapperWidth = this.$refs.wrapper.getBoundingClientRect().width
-      console.log('Wrapper width:', wrapperWidth)
 
       if (this.$refs.sidebar) {
         // @ts-ignore
         this.sidebarWidth = wrapperWidth * (sizes[0] / 100)
-        console.log('Sidebar width updated:', this.sidebarWidth)
       }
     },
   },
@@ -101,11 +98,9 @@ export default {
       expandToMin: true,
       gutterSize: 0,
       onDrag: (sizes: number[]) => {
-        console.log(sizes)
         this.updateSidebarWidth(sizes)
       },
       onDragEnd: (sizes: number[]) => {
-        console.log(sizes)
         this.updateSidebarWidth(sizes)
       },
     })

@@ -73,8 +73,8 @@ order by
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('documentation+Studio').click()
-  await page.getByTestId('article+Studio+Model Tutorial').click()
+  await page.getByTestId('expand-documentation-documentation+Studio').click()
+  await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
   await page.getByTestId('editor').click()
@@ -204,7 +204,7 @@ select count(order.id) as order_count;`
   await page.getByTestId('new-sql-editor-iris-data-tutorial').click()
 
   // Set up the iris table
-  let irisTableScript = `CREATE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
+  let irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     // Safari and Firefox both break on csv import
     return

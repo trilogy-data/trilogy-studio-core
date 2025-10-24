@@ -21,7 +21,7 @@
       <p v-if="table.description" class="table-description">{{ table.description }}</p>
     </div>
 
-    <div class="tabs">
+    <div class="tabs" ref="tabsRef">
       <button
         class="tab-button"
         :class="{ active: activeTab === 'structure' }"
@@ -37,6 +37,7 @@
         Sample Data
       </button>
     </div>
+    
     <div class="tab-content">
       <div v-if="activeTab === 'structure'" class="table-structure">
         <div class="structure-header">
@@ -97,14 +98,15 @@
           <span>⚠️ {{ error }}</span>
         </div>
 
-        <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
+        <div v-else-if="currentSampleData?.data.length === 0" class="empty-state">
           <p>No data available</p>
         </div>
-        <div v-else class="result-container-wrapper">
-          <div class="result-container" ref="resultContainerRef">
+        
+        <div v-else class="result-container-wrapper" ref="resultContainerRef">
+          <div class="result-container">
             <DataTable
-              :results="selectedSampleData.data"
-              :headers="selectedSampleData.headers"
+              :results="currentSampleData.data"
+              :headers="currentSampleData.headers"
               :containerHeight="containerHeight"
             />
           </div>
@@ -115,7 +117,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Table, AssetType } from '../../connections'
 import { Results } from '../../editors/results'
 import { inject } from 'vue'
@@ -150,42 +152,18 @@ export default defineComponent({
 
     // Refs for measuring container height
     const resultContainerRef = ref<HTMLElement | null>(null)
+    const tabsRef = ref<HTMLElement | null>(null)
     const containerHeight = ref(500) // Default height
-    let resizeObserver: ResizeObserver | null = null
 
     // Inject the connection store
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
-    // Function to update container height
-    const updateContainerHeight = () => {
-      if (resultContainerRef.value) {
-        const rect = resultContainerRef.value.getBoundingClientRect()
-        containerHeight.value = Math.max(300, rect.height) // Minimum height of 300px
-      }
+    // Generate a unique key for caching sample data
+    const getTableKey = (table: Table) => {
+      return `${table.database || ''}.${table.schema || ''}.${table.name}`
     }
 
-    // Set up ResizeObserver to watch for size changes
-    onMounted(async () => {
-      await nextTick()
-
-      if (resultContainerRef.value) {
-        updateContainerHeight()
-
-        resizeObserver = new ResizeObserver(() => {
-          updateContainerHeight()
-        })
-
-        resizeObserver.observe(resultContainerRef.value)
-      }
-    })
-
-    // Clean up ResizeObserver
-    onUnmounted(() => {
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
-    })
-
+    // Computed property for filtered columns
     const filteredColumns = computed(() => {
       if (!searchTerm.value) return props.table.columns
 
@@ -196,9 +174,74 @@ export default defineComponent({
       )
     })
 
-    const loadSampleData = async () => {
-      if (sampleData.value[props.table.name]?.data?.length > 0 && props.table.columns.length > 0)
+    // Computed property for current table's sample data
+    const currentSampleData = computed(() => {
+      const tableKey = getTableKey(props.table)
+      return sampleData.value[tableKey] || new Results(new Map(), [])
+    })
+
+    // Check if sample data needs to be loaded
+    const needsSampleData = computed(() => {
+      const tableKey = getTableKey(props.table)
+      const hasData = sampleData.value[tableKey]?.data?.length > 0
+      const hasColumns = props.table.columns.length > 0
+      return !hasData || !hasColumns
+    })
+
+    // Function to calculate available height based on viewport and existing elements
+    const calculateAvailableHeight = () => {
+      if (!resultContainerRef.value) return
+
+      const viewportHeight = window.innerHeight
+      const containerTop = resultContainerRef.value.getBoundingClientRect().top
+      
+      // Reserve space for potential scrollbars, padding, and bottom margin
+      const bottomBuffer = 40
+      const availableHeight = Math.max(300, viewportHeight - containerTop - bottomBuffer)
+      
+      // Only update if the change is significant to avoid unnecessary re-renders
+      if (Math.abs(availableHeight - containerHeight.value) > 10) {
+        containerHeight.value = availableHeight
+        console.log('Updated container height to', containerHeight.value)
+      }
+    }
+
+    // Throttled resize handler to improve performance
+    let resizeTimeout: number | null = null
+    const handleWindowResize = () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout)
+      }
+      resizeTimeout = window.setTimeout(() => {
+        if (activeTab.value === 'data') {
+          calculateAvailableHeight()
+        }
+      }, 150) // 150ms throttle
+    }
+
+    // Setup window resize listener
+    const setupWindowListener = () => {
+      window.addEventListener('resize', handleWindowResize)
+    }
+
+    // Clean up window resize listener
+    const cleanupWindowListener = () => {
+      window.removeEventListener('resize', handleWindowResize)
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout)
+        resizeTimeout = null
+      }
+    }
+
+    // Load sample data for the current table
+    const loadSampleData = async (forceRefresh = false) => {
+      const tableKey = getTableKey(props.table)
+      
+      // Skip if data already exists and we're not forcing a refresh
+      if (!forceRefresh && sampleData.value[tableKey]?.data?.length > 0 && props.table.columns.length > 0) {
+        console.log('Sample data already loaded for', tableKey)
         return
+      }
 
       isLoading.value = true
       error.value = null
@@ -207,11 +250,15 @@ export default defineComponent({
         if (!connectionStore) {
           throw new Error('Connection store not found')
         }
+
+        // Refresh columns to ensure we have the latest structure
         await connectionStore.connections[props.connectionName].refreshColumns(
           props.table.database,
           props.table.schema,
           props.table.name,
         )
+
+        // Get sample data
         const result = await connectionStore.connections[props.connectionName].getTableSample(
           props.table.database,
           props.table.schema,
@@ -219,32 +266,85 @@ export default defineComponent({
           50,
         )
 
-        sampleData.value[props.table.name] = result || new Results(new Map(), [])
+        sampleData.value[tableKey] = result || new Results(new Map(), [])
       } catch (err) {
-        console.error('Error loading sample data:', err)
+        console.error('Error loading sample data for', tableKey, ':', err)
         error.value = err instanceof Error ? err.message : 'Failed to load sample data'
       } finally {
         isLoading.value = false
       }
     }
 
-    const selectedSampleData = computed(() =>
-      sampleData.value[props.table.name]
-        ? sampleData.value[props.table.name]
-        : new Results(new Map(), []),
+    // Watch for table changes and load data if needed
+    watch(
+      () => props.table,
+      async (newTable, oldTable) => {
+        const newTableKey = getTableKey(newTable)
+        const oldTableKey = oldTable ? getTableKey(oldTable) : null
+        
+        // Only load if we're switching to a different table
+        if (newTableKey !== oldTableKey) {
+          console.log('Table changed from', oldTableKey, 'to', newTableKey)
+          
+          // Reset search when switching tables
+          searchTerm.value = ''
+          
+          // Load sample data if needed
+          if (needsSampleData.value) {
+            await loadSampleData()
+          }
+          
+          // Recalculate height for data tab
+          if (activeTab.value === 'data') {
+            await nextTick()
+            calculateAvailableHeight()
+          }
+        }
+      },
+      { immediate: false }
     )
+
+    // Watch for tab changes to recalculate height
+    watch(activeTab, async (newTab) => {
+      if (newTab === 'data') {
+        await nextTick()
+        calculateAvailableHeight()
+      }
+    })
+
+    // Initial setup
+    onMounted(async () => {
+      // Setup window resize listener
+      setupWindowListener()
+      
+      // Load sample data if needed on initial mount
+      if (needsSampleData.value) {
+        await loadSampleData()
+      }
+      
+      // Calculate initial height if we're on the data tab
+      if (activeTab.value === 'data') {
+        await nextTick()
+        calculateAvailableHeight()
+      }
+    })
+
+    // Cleanup
+    onUnmounted(() => {
+      cleanupWindowListener()
+    })
 
     return {
       activeTab,
       searchTerm,
       filteredColumns,
-      selectedSampleData,
-      sampleData,
+      currentSampleData,
       isLoading,
       error,
-      loadSampleData,
+      loadSampleData: () => loadSampleData(true), // Force refresh when called manually
       AssetType,
       resultContainerRef,
+      tabsRef,
       containerHeight,
     }
   },
@@ -370,7 +470,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0rem 1rem;
+  padding:5px;
 }
 
 .search-container {
@@ -393,28 +493,24 @@ export default defineComponent({
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.column-count,
-.row-count {
+.column-count {
   font-size: 0.875rem;
   color: #64748b;
 }
 
-.structure-table-container,
-.data-table-container {
+.structure-table-container {
   overflow-x: auto;
   padding: 0 1.5rem 1.5rem;
 }
 
-.structure-table,
-.data-table {
+.structure-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
   white-space: nowrap;
 }
 
-.structure-table th,
-.data-table th {
+.structure-table th {
   text-align: left;
   padding: 0.75rem 1rem;
   background: var(--query-window-bg);
@@ -426,15 +522,13 @@ export default defineComponent({
   top: 0;
 }
 
-.structure-table td,
-.data-table td {
+.structure-table td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-color);
 }
 
-.structure-table tr:hover,
-.data-table tr:hover {
+.structure-table tr:hover {
   background-color: var(--query-window-bg);
 }
 
@@ -447,10 +541,6 @@ export default defineComponent({
 
 .key-icon {
   font-size: 0.9rem;
-}
-
-.key-icon.small {
-  font-size: 0.75rem;
 }
 
 .constraint-badges {
@@ -532,7 +622,6 @@ export default defineComponent({
   0% {
     transform: rotate(0deg);
   }
-
   100% {
     transform: rotate(360deg);
   }
@@ -549,30 +638,5 @@ export default defineComponent({
 
 .error-message {
   color: #ef4444;
-}
-
-.cell-content {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.null-value {
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.number-value {
-  color: #0284c7;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-}
-
-.boolean-value {
-  color: #8b5cf6;
-  font-weight: 500;
-}
-
-.date-value {
-  color: #059669;
 }
 </style>

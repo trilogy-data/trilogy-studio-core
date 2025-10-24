@@ -7,7 +7,7 @@ import { type ModelConfigStoreType } from '../../stores/modelStore'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import { ModelImportService } from '../../models/helpers'
 import useScreenNavigation from '../../stores/useScreenNavigation'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, removeHashFromUrl } from '../../stores/urlStore'
 import trilogyIcon from '../../static/trilogy.png'
 
 const emit = defineEmits<{
@@ -254,11 +254,13 @@ const performImport = async () => {
 
     // Emit completion event with dashboard ID
     emit('importComplete', importedDashboard.id)
-
+    removeHashFromUrl('import')
+    removeHashFromUrl('dashboard')
     // Auto-redirect after short delay
     setTimeout(() => {
-      screenNavigation.setActiveDashboard(importedDashboard.id)
-      screenNavigation.setActiveScreen('dashboard')
+      screenNavigation.closeTab(null, 'dashboard-import')
+      screenNavigation.openTab('dashboard', null, importedDashboard.id)
+      screenNavigation.setActiveSidebarScreen('dashboard')
     }, 500)
   } catch (err) {
     console.error('Import failed:', err)
@@ -284,7 +286,7 @@ onMounted(async () => {
     updateElapsedTime()
 
     // Get URL parameters
-    const modelUrlParam = getDefaultValueFromHash('model', '')
+    const modelUrlParam = getDefaultValueFromHash('import', '')
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '')
     const modelNameParam = getDefaultValueFromHash('modelName', '')
     const connectionParam = getDefaultValueFromHash('connection', '')

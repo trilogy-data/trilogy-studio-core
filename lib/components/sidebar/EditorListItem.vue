@@ -15,6 +15,7 @@
       :is-selected="activeEditor === item.objectKey"
       :is-collapsible="!['editor', 'creator'].includes(item.type)"
       :is-collapsed="isCollapsed"
+      itemType="editor"
       @click="handleClick"
       @toggle="handleToggle"
     >

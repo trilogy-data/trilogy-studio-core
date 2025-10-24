@@ -1,24 +1,11 @@
 <template>
   <div class="sidebar-item">
-    <div
-      class="sidebar-content"
-      :class="{ 'sidebar-item-selected': isSelected }"
-      :data-testid="itemId"
-      @click="handleClick"
-    >
+    <div class="sidebar-content" :class="{ 'sidebar-item-selected': isSelected }" @click="handleClick">
       <!-- Indentation -->
-      <div
-        v-for="(_, index) in Array.from({ length: indent }, () => 0)"
-        :key="index"
-        class="sidebar-padding"
-      ></div>
+      <div v-for="(_, index) in Array.from({ length: indent }, () => 0)" :key="index" class="sidebar-padding"></div>
       <!-- Toggle button for collapsible items -->
-      <button
-        v-if="isCollapsible"
-        @click.stop="handleToggle"
-        class="chevron-button"
-        :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'"
-      >
+      <button v-if="isCollapsible" @click.stop="handleToggle" class="chevron-button"
+        :data-testid="`expand-${itemType}-${itemId}`" :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'">
         <i v-if="!isCollapsed" class="mdi mdi-menu-down chevron-icon"></i>
         <i v-else class="mdi mdi-menu-right chevron-icon"></i>
       </button>
@@ -29,7 +16,7 @@
       </slot>
 
       <!-- Item content -->
-      <span class="truncate-text">
+      <span class="truncate-text" :data-testid="`${itemType}-${itemId}`">
         <slot name="name">{{ name }}</slot>
         <span v-if="extraInfo"> ({{ extraInfo }})</span>
       </span>
@@ -77,6 +64,10 @@ export default {
       type: [String, Number],
       default: '',
     },
+    itemType: {
+      type: String,
+      default: 'item',
+    },
   },
   emits: ['click', 'toggle'],
   methods: {
@@ -99,7 +90,6 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0 4px;
   cursor: pointer;
 }
 
@@ -137,6 +127,12 @@ export default {
 .chevron-icon {
   color: var(--text-color);
   pointer-events: none;
+}
+
+
+.extra-content {
+  margin-left: auto;
+  padding: 0;
 }
 
 /* Responsive adjustments for smaller screens */

@@ -7,6 +7,7 @@
     :is-collapsible="!['model'].includes(item.type)"
     :is-collapsed="isCollapsed"
     :icon="getItemIcon()"
+    itemType="community"
     @click="handleItemClick"
     @toggle="handleToggle"
   >

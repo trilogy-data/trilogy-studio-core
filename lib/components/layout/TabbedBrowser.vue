@@ -14,7 +14,7 @@
       >
         <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
         <span class="tab-title truncate-text">{{ tab.title }}</span>
-        <button class="tab-close-btn" @click.stop="closeTab(tab.id)" v-if="tabs.length > 1">
+        <button class="tab-close-btn" @click.stop="closeTab(tab.id, null)" v-if="tabs.length > 1">
           ×
         </button>
       </div>
@@ -100,7 +100,7 @@ export default defineComponent({
         editors: 'mdi mdi-file-document-edit-outline',
         connections: 'mdi mdi-database-outline',
         llms: 'mdi mdi-creation-outline',
-        dashboard: 'mdi mdi-chart-areaspline-outline',
+        dashboard: 'mdi mdi-chart-multiple',
         'dashboard-import': 'mdi mdi-chart-multiple',
         models: 'mdi mdi-set-center',
         'community-models': 'mdi mdi-library-outline',
@@ -123,7 +123,6 @@ export default defineComponent({
     },
 
     selectTab(tabId: string): void {
-      console.log('Selecting tab:', tabId)
       this.setActiveTab(tabId)
     },
 
@@ -252,6 +251,30 @@ export default defineComponent({
   position: relative;
 }
 
+.tabbed-container {
+  /* Modern browsers */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* Webkit browsers */
+.tabbed-container::-webkit-scrollbar {
+  height: 4px; /* Very thin */
+}
+
+.tabbed-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabbed-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.tabbed-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
 /* Tab Bar Styles */
 .tab-bar {
   display: flex;
@@ -268,7 +291,7 @@ export default defineComponent({
 .tab {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
+  padding-left:4px;
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   border-bottom: none;
@@ -285,8 +308,8 @@ export default defineComponent({
 }
 
 .tab-active {
-  background-color: var(--query-window-bg);
-  border-bottom: 1px solid var(--query-window-bg);
+  background-color: var(--special-bg);
+  border-bottom: 1px solid var(--special-bg);
   position: relative;
   z-index: 1;
 }

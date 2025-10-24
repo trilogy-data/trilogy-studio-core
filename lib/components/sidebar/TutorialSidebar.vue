@@ -12,6 +12,7 @@
       :is-collapsed="collapsed[node.id]"
       :icon="node.type === 'article' ? 'mdi-text-box-outline' : ''"
       :extra-info="node.type === 'documentation' ? node.count : ''"
+      itemType="documentation"
       @click="handleClick"
       @toggle="toggleCollapse"
     />

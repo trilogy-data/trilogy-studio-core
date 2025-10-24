@@ -3,6 +3,7 @@ import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './url
 import { useEditorStore, useDashboardStore } from '.'
 import { lastSegment } from '../data/constants'
 
+
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
   | 'editors'
@@ -28,6 +29,8 @@ interface NavigationState {
   activeCommunityModelKey: Ref<string>
   activeDocumentationKey: Ref<string>
   activeLLMConnectionKey: Ref<string>
+  modelImport: Ref<string>
+  connectionImport: Ref<string>
   mobileMenuOpen: Ref<boolean>
   initialSearch: Ref<string>
   tabs: Ref<Tab[]>
@@ -54,6 +57,8 @@ export interface NavigationStore {
   readonly activeCommunityModelKey: Ref<string>
   readonly activeDocumentationKey: Ref<string>
   readonly activeLLMConnectionKey: Ref<string>
+  readonly modelImport: Ref<string>
+  readonly connectionImport: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
   readonly initialSearch: Ref<string>
 
@@ -69,11 +74,12 @@ export interface NavigationStore {
   setActiveConnectionKey(connection: string | null): void
   setActiveDocumentationKey(documentation: string | null): void
 
+
   setActiveLLMConnectionKey(llmConnection: string | null): void
   toggleMobileMenu(): void
   updateTabName(screen: ScreenType, title: string | null, address: string): void
   openTab(screen: ScreenType, title: string | null, address: string): void
-  closeTab(tabId: string): void
+  closeTab(tabId: string | null, address: string | null): void
   closeOtherTabsExcept(tabId: string): void
   closeTabsToRightOf(tabId: string): void
   onInitialLoad(): void
@@ -93,6 +99,8 @@ const createNavigationStore = (): NavigationStore => {
     activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
     activeDocumentationKey: ref(getDefaultValueFromHash('docs', '')),
+    modelImport: ref(getDefaultValueFromHash('import', '')),
+    connectionImport: ref(getDefaultValueFromHash('connection', '')),
     mobileMenuOpen: ref(false),
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
     tabs: ref<Tab[]>([]),
@@ -153,7 +161,18 @@ const createNavigationStore = (): NavigationStore => {
     setActiveTab(tab.id)
   }
 
-  const closeTab = (tabId: string): void => {
+  const closeTab = (tabId: string | null, address: string | null = null): void => {
+    if (!tabId && !address) {
+      return
+    }
+    if (!tabId && address) {
+      const tab = state.tabs.value.find((t) => t.address === address)
+      if (tab) {
+        tabId = tab.id
+      } else {
+        return
+      }
+    }
     const tabIndex = state.tabs.value.findIndex((tab) => tab.id === tabId)
     if (tabIndex !== -1) {
       const wasActiveTab = state.activeTab.value === tabId
@@ -321,53 +340,60 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const toggleMobileMenu = (): void => {
-    console.log(
-      'Toggling mobile menu from',
-      state.mobileMenuOpen.value,
-      'to',
-      !state.mobileMenuOpen.value,
-    )
     state.mobileMenuOpen.value = !state.mobileMenuOpen.value
-    console.log('Mobile menu is now', state.mobileMenuOpen.value)
   }
 
   const onInitialLoad = (): void => {
-    if (state.activeEditor.value) {
+    console.log('Navigation store initial load')
+    console.log(state)
+      const importUrl = state.modelImport.value
+    const connectionType = state.connectionImport.value
+    let sidebarScreen:ScreenType = 'editors'
+    let isImport = false
+     if (importUrl && connectionType) {
+      console.log('triggering dashboard import tab')
+      openTab('dashboard-import', null, 'dashboard-import')
+      isImport = true
+    }
+    if (state.activeEditor.value && !isImport) {
+      sidebarScreen = 'editors'
       openTab('editors', null, state.activeEditor.value)
     }
-    if (state.activeDashboard.value) {
+    if (state.activeDashboard.value&& !isImport) {
+      sidebarScreen = 'dashboard'
       openTab('dashboard', null, state.activeDashboard.value)
     }
-    if (state.activeConnectionKey.value) {
+    if (state.activeConnectionKey.value && !isImport) {
+      sidebarScreen = 'connections'
       openTab('connections', null, state.activeConnectionKey.value)
     }
-    if (state.activeModelKey.value) {
+    if (state.activeModelKey.value && !isImport) {
+      sidebarScreen = 'models'
       openTab('models', null, state.activeModelKey.value)
     }
-    if (state.activeCommunityModelKey.value) {
+    if (state.activeCommunityModelKey.value && !isImport) {
+      sidebarScreen = 'community-models'
       openTab('community-models', null, state.activeCommunityModelKey.value)
     }
-    if (state.activeDocumentationKey.value) {
+    if (state.activeDocumentationKey.value && !isImport) {
+      sidebarScreen = 'tutorial'
       openTab('tutorial', null, state.activeDocumentationKey.value)
     }
-    if (state.activeLLMConnectionKey.value) {
+    if (state.activeLLMConnectionKey.value && !isImport) {
+      sidebarScreen = 'llms'
       openTab('llms', null, state.activeLLMConnectionKey.value)
     }
     if (state.activeSidebarScreen.value === 'settings') {
+      sidebarScreen = 'settings'
       openTab('settings', 'Settings', 'settings')
     }
     if (state.activeSidebarScreen.value === 'profile') {
+      sidebarScreen = 'profile'
       openTab('profile', 'Profile', 'profile')
     }
-    // if (state.)
-    // if (activeScreen.value === 'dashboard') {
-    //   openTab('dashboard', state.activeDashboard.value, state.activeDashboard.value)
-    //   return
-    // }
-    // if (activeScreen.value === 'connections') {
-    //   openTab('connections', state.activeConnection.value, state.activeConnection.value)
-    //   return
-    // }
+
+    setActiveSidebarScreen(sidebarScreen)
+
   }
 
   return {
@@ -389,6 +415,7 @@ const createNavigationStore = (): NavigationStore => {
     get activeModelKey() {
       return state.activeModelKey
     },
+
     get activeCommunityModelKey() {
       return state.activeCommunityModelKey
     },
@@ -397,6 +424,12 @@ const createNavigationStore = (): NavigationStore => {
     },
     get activeLLMConnectionKey() {
       return state.activeLLMConnectionKey
+    },
+    get modelImport() {
+      return state.modelImport
+    },
+    get connectionImport() {
+      return state.connectionImport
     },
     get mobileMenuOpen() {
       return state.mobileMenuOpen

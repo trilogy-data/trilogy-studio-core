@@ -88,10 +88,10 @@
           data-testid="sidebar-icon-settings"
         >
           <template v-if="!isMobile">
-            <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
+            <tooltip content="Settings"><i class="mdi mdi-cog-outline"></i></tooltip>
           </template>
           <template v-else>
-            <i class="mdi mdi-cog"></i>
+            <i class="mdi mdi-cog-outline"></i>
             <div>Settings</div>
           </template>
         </div>
@@ -102,10 +102,10 @@
           @click="selectItem('profile')"
         >
           <template v-if="!isMobile">
-            <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
+            <tooltip content="Profile"><i class="mdi mdi-account-outline"></i></tooltip>
           </template>
           <template v-else>
-            <i class="mdi mdi-account"></i>
+            <i class="mdi mdi-account-outline"></i>
             <div>Profile</div>
           </template>
         </div>

@@ -6,7 +6,7 @@ test('test', async ({ page, isMobile }) => {
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-community-models').click()
-  await page.getByTestId('community-model-search').fill('titanic')
+  await page.getByTestId('community-trilogy-data-trilogy-public-models-main+duckdb+titanic').click()
   await page.getByTestId('import-titanic').click()
   await page.getByTestId('model-creator-connection').selectOption('New DuckDB')
   await page.getByTestId('model-creation-submit').click()
@@ -32,10 +32,10 @@ test('test', async ({ page, isMobile }) => {
   // this status is flaky depending on device
   // so handle both cases - where we need to expand or not
   try {
-    await page.getByTestId('editor-list-id-c-local-titanic-connection').click({ timeout: 1000 })
+    await page.getByTestId('editor-c-local-titanic-connection').click({ timeout: 1000 })
   } catch (e) {
-    await page.getByTestId('editor-list-id-s-local').click()
-    await page.getByTestId('editor-list-id-c-local-titanic-connection').click()
+    await page.getByTestId('editor-s-local').click()
+    await page.getByTestId('editor-c-local-titanic-connection').click()
   }
   await page
     .getByTestId('quick-new-editor-titanic-connection-trilogy')

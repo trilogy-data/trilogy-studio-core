@@ -8,6 +8,7 @@
       :is-selected="isSelected"
       :is-collapsible="isExpandable"
       :is-collapsed="isCollapsed"
+      itemType="connection"
       @click="handleItemClick"
       @toggle="handleToggle"
     >

@@ -105,6 +105,7 @@
         <template v-else>
           <welcome-page
             @screen-selected="setActiveScreen"
+            @sidebar-screen-selected="setActiveSidebarScreen"
             @demo-started="startDemo"
             @documentation-key-selected="setActiveDocumentationKey"
           />
@@ -231,8 +232,7 @@ import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { getDefaultValueFromHash } from '../stores/urlStore'
-import { inject, ref, defineAsyncComponent, onMounted, provide } from 'vue'
+import { inject, ref, defineAsyncComponent,  provide } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -326,7 +326,7 @@ export default {
     const {
       activeScreen,
       activeEditor,
-
+      openTab,
       activeModelKey,
       activeDocumentationKey,
       activeConnectionKey,
@@ -347,18 +347,6 @@ export default {
     } = screenNavigation
 
     onInitialLoad()
-
-    // Check for auto-import parameters on mount
-    onMounted(() => {
-      const importUrl = getDefaultValueFromHash('import', '')
-      const connectionType = getDefaultValueFromHash('connection', '')
-
-      // If we have import parameters, trigger auto-import mode
-      if (importUrl && connectionType) {
-        setActiveScreen('dashboard-import')
-        isFullScreen.value = true
-      }
-    })
 
     provide('navigationStore', screenNavigation)
 
