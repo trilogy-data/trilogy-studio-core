@@ -8,16 +8,16 @@
       <!-- Custom icon slot for different item types -->
       <template #icon>
         <connection-icon v-if="item.type === 'connection'" :connection-type="item.connection?.type" :data-testid="testTag
-            ? `connection-${item.connection.name}-${testTag}`
-            : `connection-${item.connection.name}`
+          ? `connection-${item.connection.name}-${testTag}`
+          : `connection-${item.connection.name}`
           " />
         <i v-else-if="item.type === 'database'" class="mdi mdi-database node-icon" :data-testid="testTag
-            ? `database-${item.connection.name}-${item.name}-${testTag}`
-            : `database-${item.connection.name}-${item.name}`
+          ? `database-${item.connection.name}-${item.name}-${testTag}`
+          : `database-${item.connection.name}-${item.name}`
           "></i>
         <i v-else-if="item.type === 'schema'" class="mdi mdi-folder-outline node-icon" :data-testid="testTag
-            ? `schema-${item.connection.name}-${item.name}-${testTag}`
-            : `schema-${item.connection.name}-${item.name}`
+          ? `schema-${item.connection.name}-${item.name}-${testTag}`
+          : `schema-${item.connection.name}-${item.name}`
           "></i>
         <i v-else-if="item.type === 'table'" class="mdi mdi-table node-icon"></i>
         <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle node-icon"></i>
@@ -42,8 +42,8 @@
           {{ item.name }}
         </div>
 
-        <DuckDBImporter v-else-if="item.type === 'duckdb-upload'" :db="item.connection.db"
-          :connection="item.connection" />
+        <DuckDBImporter v-else-if="item.type === 'duckdb-upload'" :db="(item.connection as any as DuckDBConnection).db"
+          :connection="item.connection as any as DuckDBConnection" />
 
         <div v-else-if="item.type === 'model'" class="bq-project-container" @click.stop>
           <label class="input-label">Model</label>
@@ -73,7 +73,7 @@
         </div>
 
         <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
-          <form @submit.prevent="updateMotherDuckToken(item.connection, mdToken)">
+          <form @submit.prevent="updateMotherDuckToken(item.connection as any as MotherDuckConnection, mdToken)">
             <button type="submit" class="customize-button">Update Token</button>
             <input type="password" v-model="mdToken" placeholder="mdToken" class="connection-customize" />
           </form>
@@ -114,7 +114,7 @@
 
         <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
           <label class="save-credential-toggle">
-            <input type="checkbox" :checked="item.connection.saveCredential"
+            <input type="checkbox" :checked="(item.connection as any as ConnectionWithSaveCredential).saveCredential"
               @change="toggleSaveCredential(item.connection)" />
             <span class="checkbox-label">Save Credentials</span>
           </label>
@@ -142,13 +142,13 @@
             title="Query History" @click.stop="toggleMobileMenu"></i>
           <editor-creator-icon class="tacticle-button hover-icon" :connection="item.connection.name" type="sql"
             title="New SQL Editor" :data-testid="testTag
-                ? `new-sql-editor-${item.connection.name}-${testTag}`
-                : `new-sql-editor-${item.connection.name}`
+              ? `new-sql-editor-${item.connection.name}-${testTag}`
+              : `new-sql-editor-${item.connection.name}`
               " />
           <editor-creator-icon class="tacticle-button hover-icon" :connection="item.connection.name"
             title="New Trilogy Editor" :data-testid="testTag
-                ? `new-trilogy-editor-${item.connection.name}-${testTag}`
-                : `new-trilogy-editor-${item.connection.name}`
+              ? `new-trilogy-editor-${item.connection.name}-${testTag}`
+              : `new-trilogy-editor-${item.connection.name}`
               " />
           <connection-refresh class="tacticle-button hover-icon" :connection="item.connection"
             :is-connected="item.connection.connected" />
@@ -181,7 +181,26 @@ import Tooltip from '../Tooltip.vue'
 import {
   Connection,
   MotherDuckConnection,
+  DuckDBConnection,
 } from '../../connections'
+
+// Interface for connections that have common properties
+interface ConnectionWithSaveCredential {
+  saveCredential?: boolean
+}
+
+interface BigQueryLikeConnection {
+  projectId?: string
+  browsingProjectId?: string
+}
+
+interface SnowflakeLikeConnection {
+  config?: {
+    privateKey?: string
+    account?: string
+    username?: string
+  }
+}
 
 export interface ListItem {
   id: string
@@ -303,43 +322,32 @@ export default {
       emit('deleteConnection', connection)
     }
 
-    //config variables
-    const bigqueryProject = ref<string>(
-      props.item.connection?.projectId ? props.item.connection.projectId : '',
-    )
-    const bigqueryBrowsingProject = ref<string>(
-      props.item.connection?.browsingProjectId ? props.item.connection.browsingProjectId : '',
-    )
-    const mdToken = ref<string>(props.item.connection?.mdToken ? props.item.connection.mdToken : '')
-    const snowflakePrivateKey = ref<string>(
-      props.item.connection?.config?.privateKey ? props.item.connection.config.privateKey : '',
-    )
-    const snowflakeAccount = ref<string>(
-      props.item.connection?.config?.account ? props.item.connection.config.account : '',
-    )
-    const snowflakeUsername = ref<string>(
-      props.item.connection?.config?.username ? props.item.connection.config.username : '',
-    )
+    // Configuration reactive variables with proper initialization
+    const bigqueryProject = ref((props.item.connection as any as BigQueryLikeConnection).projectId || '')
+    const bigqueryBrowsingProject = ref((props.item.connection as any as BigQueryLikeConnection).browsingProjectId || '')
+    const mdToken = ref((props.item.connection as any as MotherDuckConnection).mdToken || '')
+    const snowflakePrivateKey = ref((props.item.connection as any as SnowflakeLikeConnection).config?.privateKey || '')
+    const snowflakeAccount = ref((props.item.connection as any as SnowflakeLikeConnection).config?.account || '')
+    const snowflakeUsername = ref((props.item.connection as any as SnowflakeLikeConnection).config?.username || '')
 
-    // Success indicator states
-    const showBillingSuccess = ref<boolean>(false)
-    const showBrowsingSuccess = ref<boolean>(false)
-    const showPrivateKeySuccess = ref<boolean>(false)
-    const showAccountSuccess = ref<boolean>(false)
-    const showUsernameSuccess = ref<boolean>(false)
+    // Success indicators
+    const showBillingSuccess = ref(false)
+    const showBrowsingSuccess = ref(false)
+    const showPrivateKeySuccess = ref(false)
+    const showAccountSuccess = ref(false)
+    const showUsernameSuccess = ref(false)
 
-    // Function to show and hide success indicator
     const showSuccessIndicator = (indicator: Ref<boolean>) => {
       indicator.value = true
       setTimeout(() => {
         indicator.value = false
-      }, 2000) // Show check mark for 2 seconds then fade out
+      }, 1500)
     }
 
-    // Debounce function to prevent too many updates
+    // Debounce function
     const debounce = (fn: Function, delay: number) => {
-      let timeout: ReturnType<typeof setTimeout>
-      return function (...args: any[]) {
+      let timeout: NodeJS.Timeout
+      return (...args: any[]) => {
         clearTimeout(timeout)
         timeout = setTimeout(() => fn(...args), delay)
       }

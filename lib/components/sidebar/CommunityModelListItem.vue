@@ -16,7 +16,7 @@
         <i class="mdi mdi-source-repository sidebar-icon"></i>
       </template>
       <template v-else-if="item.type === 'engine'">
-        <connection-icon :connection-type="item.label" />
+        <span class="right-pad"><connection-icon :connection-type="item.label" /></span>
       </template>
     </template>
 
@@ -115,7 +115,9 @@ export default {
   display: flex;
   padding: 4px;
 }
-
+.right-pad {
+  padding-right: 5px;
+}
 .tag {
   font-size: 6px;
   border-radius: 3px;

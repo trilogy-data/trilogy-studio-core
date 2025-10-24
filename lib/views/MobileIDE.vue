@@ -4,18 +4,19 @@
       @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
       :menuOpen="mobileMenuOpen"
       :activeScreen="activeScreen"
+      :tabs="tabs"
     >
       <template #sidebar>
         <sidebar
           @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
+          @screen-selected="setActiveSidebarScreen"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
-          :active="activeScreen"
+          :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
@@ -250,7 +251,9 @@ export default {
       activeScreen,
       activeEditor,
       activeDashboard,
+      activeSidebarScreen,
       setActiveScreen,
+      setActiveSidebarScreen,
       setActiveEditor,
       setActiveDashboard,
       activeConnectionKey,
@@ -261,6 +264,8 @@ export default {
       setActiveDocumentationKey,
       activeCommunityModelKey,
       mobileMenuOpen,
+      toggleMobileMenu,
+      tabs
     } = screenNavigation
 
     provide('navigationStore', screenNavigation)
@@ -276,25 +281,25 @@ export default {
       modelStore,
       activeCommunityModelKey,
       activeScreen,
+      activeSidebarScreen,
       activeEditor,
       activeDashboard,
       activeConnectionKey,
       activeModelKey,
       activeDocumentationKey,
       setActiveScreen,
+      setActiveSidebarScreen,
       setActiveEditor,
       setActiveDashboard,
       setActiveConnectionKey,
       setActiveModelKey,
       setActiveDocumentationKey,
       mobileMenuOpen,
+      toggleMobileMenu,
+      tabs
     }
   },
   methods: {
-    toggleMobileMenu() {
-      this.mobileMenuOpen = !this.mobileMenuOpen
-    },
-
 
     saveEditorsCall() {
       this.saveEditors()

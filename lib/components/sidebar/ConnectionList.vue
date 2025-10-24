@@ -2,57 +2,30 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
-        >
+        <button @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
           <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
-      <connection-creator-inline
-        :visible="creatorVisible"
-        @close="creatorVisible = !creatorVisible"
-      />
+      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
       <div class="search-container">
-        <input
-          type="text"
-          v-model="searchTerm"
-          placeholder="Search objects..."
-          class="search-input"
-          :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'"
-        />
-        <button
-          v-if="searchTerm"
-          @click="clearSearch"
-          class="clear-search-btn"
-          :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'"
-        >
+        <input type="text" v-model="searchTerm" placeholder="Search objects..." class="search-input"
+          :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'" />
+        <button v-if="searchTerm" @click="clearSearch" class="clear-search-btn"
+          :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'">
           ✕
         </button>
       </div>
     </template>
-    <connection-list-item
-      v-for="item in filteredContentList"
-      :key="item.id"
-      :item="item"
-      :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey"
-      :isMobile="isMobile"
-      :testTag="testTag"
-      @toggle="toggleCollapse"
-      @click="handleItemClick"
-      @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken"
-      @updateBigqueryProject="updateBigqueryProject"
+    <connection-list-item v-for="item in filteredContentList" :key="item.id" :item="item"
+      :is-collapsed="collapsed[item.id]" :isSelected="item.id === activeConnectionKey" :isMobile="isMobile"
+      :testTag="testTag" @toggle="toggleCollapse" @click="handleItemClick" @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
       @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey"
-      @update-snowflake-account="updateSnowflakeAccount"
-      @update-snowflake-username="updateSnowflakeUsername"
-      @toggle-save-credential="toggleSaveCredential"
-      @toggle-mobile-menu="toggleMobileMenu"
-      :delete-connection="deleteConnection"
-    />
+      @update-snowflake-private-key="updateSnowflakePrivateKey" @update-snowflake-account="updateSnowflakeAccount"
+      @update-snowflake-username="updateSnowflakeUsername" @toggle-save-credential="toggleSaveCredential"
+      @toggle-mobile-menu="toggleMobileMenu" :delete-connection="deleteConnection" />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -176,6 +149,8 @@ export default {
       if (connection.type === 'bigquery-oauth') {
         connection.setAttribute('browsingProjectId', project)
         await saveConnections()
+        connection.databases = []
+        await connection.getDatabases()
       }
     }
     const toggleSaveCredential = (connection: any) => {
@@ -248,7 +223,7 @@ export default {
       }
       delete isLoading.value[id]
     }
-    const handleItemClick = async (id: string, connection: string, type: string) => {
+    const handleItemClick = async (id: string, _: string, __: string) => {
       // if we are expanding a connection, get the databases
       emit('connection-key-selected', id)
     }
@@ -353,7 +328,7 @@ export default {
       connectionStore,
       editorStore,
       contentList,
-      filteredContentList, 
+      filteredContentList,
       toggleCollapse,
       handleItemClick,
       toggleMobileMenu,
@@ -372,8 +347,8 @@ export default {
       rightSplit,
       creatorVisible,
       isMobile,
-      searchTerm, 
-      clearSearch, 
+      searchTerm,
+      clearSearch,
     }
   },
   components: {
@@ -439,12 +414,10 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(
-    to left,
-    var(--sidebar-bg) 0%,
-    var(--query-window-bg) 50%,
-    var(--sidebar-bg) 100%
-  );
+  background: linear-gradient(to left,
+      var(--sidebar-bg) 0%,
+      var(--query-window-bg) 50%,
+      var(--sidebar-bg) 100%);
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }
@@ -474,7 +447,8 @@ export default {
   color: var(--sidebar-text-color, #333);
   line-height: var(--sidebar-list-item-height);
   font-size: var(--sidebar-font-size, 14px);
-  padding-left: 8px; /* Add this line */
+  padding-left: 8px;
+  /* Add this line */
 }
 
 .search-input:focus {

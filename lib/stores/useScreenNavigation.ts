@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
 import { useEditorStore, useDashboardStore } from '.'
-import { lastSegment, KeySeparator } from '../data/constants'
+import { lastSegment } from '../data/constants'
 
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
@@ -99,19 +99,7 @@ const createNavigationStore = (): NavigationStore => {
     activeTab: ref<string | null>(null),
   }
 
-  // Screens that should close mobile menu when activated
-  const mobileMenuClosingScreens: ScreenType[] = [
-    'community-models',
-    'welcome',
-    'profile',
-    'settings',
-    'dashboard-import',
-    'editors',
-    'connections',
-    'dashboard',
-    'models',
-    'tutorial'
-  ]
+
 
   const getName = (screen: ScreenType, title: string | null, address: string): string => {
     if (title) {
@@ -154,7 +142,6 @@ const createNavigationStore = (): NavigationStore => {
       return isNaN(idNum) ? maxId : Math.max(maxId, idNum)
     }, 0)
     let tabIdCounter = maxTabId
-    console.log('Opening tab:', title, `with id: ${address}`, `tab-${tabIdCounter + 1}`)
     setActiveScreen(screen)
     let finalTitle = getName(screen, title, address)
     const tab: Tab = {
@@ -164,6 +151,7 @@ const createNavigationStore = (): NavigationStore => {
       address,
     }
     state.tabs.value.push(tab)
+
     setActiveTab(tab.id)
   }
 
@@ -250,7 +238,7 @@ const createNavigationStore = (): NavigationStore => {
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
       }
-      state.mobileMenuOpen.value = false;
+      toggleMobileMenu()
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {
@@ -260,6 +248,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {
     pushHashToUrl('sidebarScreen', screen)
+    console.log('Setting active sidebar screen to:', screen)
     state.activeSidebarScreen.value = screen
     if (screen == 'settings') {
       openTab('settings', 'Settings', 'settings')
@@ -335,7 +324,9 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const toggleMobileMenu = (): void => {
+    console.log('Toggling mobile menu from', state.mobileMenuOpen.value, 'to', !state.mobileMenuOpen.value)
     state.mobileMenuOpen.value = !state.mobileMenuOpen.value
+    console.log('Mobile menu is now', state.mobileMenuOpen.value)
   }
 
   const onInitialLoad = (): void => {

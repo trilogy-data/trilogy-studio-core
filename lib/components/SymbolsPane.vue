@@ -1,6 +1,5 @@
 <template>
   <div class="symbols-pane" :style="{ height: editorHeightCalc }">
-    {{ editorHeight }}
     <div class="search-container">
       <input
         type="text"

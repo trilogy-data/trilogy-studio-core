@@ -191,4 +191,11 @@ watch(
   color: var(--error-color, #e53935);
   font-size: 18px;
 }
+/* on mobile, remove single model view padding */
+@media (max-width: 768px) {
+  .single-model-view {
+    padding: 0px;
+    border: 0px;
+  }
+}
 </style>

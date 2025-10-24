@@ -3,110 +3,94 @@
     <div class="table-header">
       <div class="table-title">
         <h2>
-          <span class="text-faint" v-if="table.database">{{ table.database }}.</span
-          ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+          <span class="text-faint" v-if="table.database">{{ table.database }}.</span><span class="text-faint"
+            v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
         </h2>
-        <span
-          class="table-type-badge"
-          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
-        >
+        <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
+        <div class="data-toolbar">
+          <button class="refresh-button" @click="loadSampleData">
+            <span class="refresh-icon">⟳</span> Refresh
+          </button>
+
+        </div>
       </div>
       <p v-if="table.description" class="table-description">{{ table.description }}</p>
     </div>
 
     <div class="tabs">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'structure' }"
-        @click="activeTab = 'structure'"
-      >
+      <button class="tab-button" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'">
         Structure
       </button>
-      <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="loadSampleData">
+      <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="activeTab = 'data'">
         Sample Data
       </button>
     </div>
-
-    <div v-if="activeTab === 'structure'" class="table-structure">
-      <div class="structure-header">
-        <div class="search-container">
-          <input
-            type="text"
-            v-model="searchTerm"
-            placeholder="Search columns..."
-            class="search-input"
-          />
+    <div class = "tab-content">
+      <div v-if="activeTab === 'structure'" class="table-structure">
+        <div class="structure-header">
+          <div class="search-container">
+            <input type="text" v-model="searchTerm" placeholder="Search columns..." class="search-input" />
+          </div>
+          <div class="column-count">
+            {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
+          </div>
         </div>
-        <div class="column-count">
-          {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
-        </div>
-      </div>
 
-      <div class="structure-table-container">
-        <table class="structure-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Constraints</th>
-              <th>Default</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="column in filteredColumns" :key="column.name">
-              <td>
-                <div class="column-name">
-                  {{ column.name }}
-                  <span v-if="column.primary" class="key-icon" title="Primary Key">🔑</span>
-                </div>
-              </td>
-              <td>{{ column.type }}</td>
-              <td>
-                <div class="constraint-badges">
-                  <span v-if="column.primary" class="constraint-badge primary">PK</span>
-                  <span v-if="column.unique" class="constraint-badge unique">UQ</span>
-                  <span v-if="!column.nullable" class="constraint-badge not-null">NN</span>
-                  <span v-if="column.autoincrement" class="constraint-badge auto-inc">AI</span>
-                </div>
-              </td>
-              <td>{{ column.default !== null ? column.default : '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div v-else-if="activeTab === 'data'" class="table-data">
-      <div class="data-toolbar">
-        <button class="refresh-button" @click="loadSampleData">
-          <span class="refresh-icon">⟳</span> Refresh
-        </button>
-        <div class="row-count" v-if="sampleData.length">
-          Showing {{ sampleData.length }} row{{ selectedSampleData?.data?.length !== 1 ? 's' : '' }}
+        <div class="structure-table-container">
+          <table class="structure-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Constraints</th>
+                <th>Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="column in filteredColumns" :key="column.name">
+                <td>
+                  <div class="column-name">
+                    {{ column.name }}
+                    <span v-if="column.primary" class="key-icon" title="Primary Key">🔑</span>
+                  </div>
+                </td>
+                <td>{{ column.type }}</td>
+                <td>
+                  <div class="constraint-badges">
+                    <span v-if="column.primary" class="constraint-badge primary">PK</span>
+                    <span v-if="column.unique" class="constraint-badge unique">UQ</span>
+                    <span v-if="!column.nullable" class="constraint-badge not-null">NN</span>
+                    <span v-if="column.autoincrement" class="constraint-badge auto-inc">AI</span>
+                  </div>
+                </td>
+                <td>{{ column.default !== null ? column.default : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div v-if="isLoading" class="loading-spinner">
-        <div class="spinner"></div>
-        <span>Loading sample data...</span>
-      </div>
+      <div v-else-if="activeTab === 'data'" class="table-data">
+        <div v-if="isLoading" class="loading-spinner">
+          <div class="spinner"></div>
+          <span>Loading sample data...</span>
+        </div>
 
-      <div v-else-if="error" class="error-message">
-        <span>⚠️ {{ error }}</span>
-      </div>
+        <div v-else-if="error" class="error-message">
+          <span>⚠️ {{ error }}</span>
+        </div>
 
-      <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
-        <p>No data available</p>
-      </div>
-      <div v-else class="result-container-wrapper">
-        <div class="result-container">
-          <DataTable
-            :results="selectedSampleData.data"
-            :headers="selectedSampleData.headers"
-            :containerHeight="500"
-          />
+        <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
+          <p>No data available</p>
+        </div>
+        <div v-else class="result-container-wrapper" >
+          <div class="result-container"  ref="resultContainerRef">
+            <DataTable :results="selectedSampleData.data" :headers="selectedSampleData.headers"
+            :containerHeight="containerHeight"
+               />
+          </div>
         </div>
       </div>
     </div>
@@ -114,7 +98,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Table, AssetType } from '../../connections'
 import { Results } from '../../editors/results'
 import { inject } from 'vue'
@@ -146,9 +130,44 @@ export default defineComponent({
     const sampleData = ref<Record<string, Results>>({})
     const isLoading = ref(false)
     const error = ref<string | null>(null)
+    
+    // Refs for measuring container height
+    const resultContainerRef = ref<HTMLElement | null>(null)
+    const containerHeight = ref(500) // Default height
+    let resizeObserver: ResizeObserver | null = null
 
     // Inject the connection store
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+
+    // Function to update container height
+    const updateContainerHeight = () => {
+      if (resultContainerRef.value) {
+        const rect = resultContainerRef.value.getBoundingClientRect()
+        containerHeight.value = Math.max(300, rect.height) // Minimum height of 300px
+      }
+    }
+
+    // Set up ResizeObserver to watch for size changes
+    onMounted(async () => {
+      await nextTick()
+      
+      if (resultContainerRef.value) {
+        updateContainerHeight()
+        
+        resizeObserver = new ResizeObserver(() => {
+          updateContainerHeight()
+        })
+        
+        resizeObserver.observe(resultContainerRef.value)
+      }
+    })
+
+    // Clean up ResizeObserver
+    onUnmounted(() => {
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+    })
 
     const filteredColumns = computed(() => {
       if (!searchTerm.value) return props.table.columns
@@ -161,8 +180,8 @@ export default defineComponent({
     })
 
     const loadSampleData = async () => {
-      activeTab.value = 'data'
-      if (sampleData.value[props.table.name]?.data?.length > 0) return
+
+      if (sampleData.value[props.table.name]?.data?.length > 0 && props.table.columns.length > 0) return
 
       isLoading.value = true
       error.value = null
@@ -171,7 +190,7 @@ export default defineComponent({
         if (!connectionStore) {
           throw new Error('Connection store not found')
         }
-
+        await connectionStore.connections[props.connectionName].refreshColumns(props.table.database, props.table.schema, props.table.name)
         const result = await connectionStore.connections[props.connectionName].getTableSample(
           props.table.database,
           props.table.schema,
@@ -204,6 +223,8 @@ export default defineComponent({
       error,
       loadSampleData,
       AssetType,
+      resultContainerRef,
+      containerHeight,
     }
   },
 })
@@ -215,12 +236,19 @@ export default defineComponent({
   display: flex;
   justify-content: center;
   align-items: center;
+  height:100%;
+  overflow-y: scroll;
 }
 
 .result-container {
-  width: 60vw;
-  height: 30vw;
+  max-width:98%;
+  width: 100%;
+  height: 100%;
   border: 1px solid var(--border);
+}
+
+.table-data {
+  height: 100%;
 }
 
 .table-viewer {
@@ -230,11 +258,11 @@ export default defineComponent({
   color: #2c3e50;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   max-width: 100%;
-  margin-bottom: 2rem;
+  height: 100%;
 }
 
 .table-header {
-  padding: 1.5rem;
+  padding: 0rem 1.5rem;
   border-bottom: 1px solid var(--border);
   background: var(--query-window-bg);
 }
@@ -243,7 +271,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .table-title h2 {
@@ -251,6 +279,9 @@ export default defineComponent({
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--text-color);
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
 }
 
 .table-type-badge {
@@ -318,8 +349,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0rem 1rem;
 }
 
 .search-container {
