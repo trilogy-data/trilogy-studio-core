@@ -56,6 +56,7 @@
         'no-controls': !showControls,
       }"
     >
+
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
         <div
@@ -610,6 +611,9 @@ export default defineComponent({
   .chart-content-area {
     width: 100%;
     height: calc(100% - 40px);
+  }
+  .chart-content-area.with-side-controls {
+    width: 100%;
   }
 }
 </style>

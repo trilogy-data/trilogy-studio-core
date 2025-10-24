@@ -238,7 +238,7 @@ const createNavigationStore = (): NavigationStore => {
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
       }
-      toggleMobileMenu()
+      state.mobileMenuOpen.value = false
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {

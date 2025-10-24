@@ -13,6 +13,7 @@
           v-if="tabs.length > 1" 
           class="tab-dropdown-container"
           @click="toggleTabDropdown"
+          ref="tabDropdownContainer"
         >
           <span class="current-tab-title">{{ currentTabTitle }}</span>
           <i 
@@ -26,6 +27,7 @@
         <div 
           v-if="tabDropdownOpen && tabs.length > 1" 
           class="tab-dropdown"
+          ref="tabDropdown"
           @click.stop
         >
           <div
@@ -48,9 +50,6 @@
         <slot></slot>
       </div>
     </div>
-    
-    <!-- Invisible overlay to close dropdown -->
-    <div v-if="tabDropdownOpen" class="dropdown-overlay" @click="closeTabDropdown"></div>
   </div>
 </template>
 
@@ -189,15 +188,6 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   flex: 1;
-}
-
-.dropdown-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
 }
 
 .interface {
@@ -355,19 +345,23 @@ export default {
     toggleTabDropdown() {
       console.log('opening')
       this.tabDropdownOpen = !this.tabDropdownOpen
+      console.log(this.tabDropdownOpen) 
     },
     
     closeTabDropdown() {
+      console.log('closing')
       this.tabDropdownOpen = false
     },
     
     selectTab(tab: Tab) {
+      console.log('selecting tab', tab)
       this.$emit('tab-selected', {
         screen: tab.screen,
         address: tab.address,
         id: tab.id,
         params: tab.params
       })
+
       this.closeTabDropdown()
     },
     
@@ -378,15 +372,31 @@ export default {
     getTabIcon(screenType: ScreenType): string {
       return this.iconMap[screenType] || 'mdi mdi-file-document-outline'
     },
+
+    // Handle clicks outside the dropdown
+    handleOutsideClick(event: Event) {
+      if (!this.tabDropdownOpen) return
+      
+      const target = event.target as Element
+      const dropdown = this.$refs.tabDropdown as HTMLElement
+      const container = this.$refs.tabDropdownContainer as HTMLElement
+      
+      // Close if click is outside both the dropdown and the container
+      if (dropdown && container && 
+          !dropdown.contains(target) && 
+          !container.contains(target)) {
+        this.closeTabDropdown()
+      }
+    },
   },
   mounted() {
     // Close dropdown when clicking outside
-    document.addEventListener('click', this.closeTabDropdown)
+    document.addEventListener('click', this.handleOutsideClick)
   },
   
   beforeUnmount() {
     // Clean up event listeners
-    document.removeEventListener('click', this.closeTabDropdown)
+    document.removeEventListener('click', this.handleOutsideClick)
   },
 }
 </script>
