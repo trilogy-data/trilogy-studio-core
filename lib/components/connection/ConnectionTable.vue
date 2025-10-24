@@ -3,35 +3,50 @@
     <div class="table-header">
       <div class="table-title">
         <h2>
-          <span class="text-faint" v-if="table.database">{{ table.database }}.</span><span class="text-faint"
-            v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+          <span class="text-faint" v-if="table.database">{{ table.database }}.</span
+          ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
         </h2>
-        <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
+        <span
+          class="table-type-badge"
+          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
+        >
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
         <div class="data-toolbar">
           <button class="refresh-button" @click="loadSampleData">
             <span class="refresh-icon">⟳</span> Refresh
           </button>
-
         </div>
       </div>
       <p v-if="table.description" class="table-description">{{ table.description }}</p>
     </div>
 
     <div class="tabs">
-      <button class="tab-button" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'">
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'structure' }"
+        @click="activeTab = 'structure'"
+      >
         Structure
       </button>
-      <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="activeTab = 'data'">
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'data' }"
+        @click="activeTab = 'data'"
+      >
         Sample Data
       </button>
     </div>
-    <div class = "tab-content">
+    <div class="tab-content">
       <div v-if="activeTab === 'structure'" class="table-structure">
         <div class="structure-header">
           <div class="search-container">
-            <input type="text" v-model="searchTerm" placeholder="Search columns..." class="search-input" />
+            <input
+              type="text"
+              v-model="searchTerm"
+              placeholder="Search columns..."
+              class="search-input"
+            />
           </div>
           <div class="column-count">
             {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
@@ -85,11 +100,13 @@
         <div v-else-if="selectedSampleData?.data.length === 0" class="empty-state">
           <p>No data available</p>
         </div>
-        <div v-else class="result-container-wrapper" >
-          <div class="result-container"  ref="resultContainerRef">
-            <DataTable :results="selectedSampleData.data" :headers="selectedSampleData.headers"
-            :containerHeight="containerHeight"
-               />
+        <div v-else class="result-container-wrapper">
+          <div class="result-container" ref="resultContainerRef">
+            <DataTable
+              :results="selectedSampleData.data"
+              :headers="selectedSampleData.headers"
+              :containerHeight="containerHeight"
+            />
           </div>
         </div>
       </div>
@@ -130,7 +147,7 @@ export default defineComponent({
     const sampleData = ref<Record<string, Results>>({})
     const isLoading = ref(false)
     const error = ref<string | null>(null)
-    
+
     // Refs for measuring container height
     const resultContainerRef = ref<HTMLElement | null>(null)
     const containerHeight = ref(500) // Default height
@@ -150,14 +167,14 @@ export default defineComponent({
     // Set up ResizeObserver to watch for size changes
     onMounted(async () => {
       await nextTick()
-      
+
       if (resultContainerRef.value) {
         updateContainerHeight()
-        
+
         resizeObserver = new ResizeObserver(() => {
           updateContainerHeight()
         })
-        
+
         resizeObserver.observe(resultContainerRef.value)
       }
     })
@@ -180,8 +197,8 @@ export default defineComponent({
     })
 
     const loadSampleData = async () => {
-
-      if (sampleData.value[props.table.name]?.data?.length > 0 && props.table.columns.length > 0) return
+      if (sampleData.value[props.table.name]?.data?.length > 0 && props.table.columns.length > 0)
+        return
 
       isLoading.value = true
       error.value = null
@@ -190,7 +207,11 @@ export default defineComponent({
         if (!connectionStore) {
           throw new Error('Connection store not found')
         }
-        await connectionStore.connections[props.connectionName].refreshColumns(props.table.database, props.table.schema, props.table.name)
+        await connectionStore.connections[props.connectionName].refreshColumns(
+          props.table.database,
+          props.table.schema,
+          props.table.name,
+        )
         const result = await connectionStore.connections[props.connectionName].getTableSample(
           props.table.database,
           props.table.schema,
@@ -236,12 +257,12 @@ export default defineComponent({
   display: flex;
   justify-content: center;
   align-items: center;
-  height:100%;
+  height: 100%;
   overflow-y: scroll;
 }
 
 .result-container {
-  max-width:98%;
+  max-width: 98%;
   width: 100%;
   height: 100%;
   border: 1px solid var(--border);

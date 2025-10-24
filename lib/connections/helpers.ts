@@ -7,7 +7,6 @@ export function buildConnectionTree(
   collapsed: Record<string, boolean>,
   isLoading: Record<string, boolean>,
   isErrored: Record<string, string>,
-  isMobile: boolean = false,
 ): Array<{
   id: string
   name: string
@@ -27,7 +26,6 @@ export function buildConnectionTree(
     connection: any | undefined
     object?: any
   }> = []
-
 
   const sorted = Object.values(connections).sort((a, b) => {
     if (a.connected && !b.connected) {

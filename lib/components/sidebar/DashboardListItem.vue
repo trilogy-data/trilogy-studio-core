@@ -101,18 +101,18 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const isMobile = inject<boolean>('isMobile', false)
-    
+
     if (!connectionStore || !dashboardStore) {
       throw new Error('Connection/Dashboard stores is not provided!')
     }
-    
+
     const connectionInfo = computed(() => {
       if (props.item.type === 'connection') {
         return connectionStore.connections[props.item.label] || null
       }
       return null
     })
-    
+
     const connectionStatus = computed(() => {
       const connection = connectionInfo.value
       if (!connection) {
@@ -126,7 +126,7 @@ export default {
         return 'disabled'
       }
     })
-    
+
     return {
       isMobile,
       dashboardStore,

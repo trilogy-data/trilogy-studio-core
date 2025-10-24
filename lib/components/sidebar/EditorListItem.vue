@@ -1,13 +1,11 @@
 <template>
   <div>
-
     <div
       v-if="item.type === 'creator'"
       :data-testid="`editor-list-id-${item.key}`"
       class="creator-item"
       @click="$emit('item-click', item.type, item.objectKey, item.key)"
-    >
-    </div>
+    ></div>
 
     <sidebar-item
       v-else
@@ -35,7 +33,7 @@
       <!-- Custom name slot for connection model info -->
       <template #name>
         {{ item.label }}
-        <span class="text-light " v-if="item.type === 'connection'">
+        <span class="text-light" v-if="item.type === 'connection'">
           <span class="connection-model" v-if="connectionStore.connections[item.label]?.model">
             ({{ connectionStore.connections[item.label].model }})
           </span>
@@ -56,7 +54,7 @@
           <span class="tag-container">
             <span v-for="tag in item.editor.tags" :key="tag" class="tag">{{ tag }}</span>
           </span>
-          
+
           <tooltip content="Delete Editor" position="left">
             <span
               class="remove-btn hover-icon"
@@ -67,7 +65,7 @@
             </span>
           </tooltip>
         </template>
-        
+
         <template v-else-if="item.type === 'connection'">
           <span class="tag-container hover-icon">
             <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
@@ -78,7 +76,7 @@
             :connection="connectionStore.connections[item.label]"
           />
         </template>
-        
+
         <template v-else-if="item.type === 'folder'">
           <span class="tag-container hover-icon">
             <editor-creator-icon
@@ -134,7 +132,7 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveModels = inject<CallableFunction>('saveModels')
     const saveConnections = inject<CallableFunction>('saveConnections')
-    
+
     if (!connectionStore || !saveModels || !saveConnections) {
       throw new Error('Connection store is not provided!')
     }
@@ -185,8 +183,6 @@ export default {
 </script>
 
 <style scoped>
-
-
 .sql {
   color: var(--text-color);
   font-style: bold;

@@ -41,7 +41,6 @@ export const buildCommunityModelTree = (
     })
 
     // If this root is not collapsed, add its engines and models
-    console.log('Checking collapsed for rootKey:', rootKey, collapsed[rootKey])
     if (!collapsed[rootKey]) {
       const files = allFiles[rootKey] || []
       const engines: Record<string, ModelFile[]> = {}
@@ -66,8 +65,6 @@ export const buildCommunityModelTree = (
             indent: 1,
             modelRoot,
           })
-          console.log('Checking collapsed for engineKey:', engineKey, collapsed[engineKey])
-
           // If this engine is not collapsed, add its models
           if (!collapsed[engineKey]) {
             engines[engine].forEach((file) => {

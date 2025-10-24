@@ -2,30 +2,57 @@
   <sidebar-list title="Connections">
     <template #actions>
       <div class="button-container">
-        <button @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'">
+        <button
+          @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
+        >
           <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
-      <connection-creator-inline :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
+      <connection-creator-inline
+        :visible="creatorVisible"
+        @close="creatorVisible = !creatorVisible"
+      />
       <div class="search-container">
-        <input type="text" v-model="searchTerm" placeholder="Search objects..." class="search-input"
-          :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'" />
-        <button v-if="searchTerm" @click="clearSearch" class="clear-search-btn"
-          :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'">
+        <input
+          type="text"
+          v-model="searchTerm"
+          placeholder="Search objects..."
+          class="search-input"
+          :data-testid="testTag ? `connection-search-${testTag}` : 'connection-search'"
+        />
+        <button
+          v-if="searchTerm"
+          @click="clearSearch"
+          class="clear-search-btn"
+          :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'"
+        >
           ✕
         </button>
       </div>
     </template>
-    <connection-list-item v-for="item in filteredContentList" :key="item.id" :item="item"
-      :is-collapsed="collapsed[item.id]" :isSelected="item.id === activeConnectionKey" :isMobile="isMobile"
-      :testTag="testTag" @toggle="toggleCollapse" @click="handleItemClick" @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken" @updateBigqueryProject="updateBigqueryProject"
+    <connection-list-item
+      v-for="item in filteredContentList"
+      :key="item.id"
+      :item="item"
+      :is-collapsed="collapsed[item.id]"
+      :isSelected="item.id === activeConnectionKey"
+      :isMobile="isMobile"
+      :testTag="testTag"
+      @toggle="toggleCollapse"
+      @click="handleItemClick"
+      @refresh="refreshId"
+      @updateMotherduckToken="updateMotherDuckToken"
+      @updateBigqueryProject="updateBigqueryProject"
       @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey" @update-snowflake-account="updateSnowflakeAccount"
-      @update-snowflake-username="updateSnowflakeUsername" @toggle-save-credential="toggleSaveCredential"
-      @toggle-mobile-menu="toggleMobileMenu" :delete-connection="deleteConnection" />
+      @update-snowflake-private-key="updateSnowflakePrivateKey"
+      @update-snowflake-account="updateSnowflakeAccount"
+      @update-snowflake-username="updateSnowflakeUsername"
+      @toggle-save-credential="toggleSaveCredential"
+      @toggle-mobile-menu="toggleMobileMenu"
+      :delete-connection="deleteConnection"
+    />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -228,7 +255,6 @@ export default {
       emit('connection-key-selected', id)
     }
     const toggleCollapse = async (id: string, connection: string, type: string) => {
-
       if (
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
@@ -311,7 +337,6 @@ export default {
         collapsed.value,
         isLoading.value,
         isErrored.value,
-        isMobile.value,
       )
     })
 
@@ -414,10 +439,12 @@ export default {
   line-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
   min-height: var(--sidebar-list-item-height);
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

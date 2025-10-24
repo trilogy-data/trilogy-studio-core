@@ -1,8 +1,8 @@
 <template>
   <div class="loading-container" ref="containerRef">
     <template v-if="isCompact">
-      <p><img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})</p> <button v-if="cancel"
-        @click="handleCancel" class="cancel-button">Cancel</button>
+      <p><img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})</p>
+      <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </template>
     <template v-else>
       <img :src="trilogyIcon" class="trilogy-icon" />
@@ -11,8 +11,6 @@
         <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
       </div>
     </template>
-
-
   </div>
 </template>
 
@@ -172,7 +170,6 @@ export default defineComponent({
 }
 
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);

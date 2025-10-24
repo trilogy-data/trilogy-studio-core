@@ -30,21 +30,14 @@
     >
       <!-- Custom icon slot for different item types -->
       <template #icon>
-        <img 
-          v-if="item.type === 'source'" 
-          :src="trilogyIcon" 
-          class="trilogy-icon" 
-        />
+        <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
         <span
           v-else-if="item.type === 'concept'"
           :class="`purpose-${item.concept.purpose.toLowerCase()}`"
         >
           {{ item.concept.purpose.charAt(0).toUpperCase() }}
         </span>
-        <i 
-          v-else-if="item.type === 'datasource'" 
-          class="mdi mdi-table node-icon"
-        ></i>
+        <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
       </template>
 
       <!-- Custom extra content slot for action buttons -->

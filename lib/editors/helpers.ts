@@ -121,11 +121,7 @@ export function buildEditorTree(
     })
 
     // Helper function to recursively add folders and editors to the list
-    function addToList(
-      tree: Record<string, any>,
-      currentIndent: number,
-      pathPrefix: string = '',
-    ) {
+    function addToList(tree: Record<string, any>, currentIndent: number, pathPrefix: string = '') {
       // Sort entries: folders first, then editors
       const entries = Object.entries(tree).sort(([aKey, aVal], [bKey, bVal]) => {
         if (aVal.type === 'folder' && bVal.type === 'editor') return -1
@@ -160,7 +156,7 @@ export function buildEditorTree(
 
           // If folder is not collapsed, add its contents
           if (!collapsed[folderKey]) {
-            addToList(node.children, currentIndent+1, folderPath)
+            addToList(node.children, currentIndent + 1, folderPath)
           }
         } else if (node.type === 'editor') {
           const editorKey = `e-${storage}-${connection}-${node.editor.id}`

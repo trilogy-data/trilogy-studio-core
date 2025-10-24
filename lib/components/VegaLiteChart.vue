@@ -56,7 +56,6 @@
         'no-controls': !showControls,
       }"
     >
-
       <!-- Dual chart visualization containers for smooth hot-swapping -->
       <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
         <div

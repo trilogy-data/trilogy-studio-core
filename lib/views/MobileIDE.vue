@@ -1,23 +1,49 @@
 <template>
   <div class="main">
-    <mobile-sidebar-layout @menu-toggled="mobileMenuOpen = !mobileMenuOpen" @tab-selected="tabSelected"
-      :menuOpen="mobileMenuOpen" :activeScreen="activeScreen" :tabs="tabs">
+    <mobile-sidebar-layout
+      @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      @tab-selected="tabSelected"
+      :menuOpen="mobileMenuOpen"
+      :activeScreen="activeScreen"
+      :tabs="tabs"
+      :activeTab="activeTab"
+      @tab-closed="closeTab"
+    >
       <template #sidebar>
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveSidebarScreen"
-          @save-editors="saveEditorsCall" @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey" @dashboard-key-selected="setActiveDashboard"
-          @toggle-mobile-menu="toggleMobileMenu" @connection-key-selected="setActiveConnectionKey"
-          :active="activeSidebarScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
-          :activeConnectionKey="activeConnectionKey" :activeModelKey="activeModelKey"
-          :activeDashboardKey="activeDashboard" />
+        <sidebar
+          @editor-selected="setActiveEditor"
+          @screen-selected="setActiveSidebarScreen"
+          @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey"
+          @documentation-key-selected="setActiveDocumentationKey"
+          @dashboard-key-selected="setActiveDashboard"
+          @toggle-mobile-menu="toggleMobileMenu"
+          @connection-key-selected="setActiveConnectionKey"
+          :active="activeSidebarScreen"
+          :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey"
+          :activeConnectionKey="activeConnectionKey"
+          :activeModelKey="activeModelKey"
+          :activeDashboardKey="activeDashboard"
+        />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
         <tabbed-layout>
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
-            <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorId="activeEditor"
-              @query-started="slotProps.onQueryStarted" @save-editors="saveEditorsCall" />
-            <editor @query-started="slotProps.onQueryStarted" v-else context="main-sql" :editorId="activeEditor"
-              @save-editors="saveEditorsCall" />
+            <editor
+              v-if="activeEditorData.type == 'preql'"
+              context="main-trilogy"
+              :editorId="activeEditor"
+              @query-started="slotProps.onQueryStarted"
+              @save-editors="saveEditorsCall"
+            />
+            <editor
+              @query-started="slotProps.onQueryStarted"
+              v-else
+              context="main-sql"
+              :editorId="activeEditor"
+              @save-editors="saveEditorsCall"
+            />
           </template>
           <template #results v-if="activeEditorData">
             <ResultsView :editorData="activeEditorData"></ResultsView>
@@ -25,7 +51,10 @@
         </tabbed-layout>
       </template>
       <template v-else-if="activeScreen === 'connections'">
-        <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
+        <connection-view
+          :activeConnectionKey="activeConnectionKey"
+          @save-editors="saveEditorsCall"
+        />
       </template>
       <template v-else-if="activeScreen === 'tutorial'">
         <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
@@ -149,7 +178,7 @@ import { inject, defineAsyncComponent, provide } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
-import useScreenNavigation from '../stores/useScreenNavigation.ts'
+import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
@@ -163,14 +192,9 @@ const MobileDashboard = defineAsyncComponent(
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
-
 export default {
   name: 'MobileIDEComponent',
-  data() {
-    return {
-      activeTab: 'editor',
-    }
-  },
+  data() {},
   components: {
     Sidebar,
     Editor,
@@ -219,12 +243,13 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => { }
+      saveEditors = () => {}
     }
     const screenNavigation = useScreenNavigation()
     const {
       activeScreen,
       activeEditor,
+      activeTab,
       activeDashboard,
       activeSidebarScreen,
       setActiveScreen,
@@ -241,10 +266,10 @@ export default {
       mobileMenuOpen,
       toggleMobileMenu,
       tabs,
-      openTab
+      closeTab,
+      openTab,
     } = screenNavigation
-    const tabSelected = (e) => {
-      console.log('tab selected event', e)
+    const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
     }
     provide('navigationStore', screenNavigation)
@@ -259,6 +284,7 @@ export default {
       saveDashboards,
       modelStore,
       activeCommunityModelKey,
+      activeTab,
       activeScreen,
       activeSidebarScreen,
       activeEditor,
@@ -277,11 +303,11 @@ export default {
       toggleMobileMenu,
       tabs,
       openTab,
+      closeTab,
       tabSelected,
     }
   },
   methods: {
-
     saveEditorsCall() {
       this.saveEditors()
     },

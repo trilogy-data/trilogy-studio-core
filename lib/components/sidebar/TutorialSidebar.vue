@@ -2,7 +2,7 @@
   <sidebar-list title="Documentation">
     <template #actions></template>
     <sidebar-item
-      v-for="node in documentationNodes" 
+      v-for="node in documentationNodes"
       :key="node.id"
       :item-id="node.id"
       :name="node.name"
@@ -96,18 +96,11 @@ export default {
       collapsed.value[id] = !collapsed.value[id]
     }
 
-    const handleClick = (id: string) => {
-      // Emit the event to parent component
-      // Note: In Composition API, we need to access emit differently
-      // This would need to be adjusted based on your actual implementation
-    }
-
     return {
       documentationNodes,
       toggleCollapse,
       collapsed,
       isActiveNode,
-      handleClick,
     }
   },
 

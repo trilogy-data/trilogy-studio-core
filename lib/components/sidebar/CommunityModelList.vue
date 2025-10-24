@@ -15,45 +15,80 @@
     <div v-if="communityStore.hasErrors" class="error-container">
       <div v-for="error in communityStore.errorList" :key="error.root" class="error-item">
         <span class="error-text">{{ error.root }}: {{ error.error }}</span>
-        <button @click="communityStore.clearRepositoryError(getModelRootByKey(error.root))" class="clear-error">
+        <button
+          @click="communityStore.clearRepositoryError(getModelRootByKey(error.root))"
+          class="clear-error"
+        >
           ×
         </button>
       </div>
     </div>
 
     <!-- Model List -->
-    <CommunityModelListItem v-for="item in displayTree" :key="item.key" :item="item" :is-collapsed="collapsed[item.key]"
-      :active-model="navigationStore.activeCommunityModelKey.value" @item-click="handleItemClick"
-      @item-toggle="handleItemToggle" @model-selected="handleModelSelected" />
+    <CommunityModelListItem
+      v-for="item in displayTree"
+      :key="item.key"
+      :item="item"
+      :is-collapsed="collapsed[item.key]"
+      :active-model="navigationStore.activeCommunityModelKey.value"
+      @item-click="handleItemClick"
+      @item-toggle="handleItemToggle"
+      @model-selected="handleModelSelected"
+    />
 
     <!-- Add Repository Modal -->
-    <div v-if="communityStore.showAddRepositoryModal" class="confirmation-overlay"
-      @click="communityStore.closeAddRepositoryModal()">
+    <div
+      v-if="communityStore.showAddRepositoryModal"
+      class="confirmation-overlay"
+      @click="communityStore.closeAddRepositoryModal()"
+    >
       <div class="confirmation-dialog" @click.stop>
         <h3>Add Model Repository</h3>
         <form @submit.prevent="handleAddRepository">
           <div class="form-group">
             <label>Repository Owner: <span class="required">*</span></label>
-            <input v-model="communityStore.newRepo.owner" type="text" placeholder="e.g., trilogy-data" required />
+            <input
+              v-model="communityStore.newRepo.owner"
+              type="text"
+              placeholder="e.g., trilogy-data"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Repository Name: <span class="required">*</span></label>
-            <input v-model="communityStore.newRepo.repo" type="text" placeholder="e.g., trilogy-public-models"
-              required />
+            <input
+              v-model="communityStore.newRepo.repo"
+              type="text"
+              placeholder="e.g., trilogy-public-models"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Branch: <span class="required">*</span></label>
-            <input v-model="communityStore.newRepo.branch" type="text" placeholder="e.g., main" required />
+            <input
+              v-model="communityStore.newRepo.branch"
+              type="text"
+              placeholder="e.g., main"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Display Name (optional):</label>
-            <input v-model="communityStore.newRepo.displayName" type="text" placeholder="e.g., My Custom Models" />
+            <input
+              v-model="communityStore.newRepo.displayName"
+              type="text"
+              placeholder="e.g., My Custom Models"
+            />
           </div>
           <div v-if="addError" class="form-error">
             {{ addError }}
           </div>
           <div class="dialog-actions">
-            <button type="button" class="cancel-btn" @click="communityStore.closeAddRepositoryModal()">
+            <button
+              type="button"
+              class="cancel-btn"
+              @click="communityStore.closeAddRepositoryModal()"
+            >
               Cancel
             </button>
             <button type="submit" class="confirm-btn" :disabled="communityStore.addingRepository">
@@ -136,7 +171,6 @@ export default {
         communityStore.modelRoots,
         communityStore.filesByRoot,
         collapsed.value,
-
       )
     })
 

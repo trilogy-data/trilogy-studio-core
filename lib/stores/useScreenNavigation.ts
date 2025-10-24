@@ -99,8 +99,6 @@ const createNavigationStore = (): NavigationStore => {
     activeTab: ref<string | null>(null),
   }
 
-
-
   const getName = (screen: ScreenType, title: string | null, address: string): string => {
     if (title) {
       return title
@@ -248,7 +246,6 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {
     pushHashToUrl('sidebarScreen', screen)
-    console.log('Setting active sidebar screen to:', screen)
     state.activeSidebarScreen.value = screen
     if (screen == 'settings') {
       openTab('settings', 'Settings', 'settings')
@@ -282,7 +279,7 @@ const createNavigationStore = (): NavigationStore => {
       state.activeEditor.value = ''
       return
     }
-    openTab('editors', editor, editor)
+    openTab('editors', null, editor)
   }
 
   const setActiveDocumentationKey = (documentation: string | null): void => {
@@ -324,7 +321,12 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const toggleMobileMenu = (): void => {
-    console.log('Toggling mobile menu from', state.mobileMenuOpen.value, 'to', !state.mobileMenuOpen.value)
+    console.log(
+      'Toggling mobile menu from',
+      state.mobileMenuOpen.value,
+      'to',
+      !state.mobileMenuOpen.value,
+    )
     state.mobileMenuOpen.value = !state.mobileMenuOpen.value
     console.log('Mobile menu is now', state.mobileMenuOpen.value)
   }

@@ -39,7 +39,7 @@
         >
           {{ item.name }}
         </div>
-        
+
         <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
           <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
             <button type="submit" class="customize-button">Update API Key</button>
@@ -64,7 +64,7 @@
             </div>
           </form>
         </div>
-        
+
         <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
           <form
             @submit.prevent="updateModel(item.connection, selectedModel)"
@@ -95,7 +95,7 @@
             </select>
           </form>
         </div>
-        
+
         <div
           v-else-if="item.type === 'toggle-save-credential'"
           class="md-token-container"
@@ -110,7 +110,7 @@
             <span class="checkbox-label">Save Credentials</span>
           </label>
         </div>
-        
+
         <span
           v-else
           class="title-pad-left truncate-text"
@@ -138,7 +138,7 @@
           >
             <i class="mdi mdi-star-outline"></i>
           </LoadingButton>
-          
+
           <!-- Refresh Button for Connection -->
           <connection-refresh
             v-if="item.connection"
@@ -153,7 +153,7 @@
               <i class="mdi mdi-trash-can tactile-button"></i>
             </span>
           </tooltip>
-          
+
           <!-- Status Indicator -->
           <connection-status-icon v-if="item.connection" :connection="item.connection" />
         </div>
@@ -314,7 +314,11 @@ export default defineComponent({
     // Get item name (for simple cases where name slot isn't needed)
     const getItemName = () => {
       // Return empty string for complex items that use the name slot
-      if (['api-key', 'model', 'toggle-save-credential', 'refresh-connection'].includes(props.item.type)) {
+      if (
+        ['api-key', 'model', 'toggle-save-credential', 'refresh-connection'].includes(
+          props.item.type,
+        )
+      ) {
         return ''
       }
       return props.item.name
@@ -553,7 +557,7 @@ export default defineComponent({
   padding-left: 8px;
 }
 
-.save-credential-toggle input[type="checkbox"] {
+.save-credential-toggle input[type='checkbox'] {
   margin-right: 8px;
 }
 
