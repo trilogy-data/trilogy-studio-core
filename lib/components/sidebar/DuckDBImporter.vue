@@ -1,11 +1,6 @@
 <template>
-  <div
-    class="file-upload-container"
-    @dragover.prevent="handleDragOver"
-    @dragleave.prevent="handleDragLeave"
-    @drop.prevent="handleDrop"
-    :class="{ 'drag-active': isDragging }"
-  >
+  <div class="file-upload-container" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop" :class="{ 'drag-active': isDragging }">
     <div class="upload-area">
       <div v-if="successMessage && !isLoading" class="success-message">
         <span>{{ successMessage }}</span>
@@ -14,13 +9,8 @@
         <div class="truncate-text">
           Drag or<label class="file-input-label">
             select
-            <input
-              type="file"
-              accept=".csv,.parquet,.db"
-              @change="handleFileInput"
-              ref="fileInput"
-              class="hidden-input"
-            />
+            <input type="file" accept=".csv,.parquet,.db" @change="handleFileInput" ref="fileInput"
+              class="hidden-input" />
           </label>
           CSV/Parquet or DuckDB DB
         </div>
@@ -103,9 +93,9 @@ export default defineComponent({
 
         // Update success message based on result type
         if (result.type === 'database') {
-          successMessage.value = `Successfully attached database <strong>${result.name}</strong>`
+          successMessage.value = `Successfully attached database ${result.name}`
         } else {
-          successMessage.value = `Successfully imported <strong>${result.name}</strong>`
+          successMessage.value = `Successfully imported ${result.name}`
         }
 
         isLoading.value = false

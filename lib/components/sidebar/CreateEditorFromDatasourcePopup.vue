@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @click.stop>
     <!-- Button to trigger popup -->
     <button
       class="quick-new-editor-button trilogy-class"
@@ -175,6 +175,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import { Results } from '../../editors/results'
 import DataTable from '../DataTable.vue'
 import CodeBlock from '../CodeBlock.vue'
+import type { NavigationStore } from '../../stores/useScreenNavigation'
 
 export interface CreateDatasourcePopupProps {
   connection: Connection
@@ -191,10 +192,9 @@ const emit = defineEmits<{
 const editorStore = inject<EditorStoreType>('editorStore')
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const saveEditors = inject<Function>('saveEditors')
-const setActiveScreen = inject<Function>('setActiveScreen')
-const setActiveEditor = inject<Function>('setActiveEditor')
+const navigationStore = inject<NavigationStore>('navigationStore')
 
-if (!editorStore || !connectionStore || !saveEditors || !setActiveScreen || !setActiveEditor) {
+if (!editorStore || !connectionStore || !saveEditors || !navigationStore) {
   throw 'must inject editorStore, connectionStore and related functions to CreateDatasourcePopup'
 }
 
@@ -324,7 +324,7 @@ const closePopup = () => {
   columnAliases.value = {}
   originalColumnAliases.value = {}
   isEditing.value = {}
-  emit('close')
+  // emit('close')
 }
 
 const loadSampleData = async () => {
@@ -393,8 +393,7 @@ const createDatasource = async () => {
     )
 
     await saveEditors()
-    setActiveEditor(editor.id)
-    setActiveScreen('editors')
+    navigationStore.openTab('editors', null, editor.id)
 
     closePopup()
   } catch (error) {

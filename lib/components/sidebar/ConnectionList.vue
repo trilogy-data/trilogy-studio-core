@@ -252,6 +252,7 @@ export default {
     }
     const handleItemClick = async (id: string, _: string, __: string) => {
       // if we are expanding a connection, get the databases
+      console.log('emitting connection key selected:', id)
       emit('connection-key-selected', id)
     }
     const toggleCollapse = async (id: string, connection: string, type: string) => {

@@ -434,7 +434,7 @@ const iconMap = ref({
   editors: 'mdi mdi-file-document-edit-outline',
   connections: 'mdi mdi-database-outline',
   llms: 'mdi mdi-creation-outline',
-  dashboard: 'mdi mdi-chart-areaspline-outline',
+  dashboard: 'mdi mdi-chart-multiple',
   'dashboard-import': 'mdi mdi-chart-multiple',
   models: 'mdi mdi-set-center',
   'community-models': 'mdi mdi-library-outline',

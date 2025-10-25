@@ -72,6 +72,7 @@ order by
   // Step 1: Open the Docs and Tutorial
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
+    await page.getByTestId('sidebar-link-tutorial').click()
   }
   await page.getByTestId('expand-documentation-documentation+Studio').click()
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
@@ -242,7 +243,7 @@ select count(order.id) as order_count;`
   // Step 8: Create iris model from the connection
   // Navigate to the connection
   if (isMobile) {
-    await page.getByTestId('article+Studio+Model Tutorial').click()
+    await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
   }
   else {
     await page.getByTestId('tab-article+Studio+Model Tutorial').click()

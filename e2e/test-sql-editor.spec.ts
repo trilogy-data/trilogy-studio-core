@@ -51,7 +51,7 @@ test('test', async ({ page, isMobile }) => {
 
   // Verify folder structure is created
   // Check that analysis folder exists
-  const analysisFolder = page.getByTestId('editor-list-id-f-local-duckdb-test-analysis')
+  const analysisFolder = page.getByTestId('editor-f-local-duckdb-test-analysis')
   await expect(analysisFolder).toBeVisible()
 
   // Check that reports folder exists (should be collapsed initially)
@@ -59,11 +59,11 @@ test('test', async ({ page, isMobile }) => {
   // we do not need to expand it, because newly created editors are always expanded
   // await analysisFolder.click() // Expand analysis folder
 
-  const reportsFolder = page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports')
+  const reportsFolder = page.getByTestId('editor-f-local-duckdb-test-analysis/reports')
   await expect(reportsFolder).toBeVisible()
 
   // Check that data folder exists
-  const dataFolder = page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data')
+  const dataFolder = page.getByTestId('editor-f-local-duckdb-test-analysis/data')
   await expect(dataFolder).toBeVisible()
 
   // Expand reports folder and verify sales-report editor is there
@@ -71,7 +71,7 @@ test('test', async ({ page, isMobile }) => {
   // we do not need to expand it, because newly created editors are always expanded
   //editor-list-id-e-local-duckdb-test-analysis/reports/sales-report
   const salesReportEditor = page.getByTestId(
-    'editor-list-id-e-local-duckdb-test-analysis/reports/sales-report',
+    'editor-e-local-duckdb-test-analysis/reports/sales-report',
   )
   await expect(salesReportEditor).toBeVisible()
 
@@ -79,7 +79,7 @@ test('test', async ({ page, isMobile }) => {
   // we do not need to expand it, because newly created editors are always expanded
   // await dataFolder.click()
   const customerDataEditor = page.getByTestId(
-    'editor-list-id-e-local-duckdb-test-analysis/data/customer-data',
+    'editor-e-local-duckdb-test-analysis/data/customer-data',
   )
   await expect(customerDataEditor).toBeVisible()
 
@@ -165,7 +165,7 @@ SELECT 1;
   await page.waitForTimeout(150)
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+    // await page.getByTestId('editor-e-local-duckdb-test-analysis/data').click()
   }
 
   // Switch to customer-data editor and add different content
@@ -236,7 +236,7 @@ SELECT 1;
   }
 
   // Switch to test-one editor and add content
-  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await page.getByTestId('editor-e-local-duckdb-test-test-one').click()
   await editor.click()
   await page.keyboard.press('Control+A')
   await page.keyboard.press('Delete')
@@ -292,8 +292,8 @@ SELECT 1;
   // Now switch back to sales-report and verify scroll position is preserved
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
+    // await page.getByTestId('editor-f-local-duckdb-test-analysis').click()
+    // await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   }
 
   await salesReportEditor.click()
@@ -316,8 +316,8 @@ SELECT 1;
   // Switch back to customer-data and verify its scroll position
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-    // await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+    // await page.getByTestId('editor-f-local-duckdb-test-analysis').click()
+    // await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
   }
 
   await customerDataEditor.click()
@@ -341,7 +341,7 @@ SELECT 1;
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await page.getByTestId('editor-e-local-duckdb-test-test-one').click()
   await page.waitForTimeout(300)
 
   const restoredTestOneScroll = await page.evaluate(() => {
@@ -383,7 +383,7 @@ SELECT 1;
   await page.getByTestId('sidebar-link-editors').click()
 
   // Click on test-one editor
-  await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+  await page.getByTestId('editor-e-local-duckdb-test-test-one').click()
   await page.waitForTimeout(500) // Wait for editor to fully load
 
   // Verify scroll position is restored after reload
@@ -420,7 +420,7 @@ SELECT 1;
 
   // check for errors
   if (isMobile) {
-    await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').click()
+    await page.getByTestId('editor-e-local-duckdb-test-test-one').click()
     await page.getByTestId('editor-tab').click()
   }
   await page.getByTestId('editor').click()
@@ -443,13 +443,10 @@ order by
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  // Delete the sales-report editor
-  if (isMobile) {
-    await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis').click()
-  }
 
-  await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/reports').click()
-  await page.getByTestId('editor-list-id-f-local-duckdb-test-analysis/data').click()
+
+  await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
+  await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
   await page.getByTestId('delete-editor-sales-report').click()
   await page.getByTestId('confirm-editor-deletion').click()
@@ -477,22 +474,22 @@ order by
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  const testOneCount = await page.getByTestId('editor-list-id-e-local-duckdb-test-test-one').count()
+  const testOneCount = await page.getByTestId('editor-e-local-duckdb-test-test-one').count()
   expect(testOneCount).toBe(0)
 
   const salesReportCount = await page
-    .getByTestId('editor-list-id-e-local-duckdb-test-sales-report')
+    .getByTestId('editor-e-local-duckdb-test-sales-report')
     .count()
   expect(salesReportCount).toBe(0)
 
   const customerDataCount = await page
-    .getByTestId('editor-list-id-e-local-duckdb-test-customer-data')
+    .getByTestId('editor-e-local-duckdb-test-customer-data')
     .count()
   expect(customerDataCount).toBe(0)
 
   // Verify folders are also cleaned up when empty
   const analysisFolderCount = await page
-    .getByTestId('editor-list-id-f-local-duckdb-test-analysis')
+    .getByTestId('editor-f-local-duckdb-test-analysis')
     .count()
   expect(analysisFolderCount).toBe(0)
 
@@ -500,9 +497,7 @@ order by
   await page.getByTestId('sidebar-link-connections').click()
   await page.getByTestId('connection-duckdb-test').click()
 
-  if (isMobile) {
-    await page.getByTestId('toggle-history-duckdb-test').click()
-  }
+
 
   await page.waitForSelector('.query-history')
 

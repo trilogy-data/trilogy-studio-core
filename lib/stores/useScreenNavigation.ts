@@ -129,7 +129,6 @@ const createNavigationStore = (): NavigationStore => {
     const tab = state.tabs.value.find((tab) => tab.screen === screen && tab.address === address)
     if (tab) {
       let tabName = getName(screen, title, address)
-      console.log('Updating tab name to:', tabName, 'for tab id:', tab.id)
       tab.title = tabName
     }
   }
@@ -344,14 +343,11 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const onInitialLoad = (): void => {
-    console.log('Navigation store initial load')
-    console.log(state)
       const importUrl = state.modelImport.value
     const connectionType = state.connectionImport.value
     let sidebarScreen:ScreenType = 'editors'
     let isImport = false
      if (importUrl && connectionType) {
-      console.log('triggering dashboard import tab')
       openTab('dashboard-import', null, 'dashboard-import')
       isImport = true
     }

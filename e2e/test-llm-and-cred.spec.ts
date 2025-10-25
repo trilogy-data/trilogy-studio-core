@@ -15,7 +15,6 @@ test.describe('LLM Connection Tests', () => {
   })
 
   test('should create and verify OpenAI connection', async ({ page, isMobile, browserName }) => {
-    console.log(page.context()?.browser()?.browserType()?.name())
     await setupOpenAIMocks(page, {
       models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
       completionHandler: createCompletionHandler({
@@ -47,7 +46,7 @@ test.describe('LLM Connection Tests', () => {
     await page.getByTestId('llm-connection-creator-submit').click()
 
     // Now, test that we are connected
-    await page.getByTestId('llm-connection-list-item-trilogy-llm-openai').click()
+    await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('refresh-llm-connection-trilogy-llm-openai').click()
 
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toBeVisible()
@@ -94,7 +93,9 @@ test.describe('LLM Connection Tests', () => {
       await page.getByTestId('mobile-menu-toggle').click()
     }
 
-    await page.getByTestId('llm-connection-list-item-trilogy-llm-openai').click()
+    await page.getByTestId('sidebar-link-llms').click()
+
+    await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
 
@@ -217,6 +218,7 @@ limit 10;`,
     await page.getByTestId('llm-connection-creator-submit').click()
     await page.getByTestId('sidebar-link-editors').click()
     await page.getByTestId('sidebar-link-community-models').click()
+    await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
     await page.getByTestId('community-model-search').click()
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
@@ -228,7 +230,7 @@ limit 10;`,
     }
     await page.getByTestId('sidebar-link-editors').click()
     await page
-      .getByTestId('editor-list-id-c-local-demo-model-connection')
+      // .getByTestId('editor-c-local-demo-model-connection')
       .getByTestId('quick-new-editor-demo-model-connection-trilogy')
       .click()
     await page

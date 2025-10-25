@@ -524,9 +524,6 @@ select rows;
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-dashboard').click()
-  if (isMobile) {
-    await page.getByTestId('dashboard-creator-add').click()
-  }
 
   // Create dashboard with custom editor as source
   await page.getByTestId('dashboard-creator-add').click()

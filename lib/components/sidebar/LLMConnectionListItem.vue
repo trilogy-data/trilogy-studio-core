@@ -7,6 +7,7 @@
       :is-selected="isSelected"
       :is-collapsible="isExpandable"
       :is-collapsed="isCollapsed"
+      itemType="llm-connection"
       @click="handleItemClick"
       @toggle="toggleCollapse"
       @contextmenu.prevent="showContextMenu"
