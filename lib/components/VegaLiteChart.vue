@@ -175,10 +175,10 @@ export default defineComponent({
     const vegaContainer1 = ref<HTMLElement | null>(null)
     const vegaContainer2 = ref<HTMLElement | null>(null)
     const chartContentArea = ref<HTMLElement | null>(null)
-    
+
     // Resize observer for beeswarm charts
     let resizeObserver: ResizeObserver | null = null
-    
+
     // Internal dimensions that override props when set (for beeswarm charts)
     const internalWidth = ref<number | null>(null)
     const internalHeight = ref<number | null>(null)
@@ -213,7 +213,7 @@ export default defineComponent({
       // const effectiveHeight = internalHeight.value ?? props.containerHeight
       const effectiveHeight = props.containerHeight
       const effectiveWidth = internalWidth.value ?? props.containerWidth
-      
+
       return generateVegaSpec(
         props.data,
         controlsManager.internalConfig.value,
@@ -252,26 +252,26 @@ export default defineComponent({
         if (resizeObserver) {
           resizeObserver.disconnect()
         }
-        
-        resizeObserver = new ResizeObserver(entries => {
+
+        resizeObserver = new ResizeObserver((entries) => {
           for (let entry of entries) {
             const { width, height } = entry.contentRect
             console.log(`Chart content area resized to ${width}x${height}`)
-            
+
             // Store internal dimensions for beeswarm charts
             internalWidth.value = width
             internalHeight.value = height
-            
+
             debouncedResizeHandler()
           }
         })
-        
+
         resizeObserver.observe(chartContentArea.value)
-        
+
         // Set initial internal dimensions
         internalWidth.value = chartContentArea.value.clientWidth
         internalHeight.value = chartContentArea.value.clientHeight
-        
+
         console.log('Resize observer set up for beeswarm chart')
       } else {
         // Clear internal dimensions for non-beeswarm charts
@@ -287,7 +287,7 @@ export default defineComponent({
         resizeObserver = null
         console.log('Resize observer cleaned up')
       }
-      
+
       // Clear internal dimensions
       internalWidth.value = null
       internalHeight.value = null
@@ -340,7 +340,7 @@ export default defineComponent({
         props.onChartConfigChange,
       )
       renderChart()
-      
+
       // Set up resize observer after initial render
       nextTick(() => {
         setupResizeObserver()
@@ -357,7 +357,7 @@ export default defineComponent({
             setupResizeObserver()
           })
         }
-      }
+      },
     )
 
     // Watch for chart selection changes
@@ -610,6 +610,9 @@ export default defineComponent({
   .chart-content-area {
     width: 100%;
     height: calc(100% - 40px);
+  }
+  .chart-content-area.with-side-controls {
+    width: 100%;
   }
 }
 </style>

@@ -19,8 +19,6 @@ test('test', async ({ page, isMobile, browser }) => {
 
     const style = window.getComputedStyle(element)
     const backgroundColor = style.backgroundColor
-    console.log(backgroundColor)
-
     // Check if the background color is green (in RGB format)
     return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
   })
@@ -36,7 +34,7 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test-one editor and add content
-  await page.getByTestId('editor-list-id-e-local-duckdb-test2-test-one').click()
+  await page.getByTestId('editor-e-local-duckdb-test2-test-one').click()
   const editor = page.getByTestId('editor')
   await editor.click()
   if (browser.browserType().name() === 'webkit') {

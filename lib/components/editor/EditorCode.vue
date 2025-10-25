@@ -1,5 +1,10 @@
 <template>
-  <div ref="editorElement" class="editor-fix-styles" data-testid="editor"></div>
+  <div
+    ref="editorElement"
+    class="editor-fix-styles"
+    :style="{ height: editorHeight ? editorHeight + 'px' : '100%' }"
+    data-testid="editor"
+  ></div>
 </template>
 
 <script lang="ts">
@@ -18,6 +23,7 @@ interface Props {
   editorType: string
   theme: string
   scrollPosition?: { line: number; column: number } | null
+  editorHeight?: number
 }
 
 interface IModelContentChange {
@@ -62,6 +68,11 @@ export default defineComponent({
     scrollPosition: {
       type: Object as () => { line: number; column: number } | null,
       default: null,
+    },
+    editorHeight: {
+      type: Number,
+      required: false,
+      // default: 300,
     },
   },
 
@@ -389,6 +400,17 @@ export default defineComponent({
       },
     )
 
+    watch(
+      () => props.editorHeight,
+      () => {
+        console.log('Editor height prop changed:', props.editorHeight)
+        const editorInstance = editorMap.get(props.context)
+        if (editorInstance) {
+          editorInstance.layout()
+        }
+      },
+    )
+
     // Watch for theme changes
     watch(
       () => props.theme,
@@ -415,14 +437,8 @@ export default defineComponent({
 .editor-fix-styles {
   text-align: left;
   border: none;
-  height: 100%;
+
   position: relative;
   width: 100%;
-}
-
-@media screen and (max-width: 768px) {
-  .editor-fix-styles {
-    height: calc(100%);
-  }
 }
 </style>

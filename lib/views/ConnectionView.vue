@@ -38,6 +38,10 @@
   height: 100%;
   width: 100%;
 }
+.model-display {
+  height: 100%;
+  overflow-y: hidden;
+}
 </style>
 
 <script lang="ts">

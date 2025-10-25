@@ -64,7 +64,7 @@
       <button
         @click="() => (loading ? $emit('cancel') : $emit('run'))"
         class="action-item"
-        :class="{ 'button-cancel': loading }"
+        :class="{ 'button-cancel': loading, 'button-run': !loading }"
         data-testid="editor-run-button"
       >
         <i v-if="loading" class="mdi mdi-stop-circle-outline icon"></i>
@@ -235,6 +235,12 @@ export default defineComponent({
   background-color: var(--error-color);
   color: white;
   border: 1px solid var(--error-color);
+}
+
+.button-run {
+  background-color: var(--special-text);
+  color: white;
+  border: 0px;
 }
 
 .tag {

@@ -1,10 +1,16 @@
 <template>
   <div class="loading-container" ref="containerRef">
-    <img :src="trilogyIcon" class="trilogy-icon" />
-    <div v-if="!isCompact" class="loading-text">{{ text }} ({{ elapsedTime }})</div>
-    <div v-if="!isCompact" class="cancel-container">
+    <template v-if="isCompact">
+      <p><img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})</p>
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
-    </div>
+    </template>
+    <template v-else>
+      <img :src="trilogyIcon" class="trilogy-icon" />
+      <div class="loading-text">{{ text }} ({{ elapsedTime }})</div>
+      <div class="cancel-container">
+        <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -129,6 +135,7 @@ export default defineComponent({
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -167,6 +174,7 @@ export default defineComponent({
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }

@@ -28,6 +28,7 @@
           :editor-type="editorData.type"
           :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme"
+          :editorHeight="containerHeight"
           @contents-change="handleContentsChange"
           @scroll-change="handlePositionChange"
           @run-query="runQuery"
@@ -41,6 +42,7 @@
           @select-symbol="insertSymbol"
           ref="symbolsPane"
           v-if="!isMobile"
+          :editorHeight="containerHeight"
         />
       </div>
     </template>
@@ -52,7 +54,6 @@
   display: flex;
   flex-grow: 1;
   position: relative;
-  min-height: 250px;
 }
 
 .parent {
@@ -69,6 +70,7 @@ import type { EditorStoreType } from '../../stores/editorStore.ts'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore.ts'
 import type { ModelConfigStoreType } from '../../stores/modelStore.ts'
 import type { LLMConnectionStoreType } from '../../stores/llmStore.ts'
+import type { NavigationStore } from '../../stores/useScreenNavigation.ts'
 import { Results } from '../../editors/results.ts'
 import type { QueryInput } from '../../stores/queryExecutionService.ts'
 
@@ -140,6 +142,11 @@ export default defineComponent({
     CodeEditor,
   },
   emits: ['save-editors', 'save-models', 'query-started', 'query-finished'],
+  watch: {
+    editorHeight(newHeight) {
+      console.log('Editor height changed in Editor:', newHeight)
+    },
+  },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -151,6 +158,7 @@ export default defineComponent({
     const setActiveEditor = inject<Function>('setActiveEditor')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
+    const navigationStore = inject<NavigationStore>('navigationStore')
     if (!analyticsStore) {
       throw new Error('Analytics store is required')
     }
@@ -180,6 +188,7 @@ export default defineComponent({
       setActiveEditor,
       queryExecutionService,
       analyticsStore,
+      navigationStore,
     }
   },
   computed: {
@@ -228,6 +237,9 @@ export default defineComponent({
           this.modelStore.models[model].updateModelSourceName(this.editorData.id, newName)
           this.$emit('save-models')
         }
+      }
+      if (this.navigationStore) {
+        this.navigationStore.updateTabName('editors', null, this.editorId)
       }
     },
 

@@ -7,7 +7,6 @@ export function buildConnectionTree(
   collapsed: Record<string, boolean>,
   isLoading: Record<string, boolean>,
   isErrored: Record<string, string>,
-  isMobile: boolean = false,
 ): Array<{
   id: string
   name: string
@@ -27,19 +26,6 @@ export function buildConnectionTree(
     connection: any | undefined
     object?: any
   }> = []
-
-  // Add "View Queries" button at the top for mobile
-  if (isMobile) {
-    list.push({
-      id: 'mobile-view-queries',
-      name: `View Current Connection History`,
-      indent: 0,
-      count: 0,
-      type: 'view-queries',
-      searchPath: '',
-      connection: undefined,
-    })
-  }
 
   const sorted = Object.values(connections).sort((a, b) => {
     if (a.connected && !b.connected) {

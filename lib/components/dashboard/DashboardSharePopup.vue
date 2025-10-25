@@ -130,7 +130,11 @@ const handleClickOutside = (event: MouseEvent): void => {
         </div>
       </div>
       <div class="popup-footer">
-        <button @click="copyToClipboard" class="dashboard-copy-button" data-testid="copy-json-button">
+        <button
+          @click="copyToClipboard"
+          class="dashboard-copy-button"
+          data-testid="copy-json-button"
+        >
           {{ copySuccess ? 'Copied!' : 'Copy' }}
         </button>
       </div>

@@ -1,6 +1,8 @@
 <template>
   <div class="sidebar-list">
-    <h3 v-if="!isMobile" class="font-sans mb-1">{{ title }}</h3>
+    <div class="sidebar-header-container">
+      <h3 v-if="!isMobile" class="font-sans sidebar-header">{{ title }}</h3>
+    </div>
     <div class="action-slot">
       <slot name="actions"> </slot>
     </div>
@@ -28,7 +30,7 @@
   padding-bottom: 5px;
 }
 
-.mb-1 {
+.sidebar-header {
   font-weight: 400;
   font-size: 14px;
   margin-top: 5px;

@@ -12,6 +12,7 @@ const props = defineProps<ImportSelectorProps>()
 
 const emit = defineEmits<{
   'update:imports': [imports: DashboardImport[]]
+  explore: [DashboardImport]
 }>()
 
 // Show/hide dropdown
@@ -50,6 +51,11 @@ function toggleImport(importItem: DashboardImport): void {
 // Clear all imports
 function clearAllImports(): void {
   emit('update:imports', [])
+}
+
+// Explore selected import
+function exploreImport(importItem: DashboardImport): void {
+  emit('explore', importItem)
 }
 
 // Count of active imports
@@ -170,22 +176,45 @@ onUnmounted(() => {
         <div class="active-import-list">
           <div class="active-import-item">
             <span>{{ activeImports[0].name }}</span>
-            <button class="remove-import-button" @click.stop="clearAllImports">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+            <div class="import-actions">
+              <button
+                class="explore-import-button"
+                @click.stop="exploreImport(activeImports[0])"
+                title="Explore this data source"
+                data-testid="explore-dashboard-import"
               >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              </button>
+              <button class="remove-import-button" @click.stop="clearAllImports">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -374,27 +403,55 @@ onUnmounted(() => {
 .active-import-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   background-color: var(--special-text);
   color: white;
   padding: 4px 8px;
   font-size: 12px;
+  width: 100%;
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.explore-import-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0.8;
+  border-radius: 2px;
+}
+
+.explore-import-button:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .remove-import-button {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
-  margin-left: 8px;
+  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   opacity: 0.7;
+  border-radius: 2px;
 }
 
 .remove-import-button:hover {
   opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile responsiveness */

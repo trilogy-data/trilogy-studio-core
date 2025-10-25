@@ -22,11 +22,9 @@
       :name="item.name"
       :indent="item.indent"
       :is-selected="activeModelKey === item.id"
-      :is-collapsible="
-        ['model'].includes(item.type) ||
-        (['source', 'datasource'].includes(item.type) && item.count > 0)
-      "
+      :is-collapsible="['model', 'source', 'datasource'].includes(item.type)"
       :is-collapsed="collapsed[item.id]"
+      :extra-info="getExtraInfo(item)"
       @click="handleClick"
       @toggle="handleToggle"
     >
@@ -239,6 +237,13 @@ export default {
         })
     }
 
+    const getExtraInfo = (item: any) => {
+      if (['model', 'source'].includes(item.type)) {
+        return item.count
+      }
+      return ''
+    }
+
     const handleClick = (id: string) => {
       // get last value
       const lastIndex = id.lastIndexOf(KeySeparator)
@@ -258,6 +263,7 @@ export default {
       fetchParseResults,
       trilogyIcon,
       navigationStore,
+      getExtraInfo,
       handleClick,
       handleToggle,
     }
@@ -318,12 +324,5 @@ export default {
 .hover-icon {
   opacity: 0;
   transition: opacity 0.2s;
-}
-
-/* on mobile, always show hover icons */
-@media (max-width: 768px) {
-  .hover-icon {
-    opacity: 1;
-  }
 }
 </style>

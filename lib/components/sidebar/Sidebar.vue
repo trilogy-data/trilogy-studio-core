@@ -88,10 +88,10 @@
           data-testid="sidebar-icon-settings"
         >
           <template v-if="!isMobile">
-            <tooltip content="Settings"><i class="mdi mdi-cog"></i></tooltip>
+            <tooltip content="Settings"><i class="mdi mdi-cog-outline"></i></tooltip>
           </template>
           <template v-else>
-            <i class="mdi mdi-cog"></i>
+            <i class="mdi mdi-cog-outline"></i>
             <div>Settings</div>
           </template>
         </div>
@@ -102,17 +102,17 @@
           @click="selectItem('profile')"
         >
           <template v-if="!isMobile">
-            <tooltip content="Profile"><i class="mdi mdi-account"></i></tooltip>
+            <tooltip content="Profile"><i class="mdi mdi-account-outline"></i></tooltip>
           </template>
           <template v-else>
-            <i class="mdi mdi-account"></i>
+            <i class="mdi mdi-account-outline"></i>
             <div>Profile</div>
           </template>
         </div>
       </div>
     </div>
 
-    <div class="sidebar-content">
+    <div class="sidebar-content" :style="{ width: containerWidth - 40 + 'px' }">
       <EditorList
         :activeEditor="activeEditor"
         v-show="active === 'editors'"
@@ -203,6 +203,11 @@ export default defineComponent({
       default: getDefaultValueFromHash('dashboard'),
       optional: true,
     },
+    containerWidth: {
+      type: Number,
+      default: 200,
+      optional: true,
+    },
   },
   setup() {
     const isSaving = ref(false)
@@ -218,7 +223,7 @@ export default defineComponent({
       {
         name: 'dashboard',
         tooltip: 'Chart',
-        icon: 'mdi mdi-chart-areaspline',
+        icon: 'mdi mdi-chart-multiple',
         screen: 'dashboard',
       },
       {
@@ -229,8 +234,8 @@ export default defineComponent({
       },
       {
         name: 'community-models',
-        tooltip: 'Inspire',
-        icon: 'mdi mdi-library',
+        tooltip: 'Share & Explore',
+        icon: 'mdi mdi-library-outline',
         screen: 'community-models',
       },
       {
@@ -244,19 +249,19 @@ export default defineComponent({
       {
         name: 'edit',
         tooltip: 'Query',
-        icon: 'mdi mdi-file-document-edit',
+        icon: 'mdi mdi-file-document-edit-outline',
         screen: 'editors',
       },
       {
         name: 'database',
         tooltip: 'Connect',
-        icon: 'mdi mdi-database',
+        icon: 'mdi mdi-database-outline',
         screen: 'connections',
       },
       {
         name: 'llm',
         tooltip: 'AI',
-        icon: 'mdi mdi-creation',
+        icon: 'mdi mdi-creation-outline',
         screen: 'llms',
       },
 
@@ -431,7 +436,7 @@ export default defineComponent({
 .sidebar-container {
   display: flex;
   height: 100vh;
-  background-color: var(--sidebar-bg);
+  background-color: var(--sidebar-bg-color);
   color: var(--sidebar-font);
 }
 
@@ -515,6 +520,10 @@ export default defineComponent({
     min-width: 55px;
     max-width: 55px;
     font-size: var(--small-font-size);
+  }
+
+  .sidebar-container {
+    height: calc(100vh - 40px);
   }
 }
 </style>

@@ -3,6 +3,7 @@
   <div class="query-history">
     <div class="section-header">
       Query History for {{ connectionName }}
+      <span v-if="history.length > 0" class="query-count">({{ history.length }})</span>
       <div class="query-history-actions">
         <button @click="refreshHistory" class="refresh-btn" title="Refresh history">Refresh</button>
         <button @click="clearHistory" class="clear-btn" title="Clear history">Clear</button>
@@ -209,9 +210,22 @@ onMounted(() => {
   flex-direction: column;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.query-count {
+  color: var(--text-faint);
+  font-size: 0.9em;
+  font-weight: normal;
+}
+
 .query-history-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .refresh-btn {

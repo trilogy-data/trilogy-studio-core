@@ -38,6 +38,7 @@ export abstract class LLMProvider {
   public isDefault: boolean = false
   public changed: boolean = false
   public deleted: boolean = false
+  public running: boolean = false
 
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     this.apiKey = apiKey
@@ -52,6 +53,7 @@ export abstract class LLMProvider {
     this.isDefault = false
     this.changed = false
     this.deleted = false
+    this.running = false
   }
 
   setApiKey(apiKey: string): void {
