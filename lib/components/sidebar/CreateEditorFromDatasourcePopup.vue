@@ -176,7 +176,7 @@ import { Results } from '../../editors/results'
 import DataTable from '../DataTable.vue'
 import CodeBlock from '../CodeBlock.vue'
 
-interface CreateDatasourcePopupProps {
+export interface CreateDatasourcePopupProps {
   connection: Connection
   table: Table
 }
@@ -442,7 +442,7 @@ const createDatasource = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100;
   cursor: default;
 }
 

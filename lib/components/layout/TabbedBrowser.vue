@@ -11,6 +11,7 @@
         @drop="handleDrop(index, $event)"
         @contextmenu="showContextMenu($event, tab.id, index)"
         draggable="true"
+        :data-testid="`tab-${tab.address}`"
       >
         <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
         <span class="tab-title truncate-text">{{ tab.title }}</span>
