@@ -37,7 +37,7 @@
         Sample Data
       </button>
     </div>
-    
+
     <div class="tab-content">
       <div v-if="activeTab === 'structure'" class="table-structure">
         <div class="structure-header">
@@ -101,7 +101,7 @@
         <div v-else-if="currentSampleData?.data.length === 0" class="empty-state">
           <p>No data available</p>
         </div>
-        
+
         <div v-else class="result-container-wrapper" ref="resultContainerRef">
           <div class="result-container">
             <DataTable
@@ -194,11 +194,11 @@ export default defineComponent({
 
       const viewportHeight = window.innerHeight
       const containerTop = resultContainerRef.value.getBoundingClientRect().top
-      
+
       // Reserve space for potential scrollbars, padding, and bottom margin
       const bottomBuffer = 40
       const availableHeight = Math.max(300, viewportHeight - containerTop - bottomBuffer)
-      
+
       // Only update if the change is significant to avoid unnecessary re-renders
       if (Math.abs(availableHeight - containerHeight.value) > 10) {
         containerHeight.value = availableHeight
@@ -236,9 +236,13 @@ export default defineComponent({
     // Load sample data for the current table
     const loadSampleData = async (forceRefresh = false) => {
       const tableKey = getTableKey(props.table)
-      
+
       // Skip if data already exists and we're not forcing a refresh
-      if (!forceRefresh && sampleData.value[tableKey]?.data?.length > 0 && props.table.columns.length > 0) {
+      if (
+        !forceRefresh &&
+        sampleData.value[tableKey]?.data?.length > 0 &&
+        props.table.columns.length > 0
+      ) {
         console.log('Sample data already loaded for', tableKey)
         return
       }
@@ -281,19 +285,19 @@ export default defineComponent({
       async (newTable, oldTable) => {
         const newTableKey = getTableKey(newTable)
         const oldTableKey = oldTable ? getTableKey(oldTable) : null
-        
+
         // Only load if we're switching to a different table
         if (newTableKey !== oldTableKey) {
           console.log('Table changed from', oldTableKey, 'to', newTableKey)
-          
+
           // Reset search when switching tables
           searchTerm.value = ''
-          
+
           // Load sample data if needed
           if (needsSampleData.value) {
             await loadSampleData()
           }
-          
+
           // Recalculate height for data tab
           if (activeTab.value === 'data') {
             await nextTick()
@@ -301,7 +305,7 @@ export default defineComponent({
           }
         }
       },
-      { immediate: false }
+      { immediate: false },
     )
 
     // Watch for tab changes to recalculate height
@@ -316,12 +320,12 @@ export default defineComponent({
     onMounted(async () => {
       // Setup window resize listener
       setupWindowListener()
-      
+
       // Load sample data if needed on initial mount
       if (needsSampleData.value) {
         await loadSampleData()
       }
-      
+
       // Calculate initial height if we're on the data tab
       if (activeTab.value === 'data') {
         await nextTick()
@@ -470,7 +474,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding:5px;
+  padding: 5px;
 }
 
 .search-container {

@@ -1,12 +1,23 @@
 <template>
   <div>
     <!-- Regular items using SidebarItem -->
-    <sidebar-item :item-id="item.id" :name="getItemName()" :indent="item.indent" :is-selected="isSelected"
-      :is-collapsible="isExpandable" :is-collapsed="isCollapsed" :itemType="testTag ? testTag : 'connection'"
-      @click="handleItemClick" @toggle="handleToggle">
+    <sidebar-item
+      :item-id="item.id"
+      :name="getItemName()"
+      :indent="item.indent"
+      :is-selected="isSelected"
+      :is-collapsible="isExpandable"
+      :is-collapsed="isCollapsed"
+      :itemType="testTag ? testTag : 'connection'"
+      @click="handleItemClick"
+      @toggle="handleToggle"
+    >
       <!-- Custom icon slot for different item types -->
       <template #icon>
-        <connection-icon v-if="item.type === 'connection'" :connection-type="item.connection?.type" />
+        <connection-icon
+          v-if="item.type === 'connection'"
+          :connection-type="item.connection?.type"
+        />
         <i v-else-if="item.type === 'database'" class="mdi mdi-database node-icon"></i>
         <i v-else-if="item.type === 'schema'" class="mdi mdi-folder-outline node-icon"></i>
         <i v-else-if="item.type === 'table'" class="mdi mdi-table node-icon"></i>
@@ -17,23 +28,35 @@
 
       <!-- Custom name slot for complex content -->
       <template #name>
-        <div v-if="item.type === 'refresh-connection'" class="refresh title-pad-left truncate-text sidebar-sub-item"
-          @click="handleRefreshConnectionClick">
+        <div
+          v-if="item.type === 'refresh-connection'"
+          class="refresh title-pad-left truncate-text sidebar-sub-item"
+          @click="handleRefreshConnectionClick"
+        >
           {{ item.name }}
         </div>
 
-        <div v-else-if="item.type === 'refresh-database'" class="refresh title-pad-left truncate-text sidebar-sub-item"
-          @click="handleRefreshDatabaseClick">
+        <div
+          v-else-if="item.type === 'refresh-database'"
+          class="refresh title-pad-left truncate-text sidebar-sub-item"
+          @click="handleRefreshDatabaseClick"
+        >
           {{ item.name }}
         </div>
 
-        <div v-else-if="item.type === 'refresh-schema'" class="refresh title-pad-left truncate-text sidebar-sub-item"
-          @click="handleRefreshSchemaClick">
+        <div
+          v-else-if="item.type === 'refresh-schema'"
+          class="refresh title-pad-left truncate-text sidebar-sub-item"
+          @click="handleRefreshSchemaClick"
+        >
           {{ item.name }}
         </div>
 
-        <DuckDBImporter v-else-if="item.type === 'duckdb-upload'" :db="(item.connection as any as DuckDBConnection).db"
-          :connection="item.connection as any as DuckDBConnection" />
+        <DuckDBImporter
+          v-else-if="item.type === 'duckdb-upload'"
+          :db="(item.connection as any as DuckDBConnection).db"
+          :connection="item.connection as any as DuckDBConnection"
+        />
 
         <div v-else-if="item.type === 'model'" class="bq-project-container" @click.stop>
           <label class="input-label">Model</label>
@@ -46,39 +69,69 @@
             <transition name="fade">
               <i v-if="showBillingSuccess" class="mdi mdi-check-circle success-icon"></i>
             </transition>
-            <input type="text" v-model="bigqueryProject" placeholder="Billing Project" class="bq-project-input"
-              @input="debouncedUpdateBigqueryProject" />
+            <input
+              type="text"
+              v-model="bigqueryProject"
+              placeholder="Billing Project"
+              class="bq-project-input"
+              @input="debouncedUpdateBigqueryProject"
+            />
           </span>
         </div>
 
-        <div v-else-if="item.type === 'bigquery-browsing-project'" class="bq-project-container" @click.stop>
+        <div
+          v-else-if="item.type === 'bigquery-browsing-project'"
+          class="bq-project-container"
+          @click.stop
+        >
           <label class="input-label">Browsing</label>
           <span>
             <transition name="fade">
               <i v-if="showBrowsingSuccess" class="mdi mdi-check-circle success-icon"></i>
             </transition>
-            <input type="text" v-model="bigqueryBrowsingProject" placeholder="Browsing Project" class="bq-project-input"
-              @input="debouncedUpdateBigqueryBrowsingProject" />
+            <input
+              type="text"
+              v-model="bigqueryBrowsingProject"
+              placeholder="Browsing Project"
+              class="bq-project-input"
+              @input="debouncedUpdateBigqueryBrowsingProject"
+            />
           </span>
         </div>
 
         <div v-else-if="item.type === 'motherduck-token'" class="md-token-container" @click.stop>
-          <form @submit.prevent="
-            updateMotherDuckToken(item.connection as any as MotherDuckConnection, mdToken)
-            ">
+          <form
+            @submit.prevent="
+              updateMotherDuckToken(item.connection as any as MotherDuckConnection, mdToken)
+            "
+          >
             <button type="submit" class="customize-button">Update Token</button>
-            <input type="password" v-model="mdToken" placeholder="mdToken" class="connection-customize" />
+            <input
+              type="password"
+              v-model="mdToken"
+              placeholder="mdToken"
+              class="connection-customize"
+            />
           </form>
         </div>
 
-        <div v-else-if="item.type === 'snowflake-private-key'" class="bq-project-container" @click.stop>
+        <div
+          v-else-if="item.type === 'snowflake-private-key'"
+          class="bq-project-container"
+          @click.stop
+        >
           <label class="input-label">Private Key</label>
           <span>
             <transition name="fade">
               <i v-if="showPrivateKeySuccess" class="mdi mdi-check-circle success-icon"></i>
             </transition>
-            <input type="password" v-model="snowflakePrivateKey" placeholder="Private Key" class="bq-project-input"
-              @input="debouncedUpdateSnowflakePrivateKey" />
+            <input
+              type="password"
+              v-model="snowflakePrivateKey"
+              placeholder="Private Key"
+              class="bq-project-input"
+              @input="debouncedUpdateSnowflakePrivateKey"
+            />
           </span>
         </div>
 
@@ -88,66 +141,125 @@
             <transition name="fade">
               <i v-if="showAccountSuccess" class="mdi mdi-check-circle success-icon"></i>
             </transition>
-            <input type="text" v-model="snowflakeAccount" placeholder="Account" class="bq-project-input"
-              @input="debouncedUpdateSnowflakeAccount" />
+            <input
+              type="text"
+              v-model="snowflakeAccount"
+              placeholder="Account"
+              class="bq-project-input"
+              @input="debouncedUpdateSnowflakeAccount"
+            />
           </span>
         </div>
 
-        <div v-else-if="item.type === 'snowflake-username'" class="bq-project-container" @click.stop>
+        <div
+          v-else-if="item.type === 'snowflake-username'"
+          class="bq-project-container"
+          @click.stop
+        >
           <label class="input-label">Username</label>
           <span>
             <transition name="fade">
               <i v-if="showUsernameSuccess" class="mdi mdi-check-circle success-icon"></i>
             </transition>
-            <input type="text" v-model="snowflakeUsername" placeholder="Username" class="bq-project-input"
-              @input="debouncedUpdateSnowflakeUsername" />
+            <input
+              type="text"
+              v-model="snowflakeUsername"
+              placeholder="Username"
+              class="bq-project-input"
+              @input="debouncedUpdateSnowflakeUsername"
+            />
           </span>
         </div>
 
-        <div v-else-if="item.type === 'toggle-save-credential'" class="md-token-container" @click.stop>
+        <div
+          v-else-if="item.type === 'toggle-save-credential'"
+          class="md-token-container"
+          @click.stop
+        >
           <label class="save-credential-toggle">
-            <input type="checkbox" :checked="(item.connection as any as ConnectionWithSaveCredential).saveCredential"
-              @change="toggleSaveCredential(item.connection)" />
+            <input
+              type="checkbox"
+              :checked="(item.connection as any as ConnectionWithSaveCredential).saveCredential"
+              @change="toggleSaveCredential(item.connection)"
+            />
             <span class="checkbox-label">Save Credentials</span>
           </label>
         </div>
 
-        <span v-else class="title-pad-left truncate-text" :class="{ 'error-indicator': item.type === 'error' }">
+        <span
+          v-else
+          class="title-pad-left truncate-text"
+          :class="{ 'error-indicator': item.type === 'error' }"
+        >
           {{ item.name }}
           <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
-          <span v-if="item.type === 'connection'" class="hover-icon" @click.stop="handleRefreshConnectionClick">
+          <span
+            v-if="item.type === 'connection'"
+            class="hover-icon"
+            @click.stop="handleRefreshConnectionClick"
+          >
             <i class="mdi mdi-refresh"></i>
           </span>
-          <span v-if="item.type === 'database'" class="hover-icon" @click.stop="handleRefreshDatabaseClick">
+          <span
+            v-if="item.type === 'database'"
+            class="hover-icon"
+            @click.stop="handleRefreshDatabaseClick"
+          >
             <i class="mdi mdi-refresh"></i>
           </span>
-          <span v-if="item.type === 'schema'" class="hover-icon" @click.stop="handleRefreshSchemaClick">
+          <span
+            v-if="item.type === 'schema'"
+            class="hover-icon"
+            @click.stop="handleRefreshSchemaClick"
+          >
             <i class="mdi mdi-refresh"></i>
           </span>
-
         </span>
       </template>
 
       <!-- Custom extra content slot for connection actions -->
       <template #extra-content>
         <div class="connection-actions" v-if="item.type === 'table'">
-          <CreateEditorFromDatasourcePopup class="hover-icon" :connection="item.connection" :table="item.object" />
+          <CreateEditorFromDatasourcePopup
+            class="hover-icon"
+            :connection="item.connection"
+            :table="item.object"
+          />
         </div>
         <div class="connection-actions" v-else-if="item.type === 'connection'">
-          <i :data-testid="`toggle-history-${item.connection.name}`" class="mdi mdi-history hover-icon" v-if="isMobile"
-            title="Query History" @click.stop="toggleMobileMenu"></i>
-          <editor-creator-icon class="tacticle-button hover-icon" :connection="item.connection.name" type="sql"
-            title="New SQL Editor" :data-testid="testTag
-              ? `new-sql-editor-${item.connection.name}-${testTag}`
-              : `new-sql-editor-${item.connection.name}`
-              " />
-          <editor-creator-icon class="tacticle-button hover-icon" :connection="item.connection.name"
-            title="New Trilogy Editor" :data-testid="testTag
-              ? `new-trilogy-editor-${item.connection.name}-${testTag}`
-              : `new-trilogy-editor-${item.connection.name}`
-              " />
-          <connection-refresh class="tacticle-button hover-icon" :connection="item.connection"
-            :is-connected="item.connection.connected" />
+          <i
+            :data-testid="`toggle-history-${item.connection.name}`"
+            class="mdi mdi-history hover-icon"
+            v-if="isMobile"
+            title="Query History"
+            @click.stop="toggleMobileMenu"
+          ></i>
+          <editor-creator-icon
+            class="tacticle-button hover-icon"
+            :connection="item.connection.name"
+            type="sql"
+            title="New SQL Editor"
+            :data-testid="
+              testTag
+                ? `new-sql-editor-${item.connection.name}-${testTag}`
+                : `new-sql-editor-${item.connection.name}`
+            "
+          />
+          <editor-creator-icon
+            class="tacticle-button hover-icon"
+            :connection="item.connection.name"
+            title="New Trilogy Editor"
+            :data-testid="
+              testTag
+                ? `new-trilogy-editor-${item.connection.name}-${testTag}`
+                : `new-trilogy-editor-${item.connection.name}`
+            "
+          />
+          <connection-refresh
+            class="tacticle-button hover-icon"
+            :connection="item.connection"
+            :is-connected="item.connection.connected"
+          />
 
           <tooltip class="tacticle-button hover-icon" content="Delete Connection" position="left">
             <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
@@ -500,10 +612,12 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 .loading-indicator {
   display: block;
   width: 100%;
-  background: linear-gradient(to left,
-      var(--sidebar-bg) 0%,
-      var(--query-window-bg) 50%,
-      var(--sidebar-bg) 100%);
+  background: linear-gradient(
+    to left,
+    var(--sidebar-bg) 0%,
+    var(--query-window-bg) 50%,
+    var(--sidebar-bg) 100%
+  );
   background-size: 200% 100%;
   animation: loading-gradient 2s infinite linear;
 }

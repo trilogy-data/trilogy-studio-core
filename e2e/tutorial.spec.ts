@@ -244,8 +244,7 @@ select count(order.id) as order_count;`
   // Navigate to the connection
   if (isMobile) {
     await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
-  }
-  else {
+  } else {
     await page.getByTestId('tab-article+Studio+Model Tutorial').click()
   }
   await page.getByTestId('expand-tutorial-connection-iris-data').click()

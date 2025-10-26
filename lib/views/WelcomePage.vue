@@ -47,7 +47,12 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const demoLoading = ref(false)
 const showCreator = ref(false)
-const emit = defineEmits(['demo-started', 'sidebar-screen-selected', 'screen-selected', 'documentation-key-selected'])
+const emit = defineEmits([
+  'demo-started',
+  'sidebar-screen-selected',
+  'screen-selected',
+  'documentation-key-selected',
+])
 const startDemo = () => {
   demoLoading.value = true
 

@@ -292,7 +292,7 @@ export default defineComponent({
 .tab {
   display: flex;
   align-items: center;
-  padding-left:4px;
+  padding-left: 4px;
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   border-bottom: none;

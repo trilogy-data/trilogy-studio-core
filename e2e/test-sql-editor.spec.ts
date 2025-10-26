@@ -443,8 +443,6 @@ order by
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-
-
   await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
@@ -477,9 +475,7 @@ order by
   const testOneCount = await page.getByTestId('editor-e-local-duckdb-test-test-one').count()
   expect(testOneCount).toBe(0)
 
-  const salesReportCount = await page
-    .getByTestId('editor-e-local-duckdb-test-sales-report')
-    .count()
+  const salesReportCount = await page.getByTestId('editor-e-local-duckdb-test-sales-report').count()
   expect(salesReportCount).toBe(0)
 
   const customerDataCount = await page
@@ -488,16 +484,12 @@ order by
   expect(customerDataCount).toBe(0)
 
   // Verify folders are also cleaned up when empty
-  const analysisFolderCount = await page
-    .getByTestId('editor-f-local-duckdb-test-analysis')
-    .count()
+  const analysisFolderCount = await page.getByTestId('editor-f-local-duckdb-test-analysis').count()
   expect(analysisFolderCount).toBe(0)
 
   // now let's look at the connection history
   await page.getByTestId('sidebar-link-connections').click()
   await page.getByTestId('connection-duckdb-test').click()
-
-
 
   await page.waitForSelector('.query-history')
 

@@ -7,7 +7,7 @@
       :activeScreen="activeScreen"
       :tabs="tabs"
       :activeTab="activeTab"
-      @tab-closed="closeTab"
+      @tab-closed="(tab) => closeTab(tab, null)"
     >
       <template #sidebar>
         <sidebar

@@ -1,11 +1,24 @@
 <template>
   <div class="sidebar-item">
-    <div class="sidebar-content" :class="{ 'sidebar-item-selected': isSelected }" @click="handleClick">
+    <div
+      class="sidebar-content"
+      :class="{ 'sidebar-item-selected': isSelected }"
+      @click="handleClick"
+    >
       <!-- Indentation -->
-      <div v-for="(_, index) in Array.from({ length: indent }, () => 0)" :key="index" class="sidebar-padding"></div>
+      <div
+        v-for="(_, index) in Array.from({ length: indent }, () => 0)"
+        :key="index"
+        class="sidebar-padding"
+      ></div>
       <!-- Toggle button for collapsible items -->
-      <button v-if="isCollapsible" @click.stop="handleToggle" class="chevron-button"
-        :data-testid="`expand-${itemType}-${itemId}`" :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'">
+      <button
+        v-if="isCollapsible"
+        @click.stop="handleToggle"
+        class="chevron-button"
+        :data-testid="`expand-${itemType}-${itemId}`"
+        :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'"
+      >
         <i v-if="!isCollapsed" class="mdi mdi-menu-down chevron-icon"></i>
         <i v-else class="mdi mdi-menu-right chevron-icon"></i>
       </button>
@@ -128,7 +141,6 @@ export default {
   color: var(--text-color);
   pointer-events: none;
 }
-
 
 .extra-content {
   margin-left: auto;

@@ -487,7 +487,6 @@ const selectTab = (tab: Tab): void => {
 }
 
 const closeTab = (tabId: string): void => {
-  console.log('Closing tab:', tabId)
   emit('tab-closed', tabId)
 }
 

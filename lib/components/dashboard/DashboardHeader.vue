@@ -254,7 +254,7 @@ function handleRefresh() {
           Export
         </button>
         <button
-          @click="()=>$emit('toggle-edit-mode')"
+          @click="() => $emit('toggle-edit-mode')"
           class="btn btn-secondary"
           data-testid="toggle-edit-mode-button"
           :disabled="editsLocked"

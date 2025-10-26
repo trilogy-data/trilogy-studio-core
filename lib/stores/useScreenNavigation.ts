@@ -3,7 +3,6 @@ import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './url
 import { useEditorStore, useDashboardStore } from '.'
 import { lastSegment } from '../data/constants'
 
-
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
   | 'editors'
@@ -73,7 +72,6 @@ export interface NavigationStore {
   setActiveCommunityModelKey(communityModel: string | null): void
   setActiveConnectionKey(connection: string | null): void
   setActiveDocumentationKey(documentation: string | null): void
-
 
   setActiveLLMConnectionKey(llmConnection: string | null): void
   toggleMobileMenu(): void
@@ -343,11 +341,11 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const onInitialLoad = (): void => {
-      const importUrl = state.modelImport.value
+    const importUrl = state.modelImport.value
     const connectionType = state.connectionImport.value
-    let sidebarScreen:ScreenType = 'editors'
+    let sidebarScreen: ScreenType = 'editors'
     let isImport = false
-     if (importUrl && connectionType) {
+    if (importUrl && connectionType) {
       openTab('dashboard-import', null, 'dashboard-import')
       isImport = true
     }
@@ -355,7 +353,7 @@ const createNavigationStore = (): NavigationStore => {
       sidebarScreen = 'editors'
       openTab('editors', null, state.activeEditor.value)
     }
-    if (state.activeDashboard.value&& !isImport) {
+    if (state.activeDashboard.value && !isImport) {
       sidebarScreen = 'dashboard'
       openTab('dashboard', null, state.activeDashboard.value)
     }
@@ -389,7 +387,6 @@ const createNavigationStore = (): NavigationStore => {
     }
 
     setActiveSidebarScreen(sidebarScreen)
-
   }
 
   return {

@@ -314,7 +314,6 @@ const openPopup = async () => {
 }
 
 const closePopup = () => {
-  console.log('Closing popup and resetting state...')
   showPopup.value = false
   sampleData.value = null
   error.value = null
@@ -324,7 +323,7 @@ const closePopup = () => {
   columnAliases.value = {}
   originalColumnAliases.value = {}
   isEditing.value = {}
-  // emit('close')
+  emit('close')
 }
 
 const loadSampleData = async () => {
