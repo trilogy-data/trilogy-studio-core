@@ -20,7 +20,7 @@
       </div>
       <div class="controls">
         <loading-button :action="() => fetchParseResults(index)"> Parse </loading-button>
-        <button  @click="toggleNewSource(index)">Add Source</button>
+        <button @click="toggleNewSource(index)">Add Source</button>
         <!-- <button  @click="clearSources(index)">Clear</button> -->
         <button class="delete-btn" @click="remove(index)">Delete</button>
       </div>
@@ -79,17 +79,17 @@
     <!-- Main content area -->
     <div v-else class="model-content">
       <!-- Minimal Model Sources header -->
-      <h3 class="sources-header">
-        Model Sources ({{ config.sources.length }})
-      </h3>
+      <h3 class="sources-header">Model Sources ({{ config.sources.length }})</h3>
 
       <!-- Sources directly inline -->
       <div class="model-source" v-for="(source, sourceIndex) in config.sources" :key="sourceIndex">
         <div class="source-header">
           <div class="source-title">
-            {{ source.alias }} 
+            {{ source.alias }}
             <span class="text-faint">
-              <span class="editor-link" @click="openEditor(source.editor)" title="Open editor">🔗</span>
+              <span class="editor-link" @click="openEditor(source.editor)" title="Open editor"
+                >🔗</span
+              >
             </span>
           </div>
           <button class="btn remove-btn" @click.stop="removeSource(index, sourceIndex)">
@@ -137,7 +137,6 @@
 .model-section:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-
 
 .model-title {
   cursor: pointer;
@@ -413,7 +412,7 @@ export default defineComponent({
     const trilogyResolver = inject<FetchResolver>('trilogyResolver')
     const navigationStore = inject<NavigationStore>('navigationStore')
 
-    if (!modelStore || !editorStore || !trilogyResolver || !connectionStore || !navigationStore)  {
+    if (!modelStore || !editorStore || !trilogyResolver || !connectionStore || !navigationStore) {
       throw new Error('Missing model store or editor store!')
     }
 
@@ -572,7 +571,6 @@ export default defineComponent({
       console.log(`model+${model}`)
       this.navigationStore.closeTab(null, `model+${model}`)
       // this.modelStore.removeModelConfig(model)
-
     },
   },
 })

@@ -66,13 +66,12 @@ const mockModelStore = {
 const mockSaveDashboards = vi.fn()
 const mockSaveAll = vi.fn()
 
-
 const mockScreenNavigation = {
   setActiveModel: vi.fn(),
   setActiveDashboard: vi.fn(),
   setActiveScreen: vi.fn(),
-  closeTab: vi.fn(),           // ← Added
-  openTab: vi.fn(),            // ← Added
+  closeTab: vi.fn(), // ← Added
+  openTab: vi.fn(), // ← Added
   setActiveSidebarScreen: vi.fn(), // ← Added
   modelImport: ref(TEST_CONSTANTS.MODEL_URL),
 }

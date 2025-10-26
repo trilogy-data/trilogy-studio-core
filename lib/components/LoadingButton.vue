@@ -1,6 +1,6 @@
 <template>
   <button
-    :class="[ useDefaultStyle ? 'default-style' : '', $attrs.class]"
+    :class="[useDefaultStyle ? 'default-style' : '', $attrs.class]"
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"

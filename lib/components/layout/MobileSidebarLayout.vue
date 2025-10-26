@@ -2,21 +2,41 @@
   <div id="interface" class="interface">
     <div class="mobile-select-bar">
       <div class="icon-container" tooltip="Menu">
-        <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon" data-testid="mobile-menu-toggle"></i>
+        <i
+          @click="$emit('menu-toggled')"
+          class="mdi mdi-menu hamburger-icon"
+          data-testid="mobile-menu-toggle"
+        ></i>
       </div>
       <div class="header-center">
-        <div v-if="tabs.length > 1" class="tab-dropdown-container" @click="toggleTabDropdown"
-          ref="tabDropdownContainer">
+        <div
+          v-if="tabs.length > 1"
+          class="tab-dropdown-container"
+          @click="toggleTabDropdown"
+          ref="tabDropdownContainer"
+        >
           <span class="current-tab-title">{{ currentTabTitle }}</span>
-          <i :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]" class="mdi-chevron-down"></i>
+          <i
+            :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]"
+            class="mdi-chevron-down"
+          ></i>
         </div>
         <span v-else class="header">{{ screenTitle }}</span>
 
         <!-- Tab Dropdown -->
-        <div v-if="tabDropdownOpen && tabs.length > 1" class="tab-dropdown" ref="tabDropdown" @click.stop>
+        <div
+          v-if="tabDropdownOpen && tabs.length > 1"
+          class="tab-dropdown"
+          ref="tabDropdown"
+          @click.stop
+        >
           <!-- Batch Actions Header -->
           <div class="tab-dropdown-header" v-if="tabs.length > 2">
-            <button class="close-others-btn" @click="showCloseOthersConfirm = true" :disabled="batchCloseInProgress">
+            <button
+              class="close-others-btn"
+              @click="showCloseOthersConfirm = true"
+              :disabled="batchCloseInProgress"
+            >
               <i class="mdi mdi-close-box-multiple-outline"></i>
               <span>Close other tabs</span>
             </button>
@@ -24,9 +44,17 @@
 
           <!-- Tab Items -->
           <div class="tab-dropdown-items">
-            <TabDropdownItem v-for="tab in tabs" :key="tab.id" :ref="'tabItem-' + tab.id" :tab="tab"
-              :is-active="isActiveTab(tab)" :icon="getTabIcon(tab.screen)" :disabled="batchCloseInProgress"
-              @select="selectTab" @close="closeTab" />
+            <TabDropdownItem
+              v-for="tab in tabs"
+              :key="tab.id"
+              :ref="'tabItem-' + tab.id"
+              :tab="tab"
+              :is-active="isActiveTab(tab)"
+              :icon="getTabIcon(tab.screen)"
+              :disabled="batchCloseInProgress"
+              @select="selectTab"
+              @close="closeTab"
+            />
           </div>
         </div>
       </div>
@@ -42,7 +70,11 @@
     </div>
 
     <!-- Confirmation Dialog -->
-    <div v-if="showCloseOthersConfirm" class="close-confirm-overlay" @click="showCloseOthersConfirm = false">
+    <div
+      v-if="showCloseOthersConfirm"
+      class="close-confirm-overlay"
+      @click="showCloseOthersConfirm = false"
+    >
       <div class="close-confirm-dialog" @click.stop>
         <p>Close {{ otherTabsCount }} other tabs?</p>
         <div class="confirm-buttons">
@@ -351,15 +383,9 @@
 </style>
 
 <script setup lang="ts">
-import {
-  ref,
-  computed,
-  onMounted,
-  onBeforeUnmount,
-} from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TabDropdownItem from './TabDropdownItem.vue'
 import { type Tab } from '../../stores/useScreenNavigation'
-
 
 type IconMapKey = keyof typeof iconMap.value
 
