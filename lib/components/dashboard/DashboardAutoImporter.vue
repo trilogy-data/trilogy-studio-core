@@ -286,7 +286,7 @@ onMounted(async () => {
     updateElapsedTime()
 
     // Get URL parameters
-    const modelUrlParam = getDefaultValueFromHash('import', '')
+    const modelUrlParam = screenNavigation.modelImport.value
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '')
     const modelNameParam = getDefaultValueFromHash('modelName', '')
     const connectionParam = getDefaultValueFromHash('connection', '')

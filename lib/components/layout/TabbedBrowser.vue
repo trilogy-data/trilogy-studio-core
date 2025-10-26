@@ -410,7 +410,7 @@ export default defineComponent({
 
 /* Drag and Drop Visual Feedback */
 .tab[draggable='true'] {
-  cursor: grab;
+  cursor: pointer;
 }
 
 .tab[draggable='true']:active {

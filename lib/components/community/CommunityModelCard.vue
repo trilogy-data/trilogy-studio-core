@@ -199,7 +199,7 @@ const copyDashboardLink = async (component: any): Promise<void> => {
   const currentBase = window.location.origin + window.location.pathname
 
   // Construct the import link
-  const importLink = `${currentBase}#screen=dashboard-import&model=${encodeURIComponent(props.file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
+  const importLink = `${currentBase}#screen=dashboard-import&import=${encodeURIComponent(props.file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
 
   try {
     await navigator.clipboard.writeText(importLink)

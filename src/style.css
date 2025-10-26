@@ -172,9 +172,11 @@ h1 {
 /* BUTTONS */
 
 button:hover {
-  background-color: var(--button-mouseover)
-    /* Lighter gray when hovered */
+  background-color: var(--button-mouseover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 
 .button-container {
   display: flex;

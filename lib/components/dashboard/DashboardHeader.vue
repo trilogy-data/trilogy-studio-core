@@ -143,56 +143,32 @@ function handleRefresh() {
             ✎
           </span>
         </span>
-        <input
-          v-else
-          ref="titleInput"
-          data-testid="dashboard-title-input"
-          v-model="editableTitle"
-          @blur="finishEditingTitle"
-          @keyup.enter="finishEditingTitle"
-          @keyup.esc="cancelEditingTitle"
-          class="title-input"
-          type="text"
-        />
+        <input v-else ref="titleInput" data-testid="dashboard-title-input" v-model="editableTitle"
+          @blur="finishEditingTitle" @keyup.enter="finishEditingTitle" @keyup.esc="cancelEditingTitle"
+          class="title-input" type="text" />
       </div>
 
       <div class="dashboard-right-controls">
         <div class="connection-selector">
           <div class="select-wrapper">
             <i class="mdi mdi-database-outline select-icon"></i>
-            <select
-              id="connection"
-              data-testid="connection-selector"
-              @change="$emit('connection-change', $event)"
-              :value="selectedConnection"
-            >
-              <option
-                v-for="conn in Object.values(connectionStore.connections).filter(
-                  (conn) => conn.model,
-                )"
-                :key="conn.name"
-                :value="conn.name"
-              >
+            <select id="connection" data-testid="connection-selector" @change="$emit('connection-change', $event)"
+              :value="selectedConnection">
+              <option v-for="conn in Object.values(connectionStore.connections).filter(
+                (conn) => conn.model,
+              )" :key="conn.name" :value="conn.name">
                 {{ conn.name }}
               </option>
             </select>
           </div>
         </div>
-        <DashboardImportSelector
-          :available-imports="availableImports"
-          :active-imports="activeImports"
-          @update:imports="handleImportsChange"
-          @explore="(e) => navigationStore.openTab('editors', null, e.id)"
-        />
+        <DashboardImportSelector :available-imports="availableImports" :active-imports="activeImports"
+          @update:imports="handleImportsChange" @explore="(e) => navigationStore.openTab('editors', null, e.id)" />
         <div class="grid-actions">
           <button @click="$emit('add-item')" class="btn btn-success" data-testid="add-item-button">
             Add Item
           </button>
-          <button
-            @click="$emit('clear-items')"
-            class="btn btn-danger"
-            data-testid="clear-items-button"
-          >
+          <button @click="$emit('clear-items')" class="btn btn-danger" data-testid="clear-items-button">
             Clear All
           </button>
         </div>
@@ -208,69 +184,38 @@ function handleRefresh() {
             ✎
           </span>
         </span>
-        <input
-          v-else
-          ref="titleInput"
-          data-testid="dashboard-title-input"
-          v-model="editableTitle"
-          @blur="finishEditingTitle"
-          @keyup.enter="finishEditingTitle"
-          @keyup.esc="cancelEditingTitle"
-          class="title-input"
-          type="text"
-        />
+        <input v-else ref="titleInput" data-testid="dashboard-title-input" v-model="editableTitle"
+          @blur="finishEditingTitle" @keyup.enter="finishEditingTitle" @keyup.esc="cancelEditingTitle"
+          class="title-input" type="text" />
       </div>
     </div>
 
     <!-- Filter row - now showing the extracted FilterInputComponent -->
     <div class="controls-row filter-row">
-      <FilterInputComponent
-        :filter-value="dashboard?.filter || ''"
-        :filter-error="filterError"
-        :is-loading="isLoading"
-        :global-completion="globalCompletion"
-        :validate-filter="validateFilter"
-        @filter-apply="handleFilterApply"
-        @clear-filter="$emit('clear-filter', '')"
-      />
+      <FilterInputComponent :filter-value="dashboard?.filter || ''" :filter-error="filterError" :is-loading="isLoading"
+        :global-completion="globalCompletion" :validate-filter="validateFilter" @filter-apply="handleFilterApply"
+        @clear-filter="$emit('clear-filter', '')" />
 
       <div class="grid-actions">
         <!-- Replace the regular download button with LoadingButton -->
-        <LoadingButton
-          :action="handleDownloadAction"
-          :use-default-style="false"
-          class="btn btn-secondary"
-          data-testid="download-button"
-          test-id="download-button"
-        >
+        <LoadingButton :action="handleDownloadAction" :use-default-style="false" class="btn btn-secondary"
+          data-testid="download-button" test-id="download-button">
           Download
         </LoadingButton>
 
-        <button
-          @click="toggleSharePopup"
-          class="btn btn-secondary"
-          data-testid="share-dashboard-button"
-        >
+        <button @click="toggleSharePopup" class="btn btn-secondary" data-testid="share-dashboard-button">
           Export
         </button>
-        <button
-          @click="() => $emit('toggle-edit-mode')"
-          class="btn btn-secondary"
-          data-testid="toggle-edit-mode-button"
-          :disabled="editsLocked"
-        >
-          {{ editMode ? 'Fullscreen' : 'Edit' }}
+        <button @click="() => $emit('toggle-edit-mode')" class="btn btn-secondary" data-testid="toggle-edit-mode-button"
+          :disabled="editsLocked">
+          {{ editMode ? 'Fullscreen' : 'Exit Fullscreen' }}
         </button>
         <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
           ⟳ Refresh
         </button>
       </div>
     </div>
-    <DashboardSharePopup
-      :dashboard="dashboard"
-      :is-open="isSharePopupOpen"
-      @close="closeSharePopup"
-    />
+    <DashboardSharePopup :dashboard="dashboard" :is-open="isSharePopupOpen" @close="closeSharePopup" />
   </div>
 </template>
 
@@ -383,7 +328,8 @@ function handleRefresh() {
 }
 
 .select-wrapper select:focus {
-  border-color: var(--special-text); /* Keep same border as unfocused */
+  border-color: var(--special-text);
+  /* Keep same border as unfocused */
   box-shadow: none;
 }
 
@@ -397,7 +343,8 @@ function handleRefresh() {
   cursor: pointer;
   min-width: 150px;
   outline: none;
-  border-radius: 0; /* Remove rounded corners */
+  border-radius: 0;
+  /* Remove rounded corners */
   -webkit-appearance: none;
   -moz-appearance: none;
 }
@@ -436,15 +383,10 @@ function handleRefresh() {
   font-weight: 250;
   color: var(--text-color);
   font-size: var(--button-font-size);
-  background-color: transparent;
   transition: all 0.2s ease;
   text-align: center;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
 
 .btn:active {
   transform: translateY(0);
@@ -479,11 +421,6 @@ function handleRefresh() {
   color: var(--text-color);
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--text-color);
-  color: var(--bg-color);
-  border-color: var(--text-color);
-}
 
 .btn-success {
   border-color: var(--special-text);

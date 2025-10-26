@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, VueWrapper, flushPromises } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
 import AutoImportComponent from './DashboardAutoImporter.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 
@@ -70,6 +70,7 @@ const mockScreenNavigation = {
   setActiveModel: vi.fn(),
   setActiveDashboard: vi.fn(),
   setActiveScreen: vi.fn(),
+  modelImport: ref(TEST_CONSTANTS.MODEL_URL),
 }
 
 const mockModelImportService = {

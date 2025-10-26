@@ -97,7 +97,8 @@ const createNavigationStore = (): NavigationStore => {
     activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
     activeDocumentationKey: ref(getDefaultValueFromHash('docs', '')),
-    modelImport: ref(getDefaultValueFromHash('import', '')),
+    // model import is legacy
+    modelImport: ref(getDefaultValueFromHash('import', getDefaultValueFromHash('model', ''))),
     connectionImport: ref(getDefaultValueFromHash('connection', '')),
     mobileMenuOpen: ref(false),
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
