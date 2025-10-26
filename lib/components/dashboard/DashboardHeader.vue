@@ -180,9 +180,6 @@ function handleRefresh() {
       <div class="dashboard-title" @click="startEditingTitle">
         <span v-if="!isEditingTitle" class="editable-text">
           {{ dashboard?.name || 'Untitled Dashboard' }}
-          <span class="edit-indicator" data-testid="edit-dashboard-title" v-if="!editsLocked">
-            ✎
-          </span>
         </span>
         <input v-else ref="titleInput" data-testid="dashboard-title-input" v-model="editableTitle"
           @blur="finishEditingTitle" @keyup.enter="finishEditingTitle" @keyup.esc="cancelEditingTitle"
@@ -455,6 +452,9 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
+  .edit-indicator {
+    opacity: 1;
+  }
   .title-row {
     flex-direction: column;
     gap: 15px;
