@@ -101,6 +101,7 @@
   --sidebar-sub-item-font-size: 12px;
 
   --font-size: 14px;
+  --title-font-size: 24px;
   --big-font-size: 18px;
   --small-font-size: 12px;
   --button-font-size: .80em;
@@ -185,7 +186,7 @@ button:hover {
 }
 
 button {
-  border: 1px solid var(--button-border, #cfcfcf);
+  border: 0px solid var(--button-border, #cfcfcf);
   /* padding: 0.6em 1.2em; */
   /* font-size: .70em; */
   font-size: var(--button-font-size);
@@ -196,7 +197,24 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
   color: var(--text-color);
+  border-radius:4px;
   /* flex: 1; */
+}
+
+.delete-btn,
+.remove-btn {
+  color: var(--delete-color, #dc3545);
+  border: 1px solid var(--delete-color, #dc3545);
+}
+
+.delete-btn,
+.remove-btn:hover {
+  background-color: var(--delete-color, #dc3545);
+  color: white;
+}
+
+.tactile-button, .remove-btn {
+  border: none;
 }
 
 .tacticle-button:hover {

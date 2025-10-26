@@ -11,7 +11,7 @@
       v-else
       :item-id="item.key"
       :name="item.label"
-      :indent="!isMobile ? item.indent : 0"
+      :indent="item.indent"
       :is-selected="activeEditor === item.objectKey"
       :is-collapsible="!['editor', 'creator'].includes(item.type)"
       :is-collapsed="isCollapsed"

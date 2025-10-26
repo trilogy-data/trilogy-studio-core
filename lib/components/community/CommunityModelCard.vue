@@ -466,6 +466,7 @@ defineExpose({
 
 .copy-import-button:hover {
   background-color: var(--button-hover-bg, #1d4ed8);
+  color: white;
 }
 
 .copy-import-button i {

@@ -143,7 +143,7 @@
   border-radius: 4px;
   transition: background-color 0.2s ease;
   user-select: none;
-  max-width: 200px;
+  max-width: 250px;
 }
 
 .tab-dropdown-container:hover {
@@ -343,9 +343,11 @@
     /* Fix for iOS Safari viewport height issues */
     height: -webkit-fill-available;
   }
+
   .sidebar {
     height: calc(-webkit-fill-available - 40px);
   }
+
   .nested-page-content {
     height: calc(-webkit-fill-available - 40px);
   }
@@ -372,31 +374,18 @@
 
   .current-tab-title {
     font-size: 16px;
-    max-width: 120px;
   }
 
   .tab-dropdown-container {
-    max-width: 150px;
     padding: 4px 8px;
   }
 }
 </style>
 
 <script setup lang="ts">
-import {
-  ref,
-  computed,
-  onMounted,
-  onBeforeUnmount,
-  type ComponentPublicInstance,
-  getCurrentInstance,
-} from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TabDropdownItem from './TabDropdownItem.vue'
 import { type Tab } from '../../stores/useScreenNavigation'
-
-interface TabDropdownComponent extends ComponentPublicInstance {
-  triggerClose: () => void
-}
 
 type IconMapKey = keyof typeof iconMap.value
 
@@ -416,6 +405,7 @@ const emit = defineEmits<{
   'menu-toggled': []
   'tab-selected': [data: Tab]
   'tab-closed': [tabId: string]
+  'close-other-tabs': [tabId: string]
 }>()
 
 // Reactive data
@@ -500,34 +490,7 @@ const getTabIcon = (screenType: string): string => {
 
 const executeCloseOthers = (): void => {
   showCloseOthersConfirm.value = false
-  batchCloseInProgress.value = true
-
-  const otherTabs = props.tabs.filter((tab) => !isActiveTab(tab))
-
-  // Get refs as a record to handle dynamic ref names properly
-  const refsRecord = getCurrentInstance()?.refs as Record<
-    string,
-    TabDropdownComponent[] | undefined
-  >
-
-  // Trigger close animation on each tab component with stagger
-  otherTabs.forEach((tab, index) => {
-    setTimeout(() => {
-      const tabComponents = refsRecord?.[`tabItem-${tab.id}`]
-      const tabComponent = Array.isArray(tabComponents) ? tabComponents[0] : undefined
-      if (tabComponent && typeof tabComponent.triggerClose === 'function') {
-        tabComponent.triggerClose()
-      }
-    }, index * 50)
-  })
-
-  // Reset batch state after all animations complete
-  setTimeout(
-    () => {
-      batchCloseInProgress.value = false
-    },
-    otherTabs.length * 50 + 300,
-  )
+  emit('close-other-tabs', props.activeTab as string)
 }
 
 // Handle clicks outside the dropdown

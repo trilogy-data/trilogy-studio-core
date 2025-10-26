@@ -163,9 +163,6 @@ export default defineComponent({
   font-weight: 300;
   font-size: 12px;
   cursor: pointer;
-  border-radius: 0px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
@@ -255,7 +252,6 @@ export default defineComponent({
 
 .tag-inactive {
   font-size: 8px;
-  border-radius: var(--border-radius);
   padding: 2px;
   color: var(--tag-font);
   line-height: 10px;
@@ -288,8 +284,6 @@ export default defineComponent({
     width: auto;
     font-weight: 500;
     cursor: pointer;
-    border-radius: 0px;
-    border: 1px solid var(--border);
     cursor: pointer;
     margin-left: 0rem;
     transition:

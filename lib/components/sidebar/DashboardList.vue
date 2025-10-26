@@ -9,11 +9,7 @@
         >
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
-        <button
-          @click="importPopupVisible = true"
-          class="import-button"
-          data-testid="dashboard-import-button"
-        >
+        <button @click="importPopupVisible = true" data-testid="dashboard-import-button">
           Import
         </button>
       </div>
@@ -269,13 +265,6 @@ export default {
 </script>
 
 <style scoped>
-.import-button {
-  background-color: var(--button-bg);
-  color: var(--text-color);
-  border: none;
-  cursor: pointer;
-}
-
 .import-button:hover {
   background-color: var(--button-hover-bg);
 }

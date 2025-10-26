@@ -50,6 +50,12 @@
               <i class="mdi mdi-cog-refresh-outline"></i>
             </loading-button>
           </tooltip>
+          <tooltip v-if="item.type === 'model'" content="Delete Model" position="left">
+            <i
+              class="mdi mdi-delete-outline"
+              @click="() => modelStore.removeModelConfig(item.name)"
+            ></i>
+          </tooltip>
         </span>
       </template>
     </sidebar-item>
@@ -260,6 +266,7 @@ export default {
       navigationStore,
       handleClick,
       handleToggle,
+      modelStore,
     }
   },
 
