@@ -529,7 +529,7 @@ complete_for_clause?
       new Paragraph(
         'Telemetry',
         `<a href="https://www.goatcounter.com/">GoatCounter</a> is used to collect anonymized
-        statistics about usage in the studio, such as aggregate queries run. No uniquely identifying information is collected, though the system type, browser, screensize and country are recorded.`,
+        statistics about usage in the studio, such as feature usage. No uniquely identifying information is collected, though the system type, browser, screensize and country are recorded. You can disable telemetry in the settings menu.`,
       ),
     ]),
   ]),
@@ -538,12 +538,12 @@ complete_for_clause?
       new Paragraph('Last Updated', 'February 22, 2025'),
       new Paragraph(
         'Service Description',
-        'Trilogy Studio (referred to as "IDE" henceforth) enables users to interact with their own databases. The IDE communicates with non-user services only to do basic telemetry and preprocessing of Trilogy code using the default language server (if a local one is not configured). The primary purpose of this preprocessing is to generate SQL to be returned to the browser for execution.',
+        'Trilogy Studio (referred to as "IDE" henceforth) enables users to interact with public data or data in databases they own. The IDE communicates with non-user services only to do basic telemetry and preprocessing of Trilogy code using the default language server (if a local one is not configured). The primary purpose of this preprocessing is to generate SQL to be returned to the browser for execution.',
         'section',
       ),
       new Paragraph(
         'Data Privacy and Security',
-        'No Data Collection: We do not collect, store, or process any of your data or database contents. All database interactions occur directly between your browser and your database through client-side JavaScript.',
+        'No Data Collection: We do not collect, store, or process any of your data or database contents, beyond metadata provided in the model definition. All database interactions occur directly between your browser and your database through client-side JavaScript.',
         'section',
       ),
       new Paragraph(

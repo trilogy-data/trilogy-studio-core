@@ -9,6 +9,9 @@
     <template v-else-if="connectionType === 'bigquery-oauth'">
       <i class="mdi mdi-google"></i>
     </template>
+    <template v-else-if="connectionType === 'bigquery'">
+      <i class="mdi mdi-google"></i>
+    </template>
     <template v-else>
       <i class="mdi mdi-database"></i>
     </template>
@@ -20,7 +23,7 @@ import { computed } from 'vue'
 import Tooltip from '../Tooltip.vue'
 import motherduckIcon from '../../static/motherduck.png'
 
-interface ConnectionIconProps {
+export interface ConnectionIconProps {
   connectionType?: string
 }
 
@@ -35,7 +38,7 @@ const tooltipContent = computed(() => {
     snowflake: 'Snowflake',
     default: 'Database Connection',
   }
-  return typeMap[props.connectionType || 'default']
+  return typeMap[props.connectionType || 'default'] || props.connectionType || ''
 })
 </script>
 

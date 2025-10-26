@@ -2,20 +2,24 @@
   <div class="main">
     <mobile-sidebar-layout
       @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      @tab-selected="tabSelected"
       :menuOpen="mobileMenuOpen"
       :activeScreen="activeScreen"
+      :tabs="tabs"
+      :activeTab="activeTab"
+      @tab-closed="(tab) => closeTab(tab, null)"
     >
       <template #sidebar>
         <sidebar
           @editor-selected="setActiveEditor"
-          @screen-selected="setActiveScreen"
+          @screen-selected="setActiveSidebarScreen"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
-          :active="activeScreen"
+          :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
@@ -71,7 +75,7 @@
         <dashboard-auto-importer @import-complete="handleImportComplete" />
       </template>
       <template v-else-if="activeScreen === 'community-models'">
-        <community-models />
+        <community-models :activeCommunityModelKey="activeCommunityModelKey" />
       </template>
       <template v-else-if="activeScreen === 'llms'">
         <LLMView />
@@ -170,12 +174,11 @@ import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { getDefaultValueFromHash, pushHashToUrl } from '../stores/urlStore'
-import { inject, defineAsyncComponent } from 'vue'
+import { inject, defineAsyncComponent, provide } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
-import useScreenNavigation from '../stores/useScreenNavigation.ts'
+import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
@@ -191,17 +194,7 @@ const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
 export default {
   name: 'MobileIDEComponent',
-  data() {
-    let activeModelKey = getDefaultValueFromHash('modelKey')
-    let activeDocumentationKey = getDefaultValueFromHash('documentationKey')
-    let activeConnectionKey = getDefaultValueFromHash('connection')
-    return {
-      activeModelKey: activeModelKey ? activeModelKey : '',
-      activeDocumentationKey: activeDocumentationKey ? activeDocumentationKey : '',
-      activeConnectionKey: activeConnectionKey ? activeConnectionKey : '',
-      activeTab: 'editor',
-    }
-  },
+  data() {},
   components: {
     Sidebar,
     Editor,
@@ -256,12 +249,30 @@ export default {
     const {
       activeScreen,
       activeEditor,
+      activeTab,
       activeDashboard,
+      activeSidebarScreen,
       setActiveScreen,
+      setActiveSidebarScreen,
       setActiveEditor,
       setActiveDashboard,
+      activeConnectionKey,
+      activeModelKey,
+      activeDocumentationKey,
+      setActiveConnectionKey,
+      setActiveModelKey,
+      setActiveDocumentationKey,
+      activeCommunityModelKey,
       mobileMenuOpen,
+      toggleMobileMenu,
+      tabs,
+      closeTab,
+      openTab,
     } = screenNavigation
+    const tabSelected = (e: Tab) => {
+      openTab(e.screen, null, e.address)
+    }
+    provide('navigationStore', screenNavigation)
     return {
       connectionStore,
       editorStore,
@@ -272,35 +283,31 @@ export default {
       saveModels,
       saveDashboards,
       modelStore,
+      activeCommunityModelKey,
+      activeTab,
       activeScreen,
+      activeSidebarScreen,
       activeEditor,
       activeDashboard,
+      activeConnectionKey,
+      activeModelKey,
+      activeDocumentationKey,
       setActiveScreen,
+      setActiveSidebarScreen,
       setActiveEditor,
       setActiveDashboard,
+      setActiveConnectionKey,
+      setActiveModelKey,
+      setActiveDocumentationKey,
       mobileMenuOpen,
+      toggleMobileMenu,
+      tabs,
+      openTab,
+      closeTab,
+      tabSelected,
     }
   },
   methods: {
-    toggleMobileMenu() {
-      this.mobileMenuOpen = !this.mobileMenuOpen
-    },
-    setActiveModelKey(modelKey: string) {
-      pushHashToUrl('modelKey', modelKey)
-      this.activeModelKey = modelKey
-      this.mobileMenuOpen = false
-    },
-    setActiveDocumentationKey(documentationKey: string) {
-      pushHashToUrl('documentationKey', documentationKey)
-      this.activeDocumentationKey = documentationKey
-      if (documentationKey.startsWith('article')) {
-        this.mobileMenuOpen = false
-      }
-    },
-    setActiveConnectionKey(connectionKey: string) {
-      pushHashToUrl('connection', connectionKey)
-      this.activeConnectionKey = connectionKey
-    },
     saveEditorsCall() {
       this.saveEditors()
     },

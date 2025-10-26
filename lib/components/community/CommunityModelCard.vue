@@ -2,11 +2,11 @@
   <div class="model-item">
     <!-- Import/Reload button in top right -->
     <button
-      @click="$emit('toggle-creator', file.name)"
+      @click="toggleCreator"
       :data-testid="`import-${file.name}`"
       class="action-button-topright"
     >
-      {{ creatorIsExpanded ? 'Hide' : modelExists(file.name) ? 'Reload' : 'Import' }}
+      {{ creatorIsExpanded ? 'Hide' : modelExists ? 'Reload' : 'Import' }}
     </button>
 
     <div class="model-item-header">
@@ -14,7 +14,7 @@
         <div class="font-semibold flex items-center">
           <span
             class="imported-indicator mr-2"
-            v-if="modelExists(file.name)"
+            v-if="modelExists"
             :data-testid="`imported-${file.name}`"
           >
             <i class="mdi mdi-check check-icon"></i>
@@ -24,8 +24,9 @@
 
         <!-- Expand button below title -->
         <button
+          v-if="!initialComponentsExpanded"
           class="expand-button"
-          @click="$emit('toggle-components', file.downloadUrl)"
+          @click="toggleComponents"
           :class="{ expanded: isComponentsExpanded }"
           :title="isComponentsExpanded ? 'Hide Content' : 'Show Content'"
         >
@@ -44,12 +45,12 @@
       <model-creator
         :formDefaults="{
           importAddress: file.downloadUrl,
-          connection: getDefaultConnection(file.engine),
+          connection: defaultConnection,
           name: file.name,
         }"
         :absolute="false"
         :visible="creatorIsExpanded"
-        @close="$emit('toggle-creator', file.name)"
+        @close="toggleCreator"
       />
     </div>
 
@@ -59,16 +60,15 @@
           :class="[
             'description-text',
             {
-              'description-truncated':
-                !isDescriptionExpanded && shouldTruncateDescription(file.description),
+              'description-truncated': !isDescriptionExpanded && shouldTruncateDescription,
             },
           ]"
         >
           <markdown-renderer :markdown="file.description" />
         </div>
         <button
-          v-if="shouldTruncateDescription(file.description)"
-          @click="$emit('toggle-description', file.name)"
+          v-if="shouldTruncateDescription"
+          @click="toggleDescription"
           class="description-toggle-button"
         >
           {{ isDescriptionExpanded ? 'Show Less' : 'Show More' }}
@@ -95,7 +95,7 @@
           </div>
           <div v-if="component.type === 'dashboard'" class="dashboard-actions">
             <button
-              @click="$emit('copy-dashboard-link', component, file)"
+              @click="copyDashboardLink(component)"
               class="copy-import-button"
               :title="'Copy import link for ' + component.name"
             >
@@ -110,26 +110,123 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
+import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/githubApiService'
+import type { ModelFile } from '../../remotes/models'
+import { type ModelConfigStoreType } from '../../stores/modelStore'
 
-defineProps<{
-  file: any
-  modelExists: (name: string) => boolean
-  creatorIsExpanded: boolean
-  isComponentsExpanded: boolean
-  isDescriptionExpanded: boolean
-  getDefaultConnection: (engine: string) => string
-  getComponentIcon: (type: string) => string
-  shouldTruncateDescription: (description: string) => boolean
+interface Props {
+  file: ModelFile
+  // Optional overrides for initial state
+  initialCreatorExpanded?: boolean
+  initialComponentsExpanded?: boolean
+  initialDescriptionExpanded?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  initialCreatorExpanded: false,
+  initialComponentsExpanded: false,
+  initialDescriptionExpanded: false,
+})
+
+const emit = defineEmits<{
+  (e: 'creator-toggled', isExpanded: boolean): void
+  (e: 'components-toggled', isExpanded: boolean): void
+  (e: 'description-toggled', isExpanded: boolean): void
+  (e: 'dashboard-link-copied', component: any): void
 }>()
 
-defineEmits<{
-  (e: 'toggle-creator', name: string): void
-  (e: 'toggle-components', url: string): void
-  (e: 'toggle-description', name: string): void
-  (e: 'copy-dashboard-link', component: any, file: any): void
-}>()
+// Inject stores
+const modelStore = inject<ModelConfigStoreType>('modelStore')
+if (!modelStore) {
+  throw new Error('ModelConfigStore not found in context')
+}
+
+// Internal state management
+const creatorIsExpanded = ref(props.initialCreatorExpanded)
+const isComponentsExpanded = ref(props.initialComponentsExpanded)
+const isDescriptionExpanded = ref(props.initialDescriptionExpanded)
+
+// Computed properties
+const modelExists = computed(() => {
+  return props.file.name in modelStore.models
+})
+
+const defaultConnection = computed(() => {
+  return getDefaultConnectionService(props.file.engine)
+})
+
+const shouldTruncateDescription = computed(() => {
+  if (!props.file.description) return false
+  const lines = props.file.description.split('\n')
+  return lines.length > 5
+})
+
+// Utility functions
+const getComponentIcon = (type: string): string => {
+  switch (type) {
+    case 'dashboard':
+      return 'mdi mdi-view-dashboard'
+    case 'trilogy':
+      return 'mdi mdi-database'
+    case 'sql':
+      return 'mdi mdi-code-tags'
+    default:
+      return 'mdi mdi-file'
+  }
+}
+
+// Action methods
+const toggleCreator = () => {
+  creatorIsExpanded.value = !creatorIsExpanded.value
+  emit('creator-toggled', creatorIsExpanded.value)
+}
+
+const toggleComponents = () => {
+  isComponentsExpanded.value = !isComponentsExpanded.value
+  emit('components-toggled', isComponentsExpanded.value)
+}
+
+const toggleDescription = () => {
+  isDescriptionExpanded.value = !isDescriptionExpanded.value
+  emit('description-toggled', isDescriptionExpanded.value)
+}
+
+const copyDashboardLink = async (component: any): Promise<void> => {
+  // Get current base URL
+  const currentBase = window.location.origin + window.location.pathname
+
+  // Construct the import link
+  const importLink = `${currentBase}#screen=dashboard-import&import=${encodeURIComponent(props.file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
+
+  try {
+    await navigator.clipboard.writeText(importLink)
+    emit('dashboard-link-copied', component)
+    console.log('Dashboard import link copied to clipboard:', importLink)
+  } catch (err) {
+    console.error('Failed to copy dashboard import link:', err)
+    // Fallback: create a temporary textarea and copy from it
+    const textArea = document.createElement('textarea')
+    textArea.value = importLink
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+    emit('dashboard-link-copied', component)
+  }
+}
+
+// Expose methods for parent components that need to control state
+defineExpose({
+  toggleCreator,
+  toggleComponents,
+  toggleDescription,
+  creatorIsExpanded: () => creatorIsExpanded.value,
+  isComponentsExpanded: () => isComponentsExpanded.value,
+  isDescriptionExpanded: () => isDescriptionExpanded.value,
+})
 </script>
 
 <style scoped>

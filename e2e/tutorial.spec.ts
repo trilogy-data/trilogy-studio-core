@@ -72,9 +72,10 @@ order by
   // Step 1: Open the Docs and Tutorial
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
+    await page.getByTestId('sidebar-link-tutorial').click()
   }
-  await page.getByTestId('documentation+Studio').click()
-  await page.getByTestId('article+Studio+Model Tutorial').click()
+  await page.getByTestId('expand-documentation-documentation+Studio').click()
+  await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
   await page.getByTestId('editor').click()
@@ -188,6 +189,8 @@ select count(order.id) as order_count;`
     await page.keyboard.type(chunk)
   }
 
+  await page.keyboard.press('Delete')
+
   await page.getByTestId('editor-run-button').click()
 
   // Wait for query to complete
@@ -195,16 +198,16 @@ select count(order.id) as order_count;`
   await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
 
   // Create a new DuckDB connection for iris data
-  await page.getByTestId('connection-creator-add-tutorial').click()
+  await page.getByTestId('connection-creator-add-tutorial-connection').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('iris-data')
   await page.getByTestId('connection-creator-submit').click()
 
   // Create a new SQL editor with the startup script
-  await page.getByTestId('new-sql-editor-iris-data-tutorial').click()
+  await page.getByTestId('new-sql-editor-iris-data-tutorial-connection').click()
 
   // Set up the iris table
-  let irisTableScript = `CREATE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
+  let irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     // Safari and Firefox both break on csv import
     return
@@ -240,17 +243,19 @@ select count(order.id) as order_count;`
   // Step 8: Create iris model from the connection
   // Navigate to the connection
   if (isMobile) {
-    await page.getByTestId('article+Studio+Model Tutorial').click()
+    await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
+  } else {
+    await page.getByTestId('tab-article+Studio+Model Tutorial').click()
   }
-  await page.getByTestId('connection-iris-data-tutorial').click()
+  await page.getByTestId('expand-tutorial-connection-iris-data').click()
 
   // popup freezes in webkit
   // if (browserName === 'webkit') {
   //   return
   // }
 
-  await page.getByTestId('database-iris-data-memory-tutorial').click()
-  await page.getByTestId('schema-iris-data-main-tutorial').click()
+  await page.getByTestId('expand-tutorial-connection-iris-data+memory').click()
+  await page.getByTestId('expand-tutorial-connection-iris-data+memory+main').click()
   await page.getByTestId('create-datasource-iris_data').click()
   // accept defaults
   await page.getByTestId('create-datasource-button').click()
@@ -299,7 +304,8 @@ address iris_data;`
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
-  await page.getByTestId('quick-new-editor-iris-data-trilogy').click()
+  await page.getByTestId('sidebar-icon-connections').click()
+  await page.getByTestId('new-trilogy-editor-iris-data').click()
   if (isMobile) {
     await page.getByTestId('editor').click()
     await page.getByTestId('editor').press('ControlOrMeta+a')

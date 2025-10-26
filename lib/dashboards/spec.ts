@@ -119,7 +119,9 @@ export const generateVegaSpec = (
   const yearColumns = Array.from(columns.entries())
     .filter(([_, col]) => col.traits?.includes('year'))
     .map(([colName, _]) => colName)
-
+  // const dateTimeColumns = Array.from(columns.entries())
+  //   .filter(([_, col]) => col.traits?.includes('datetime'))
+  //   .map(([colName, _]) => colName)
   let localData = data ? [...data] : []
   if (yearColumns.length > 0 && localData) {
     localData.forEach((row) => {
@@ -134,6 +136,15 @@ export const generateVegaSpec = (
       })
     })
   }
+  // if (dateTimeColumns.length > 0 && localData) {
+  //   localData.forEach((row) => {
+  //     dateTimeColumns.forEach((colName) => {
+  //       const dateTimeValue = row[colName]
+  //       //@ts-ignore
+  //       row[colName] = dateTimeValue.toJSDate()
+  //     })
+  //   })
+  // }
 
   // Create base spec
   let spec: any = createBaseSpec(localData)

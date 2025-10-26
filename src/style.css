@@ -11,6 +11,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  --special-bg: hsl(210, 100%, 50%, 0.5);
+
 }
 
 /* Dark Mode Colors */
@@ -64,7 +66,7 @@
   --sidebar-selector-font: #333333;
   --sidebar-selector-selected-bg: #FFFFFF;
 
-  --sidebar-bg: #F2F2F2;
+  --sidebar-bg: #f9f9f9;
   --sidebar-font: #4D4D4D;
 
   --query-window-bg: #FFFFFF;
@@ -170,9 +172,11 @@ h1 {
 /* BUTTONS */
 
 button:hover {
-  background-color: var(--button-mouseover)
-    /* Lighter gray when hovered */
+  background-color: var(--button-mouseover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 
 .button-container {
   display: flex;
@@ -271,7 +275,7 @@ button {
 
 .sidebar-item-selected {
   /*blue 50% transparency background + dark blue border */
-  background-color: hsl(210, 100%, 50%, 0.5);
+  background-color: var(--special-bg);
   border: 1px solid hsl(210, 100%, 50%, 0.75);
 }
 

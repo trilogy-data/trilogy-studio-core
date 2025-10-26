@@ -15,3 +15,10 @@ export function rsplit(str: string, delimiter: string): [string, string] {
     str.slice(lastIndex + 1), // Everything after the last delimiter
   ]
 }
+
+export function lastSegment(key: string, delimiter: string | null): string {
+  delimiter = delimiter || KeySeparator
+  const lastIndex = key.lastIndexOf(delimiter)
+  const label = lastIndex !== -1 ? key.substring(lastIndex + delimiter.length) : key
+  return label
+}

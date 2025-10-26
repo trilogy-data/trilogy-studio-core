@@ -2,6 +2,7 @@ import { type Row, type ResultColumn } from '../editors/results'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
+import { DateTime } from 'luxon'
 
 const valueToString = (column: string, value: any): string => {
   if (value === null || value === undefined) {
@@ -16,6 +17,10 @@ const valueToString = (column: string, value: any): string => {
   }
   if (value instanceof Date) {
     return `time(datum.${column}) === time(datetime(${value.getFullYear()}, ${value.getMonth()}, ${value.getDate()}))`
+  }
+  if (value instanceof DateTime) {
+    const iso = value.toUTC().toISO()
+    return `time(datum.${column}) === time(toDate("${iso}"))`
   }
   // Handle arrays and objects by converting to JSON string
   return `datum.${column} === ${JSON.stringify(value)}`
@@ -171,6 +176,8 @@ const createHeadlineLayer = (
       ],
     }
   }
+  console.log('type debug')
+  console.log(valueToString(column, datum))
   let labelMark = {
     mark: {
       type: 'text',

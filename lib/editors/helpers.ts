@@ -12,7 +12,7 @@ export function buildEditorTree(
     objectKey: string
     label: string
     type: string
-    indent: Array<number>
+    indent: number
     editor?: any
     connection?: string
   }> = []
@@ -78,7 +78,7 @@ export function buildEditorTree(
     editors: Editor[],
     storage: string,
     connection: string,
-    baseIndent: number[],
+    baseIndent: number,
   ) {
     // Create a tree structure for folders
     const folderTree: Record<string, any> = {}
@@ -121,11 +121,7 @@ export function buildEditorTree(
     })
 
     // Helper function to recursively add folders and editors to the list
-    function addToList(
-      tree: Record<string, any>,
-      currentIndent: number[],
-      pathPrefix: string = '',
-    ) {
+    function addToList(tree: Record<string, any>, currentIndent: number, pathPrefix: string = '') {
       // Sort entries: folders first, then editors
       const entries = Object.entries(tree).sort(([aKey, aVal], [bKey, bVal]) => {
         if (aVal.type === 'folder' && bVal.type === 'editor') return -1
@@ -160,7 +156,7 @@ export function buildEditorTree(
 
           // If folder is not collapsed, add its contents
           if (!collapsed[folderKey]) {
-            addToList(node.children, [...currentIndent, currentIndent.length], folderPath)
+            addToList(node.children, currentIndent + 1, folderPath)
           }
         } else if (node.type === 'editor') {
           const editorKey = `e-${storage}-${connection}-${node.editor.id}`
@@ -188,7 +184,7 @@ export function buildEditorTree(
       key: storageKey,
       label: 'Browser Storage',
       type: 'storage',
-      indent: [],
+      indent: 0,
     })
 
     // If storage is not collapsed, add connections and editors
@@ -213,13 +209,13 @@ export function buildEditorTree(
             objectKey: connection,
             label: connection,
             type: 'connection',
-            indent: [0],
+            indent: 1,
           })
           processedConnections.add(connectionKey)
 
           // If connection is not collapsed, add folder structure
           if (!collapsed[connectionKey]) {
-            buildFolderStructure(editors, storage, connection, [0, 1])
+            buildFolderStructure(editors, storage, connection, 2)
           }
         }
       })

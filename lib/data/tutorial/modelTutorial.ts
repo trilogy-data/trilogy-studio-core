@@ -129,7 +129,7 @@ order by total_revenue desc;`,
       <li>3. Click the black doc icon to create a new SQL editor. This will take you to the editor!</li>
       <li>4. Paste in the code and run it.</li>
       <li>5. Click 'set editor as startup script' in the top right.</li>
-      <li>6. Come back here by using the 'documentation' on the left.</li>
+      <li>6. Come back into this tutorial tab.</li>
       </ul>
      `,
     ),
@@ -145,7 +145,7 @@ order by total_revenue desc;`,
     ),
     new Paragraph(
       'Purpose',
-      `CREATE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`,
+      `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`,
       'code',
     ),
     new Paragraph('Purpose', '', 'connections'),

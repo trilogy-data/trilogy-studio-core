@@ -41,6 +41,7 @@
       :isMobile="isMobile"
       :testTag="testTag"
       @toggle="toggleCollapse"
+      @click="handleItemClick"
       @refresh="refreshId"
       @updateMotherduckToken="updateMotherDuckToken"
       @updateBigqueryProject="updateBigqueryProject"
@@ -175,6 +176,8 @@ export default {
       if (connection.type === 'bigquery-oauth') {
         connection.setAttribute('browsingProjectId', project)
         await saveConnections()
+        connection.databases = []
+        await connection.getDatabases()
       }
     }
     const toggleSaveCredential = (connection: any) => {
@@ -247,12 +250,12 @@ export default {
       }
       delete isLoading.value[id]
     }
-    const toggleCollapse = async (id: string, connection: string, type: string) => {
+    const handleItemClick = async (id: string, _: string, __: string) => {
       // if we are expanding a connection, get the databases
-      if (['connection', 'database', 'schema', 'table'].includes(type)) {
-        emit('connection-key-selected', id)
-      }
-
+      console.log('emitting connection key selected:', id)
+      emit('connection-key-selected', id)
+    }
+    const toggleCollapse = async (id: string, connection: string, type: string) => {
       if (
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
@@ -335,7 +338,6 @@ export default {
         collapsed.value,
         isLoading.value,
         isErrored.value,
-        isMobile.value,
       )
     })
 
@@ -352,8 +354,9 @@ export default {
       connectionStore,
       editorStore,
       contentList,
-      filteredContentList, // Use the filtered list instead of the original
+      filteredContentList,
       toggleCollapse,
+      handleItemClick,
       toggleMobileMenu,
       collapsed,
       saveConnections,
@@ -370,8 +373,8 @@ export default {
       rightSplit,
       creatorVisible,
       isMobile,
-      searchTerm, // Expose search term to template
-      clearSearch, // Expose clear search function
+      searchTerm,
+      clearSearch,
     }
   },
   components: {
@@ -472,7 +475,8 @@ export default {
   color: var(--sidebar-text-color, #333);
   line-height: var(--sidebar-list-item-height);
   font-size: var(--sidebar-font-size, 14px);
-  padding-left: 8px; /* Add this line */
+  padding-left: 8px;
+  /* Add this line */
 }
 
 .search-input:focus {

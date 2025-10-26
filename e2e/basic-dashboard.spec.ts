@@ -64,9 +64,11 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-community-models').click({ force: true })
-  await page.getByTestId('community-model-search').click()
-  await page.getByTestId('community-model-search').press('ControlOrMeta+a')
-  await page.getByTestId('community-model-search').fill('faa')
+  // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
+  // await page.getByTestId('community-model-search').click()
+  // await page.getByTestId('community-model-search').press('ControlOrMeta+a')
+  // await page.getByTestId('community-model-search').fill('faa')
+  await page.getByTestId('community-trilogy-data-trilogy-public-models-main+duckdb+faa').click()
   await page.getByTestId('import-faa').click()
   await page.getByTestId('model-creation-submit').click()
   await page.getByTestId('imported-faa')
@@ -76,23 +78,22 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-dashboard').click()
-  if (isMobile) {
-    await page.getByTestId('dashboard-creator-add').click()
-  }
+  await page.getByTestId('dashboard-creator-add').click({ force: true })
   await page.getByTestId('dashboard-creator-name').click()
   await page.getByTestId('dashboard-creator-name').fill('faa-test')
+  await page.getByTestId('dashboard-creator-connection').selectOption('faa-connection')
   await page.getByTestId('dashboard-creator-import').selectOption('flight')
   await page.getByTestId('dashboard-creator-submit').click()
 
   //check if the faa-test object eixsts
   if (!isMobile) {
-    const elementExists = await page.isVisible('[data-testid="dashboard-list-id-d-faa-test"]')
+    const elementExists = await page.isVisible('[data-testid="dashboard-d-faa-test"]')
     if (!elementExists) {
-      await page.getByTestId('dashboard-list-id-s-local').click()
-      await page.getByTestId('dashboard-list-id-c-local-faa-connection').click()
+      await page.getByTestId('dashboard-s-local').click()
+      await page.getByTestId('dashboard-c-local-faa-connection').click()
     }
 
-    await page.getByTestId('dashboard-list-id-d-faa-test').click()
+    await page.getByTestId('dashboard-d-faa-test').click()
   }
 
   // set up the source
@@ -502,7 +503,7 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
-  await page.getByTestId('editor-list-id-e-local-duckdb-test2-test_one').click()
+  await page.getByTestId('editor-e-local-duckdb-test2-test_one').click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
@@ -523,26 +524,24 @@ select rows;
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-link-dashboard').click()
-  if (isMobile) {
-    await page.getByTestId('dashboard-creator-add').click()
-  }
 
   // Create dashboard with custom editor as source
-  await page.getByTestId('dashboard-creator-name').click()
+  await page.getByTestId('dashboard-creator-add').click()
   await page.getByTestId('dashboard-creator-name').fill('custom-editor-dashboard')
+  await page.getByTestId('dashboard-creator-connection').selectOption(connectionName)
   await page.getByTestId('dashboard-creator-import').selectOption('test_one') // Use the custom editor as source
   await page.getByTestId('dashboard-creator-submit').click()
 
   // Navigate to the created dashboard
   if (!isMobile) {
     const elementExists = await page.isVisible(
-      '[data-testid="dashboard-list-id-d-custom-editor-dashboard"]',
+      '[data-testid="dashboard-d-custom-editor-dashboard"]',
     )
     if (!elementExists) {
-      await page.getByTestId('dashboard-list-id-s-local').click()
-      await page.getByTestId(`dashboard-list-id-c-local-${connectionName}`).click()
+      await page.getByTestId('dashboard-s-local').click()
+      await page.getByTestId(`dashboard-c-local-${connectionName}`).click()
     }
-    await page.getByTestId('dashboard-list-id-c-local-duckdb-test2').click()
+    await page.getByTestId('dashboard-c-local-duckdb-test2').click()
   }
 
   // Verify dashboard is using custom editor as source

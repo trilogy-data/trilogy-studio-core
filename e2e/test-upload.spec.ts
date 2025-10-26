@@ -67,7 +67,7 @@ test.describe('CSV Upload and Datasource Creation', () => {
     })
 
     // Click on the connection to expand it
-    await page.getByTestId('connection-upload-test').click()
+    await page.getByTestId('expand-connection-upload-test').click()
 
     // Upload CSV file via drag and drop
     const fileBuffer = fs.readFileSync(csvFilePath)
@@ -105,9 +105,9 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await expect(page.locator('.success-message')).toContainText('sample_users')
 
     // expand the connection
-    await page.getByTestId('database-upload-test-memory').click()
+    await page.getByTestId('expand-connection-upload-test+memory').click()
     // Wait for the table to appear in the connection tree
-    await page.getByTestId('schema-upload-test-main').click()
+    await page.getByTestId('expand-connection-upload-test+memory+main').click()
     // The table should appear under the expanded database
     await page.waitForSelector('[data-testid="create-datasource-sample_users"]', { timeout: 10000 })
 

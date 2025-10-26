@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="section-header">
-      Community Models
+      {{ remote || 'Community Models' }}
       <button @click="$emit('refresh')" :disabled="loading" data-testid="refresh-models-button">
         <span v-if="!loading">Refresh</span>
         <span v-else>Refreshing...</span>
@@ -27,6 +27,7 @@
             :value="selectedEngine"
             @change="$emit('update:selectedEngine', ($event.target as HTMLSelectElement)?.value)"
             class="px-3 py-2 border rounded"
+            :disabled="engineDisabled"
           >
             <option value="">All Engines</option>
             <option v-for="engine in availableEngines" :key="engine" :value="engine">
@@ -59,6 +60,8 @@ defineProps<{
   importStatus: string
   availableEngines: string[]
   loading: boolean
+  remote: string | null
+  engineDisabled: boolean
 }>()
 
 defineEmits<{

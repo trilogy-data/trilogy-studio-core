@@ -103,9 +103,9 @@ export default defineComponent({
 
         // Update success message based on result type
         if (result.type === 'database') {
-          successMessage.value = `Successfully attached database <strong>${result.name}</strong>`
+          successMessage.value = `Successfully attached database ${result.name}`
         } else {
-          successMessage.value = `Successfully imported <strong>${result.name}</strong>`
+          successMessage.value = `Successfully imported ${result.name}`
         }
 
         isLoading.value = false

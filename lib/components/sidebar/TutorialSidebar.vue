@@ -1,38 +1,28 @@
 <template>
   <sidebar-list title="Documentation">
     <template #actions></template>
-    <div v-for="node in documentationNodes" :key="node.id" class="sidebar-item">
-      <div
-        class="sidebar-content"
-        @click="handleClick(node.id)"
-        :class="{ 'sidebar-item-selected': isActiveNode(node.id) }"
-        :data-testid="node.id"
-      >
-        <!-- Indentation -->
-        <div
-          v-for="(_, index) in Array.from({ length: node.indent }, () => 0)"
-          :key="index"
-          class="sidebar-padding"
-        ></div>
-        <!-- Toggle Icons for Collapsible Nodes -->
-        <span v-if="node.type === 'documentation'">
-          <i v-if="!collapsed[node.id]" class="mdi mdi-menu-down"></i>
-          <i v-else class="mdi mdi-menu-right"></i>
-        </span>
-        <i v-else-if="node.type === 'article'" class="mdi mdi-text-box-outline node-icon"></i>
-        <!-- Node Name with Extra Info -->
-        <span class="truncate-text">
-          {{ node.name }}
-          <span v-if="node.type === 'documentation'">({{ node.count }})</span>
-        </span>
-      </div>
-    </div>
+    <sidebar-item
+      v-for="node in documentationNodes"
+      :key="node.id"
+      :item-id="node.id"
+      :name="node.name"
+      :indent="node.indent"
+      :is-selected="isActiveNode(node.id)"
+      :is-collapsible="node.type === 'documentation'"
+      :is-collapsed="collapsed[node.id]"
+      :icon="node.type === 'article' ? 'mdi-text-box-outline' : ''"
+      :extra-info="node.type === 'documentation' ? node.count : ''"
+      itemType="documentation"
+      @click="handleClick"
+      @toggle="toggleCollapse"
+    />
   </sidebar-list>
 </template>
 
 <script lang="ts">
 import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
+import SidebarItem from './GenericSidebarItem.vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import { documentation } from '../../data/tutorial/documentation'
 import { KeySeparator } from '../../data/constants'
@@ -117,37 +107,17 @@ export default {
 
   methods: {
     handleClick(id: string) {
-      this.toggleCollapse(id)
       this.$emit('documentation-key-selected', id)
     },
   },
 
   components: {
     SidebarList,
+    SidebarItem,
   },
 }
 </script>
 
 <style scoped>
-.node-icon {
-  padding-right: 5px;
-}
-
-.sidebar-item:hover {
-  background-color: var(--button-mouseover);
-}
-
-.sidebar-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0 4px;
-}
-
-.sidebar-padding {
-  width: 7px;
-  height: 22px;
-  margin-right: 5px;
-  border-right: 1px solid var(--border-light);
-}
+/* All styles are now handled by the SidebarItem component */
 </style>

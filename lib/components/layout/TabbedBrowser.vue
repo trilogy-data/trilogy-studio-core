@@ -1,155 +1,172 @@
 <template>
   <div class="tabbed-container">
-    <!-- Tab Navigation Bar -->
     <div class="tab-bar">
       <div
         v-for="(tab, index) in tabs"
         :key="tab.id"
-        :class="['tab', { 'tab-active': currentTabId === tab.id }]"
+        :class="['tab', { 'tab-active': activeTab === tab.id }]"
         @click="selectTab(tab.id)"
         @dragstart="handleDragStart(index, $event)"
         @dragover="handleDragOver($event)"
         @drop="handleDrop(index, $event)"
+        @contextmenu="showContextMenu($event, tab.id, index)"
         draggable="true"
+        :data-testid="`tab-${tab.address}`"
       >
+        <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
         <span class="tab-title truncate-text">{{ tab.title }}</span>
-        <button class="tab-close-btn" @click.stop="closeTab(tab.id)" v-if="tabs.length > 1">
+        <button class="tab-close-btn" @click.stop="closeTab(tab.id, null)" v-if="tabs.length > 1">
           ×
         </button>
       </div>
-      <button class="new-tab-btn" @click="$emit('new-tab')" title="New Tab">+</button>
+      <!-- <button class="new-tab-btn" @click="$emit('new-tab')" title="New Tab">+</button> -->
     </div>
 
     <!-- Content Area -->
     <div class="tab-content">
       <slot></slot>
     </div>
+
+    <!-- Context Menu -->
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div
+        class="context-menu-item"
+        @click="closeOtherTabs"
+        :class="{ disabled: tabs.length <= 1 }"
+      >
+        Close Other Tabs
+      </div>
+      <div
+        class="context-menu-item"
+        @click="closeTabsToRight"
+        :class="{ disabled: !canCloseTabsToRight }"
+      >
+        Close Tabs to the Right
+      </div>
+    </div>
+
+    <!-- Invisible overlay to close context menu -->
+    <div v-if="contextMenu.visible" class="context-menu-overlay" @click="hideContextMenu"></div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-// Remove the problematic import for now - you'll need to ensure this path exists
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import { type ScreenType } from '../../stores/useScreenNavigation'
 
-interface Tab {
-  id: string
-  title: string
-  screen: ScreenType
-  params?: Record<string, string>
-  isActive: boolean
-}
-
 export default defineComponent({
   name: 'TabbedLayout',
-  props: {
-    initialTabs: {
-      type: Array as () => Tab[],
-      default: () => [],
-    },
-  },
   emits: ['new-tab', 'tab-added', 'tab-closed', 'tab-selected', 'tabs-reordered'],
   setup() {
     const navigationStore = useScreenNavigation()
+    const {
+      activeTab,
+      tabs,
+      openTab,
+      closeTab,
+      setActiveTab,
+      // Stub methods for new functionality - to be implemented in store
+      closeOtherTabsExcept,
+      closeTabsToRightOf,
+    } = navigationStore
     return {
-      navigationStore,
+      activeTab,
+      tabs,
+      openTab,
+      setActiveTab,
+      closeTab,
+      closeOtherTabsExcept,
+      closeTabsToRightOf,
     }
   },
   data() {
     return {
-      tabs: [] as Tab[],
-      currentTabId: '' as string,
       draggedTabIndex: -1 as number,
       tabIdCounter: 0 as number,
+      contextMenu: {
+        visible: false,
+        x: 0,
+        y: 0,
+        targetTabId: '',
+        targetTabIndex: -1,
+      },
+      // Icon mapping that matches the sidebar configuration
+      iconMap: {
+        editors: 'mdi mdi-file-document-edit-outline',
+        connections: 'mdi mdi-database-outline',
+        llms: 'mdi mdi-creation-outline',
+        dashboard: 'mdi mdi-chart-multiple',
+        'dashboard-import': 'mdi mdi-chart-multiple',
+        models: 'mdi mdi-set-center',
+        'community-models': 'mdi mdi-library-outline',
+        tutorial: 'mdi mdi-help',
+        settings: 'mdi mdi-cog-outline',
+        profile: 'mdi mdi-account-outline',
+        welcome: 'mdi mdi-home-outline',
+        '': 'mdi mdi-file-document-outline', // fallback icon
+      } as Record<ScreenType, string>,
     }
   },
   computed: {
-    currentTab(): Tab | undefined {
-      return this.tabs.find((tab: Tab) => tab.id === this.currentTabId)
+    canCloseTabsToRight(): boolean {
+      return this.contextMenu.targetTabIndex < this.tabs.length - 1
     },
   },
   methods: {
-    // Tab Management
-    addTab(screen: ScreenType, title?: string, params?: Record<string, string>): string {
-      const existingTab = this.tabs.find(
-        (tab: Tab) =>
-          tab.screen === screen &&
-          JSON.stringify(tab.params || {}) === JSON.stringify(params || {}),
-      )
-
-      if (existingTab) {
-        this.selectTab(existingTab.id)
-        return existingTab.id
-      }
-
-      const tabId = `tab-${++this.tabIdCounter}`
-      const newTab: Tab = {
-        id: tabId,
-        title: title || this.getScreenTitle(screen),
-        screen: screen,
-        params: params,
-        isActive: false,
-      }
-
-      this.tabs.push(newTab)
-      this.selectTab(tabId)
-      this.$emit('tab-added', newTab)
-      return tabId
-    },
-
-    closeTab(tabId: string): void {
-      const tabIndex = this.tabs.findIndex((tab: Tab) => tab.id === tabId)
-      if (tabIndex === -1) return
-
-      const closedTab = this.tabs[tabIndex]
-      this.tabs.splice(tabIndex, 1)
-
-      // If we closed the current tab, select another one
-      if (this.currentTabId === tabId && this.tabs.length > 0) {
-        const newIndex = Math.min(tabIndex, this.tabs.length - 1)
-        this.selectTab(this.tabs[newIndex].id)
-      } else if (this.tabs.length === 0) {
-        this.currentTabId = ''
-      }
-
-      this.$emit('tab-closed', closedTab)
+    getTabIcon(screenType: ScreenType): string {
+      return this.iconMap[screenType] || 'mdi mdi-file-document-outline'
     },
 
     selectTab(tabId: string): void {
-      const tab = this.tabs.find((t: Tab) => t.id === tabId)
-      if (!tab) return
-
-      this.currentTabId = tabId
-
-      // Navigate using the navigation store (when available)
-      if (this.navigationStore) {
-        if (tab.params) {
-          this.navigationStore.setActiveScreenWithParams(tab.screen, tab.params)
-        } else {
-          this.navigationStore.setActiveScreen(tab.screen)
-        }
-      }
-
-      this.$emit('tab-selected', tab)
+      this.setActiveTab(tabId)
     },
 
-    updateTabTitle(tabId: string, title: string): void {
-      const tab = this.tabs.find((t: Tab) => t.id === tabId)
-      if (tab) {
-        tab.title = title
-      }
+    // Context Menu Methods
+    showContextMenu(event: MouseEvent, tabId: string, tabIndex: number): void {
+      event.preventDefault()
+      this.contextMenu.visible = true
+      this.contextMenu.x = event.clientX
+      this.contextMenu.y = event.clientY
+      this.contextMenu.targetTabId = tabId
+      this.contextMenu.targetTabIndex = tabIndex
     },
 
-    updateTabScreen(tabId: string, screen: ScreenType, params?: Record<string, string>): void {
-      const tab = this.tabs.find((t: Tab) => t.id === tabId)
-      if (tab) {
-        tab.screen = screen
-        tab.params = params
-        if (!tab.title || tab.title === this.getScreenTitle(tab.screen)) {
-          tab.title = this.getScreenTitle(screen)
-        }
+    hideContextMenu(): void {
+      this.contextMenu.visible = false
+      this.contextMenu.targetTabId = ''
+      this.contextMenu.targetTabIndex = -1
+    },
+
+    closeOtherTabs(): void {
+      if (this.tabs.length <= 1) return
+
+      // Call store method to close all tabs except the target tab
+      if (this.closeOtherTabsExcept) {
+        this.closeOtherTabsExcept(this.contextMenu.targetTabId)
+      } else {
+        // Fallback implementation until store method is available
+        console.log('closeOtherTabsExcept not implemented in store yet')
       }
+      this.hideContextMenu()
+    },
+
+    closeTabsToRight(): void {
+      if (!this.canCloseTabsToRight) return
+
+      // Call store method to close tabs to the right of the target tab
+      if (this.closeTabsToRightOf) {
+        this.closeTabsToRightOf(this.contextMenu.targetTabId)
+      } else {
+        // Fallback implementation until store method is available
+        console.log('closeTabsToRightOf not implemented in store yet')
+      }
+      this.hideContextMenu()
     },
 
     // Drag and Drop
@@ -180,23 +197,6 @@ export default defineComponent({
       this.draggedTabIndex = -1
     },
 
-    // Utility Methods
-    getScreenTitle(screen: ScreenType): string {
-      const screenTitles: Record<ScreenType, string> = {
-        editors: 'Editors',
-        tutorial: 'Tutorial',
-        llms: 'LLMs',
-        dashboard: 'Dashboard',
-        'dashboard-import': 'Import',
-        'community-models': 'Community',
-        welcome: 'Welcome',
-        profile: 'Profile',
-        settings: 'Settings',
-        '': 'Home',
-      }
-      return screenTitles[screen] || screen.charAt(0).toUpperCase() + screen.slice(1)
-    },
-
     // Split.js Integration
     initializeSplit(): void {
       // No split functionality needed
@@ -205,16 +205,22 @@ export default defineComponent({
 
   mounted() {
     // Initialize with provided tabs or create a default one
-    if (this.initialTabs.length > 0) {
-      this.tabs = [...this.initialTabs]
-      this.currentTabId = this.tabs[0].id
-      this.tabIdCounter = Math.max(...this.tabs.map((t: Tab) => parseInt(t.id.split('-')[1]) || 0))
-    } else {
-      // Create a default tab based on current navigation state
-      // const currentScreen = this.navigationStore?.activeScreen?.value || 'welcome'
+    if (this.tabs.length === 0) {
       const currentScreen: ScreenType = 'welcome'
-      this.addTab(currentScreen)
+      this.openTab(currentScreen, 'Welcome', 'welcome')
     }
+    // Hide context menu when clicking outside
+    document.addEventListener('click', this.hideContextMenu)
+    document.addEventListener('contextmenu', (e: Event) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.tab')) {
+        this.hideContextMenu()
+      }
+    })
+  },
+
+  beforeUnmount() {
+    // Clean up event listeners
+    document.removeEventListener('click', this.hideContextMenu)
   },
 
   watch: {
@@ -242,7 +248,32 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 30px);
+  position: relative;
+}
+
+.tabbed-container {
+  /* Modern browsers */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* Webkit browsers */
+.tabbed-container::-webkit-scrollbar {
+  height: 4px; /* Very thin */
+}
+
+.tabbed-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabbed-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.tabbed-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
 }
 
 /* Tab Bar Styles */
@@ -252,7 +283,7 @@ export default defineComponent({
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border);
   padding: 0;
-  min-height: 40px;
+  min-height: 20px;
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;
@@ -261,7 +292,7 @@ export default defineComponent({
 .tab {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding-left: 4px;
   background-color: var(--button-bg);
   border: 1px solid var(--border);
   border-bottom: none;
@@ -278,10 +309,17 @@ export default defineComponent({
 }
 
 .tab-active {
-  background-color: var(--query-window-bg);
-  border-bottom: 1px solid var(--query-window-bg);
+  background-color: var(--special-bg);
+  border-bottom: 1px solid var(--special-bg);
   position: relative;
   z-index: 1;
+}
+
+.tab-icon {
+  font-size: 16px;
+  margin-right: 6px;
+  color: var(--text-color);
+  flex-shrink: 0;
 }
 
 .tab-title {
@@ -289,6 +327,9 @@ export default defineComponent({
   font-size: var(--small-font-size);
   color: var(--text-color);
   margin-right: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .tab-close-btn {
@@ -302,6 +343,7 @@ export default defineComponent({
   border-radius: 2px;
   margin-left: 4px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .tab-close-btn:hover {
@@ -324,20 +366,62 @@ export default defineComponent({
   background-color: var(--button-mouseover);
 }
 
+/* Context Menu Styles */
+.context-menu {
+  position: fixed;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  color: var(--text-color);
+  font-size: var(--small-font-size);
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-item:hover:not(.disabled) {
+  background-color: var(--button-mouseover);
+}
+
+.context-menu-item.disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
 /* Content Area */
 .tab-content {
-  flex: 1 1 auto;
-  overflow: hidden;
-  background-color: var(--query-window-bg);
+  height: 100%;
 }
 
 /* Drag and Drop Visual Feedback */
 .tab[draggable='true'] {
-  cursor: grab;
+  cursor: pointer;
 }
 
 .tab[draggable='true']:active {
   cursor: grabbing;
+}
+
+/* Utility Classes */
+.truncate-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Responsive Design */
@@ -348,12 +432,48 @@ export default defineComponent({
     padding: 6px 8px;
   }
 
+  .tab-icon {
+    font-size: 14px;
+    margin-right: 4px;
+  }
+
   .tab-title {
     font-size: var(--font-size);
   }
 
   .tab-bar {
     min-height: 44px;
+  }
+
+  .context-menu {
+    min-width: 140px;
+  }
+
+  .context-menu-item {
+    padding: 10px 16px;
+    font-size: var(--font-size);
+  }
+
+  /* On very small screens, consider hiding tab titles and showing only icons */
+  @media screen and (max-width: 480px) {
+    .tab {
+      min-width: 40px;
+      max-width: 50px;
+      padding: 6px 4px;
+      justify-content: center;
+    }
+
+    .tab-title {
+      display: none;
+    }
+
+    .tab-icon {
+      margin-right: 0;
+    }
+
+    .tab-close-btn {
+      display: none;
+    }
   }
 }
 </style>
