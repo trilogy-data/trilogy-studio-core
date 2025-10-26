@@ -66,10 +66,14 @@ const mockModelStore = {
 const mockSaveDashboards = vi.fn()
 const mockSaveAll = vi.fn()
 
+
 const mockScreenNavigation = {
   setActiveModel: vi.fn(),
   setActiveDashboard: vi.fn(),
   setActiveScreen: vi.fn(),
+  closeTab: vi.fn(),           // ← Added
+  openTab: vi.fn(),            // ← Added
+  setActiveSidebarScreen: vi.fn(), // ← Added
   modelImport: ref(TEST_CONSTANTS.MODEL_URL),
 }
 
@@ -82,7 +86,7 @@ vi.mock('../../stores/urlStore', () => ({
 }))
 
 vi.mock('../../stores/useScreenNavigation', () => ({
-  default: () => mockScreenNavigation,
+  default: vi.fn(() => mockScreenNavigation),
 }))
 
 vi.mock('../../models/helpers', () => ({
@@ -125,6 +129,7 @@ describe('AutoImportComponent', () => {
     mockDashboardStore.dashboards = {}
     mockConnectionStore.connections = {}
     mockModelStore.models = {}
+    mockScreenNavigation.modelImport.value = TEST_CONSTANTS.MODEL_URL
 
     // Mock fetch globally
     mockFetch = vi.fn()
