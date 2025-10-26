@@ -83,6 +83,7 @@
               context="main-trilogy"
               editorId="my-first-editor"
               @save-editors="saveEditorsCall"
+              :containerHeight="500"
             />
           </div>
           <div class="editor-bottom">

@@ -76,7 +76,7 @@ const greeting <- 'Hello World'; # A friendly greeting
 select greeting;`,
           hints: ["Don't forget the closing semicolon or as!", "Select 'Hello World' as greeting;"],
           validationFn: (results: Results) => {
-            return results.data?.[0]?.greeting.toLowerCase() === 'hello world'
+            return results.data?.[0]?.greeting?.toLowerCase() === 'hello world'
           },
         },
         {

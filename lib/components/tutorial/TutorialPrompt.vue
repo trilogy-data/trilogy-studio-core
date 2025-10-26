@@ -46,6 +46,7 @@
           @save-editors="saveEditorsCall"
           ref="editorRef"
           @query-finished="validateResults"
+          :containerHeight="300"
         />
       </div>
       <div class="results-section">

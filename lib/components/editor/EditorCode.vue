@@ -379,6 +379,7 @@ export default defineComponent({
 
     // Setup on mount
     onMounted(() => {
+      console.log('Editor mounted')
       createEditor()
     })
 
@@ -396,6 +397,7 @@ export default defineComponent({
     watch(
       () => props.editorId,
       () => {
+        console.log('Editor ID prop changed:', props.editorId)
         createEditor()
       },
     )
