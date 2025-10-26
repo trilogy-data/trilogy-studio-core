@@ -201,6 +201,7 @@ export const useDashboardStore = defineStore('dashboards', {
       // Copy updatedAt from the existing dashboard
       newDashboard.updatedAt = new Date()
       newDashboard.nextId = existingDashboard.nextId
+      newDashboard.changed = true
       // Add the new dashboard to the store
       this.addDashboard(newDashboard)
       // Set the new dashboard as active

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ModelConfig, ModelParseResults, ModelSource } from '../models'
 import type { Editor } from '../editors'
+import useConnectionStore from './connectionStore'
 
 const useModelConfigStore = defineStore('models', {
   state: () => ({
@@ -26,6 +27,14 @@ const useModelConfigStore = defineStore('models', {
     },
     removeModelConfig(name: string) {
       if (this.models[name]) {
+        let connectionStore = useConnectionStore()
+        // Update connections that reference this model
+        connectionStore.connectionList.forEach((connection) => {
+          if (connection.model === name) {
+            connection.model = null
+            connection.changed = true
+          }
+        })
         delete this.models[name]
       } else {
         throw new Error(`ModelConfig with name "${name}" not found.`)
@@ -34,9 +43,18 @@ const useModelConfigStore = defineStore('models', {
     updateModelName(name: string, newName: string) {
       if (name === newName) return
       console.log(`Renaming model from ${name} to ${newName}`)
+      let connectionStore = useConnectionStore()
+      // Update connections that reference this model
+      connectionStore.connectionList.forEach((connection) => {
+        if (connection.model === name) {
+          connection.model = newName
+          connection.changed = true
+        }
+      })
       this.models[newName] = this.models[name]
       this.models[newName].name = newName
       this.models[newName].changed = true
+
       delete this.models[name]
     },
     addEditorAsModelSource(model: string, editor: Editor): void {

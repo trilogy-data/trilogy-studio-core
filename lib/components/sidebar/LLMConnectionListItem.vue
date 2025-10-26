@@ -151,7 +151,7 @@
 
           <tooltip class="tacticle-button" content="Delete Connection" position="left">
             <span class="remove-btn" @click.stop="deleteConnection(item.id)">
-              <i class="mdi mdi-trash-can tactile-button"></i>
+              <i class="mdi mdi-trash-can-outline tactile-button"></i>
             </span>
           </tooltip>
 

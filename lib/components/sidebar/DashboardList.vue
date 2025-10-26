@@ -11,7 +11,6 @@
         </button>
         <button
           @click="importPopupVisible = true"
-          class="import-button"
           data-testid="dashboard-import-button"
         >
           Import
@@ -269,12 +268,7 @@ export default {
 </script>
 
 <style scoped>
-.import-button {
-  background-color: var(--button-bg);
-  color: var(--text-color);
-  border: none;
-  cursor: pointer;
-}
+
 
 .import-button:hover {
   background-color: var(--button-hover-bg);

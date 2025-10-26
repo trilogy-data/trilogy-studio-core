@@ -208,7 +208,7 @@ function handleRefresh() {
         </button>
         <button @click="() => $emit('toggle-edit-mode')" class="btn btn-secondary" data-testid="toggle-edit-mode-button"
           :disabled="editsLocked">
-          {{ editMode ? 'Fullscreen' : 'Exit Fullscreen' }}
+          {{ editMode ? 'Fullscreen' : 'Edit Mode' }}
         </button>
         <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
           ⟳ Refresh
@@ -379,12 +379,12 @@ function handleRefresh() {
   justify-content: center;
   cursor: pointer;
   margin-top: 5px;
-  border: 1px solid var(--border-light);
   font-weight: 250;
   color: var(--text-color);
   font-size: var(--button-font-size);
   transition: all 0.2s ease;
   text-align: center;
+  border: none;
 }
 
 
@@ -424,7 +424,8 @@ function handleRefresh() {
 
 .btn-success {
   border-color: var(--special-text);
-  color: var(--special-text);
+  color: white;
+      background-color: var(--special-text);
 }
 
 .btn-success:hover:not(:disabled) {
@@ -433,7 +434,7 @@ function handleRefresh() {
 }
 
 .btn-danger {
-  border-color: var(--delete-color);
+  border: 1px solid var(--delete-color);
   color: var(--delete-color);
 }
 

@@ -8,6 +8,7 @@
       :tabs="tabs"
       :activeTab="activeTab"
       @tab-closed="(tab) => closeTab(tab, null)"
+      @close-other-tabs="(tab) => closeOtherTabsExcept(tab)"
     >
       <template #sidebar>
         <sidebar
@@ -267,6 +268,7 @@ export default {
       toggleMobileMenu,
       tabs,
       closeTab,
+      closeOtherTabsExcept,
       openTab,
     } = screenNavigation
     const tabSelected = (e: Tab) => {
@@ -304,6 +306,7 @@ export default {
       tabs,
       openTab,
       closeTab,
+      closeOtherTabsExcept,
       tabSelected,
     }
   },

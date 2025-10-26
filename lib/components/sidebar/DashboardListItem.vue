@@ -3,7 +3,7 @@
     v-if="item.type !== 'creator'"
     :item-id="item.key"
     :name="item.label"
-    :indent="!isMobile ? item.indent : 0"
+    :indent="item.indent"
     :is-selected="isActive"
     :is-collapsible="!['dashboard', 'creator'].includes(item.type)"
     :is-collapsed="isCollapsed"
@@ -53,7 +53,7 @@
               @click.stop="handleDelete"
               :data-testid="`delete-dashboard-${item.label}`"
             >
-              <i class="mdi mdi-trash-can"></i>
+              <i class="mdi mdi-trash-can-outline"></i>
             </span>
           </tooltip>
         </template>

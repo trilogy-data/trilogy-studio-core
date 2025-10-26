@@ -2,10 +2,8 @@
   <sidebar-list title="Models">
     <template #actions>
       <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
-        >
+        <button @click="creatorVisible = !creatorVisible"
+          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'">
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
         <loading-button :action="saveModels" :key-combination="['control', 's']">
@@ -15,28 +13,14 @@
       <model-creator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
 
-    <sidebar-item
-      v-for="item in flatList"
-      :key="item.id"
-      :item-id="item.id"
-      :name="item.name"
-      :indent="item.indent"
-      :is-selected="activeModelKey === item.id"
-      :is-collapsible="
-        ['model'].includes(item.type) ||
+    <sidebar-item v-for="item in flatList" :key="item.id" :item-id="item.id" :name="item.name" :indent="item.indent"
+      :is-selected="activeModelKey === item.id" :is-collapsible="['model'].includes(item.type) ||
         (['source', 'datasource'].includes(item.type) && item.count > 0)
-      "
-      :is-collapsed="collapsed[item.id]"
-      @click="handleClick"
-      @toggle="handleToggle"
-    >
+        " :is-collapsed="collapsed[item.id]" @click="handleClick" @toggle="handleToggle">
       <!-- Custom icon slot for different item types -->
       <template #icon>
         <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
-        <span
-          v-else-if="item.type === 'concept'"
-          :class="`purpose-${item.concept.purpose.toLowerCase()}`"
-        >
+        <span v-else-if="item.type === 'concept'" :class="`purpose-${item.concept.purpose.toLowerCase()}`">
           {{ item.concept.purpose.charAt(0).toUpperCase() }}
         </span>
         <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
@@ -46,9 +30,13 @@
       <template #extra-content>
         <span class="right-container hover-icon">
           <tooltip v-if="item.type === 'model'" content="Refresh Model" position="left">
+
             <loading-button :action="() => fetchParseResults(item.name)">
               <i class="mdi mdi-cog-refresh-outline"></i>
             </loading-button>
+          </tooltip>
+          <tooltip v-if="item.type === 'model'" content="Delete Model" position="left">
+            <i class="mdi mdi-delete-outline" @click="() => modelStore.removeModelConfig(item.name)"></i>
           </tooltip>
         </span>
       </template>
@@ -260,6 +248,7 @@ export default {
       navigationStore,
       handleClick,
       handleToggle,
+      modelStore
     }
   },
 

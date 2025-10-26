@@ -2,41 +2,21 @@
   <div id="interface" class="interface">
     <div class="mobile-select-bar">
       <div class="icon-container" tooltip="Menu">
-        <i
-          @click="$emit('menu-toggled')"
-          class="mdi mdi-menu hamburger-icon"
-          data-testid="mobile-menu-toggle"
-        ></i>
+        <i @click="$emit('menu-toggled')" class="mdi mdi-menu hamburger-icon" data-testid="mobile-menu-toggle"></i>
       </div>
       <div class="header-center">
-        <div
-          v-if="tabs.length > 1"
-          class="tab-dropdown-container"
-          @click="toggleTabDropdown"
-          ref="tabDropdownContainer"
-        >
+        <div v-if="tabs.length > 1" class="tab-dropdown-container" @click="toggleTabDropdown"
+          ref="tabDropdownContainer">
           <span class="current-tab-title">{{ currentTabTitle }}</span>
-          <i
-            :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]"
-            class="mdi-chevron-down"
-          ></i>
+          <i :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]" class="mdi-chevron-down"></i>
         </div>
         <span v-else class="header">{{ screenTitle }}</span>
 
         <!-- Tab Dropdown -->
-        <div
-          v-if="tabDropdownOpen && tabs.length > 1"
-          class="tab-dropdown"
-          ref="tabDropdown"
-          @click.stop
-        >
+        <div v-if="tabDropdownOpen && tabs.length > 1" class="tab-dropdown" ref="tabDropdown" @click.stop>
           <!-- Batch Actions Header -->
           <div class="tab-dropdown-header" v-if="tabs.length > 2">
-            <button
-              class="close-others-btn"
-              @click="showCloseOthersConfirm = true"
-              :disabled="batchCloseInProgress"
-            >
+            <button class="close-others-btn" @click="showCloseOthersConfirm = true" :disabled="batchCloseInProgress">
               <i class="mdi mdi-close-box-multiple-outline"></i>
               <span>Close other tabs</span>
             </button>
@@ -44,17 +24,9 @@
 
           <!-- Tab Items -->
           <div class="tab-dropdown-items">
-            <TabDropdownItem
-              v-for="tab in tabs"
-              :key="tab.id"
-              :ref="'tabItem-' + tab.id"
-              :tab="tab"
-              :is-active="isActiveTab(tab)"
-              :icon="getTabIcon(tab.screen)"
-              :disabled="batchCloseInProgress"
-              @select="selectTab"
-              @close="closeTab"
-            />
+            <TabDropdownItem v-for="tab in tabs" :key="tab.id" :ref="'tabItem-' + tab.id" :tab="tab"
+              :is-active="isActiveTab(tab)" :icon="getTabIcon(tab.screen)" :disabled="batchCloseInProgress"
+              @select="selectTab" @close="closeTab" />
           </div>
         </div>
       </div>
@@ -70,11 +42,7 @@
     </div>
 
     <!-- Confirmation Dialog -->
-    <div
-      v-if="showCloseOthersConfirm"
-      class="close-confirm-overlay"
-      @click="showCloseOthersConfirm = false"
-    >
+    <div v-if="showCloseOthersConfirm" class="close-confirm-overlay" @click="showCloseOthersConfirm = false">
       <div class="close-confirm-dialog" @click.stop>
         <p>Close {{ otherTabsCount }} other tabs?</p>
         <div class="confirm-buttons">
@@ -143,7 +111,7 @@
   border-radius: 4px;
   transition: background-color 0.2s ease;
   user-select: none;
-  max-width: 200px;
+  max-width: 250px;
 }
 
 .tab-dropdown-container:hover {
@@ -343,9 +311,11 @@
     /* Fix for iOS Safari viewport height issues */
     height: -webkit-fill-available;
   }
+
   .sidebar {
     height: calc(-webkit-fill-available - 40px);
   }
+
   .nested-page-content {
     height: calc(-webkit-fill-available - 40px);
   }
@@ -372,11 +342,9 @@
 
   .current-tab-title {
     font-size: 16px;
-    max-width: 120px;
   }
 
   .tab-dropdown-container {
-    max-width: 150px;
     padding: 4px 8px;
   }
 }
@@ -388,15 +356,10 @@ import {
   computed,
   onMounted,
   onBeforeUnmount,
-  type ComponentPublicInstance,
-  getCurrentInstance,
 } from 'vue'
 import TabDropdownItem from './TabDropdownItem.vue'
 import { type Tab } from '../../stores/useScreenNavigation'
 
-interface TabDropdownComponent extends ComponentPublicInstance {
-  triggerClose: () => void
-}
 
 type IconMapKey = keyof typeof iconMap.value
 
@@ -416,6 +379,7 @@ const emit = defineEmits<{
   'menu-toggled': []
   'tab-selected': [data: Tab]
   'tab-closed': [tabId: string]
+  'close-other-tabs': [tabId: string]
 }>()
 
 // Reactive data
@@ -500,34 +464,7 @@ const getTabIcon = (screenType: string): string => {
 
 const executeCloseOthers = (): void => {
   showCloseOthersConfirm.value = false
-  batchCloseInProgress.value = true
-
-  const otherTabs = props.tabs.filter((tab) => !isActiveTab(tab))
-
-  // Get refs as a record to handle dynamic ref names properly
-  const refsRecord = getCurrentInstance()?.refs as Record<
-    string,
-    TabDropdownComponent[] | undefined
-  >
-
-  // Trigger close animation on each tab component with stagger
-  otherTabs.forEach((tab, index) => {
-    setTimeout(() => {
-      const tabComponents = refsRecord?.[`tabItem-${tab.id}`]
-      const tabComponent = Array.isArray(tabComponents) ? tabComponents[0] : undefined
-      if (tabComponent && typeof tabComponent.triggerClose === 'function') {
-        tabComponent.triggerClose()
-      }
-    }, index * 50)
-  })
-
-  // Reset batch state after all animations complete
-  setTimeout(
-    () => {
-      batchCloseInProgress.value = false
-    },
-    otherTabs.length * 50 + 300,
-  )
+  emit('close-other-tabs', props.activeTab as string)
 }
 
 // Handle clicks outside the dropdown

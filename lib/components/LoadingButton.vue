@@ -1,6 +1,6 @@
 <template>
   <button
-    :class="['btn', useDefaultStyle ? 'default-style' : '', $attrs.class]"
+    :class="[ useDefaultStyle ? 'default-style' : '', $attrs.class]"
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"
@@ -126,7 +126,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .hidden-text {
   visibility: hidden;
 }
@@ -150,8 +150,6 @@ export default {
 }
 
 .btn {
-  /* min-height: 24px; */
-  border: 1px solid transparent;
   /* width: 100%; */
   position: relative;
 }
