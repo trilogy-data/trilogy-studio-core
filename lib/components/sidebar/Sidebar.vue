@@ -27,7 +27,6 @@
           </div>
         </div>
       </div>
-      <div v-if="isMobile">Home</div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
       <div
         v-for="(item, _) in sidebarItems"
@@ -401,6 +400,7 @@ export default defineComponent({
   text-align: center;
   cursor: pointer;
   transition: transform 0.3s ease;
+  padding-bottom: 10px;
   /* justify-content: flex-start; */
 }
 

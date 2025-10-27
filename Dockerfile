@@ -1,22 +1,31 @@
 # Multi-stage Dockerfile for Trilogy Studio
 # Stage 1: Build Frontend
-FROM node:23-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
+# ^ use Node 22 LTS for stability; Node 23 is bleeding-edge and may cause pnpm/corepack bugs
 
 WORKDIR /app/frontend
 
-# Install pnpm
-RUN corepack enable pnpm
+# Enable pnpm via Corepack
+RUN corepack enable pnpm && corepack prepare pnpm@10 --activate
 
-# Copy frontend package files
+# Copy only dependency manifests first (better cache)
 COPY package.json pnpm-lock.yaml ./
 
-# Install frontend dependencies
-RUN pnpm install --frozen-lockfile
+# Install ALL dependencies, including dev ones (needed for vue-tsc, typescript, prettier, etc.)
+RUN pnpm install --frozen-lockfile --prod=false
 
-# Copy frontend source
-COPY ./ ./
+# Copy the rest of the source code
+COPY ./src ./src
+COPY ./lib ./lib
+COPY ./public ./public
+COPY ./docker/index.html index.html
+COPY tsconfig.json tsconfig.json
+COPY tsconfig.node.json tsconfig.node.json
+COPY vite.config.ts vite.config.ts
+COPY tsconfig.app.json tsconfig.app.json
 
-# Build frontend
+
+# Build the frontend (runs vue-tsc, prettier, and vite)
 RUN pnpm run build
 
 # Stage 2: Build Backend
@@ -45,19 +54,18 @@ RUN pytest tests || echo "No tests found, continuing..."
 RUN uv pip install -r requirements.txt --no-cache-dir --system
 
 # Stage 3: Production - Nginx + Python
-FROM nginx:alpine AS production
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim  AS production
 
-# Install Python, curl, and supervisor for process management
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
+# Install Python, curl, nginx, and supervisor for process management
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     supervisor \
-    && ln -sf python3 /usr/bin/python
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create application user
-RUN addgroup -g 1001 -S appuser && \
-    adduser -S -D -H -u 1001 -h /app -s /bin/sh -G appuser -g appuser appuser
+RUN groupadd -g 1001 appuser && \
+    useradd -r -u 1001 -g appuser -d /app -s /bin/sh appuser
 
 # Set working directory
 WORKDIR /app
@@ -76,11 +84,13 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 RUN rm -rf /usr/share/nginx/html/* && \
     cp -r ./frontend/dist/* /usr/share/nginx/html/
 
+RUN  mkdir /usr/share/nginx/html/trilogy-studio-core && cp -r ./frontend/dist/* /usr/share/nginx/html/trilogy-studio-core
+
 # Copy nginx configuration
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Create supervisor configuration
-COPY docker/supervisord.conf /etc/supervisor/conf.d/trilogy.conf 
+COPY docker/supervisord.conf /etc/supervisor/conf.d/trilogy.conf
 
 # Set environment variables
 ENV PYTHONPATH=/app/backend

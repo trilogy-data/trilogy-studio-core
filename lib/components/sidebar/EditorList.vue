@@ -6,6 +6,7 @@
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
         >
+          <i v-if="!creatorVisible" class="mdi mdi-plus"></i>
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
@@ -256,6 +257,11 @@ export default {
 .tag:hover {
   background-color: hsl(210, 100%, 50%, 0.5);
   border: 1px solid hsl(210, 100%, 50%, 0.75);
+}
+
+.tag-excluded:hover {
+  background-color: hsla(0, 0%, 69%, 0.2);
+  border: 1px solid hsla(0, 0%, 69%, 0.2);
 }
 
 .confirmation-overlay {

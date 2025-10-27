@@ -11,6 +11,18 @@ Supports
 
 Read more about Trilogy, the language [here](https://trilogydata.dev/).
 
+## Docker
+
+Suggest local execution for now. Includes image with resolution service + frontend. 
+
+No tracking; requires internet to get WASM bundles. (This may be removed in future.)
+
+From repo root:
+
+```bash
+docker build
+docker run  -p 8080:80 trilogy-studio:latest   
+```
 
 ### Flexible Visualization
 
