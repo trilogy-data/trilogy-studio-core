@@ -65,6 +65,7 @@
                 :containerHeight="containerHeight"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
+                @drilldown-click="drilldownClick"
               ></ResultsView>
             </template>
           </vertical-split-layout>
@@ -392,6 +393,11 @@ export default {
     runQuery() {
       if (this.editorRef) {
         this.editorRef.runQuery()
+      }
+    },
+    drillDownQuery() {
+      if (this.editorRef) {
+        this.editorRef.drillDownQuery()
       }
     },
     toggleFullScreen(status: boolean) {

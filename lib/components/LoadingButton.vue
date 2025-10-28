@@ -1,23 +1,14 @@
 <template>
-  <button
-    :class="[useDefaultStyle ? 'default-style' : '', $attrs.class]"
-    v-bind="$attrs"
-    :disabled="disabled || isLoading"
-    @click.stop="handleClick"
-  >
+  <button :class="[useDefaultStyle ? 'default-style' : '', $attrs.class, 'btn']" v-bind="$attrs"
+    :disabled="disabled || isLoading" @click.stop="handleClick">
     <span :class="{ 'hidden-text': isLoading }">
       <slot></slot>
     </span>
-    <span v-if="status === 'success'" class="status success overlay">✔</span>
-    <tooltip
-      v-else-if="status === 'error'"
-      :content="errorMessage || ''"
-      :inline="false"
-      position="left"
-      class="status error overlay"
-      ><span class="status error overlay" :data-testid="`${testId}-error`">✖</span>
+    <span v-if="status === 'success'" class=" success status_overlay">✔</span>
+    <tooltip v-else-if="status === 'error'" :content="errorMessage || ''" :inline="false" position="left"
+      class="error status_overlay"><span class="error status_overlay" :data-testid="`${testId}-error`">✖</span>
     </tooltip>
-    <span v-else-if="isLoading" class="status loading overlay">
+    <span v-else-if="isLoading" class="loading status_overlay">
       <span class="spinner"></span>
     </span>
   </button>
@@ -131,7 +122,7 @@ export default {
   visibility: hidden;
 }
 
-.status.overlay {
+.status_overlay {
   position: absolute;
   top: 50%;
   left: 50%;

@@ -11,6 +11,7 @@ from trilogy.render import get_dialect_generator
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.core.exceptions import InvalidSyntaxException
+from trilogy.authoring import SelectStatement, SelectItem
 
 from env_helpers import parse_env_from_full_model, model_to_response
 from io_models import (
@@ -22,6 +23,7 @@ from io_models import (
     MultiQueryOutSchema,
     ModelInSchema,
     Model,
+    DrilldownQueryInSchema,
 )
 from diagnostics import get_diagnostics
 from utility import safe_percentage
@@ -32,6 +34,8 @@ from query_helpers import (
     safe_format_query,
     PARSE_CONFIG,
 )
+
+logger = getLogger(__name__)
 
 
 def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
@@ -56,6 +60,48 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             _, parsed = parse_text(
                 safe_format_query(query.query), env, parse_config=PARSE_CONFIG
             )
+        except Exception as e:
+            raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
+        renderer = Renderer()
+        return FormatQueryOutSchema(text=renderer.render_statement_string(parsed))
+
+    @router.post("/drilldown_query")
+    def drilldown_query(query: DrilldownQueryInSchema):
+        env = parse_env_from_full_model(query.full_model.sources)
+        try:
+            _, parsed = parse_text(
+                safe_format_query(query.query), env, parse_config=PARSE_CONFIG
+            )
+            _, where_parsed = parse_text(
+                f"WHERE {query.drilldown_filter} SELECT 1 as __ftest;", env, parse_config=PARSE_CONFIG
+            )
+            where_clause = where_parsed[-1]
+            assert isinstance(where_clause, SelectStatement), type(where_clause)
+            parsed_query = parsed[-1]
+            if not isinstance(parsed_query, SelectStatement):
+                raise HTTPException(
+                    status_code=422, detail="Cannot drill into non-select statements"
+                )
+            target = env.concepts[query.drilldown_remove]
+            remove_idx = [
+                i
+                for i, comp in enumerate(parsed_query.selection)
+                if comp.concept.address == target.address
+            ]
+            components = parsed_query.selection
+            del components[remove_idx[0]]
+            # add new value
+            components.insert(
+                remove_idx[0],
+                SelectItem(content=env.concepts[query.drilldown_add].reference),
+            )
+            logger.info(f"Drilldown add idx: {remove_idx[0]}")
+            if parsed_query.where_clause:
+                # merge with existing where
+                parsed_query.where_clause.conditional = parsed_query.where_clause.conditional + where_clause.where_clause.conditional
+            else:
+                parsed_query.where_clause = where_clause.where_clause
+            parsed_query.selection = components
         except Exception as e:
             raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
         renderer = Renderer()

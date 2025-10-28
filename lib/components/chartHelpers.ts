@@ -13,6 +13,7 @@ export interface ChartEventHandlers {
   onDimensionClick: (data: any) => void
   onPointClick: (data: any) => void
   onBackgroundClick: () => void
+  onDrilldownClick: (data: any) => void
 }
 
 export interface BrushState {
@@ -28,7 +29,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) {}
+  constructor(private eventHandlers: ChartEventHandlers) { }
 
   /**
    * Downloads the chart as a PNG file
@@ -198,6 +199,8 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
   ): void {
     const append = event.shiftKey
+    const control = event.ctrlKey
+
     if (!item || !item.datum) {
       if (
         config.chartType === 'headline' &&
@@ -217,12 +220,12 @@ export class ChromaChartHelpers {
     this.brushState.lastClickTime = currentTime
     // Handle geographic charts
     if (config.geoField) {
-      this.handleGeographicClick(item, config, columns, append)
+      this.handleGeographicClick(item, config, columns, append, control)
       return
     }
 
     // Handle other chart types
-    this.handleStandardClick(item, config, columns, append)
+    this.handleStandardClick(item, config, columns, append, control)
   }
 
   /**
@@ -233,6 +236,7 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
     append: boolean,
+    control: boolean,
   ): void {
     if (!config.geoField) return
 
@@ -256,6 +260,7 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
     append: boolean,
+    control: boolean,
   ): void {
     let baseFilters = {}
     let baseChart = {}

@@ -188,6 +188,7 @@ export default defineComponent({
       onDimensionClick: (data) => emit('dimension-click', data),
       onPointClick: (data) => emit('point-click', data),
       onBackgroundClick: () => emit('background-click'),
+      onDrilldownClick: (data) => emit('drilldown-click', data),
     }
     const chartHelpers = new ChromaChartHelpers(eventHandlers)
 

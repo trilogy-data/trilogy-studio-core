@@ -241,6 +241,48 @@ export default class TrilogyResolver {
     return response
   }
 
+  async drilldown_query(
+    query: string,
+    dialect: string,
+    type: string,
+    drilldown_remove: string,
+    drilldown_add: string,
+    drilldown_filter: string,
+    sources: ContentInput[] | null = null,
+    imports: Import[] | null = null,
+    extraFilters: string[] | null = null,
+    parameters: Record<string, string | number | boolean> | null = null,
+  ): Promise<FormatQueryResponse> {
+    const requestParams = {
+      query: query,
+      dialect: dialect,
+      type: type,
+      drilldown_remove: drilldown_remove,
+      drilldown_add: drilldown_add,
+      drilldown_filter: drilldown_filter,
+      full_model: { name: '', sources: sources || [] },
+      imports: imports || [],
+      extra_filters: extraFilters || [],
+      parameters: parameters || {},
+    }
+
+
+    // Not in cache, make the API call
+    const response = await this.fetchWithErrorHandling(
+      `${this.settingStore.settings.trilogyResolver}/drilldown_query`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
+      },
+    )
+
+
+    return response
+  }
+
   async format_query(
     query: string,
     dialect: string,

@@ -60,7 +60,7 @@ export const createBarChartSpec = (
     encoding: {
       x: {
         ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-        sort: getSortOrder(config.xField || '', columns, config.yField),
+        ...getSortOrder(config.xField || '', columns, config.yField),
       },
       y: createFieldEncoding(config.yField || '', columns, {
         axis: { ...getFormatHint(config.yField, columns) },

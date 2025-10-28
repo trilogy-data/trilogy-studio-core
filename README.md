@@ -15,14 +15,21 @@ Read more about Trilogy, the language [here](https://trilogydata.dev/).
 
 Suggest local execution for now. Includes image with resolution service + frontend. 
 
-No tracking; requires internet to get WASM bundles. (This may be removed in future.)
+No telemetry; requires internet to get WASM bundles. (This will be removed in future to get full offline usage).
 
 From repo root:
 
+### Bash
 ```bash
-docker build
-docker run  -p 8080:80 trilogy-studio:latest   
+docker build  -t trilogy-studio:latest && docker run  -p 8080:80 trilogy-studio:latest   
 ```
+
+### Powersheel
+```powershell
+docker build -t trilogy-studio:latest . ; docker run  -p 8080:80 trilogy-studio:latest   
+```
+
+Access on http://localhost:8080 (or alternative port used).
 
 ### Flexible Visualization
 

@@ -37,6 +37,7 @@
           :initialConfig="chartConfig"
           :onChartConfigChange="onChartChange"
           @refresh-click="handleLocalRefresh"
+          @drilldown-click="$emit('drilldown-click', $event)"
         />
       </div>
       <div v-else-if="displayTab === 'sql'" class="sql-view">

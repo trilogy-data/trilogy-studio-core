@@ -213,11 +213,11 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     if (extraContent) {
       sources = sources.concat(extraContent)
@@ -403,7 +403,7 @@ export default class QueryExecutionService {
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     extraContent?: ContentInput[],
-  ) {
+  ): Promise<string | null> {
     try {
       const formatted = await this.trilogyResolver.format_query(
         text,
@@ -416,8 +416,40 @@ export default class QueryExecutionService {
       if (formatted.data && formatted.data.text) {
         return formatted.data.text
       }
+      return null
     } catch (error) {
       console.error('Error formatting query:', error)
+      throw error
+    }
+  }
+
+  async createDrilldownQuery(text: string,
+    queryType: string,
+    editorType: 'trilogy' | 'sql' | 'preql',
+    imports: Import[] = [],
+    extraFilters: string[] = [],
+    drilldown_add: string,
+    drilldown_remove: string,
+    extraContent?: ContentInput[],): Promise<string | null> {
+    try {
+      const formatted = await this.trilogyResolver.drilldown_query(
+        text,
+        queryType,
+        editorType,
+        drilldown_remove,
+        drilldown_add,
+        extraContent,
+        imports,
+        extraFilters,
+      )
+
+      if (formatted.data && formatted.data.text) {
+        return formatted.data.text
+      }
+      return null
+    } catch (error) {
+      console.error('Error formatting query:', error)
+      throw error
     }
   }
 
@@ -426,11 +458,11 @@ export default class QueryExecutionService {
 
     let sources = conn.model
       ? this.modelStore.models[conn.model].sources.map((source) => ({
-          alias: source.alias,
-          contents: this.editorStore.editors[source.editor]
-            ? this.editorStore.editors[source.editor].contents
-            : '',
-        }))
+        alias: source.alias,
+        contents: this.editorStore.editors[source.editor]
+          ? this.editorStore.editors[source.editor].contents
+          : '',
+      }))
       : []
 
     if (queryInput.extraContent) {
@@ -478,11 +510,11 @@ export default class QueryExecutionService {
     if (!sources) {
       sources = conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]
-              ? this.editorStore.editors[source.editor].contents
-              : '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]
+            ? this.editorStore.editors[source.editor].contents
+            : '',
+        }))
         : []
     }
     if (queryInput.extraContent) {
@@ -597,9 +629,9 @@ export default class QueryExecutionService {
     let sources: ContentInput[] =
       conn && conn.model
         ? this.modelStore.models[conn.model].sources.map((source) => ({
-            alias: source.alias,
-            contents: this.editorStore.editors[source.editor]?.contents || '',
-          }))
+          alias: source.alias,
+          contents: this.editorStore.editors[source.editor]?.contents || '',
+        }))
         : []
 
     if (queryInput.extraContent) {

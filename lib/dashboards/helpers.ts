@@ -3,6 +3,7 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
+import {type FieldEncodingOutput} from './types'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -20,7 +21,9 @@ const temporalTraits = [
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
 
-const categoricalTraits = [...temporalTraits]
+const ordinalTraits = ['rank', 'index', 'grade', 'flag', 'letter_grade']
+
+const categoricalTraits = [...temporalTraits, ...ordinalTraits, 'identifier']
 
 export function convertTimestampToISODate(timestamp: number): Date {
   const date = new Date(timestamp)
@@ -55,6 +58,14 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
     [ColumnType.NUMBER, ColumnType.INTEGER, ColumnType.FLOAT].includes(column.type) &&
     !column.traits?.some((trait) => trait.endsWith('latitude') || trait.endsWith('longitude'))
   )
+}
+
+export const isOrdinalColumn = (column: ResultColumn): boolean => {
+
+  if (column.traits && ordinalTraits.some((trait) => column.traits?.includes(trait))) {
+    return true
+  }
+  return false  
 }
 
 export const isImageColumn = (column: ResultColumn): boolean => {
@@ -138,7 +149,7 @@ export const filteredColumns = (
   columns.forEach((column, _) => {
     if (filter === 'all') {
       result.push(column)
-    } else if (filter === 'numeric' && isNumericColumn(column)) {
+    } else if (filter === 'numeric' && isNumericColumn(column) && !isTemporalColumn(column)) {
       result.push(column)
     } else if (filter === 'categorical' && isCategoricalColumn(column)) {
       result.push(column)
@@ -160,7 +171,20 @@ export const filteredColumns = (
   })
 
   return result
+
 }
+
+const firstNonCategoricalNumericColumn = (
+  defaults: Partial<ChartConfig>,
+  numericColumns: ResultColumn[],
+): ResultColumn => {
+  let candidates = numericColumns.filter((col) => col.name !== defaults.xField && col.name !== defaults.yField)
+  if (candidates.length > 0) {
+    return candidates[0]
+  }
+  return numericColumns[0]
+}
+
 // Determine default configuration based on column types
 export const determineDefaultConfig = (
   data: readonly Row[],
@@ -244,7 +268,7 @@ export const determineDefaultConfig = (
   // now set defaults for each chart type
   if (defaults.chartType === 'barh') {
     defaults.yField = categoricalColumns[0].name
-    defaults.xField = numericColumns[0].name
+    defaults.xField = firstNonCategoricalNumericColumn(defaults, numericColumns).name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -479,19 +503,22 @@ export const getSortOrder = (
   if (getColumnHasTrait(fieldName, columns, 'day_of_week_name')) {
     return { sort: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] }
   }
+  if (isOrdinalColumn(column)) {
+    return { sort: { field: fieldName, order: 'ascending' } }
+  }
   if (isTemporalColumn(column)) {
     return { sort: { field: fieldName, order: 'ascending' } }
   } else if (isNumericColumn(column)) {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn, order: 'descending' },
+        sort: { field: valueColumn,  op: 'sum', order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'descending' } }
   } else {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn, order: 'descending' },
+        sort: { field: valueColumn,  op: 'sum', order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'ascending' } }
@@ -517,7 +544,11 @@ export const getVegaFieldType = (
       return 'temporal'
     }
     return 'ordinal'
-  } else if (isNumericColumn(column)) {
+  } 
+  else if (isOrdinalColumn(column)) {
+    return 'ordinal'
+  }
+  else if (isNumericColumn(column)) {
     return 'quantitative'
   } else {
     return 'nominal'
@@ -533,7 +564,7 @@ export const createFieldEncoding = (
     scale?: string | undefined
     zero?: boolean | undefined
   } = {},
-): any => {
+): FieldEncodingOutput => {
   if (!fieldName) return {}
   return {
     field: fieldName,

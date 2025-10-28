@@ -1,6 +1,6 @@
 import { type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { getFormatHint, createFieldEncoding, createInteractionEncodings } from './helpers'
+import { getFormatHint, createFieldEncoding, createInteractionEncodings, getSortOrder, } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
 export const createBarHChartSpec = (
@@ -39,7 +39,7 @@ export const createBarHChartSpec = (
     encoding: {
       y: {
         ...createFieldEncoding(config.yField || '', columns),
-        sort: { field: config.xField, op: 'sum', order: 'descending' },
+        ...getSortOrder(config.yField || '', columns, config.xField),
         axis: {
           labelExpr: isMobile
             ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"

@@ -1,49 +1,22 @@
 <template>
   <div class="parent">
-    <error-message v-if="!editorData"
-      >An editor by this ID ({{ editorId }}) could not be found.</error-message
-    >
+    <error-message v-if="!editorData">An editor by this ID ({{ editorId }}) could not be found.</error-message>
     <template v-else>
-      <editor-header
-        :name="editorData.name"
-        :editor-type="editorData.type"
-        :tags="editorData.tags"
-        :loading="editorData.loading"
-        :connection-has-model="connectionHasModel"
-        @name-update="updateEditorName"
-        @save="$emit('save-editors')"
-        @validate="validateQuery"
-        @run="runQuery"
-        @cancel="cancelQuery"
-        @toggle-tag="toggleTag"
-        @generate="handleLLMTrigger"
-      />
+      <editor-header :name="editorData.name" :editor-type="editorData.type" :tags="editorData.tags"
+        :loading="editorData.loading" :connection-has-model="connectionHasModel" @name-update="updateEditorName"
+        @save="$emit('save-editors')" @validate="validateQuery" @run="runQuery" @cancel="cancelQuery"
+        @toggle-tag="toggleTag" @generate="handleLLMTrigger" />
       <div class="editor-content">
-        <code-editor
-          ref="codeEditor"
-          :id="context"
-          :editor-id="editorId"
-          :context="context"
-          :contents="editorData.contents"
-          :editor-type="editorData.type"
-          :scroll-position="editorData.scrollPosition"
-          :theme="userSettingsStore.getSettings.theme"
-          :editorHeight="containerHeight"
-          @contents-change="handleContentsChange"
-          @scroll-change="handlePositionChange"
-          @run-query="runQuery"
-          @validate-query="validateQuery"
-          @format-query="formatQuery"
-          @generate-llm-query="handleLLMTrigger"
-          @save="$emit('save-editors')"
-        />
-        <SymbolsPane
-          :symbols="editorData.completionSymbols || []"
-          @select-symbol="insertSymbol"
-          ref="symbolsPane"
-          v-if="!isMobile"
-          :editorHeight="containerHeight"
-        />
+        <code-editor ref="codeEditor" :id="context" :editor-id="editorId" :context="context"
+          :contents="editorData.contents" :editor-type="editorData.type" :scroll-position="editorData.scrollPosition"
+          :theme="userSettingsStore.getSettings.theme" :editorHeight="containerHeight"
+          @contents-change="handleContentsChange" @scroll-change="handlePositionChange" @run-query="runQuery"
+          @validate-query="validateQuery" @format-query="formatQuery"
+           @generate-llm-query="handleLLMTrigger" 
+          @drill-query="drilldownQuery"
+          @save="$emit('save-editors')" />
+        <SymbolsPane :symbols="editorData.completionSymbols || []" @select-symbol="insertSymbol" ref="symbolsPane"
+          v-if="!isMobile" :editorHeight="containerHeight" />
       </div>
     </template>
   </div>
@@ -330,11 +303,11 @@ export default defineComponent({
       if (!sources) {
         sources = conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       }
 
@@ -396,11 +369,11 @@ export default defineComponent({
       const sources: ContentInput[] =
         conn && conn.model
           ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
           : []
       // Prepare imports
       let imports: Import[] = []
@@ -422,7 +395,38 @@ export default defineComponent({
       }
       return partial
     },
+    async drilldownQuery(remove: string, add: string, extraFilters: string[]): Promise<void> {
+      const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+      if (!codeEditorRef) return
 
+      
+
+      const text = codeEditorRef.getEditorText(this.editorData.contents)
+      if (!text) return
+
+      const queryInput = await this.buildQueryArgs(text)
+      try {
+        const drilldown = await this.trilogyResolver.drilldown_query(
+          text,
+          queryInput.queryType,
+          queryInput.editorType,
+          'passenger.class',
+          'passenger.cabin_deck',
+          'passenger.class=1',
+          // remove,
+          // add,
+          queryInput.sources,
+          queryInput.imports,
+        )
+        if (drilldown.data && drilldown.data.text) {
+          codeEditorRef.setValue(drilldown.data.text)
+          this.editorData.contents = drilldown.data.text
+        }
+        await this.runQuery()
+      } catch (error) {
+        console.error('Error formatting query:', error)
+      }
+    },
     async runQuery(): Promise<any> {
       this.$emit('query-started')
       // clear existing inteaction state
@@ -520,7 +524,7 @@ export default defineComponent({
         this.editorData.connection,
         queryInput,
         // Starter callback (empty for now)
-        () => {},
+        () => { },
         // Progress callback
         onProgress,
         // Failure callback
@@ -706,9 +710,9 @@ export default defineComponent({
               this.editorData.connection,
               queryInput,
               // Starter callback (empty for now)
-              () => {},
+              () => { },
               // Progress callback
-              () => {},
+              () => { },
               // Failure callback
               onError,
               // Success callback

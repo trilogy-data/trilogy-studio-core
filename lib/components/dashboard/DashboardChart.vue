@@ -260,6 +260,7 @@ export default defineComponent({
         filters: dimension.filters,
         chart: dimension.chart,
         append: dimension.append,
+        control: dimension.control,
       })
     }
 
