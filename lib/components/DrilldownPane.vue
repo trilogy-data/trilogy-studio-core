@@ -59,8 +59,10 @@
         }"
         @click="selectDimension(dimension)"
         @mouseenter="
-          showTooltip($event, dimension)
-          setHighlightedIndex(index)
+          (event) => {
+            showTooltip(event, dimension)
+            setHighlightedIndex(index)
+          }
         "
         @mouseleave="hideTooltip"
         @mousemove="updateTooltipPosition($event)"
