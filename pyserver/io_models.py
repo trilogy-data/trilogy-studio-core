@@ -110,10 +110,12 @@ class QueryInSchema(BaseModel):
     parameters: Optional[dict[str, str | int | float]] = None
     # chart_type: ChartType | None = None
 
+
 class DrilldownQueryInSchema(QueryInSchema):
-    drilldown_remove:str
-    drilldown_add:list[str]
-    drilldown_filter:str
+    drilldown_remove: str
+    drilldown_add: list[str]
+    drilldown_filter: str
+
 
 class ValidateQueryInSchema(BaseModel):
     query: str

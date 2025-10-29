@@ -242,7 +242,11 @@ def generate_single_query(
     if not final_select.limit:
         final_select.limit = STATEMENT_LIMIT
 
-    candidates = final_select.selects if isinstance(final_select, MultiSelectStatement) else [final_select]
+    candidates = (
+        final_select.selects
+        if isinstance(final_select, MultiSelectStatement)
+        else [final_select]
+    )
 
     if extra_filters:
         conditional = filters_to_conditional(
@@ -441,6 +445,7 @@ def generate_multi_query_core(
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
             # log full traceback
             import traceback
+
             traceback_str = traceback.format_exc()
             perf_logger.error(traceback_str)
             all.append((subquery.label, e, default_return, None))

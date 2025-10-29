@@ -77,10 +77,14 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
                     imp_string = f"import {imp.name};\n"
                 base_imp_string += imp_string
             _, parsed = parse_text(
-                safe_format_query(base_imp_string + query.query), env, parse_config=PARSE_CONFIG
+                safe_format_query(base_imp_string + query.query),
+                env,
+                parse_config=PARSE_CONFIG,
             )
             _, where_parsed = parse_text(
-                f"WHERE {query.drilldown_filter} SELECT 1 as __ftest;", env, parse_config=PARSE_CONFIG
+                f"WHERE {query.drilldown_filter} SELECT 1 as __ftest;",
+                env,
+                parse_config=PARSE_CONFIG,
             )
             where_clause = where_parsed[-1]
             assert isinstance(where_clause, SelectStatement), type(where_clause)
@@ -99,20 +103,23 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             del components[remove_idx[0]]
             # add new value
             for idx, val in enumerate(query.drilldown_add):
-      
+
                 components.insert(
-                    remove_idx[0]+idx,
+                    remove_idx[0] + idx,
                     SelectItem(content=env.concepts[val].reference),
                 )
- 
-            if parsed_query.where_clause:
-                # merge with existing where
-                parsed_query.where_clause.conditional = parsed_query.where_clause.conditional + where_clause.where_clause.conditional
-            else:
-                parsed_query.where_clause = where_clause.where_clause
+
+            where_filter = where_clause.where_clause
+            if where_filter:
+                if parsed_query.where_clause:
+                    # merge with existing where
+                    parsed_query.where_clause.conditional = (
+                        parsed_query.where_clause.conditional + where_filter.conditional
+                    )
+                else:
+                    parsed_query.where_clause = where_filter
             parsed_query.selection = components
         except Exception as e:
-            raise e
             raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
         renderer = Renderer()
         return FormatQueryOutSchema(text=renderer.render_statement_string(parsed))

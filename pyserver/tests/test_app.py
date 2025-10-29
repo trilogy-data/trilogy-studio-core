@@ -2,11 +2,11 @@ from fastapi.testclient import TestClient
 from io_models import (
     ModelInSchema,
     ModelSourceInSchema,
-    FormatQueryOutSchema,
     QueryInSchema,
     DrilldownQueryInSchema,
     Import,
 )
+from trilogy import Dialects
 
 
 def test_read_main(test_client: TestClient):
@@ -53,7 +53,7 @@ def test_format_query(test_client: TestClient):
     request = QueryInSchema(
         imports=[],
         query="select name, customer_count;",
-        dialect="duck_db",
+        dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
             name="test_parse",
             sources=[
@@ -94,7 +94,7 @@ def test_drilldown_query(test_client: TestClient):
             )
         ],
         query="select name, customer_count;",
-        dialect="duck_db",
+        dialect=Dialects.DUCK_DB,
         drilldown_remove="name",
         drilldown_add=["last_name"],
         drilldown_filter="local.name='bob'",
