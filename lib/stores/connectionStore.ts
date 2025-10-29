@@ -9,7 +9,7 @@ import {
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
 import useModelConfigStore from './modelStore'
-
+import type { ContentInput } from '../stores/resolver'
 // Track in-progress operations
 const pendingOperations = new Map()
 
@@ -151,6 +151,20 @@ const useConnectionStore = defineStore('connections', {
       } else {
         return 'disabled'
       }
+    },
+    getConnectionSources(name:string) {
+      const conn = this.connections[name]
+      const modelStore = useModelConfigStore()
+      const editorStore = useEditorStore()
+      let sources: ContentInput[] = conn && conn.model
+      ? modelStore.models[conn.model].sources.map((source) => ({
+        alias: source.alias,
+        contents: editorStore.editors[source.editor]
+          ? editorStore.editors[source.editor].contents
+          : '',
+      }))
+      : []
+      return sources
     },
     newConnection(name: string, type: string, options: Record<string, any>): Connection {
       if (this.connections[name]) {

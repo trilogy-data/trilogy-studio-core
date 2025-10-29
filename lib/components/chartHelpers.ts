@@ -244,7 +244,18 @@ export class ChromaChartHelpers {
     const geoConcept = geoField?.address
 
     if (!geoConcept || !geoField) return
-
+    if (control) {
+      console.log('Drilldown filters:', {
+        [geoConcept]: item.datum[config.geoField],
+      })
+      this.eventHandlers.onDrilldownClick({
+        filters: { [geoConcept]: item.datum[config.geoField] }
+      })
+      return
+    }
+    console.log('Geo point click filters:', {
+      [geoConcept]: item.datum[config.geoField],
+    })
     this.eventHandlers.onDimensionClick({
       filters: { [geoConcept]: item.datum[config.geoField] },
       chart: { [config.geoField]: item.datum[config.geoField] },
@@ -300,8 +311,17 @@ export class ChromaChartHelpers {
         baseChart = { ...baseChart, [field]: item.datum[field] }
       }
     })
-    console.log('Point click filters:', baseFilters)
 
+    if (control) {
+      console.log('Drilldown filters:', baseFilters)
+      this.eventHandlers.onDrilldownClick({
+        filters: baseFilters,
+        chart: baseChart,
+        append,
+      })
+      return
+    }
+    console.log('Point click filters:', baseFilters)
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
       chart: baseChart,

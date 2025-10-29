@@ -69,8 +69,15 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
     def drilldown_query(query: DrilldownQueryInSchema):
         env = parse_env_from_full_model(query.full_model.sources)
         try:
+            base_imp_string = ""
+            for imp in query.imports:
+                if imp.alias:
+                    imp_string = f"import {imp.name} as {imp.alias};\n"
+                else:
+                    imp_string = f"import {imp.name};\n"
+                base_imp_string += imp_string
             _, parsed = parse_text(
-                safe_format_query(query.query), env, parse_config=PARSE_CONFIG
+                safe_format_query(base_imp_string + query.query), env, parse_config=PARSE_CONFIG
             )
             _, where_parsed = parse_text(
                 f"WHERE {query.drilldown_filter} SELECT 1 as __ftest;", env, parse_config=PARSE_CONFIG
@@ -91,11 +98,13 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             components = parsed_query.selection
             del components[remove_idx[0]]
             # add new value
-            components.insert(
-                remove_idx[0],
-                SelectItem(content=env.concepts[query.drilldown_add].reference),
-            )
-            logger.info(f"Drilldown add idx: {remove_idx[0]}")
+            for idx, val in enumerate(query.drilldown_add):
+      
+                components.insert(
+                    remove_idx[0]+idx,
+                    SelectItem(content=env.concepts[val].reference),
+                )
+ 
             if parsed_query.where_clause:
                 # merge with existing where
                 parsed_query.where_clause.conditional = parsed_query.where_clause.conditional + where_clause.where_clause.conditional
@@ -103,6 +112,7 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
                 parsed_query.where_clause = where_clause.where_clause
             parsed_query.selection = components
         except Exception as e:
+            raise e
             raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
         renderer = Renderer()
         return FormatQueryOutSchema(text=renderer.render_statement_string(parsed))

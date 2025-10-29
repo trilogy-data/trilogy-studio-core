@@ -11,10 +11,8 @@
           :contents="editorData.contents" :editor-type="editorData.type" :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme" :editorHeight="containerHeight"
           @contents-change="handleContentsChange" @scroll-change="handlePositionChange" @run-query="runQuery"
-          @validate-query="validateQuery" @format-query="formatQuery"
-           @generate-llm-query="handleLLMTrigger" 
-          @drill-query="drilldownQuery"
-          @save="$emit('save-editors')" />
+          @validate-query="validateQuery" @format-query="formatQuery" @generate-llm-query="handleLLMTrigger"
+          @drill-query="drilldownQuery" @save="$emit('save-editors')" />
         <SymbolsPane :symbols="editorData.completionSymbols || []" @select-symbol="insertSymbol" ref="symbolsPane"
           v-if="!isMobile" :editorHeight="containerHeight" />
       </div>
@@ -395,11 +393,11 @@ export default defineComponent({
       }
       return partial
     },
-    async drilldownQuery(remove: string, add: string, extraFilters: string[]): Promise<void> {
+    async drilldownQuery(remove: string, add: string[], filter: string): Promise<void> {
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
       if (!codeEditorRef) return
 
-      
+
 
       const text = codeEditorRef.getEditorText(this.editorData.contents)
       if (!text) return
@@ -410,9 +408,9 @@ export default defineComponent({
           text,
           queryInput.queryType,
           queryInput.editorType,
-          'passenger.class',
-          'passenger.cabin_deck',
-          'passenger.class=1',
+          remove,
+          add,
+          filter,
           // remove,
           // add,
           queryInput.sources,

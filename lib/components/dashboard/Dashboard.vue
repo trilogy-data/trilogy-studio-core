@@ -250,6 +250,7 @@ async function exportToImage() {
               :edit-mode="editMode"
               :filter="filter"
               :get-item-data="getItemData"
+              :symbols="globalCompletion"
               :get-dashboard-query-executor="getDashboardQueryExecutor"
               @dimension-click="dashboardBase?.setCrossFilter"
               :set-item-data="setItemData"

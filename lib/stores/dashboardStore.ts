@@ -595,6 +595,7 @@ export const useDashboardStore = defineStore('dashboards', {
           })),
         })
         if (results) {
+          dashboard.symbols = results.data.completion_items
           return results.data.completion_items
         } else {
           throw new Error('No completion items found.')

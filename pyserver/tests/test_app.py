@@ -90,13 +90,13 @@ def test_drilldown_query(test_client: TestClient):
         imports=[
             Import(
                 name="test",
-                alias="test",
+                alias="",
             )
         ],
-        query="import test; select name, customer_count;",
+        query="select name, customer_count;",
         dialect="duck_db",
         drilldown_remove="name",
-        drilldown_add="last_name",
+        drilldown_add=["last_name"],
         drilldown_filter="local.name='bob'",
         full_model=ModelInSchema(
             name="test_parse",

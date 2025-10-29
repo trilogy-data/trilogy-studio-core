@@ -356,8 +356,6 @@ provide(
   new QueryExecutionService(
     props.trilogyResolver,
     props.connectionStore,
-    props.modelStore,
-    props.editorStore,
   ),
 )
 

@@ -395,9 +395,9 @@ export default {
         this.editorRef.runQuery()
       }
     },
-    drillDownQuery() {
+    drilldownClick(e) {
       if (this.editorRef) {
-        this.editorRef.drillDownQuery()
+        this.editorRef.drilldownQuery(e.remove, e.add, e.filter)
       }
     },
     toggleFullScreen(status: boolean) {

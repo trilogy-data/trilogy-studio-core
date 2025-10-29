@@ -24,6 +24,7 @@
       :type="editorData.type"
       :chartConfig="editorData.chartConfig"
       :error="editorData.error || undefined"
+      :symbols="editorData.completionSymbols"
       @config-change="(config) => editorData.setChartConfig(config)"
       @drilldown-click="(data) => handleDrilldown(data)"
       @refresh-click="() => $emit('refresh-click')"

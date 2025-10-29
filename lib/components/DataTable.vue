@@ -1,26 +1,14 @@
 <template>
-  <div
-    class="result-table row pa-0 ba-0"
-    @mouseenter="controlsVisible = true"
-    @mouseleave="controlsVisible = false"
-  >
+  <div class="result-table row pa-0 ba-0" @mouseenter="controlsVisible = true" @mouseleave="controlsVisible = false">
     <div class="table-container">
       <!-- Minimal floating action buttons -->
       <div class="controls-toggle" :class="{ 'controls-visible': controlsVisible }">
-        <button
-          class="control-btn"
-          @click="copyToClipboard"
-          :disabled="!tableData || tableData.length === 0"
-          title="Copy table data to clipboard"
-        >
+        <button class="control-btn" @click="copyToClipboard" :disabled="!tableData || tableData.length === 0"
+          title="Copy table data to clipboard">
           <i class="mdi mdi-content-copy icon"></i>
         </button>
-        <button
-          class="control-btn"
-          @click="downloadData"
-          :disabled="!tableData || tableData.length === 0"
-          title="Download table data as CSV"
-        >
+        <button class="control-btn" @click="downloadData" :disabled="!tableData || tableData.length === 0"
+          title="Download table data as CSV">
           <i class="mdi mdi-download-outline icon"></i>
         </button>
       </div>
@@ -88,7 +76,8 @@
   font-size: 14px;
   transition: background-color 0.2s;
   backdrop-filter: blur(4px);
-  border-radius: 0; /* Sharp corners */
+  border-radius: 0;
+  /* Sharp corners */
 }
 
 .control-btn:hover:not(:disabled) {
@@ -408,11 +397,11 @@ export default {
     containerHeight: Number,
     cellClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     backgroundClick: {
       type: Function,
-      default: () => {},
+      default: () => { },
     },
     prettyPrint: {
       type: Boolean,
@@ -606,7 +595,7 @@ export default {
         },
       })
 
-      tab.on('cellClick', (_, cell) => {
+      tab.on('cellClick', (event, cell) => { 
         let fieldName = cell.getField()
         let fullField = this.headers.get(fieldName)
         if (!fullField) {
@@ -619,6 +608,15 @@ export default {
         let value = cell.getValue()
 
         const element = cell.getElement()
+
+        //@ts-ignore
+        if (event.ctrlKey) {
+          this.$emit('drilldown-click', {
+            filters: { [field]: value },
+          })
+          return 
+        }
+
         if (element.classList.contains('highlighted-cell')) {
           const highlightedCells = target.querySelectorAll('.highlighted-cell')
           highlightedCells.forEach((highlightedCell) => {

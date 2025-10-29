@@ -3,6 +3,8 @@ import type { ChartConfig } from '../editors/results'
 import type { Results } from '../editors/results'
 import { objectToSqlExpression } from './conditions'
 import type { ContentInput } from '../stores/resolver'
+
+
 export interface DimensionClick {
   source: string
   filters: Record<string, string>
@@ -166,6 +168,7 @@ export class DashboardModel implements Dashboard {
     this.deleted = true
     this.changed = true
   }
+
 
   updateItemLayoutDimensions(
     itemId: string,

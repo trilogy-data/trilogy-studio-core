@@ -1,44 +1,31 @@
 <template>
   <div class="results-container">
     <div class="tabs">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'results' }"
-        @click="setTab('results')"
-        data-testid="results-tab-button"
-      >
-        Results (<span v-if="error">Error</span
-        ><span v-else data-testid="query-results-length">{{ results.data.length }}</span
-        >)
+      <button class="tab-button" :class="{ active: activeTab === 'results' }" @click="setTab('results')"
+        data-testid="results-tab-button">
+        Results (<span v-if="error">Error</span><span v-else data-testid="query-results-length">{{ results.data.length
+        }}</span>)
       </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'visualize' }"
-        @click="setTab('visualize')"
-      >
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'visualize' }"
+        @click="setTab('visualize')">
         Visualize
       </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'sql' }"
-        @click="setTab('sql')"
-      >
+      <button class="tab-button" v-if="!(type === 'sql')" :class="{ active: activeTab === 'sql' }"
+        @click="setTab('sql')">
         Generated SQL
       </button>
     </div>
     <div class="tab-content">
-      <div v-if="displayTab === 'visualize'" class="sql-view">
-        <vega-lite-chart
-          :data="results.data"
-          :columns="results.headers"
-          :containerHeight="containerHeight"
-          :initialConfig="chartConfig"
-          :onChartConfigChange="onChartChange"
-          @refresh-click="handleLocalRefresh"
-          @drilldown-click="$emit('drilldown-click', $event)"
+      <drilldown-pane v-if="activeDrilldown" :drilldown-remove="activeDrilldown.remove"
+        :drilldown-filter="activeDrilldown.filter" @close="activeDrilldown = null" :symbols="symbols"
+        @submit="submitDrilldown"
         />
+
+      <div v-else-if="displayTab === 'visualize'" class="sql-view">
+
+        <vega-lite-chart :data="results.data" :columns="results.headers" :containerHeight="containerHeight"
+          :initialConfig="chartConfig" :onChartConfigChange="onChartChange" @refresh-click="handleLocalRefresh"
+          @drilldown-click="activateDrilldown" />
       </div>
       <div v-else-if="displayTab === 'sql'" class="sql-view">
         <code-block :language="'sql'" :content="generatedSql || ''" />
@@ -53,12 +40,8 @@
           </loading-button>
         </template>
       </error-message>
-      <data-table
-        v-else
-        :headers="results.headers"
-        :results="results.data"
-        :containerHeight="containerHeight"
-      />
+
+      <data-table v-else :headers="results.headers" :results="results.data" :containerHeight="containerHeight" @drilldown-click="activateDrilldown" />
     </div>
   </div>
 </template>
@@ -67,7 +50,7 @@
 import DataTable from '../DataTable.vue'
 import { Results } from '../../editors/results'
 // import type {ChartConfig} from '../editors/results'
-import { ref, onMounted, onUpdated, inject, type PropType } from 'vue'
+import { ref, onMounted, onUpdated, inject, type PropType, } from 'vue'
 import Prism from 'prismjs'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import { getDefaultValueFromHash, pushHashToUrl } from '../../stores/urlStore'
@@ -75,11 +58,18 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingButton from '../LoadingButton.vue'
 import CodeBlock from '../CodeBlock.vue'
+import DrilldownPane from '../DrilldownPane.vue'
 import type { ChartConfig } from '../../editors/results'
+import { objectToSqlExpression } from '../../dashboards/conditions'
+
+export interface Drilldown {
+  remove: string
+  filter: string
+}
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane },
   props: {
     type: {
       type: String,
@@ -101,12 +91,17 @@ export default {
       type: String,
       required: false,
     },
+    symbols: {
+      type: Object as PropType<any>,
+      required: false,
+    },
     containerHeight: Number,
     generatedSql: String,
   },
   data() {
     return {
       activeTab: getDefaultValueFromHash('activeEditorTab', 'results'),
+      activeDrilldown: null as Drilldown | null,
     }
   },
   methods: {
@@ -116,12 +111,30 @@ export default {
     },
     handleReconnect() {
       if (this.connection) {
-        return this.connectionStore.resetConnection(this.connection).then(() => {})
+        return this.connectionStore.resetConnection(this.connection).then(() => { })
       }
       return Promise.resolve()
     },
     onChartChange(config: any) {
       this.$emit('config-change', config)
+    },
+    activateDrilldown(e) {
+      let filters = e.filters
+      // remove is keys of e.filters
+      let remove = Object.keys(filters)[0]
+      
+      let filterString = objectToSqlExpression(e.filters)
+      if (!remove) {
+        return
+      }
+      this.activeDrilldown = { remove, filter: filterString }
+    },
+    submitDrilldown(selected: string[]) {
+      this.$emit('drilldown-click', {
+        remove: this.activeDrilldown?.remove,
+        filter: this.activeDrilldown?.filter,
+        add: selected,
+      })
     },
     handleLocalRefresh() {
       this.$emit('refresh-click')

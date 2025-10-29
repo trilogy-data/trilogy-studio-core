@@ -112,7 +112,7 @@ class QueryInSchema(BaseModel):
 
 class DrilldownQueryInSchema(QueryInSchema):
     drilldown_remove:str
-    drilldown_add:str
+    drilldown_add:list[str]
     drilldown_filter:str
 
 class ValidateQueryInSchema(BaseModel):

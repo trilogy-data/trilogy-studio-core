@@ -246,13 +246,15 @@ export default class TrilogyResolver {
     dialect: string,
     type: string,
     drilldown_remove: string,
-    drilldown_add: string,
+    drilldown_add: string[],
     drilldown_filter: string,
     sources: ContentInput[] | null = null,
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
   ): Promise<FormatQueryResponse> {
+    console.log('TrilogyResolver.drilldown_query called')
+    console.log(drilldown_filter)
     const requestParams = {
       query: query,
       dialect: dialect,
