@@ -331,7 +331,6 @@ export default defineComponent({
           emit('format-query')
         })
       }
-
       // LLM query generation: Ctrl+Shift+Enter
       editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
         emit('generate-llm-query')

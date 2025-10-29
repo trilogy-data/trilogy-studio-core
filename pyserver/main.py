@@ -57,6 +57,8 @@ IS_DEV = (
     or (os.getenv("HOST", "").lower() in ("localhost", "127.0.0.1"))
 )
 
+IS_DOCKER = os.getenv("IN_DOCKER_IMAGE", "") == "1"
+
 # Enable performance logging in dev mode or if explicitly requested
 ENABLE_PERF_LOGGING = (
     IS_DEV or os.environ.get("ENABLE_PERF_LOGGING", "false").lower() == "true"
@@ -98,13 +100,13 @@ allowed_origins = [
 # if not IN_APP_CONFIG.validate:
 allowed_origins += []
 
-if os.getenv("ALLOWED_ORIGINS") == "dev":
+if os.getenv("ALLOWED_ORIGINS") == "dev" or IS_DOCKER:
     allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 else:
     allow_origin_regex = (
         "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)"
     )
-
+allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

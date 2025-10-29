@@ -65,6 +65,7 @@
                 :containerHeight="containerHeight"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
+                @drilldown-click="drilldownClick"
               ></ResultsView>
             </template>
           </vertical-split-layout>
@@ -239,6 +240,7 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
+import type { DrillDownEvent } from '../events/display.ts'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -392,6 +394,11 @@ export default {
     runQuery() {
       if (this.editorRef) {
         this.editorRef.runQuery()
+      }
+    },
+    drilldownClick(e: DrillDownEvent) {
+      if (this.editorRef) {
+        this.editorRef.drilldownQuery(e.remove, e.add, e.filter)
       }
     },
     toggleFullScreen(status: boolean) {

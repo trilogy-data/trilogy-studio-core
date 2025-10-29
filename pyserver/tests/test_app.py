@@ -1,5 +1,12 @@
 from fastapi.testclient import TestClient
-from io_models import ModelInSchema, ModelSourceInSchema
+from io_models import (
+    ModelInSchema,
+    ModelSourceInSchema,
+    QueryInSchema,
+    DrilldownQueryInSchema,
+    Import,
+)
+from trilogy import Dialects
 
 
 def test_read_main(test_client: TestClient):
@@ -39,6 +46,98 @@ select 3 as id, 'alice' as name
     response = test_client.post("/parse_model", data=model.model_dump_json())  # type: ignore
     assert response.status_code == 200
     assert response.json()["sources"][0]["concepts"][0]["address"] == "local.cuid"
+
+
+def test_format_query(test_client: TestClient):
+
+    request = QueryInSchema(
+        imports=[],
+        query="select name, customer_count;",
+        dialect=Dialects.DUCK_DB,
+        full_model=ModelInSchema(
+            name="test_parse",
+            sources=[
+                ModelSourceInSchema(
+                    alias="test",
+                    contents="""key cuid int; 
+property cuid.name string;
+auto customer_count <- count(cuid);     
+datasource customers (
+    id: cuid,
+    name: name,
+)
+grain (cuid,)
+query '''
+select 1 as id, 'bob' as name
+union all
+select 2 as id, 'fred' as name
+union all
+select 3 as id, 'alice' as name
+'''
+;""",
+                )
+            ],
+        ),
+    )
+    response = test_client.post("/format_query", data=request.model_dump_json())  # type: ignore
+    assert response.status_code == 200
+    assert "customer_count" in response.json()["text"]
+
+
+def test_drilldown_query(test_client: TestClient):
+
+    request = DrilldownQueryInSchema(
+        imports=[
+            Import(
+                name="test",
+                alias="",
+            )
+        ],
+        query="select name, customer_count;",
+        dialect=Dialects.DUCK_DB,
+        drilldown_remove="name",
+        drilldown_add=["last_name"],
+        drilldown_filter="local.name='bob'",
+        full_model=ModelInSchema(
+            name="test_parse",
+            sources=[
+                ModelSourceInSchema(
+                    alias="test",
+                    contents="""key cuid int; 
+property cuid.name string;
+property cuid.last_name string;
+auto customer_count <- count(cuid);     
+datasource customers (
+    id: cuid,
+    name,
+    last_name
+)
+grain (cuid,)
+query '''
+select 1 as id, 'bob' as name   , 'smith' as last_name
+union all
+select 2 as id, 'fred' as name   , 'johnson' as last_name
+union all
+select 3 as id, 'alice' as name , 'williams' as last_name
+'''
+;""",
+                )
+            ],
+        ),
+    )
+    response = test_client.post("/drilldown_query", data=request.model_dump_json())  # type: ignore
+    assert response.status_code == 200
+    assert (
+        response.json()["text"]
+        == """import test;
+
+WHERE
+    name = 'bob'
+SELECT
+    last_name,
+    customer_count,
+;"""
+    ), response.json()["text"]
 
 
 # def test_read_models(test_client: TestClient):

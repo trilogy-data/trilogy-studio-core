@@ -82,9 +82,10 @@ export interface NavigationStore {
   closeTabsToRightOf(tabId: string): void
   onInitialLoad(): void
 }
-const dashboardStore = useDashboardStore()
-const editorStore = useEditorStore()
+
 const createNavigationStore = (): NavigationStore => {
+  const dashboardStore = useDashboardStore()
+  const editorStore = useEditorStore()
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
     activeSidebarScreen: ref(
@@ -457,9 +458,12 @@ const createNavigationStore = (): NavigationStore => {
   }
 }
 
-const navigationStore = createNavigationStore()
+let navigationStore = null as NavigationStore | null
 
 export default function useScreenNavigation(): NavigationStore {
+  if (!navigationStore) {
+    navigationStore = createNavigationStore()
+  }
   return navigationStore
 }
 

@@ -11,12 +11,14 @@ import {
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
+import type { CompletionItem } from '../../stores/resolver'
 
 // Props definition
 const props = defineProps<{
   dashboardId: string
   item: LayoutItem
   editMode: boolean
+  symbols: CompletionItem[]
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
   getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   setItemData: (itemId: string, dashboardId: string, data: any) => void
@@ -342,6 +344,7 @@ const filterCount = computed(() => {
         :getItemData="getItemData"
         :getDashboardQueryExecutor="getDashboardQueryExecutor"
         :editMode="editMode"
+        :symbols="props.symbols || []"
         @dimension-click="dimensionClick"
         @background-click="backgroundClick"
       />

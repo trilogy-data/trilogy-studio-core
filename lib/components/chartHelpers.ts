@@ -13,6 +13,7 @@ export interface ChartEventHandlers {
   onDimensionClick: (data: any) => void
   onPointClick: (data: any) => void
   onBackgroundClick: () => void
+  onDrilldownClick: (data: any) => void
 }
 
 export interface BrushState {
@@ -198,6 +199,8 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
   ): void {
     const append = event.shiftKey
+    const control = event.ctrlKey
+
     if (!item || !item.datum) {
       if (
         config.chartType === 'headline' &&
@@ -217,12 +220,12 @@ export class ChromaChartHelpers {
     this.brushState.lastClickTime = currentTime
     // Handle geographic charts
     if (config.geoField) {
-      this.handleGeographicClick(item, config, columns, append)
+      this.handleGeographicClick(item, config, columns, append, control)
       return
     }
 
     // Handle other chart types
-    this.handleStandardClick(item, config, columns, append)
+    this.handleStandardClick(item, config, columns, append, control)
   }
 
   /**
@@ -233,6 +236,7 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
     append: boolean,
+    control: boolean,
   ): void {
     if (!config.geoField) return
 
@@ -240,7 +244,18 @@ export class ChromaChartHelpers {
     const geoConcept = geoField?.address
 
     if (!geoConcept || !geoField) return
-
+    if (control) {
+      console.log('Drilldown filters:', {
+        [geoConcept]: item.datum[config.geoField],
+      })
+      this.eventHandlers.onDrilldownClick({
+        filters: { [geoConcept]: item.datum[config.geoField] },
+      })
+      return
+    }
+    console.log('Geo point click filters:', {
+      [geoConcept]: item.datum[config.geoField],
+    })
     this.eventHandlers.onDimensionClick({
       filters: { [geoConcept]: item.datum[config.geoField] },
       chart: { [config.geoField]: item.datum[config.geoField] },
@@ -256,6 +271,7 @@ export class ChromaChartHelpers {
     config: ChartConfig,
     columns: Map<string, ResultColumn>,
     append: boolean,
+    control: boolean,
   ): void {
     let baseFilters = {}
     let baseChart = {}
@@ -295,8 +311,17 @@ export class ChromaChartHelpers {
         baseChart = { ...baseChart, [field]: item.datum[field] }
       }
     })
-    console.log('Point click filters:', baseFilters)
 
+    if (control) {
+      console.log('Drilldown filters:', baseFilters)
+      this.eventHandlers.onDrilldownClick({
+        filters: baseFilters,
+        chart: baseChart,
+        append,
+      })
+      return
+    }
+    console.log('Point click filters:', baseFilters)
     this.eventHandlers.onDimensionClick({
       filters: baseFilters,
       chart: baseChart,

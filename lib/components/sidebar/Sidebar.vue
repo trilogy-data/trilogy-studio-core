@@ -27,7 +27,7 @@
           </div>
         </div>
       </div>
-      <div v-if="isMobile">Home</div>
+      <div class="trilogy-icon-padding"></div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
       <div
         v-for="(item, _) in sidebarItems"
@@ -402,6 +402,10 @@ export default defineComponent({
   cursor: pointer;
   transition: transform 0.3s ease;
   /* justify-content: flex-start; */
+}
+
+.trilogy-icon-padding {
+  margin-top: 10px;
 }
 
 .trilogy-icon.spinning {

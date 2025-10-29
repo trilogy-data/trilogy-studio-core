@@ -4,7 +4,15 @@
     class="chart-placeholder no-drag"
     :class="{ 'chart-placeholder-edit-mode': editMode }"
   >
-    <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <drilldown-pane
+      v-if="activeDrilldown"
+      :drilldown-remove="activeDrilldown.remove"
+      :drilldown-filter="activeDrilldown.filter"
+      @close="activeDrilldown = null"
+      :symbols="symbols"
+      @submit="submitDrilldown"
+    />
+    <ErrorMessage v-else-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <VegaLiteChart
       v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
@@ -20,6 +28,7 @@
       @dimension-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
       @refresh-click="handleLocalRefresh"
+      @drilldown-click="activateDrilldown"
     />
     <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
@@ -44,8 +53,15 @@ import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExec
 import ErrorMessage from '../ErrorMessage.vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import LoadingView from '../LoadingView.vue'
+import DrilldownPane from '../DrilldownPane.vue'
 import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
 import type { AnalyticsStoreType } from '../../stores/analyticsStore'
+import { objectToSqlExpression } from '../../dashboards/conditions'
+import type { CompletionItem } from '../../stores/resolver'
+export interface Drilldown {
+  remove: string
+  filter: string
+}
 
 export default defineComponent({
   name: 'DashboardChart',
@@ -53,6 +69,7 @@ export default defineComponent({
     VegaLiteChart,
     ErrorMessage,
     LoadingView,
+    DrilldownPane,
   },
   props: {
     dashboardId: {
@@ -77,7 +94,10 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
-
+    symbols: {
+      type: Array as PropType<CompletionItem[]>,
+      required: true,
+    },
     getDashboardQueryExecutor: {
       type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
       required: true,
@@ -89,6 +109,7 @@ export default defineComponent({
     const currentQueryId = ref<string | null>(null)
     const showLoading = ref(false)
     const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
+    const activeDrilldown = ref<Drilldown | null>(null)
 
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
@@ -267,6 +288,32 @@ export default defineComponent({
       emit('background-click')
     }
 
+    // Drilldown methods - matching ResultsContainer pattern
+    const activateDrilldown = (e: any) => {
+      let filters = e.filters
+      // remove is keys of e.filters
+      let remove = Object.keys(filters)[0]
+
+      let filterString = objectToSqlExpression(e.filters)
+      if (!remove) {
+        return
+      }
+      activeDrilldown.value = { remove, filter: filterString }
+    }
+
+    const submitDrilldown = async (selected: string[]) => {
+      let executor = props.getDashboardQueryExecutor(props.dashboardId)
+      let newQuery = await executor.createDrilldownQuery(
+        query.value,
+        selected,
+        activeDrilldown.value!.remove,
+        activeDrilldown.value!.filter,
+      )
+      props.setItemData(props.itemId, props.dashboardId, { content: newQuery })
+      activeDrilldown.value = null
+      await executeQuery()
+    }
+
     return {
       chartContainer,
       results,
@@ -286,6 +333,9 @@ export default defineComponent({
       startTime,
       handleDimensionClick,
       handleBackgroundClick,
+      activeDrilldown,
+      activateDrilldown,
+      submitDrilldown,
     }
   },
 })

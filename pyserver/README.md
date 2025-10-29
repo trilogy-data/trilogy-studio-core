@@ -8,10 +8,13 @@ fly deploy
 
 Docker build runs tests. Make sure they pass.
 
-## Tests
+## Tests/CI
 
-Basic pytest coverage.
+Pytest for most tests.
 
+Ruff for formatting.
+
+Mypy for type checking; requires explicit package base; run from pyserver subfolder.
 ```bash
 mypy . --explicit-package-bases
 ```

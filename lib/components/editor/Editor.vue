@@ -35,6 +35,7 @@
           @validate-query="validateQuery"
           @format-query="formatQuery"
           @generate-llm-query="handleLLMTrigger"
+          @drill-query="drilldownQuery"
           @save="$emit('save-editors')"
         />
         <SymbolsPane
@@ -422,7 +423,36 @@ export default defineComponent({
       }
       return partial
     },
+    async drilldownQuery(remove: string, add: string[], filter: string): Promise<void> {
+      const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+      if (!codeEditorRef) return
 
+      const text = codeEditorRef.getEditorText(this.editorData.contents)
+      if (!text) return
+
+      const queryInput = await this.buildQueryArgs(text)
+      try {
+        const drilldown = await this.trilogyResolver.drilldown_query(
+          text,
+          queryInput.queryType,
+          queryInput.editorType,
+          remove,
+          add,
+          filter,
+          // remove,
+          // add,
+          queryInput.sources,
+          queryInput.imports,
+        )
+        if (drilldown.data && drilldown.data.text) {
+          codeEditorRef.setValue(drilldown.data.text)
+          this.editorData.contents = drilldown.data.text
+        }
+        await this.runQuery()
+      } catch (error) {
+        console.error('Error formatting query:', error)
+      }
+    },
     async runQuery(): Promise<any> {
       this.$emit('query-started')
       // clear existing inteaction state

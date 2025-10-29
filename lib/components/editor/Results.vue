@@ -29,7 +29,16 @@
       </button>
     </div>
     <div class="tab-content">
-      <div v-if="displayTab === 'visualize'" class="sql-view">
+      <drilldown-pane
+        v-if="activeDrilldown"
+        :drilldown-remove="activeDrilldown.remove"
+        :drilldown-filter="activeDrilldown.filter"
+        @close="activeDrilldown = null"
+        :symbols="symbols"
+        @submit="submitDrilldown"
+      />
+
+      <div v-else-if="displayTab === 'visualize'" class="sql-view">
         <vega-lite-chart
           :data="results.data"
           :columns="results.headers"
@@ -37,6 +46,7 @@
           :initialConfig="chartConfig"
           :onChartConfigChange="onChartChange"
           @refresh-click="handleLocalRefresh"
+          @drilldown-click="activateDrilldown"
         />
       </div>
       <div v-else-if="displayTab === 'sql'" class="sql-view">
@@ -52,11 +62,13 @@
           </loading-button>
         </template>
       </error-message>
+
       <data-table
         v-else
         :headers="results.headers"
         :results="results.data"
         :containerHeight="containerHeight"
+        @drilldown-click="activateDrilldown"
       />
     </div>
   </div>
@@ -74,11 +86,19 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingButton from '../LoadingButton.vue'
 import CodeBlock from '../CodeBlock.vue'
+import DrilldownPane from '../DrilldownPane.vue'
 import type { ChartConfig } from '../../editors/results'
+import { objectToSqlExpression } from '../../dashboards/conditions'
+import type { DrillDownTriggerEvent } from '../../events/display'
+
+export interface Drilldown {
+  remove: string
+  filter: string
+}
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane },
   props: {
     type: {
       type: String,
@@ -100,12 +120,17 @@ export default {
       type: String,
       required: false,
     },
+    symbols: {
+      type: Object as PropType<any>,
+      required: false,
+    },
     containerHeight: Number,
     generatedSql: String,
   },
   data() {
     return {
       activeTab: getDefaultValueFromHash('activeEditorTab', 'results'),
+      activeDrilldown: null as Drilldown | null,
     }
   },
   methods: {
@@ -121,6 +146,21 @@ export default {
     },
     onChartChange(config: any) {
       this.$emit('config-change', config)
+    },
+    activateDrilldown(e: DrillDownTriggerEvent) {
+      let remove = Object.keys(e.filters)[0]
+      let filterString = objectToSqlExpression(e.filters)
+      if (!remove) {
+        return
+      }
+      this.activeDrilldown = { remove, filter: filterString }
+    },
+    submitDrilldown(selected: string[]) {
+      this.$emit('drilldown-click', {
+        remove: this.activeDrilldown?.remove,
+        filter: this.activeDrilldown?.filter,
+        add: selected,
+      })
     },
     handleLocalRefresh() {
       this.$emit('refresh-click')

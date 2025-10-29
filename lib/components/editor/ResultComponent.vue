@@ -24,7 +24,9 @@
       :type="editorData.type"
       :chartConfig="editorData.chartConfig"
       :error="editorData.error || undefined"
+      :symbols="editorData.completionSymbols"
       @config-change="(config) => editorData.setChartConfig(config)"
+      @drilldown-click="(data) => handleDrilldown(data)"
       @refresh-click="() => $emit('refresh-click')"
     />
     <!-- <llm-interaction></llm-interaction> -->
@@ -77,6 +79,9 @@ export default {
   methods: {
     llmQueryAccepted() {
       this.$emit('llm-query-accepted')
+    },
+    handleDrilldown(data: any) {
+      this.$emit('drilldown-click', data)
     },
   },
 }

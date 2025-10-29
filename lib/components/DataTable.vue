@@ -88,7 +88,8 @@
   font-size: 14px;
   transition: background-color 0.2s;
   backdrop-filter: blur(4px);
-  border-radius: 0; /* Sharp corners */
+  border-radius: 0;
+  /* Sharp corners */
 }
 
 .control-btn:hover:not(:disabled) {
@@ -606,7 +607,7 @@ export default {
         },
       })
 
-      tab.on('cellClick', (_, cell) => {
+      tab.on('cellClick', (event, cell) => {
         let fieldName = cell.getField()
         let fullField = this.headers.get(fieldName)
         if (!fullField) {
@@ -619,6 +620,15 @@ export default {
         let value = cell.getValue()
 
         const element = cell.getElement()
+
+        //@ts-ignore
+        if (event.ctrlKey) {
+          this.$emit('drilldown-click', {
+            filters: { [field]: value },
+          })
+          return
+        }
+
         if (element.classList.contains('highlighted-cell')) {
           const highlightedCells = target.querySelectorAll('.highlighted-cell')
           highlightedCells.forEach((highlightedCell) => {

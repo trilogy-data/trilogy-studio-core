@@ -60,10 +60,10 @@ export class DashboardQueryExecutor {
   // Track which itemIds are associated with each query ID (for cleanup)
   private itemIdByQueryId: Map<string, string> = new Map()
 
-  private queryExecutionService: QueryExecutionService
-  private connectionStore: ConnectionStoreType
+  public queryExecutionService: QueryExecutionService
+  public connectionStore: ConnectionStoreType
   private editorStore: EditorStoreType
-  private connectionName: string
+  public connectionName: string
   private dashboardId: string
   private getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
   private setItemData: (itemId: string, dashboardId: string, content: any) => void
@@ -540,6 +540,28 @@ export class DashboardQueryExecutor {
       queuedQueries: Array.from(this.queryQueue.values()),
       latestQueryByItemId: Object.fromEntries(this.latestQueryByItemId),
     }
+  }
+
+  public async createDrilldownQuery(
+    query: string,
+    add: string[],
+    remove: string,
+    filter: string,
+  ): Promise<any> {
+    let queryType = this.connectionStore.connections[this.connectionName].query_type
+    let sources = this.connectionStore.getConnectionSources(this.connectionName)
+
+    let newQuery = await this.queryExecutionService.createDrilldownQuery(
+      query,
+      queryType,
+      'trilogy',
+      this.getDashboardData(this.dashboardId).imports,
+      add,
+      remove,
+      filter,
+      sources,
+    )
+    return newQuery
   }
 
   private generateQueryId(request: QueryRequest): string {
