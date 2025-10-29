@@ -1,14 +1,35 @@
 <template>
-  <div ref="chartContainer" class="chart-placeholder no-drag" :class="{ 'chart-placeholder-edit-mode': editMode }">
-    <drilldown-pane v-if="activeDrilldown" :drilldown-remove="activeDrilldown.remove"
-      :drilldown-filter="activeDrilldown.filter" @close="activeDrilldown = null" :symbols="symbols"
-      @submit="submitDrilldown" />
+  <div
+    ref="chartContainer"
+    class="chart-placeholder no-drag"
+    :class="{ 'chart-placeholder-edit-mode': editMode }"
+  >
+    <drilldown-pane
+      v-if="activeDrilldown"
+      :drilldown-remove="activeDrilldown.remove"
+      :drilldown-filter="activeDrilldown.filter"
+      @close="activeDrilldown = null"
+      :symbols="symbols"
+      @submit="submitDrilldown"
+    />
     <ErrorMessage v-else-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
-    <VegaLiteChart v-else-if="results && ready" :id="`${itemId}-${dashboardId}`" :columns="results.headers"
-      :data="results.data" :showControls="editMode" :initialConfig="chartConfig || undefined"
-      :containerHeight="chartHeight" :container-width="chartWidth" :onChartConfigChange="onChartConfigChange"
-      :chartSelection :chartTitle @dimension-click="handleDimensionClick" @background-click="handleBackgroundClick"
-      @refresh-click="handleLocalRefresh" @drilldown-click="activateDrilldown" />
+    <VegaLiteChart
+      v-else-if="results && ready"
+      :id="`${itemId}-${dashboardId}`"
+      :columns="results.headers"
+      :data="results.data"
+      :showControls="editMode"
+      :initialConfig="chartConfig || undefined"
+      :containerHeight="chartHeight"
+      :container-width="chartWidth"
+      :onChartConfigChange="onChartConfigChange"
+      :chartSelection
+      :chartTitle
+      @dimension-click="handleDimensionClick"
+      @background-click="handleBackgroundClick"
+      @refresh-click="handleLocalRefresh"
+      @drilldown-click="activateDrilldown"
+    />
     <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
@@ -75,7 +96,7 @@ export default defineComponent({
     },
     symbols: {
       type: Array as PropType<CompletionItem[]>,
-      required: false,
+      required: true,
     },
     getDashboardQueryExecutor: {
       type: Function as PropType<(dashboardId: string) => DashboardQueryExecutor>,
@@ -281,14 +302,12 @@ export default defineComponent({
     }
 
     const submitDrilldown = async (selected: string[]) => {
-
-      let executor = props.getDashboardQueryExecutor(props.dashboardId);
+      let executor = props.getDashboardQueryExecutor(props.dashboardId)
       let newQuery = await executor.createDrilldownQuery(
         query.value,
         selected,
         activeDrilldown.value!.remove,
         activeDrilldown.value!.filter,
-
       )
       props.setItemData(props.itemId, props.dashboardId, { content: newQuery })
       activeDrilldown.value = null

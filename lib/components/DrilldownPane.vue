@@ -4,8 +4,8 @@
     <div class="drilldown-header">
       <div class="header-title">Select Drilldown Dimensions</div>
       <div class="header-actions">
-        <button 
-          class="action-btn submit-btn" 
+        <button
+          class="action-btn submit-btn"
           @click="handleSubmit"
           :disabled="selected.length === 0"
           title="Submit selection (Enter)"
@@ -13,25 +13,21 @@
           <i class="mdi mdi-check"></i>
           Submit
         </button>
-        <button 
-          class="action-btn close-btn" 
-          @click="handleClose"
-          title="Close (Escape)"
-        >
+        <button class="action-btn close-btn" @click="handleClose" title="Close (Escape)">
           <i class="mdi mdi-close"></i>
         </button>
       </div>
     </div>
 
     <div class="search-container">
-      <input 
-        type="text" 
-        class="drilldown-search" 
-        placeholder="Search dimensions..." 
+      <input
+        type="text"
+        class="drilldown-search"
+        placeholder="Search dimensions..."
         v-model="searchQuery"
-        @input="filterDimensions" 
+        @input="filterDimensions"
         @keydown="handleSearchKeydown"
-        ref="drilldownSearchInput" 
+        ref="drilldownSearchInput"
       />
       <div class="dimension-count">({{ filteredDimensions.length }})</div>
     </div>
@@ -40,7 +36,11 @@
       <div class="selected-list">
         <div v-for="dimension in selected" :key="dimension" class="selected-item">
           <span class="selected-name">{{ dimension }}</span>
-          <button class="remove-btn" @click="removeDimension(dimension)" :title="`Remove ${dimension}`">
+          <button
+            class="remove-btn"
+            @click="removeDimension(dimension)"
+            :title="`Remove ${dimension}`"
+          >
             <i class="mdi mdi-close"></i>
           </button>
         </div>
@@ -48,40 +48,58 @@
     </div>
 
     <div class="dimensions-list" ref="dimensionsList">
-      <div 
-        v-for="(dimension, index) in filteredDimensions" 
-        :key="index" 
+      <div
+        v-for="(dimension, index) in filteredDimensions"
+        :key="index"
         class="dimension-item"
-        :class="{ 
-          'selected': selected.includes(dimension.label), 
-          'disabled': dimension.type === 'metric',
-          'highlighted': highlightedIndex === index
+        :class="{
+          selected: selected.includes(dimension.label),
+          disabled: dimension.type === 'metric',
+          highlighted: highlightedIndex === index,
         }"
-        @click="selectDimension(dimension)" 
-        @mouseenter="showTooltip($event, dimension); setHighlightedIndex(index)" 
+        @click="selectDimension(dimension)"
+        @mouseenter="
+          showTooltip($event, dimension)
+          setHighlightedIndex(index)
+        "
         @mouseleave="hideTooltip"
         @mousemove="updateTooltipPosition($event)"
       >
-        <div class="dimension-icon" :class="getIconClass(dimension)" :title="getIconTooltip(dimension)">
+        <div
+          class="dimension-icon"
+          :class="getIconClass(dimension)"
+          :title="getIconTooltip(dimension)"
+        >
           <i v-if="getIconType(dimension) === 'mdi'" :class="getIconMdiClass(dimension)"></i>
           <template v-else>{{ getDimensionChar(dimension) }}</template>
         </div>
         <div class="dimension-details">
           <div class="dimension-label">{{ dimension.label }}</div>
-          <div v-if="dimension.description" class="dimension-description">{{ dimension.description }}</div>
+          <div v-if="dimension.description" class="dimension-description">
+            {{ dimension.description }}
+          </div>
         </div>
         <div v-if="selected.includes(dimension.label)" class="selected-indicator">
           <i class="mdi mdi-check"></i>
         </div>
       </div>
-      <div v-if="filteredDimensions.length === 0" class="no-dimensions">No matching dimensions found</div>
+      <div v-if="filteredDimensions.length === 0" class="no-dimensions">
+        No matching dimensions found
+      </div>
     </div>
 
     <!-- Custom Tooltip -->
-    <div v-if="tooltip.visible" class="custom-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
+    <div
+      v-if="tooltip.visible"
+      class="custom-tooltip"
+      :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+    >
       <div class="tooltip-header">
         <div class="tooltip-icon" :class="getIconClass(tooltip.dimension)">
-          <i v-if="getIconType(tooltip.dimension) === 'mdi'" :class="getIconMdiClass(tooltip.dimension)"></i>
+          <i
+            v-if="getIconType(tooltip.dimension) === 'mdi'"
+            :class="getIconMdiClass(tooltip.dimension)"
+          ></i>
           <template v-else>{{ getDimensionChar(tooltip.dimension) }}</template>
         </div>
         <div class="tooltip-title">{{ tooltip.dimension.label }}</div>
@@ -100,8 +118,10 @@
           </span>
         </div>
 
-        <div v-if="tooltip.dimension.description && tooltip.dimension.description.trim()"
-          class="tooltip-row description-row">
+        <div
+          v-if="tooltip.dimension.description && tooltip.dimension.description.trim()"
+          class="tooltip-row description-row"
+        >
           <span class="tooltip-label">Description:</span>
           <div class="tooltip-value description-value">{{ tooltip.dimension.description }}</div>
         </div>
@@ -123,7 +143,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import {
+  defineComponent,
+  ref,
+  type PropType,
+  reactive,
+  watch,
+  onMounted,
+  onUnmounted,
+  nextTick,
+} from 'vue'
 
 import type { CompletionItem } from '../stores/resolver'
 
@@ -197,8 +226,10 @@ export default defineComponent({
     const handleGlobalKeydown = (event: KeyboardEvent) => {
       // Only handle events if the component has focus or search input is focused
       const isSearchFocused = document.activeElement === drilldownSearchInput.value
-      const isComponentActive = drilldownSearchInput.value?.closest('.drilldown-pane')?.contains(document.activeElement)
-      
+      const isComponentActive = drilldownSearchInput.value
+        ?.closest('.drilldown-pane')
+        ?.contains(document.activeElement)
+
       if (!isSearchFocused && !isComponentActive) return
 
       if (event.key === 'Escape') {
@@ -220,10 +251,12 @@ export default defineComponent({
           break
         case 'Enter':
           event.preventDefault()
-          if (highlightedIndex.value >= 0 && highlightedIndex.value < filteredDimensions.value.length) {
+          if (
+            highlightedIndex.value >= 0 &&
+            highlightedIndex.value < filteredDimensions.value.length
+          ) {
             selectDimension(filteredDimensions.value[highlightedIndex.value])
             highlightedIndex.value = -1
-
           } else {
             // If nothing is highlighted, submit the form
             handleSubmit()
@@ -239,17 +272,17 @@ export default defineComponent({
     // Navigation functions
     const navigateDown = () => {
       if (filteredDimensions.value.length === 0) return
-      
+
       highlightedIndex.value = Math.min(
         highlightedIndex.value + 1,
-        filteredDimensions.value.length - 1
+        filteredDimensions.value.length - 1,
       )
       scrollToHighlighted()
     }
 
     const navigateUp = () => {
       if (filteredDimensions.value.length === 0) return
-      
+
       highlightedIndex.value = Math.max(highlightedIndex.value - 1, 0)
       scrollToHighlighted()
     }
@@ -273,7 +306,8 @@ export default defineComponent({
 
       filteredDimensions.value = props.symbols.filter((dimension) => {
         // Apply search filter
-        const matchesSearch = !query ||
+        const matchesSearch =
+          !query ||
           dimension.label.toLowerCase().includes(query) ||
           (dimension.description && dimension.description.toLowerCase().includes(query))
 
@@ -289,9 +323,13 @@ export default defineComponent({
     }
 
     // Watch for changes in available dimensions
-    watch(() => props.symbols, () => {
-      filterDimensions()
-    }, { immediate: true })
+    watch(
+      () => props.symbols,
+      () => {
+        filterDimensions()
+      },
+      { immediate: true },
+    )
 
     // Watch for changes in search query
     watch(searchQuery, () => {
@@ -300,7 +338,9 @@ export default defineComponent({
 
     // Icon helper functions
     const getIconType = (dimension: CompletionItem): string => {
-      return dimension.trilogySubType && ICON_CONFIG.trilogy[dimension.trilogySubType] ? 'mdi' : 'char'
+      return dimension.trilogySubType && ICON_CONFIG.trilogy[dimension.trilogySubType]
+        ? 'mdi'
+        : 'char'
     }
 
     const getIconMdiClass = (dimension: CompletionItem): string => {
@@ -349,7 +389,7 @@ export default defineComponent({
 
     // Remove dimension from selection
     const removeDimension = (dimensionLabel: string) => {
-      selected.value = selected.value.filter(label => label !== dimensionLabel)
+      selected.value = selected.value.filter((label) => label !== dimensionLabel)
       emit('remove-dimension', dimensionLabel)
     }
 
@@ -468,7 +508,7 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border)
+  border-bottom: 1px solid var(--border);
 }
 
 .header-title {
@@ -942,7 +982,7 @@ export default defineComponent({
   .selected-dimensions {
     display: none;
   }
-  
+
   .keyboard-hints {
     display: none;
   }

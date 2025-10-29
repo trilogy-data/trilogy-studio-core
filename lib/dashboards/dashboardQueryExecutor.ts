@@ -320,7 +320,7 @@ export class DashboardQueryExecutor {
         }
       },
       onProgress: (_: any) => {
-        ; () => { }
+        ;() => {}
       },
     }
 
@@ -431,7 +431,7 @@ export class DashboardQueryExecutor {
           }
         },
         onProgress: (_: any) => {
-          ; () => { }
+          ;() => {}
         },
       }
 
@@ -542,8 +542,13 @@ export class DashboardQueryExecutor {
     }
   }
 
-  public async createDrilldownQuery(query: string, add: string[], remove: string, filter: string): Promise<any> {
-    let queryType = this.connectionStore.connections[this.connectionName].query_type;
+  public async createDrilldownQuery(
+    query: string,
+    add: string[],
+    remove: string,
+    filter: string,
+  ): Promise<any> {
+    let queryType = this.connectionStore.connections[this.connectionName].query_type
     let sources = this.connectionStore.getConnectionSources(this.connectionName)
 
     let newQuery = await this.queryExecutionService.createDrilldownQuery(
@@ -557,9 +562,7 @@ export class DashboardQueryExecutor {
       sources,
     )
     return newQuery
-
   }
-
 
   private generateQueryId(request: QueryRequest): string {
     return `${request.dashboardId}-${request.itemId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -571,9 +574,9 @@ export class DashboardQueryExecutor {
         queuedQuery.dashboardId === request.dashboardId &&
         queuedQuery.queryInput.text === request.queryInput.text &&
         JSON.stringify(queuedQuery.queryInput.extraFilters) ===
-        JSON.stringify(request.queryInput.extraFilters) &&
+          JSON.stringify(request.queryInput.extraFilters) &&
         JSON.stringify(queuedQuery.queryInput.parameters) ===
-        JSON.stringify(request.queryInput.parameters)
+          JSON.stringify(request.queryInput.parameters)
       ) {
         return queuedQuery
       }
@@ -717,8 +720,8 @@ export class DashboardQueryExecutor {
         dashboardData.imports,
         [],
         {},
-        () => { },
-        () => { },
+        () => {},
+        () => {},
         errorCallbacks,
         callbacks,
         false,
@@ -834,7 +837,7 @@ export class DashboardQueryExecutor {
       const { resultPromise } = await this.queryExecutionService.executeQuery(
         this.connectionName,
         queryArgs,
-        () => { }, // Progress callback for connection issues
+        () => {}, // Progress callback for connection issues
         (message: any) => {
           if (message.error) {
             queuedQuery.onProgress(message)

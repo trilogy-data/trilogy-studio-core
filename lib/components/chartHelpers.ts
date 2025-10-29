@@ -29,7 +29,7 @@ export class ChromaChartHelpers {
     pendingBackgroundClick: false,
   }
 
-  constructor(private eventHandlers: ChartEventHandlers) { }
+  constructor(private eventHandlers: ChartEventHandlers) {}
 
   /**
    * Downloads the chart as a PNG file
@@ -249,7 +249,7 @@ export class ChromaChartHelpers {
         [geoConcept]: item.datum[config.geoField],
       })
       this.eventHandlers.onDrilldownClick({
-        filters: { [geoConcept]: item.datum[config.geoField] }
+        filters: { [geoConcept]: item.datum[config.geoField] },
       })
       return
     }

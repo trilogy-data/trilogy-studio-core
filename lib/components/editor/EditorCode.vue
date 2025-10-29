@@ -331,11 +331,6 @@ export default defineComponent({
           emit('format-query')
         })
       }
-      if (props.editorType !== 'sql') {
-        editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.KeyL, () => {
-          emit('drill-query')
-        })
-      }
       // LLM query generation: Ctrl+Shift+Enter
       editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
         emit('generate-llm-query')

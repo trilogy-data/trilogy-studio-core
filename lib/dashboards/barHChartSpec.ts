@@ -1,6 +1,11 @@
 import { type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { getFormatHint, createFieldEncoding, createInteractionEncodings, getSortOrder, } from './helpers'
+import {
+  getFormatHint,
+  createFieldEncoding,
+  createInteractionEncodings,
+  getSortOrder,
+} from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
 export const createBarHChartSpec = (

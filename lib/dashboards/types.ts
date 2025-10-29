@@ -1,97 +1,96 @@
-export type FieldType = 'nominal' | 'temporal' | 'ordinal' | 'quantitative';
- 
- export interface FieldEncodingOutput {
+export type FieldType = 'nominal' | 'temporal' | 'ordinal' | 'quantitative'
+
+export interface FieldEncodingOutput {
   /** The field name to encode (required when fieldName is provided) */
-  field?: string;
-  
+  field?: string
+
   /** The Vega-Lite field type */
-  type?: FieldType;
+  type?: FieldType
 
   /** Human-readable title for the field (derived from description or field name) */
-  title?: string;
-  
+  title?: string
+
   /** Format hint for displaying values (e.g., date formats, number formats) */
-  format?: string;
-  
+  format?: string
+
   /** Format type for parsing values */
-  formatType?: string;
-  
+  formatType?: string
+
   /** Sorting configuration for the field */
-  sort?: 
+  sort?:
     | string[] // Explicit sort order (e.g., days of week)
-    | { 
-        field: string; 
-        order: 'ascending' | 'descending' 
+    | {
+        field: string
+        order: 'ascending' | 'descending'
       } // Sort by field value
     | {
-        field?: string;
-        order?: 'ascending' | 'descending';
-      };
-  
+        field?: string
+        order?: 'ascending' | 'descending'
+      }
+
   /** Scale configuration for the encoding */
   scale?: {
     /** Scale type (e.g., 'linear', 'log', 'sqrt') */
-    type?: string;
-    
+    type?: string
+
     /** Whether to include zero in the scale domain */
-    zero?: boolean;
-    
+    zero?: boolean
+
     /** Other scale properties */
-    [key: string]: any;
-  };
-  
+    [key: string]: any
+  }
+
   /** Axis configuration properties */
   axis?: {
     /** Axis title */
-    title?: string;
-    
+    title?: string
+
     /** Axis labels configuration */
-    labels?: boolean;
-    
+    labels?: boolean
+
     /** Tick configuration */
-    ticks?: boolean;
-    
+    ticks?: boolean
+
     /** Grid lines configuration */
-    grid?: boolean;
-    
+    grid?: boolean
+
     /** Other axis properties */
-    [key: string]: any;
-  };
-  
+    [key: string]: any
+  }
+
   /** Legend configuration properties */
   legend?: {
     /** Legend orientation */
-    orient?: 'left' | 'right' | 'top' | 'bottom';
-    
+    orient?: 'left' | 'right' | 'top' | 'bottom'
+
     /** Legend title orientation */
-    titleOrient?: 'left' | 'right' | 'top' | 'bottom' | 'center';
-    
+    titleOrient?: 'left' | 'right' | 'top' | 'bottom' | 'center'
+
     /** Legend direction */
-    direction?: 'horizontal' | 'vertical';
-    
+    direction?: 'horizontal' | 'vertical'
+
     /** Legend title font size */
-    titleFontSize?: number;
-    
+    titleFontSize?: number
+
     /** Number of ticks in legend */
-    tickCount?: number;
-    
+    tickCount?: number
+
     /** Specific values to show in legend */
-    values?: any[];
-    
+    values?: any[]
+
     /** Format for legend values */
-    format?: string;
-    
+    format?: string
+
     /** Format type for legend values */
-    formatType?: string;
-    
+    formatType?: string
+
     /** Other legend properties */
-    [key: string]: any;
-  } | null; // null when legend is explicitly hidden
-  
-  /** 
+    [key: string]: any
+  } | null // null when legend is explicitly hidden
+
+  /**
    * Additional properties that may be merged from axisOptions parameter
    * This allows for any additional Vega-Lite encoding properties
    */
-  [key: string]: any;
+  [key: string]: any
 }
-

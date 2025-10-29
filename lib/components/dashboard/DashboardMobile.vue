@@ -197,6 +197,7 @@ function handleToggleEditMode() {
           :edit-mode="editMode"
           :filter="filter"
           :get-item-data="getItemData"
+          :symbols="[]"
           :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
           @dimension-click="dashboardBase?.setCrossFilter"
           @background-click="dashboardBase?.unSelect"

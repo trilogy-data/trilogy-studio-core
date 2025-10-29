@@ -152,18 +152,19 @@ const useConnectionStore = defineStore('connections', {
         return 'disabled'
       }
     },
-    getConnectionSources(name:string) {
+    getConnectionSources(name: string) {
       const conn = this.connections[name]
       const modelStore = useModelConfigStore()
       const editorStore = useEditorStore()
-      let sources: ContentInput[] = conn && conn.model
-      ? modelStore.models[conn.model].sources.map((source) => ({
-        alias: source.alias,
-        contents: editorStore.editors[source.editor]
-          ? editorStore.editors[source.editor].contents
-          : '',
-      }))
-      : []
+      let sources: ContentInput[] =
+        conn && conn.model
+          ? modelStore.models[conn.model].sources.map((source) => ({
+              alias: source.alias,
+              contents: editorStore.editors[source.editor]
+                ? editorStore.editors[source.editor].contents
+                : '',
+            }))
+          : []
       return sources
     },
     newConnection(name: string, type: string, options: Record<string, any>): Connection {

@@ -268,7 +268,6 @@ export default class TrilogyResolver {
       parameters: parameters || {},
     }
 
-
     // Not in cache, make the API call
     const response = await this.fetchWithErrorHandling(
       `${this.settingStore.settings.trilogyResolver}/drilldown_query`,
@@ -280,7 +279,6 @@ export default class TrilogyResolver {
         body: JSON.stringify(requestParams),
       },
     )
-
 
     return response
   }

@@ -11,7 +11,7 @@ import {
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
-import type {  CompletionItem } from '../../stores/resolver'
+import type { CompletionItem } from '../../stores/resolver'
 
 // Props definition
 const props = defineProps<{
@@ -158,7 +158,6 @@ function removeFilter(filterSource: string): void {
 
 // Get item data
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
-
 
 // Determine which component to render based on the cell type
 const cellComponent = computed(() => {
@@ -347,7 +346,6 @@ const filterCount = computed(() => {
         :editMode="editMode"
         :symbols="props.symbols || []"
         @dimension-click="dimensionClick"
-
         @background-click="backgroundClick"
       />
     </div>

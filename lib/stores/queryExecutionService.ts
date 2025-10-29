@@ -8,8 +8,6 @@ import type {
   ValidateResponse,
 } from './resolver'
 import useQueryHistoryService from './connectionHistoryStore'
-import type { ModelConfigStoreType } from './modelStore'
-import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
 
@@ -390,7 +388,6 @@ export default class QueryExecutionService {
     imports: Import[] = [],
     extraContent?: ContentInput[],
   ): Promise<string | null> {
-
     try {
       const formatted = await this.trilogyResolver.format_query(
         text,
@@ -410,16 +407,17 @@ export default class QueryExecutionService {
     }
   }
 
-  async createDrilldownQuery(text: string,
+  async createDrilldownQuery(
+    text: string,
     queryType: string,
     editorType: 'trilogy' | 'sql' | 'preql',
     imports: Import[] = [],
     drilldown_add: string[],
     drilldown_remove: string,
     drilldown_filter: string,
-    extraContent?: ContentInput[],): Promise<string | null> {
+    extraContent?: ContentInput[],
+  ): Promise<string | null> {
     try {
-
       const formatted = await this.trilogyResolver.drilldown_query(
         text,
         queryType,
@@ -428,7 +426,7 @@ export default class QueryExecutionService {
         drilldown_add,
         drilldown_filter,
         extraContent,
-        imports
+        imports,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -600,7 +598,7 @@ export default class QueryExecutionService {
         }
       }
     }
-    let sources: ContentInput[] =this.connectionStore.getConnectionSources(conn.name)
+    let sources: ContentInput[] = this.connectionStore.getConnectionSources(conn.name)
 
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)

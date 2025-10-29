@@ -3,7 +3,7 @@ import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import { Charts } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import {type FieldEncodingOutput} from './types'
+import { type FieldEncodingOutput } from './types'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -61,11 +61,10 @@ export const isNumericColumn = (column: ResultColumn): boolean => {
 }
 
 export const isOrdinalColumn = (column: ResultColumn): boolean => {
-
   if (column.traits && ordinalTraits.some((trait) => column.traits?.includes(trait))) {
     return true
   }
-  return false  
+  return false
 }
 
 export const isImageColumn = (column: ResultColumn): boolean => {
@@ -171,14 +170,15 @@ export const filteredColumns = (
   })
 
   return result
-
 }
 
 const firstNonCategoricalNumericColumn = (
   defaults: Partial<ChartConfig>,
   numericColumns: ResultColumn[],
 ): ResultColumn => {
-  let candidates = numericColumns.filter((col) => col.name !== defaults.xField && col.name !== defaults.yField)
+  let candidates = numericColumns.filter(
+    (col) => col.name !== defaults.xField && col.name !== defaults.yField,
+  )
   if (candidates.length > 0) {
     return candidates[0]
   }
@@ -511,14 +511,14 @@ export const getSortOrder = (
   } else if (isNumericColumn(column)) {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn,  op: 'sum', order: 'descending' },
+        sort: { field: valueColumn, op: 'sum', order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'descending' } }
   } else {
     if (valueColumn) {
       return {
-        sort: { field: valueColumn,  op: 'sum', order: 'descending' },
+        sort: { field: valueColumn, op: 'sum', order: 'descending' },
       }
     }
     return { sort: { field: fieldName, order: 'ascending' } }
@@ -544,11 +544,9 @@ export const getVegaFieldType = (
       return 'temporal'
     }
     return 'ordinal'
-  } 
-  else if (isOrdinalColumn(column)) {
+  } else if (isOrdinalColumn(column)) {
     return 'ordinal'
-  }
-  else if (isNumericColumn(column)) {
+  } else if (isNumericColumn(column)) {
     return 'quantitative'
   } else {
     return 'nominal'

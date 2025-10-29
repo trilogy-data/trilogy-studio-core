@@ -26,9 +26,8 @@
             {{ unSaved }}
           </div>
         </div>
-
       </div>
-              <div class="trilogy-icon-padding"></div>
+      <div class="trilogy-icon-padding"></div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
       <div
         v-for="(item, _) in sidebarItems"

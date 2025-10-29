@@ -353,10 +353,7 @@ let store = useAnalyticsStore()
 provide('analyticsStore', store)
 provide(
   'queryExecutionService',
-  new QueryExecutionService(
-    props.trilogyResolver,
-    props.connectionStore,
-  ),
+  new QueryExecutionService(props.trilogyResolver, props.connectionStore),
 )
 
 const windowWidth = ref(window.innerWidth)
