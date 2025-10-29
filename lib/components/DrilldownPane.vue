@@ -4,12 +4,8 @@
     <div class="drilldown-header">
       <div class="header-title">Select Drilldown Dimensions</div>
       <div class="header-actions">
-        <button
-          class="action-btn submit-btn"
-          @click="handleSubmit"
-          :disabled="selected.length === 0"
-          title="Submit selection (Enter)"
-        >
+        <button class="action-btn submit-btn" @click="handleSubmit" :disabled="selected.length === 0"
+          title="Submit selection (Enter)">
           <i class="mdi mdi-check"></i>
           Submit
         </button>
@@ -20,15 +16,8 @@
     </div>
 
     <div class="search-container">
-      <input
-        type="text"
-        class="drilldown-search"
-        placeholder="Search dimensions..."
-        v-model="searchQuery"
-        @input="filterDimensions"
-        @keydown="handleSearchKeydown"
-        ref="drilldownSearchInput"
-      />
+      <input type="text" class="drilldown-search" placeholder="Search dimensions..." v-model="searchQuery"
+        @input="filterDimensions" @keydown="handleSearchKeydown" ref="drilldownSearchInput" />
       <div class="dimension-count">({{ filteredDimensions.length }})</div>
     </div>
 
@@ -36,11 +25,7 @@
       <div class="selected-list">
         <div v-for="dimension in selected" :key="dimension" class="selected-item">
           <span class="selected-name">{{ dimension }}</span>
-          <button
-            class="remove-btn"
-            @click="removeDimension(dimension)"
-            :title="`Remove ${dimension}`"
-          >
+          <button class="remove-btn" @click="removeDimension(dimension)" :title="`Remove ${dimension}`">
             <i class="mdi mdi-close"></i>
           </button>
         </div>
@@ -48,30 +33,15 @@
     </div>
 
     <div class="dimensions-list" ref="dimensionsList">
-      <div
-        v-for="(dimension, index) in filteredDimensions"
-        :key="index"
-        class="dimension-item"
-        :class="{
-          selected: selected.includes(dimension.label),
-          disabled: dimension.type === 'metric',
-          highlighted: highlightedIndex === index,
-        }"
-        @click="selectDimension(dimension)"
-        @mouseenter="
-          (event) => {
-            showTooltip(event, dimension)
-            setHighlightedIndex(index)
-          }
-        "
-        @mouseleave="hideTooltip"
-        @mousemove="updateTooltipPosition($event)"
-      >
-        <div
-          class="dimension-icon"
-          :class="getIconClass(dimension)"
-          :title="getIconTooltip(dimension)"
-        >
+      <div v-for="(dimension, index) in filteredDimensions" :key="index" class="dimension-item" :class="{
+        selected: selected.includes(dimension.label),
+        disabled: dimension.type === 'metric',
+        highlighted: highlightedIndex === index,
+      }" @click="selectDimension(dimension)" @mouseenter="(event) => {
+          showTooltip(event, dimension)
+          setHighlightedIndex(index)
+        }" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition($event)">
+        <div class="dimension-icon" :class="getIconClass(dimension)" :title="getIconTooltip(dimension)">
           <i v-if="getIconType(dimension) === 'mdi'" :class="getIconMdiClass(dimension)"></i>
           <template v-else>{{ getDimensionChar(dimension) }}</template>
         </div>
@@ -91,17 +61,10 @@
     </div>
 
     <!-- Custom Tooltip -->
-    <div
-      v-if="tooltip.visible"
-      class="custom-tooltip"
-      :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
-    >
+    <div v-if="tooltip.visible" class="custom-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
       <div class="tooltip-header">
         <div class="tooltip-icon" :class="getIconClass(tooltip.dimension)">
-          <i
-            v-if="getIconType(tooltip.dimension) === 'mdi'"
-            :class="getIconMdiClass(tooltip.dimension)"
-          ></i>
+          <i v-if="getIconType(tooltip.dimension) === 'mdi'" :class="getIconMdiClass(tooltip.dimension)"></i>
           <template v-else>{{ getDimensionChar(tooltip.dimension) }}</template>
         </div>
         <div class="tooltip-title">{{ tooltip.dimension.label }}</div>
@@ -120,10 +83,8 @@
           </span>
         </div>
 
-        <div
-          v-if="tooltip.dimension.description && tooltip.dimension.description.trim()"
-          class="tooltip-row description-row"
-        >
+        <div v-if="tooltip.dimension.description && tooltip.dimension.description.trim()"
+          class="tooltip-row description-row">
           <span class="tooltip-label">Description:</span>
           <div class="tooltip-value description-value">{{ tooltip.dimension.description }}</div>
         </div>
