@@ -8,7 +8,17 @@
           ref="editorElement" 
           :style="dialogStyle"
         >
-          <h2>{{ currentItem.title }}</h2>
+          <div class="modal-header">
+            <h2>{{ currentItem.title }}</h2>
+            <button 
+              @click="skipSequence" 
+              class="exit-button"
+              data-testid="exit-modal"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+          </div>
           <div class="modal-content">
             <p>{{ currentItem.content }}</p>
           </div>
@@ -142,10 +152,48 @@ watch(() => props.activeItems, () => {
 
 <style scoped>
 /* Using global variables from style.css */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
 h2 {
   font-size: var(--big-font-size);
-  margin-top: 0;
+  margin: 0;
   color: var(--text-color);
+  flex: 1;
+}
+
+.exit-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-color);
+  opacity: 0.6;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.exit-button:hover {
+  opacity: 1;
+  background-color: var(--border-light);
+}
+
+.exit-button:focus {
+  outline: 2px solid var(--special-text);
+  outline-offset: 2px;
 }
 
 .modal-content {
