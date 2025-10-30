@@ -62,6 +62,7 @@ function getDefaultDimensions() {
 export function useResizableDialog(
   onCancel: () => void,
   options: ResizableDialogOptions = {},
+  referenceElement?: Ref<HTMLElement | null>
 ): ResizableDialogReturn {
   const { initialWidth, initialHeight, minWidth = 400, minHeight = 200 } = options
 
@@ -203,7 +204,7 @@ export function useResizableDialog(
    * Handle clicks outside the dialog
    */
   function handleClickOutside(event: MouseEvent): void {
-    const popupElement = document.querySelector('.content-editor')
+    const popupElement = editorElement.value
     if (!popupElement || !canCloseOnClickOutside.value) return
 
     if (isResizing.value) return
