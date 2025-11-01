@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('test', async ({ page, isMobile, browserName }) => {
-  await page.goto('http://localhost:5173/trilogy-studio-core/')
+  await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   await page.getByTestId('tutorial-button').click()
   await page.getByTestId('community-model-search').click()
   await page.getByRole('textbox', { name: 'Search by model name...' }).fill('demo-model')

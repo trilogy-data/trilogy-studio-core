@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('test', async ({ page, isMobile }) => {
-  await page.goto('http://localhost:5173/trilogy-studio-core/')
+  await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }

@@ -7,6 +7,7 @@ export interface UserSettings {
   trilogyResolver: string
   telemetryEnabled: boolean | null
   tipsRead: string[]
+  skipAllTips: boolean
   [key: string]: string | boolean | number | null | undefined | string[]
 }
 
@@ -19,6 +20,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       trilogyResolver: '',
       telemetryEnabled: null,
       tipsRead: [] as string[],
+      skipAllTips:false
     } as UserSettings,
     defaults: {
       theme: 'dark',
@@ -52,6 +54,12 @@ export const useUserSettingsStore = defineStore('userSettings', {
     },
 
     getUnreadTips(tips: ModalItem[]) {
+      if (this.settings.skipAllTips) {
+        return []
+      }
+      if (!this.settings.tipsRead) {
+        this.settings.tipsRead = []
+      }
       return tips.filter((tip) => !this.settings.tipsRead.includes(tip.id))
     },
     clearDismissedTips() {

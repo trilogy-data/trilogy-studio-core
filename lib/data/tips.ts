@@ -96,14 +96,14 @@ export const dashboardTips: ModalItem[] = [
     id: 'dashboard-intro',
     title: 'Dashboard',
     content:
-      'Dashboards are collections of Trilogy queries off a common source file. They natively support cross-filtering, drilldown, global filtering, and other interactivity. Click or drag on charts to filter. They are designed to be lightweight, customizable, and interactive.',
+      'Welcome to a dashboard - a way of interactively exploring visualized data and markup. It natively support cross-filtering, drilldown, global filtering, and other interactivity. Click or drag on charts to filter. They are designed to be lightweight, customizable, and interactive. You can close these tips in the top right if you know what you\'re doing!',
     category: 'dashboard',
   },
   {
     id: 'dashboard-full-screen',
     title: 'Full Screen',
     content:
-      'Dashboards can be full-screen for viewing or editable. Use the button in the top right to toggle between modes.',
+      'Dashboards can be full-screen for viewing and analysis or in edit mode, which will allow you to modify the layout and content. Use the button in the top right to toggle between modes.',
     category: 'dashboard',
     highlightDataTestId: 'toggle-edit-mode-button',
   },
@@ -111,7 +111,7 @@ export const dashboardTips: ModalItem[] = [
     id: 'dashboard-add-item',
     title: 'Add Dashboard Item',
     content:
-      'Use the add item button in the top left to add new charts, tables, markdown blocks, or filters to your dashboard.',
+      'Use the add item button in the top left to add new charts, tables, markdown blocks, or filters to your dashboard. You will need to be in edit mode to see it.',
     category: 'dashboard',
     highlightDataTestId: 'add-item-button',
   },

@@ -303,8 +303,12 @@ const createNavigationStore = (): NavigationStore => {
         // if full screen, only show dashboard tips
         if (state.fullScreen.value) {
           baseTips = []
+
         }
-        baseTips = baseTips.concat(userSettingsStore.getUnreadTips(dashboardTips))
+        else {
+          baseTips = baseTips.concat(userSettingsStore.getUnreadTips(dashboardTips))
+        }
+
       } else if (tabInfo.screen === 'connections') {
         state.activeConnectionKey.value = tabInfo.address
       } else if (tabInfo.screen === 'llms') {
@@ -313,6 +317,8 @@ const createNavigationStore = (): NavigationStore => {
         state.activeDocumentationKey.value = tabInfo.address
       } else if (tabInfo.screen === 'models') {
         state.activeModelKey.value = tabInfo.address
+      } else if (tabInfo.screen === 'dashboard-import') {
+        baseTips = []
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
         baseTips = baseTips.concat(userSettingsStore.getUnreadTips(communityTips))
@@ -416,10 +422,17 @@ const createNavigationStore = (): NavigationStore => {
     const connectionType = state.connectionImport.value
     let sidebarScreen: ScreenType = 'editors'
     let isImport = false
+    if (getDefaultValueFromHash('skipTips', '') === 'true') {
+      userSettingsStore.updateSetting('skipAllTips', true)
+      console.log('Skipping tips as per URL parameter')
+    }
+
     if (importUrl && connectionType) {
       openTab('dashboard-import', null, 'dashboard-import')
       isImport = true
     }
+
+
     if (state.activeEditor.value && !isImport) {
       sidebarScreen = 'editors'
       openTab('editors', null, state.activeEditor.value)
@@ -456,6 +469,7 @@ const createNavigationStore = (): NavigationStore => {
       sidebarScreen = 'profile'
       openTab('profile', 'Profile', 'profile')
     }
+
 
     setActiveSidebarScreen(sidebarScreen)
   }
