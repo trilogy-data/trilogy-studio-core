@@ -141,6 +141,77 @@ function handleToggleEditMode() {
     triggerResize()
   })
 }
+
+// Mobile navigation scroll functions
+function scrollToTop() {
+  const container = document.getElementById('page-content')
+  if (container) {
+    container.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+function scrollToBottom() {
+  const container = document.getElementById('page-content')
+  if (container) {
+    console.log('Scrolling to bottom')
+    console.log('Container scrollHeight:', container.scrollHeight)
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+  }
+}
+
+function scrollUpOne() {
+  const container = document.getElementById('page-content')
+  if (!container) return
+
+  const currentScrollTop = container.scrollTop
+  const items = container.querySelectorAll('.mobile-item')
+  
+  // Find the current item that's mostly visible
+  let targetItem = null
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i] as HTMLElement
+    const itemTop = item.offsetTop
+    
+    if (itemTop < currentScrollTop) {
+      targetItem = item
+      break
+    }
+  }
+  
+  if (targetItem) {
+    container.scrollTo({ 
+      top: targetItem.offsetTop - 15, // Account for gap
+      behavior: 'smooth' 
+    })
+  }
+}
+
+function scrollDownOne() {
+  const container = document.getElementById('page-content')
+  if (!container) return
+
+  const currentScrollTop = container.scrollTop
+  const items = container.querySelectorAll('.mobile-item')
+  
+  // Find the next item below the current viewport
+  let targetItem = null
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i] as HTMLElement
+    const itemTop = item.offsetTop
+    
+    if (itemTop > currentScrollTop + 50) { // Small offset to ensure we move to next item
+      targetItem = item
+      break
+    }
+  }
+  
+  if (targetItem) {
+    container.scrollTo({ 
+      top: targetItem.offsetTop - 15, // Account for gap
+      behavior: 'smooth' 
+    })
+  }
+}
 </script>
 
 <template>
@@ -211,6 +282,22 @@ function handleToggleEditMode() {
       </div>
     </div>
 
+    <!-- Mobile Navigation Bar -->
+    <div class="mobile-nav-bar" v-if="sortedLayout.length > 0">
+      <button @click="scrollToTop" class="nav-btn" title="Scroll to top">
+        <i class="mdi mdi-chevron-double-up"></i>
+      </button>
+      <button @click="scrollUpOne" class="nav-btn" title="Previous item">
+        <i class="mdi mdi-chevron-up"></i>
+      </button>
+      <button @click="scrollDownOne" class="nav-btn" title="Next item">
+        <i class="mdi mdi-chevron-down"></i>
+      </button>
+      <button @click="scrollToBottom" class="nav-btn" title="Scroll to bottom">
+        <i class="mdi mdi-chevron-double-down"></i>
+      </button>
+    </div>
+
     <!-- Add Item Modal -->
     <DashboardAddItemModal
       :show="showAddItemModal"
@@ -269,6 +356,7 @@ function handleToggleEditMode() {
   color: var(--text-color);
   background-color: var(--bg-color);
   overflow: hidden;
+  position: relative;
 }
 
 .mobile-container {
@@ -279,13 +367,58 @@ function handleToggleEditMode() {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  padding-bottom: 80px;
+  padding-bottom: 80px; /* Space for navigation bar */
 }
 
 .mobile-item {
   width: 100%;
   background: var(--result-window-bg);
   position: relative;
+}
+
+.mobile-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--result-window-bg);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-btn {
+  background: var(--button-bg, var(--bg-color));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 20px;
+}
+
+.nav-btn:hover {
+  background: var(--button-hover-bg, var(--highlight-color));
+  transform: translateY(-1px);
+}
+
+.nav-btn:active {
+  transform: translateY(0);
+  background: var(--button-active-bg, var(--accent-color));
+}
+
+.nav-btn i {
+  line-height: 1;
 }
 
 .dashboard-not-found {
@@ -313,5 +446,19 @@ function handleToggleEditMode() {
   justify-content: center;
   padding: 20px;
   flex: 1;
+}
+
+/* Add responsive touch target sizing */
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 10px 12px;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 18px;
+  }
+  
+  .mobile-nav-bar {
+    padding: 6px;
+  }
 }
 </style>
