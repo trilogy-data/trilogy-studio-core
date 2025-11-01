@@ -295,7 +295,7 @@ function scrollDownOne() {
     </div>
 
     <!-- Mobile Navigation Bar -->
-    <div class="mobile-nav-bar" v-if="sortedLayout.length > 0">
+    <div class="mobile-nav-bar" v-if="sortedLayout.length > 1">
       <button @click="scrollToTop" class="nav-btn" title="Scroll to top">
         <i class="mdi mdi-chevron-double-up"></i>
       </button>

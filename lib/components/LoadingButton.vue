@@ -55,7 +55,7 @@ export default {
     Tooltip,
   },
   setup(props) {
-    const isLoading = ref(true)
+    const isLoading = ref(false)
     const errorMessage = ref<string | null>(null)
     const status = ref<'success' | 'error' | null>(null)
     const keysPressed = new Set<string>()
