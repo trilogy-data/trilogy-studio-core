@@ -4,6 +4,7 @@
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"
+    :data-testid="`${testId}`"
   >
     <span :class="{ 'hidden-text': isLoading }">
       <slot></slot>

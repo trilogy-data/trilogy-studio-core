@@ -81,7 +81,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="import-selector">
+  <div class="import-selector" data-testid="dashboard-import-wrapper">
     <div class="import-selector-header" @click="toggleDropdown">
       <div
         class="import-summary"

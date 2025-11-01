@@ -1,7 +1,8 @@
 import { ref, type Ref } from 'vue'
 import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
-import { useEditorStore, useDashboardStore } from '.'
+import { useEditorStore, useDashboardStore, useUserSettingsStore } from '.'
 import { lastSegment } from '../data/constants'
+import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
 
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
@@ -19,6 +20,7 @@ type ScreenType =
   | ''
 
 interface NavigationState {
+  fullScreen: Ref<boolean>
   activeScreen: Ref<ScreenType>
   activeSidebarScreen: Ref<ScreenType>
   activeEditor: Ref<string>
@@ -34,6 +36,8 @@ interface NavigationState {
   initialSearch: Ref<string>
   tabs: Ref<Tab[]>
   activeTab: Ref<string | null>
+  showTipModal: Ref<boolean>
+  displayedTips: Ref<ModalItem[]>
 }
 
 export interface Tab {
@@ -47,6 +51,7 @@ export interface Tab {
 }
 
 export interface NavigationStore {
+  readonly fullScreen: Ref<boolean>
   readonly activeScreen: Ref<string>
   readonly activeSidebarScreen: Ref<string>
   readonly activeEditor: Ref<string>
@@ -60,9 +65,11 @@ export interface NavigationStore {
   readonly connectionImport: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
   readonly initialSearch: Ref<string>
+  readonly showTipModal: Ref<boolean>
 
   readonly tabs: Ref<Tab[]>
   readonly activeTab: Ref<string | null>
+  readonly displayedTips: Ref<ModalItem[]>
   setActiveTab(tabId: string): void
   setActiveScreen(screen: ScreenType): void
   setActiveSidebarScreen(screen: ScreenType): void
@@ -75,6 +82,7 @@ export interface NavigationStore {
 
   setActiveLLMConnectionKey(llmConnection: string | null): void
   toggleMobileMenu(): void
+  toggleFullScreen(s: boolean): void
   updateTabName(screen: ScreenType, title: string | null, address: string): void
   openTab(screen: ScreenType, title: string | null, address: string): void
   closeTab(tabId: string | null, address: string | null): void
@@ -86,6 +94,7 @@ export interface NavigationStore {
 const createNavigationStore = (): NavigationStore => {
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
+  const userSettingsStore = useUserSettingsStore()
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
     activeSidebarScreen: ref(
@@ -105,6 +114,9 @@ const createNavigationStore = (): NavigationStore => {
     initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
     tabs: ref<Tab[]>([]),
     activeTab: ref<string | null>(null),
+    showTipModal: ref(true),
+    displayedTips: ref<ModalItem[]>([]),
+    fullScreen: ref(false),
   }
 
   const getName = (screen: ScreenType, title: string | null, address: string): string => {
@@ -188,6 +200,7 @@ const createNavigationStore = (): NavigationStore => {
         }
       }
     }
+    cleanupActiveKeys()
   }
 
   const closeOtherTabsExcept = (tabId: string): void => {
@@ -203,6 +216,47 @@ const createNavigationStore = (): NavigationStore => {
         // No tabs remain, inject welcome tab and make it active
         openTab('welcome', 'Welcome', 'welcome')
       }
+    }
+    cleanupActiveKeys()
+  }
+
+  const cleanupActiveKeys = (): void => {
+    let activeKeys = state.tabs.value.map((tab) => tab.screen)
+    if (!activeKeys.includes('editors')) {
+      state.activeEditor.value = ''
+      removeHashFromUrl('editors')
+      removeHashFromUrl('activeEditorTabs')
+    }
+    if (!activeKeys.includes('dashboard')) {
+      state.activeDashboard.value = ''
+      removeHashFromUrl('dashboard')
+    }
+    if (!activeKeys.includes('connections')) {
+      state.activeConnectionKey.value = ''
+      removeHashFromUrl('connections')
+    }
+    if (!activeKeys.includes('models')) {
+      state.activeModelKey.value = ''
+      removeHashFromUrl('model')
+    }
+    if (!activeKeys.includes('community-models')) {
+      state.activeCommunityModelKey.value = ''
+      removeHashFromUrl('community-models')
+    }
+    if (!activeKeys.includes('tutorial')) {
+      state.activeDocumentationKey.value = ''
+      removeHashFromUrl('docs')
+    }
+    if (!activeKeys.includes('llms')) {
+      state.activeLLMConnectionKey.value = ''
+      removeHashFromUrl('llms')
+    }
+    if (!activeKeys.includes('settings')) {
+      removeHashFromUrl('sidebarScreen')
+      removeHashFromUrl('settings')
+    }
+    if (!activeKeys.includes('profile')) {
+      removeHashFromUrl('sidebarScreen')
     }
   }
 
@@ -225,6 +279,7 @@ const createNavigationStore = (): NavigationStore => {
         }
       }
     }
+    cleanupActiveKeys()
   }
 
   const setActiveTab = (tabId: string): void => {
@@ -233,6 +288,7 @@ const createNavigationStore = (): NavigationStore => {
     if (tabInfo) {
       state.activeTab.value = tabId
       setActiveScreen(tabInfo.screen)
+      let baseTips: ModalItem[] = userSettingsStore.getUnreadTips(tips)
       if (tabInfo.address) {
         pushHashToUrl(tabInfo.screen, tabInfo.address)
       }
@@ -240,9 +296,15 @@ const createNavigationStore = (): NavigationStore => {
       if (tabInfo.screen === 'editors') {
         state.activeEditor.value = tabInfo.address
         editorStore.activeEditorId = tabInfo.address
+        baseTips = baseTips.concat(userSettingsStore.getUnreadTips(editorTips))
       } else if (tabInfo.screen === 'dashboard') {
         state.activeDashboard.value = tabInfo.address
         dashboardStore.activeDashboardId = tabInfo.address
+        // if full screen, only show dashboard tips
+        if (state.fullScreen.value) {
+          baseTips = []
+        }
+        baseTips = baseTips.concat(userSettingsStore.getUnreadTips(dashboardTips))
       } else if (tabInfo.screen === 'connections') {
         state.activeConnectionKey.value = tabInfo.address
       } else if (tabInfo.screen === 'llms') {
@@ -253,8 +315,11 @@ const createNavigationStore = (): NavigationStore => {
         state.activeModelKey.value = tabInfo.address
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
+        baseTips = baseTips.concat(userSettingsStore.getUnreadTips(communityTips))
       }
       state.mobileMenuOpen.value = false
+      state.displayedTips.value = baseTips
+      state.showTipModal.value = baseTips.length > 0
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {
@@ -340,6 +405,10 @@ const createNavigationStore = (): NavigationStore => {
 
   const toggleMobileMenu = (): void => {
     state.mobileMenuOpen.value = !state.mobileMenuOpen.value
+  }
+
+  const toggleFullScreen = (value: boolean): void => {
+    state.fullScreen.value = value
   }
 
   const onInitialLoad = (): void => {
@@ -438,6 +507,15 @@ const createNavigationStore = (): NavigationStore => {
     get activeTab() {
       return state.activeTab
     },
+    get showTipModal() {
+      return state.showTipModal
+    },
+    get displayedTips() {
+      return state.displayedTips
+    },
+    get fullScreen() {
+      return state.fullScreen
+    },
     setActiveScreen,
     setActiveSidebarScreen,
     setActiveEditor,
@@ -455,6 +533,7 @@ const createNavigationStore = (): NavigationStore => {
     closeOtherTabsExcept,
     closeTabsToRightOf,
     onInitialLoad,
+    toggleFullScreen,
   }
 }
 

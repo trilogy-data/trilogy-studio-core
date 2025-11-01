@@ -3,15 +3,11 @@
     <!-- Generic modal dialog -->
     <teleport to="body" v-if="showModal && currentItem">
       <div class="confirmation-overlay">
-        <div 
-          class="confirmation-dialog" 
-          ref="editorElement" 
-          :style="dialogStyle"
-        >
+        <div class="confirmation-dialog" ref="editorElement" :style="dialogStyle">
           <div class="modal-header">
             <h2>{{ currentItem.title }}</h2>
-            <button 
-              @click="skipSequence" 
+            <button
+              @click="skipSequence"
               class="exit-button"
               data-testid="exit-modal"
               aria-label="Close modal"
@@ -28,12 +24,7 @@
             </span>
           </div>
           <div class="button-container">
-            <button
-              v-if="hasNext"
-              @click="nextItem"
-              class="primary-button"
-              data-testid="next-item"
-            >
+            <button v-if="hasNext" @click="nextItem" class="primary-button" data-testid="next-item">
               Next →
             </button>
             <button
@@ -46,7 +37,7 @@
             </button>
             <button @click="skipSequence" class="cancel-btn">Skip</button>
           </div>
-          
+
           <!-- Resize handles -->
           <ResizeHandles :onStartResize="startResize" />
         </div>
@@ -56,16 +47,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import ResizeHandles from '../composables/ResizeHandles.vue' // Adjust path as needed
 import { useResizableDialog } from '../composables/useResizableDialog' // Adjust path as needed
-
-// Modal item interface
-export interface ModalItem {
-  id: string
-  title: string
-  content: string
-}
+import type { ModalItem } from '../data/tips'
 
 // Define props
 const props = defineProps({
@@ -88,23 +73,27 @@ const props = defineProps({
 })
 
 // Define emits
-const emit = defineEmits([
-  'mark-item-read',
-  'close-modal',
-])
+const emit = defineEmits(['mark-item-read', 'close-modal'])
 
 // Local state
 const currentIndex = ref(0)
+const highlightedElement = ref<HTMLElement | null>(null)
+
+// Highlighting retry mechanism state
+const activeHighlightAttempt = ref<string | null>(null)
+const highlightRetryCount = ref(0)
+const maxHighlightRetries = 50 // Maximum number of retries
+const retryInterval = 100 // Retry every 100ms
 
 // Use the resizable dialog composable
-const { editorElement, dialogStyle, startResize } = useResizableDialog(
+const { editorElement, dialogStyle, startResize, canCloseOnClickOutside } = useResizableDialog(
   () => emit('close-modal'),
   {
     initialWidth: props.initialWidth,
     initialHeight: props.initialHeight,
     minWidth: 400,
     minHeight: 300,
-  }
+  },
 )
 
 // Computed properties
@@ -117,15 +106,140 @@ const hasNext = computed(() => {
   return currentIndex.value < props.activeItems.length - 1
 })
 
+const removeGlobalCSS = () => {
+  const existingLink = document.getElementById('tutorial-highlight-styles')
+  if (existingLink) {
+    existingLink.remove()
+  }
+}
+
+// Highlighting functionality with retry mechanism
+const highlightElement = async (dataTestId: string) => {
+  await nextTick() // Ensure DOM is updated
+
+  // Set the active attempt to track this highlighting request
+  activeHighlightAttempt.value = dataTestId
+  highlightRetryCount.value = 0
+
+  // Start the retry loop
+  attemptHighlight(dataTestId)
+}
+
+const attemptHighlight = async (dataTestId: string) => {
+  // Check if this attempt is still active (modal hasn't changed/closed)
+  if (activeHighlightAttempt.value !== dataTestId || !props.showModal) {
+    return
+  }
+
+  // Find the element with the specified data-testid
+  const element = document.querySelector(`[data-testid="${dataTestId}"]`) as HTMLElement
+
+  if (element) {
+    // Element found! Proceed with highlighting
+    await performHighlight(element, dataTestId)
+    return
+  }
+
+  // Element not found, check if we should retry
+  highlightRetryCount.value++
+
+  if (highlightRetryCount.value >= maxHighlightRetries) {
+    console.warn(
+      `Element with data-testid="${dataTestId}" not found after ${maxHighlightRetries} attempts`,
+    )
+    activeHighlightAttempt.value = null
+    return
+  }
+
+  // Schedule next retry
+  setTimeout(() => {
+    attemptHighlight(dataTestId)
+  }, retryInterval)
+}
+
+const performHighlight = async (element: HTMLElement, dataTestId: string) => {
+  // Double-check this attempt is still active
+  if (activeHighlightAttempt.value !== dataTestId || !props.showModal) {
+    return
+  }
+
+  // Remove previous highlighting
+  clearHighlight()
+
+  // Temporarily disable click-outside detection
+  const originalCanClose = canCloseOnClickOutside?.value
+  if (canCloseOnClickOutside) {
+    canCloseOnClickOutside.value = false
+  }
+
+  // Add highlight classes
+  element.classList.add(
+    'tutorial-highlight',
+    'tutorial-highlight-transition',
+    'tutorial-scroll-target',
+  )
+
+  // Determine arrow position based on element's position
+  const rect = element.getBoundingClientRect()
+
+  if (rect.top < 100) {
+    element.classList.add('arrow-bottom')
+  }
+
+  // Scroll element into view smoothly
+  element.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+    inline: 'nearest',
+  })
+
+  highlightedElement.value = element
+  activeHighlightAttempt.value = null // Clear the active attempt
+
+  // Re-enable click-outside detection after scroll animation completes
+  setTimeout(() => {
+    if (canCloseOnClickOutside) {
+      canCloseOnClickOutside.value = originalCanClose ?? true
+    }
+  }, 1000) // Adjust timing based on your scroll animation duration
+}
+
+const clearHighlight = () => {
+  // Cancel any active highlighting attempts
+  activeHighlightAttempt.value = null
+
+  if (highlightedElement.value) {
+    highlightedElement.value.classList.remove(
+      'tutorial-highlight',
+      'tutorial-highlight-transition',
+      'tutorial-scroll-target',
+      'arrow-bottom',
+    )
+    highlightedElement.value = null
+  }
+
+  // Clear any other highlighted elements (safety cleanup)
+  const highlightedElements = document.querySelectorAll('.tutorial-highlight')
+  highlightedElements.forEach((el) => {
+    el.classList.remove(
+      'tutorial-highlight',
+      'tutorial-highlight-transition',
+      'tutorial-scroll-target',
+      'arrow-bottom',
+    )
+  })
+}
+
 // Methods
-const nextItem = () => {
+const nextItem = async () => {
   if (currentItem.value) {
     // Mark current item as read
     emit('mark-item-read', currentItem.value.id)
   }
-  
+
   if (hasNext.value) {
     currentIndex.value++
+    // Highlighting will be handled by the watcher
   } else {
     // This shouldn't happen, but close if it does
     emit('close-modal')
@@ -141,17 +255,83 @@ const completeSequence = () => {
 }
 
 const skipSequence = () => {
+  if (currentItem.value) {
+    // Mark current item as read
+    emit('mark-item-read', currentItem.value.id)
+  }
   emit('close-modal')
 }
 
+// Watchers
 // Reset index when items change
-watch(() => props.activeItems, () => {
-  currentIndex.value = 0
+watch(
+  () => props.activeItems,
+  () => {
+    currentIndex.value = 0
+  },
+)
+
+// Handle highlighting when current item changes
+watch(
+  currentItem,
+  async (newItem) => {
+    if (newItem?.highlightDataTestId) {
+      await highlightElement(newItem.highlightDataTestId)
+    } else {
+      clearHighlight()
+    }
+  },
+  { immediate: true },
+)
+
+// Handle modal visibility changes
+watch(
+  () => props.showModal,
+  (isVisible) => {
+    if (isVisible) {
+      // Highlight current item if it has a testId
+      if (currentItem.value?.highlightDataTestId) {
+        nextTick(() => {
+          highlightElement(currentItem.value!.highlightDataTestId!)
+        })
+      }
+    } else {
+      clearHighlight()
+      // Don't remove CSS immediately to allow for smooth transitions
+      setTimeout(() => {
+        if (!props.showModal) {
+          removeGlobalCSS()
+        }
+      }, 300)
+    }
+  },
+)
+
+// Lifecycle hooks
+onMounted(() => {})
+
+onUnmounted(() => {
+  clearHighlight()
+  removeGlobalCSS()
+})
+
+// Handle escape key
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && props.showModal) {
+    skipSequence()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleEscapeKey)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscapeKey)
 })
 </script>
 
 <style scoped>
-/* Using global variables from style.css */
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -251,17 +431,6 @@ h2 {
 
 .cancel-btn:hover {
   background-color: var(--border-light);
-}
-
-/* Updated overlay and dialog styles for resizable functionality */
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
 }
 
 .confirmation-dialog {

@@ -1,27 +1,54 @@
 <template>
   <div class="main">
-    <PopupModal v-if="showPopupModal" title="Tips" :showModal="showPopupModal" :activeItems="popupContent"
-      @mark-item-read="(id) => { markTipRead(id) }" @close-modal="() => { showPopupModal = false }" />
+    <PopupModal
+      v-if="showTipModal"
+      title="Tips"
+      :showModal="showTipModal"
+      :activeItems="displayedTips"
+      @mark-item-read="
+        (id) => {
+          markTipRead(id)
+        }
+      "
+      @close-modal="
+        () => {
+          showTipModal = false
+        }
+      "
+    />
     <!-- Full screen mode - no sidebar -->
-    <div v-if="isFullScreen" class="full-screen-container">
+    <div v-if="fullScreen" class="full-screen-container">
       <template v-if="activeScreen === 'dashboard'">
         <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'dashboard-import'">
-        <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
+        <dashboard-auto-importer
+          @import-complete="handleImportComplete"
+          @full-screen="toggleFullScreen"
+        />
       </template>
     </div>
 
     <!-- Normal mode with sidebar -->
     <sidebar-layout v-else>
       <template #sidebar="{ containerWidth }">
-        <sidebar @editor-selected="setActiveEditor" @screen-selected="setActiveSidebarScreen"
-          @save-editors="saveEditorsCall" @model-key-selected="setActiveModelKey"
-          @documentation-key-selected="setActiveDocumentationKey" @connection-key-selected="setActiveConnectionKey"
-          @llm-key-selected="setActiveLLMConnectionKey" @dashboard-key-selected="setActiveDashboard"
-          :active="activeSidebarScreen" :activeEditor="activeEditor" :activeDocumentationKey="activeDocumentationKey"
-          :activeModelKey="activeModelKey" :activeConnectionKey="activeConnectionKey" :containerWidth="containerWidth"
-          :activeDashboardKey="activeDashboard" />
+        <sidebar
+          @editor-selected="setActiveEditor"
+          @screen-selected="setActiveSidebarScreen"
+          @save-editors="saveEditorsCall"
+          @model-key-selected="setActiveModelKey"
+          @documentation-key-selected="setActiveDocumentationKey"
+          @connection-key-selected="setActiveConnectionKey"
+          @llm-key-selected="setActiveLLMConnectionKey"
+          @dashboard-key-selected="setActiveDashboard"
+          :active="activeSidebarScreen"
+          :activeEditor="activeEditor"
+          :activeDocumentationKey="activeDocumentationKey"
+          :activeModelKey="activeModelKey"
+          :activeConnectionKey="activeConnectionKey"
+          :containerWidth="containerWidth"
+          :activeDashboardKey="activeDashboard"
+        />
       </template>
       <template v-if="showingCredentialPrompt">
         <CredentialBackgroundPage />
@@ -30,21 +57,41 @@
         <template v-if="activeScreen && ['editors'].includes(activeScreen)">
           <vertical-split-layout>
             <template #editor="{ containerHeight }" v-if="activeEditor && activeEditorData">
-              <editor v-if="activeEditorData.type == 'preql'" context="main-trilogy" :editorId="activeEditor"
-                :containerHeight="containerHeight" @save-editors="saveEditorsCall" @save-models="saveModelsCall"
-                ref="editorRef" />
-              <editor v-else context="main-sql" :containerHeight="containerHeight" :editorId="activeEditor"
-                @save-editors="saveEditorsCall" ref="editorRef" />
+              <editor
+                v-if="activeEditorData.type == 'preql'"
+                context="main-trilogy"
+                :editorId="activeEditor"
+                :containerHeight="containerHeight"
+                @save-editors="saveEditorsCall"
+                @save-models="saveModelsCall"
+                ref="editorRef"
+              />
+              <editor
+                v-else
+                context="main-sql"
+                :containerHeight="containerHeight"
+                :editorId="activeEditor"
+                @save-editors="saveEditorsCall"
+                ref="editorRef"
+              />
             </template>
             <template #results="{ containerHeight }" v-if="activeEditorData">
-              <ResultsView :editorData="activeEditorData" :containerHeight="containerHeight"
-                @llm-query-accepted="runQuery" @refresh-click="runQuery" @drilldown-click="drilldownClick">
+              <ResultsView
+                :editorData="activeEditorData"
+                :containerHeight="containerHeight"
+                @llm-query-accepted="runQuery"
+                @refresh-click="runQuery"
+                @drilldown-click="drilldownClick"
+              >
               </ResultsView>
             </template>
           </vertical-split-layout>
         </template>
         <template v-else-if="activeScreen === 'connections'">
-          <connection-view :activeConnectionKey="activeConnectionKey" @save-editors="saveEditorsCall" />
+          <connection-view
+            :activeConnectionKey="activeConnectionKey"
+            @save-editors="saveEditorsCall"
+          />
         </template>
         <template v-else-if="activeScreen === 'tutorial'">
           <tutorial-page :activeDocumentationKey="activeDocumentationKey" />
@@ -62,7 +109,10 @@
           <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
         </template>
         <template v-else-if="activeScreen === 'dashboard-import'">
-          <dashboard-auto-importer @import-complete="handleImportComplete" @full-screen="toggleFullScreen" />
+          <dashboard-auto-importer
+            @import-complete="handleImportComplete"
+            @full-screen="toggleFullScreen"
+          />
         </template>
         <template v-else-if="activeScreen === 'community-models'">
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
@@ -71,8 +121,12 @@
           <LLMView />
         </template>
         <template v-else>
-          <welcome-page @screen-selected="setActiveScreen" @sidebar-screen-selected="setActiveSidebarScreen"
-            @demo-started="startDemo" @documentation-key-selected="setActiveDocumentationKey" />
+          <welcome-page
+            @screen-selected="setActiveScreen"
+            @sidebar-screen-selected="setActiveSidebarScreen"
+            @demo-started="startDemo"
+            @documentation-key-selected="setActiveDocumentationKey"
+          />
         </template>
       </TabbedBrowser>
     </sidebar-layout>
@@ -200,7 +254,7 @@ import { inject, ref, defineAsyncComponent, provide } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
-import type { ModelConfigStoreType, } from '../stores/modelStore.ts'
+import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
@@ -216,14 +270,11 @@ const Dashboard = defineAsyncComponent(() => import('../components/dashboard/Das
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
-
 export default {
   name: 'IDEComponent',
   data() {
     return {
       activeTab: 'results',
-      showPopupModal: true,
-
     }
   },
   //add an argument for if the credential prompt is up
@@ -259,7 +310,6 @@ export default {
   setup() {
     // Create a ref for the editor component
     const editorRef = ref<typeof Editor | null>(null)
-    const isFullScreen = ref(false)
     type ResolverType = typeof TrilogyResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -292,7 +342,7 @@ export default {
       )
     }
     if (!saveEditors) {
-      saveEditors = () => { }
+      saveEditors = () => {}
     }
 
     const screenNavigation = useScreenNavigation()
@@ -316,13 +366,16 @@ export default {
       setActiveLLMConnectionKey,
       setActiveDashboard,
       onInitialLoad,
+      showTipModal,
+      displayedTips,
+      fullScreen,
+      toggleFullScreen,
     } = screenNavigation
 
     onInitialLoad()
 
     provide('navigationStore', screenNavigation)
 
-    const popupContent = userSettingsStore.getUnreadTips()
     const markTipRead = userSettingsStore.markTipRead
 
     return {
@@ -355,10 +408,11 @@ export default {
       activeDashboard,
       setActiveDashboard,
       editorRef,
-      popupContent,
-      isFullScreen,
-      markTipRead
-
+      displayedTips,
+      fullScreen,
+      markTipRead,
+      showTipModal,
+      toggleFullScreen,
     }
   },
   methods: {
@@ -377,9 +431,6 @@ export default {
       if (this.editorRef) {
         this.editorRef.drilldownQuery(e.remove, e.add, e.filter)
       }
-    },
-    toggleFullScreen(status: boolean) {
-      this.isFullScreen = status
     },
     async startDemo() {
       let editor = await setupDemo(

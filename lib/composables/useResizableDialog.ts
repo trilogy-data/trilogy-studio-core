@@ -62,7 +62,6 @@ function getDefaultDimensions() {
 export function useResizableDialog(
   onCancel: () => void,
   options: ResizableDialogOptions = {},
-  referenceElement?: Ref<HTMLElement | null>
 ): ResizableDialogReturn {
   const { initialWidth, initialHeight, minWidth = 400, minHeight = 200 } = options
 

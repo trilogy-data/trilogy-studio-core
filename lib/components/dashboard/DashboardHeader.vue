@@ -157,7 +157,7 @@ function handleRefresh() {
       </div>
 
       <div class="dashboard-right-controls">
-        <div class="connection-selector">
+        <div class="connection-selector" data-testid="connection-selector-wrapper">
           <div class="select-wrapper">
             <i class="mdi mdi-database-outline select-icon"></i>
             <select

@@ -377,6 +377,13 @@ export const determineDefaultConfig = (
         defaults.colorField = numericColumns[0].name
       }
     }
+    // if we have a non-used categorical column, use it for default
+    const nonAssignedCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.colorField && col.name !== defaults.xField && col.name !== defaults.yField
+    ) 
+    if (nonAssignedCategorical.length > 0 && !defaults.annotationField) {
+      defaults.annotationField = nonAssignedCategorical[0].name
+    }
   }
 
   return defaults

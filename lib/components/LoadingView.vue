@@ -1,7 +1,9 @@
 <template>
   <div class="loading-container" ref="containerRef">
     <template v-if="isCompact">
-      <p class="display-text"><img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})</p>
+      <p class="display-text">
+        <img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})
+      </p>
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </template>
     <template v-else>
