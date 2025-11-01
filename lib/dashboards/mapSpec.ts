@@ -61,6 +61,60 @@ const US_STATE_MAPPINGS = [
   { id: 56, abbr: 'WY' },
 ]
 
+const US_STATE_MAPPINGS_LONG = [
+  { id: 1, name: 'Alabama' },
+  { id: 2, name: 'Alaska' },
+  { id: 4, name: 'Arizona' },
+  { id: 5, name: 'Arkansas' },
+  { id: 6, name: 'California' },
+  { id: 8, name: 'Colorado' },
+  { id: 9, name: 'Connecticut' },
+  { id: 10, name: 'Delaware' },
+  { id: 11, name: 'District of Columbia' },
+  { id: 12, name: 'Florida' },
+  { id: 13, name: 'Georgia' },
+  { id: 15, name: 'Hawaii' },
+  { id: 16, name: 'Idaho' },
+  { id: 17, name: 'Illinois' },
+  { id: 18, name: 'Indiana' },
+  { id: 19, name: 'Iowa' },
+  { id: 20, name: 'Kansas' },
+  { id: 21, name: 'Kentucky' },
+  { id: 22, name: 'Louisiana' },
+  { id: 23, name: 'Maine' },
+  { id: 24, name: 'Maryland' },
+  { id: 25, name: 'Massachusetts' },
+  { id: 26, name: 'Michigan' },
+  { id: 27, name: 'Minnesota' },
+  { id: 28, name: 'Mississippi' },
+  { id: 29, name: 'Missouri' },
+  { id: 30, name: 'Montana' },
+  { id: 31, name: 'Nebraska' },
+  { id: 32, name: 'Nevada' },
+  { id: 33, name: 'New Hampshire' },
+  { id: 34, name: 'New Jersey' },
+  { id: 35, name: 'New Mexico' },
+  { id: 36, name: 'New York' },
+  { id: 37, name: 'North Carolina' },
+  { id: 38, name: 'North Dakota' },
+  { id: 39, name: 'Ohio' },
+  { id: 40, name: 'Oklahoma' },
+  { id: 41, name: 'Oregon' },
+  { id: 42, name: 'Pennsylvania' },
+  { id: 44, name: 'Rhode Island' },
+  { id: 45, name: 'South Carolina' },
+  { id: 46, name: 'South Dakota' },
+  { id: 47, name: 'Tennessee' },
+  { id: 48, name: 'Texas' },
+  { id: 49, name: 'Utah' },
+  { id: 50, name: 'Vermont' },
+  { id: 51, name: 'Virginia' },
+  { id: 53, name: 'Washington' },
+  { id: 54, name: 'West Virginia' },
+  { id: 55, name: 'Wisconsin' },
+  { id: 56, name: 'Wyoming' },
+];
+
 const US_MAP_BASE_CONFIG = {
   url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2.2.0/data/us-10m.json',
   format: { type: 'topojson', feature: 'states' },
@@ -423,6 +477,7 @@ const createUSChoroplethMapSpec = (
   intChart: Array<Partial<ChartConfig>>,
   isMobile: boolean = false,
   currentTheme: string = 'light',
+  stateList: 'short' | 'full' = 'short',
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
@@ -469,13 +524,13 @@ const createUSChoroplethMapSpec = (
           {
             lookup: 'id',
             from: {
-              data: { values: US_STATE_MAPPINGS },
+              data: { values: stateList === 'short' ? US_STATE_MAPPINGS : US_STATE_MAPPINGS_LONG },
               key: 'id',
-              fields: ['abbr'],
+              fields: [stateList === 'short' ? 'abbr' : 'name'],
             },
           },
           {
-            lookup: 'abbr',
+            lookup: stateList === 'short' ? 'abbr' : 'name',
             from: {
               data: { values: data },
               key: config.geoField,
@@ -525,7 +580,9 @@ export const createMapSpec = (
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
     return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
   }
-
+  else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state')) {
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme, 'full')
+  }
   // Handle country map case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'country')) {
     let lookupField: string = config.geoField
@@ -635,5 +692,8 @@ export const createMapSpec = (
       config: { view: { stroke: null } },
     }
   }
+  throw new Error(
+    'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
+  )
   return {}
 }
