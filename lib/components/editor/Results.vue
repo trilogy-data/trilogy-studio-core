@@ -53,7 +53,14 @@
         <code-block :language="'sql'" :content="generatedSql || ''" />
         <!-- <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre> -->
       </div>
-      <error-message v-else-if="error" :type="error === 'Connection is not active... Attempting to automatically reconnect.' ? 'information' : 'error'">
+      <error-message
+        v-else-if="error"
+        :type="
+          error === 'Connection is not active... Attempting to automatically reconnect.'
+            ? 'information'
+            : 'error'
+        "
+      >
         {{ error }}
         <template #action v-if="error === 'Connection is not active.'">
           <loading-button :action="handleReconnect">
@@ -239,7 +246,7 @@ export default {
   padding-left: 20px;
   padding-right: 20px;
   color: var(--text-color);
-  border-radius:0px;
+  border-radius: 0px;
   /* max-width:100px; */
 }
 
@@ -250,7 +257,7 @@ export default {
 .tab-button.active {
   color: #0ea5e9;
   border-bottom: 2px solid #0ea5e9;
-  border-radius:0px;
+  border-radius: 0px;
 }
 
 .tab-content {

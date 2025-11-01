@@ -96,7 +96,7 @@ export const dashboardTips: ModalItem[] = [
     id: 'dashboard-intro',
     title: 'Dashboard',
     content:
-      'Welcome to a dashboard - a way of interactively exploring visualized data and markup. It natively support cross-filtering, drilldown, global filtering, and other interactivity. Click or drag on charts to filter. They are designed to be lightweight, customizable, and interactive. You can close these tips in the top right if you know what you\'re doing!',
+      "Welcome to a dashboard - a way of interactively exploring visualized data and markup. It natively support cross-filtering, drilldown, global filtering, and other interactivity. Click or drag on charts to filter. They are designed to be lightweight, customizable, and interactive. You can close these tips in the top right if you know what you're doing!",
     category: 'dashboard',
   },
   {

@@ -17,17 +17,17 @@ export default {
     type: {
       type: String as () => 'error' | 'information',
       default: 'error',
-      validator: (value: string) => ['error', 'information'].includes(value)
-    }
+      validator: (value: string) => ['error', 'information'].includes(value),
+    },
   },
   computed: {
     messageClass(): string {
-      return this.type === 'information' ? 'information-message' : 'error-message';
+      return this.type === 'information' ? 'information-message' : 'error-message'
     },
     iconEmoji(): string {
-      return this.type === 'information' ? 'ℹ️' : '⚠️';
-    }
-  }
+      return this.type === 'information' ? 'ℹ️' : '⚠️'
+    },
+  },
 }
 </script>
 

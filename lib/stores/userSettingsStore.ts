@@ -20,7 +20,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       trilogyResolver: '',
       telemetryEnabled: null,
       tipsRead: [] as string[],
-      skipAllTips:false
+      skipAllTips: false,
     } as UserSettings,
     defaults: {
       theme: 'dark',

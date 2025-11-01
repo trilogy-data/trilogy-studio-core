@@ -6,7 +6,7 @@
     @click.stop="handleClick"
     :data-testid="`${testId}`"
   >
-    <span :class="{ 'hidden-text': isLoading, 'contents': true }">
+    <span :class="{ 'hidden-text': isLoading, contents: true }">
       <slot></slot>
     </span>
     <span v-if="status === 'success'" class="success status_overlay">✔</span>
@@ -140,7 +140,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  height:100%;
+  height: 100%;
 }
 
 .success {
@@ -158,8 +158,8 @@ export default {
 .btn {
   /* width: 100%; */
   position: relative;
-  padding:0px;
-  margin:0px;
+  padding: 0px;
+  margin: 0px;
   /* height:100%; */
 }
 
@@ -175,9 +175,9 @@ export default {
   border-top-color: var(--color);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
-  padding:0px;
-  margin:0px;
-  height:50%;
+  padding: 0px;
+  margin: 0px;
+  height: 50%;
 }
 
 @keyframes spin {

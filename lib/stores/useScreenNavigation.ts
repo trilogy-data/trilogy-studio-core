@@ -303,12 +303,9 @@ const createNavigationStore = (): NavigationStore => {
         // if full screen, only show dashboard tips
         if (state.fullScreen.value) {
           baseTips = []
-
-        }
-        else {
+        } else {
           baseTips = baseTips.concat(userSettingsStore.getUnreadTips(dashboardTips))
         }
-
       } else if (tabInfo.screen === 'connections') {
         state.activeConnectionKey.value = tabInfo.address
       } else if (tabInfo.screen === 'llms') {
@@ -432,7 +429,6 @@ const createNavigationStore = (): NavigationStore => {
       isImport = true
     }
 
-
     if (state.activeEditor.value && !isImport) {
       sidebarScreen = 'editors'
       openTab('editors', null, state.activeEditor.value)
@@ -469,7 +465,6 @@ const createNavigationStore = (): NavigationStore => {
       sidebarScreen = 'profile'
       openTab('profile', 'Profile', 'profile')
     }
-
 
     setActiveSidebarScreen(sidebarScreen)
   }

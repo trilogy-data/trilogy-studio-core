@@ -64,7 +64,6 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-
   await page.getByTestId('sidebar-link-community-models').click({ force: true })
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()

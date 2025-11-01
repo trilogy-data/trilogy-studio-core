@@ -113,7 +113,7 @@ const US_STATE_MAPPINGS_LONG = [
   { id: 54, name: 'West Virginia' },
   { id: 55, name: 'Wisconsin' },
   { id: 56, name: 'Wyoming' },
-];
+]
 
 const US_MAP_BASE_CONFIG = {
   url: 'https://cdn.jsdelivr.net/npm/vega-datasets@2.2.0/data/us-10m.json',
@@ -579,9 +579,16 @@ export const createMapSpec = (
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
     return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
-  }
-  else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme, 'full')
+  } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state')) {
+    return createUSChoroplethMapSpec(
+      config,
+      data,
+      columns,
+      intChart,
+      isMobile,
+      currentTheme,
+      'full',
+    )
   }
   // Handle country map case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'country')) {
