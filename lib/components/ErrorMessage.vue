@@ -1,6 +1,6 @@
 <template>
   <div :class="messageClass" ref="messageContainer">
-    <span class="message-text" data-testid="message-text">
+    <span class="message-text" data-testid="error-text">
       <span class="message-icon">{{ iconEmoji }}</span>
       <slot></slot>
     </span>
