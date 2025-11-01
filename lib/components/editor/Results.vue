@@ -53,7 +53,7 @@
         <code-block :language="'sql'" :content="generatedSql || ''" />
         <!-- <pre><code ref="codeBlock" class="language-sql">{{ generatedSql }}</code></pre> -->
       </div>
-      <error-message v-else-if="error">
+      <error-message v-else-if="error" :type="error === 'Connection is not active... Attempting to automatically reconnect.' ? 'information' : 'error'">
         {{ error }}
         <template #action v-if="error === 'Connection is not active.'">
           <loading-button :action="handleReconnect">
