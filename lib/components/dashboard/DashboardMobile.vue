@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
@@ -7,45 +7,70 @@ import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
-import DashboardBase from './DashboardBase.vue'
-import { CELL_TYPES } from '../../dashboards/base'
+import { useDashboard } from './useDashboard'
+import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 
-defineProps<{
+const props = defineProps<{
   name: string
   connectionId?: string
   viewMode?: boolean
 }>()
 
-// Use the base dashboard logic
-const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
-
 const mobileMinHeight = 400 // Minimum height for mobile items
 
-// Computed properties from base with proper fallbacks
-const dashboard = computed(() => dashboardBase.value?.dashboard)
-const sortedLayout = computed(() => dashboardBase.value?.sortedLayout || [])
-const editMode = computed(() => dashboardBase.value?.editMode || false)
-const selectedConnection = computed(() => dashboardBase.value?.selectedConnection || '')
-const filter = computed(() => dashboardBase.value?.filter || '')
-const filterError = computed(() => dashboardBase.value?.filterError || '')
-const globalCompletion = computed(() => dashboardBase.value?.globalCompletion || [])
-const showAddItemModal = computed(() => dashboardBase.value?.showAddItemModal || false)
-const showQueryEditor = computed(() => dashboardBase.value?.showQueryEditor || false)
-const showMarkdownEditor = computed(() => dashboardBase.value?.showMarkdownEditor || false)
-const editingItem = computed(() => dashboardBase.value?.editingItem)
+// Use the dashboard composable
+const {
+  // State
+  dashboard,
+  sortedLayout,
+  editMode,
+  selectedConnection,
+  filter,
+  filterError,
+  globalCompletion,
+  showAddItemModal,
+  showQueryEditor,
+  showMarkdownEditor,
+  editingItem,
 
-// Function wrappers that ensure base is available
-const getItemData = (itemId: string, dashboardId: string) => {
-  return dashboardBase.value!.getItemData(itemId, dashboardId)
-}
-
-const setItemData = (itemId: string, dashboardId: string, data: any) => {
-  dashboardBase.value!.setItemData(itemId, dashboardId, data)
-}
-
-const validateFilter = async (filter: string) => {
-  return dashboardBase.value!.validateFilter(filter)
-}
+  // Methods
+  handleFilterChange,
+  handleFilterClear,
+  handleImportChange,
+  validateFilter,
+  onConnectionChange,
+  toggleEditMode,
+  openAddItemModal,
+  addItem,
+  clearItems,
+  removeItem,
+  copyItem,
+  closeAddModal,
+  openEditor,
+  saveContent,
+  closeEditors,
+  getDashboardQueryExecutor,
+  getItemData,
+  setItemData,
+  handleRefresh,
+  setCrossFilter,
+  removeFilter,
+  unSelect,
+  dashboardCreated,
+} = useDashboard(
+  {
+    name: props.name,
+    connectionId: props.connectionId,
+    viewMode: props.viewMode,
+    isMobile: true,
+  },
+  {
+    layoutUpdated: () => {}, // Not needed for mobile
+    dimensionsUpdate: (itemId: string) => updateItemDimensions(itemId),
+    triggerResize: () => triggerResize(),
+    fullScreen: () => {}, // Not needed for mobile
+  },
+)
 
 // Mobile-specific methods
 function updateItemDimensions(itemId: string): void {
@@ -59,8 +84,8 @@ function updateItemDimensions(itemId: string): void {
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
 
-    if (dashboard.value.id && dashboardBase.value) {
-      dashboardBase.value.setItemData(itemId, dashboard.value.id, { width, height })
+    if (dashboard.value.id) {
+      setItemData(itemId, dashboard.value.id, { width, height })
     }
   }
 }
@@ -68,7 +93,7 @@ function updateItemDimensions(itemId: string): void {
 function triggerResize(): void {
   if (!dashboard.value) return
 
-  sortedLayout.value.forEach((item) => {
+  sortedLayout.value.forEach((item: LayoutItem) => {
     updateItemDimensions(item.i)
   })
 }
@@ -134,27 +159,86 @@ function calculateMobileHeight(item: any): number | string {
 
 // Handle edit mode toggle for mobile
 function handleToggleEditMode() {
-  dashboardBase.value?.toggleEditMode()
+  toggleEditMode()
 
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
   })
 }
+
+// Mobile navigation scroll functions
+function scrollToTop() {
+  const container = document.getElementById('page-content')
+  if (container) {
+    container.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+function scrollToBottom() {
+  const container = document.getElementById('page-content')
+  if (container) {
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+  }
+}
+
+function scrollUpOne() {
+  const container = document.getElementById('page-content')
+  if (!container) return
+
+  const currentScrollTop = container.scrollTop
+  const items = container.querySelectorAll('.mobile-item')
+
+  // Find the current item that's mostly visible
+  let targetItem = null
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i] as HTMLElement
+    const itemTop = item.offsetTop
+
+    if (itemTop < currentScrollTop) {
+      targetItem = item
+      break
+    }
+  }
+
+  if (targetItem) {
+    container.scrollTo({
+      top: targetItem.offsetTop - 15, // Account for gap
+      behavior: 'smooth',
+    })
+  }
+}
+
+function scrollDownOne() {
+  const container = document.getElementById('page-content')
+  if (!container) return
+
+  const currentScrollTop = container.scrollTop
+  const items = container.querySelectorAll('.mobile-item')
+
+  // Find the next item below the current viewport
+  let targetItem = null
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i] as HTMLElement
+    const itemTop = item.offsetTop
+
+    if (itemTop > currentScrollTop + 50) {
+      // Small offset to ensure we move to next item
+      targetItem = item
+      break
+    }
+  }
+
+  if (targetItem) {
+    container.scrollTo({
+      top: targetItem.offsetTop - 15, // Account for gap
+      behavior: 'smooth',
+    })
+  }
+}
 </script>
 
 <template>
-  <DashboardBase
-    ref="dashboardBase"
-    :key="name"
-    :name="name"
-    :connection-id="connectionId"
-    :view-mode="viewMode"
-    :is-mobile="true"
-    @dimensions-update="updateItemDimensions"
-    @trigger-resize="triggerResize"
-  />
-
   <div class="dashboard-mobile-container" v-if="dashboard">
     <DashboardHeader
       :dashboard="dashboard"
@@ -164,14 +248,14 @@ function handleToggleEditMode() {
       :filterError="filterError"
       :globalCompletion="globalCompletion"
       :validateFilter="validateFilter"
-      @connection-change="dashboardBase?.onConnectionChange"
-      @filter-change="dashboardBase?.handleFilterChange"
-      @import-change="dashboardBase?.handleImportChange"
-      @add-item="dashboardBase?.openAddItemModal"
-      @clear-items="dashboardBase?.clearItems"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
       @toggle-edit-mode="handleToggleEditMode"
-      @refresh="dashboardBase?.handleRefresh"
-      @clear-filter="dashboardBase?.handleFilterClear"
+      @refresh="handleRefresh"
+      @clear-filter="handleFilterClear"
     />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
@@ -191,32 +275,43 @@ function handleToggleEditMode() {
         }"
       >
         <DashboardGridItem
-          v-if="dashboardBase"
           :dashboard-id="dashboard.id"
           :item="item"
           :edit-mode="editMode"
           :filter="filter"
           :get-item-data="getItemData"
           :symbols="[]"
-          :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
-          @dimension-click="dashboardBase?.setCrossFilter"
-          @background-click="dashboardBase?.unSelect"
+          :get-dashboard-query-executor="getDashboardQueryExecutor"
+          @dimension-click="setCrossFilter"
+          @background-click="unSelect"
           :set-item-data="setItemData"
-          @edit-content="dashboardBase?.openEditor"
-          @remove-filter="dashboardBase?.removeFilter"
+          @edit-content="openEditor"
+          @remove-filter="removeFilter"
           @update-dimensions="updateItemDimensions"
-          @remove-item="dashboardBase?.removeItem"
-          @copy-item="dashboardBase?.copyItem"
+          @remove-item="removeItem"
+          @copy-item="copyItem"
         />
       </div>
     </div>
 
+    <!-- Mobile Navigation Bar -->
+    <div class="mobile-nav-bar" v-if="sortedLayout.length > 1">
+      <button @click="scrollToTop" class="nav-btn" title="Scroll to top">
+        <i class="mdi mdi-chevron-double-up"></i>
+      </button>
+      <button @click="scrollUpOne" class="nav-btn" title="Previous item">
+        <i class="mdi mdi-chevron-up"></i>
+      </button>
+      <button @click="scrollDownOne" class="nav-btn" title="Next item">
+        <i class="mdi mdi-chevron-down"></i>
+      </button>
+      <button @click="scrollToBottom" class="nav-btn" title="Scroll to bottom">
+        <i class="mdi mdi-chevron-double-down"></i>
+      </button>
+    </div>
+
     <!-- Add Item Modal -->
-    <DashboardAddItemModal
-      :show="showAddItemModal"
-      @add="dashboardBase?.addItem"
-      @close="dashboardBase?.closeAddModal"
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="addItem" @close="closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
@@ -226,8 +321,8 @@ function handleToggleEditMode() {
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
         :showing="showQueryEditor"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
+        @save="saveContent"
+        @cancel="closeEditors"
       />
     </Teleport>
 
@@ -237,8 +332,8 @@ function handleToggleEditMode() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).structured_content"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
+        @save="saveContent"
+        @cancel="closeEditors"
       />
     </Teleport>
   </div>
@@ -253,7 +348,7 @@ function handleToggleEditMode() {
       <dashboard-creator-inline
         class="inline-creator"
         :visible="true"
-        @dashboard-created="dashboardBase?.dashboardCreated"
+        @dashboard-created="dashboardCreated"
       ></dashboard-creator-inline>
     </template>
   </div>
@@ -269,6 +364,7 @@ function handleToggleEditMode() {
   color: var(--text-color);
   background-color: var(--bg-color);
   overflow: hidden;
+  position: relative;
 }
 
 .mobile-container {
@@ -279,13 +375,58 @@ function handleToggleEditMode() {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  padding-bottom: 80px;
+  padding-bottom: 80px; /* Space for navigation bar */
 }
 
 .mobile-item {
   width: 100%;
   background: var(--result-window-bg);
   position: relative;
+}
+
+.mobile-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--result-window-bg);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-btn {
+  background: var(--button-bg, var(--bg-color));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 20px;
+}
+
+.nav-btn:hover {
+  background: var(--button-hover-bg, var(--highlight-color));
+  transform: translateY(-1px);
+}
+
+.nav-btn:active {
+  transform: translateY(0);
+  background: var(--button-active-bg, var(--accent-color));
+}
+
+.nav-btn i {
+  line-height: 1;
 }
 
 .dashboard-not-found {
@@ -313,5 +454,19 @@ function handleToggleEditMode() {
   justify-content: center;
   padding: 20px;
   flex: 1;
+}
+
+/* Add responsive touch target sizing */
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 10px 12px;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 18px;
+  }
+
+  .mobile-nav-bar {
+    padding: 6px;
+  }
 }
 </style>

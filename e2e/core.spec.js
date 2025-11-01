@@ -31,7 +31,7 @@ test('user settings', async ({ page, isMobile }) => {
       }),
     })
   })
-  await page.goto('/')
+  await page.goto('/#skipTips=true')
   await expect(page).toHaveTitle(/Trilogy Studio/)
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -49,6 +49,11 @@ test('user settings', async ({ page, isMobile }) => {
   await page.getByTestId('connection-creator-name').fill('test')
   await page.getByTestId('connection-creator-submit').click()
   await page.getByTestId('new-trilogy-editor-test').click()
+  // since we reset settings, we need to dismiss modal again
+  if (!isMobile) {
+    await page.getByTestId('exit-modal').click()
+  }
+
   await page.getByTestId('editor-run-button').click()
   const request = await requestPromise
 

@@ -1,7 +1,23 @@
 <template>
   <div class="main">
+    <PopupModal
+      v-if="showTipModal"
+      title="Tips"
+      :showModal="showTipModal"
+      :activeItems="displayedTips"
+      @mark-item-read="
+        (id) => {
+          markTipRead(id)
+        }
+      "
+      @close-modal="
+        () => {
+          showTipModal = false
+        }
+      "
+    />
     <!-- Full screen mode - no sidebar -->
-    <div v-if="isFullScreen" class="full-screen-container">
+    <div v-if="fullScreen" class="full-screen-container">
       <template v-if="activeScreen === 'dashboard'">
         <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
       </template>
@@ -66,7 +82,8 @@
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
-              ></ResultsView>
+              >
+              </ResultsView>
             </template>
           </vertical-split-layout>
         </template>
@@ -239,8 +256,10 @@ import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 import type { DrillDownEvent } from '../events/display.ts'
+import PopupModal from '../components/PopupModal.vue'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -286,14 +305,15 @@ export default {
     DashboardAutoImporter,
     CredentialBackgroundPage,
     TabbedBrowser,
+    PopupModal,
   },
   setup() {
     // Create a ref for the editor component
     const editorRef = ref<typeof Editor | null>(null)
-    const isFullScreen = ref(false)
     type ResolverType = typeof TrilogyResolver
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
 
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
@@ -308,6 +328,7 @@ export default {
       !editorStore ||
       !connectionStore ||
       !dashboardStore ||
+      !userSettingsStore ||
       !trilogyResolver ||
       !modelStore ||
       !saveConnections ||
@@ -345,11 +366,17 @@ export default {
       setActiveLLMConnectionKey,
       setActiveDashboard,
       onInitialLoad,
+      showTipModal,
+      displayedTips,
+      fullScreen,
+      toggleFullScreen,
     } = screenNavigation
 
     onInitialLoad()
 
     provide('navigationStore', screenNavigation)
+
+    const markTipRead = userSettingsStore.markTipRead
 
     return {
       connectionStore,
@@ -381,7 +408,11 @@ export default {
       activeDashboard,
       setActiveDashboard,
       editorRef,
-      isFullScreen,
+      displayedTips,
+      fullScreen,
+      markTipRead,
+      showTipModal,
+      toggleFullScreen,
     }
   },
   methods: {
@@ -400,9 +431,6 @@ export default {
       if (this.editorRef) {
         this.editorRef.drilldownQuery(e.remove, e.add, e.filter)
       }
-    },
-    toggleFullScreen(status: boolean) {
-      this.isFullScreen = status
     },
     async startDemo() {
       let editor = await setupDemo(

@@ -192,7 +192,7 @@ export default class DuckDBConnection extends BaseConnection {
     const tempConnection = await this.db.connect()
 
     try {
-      onProgress?.(`Analyzing Parquet structure...`)
+      onProgress?.(`Uploading parquet file...`)
 
       // For Parquet, we can directly create a table from the file
       await tempConnection.query(`

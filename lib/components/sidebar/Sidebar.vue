@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar-container">
-    <div class="sidebar-icons">
+    <div class="sidebar-icons" data-testid="sidebar-icons">
       <div class="trilogy-icon">
         <div class="trilogy-icon-wrapper">
           <tooltip

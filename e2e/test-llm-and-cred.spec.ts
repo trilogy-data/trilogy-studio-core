@@ -27,7 +27,7 @@ test.describe('LLM Connection Tests', () => {
       page.context()?.browser()?.browserType()?.name() || '',
     )
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/')
+    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
 
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
@@ -138,7 +138,7 @@ test.describe('LLM Connection Tests', () => {
       })
     })
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/')
+    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
 
     // Navigate to LLM testing page
     if (isMobile) {
@@ -196,7 +196,7 @@ limit 10;`,
       }),
     })
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/')
+    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
 
     // Navigate to LLM testing page
     if (isMobile) {

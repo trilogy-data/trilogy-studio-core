@@ -11,9 +11,15 @@ Supports
 
 Read more about Trilogy, the language [here](https://trilogydata.dev/).
 
+## This Repo
+
+This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server example that can run queries.
+
 ## Docker
 
-Suggest local execution for now. Includes image with resolution service + frontend. 
+The suggested local execution option for now. (An app will come at some point!)
+
+A docker container is available in the base repo.  Includes image with syntax resolution service + frontend. 
 
 No telemetry; requires internet to get WASM bundles. (This will be removed in future to get full offline usage).
 
@@ -21,10 +27,10 @@ From repo root:
 
 ### Bash
 ```bash
-docker build  -t trilogy-studio:latest && docker run  -p 8080:80 trilogy-studio:latest   
+docker build -t trilogy-studio:latest && docker run -p 8080:80 trilogy-studio:latest   
 ```
 
-### Powersheel
+### Powershell
 ```powershell
 docker build -t trilogy-studio:latest . ; docker run  -p 8080:80 trilogy-studio:latest   
 ```
@@ -33,7 +39,9 @@ Access on http://localhost:8080 (or alternative port used).
 
 ### Flexible Visualization
 
-Explore data with easy, interactive visuals. Polish and share - and users can make the dashboard their own to drill deeper. 
+Explore data with easy, interactive visuals. Connect them in rich, interactive dashboards that can be shared.
+
+Native cross filtering, drilldown, and NLP filtering. 
 
 <p align="center">
 <img src="docs/dashboard.png" width="515" height="599" alt="Dashboard View">
@@ -48,25 +56,26 @@ All the modern IDE features you expect, and a built in semantic auto-complete.
 </p>
 
 
-## This Repo
+### MCP Server
 
-This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server example that can run queries.
+Provides a basic integration to be used with assistants like Claude desktop. Supports executing queries as well as parsing.
 
 ## Run MCP Locally
 
 ### Claude Desktop
 
-Trilogy Studio can be run as a local MCP server for Claude.
+Trilogy Studio can be run as a local MCP server for Claude. It'll by default only have access to the default public models.
+Support for custom models coming soon!
 
 Checkout repo, and from root run below:
 
 ```bash
-uv run mcp install pyserver/mcp.py
+uv run mcp install pyserver/mcp_server.py
 ```
 
 Or directly edit:
 
-On MacOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
+On MacOS: `~/Library/Application\Support/Claude/claude_desktop_config.json`
 On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 ```json

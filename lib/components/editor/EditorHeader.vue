@@ -38,7 +38,7 @@
       >
         {{ tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
       </loading-button>
-      <button class="action-item" @click="$emit('save')">
+      <button class="action-item" @click="$emit('save')" data-testid="editor-save-button">
         <i class="mdi mdi-content-save-outline icon"></i>
         Save
       </button>
@@ -47,6 +47,7 @@
         :useDefaultStyle="false"
         class="action-item"
         :action="() => $emit('validate')"
+        testId="editor-validate-button"
       >
         <i class="mdi mdi-code-braces icon"></i>
         Parse

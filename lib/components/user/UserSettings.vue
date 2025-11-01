@@ -14,6 +14,11 @@
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
+      <div v-else-if="key === 'tipsRead'">
+        <button class="button" @click="clearDismissedTips" :disabled="isLoading">
+          Reshow Dismissed Popups ({{ settings.tipsRead.length }})
+        </button>
+      </div>
       <input
         v-else-if="typeof value === 'string'"
         type="text"
@@ -85,10 +90,15 @@ export default defineComponent({
       return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())
     }
 
+    const clearDismissedTips = async () => {
+      await userSettingsStore.clearDismissedTips()
+    }
+
     return {
       settings,
       isLoading,
       hasChanges,
+      clearDismissedTips,
       saveSettings,
       resetToDefaults,
       formatLabel,

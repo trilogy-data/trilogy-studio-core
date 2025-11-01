@@ -58,11 +58,12 @@ async function getPixelColor(page, x, y) {
 }
 
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
-  await page.goto('http://localhost:5173/trilogy-studio-core/')
+  await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   // setup
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
+
   await page.getByTestId('sidebar-link-community-models').click({ force: true })
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()
@@ -471,8 +472,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 const connectionName = 'duckdb-test2'
 
 test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
-  await page.goto('http://localhost:5173/trilogy-studio-core/')
-
+  await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   // Setup connection
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -488,7 +488,6 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
     if (!element) return false
     const style = window.getComputedStyle(element)
     const backgroundColor = style.backgroundColor
-    console.log(backgroundColor)
     // Check if the background color is green (in RGB format)
     return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
   })
