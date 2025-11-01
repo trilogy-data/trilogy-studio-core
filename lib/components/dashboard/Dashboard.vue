@@ -76,7 +76,7 @@ const {
     dimensionsUpdate: (itemId) => updateItemDimensions(itemId),
     triggerResize: () => triggerResize(),
     fullScreen: (enabled) => emit('fullScreen', enabled),
-  }
+  },
 )
 
 // Desktop-specific reactive state
@@ -276,11 +276,7 @@ async function exportToImage() {
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal
-      :show="showAddItemModal"
-      @add="addItem"
-      @close="closeAddModal"
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="addItem" @close="closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">

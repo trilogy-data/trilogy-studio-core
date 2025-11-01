@@ -8,7 +8,7 @@ import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
-import { CELL_TYPES, type LayoutItem  } from '../../dashboards/base'
+import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 
 const props = defineProps<{
   name: string
@@ -66,10 +66,10 @@ const {
   },
   {
     layoutUpdated: () => {}, // Not needed for mobile
-    dimensionsUpdate: (itemId:string) => updateItemDimensions(itemId),
+    dimensionsUpdate: (itemId: string) => updateItemDimensions(itemId),
     triggerResize: () => triggerResize(),
     fullScreen: () => {}, // Not needed for mobile
-  }
+  },
 )
 
 // Mobile-specific methods
@@ -93,7 +93,7 @@ function updateItemDimensions(itemId: string): void {
 function triggerResize(): void {
   if (!dashboard.value) return
 
-  sortedLayout.value.forEach((item:LayoutItem) => {
+  sortedLayout.value.forEach((item: LayoutItem) => {
     updateItemDimensions(item.i)
   })
 }
@@ -188,23 +188,23 @@ function scrollUpOne() {
 
   const currentScrollTop = container.scrollTop
   const items = container.querySelectorAll('.mobile-item')
-  
+
   // Find the current item that's mostly visible
   let targetItem = null
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i] as HTMLElement
     const itemTop = item.offsetTop
-    
+
     if (itemTop < currentScrollTop) {
       targetItem = item
       break
     }
   }
-  
+
   if (targetItem) {
-    container.scrollTo({ 
+    container.scrollTo({
       top: targetItem.offsetTop - 15, // Account for gap
-      behavior: 'smooth' 
+      behavior: 'smooth',
     })
   }
 }
@@ -215,23 +215,24 @@ function scrollDownOne() {
 
   const currentScrollTop = container.scrollTop
   const items = container.querySelectorAll('.mobile-item')
-  
+
   // Find the next item below the current viewport
   let targetItem = null
   for (let i = 0; i < items.length; i++) {
     const item = items[i] as HTMLElement
     const itemTop = item.offsetTop
-    
-    if (itemTop > currentScrollTop + 50) { // Small offset to ensure we move to next item
+
+    if (itemTop > currentScrollTop + 50) {
+      // Small offset to ensure we move to next item
       targetItem = item
       break
     }
   }
-  
+
   if (targetItem) {
-    container.scrollTo({ 
+    container.scrollTo({
       top: targetItem.offsetTop - 15, // Account for gap
-      behavior: 'smooth' 
+      behavior: 'smooth',
     })
   }
 }
@@ -310,11 +311,7 @@ function scrollDownOne() {
     </div>
 
     <!-- Add Item Modal -->
-    <DashboardAddItemModal
-      :show="showAddItemModal"
-      @add="addItem"
-      @close="closeAddModal"
-    />
+    <DashboardAddItemModal :show="showAddItemModal" @add="addItem" @close="closeAddModal" />
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
@@ -467,7 +464,7 @@ function scrollDownOne() {
     min-height: 44px;
     font-size: 18px;
   }
-  
+
   .mobile-nav-bar {
     padding: 6px;
   }
