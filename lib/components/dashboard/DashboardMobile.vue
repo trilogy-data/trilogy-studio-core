@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
@@ -7,45 +7,70 @@ import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
-import DashboardBase from './DashboardBase.vue'
-import { CELL_TYPES } from '../../dashboards/base'
+import { useDashboard } from './useDashboard'
+import { CELL_TYPES, type LayoutItem  } from '../../dashboards/base'
 
-defineProps<{
+const props = defineProps<{
   name: string
   connectionId?: string
   viewMode?: boolean
 }>()
 
-// Use the base dashboard logic
-const dashboardBase = ref<InstanceType<typeof DashboardBase>>()
-
 const mobileMinHeight = 400 // Minimum height for mobile items
 
-// Computed properties from base with proper fallbacks
-const dashboard = computed(() => dashboardBase.value?.dashboard)
-const sortedLayout = computed(() => dashboardBase.value?.sortedLayout || [])
-const editMode = computed(() => dashboardBase.value?.editMode || false)
-const selectedConnection = computed(() => dashboardBase.value?.selectedConnection || '')
-const filter = computed(() => dashboardBase.value?.filter || '')
-const filterError = computed(() => dashboardBase.value?.filterError || '')
-const globalCompletion = computed(() => dashboardBase.value?.globalCompletion || [])
-const showAddItemModal = computed(() => dashboardBase.value?.showAddItemModal || false)
-const showQueryEditor = computed(() => dashboardBase.value?.showQueryEditor || false)
-const showMarkdownEditor = computed(() => dashboardBase.value?.showMarkdownEditor || false)
-const editingItem = computed(() => dashboardBase.value?.editingItem)
+// Use the dashboard composable
+const {
+  // State
+  dashboard,
+  sortedLayout,
+  editMode,
+  selectedConnection,
+  filter,
+  filterError,
+  globalCompletion,
+  showAddItemModal,
+  showQueryEditor,
+  showMarkdownEditor,
+  editingItem,
 
-// Function wrappers that ensure base is available
-const getItemData = (itemId: string, dashboardId: string) => {
-  return dashboardBase.value!.getItemData(itemId, dashboardId)
-}
-
-const setItemData = (itemId: string, dashboardId: string, data: any) => {
-  dashboardBase.value!.setItemData(itemId, dashboardId, data)
-}
-
-const validateFilter = async (filter: string) => {
-  return dashboardBase.value!.validateFilter(filter)
-}
+  // Methods
+  handleFilterChange,
+  handleFilterClear,
+  handleImportChange,
+  validateFilter,
+  onConnectionChange,
+  toggleEditMode,
+  openAddItemModal,
+  addItem,
+  clearItems,
+  removeItem,
+  copyItem,
+  closeAddModal,
+  openEditor,
+  saveContent,
+  closeEditors,
+  getDashboardQueryExecutor,
+  getItemData,
+  setItemData,
+  handleRefresh,
+  setCrossFilter,
+  removeFilter,
+  unSelect,
+  dashboardCreated,
+} = useDashboard(
+  {
+    name: props.name,
+    connectionId: props.connectionId,
+    viewMode: props.viewMode,
+    isMobile: true,
+  },
+  {
+    layoutUpdated: () => {}, // Not needed for mobile
+    dimensionsUpdate: (itemId:string) => updateItemDimensions(itemId),
+    triggerResize: () => triggerResize(),
+    fullScreen: () => {}, // Not needed for mobile
+  }
+)
 
 // Mobile-specific methods
 function updateItemDimensions(itemId: string): void {
@@ -59,8 +84,8 @@ function updateItemDimensions(itemId: string): void {
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
 
-    if (dashboard.value.id && dashboardBase.value) {
-      dashboardBase.value.setItemData(itemId, dashboard.value.id, { width, height })
+    if (dashboard.value.id) {
+      setItemData(itemId, dashboard.value.id, { width, height })
     }
   }
 }
@@ -68,7 +93,7 @@ function updateItemDimensions(itemId: string): void {
 function triggerResize(): void {
   if (!dashboard.value) return
 
-  sortedLayout.value.forEach((item) => {
+  sortedLayout.value.forEach((item:LayoutItem) => {
     updateItemDimensions(item.i)
   })
 }
@@ -134,7 +159,7 @@ function calculateMobileHeight(item: any): number | string {
 
 // Handle edit mode toggle for mobile
 function handleToggleEditMode() {
-  dashboardBase.value?.toggleEditMode()
+  toggleEditMode()
 
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
@@ -153,8 +178,6 @@ function scrollToTop() {
 function scrollToBottom() {
   const container = document.getElementById('page-content')
   if (container) {
-    console.log('Scrolling to bottom')
-    console.log('Container scrollHeight:', container.scrollHeight)
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
   }
 }
@@ -215,17 +238,6 @@ function scrollDownOne() {
 </script>
 
 <template>
-  <DashboardBase
-    ref="dashboardBase"
-    :key="name"
-    :name="name"
-    :connection-id="connectionId"
-    :view-mode="viewMode"
-    :is-mobile="true"
-    @dimensions-update="updateItemDimensions"
-    @trigger-resize="triggerResize"
-  />
-
   <div class="dashboard-mobile-container" v-if="dashboard">
     <DashboardHeader
       :dashboard="dashboard"
@@ -235,14 +247,14 @@ function scrollDownOne() {
       :filterError="filterError"
       :globalCompletion="globalCompletion"
       :validateFilter="validateFilter"
-      @connection-change="dashboardBase?.onConnectionChange"
-      @filter-change="dashboardBase?.handleFilterChange"
-      @import-change="dashboardBase?.handleImportChange"
-      @add-item="dashboardBase?.openAddItemModal"
-      @clear-items="dashboardBase?.clearItems"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
       @toggle-edit-mode="handleToggleEditMode"
-      @refresh="dashboardBase?.handleRefresh"
-      @clear-filter="dashboardBase?.handleFilterClear"
+      @refresh="handleRefresh"
+      @clear-filter="handleFilterClear"
     />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
@@ -262,22 +274,21 @@ function scrollDownOne() {
         }"
       >
         <DashboardGridItem
-          v-if="dashboardBase"
           :dashboard-id="dashboard.id"
           :item="item"
           :edit-mode="editMode"
           :filter="filter"
           :get-item-data="getItemData"
           :symbols="[]"
-          :get-dashboard-query-executor="dashboardBase.getDashboardQueryExecutor"
-          @dimension-click="dashboardBase?.setCrossFilter"
-          @background-click="dashboardBase?.unSelect"
+          :get-dashboard-query-executor="getDashboardQueryExecutor"
+          @dimension-click="setCrossFilter"
+          @background-click="unSelect"
           :set-item-data="setItemData"
-          @edit-content="dashboardBase?.openEditor"
-          @remove-filter="dashboardBase?.removeFilter"
+          @edit-content="openEditor"
+          @remove-filter="removeFilter"
           @update-dimensions="updateItemDimensions"
-          @remove-item="dashboardBase?.removeItem"
-          @copy-item="dashboardBase?.copyItem"
+          @remove-item="removeItem"
+          @copy-item="copyItem"
         />
       </div>
     </div>
@@ -301,8 +312,8 @@ function scrollDownOne() {
     <!-- Add Item Modal -->
     <DashboardAddItemModal
       :show="showAddItemModal"
-      @add="dashboardBase?.addItem"
-      @close="dashboardBase?.closeAddModal"
+      @add="addItem"
+      @close="closeAddModal"
     />
 
     <!-- Content Editors -->
@@ -313,8 +324,8 @@ function scrollDownOne() {
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
         :showing="showQueryEditor"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
+        @save="saveContent"
+        @cancel="closeEditors"
       />
     </Teleport>
 
@@ -324,8 +335,8 @@ function scrollDownOne() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).structured_content"
-        @save="dashboardBase?.saveContent"
-        @cancel="dashboardBase?.closeEditors"
+        @save="saveContent"
+        @cancel="closeEditors"
       />
     </Teleport>
   </div>
@@ -340,7 +351,7 @@ function scrollDownOne() {
       <dashboard-creator-inline
         class="inline-creator"
         :visible="true"
-        @dashboard-created="dashboardBase?.dashboardCreated"
+        @dashboard-created="dashboardCreated"
       ></dashboard-creator-inline>
     </template>
   </div>
