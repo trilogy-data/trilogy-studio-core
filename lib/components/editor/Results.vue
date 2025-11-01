@@ -239,6 +239,7 @@ export default {
   padding-left: 20px;
   padding-right: 20px;
   color: var(--text-color);
+  border-radius:0px;
   /* max-width:100px; */
 }
 
@@ -249,6 +250,7 @@ export default {
 .tab-button.active {
   color: #0ea5e9;
   border-bottom: 2px solid #0ea5e9;
+  border-radius:0px;
 }
 
 .tab-content {

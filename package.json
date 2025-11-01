@@ -29,7 +29,7 @@
     "@types/prismjs": "^1.26.5",
     "@types/tabulator-tables": "^6.2.4",
     "@types/webappsec-credential-management": "^0.6.9",
-    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitejs/plugin-vue": "^6.0.1",
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
