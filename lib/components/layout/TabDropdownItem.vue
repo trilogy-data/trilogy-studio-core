@@ -115,6 +115,8 @@ export default {
         this.closeTab()
       } else {
         // Snap back to original position
+        // emit a click
+        this.$emit('select', this.tab)
         this.resetSwipe()
       }
     },

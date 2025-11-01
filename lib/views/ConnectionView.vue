@@ -30,6 +30,7 @@
   height: 100%;
   width: 100%;
   background-color: var(--query-window-bg);
+  padding: 8px;
 }
 .no-selection {
   display: flex;
