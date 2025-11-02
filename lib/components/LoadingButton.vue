@@ -147,9 +147,6 @@ export default {
   color: green;
 }
 
-.contents {
-  height: 100%;
-}
 
 .error {
   color: red;
