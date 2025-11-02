@@ -228,6 +228,7 @@ const filterCount = computed(() => {
     <!-- Edit Controls (styled like control buttons) -->
     <div
       class="header-controls"
+      data-testid="dashboard-item-header-controls"
       :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
       v-if="editMode"
     >

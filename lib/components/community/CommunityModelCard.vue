@@ -98,6 +98,7 @@
               @click="copyDashboardLink(component)"
               class="copy-import-button"
               :title="'Copy import link for ' + component.name"
+              data-testid="copy-dashboard-share-button"
             >
               <i class="mdi mdi-content-copy"></i>
               Copy Share Link

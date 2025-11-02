@@ -1,7 +1,9 @@
 <template>
   <div class="loading-container" ref="containerRef">
     <template v-if="isCompact">
-      <p><img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})</p>
+      <p class="display-text">
+        <img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})
+      </p>
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </template>
     <template v-else>
@@ -62,6 +64,11 @@ export default defineComponent({
 
     const updateContainerHeight = () => {
       if (containerRef.value) {
+        let parent = containerRef.value.parentElement
+        if (parent && parent.clientHeight > 0) {
+          containerHeight.value = parent.clientHeight
+          return
+        }
         containerHeight.value = containerRef.value.clientHeight
       }
     }
@@ -121,6 +128,7 @@ export default defineComponent({
 
     return {
       containerRef,
+      containerHeight,
       handleCancel,
       trilogyIcon,
       elapsedTime,
@@ -167,6 +175,14 @@ export default defineComponent({
 /* When in compact mode, adjust container styles */
 .loading-container {
   min-height: 30px;
+}
+
+.display-text {
+  font-size: 1.1rem;
+  text-align: center;
+  height: 24px;
+  /* align text vertically with icon */
+  display: flex;
 }
 
 @keyframes bounce {

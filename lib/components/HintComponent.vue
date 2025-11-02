@@ -1,6 +1,6 @@
 <template>
   <div class="expand layout-center hints">
-    <div class="shortcuts">
+    <div class="shortcuts" data-testid="editor-shortcut-hints">
       <div v-for="shortcut in shortcuts" class="shortcut-item">
         <div class="shortcut-name">{{ shortcut.name }}</div>
         <div class="shortcut">

@@ -19,7 +19,10 @@
     </div>
     <div v-else>
       <div class="no-selection">
-        <h2>Use menu navigation to select a connection, database, schema, or table.</h2>
+        <h3>
+          This saved item address is not loadable; you may need to establish the connection and
+          refresh databases/schemas to view it.
+        </h3>
       </div>
     </div>
   </div>
@@ -30,6 +33,7 @@
   height: 100%;
   width: 100%;
   background-color: var(--query-window-bg);
+  padding: 8px;
 }
 .no-selection {
   display: flex;

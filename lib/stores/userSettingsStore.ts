@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia'
 import { useAnalyticsStore } from './analyticsStore'
+import { type ModalItem } from '../data/tips'
 
 export interface UserSettings {
   theme: 'dark' | 'light' | ''
   trilogyResolver: string
   telemetryEnabled: boolean | null
-  [key: string]: string | boolean | number | null | undefined
+  tipsRead: string[]
+  skipAllTips: boolean
+  [key: string]: string | boolean | number | null | undefined | string[]
 }
+
+const storageKey = 'userSettings'
 
 export const useUserSettingsStore = defineStore('userSettings', {
   state: () => ({
@@ -14,6 +19,8 @@ export const useUserSettingsStore = defineStore('userSettings', {
       theme: '',
       trilogyResolver: '',
       telemetryEnabled: null,
+      tipsRead: [] as string[],
+      skipAllTips: false,
     } as UserSettings,
     defaults: {
       theme: 'dark',
@@ -46,6 +53,31 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.hasChanges = true
     },
 
+    getUnreadTips(tips: ModalItem[]) {
+      if (this.settings.skipAllTips) {
+        return []
+      }
+      if (!this.settings.tipsRead) {
+        this.settings.tipsRead = []
+      }
+      return tips.filter((tip) => !this.settings.tipsRead.includes(tip.id))
+    },
+    clearDismissedTips() {
+      this.settings.tipsRead = []
+      this.hasChanges = true
+      this.saveSettings()
+    },
+    markTipRead(tipId: string) {
+      if (!this.settings.tipsRead.includes(tipId)) {
+        this.settings.tipsRead.push(tipId)
+        this.hasChanges = true
+        this.saveSettings()
+      }
+    },
+    clearReadTips() {
+      this.settings.tipsRead = []
+      this.hasChanges = true
+    },
     toggleTheme() {
       document.documentElement.classList.remove('dark-theme', 'light-theme')
 
@@ -79,8 +111,8 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.isLoading = true
 
       try {
-        // Here you would typically save to an API or localStorage
-        localStorage.setItem('userSettings', JSON.stringify(this.settings))
+        localStorage.setItem(storageKey, JSON.stringify(this.settings))
+        console.log('Settings saved:', this.settings)
         this.hasChanges = false
         return true
       } catch (error) {
@@ -98,7 +130,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.isLoading = true
 
       try {
-        const savedSettings = localStorage.getItem('userSettings')
+        const savedSettings = localStorage.getItem(storageKey)
         if (savedSettings) {
           this.settings = JSON.parse(savedSettings)
           // set telemetry
@@ -106,6 +138,10 @@ export const useUserSettingsStore = defineStore('userSettings', {
           if (this.settings.telemetryEnabled === false) {
             analyticsStore.setEnabled(this.settings.telemetryEnabled)
           }
+          if (!this.settings.tipsRead) {
+            this.settings.tipsRead = []
+          }
+          console.log(this.settings.tipsRead)
         }
       } catch (error) {
         console.error('Failed to load settings:', error)

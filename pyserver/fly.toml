@@ -4,7 +4,7 @@
 #
 
 app = 'trilogy-service'
-primary_region = 'atl'
+primary_region = 'ewr'
 
 [build]
 

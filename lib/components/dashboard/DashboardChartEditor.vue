@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import SimpleEditor from '../SimpleEditor.vue'
-import ResizeHandles from './ResizeHandles.vue'
+import ResizeHandles from '../../composables/ResizeHandles.vue'
 import { useResizableDialog } from '../../composables/useResizableDialog'
 import { type Import } from '../../stores/resolver'
 import type { ContentInput } from '../../stores/resolver'

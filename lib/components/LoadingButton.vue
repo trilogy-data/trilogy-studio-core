@@ -4,8 +4,9 @@
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"
+    :data-testid="`${testId}`"
   >
-    <span :class="{ 'hidden-text': isLoading }">
+    <span :class="{ 'hidden-text': isLoading, contents: true }">
       <slot></slot>
     </span>
     <span v-if="status === 'success'" class="success status_overlay">✔</span>
@@ -139,10 +140,15 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
 }
 
 .success {
   color: green;
+}
+
+.contents {
+  height: 100%;
 }
 
 .error {
@@ -152,6 +158,9 @@ export default {
 .btn {
   /* width: 100%; */
   position: relative;
+  padding: 0px;
+  margin: 0px;
+  /* height:100%; */
 }
 
 .btn:disabled {
@@ -161,12 +170,14 @@ export default {
 
 .spinner {
   display: inline-block;
-  height: 45%;
   aspect-ratio: 1 / 1;
   border: 2px solid transparent;
   border-top-color: var(--color);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
+  padding: 0px;
+  margin: 0px;
+  height: 50%;
 }
 
 @keyframes spin {
