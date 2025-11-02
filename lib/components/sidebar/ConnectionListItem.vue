@@ -224,6 +224,7 @@
             class="hover-icon"
             :connection="item.connection"
             :table="item.object"
+            mode="icon"
           />
         </div>
         <div class="connection-actions" v-else-if="item.type === 'connection'">

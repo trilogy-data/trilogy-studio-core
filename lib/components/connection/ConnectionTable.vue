@@ -3,37 +3,27 @@
     <div class="table-header">
       <div class="table-title">
         <h2>
-          <span class="text-faint" v-if="table.database">{{ table.database }}.</span
-          ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+          <span class="text-faint" v-if="table.database">{{ table.database }}.</span><span class="text-faint"
+            v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
         </h2>
-        <span
-          class="table-type-badge"
-          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
-        >
+        <span class="table-type-badge" :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']">
           {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
         </span>
         <div class="data-toolbar">
           <button class="refresh-button" @click="loadSampleData">
             <span class="refresh-icon">⟳</span> Refresh
           </button>
+          <CreateEditorFromDatasourcePopup v-if="connectionInfo" :connection="connectionInfo" :table="table" mode="button" />
         </div>
       </div>
       <p v-if="table.description" class="table-description">{{ table.description }}</p>
     </div>
 
     <div class="tabs" ref="tabsRef">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'structure' }"
-        @click="activeTab = 'structure'"
-      >
+      <button class="tab-button" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'">
         Structure
       </button>
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'data' }"
-        @click="activeTab = 'data'"
-      >
+      <button class="tab-button" :class="{ active: activeTab === 'data' }" @click="activeTab = 'data'">
         Sample Data
       </button>
     </div>
@@ -42,12 +32,7 @@
       <div v-if="activeTab === 'structure'" class="table-structure">
         <div class="structure-header">
           <div class="search-container">
-            <input
-              type="text"
-              v-model="searchTerm"
-              placeholder="Search columns..."
-              class="search-input"
-            />
+            <input type="text" v-model="searchTerm" placeholder="Search columns..." class="search-input" />
           </div>
           <div class="column-count">
             {{ filteredColumns.length }} column{{ filteredColumns.length !== 1 ? 's' : '' }}
@@ -104,11 +89,8 @@
 
         <div v-else class="result-container-wrapper" ref="resultContainerRef">
           <div class="result-container">
-            <DataTable
-              :results="currentSampleData.data"
-              :headers="currentSampleData.headers"
-              :containerHeight="containerHeight"
-            />
+            <DataTable :results="currentSampleData.data" :headers="currentSampleData.headers"
+              :containerHeight="containerHeight" />
           </div>
         </div>
       </div>
@@ -123,11 +105,13 @@ import { Results } from '../../editors/results'
 import { inject } from 'vue'
 import DataTable from '../DataTable.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import CreateEditorFromDatasourcePopup from '../sidebar/CreateEditorFromDatasourcePopup.vue'
 
 export default defineComponent({
   name: 'TableViewer',
   components: {
     DataTable,
+    CreateEditorFromDatasourcePopup,
   },
   props: {
     table: {
@@ -338,6 +322,10 @@ export default defineComponent({
       cleanupWindowListener()
     })
 
+    const connectionInfo = computed(() => {
+      if (!connectionStore) return null
+      return connectionStore.connections[props.connectionName]
+    })
     return {
       activeTab,
       searchTerm,
@@ -350,6 +338,7 @@ export default defineComponent({
       resultContainerRef,
       tabsRef,
       containerHeight,
+      connectionInfo,
     }
   },
 })
@@ -475,6 +464,7 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
   padding: 5px;
+  
 }
 
 .search-container {
@@ -598,10 +588,6 @@ export default defineComponent({
   background: var(--query-window-bg);
 }
 
-.refresh-icon {
-  font-size: 1rem;
-}
-
 .loading-spinner {
   display: flex;
   flex-direction: column;
@@ -626,6 +612,7 @@ export default defineComponent({
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
