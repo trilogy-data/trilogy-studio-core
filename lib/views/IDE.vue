@@ -250,7 +250,7 @@ import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, ref, defineAsyncComponent, provide } from 'vue'
+import { inject, ref, defineAsyncComponent, provide, onBeforeUnmount } from 'vue'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -370,9 +370,17 @@ export default {
       displayedTips,
       fullScreen,
       toggleFullScreen,
+      addBackListeners,
+      removeBacklisteners,
     } = screenNavigation
 
     onInitialLoad()
+    addBackListeners()
+
+    // on unmount, remove back listeners
+    onBeforeUnmount(() => {
+      removeBacklisteners()
+    })
 
     provide('navigationStore', screenNavigation)
 

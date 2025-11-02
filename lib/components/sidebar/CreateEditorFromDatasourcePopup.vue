@@ -2,6 +2,7 @@
   <div @click.stop>
     <!-- Button to trigger popup -->
     <button
+      v-if="props.mode === 'icon'"
       class="quick-new-editor-button trilogy-class"
       @click.stop="openPopup"
       :data-testid="`create-datasource-${table.name}`"
@@ -9,166 +10,180 @@
     >
       <i class="mdi mdi-database-plus-outline"></i>
     </button>
+    <button
+      v-else-if="props.mode === 'button'"
+      class="alt-create-button"
+      @click.stop="openPopup"
+      :data-testid="`create-datasource-button-${table.name}`"
+    >
+      <i class="mdi mdi-database-plus-outline"></i>Create Datasource
+    </button>
 
-    <!-- Popup Modal -->
-    <div v-if="showPopup" class="popup-overlay" @click.self="closePopup">
-      <div class="popup-content" data-testid="datasource-creation-modal">
-        <div class="popup-header">
-          <h3 data-testid="modal-title">Create Datasource from {{ table.name }}</h3>
-          <button class="close-button" @click="closePopup">
-            <i class="mdi mdi-close"></i>
-          </button>
-        </div>
+    <!-- Teleported Popup Modal -->
+    <Teleport to="body">
+      <div v-if="showPopup" class="popup-overlay" @click.self="closePopup">
+        <div class="popup-content" data-testid="datasource-creation-modal">
+          <div class="popup-header">
+            <h3 data-testid="modal-title">Create Datasource from {{ table.name }}</h3>
+            <button class="close-button" @click="closePopup">
+              <i class="mdi mdi-close"></i>
+            </button>
+          </div>
 
-        <div class="popup-body">
-          <!-- Main Content Grid -->
-          <div class="content-grid">
-            <!-- Left Column -->
-            <div class="left-column">
-              <!-- Column Configuration -->
-              <div class="form-section">
-                <label class="section-label">Column Configuration</label>
-                <div class="column-config-container">
-                  <div
-                    v-for="column in tableColumns"
-                    :key="`${column.name}-${componentKey}`"
-                    class="column-config-item"
-                    :data-testid="`column-config-${column.name}`"
-                  >
-                    <div class="column-row">
-                      <div class="column-info">
-                        <span class="pk-label">
-                          <span>Grain Key?</span>
-                          <label class="checkbox-label">
-                            <input
-                              type="checkbox"
-                              :value="column.name"
-                              v-model="selectedGrainKeys"
-                              @change="updateDatasourcePreview"
-                              :data-testid="`grain-key-checkbox-${column.name}`"
-                            />
-                          </label>
-                        </span>
-                        <div class="menu-title" @click="() => startEditing(column.name)">
-                          Field:
-                          <span
-                            v-if="!isEditing[column.name]"
-                            class="editable-text"
-                            :data-testid="`edit-column-name-${column.name}`"
-                          >
-                            {{ columnAliases[column.name] }}
-                            <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
+          <div class="popup-body">
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+              <!-- Left Column -->
+              <div class="left-column">
+                <!-- Column Configuration -->
+                <div class="form-section">
+                  <label class="section-label">Column Configuration</label>
+                  <div class="column-config-container">
+                    <div
+                      v-for="column in tableColumns"
+                      :key="`${column.name}-${componentKey}`"
+                      class="column-config-item"
+                      :data-testid="`column-config-${column.name}`"
+                    >
+                      <div class="column-row">
+                        <div class="column-info">
+                          <span class="pk-label">
+                            <span>Grain Key?</span>
+                            <label class="checkbox-label">
+                              <input
+                                type="checkbox"
+                                :value="column.name"
+                                v-model="selectedGrainKeys"
+                                @change="updateDatasourcePreview"
+                                :data-testid="`grain-key-checkbox-${column.name}`"
+                              />
+                            </label>
                           </span>
+                          <div class="menu-title" @click="() => startEditing(column.name)">
+                            Field:
+                            <span
+                              v-if="!isEditing[column.name]"
+                              class="editable-text"
+                              :data-testid="`edit-column-name-${column.name}`"
+                            >
+                              {{ columnAliases[column.name] }}
+                              <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
+                            </span>
+                            <input
+                              v-else
+                              ref="nameInput"
+                              :data-testid="`column-name-input-${column.name}`"
+                              v-model="columnAliases[column.name]"
+                              @blur="() => stopEditing(column.name)"
+                              @keyup.enter="() => stopEditing(column.name)"
+                              @keyup.esc="() => cancelEditing(column.name)"
+                              class="name-input"
+                              type="text"
+                            />
+                          </div>
+                          <span class="column-type">(bound to: {{ column.name }})</span>
+                          <span class="column-type">({{ column.trilogyType }})</span>
+                        </div>
+                        <div class="column-description">
                           <input
-                            v-else
-                            ref="nameInput"
-                            :data-testid="`column-name-input-${column.name}`"
-                            v-model="columnAliases[column.name]"
-                            @blur="() => stopEditing(column.name)"
-                            @keyup.enter="() => stopEditing(column.name)"
-                            @keyup.esc="() => cancelEditing(column.name)"
-                            class="name-input"
                             type="text"
+                            :value="columnDescriptions[column.name] || column.description || ''"
+                            @input="
+                              updateColumnDescription(
+                                column.name,
+                                ($event.target as HTMLInputElement)?.value,
+                              )
+                            "
+                            placeholder="Enter description..."
+                            class="description-input"
+                            :data-testid="`description-input-${column.name}`"
                           />
                         </div>
-                        <span class="column-type">(bound to: {{ column.name }})</span>
-                        <span class="column-type">({{ column.trilogyType }})</span>
-                      </div>
-                      <div class="column-description">
-                        <input
-                          type="text"
-                          :value="columnDescriptions[column.name] || column.description || ''"
-                          @input="
-                            updateColumnDescription(
-                              column.name,
-                              ($event.target as HTMLInputElement)?.value,
-                            )
-                          "
-                          placeholder="Enter description..."
-                          class="description-input"
-                          :data-testid="`description-input-${column.name}`"
-                        />
                       </div>
                     </div>
-                  </div>
-                </div>
-                <div
-                  v-if="selectedGrainKeys.length === 0"
-                  class="warning-text"
-                  data-testid="no-grain-keys-warning"
-                >
-                  No grain keys selected. All columns inferred as keys.
-                </div>
-                <div v-else>
-                  <span class="primary-key-badge" data-testid="grain-key-display"
-                    >Grain Key: {{ selectedGrainKeys.join(', ') }}</span
-                  >
-                </div>
-              </div>
-
-              <!-- Sample Data -->
-              <div class="form-section">
-                <label class="section-label">Sample Data</label>
-                <div class="sample-data-container">
-                  <div v-if="isLoading" class="loading-indicator">
-                    <div class="spinner"></div>
-                    <span>Loading sample data...</span>
-                  </div>
-                  <div v-else-if="error" class="error-text">
-                    ⚠️ Error loading sample data: {{ error }}
                   </div>
                   <div
-                    v-else-if="sampleData && sampleData.data && sampleData.data.length > 0"
-                    class="data-table-wrapper"
+                    v-if="selectedGrainKeys.length === 0"
+                    class="warning-text"
+                    data-testid="no-grain-keys-warning"
                   >
-                    <div class="data-table-wrapper-core">
-                      <DataTable
-                        :results="sampleData.data"
-                        :headers="sampleData.headers"
-                        :fitParent="true"
-                        data-testid="sample-data-table"
-                      />
-                    </div>
-                    <div class="sample-info" data-testid="sample-data-info">
-                      Showing {{ sampleData.data.length }} rows
-                    </div>
+                    No grain keys selected. All columns inferred as keys.
                   </div>
-                  <div v-else class="no-data-text">No sample data available</div>
+                  <div v-else>
+                    <span class="primary-key-badge" data-testid="grain-key-display"
+                      >Grain Key: {{ selectedGrainKeys.join(', ') }}</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Sample Data -->
+                <div class="form-section">
+                  <label class="section-label">Sample Data</label>
+                  <div class="sample-data-container">
+                    <div v-if="isLoading" class="loading-indicator">
+                      <div class="spinner"></div>
+                      <span>Loading sample data...</span>
+                    </div>
+                    <div v-else-if="error" class="error-text">
+                      ⚠️ Error loading sample data: {{ error }}
+                    </div>
+                    <div
+                      v-else-if="sampleData && sampleData.data && sampleData.data.length > 0"
+                      class="data-table-wrapper"
+                    >
+                      <div class="data-table-wrapper-core">
+                        <DataTable
+                          :results="sampleData.data"
+                          :headers="sampleData.headers"
+                          :fitParent="true"
+                          data-testid="sample-data-table"
+                        />
+                      </div>
+                      <div class="sample-info" data-testid="sample-data-info">
+                        Showing {{ sampleData.data.length }} rows
+                      </div>
+                    </div>
+                    <div v-else class="no-data-text">No sample data available</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Right Column - Datasource Preview -->
-            <div class="right-column">
-              <div class="form-section">
-                <label class="section-label">Datasource Preview</label>
-                <div class="code-preview" data-testid="datasource-preview">
-                  <code-block :content="datasourcePreview" language="trilogy" />
+              <!-- Right Column - Datasource Preview -->
+              <div class="right-column">
+                <div class="form-section">
+                  <label class="section-label">Datasource Preview</label>
+                  <div class="code-preview" data-testid="datasource-preview">
+                    <code-block :content="datasourcePreview" language="trilogy" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="popup-footer">
-          <button class="cancel-button" @click="closePopup" data-testid="cancel-datasource-button">
-            Cancel
-          </button>
-          <button
-            class="create-button"
-            @click="createDatasource"
-            data-testid="create-datasource-button"
-          >
-            Create Datasource
-          </button>
+          <div class="popup-footer">
+            <button
+              class="cancel-button"
+              @click="closePopup"
+              data-testid="cancel-datasource-button"
+            >
+              Cancel
+            </button>
+            <button
+              class="create-button"
+              @click="createDatasource"
+              data-testid="create-datasource-button"
+            >
+              Create Datasource
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, inject } from 'vue'
+import { ref, computed, watch, nextTick, inject, onMounted, onUnmounted } from 'vue'
 import type { Connection, Table } from '../../connections'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
@@ -180,6 +195,7 @@ import type { NavigationStore } from '../../stores/useScreenNavigation'
 export interface CreateDatasourcePopupProps {
   connection: Connection
   table: Table
+  mode: 'icon' | 'button'
 }
 
 const props = defineProps<CreateDatasourcePopupProps>()
@@ -212,6 +228,33 @@ const originalColumnAliases = ref<Record<string, string>>({}) // Store original 
 
 // Reactive computed for table columns to ensure proper reactivity
 const tableColumns = computed(() => props.table?.columns || [])
+
+// Escape key handler for closing popup
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showPopup.value) {
+    closePopup()
+  }
+}
+
+// Prevent body scroll when popup is open
+const toggleBodyScroll = (disable: boolean) => {
+  if (disable) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
+
+// Lifecycle hooks for managing global event listeners
+onMounted(() => {
+  document.addEventListener('keydown', handleEscapeKey)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscapeKey)
+  // Ensure body scroll is restored
+  document.body.style.overflow = ''
+})
 
 // Initialize data when table changes
 const initializeColumnData = async () => {
@@ -311,10 +354,12 @@ const openPopup = async () => {
   await loadSampleData()
   await nextTick()
   showPopup.value = true
+  toggleBodyScroll(true)
 }
 
 const closePopup = () => {
   showPopup.value = false
+  toggleBodyScroll(false)
   sampleData.value = null
   error.value = null
   // Reset all data
@@ -440,18 +485,24 @@ const createDatasource = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 9999; /* Higher z-index for teleported modal */
   cursor: default;
+  padding: 16px; /* Add padding for better mobile experience */
+  box-sizing: border-box;
 }
 
 .popup-content {
   background: var(--sidebar-bg);
   border: 1px solid var(--border);
+  border-radius: 8px; /* Add border radius for better appearance */
   width: 95%;
   max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;
   color: var(--text-color);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04); /* Add shadow */
 }
 
 .popup-header {
@@ -460,6 +511,8 @@ const createDatasource = async () => {
   align-items: center;
   padding: 16px;
   border-bottom: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-radius: 8px 8px 0 0; /* Match parent border radius */
 }
 
 .popup-header h3 {
@@ -474,6 +527,8 @@ const createDatasource = async () => {
   cursor: pointer;
   font-size: 20px;
   padding: 4px;
+  border-radius: 4px; /* Add border radius */
+  transition: background-color 0.2s;
 }
 
 .close-button:hover {
@@ -532,6 +587,7 @@ const createDatasource = async () => {
   background: var(--query-window-bg);
   max-height: 400px;
   overflow-y: auto;
+  border-radius: 4px; /* Add border radius */
 }
 
 .column-config-item {
@@ -613,6 +669,9 @@ const createDatasource = async () => {
   background: var(--sidebar-bg);
   color: var(--text-color);
   font-size: 12px;
+  border-radius: 4px; /* Add border radius */
+  padding: 4px 8px; /* Add padding */
+  transition: border-color 0.2s;
 }
 
 .description-input:focus {
@@ -624,6 +683,7 @@ const createDatasource = async () => {
   border: 1px solid var(--border);
   background: var(--query-window-bg);
   min-height: 50%;
+  border-radius: 4px; /* Add border radius */
 }
 
 .loading-indicator {
@@ -686,6 +746,7 @@ const createDatasource = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0 0 4px 4px; /* Match parent border radius */
 }
 
 .no-data-text {
@@ -702,6 +763,7 @@ const createDatasource = async () => {
   overflow-x: auto;
   overflow-y: scroll;
   max-height: 50vh;
+  border-radius: 4px; /* Add border radius */
 }
 
 .code-preview pre {
@@ -719,6 +781,8 @@ const createDatasource = async () => {
   gap: 8px;
   padding: 16px;
   border-top: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-radius: 0 0 8px 8px; /* Match parent border radius */
 }
 
 .cancel-button,
@@ -727,6 +791,8 @@ const createDatasource = async () => {
   border: 1px solid var(--border);
   cursor: pointer;
   font-size: 14px;
+  border-radius: 4px; /* Add border radius */
+  transition: background-color 0.2s;
 }
 
 .cancel-button {
@@ -741,10 +807,12 @@ const createDatasource = async () => {
 .create-button {
   background-color: #cc6900;
   color: white;
+  border-color: #cc6900;
 }
 
 .create-button:hover {
   background-color: #b85c00;
+  border-color: #b85c00;
 }
 
 .menu-title {
@@ -754,6 +822,11 @@ const createDatasource = async () => {
 .editable-text {
   border-bottom: 1px dashed var(--text-faint);
   cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.editable-text:hover {
+  border-color: #cc6900;
 }
 
 .edit-indicator {
@@ -768,6 +841,8 @@ const createDatasource = async () => {
   color: var(--text-color);
   font-size: 12px;
   padding: 2px 4px;
+  border-radius: 4px; /* Add border radius */
+  transition: border-color 0.2s;
 }
 
 .name-input:focus {
@@ -792,6 +867,50 @@ const createDatasource = async () => {
 
   .popup-content {
     width: 100%;
+    margin: 0;
   }
+
+  .popup-overlay {
+    padding: 8px; /* Reduce padding on smaller screens */
+  }
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 768px) {
+  .popup-overlay {
+    padding: 4px;
+  }
+
+  .popup-content {
+    width: 100%;
+    max-height: 95vh;
+  }
+
+  .popup-body {
+    padding: 12px;
+  }
+
+  .content-grid {
+    gap: 16px;
+  }
+}
+
+.alt-create-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.alt-create-button:hover {
+  background-color: var(--hover-color);
+  border-color: #cc6900;
 }
 </style>

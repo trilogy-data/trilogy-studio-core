@@ -4,6 +4,8 @@ import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR } from 
 import { type ChartConfig } from '../editors/results'
 import { DateTime } from 'luxon'
 
+const HEADLINE_MAX = 20
+
 const valueToString = (column: string, value: any): string => {
   if (value === null || value === undefined) {
     return `datum.${column} === null`
@@ -176,8 +178,6 @@ const createHeadlineLayer = (
       ],
     }
   }
-  console.log('type debug')
-  console.log(valueToString(column, datum))
   let labelMark = {
     mark: {
       type: 'text',
@@ -216,7 +216,8 @@ export const createHeadlineSpec = (
   intChart: { [key: string]: string | number | Array<any> }[],
 ) => {
   let columnsArray = Array.from(columns.values())
-  let dataFull = data ? data : []
+  // Avoid trying to process too much
+  let dataFull = data ? data.slice(0, HEADLINE_MAX) : []
 
   // Calculate maximum text lengths for consistent sizing
   let maxValueLength = 1

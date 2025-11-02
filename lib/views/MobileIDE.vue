@@ -175,7 +175,7 @@ import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, defineAsyncComponent, provide } from 'vue'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -270,10 +270,20 @@ export default {
       closeTab,
       closeOtherTabsExcept,
       openTab,
+      addBackListeners,
+      removeBacklisteners,
+      onInitialLoad,
     } = screenNavigation
     const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
     }
+    onInitialLoad()
+    addBackListeners()
+
+    // on unmount, remove back listeners
+    onBeforeUnmount(() => {
+      removeBacklisteners()
+    })
     provide('navigationStore', screenNavigation)
     return {
       connectionStore,

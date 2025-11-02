@@ -16,6 +16,12 @@
           <button class="refresh-button" @click="loadSampleData">
             <span class="refresh-icon">⟳</span> Refresh
           </button>
+          <CreateEditorFromDatasourcePopup
+            v-if="connectionInfo"
+            :connection="connectionInfo"
+            :table="table"
+            mode="button"
+          />
         </div>
       </div>
       <p v-if="table.description" class="table-description">{{ table.description }}</p>
@@ -123,11 +129,13 @@ import { Results } from '../../editors/results'
 import { inject } from 'vue'
 import DataTable from '../DataTable.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import CreateEditorFromDatasourcePopup from '../sidebar/CreateEditorFromDatasourcePopup.vue'
 
 export default defineComponent({
   name: 'TableViewer',
   components: {
     DataTable,
+    CreateEditorFromDatasourcePopup,
   },
   props: {
     table: {
@@ -338,6 +346,10 @@ export default defineComponent({
       cleanupWindowListener()
     })
 
+    const connectionInfo = computed(() => {
+      if (!connectionStore) return null
+      return connectionStore.connections[props.connectionName]
+    })
     return {
       activeTab,
       searchTerm,
@@ -350,6 +362,7 @@ export default defineComponent({
       resultContainerRef,
       tabsRef,
       containerHeight,
+      connectionInfo,
     }
   },
 })
@@ -598,10 +611,6 @@ export default defineComponent({
   background: var(--query-window-bg);
 }
 
-.refresh-icon {
-  font-size: 1rem;
-}
-
 .loading-spinner {
   display: flex;
   flex-direction: column;
@@ -626,6 +635,7 @@ export default defineComponent({
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
