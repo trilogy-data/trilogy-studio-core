@@ -356,13 +356,13 @@ const createNavigationStore = (): NavigationStore => {
     if (state.activeScreen.value === screen) {
       return
     }
-    pushHashToUrl('screen', screen)
     state.activeScreen.value = screen
+    pushHashToUrl('screen', screen)
   }
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {
-    pushHashToUrl('sidebarScreen', screen)
     state.activeSidebarScreen.value = screen
+    pushHashToUrl('sidebarScreen', screen)
     if (screen == 'settings') {
       openTab('settings', 'Settings', 'settings')
     } else if (screen == 'profile') {
@@ -586,12 +586,11 @@ const createNavigationStore = (): NavigationStore => {
       const currentDocs = getDefaultValueFromHash('docs', '')
       const currentLLMs = getDefaultValueFromHash('llms', '')
       const currentScreen = getDefaultValueFromHash('screen', '') as ScreenType
-      const currentSidebarScreen = getDefaultValueFromHash('sidebarScreen', 'editors') as ScreenType
+      const currentSidebarScreen = getDefaultValueFromHash('sidebarScreen', '') as ScreenType
       let changedScreen = false
       // Update sidebar screen if it changed
       if (currentSidebarScreen !== state.activeSidebarScreen.value) {
-        state.activeSidebarScreen.value = currentSidebarScreen
-        setActiveSidebarScreen(currentScreen)
+        setActiveSidebarScreen(currentSidebarScreen)
       }
 
       if (currentScreen !== state.activeScreen.value) {

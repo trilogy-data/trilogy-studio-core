@@ -374,8 +374,8 @@ export default defineComponent({
     getUrl(screen: string): string {
       // Create a URL with the appropriate parameters for this screen
       const params = new URLSearchParams(window.location.search)
-      params.set('screen', screen)
-      return `?${params.toString()}`
+      params.set('sidebarScreen', screen)
+      return `#${params.toString()}`
     },
   },
 })
