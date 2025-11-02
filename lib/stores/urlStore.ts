@@ -45,3 +45,19 @@ export function removeHashFromUrl(key: string): void {
   // Update the URL hash
   window.location.hash = `#${hashParams.toString()}`
 }
+
+export function removeHashesFromUrl(keys: string[]): void {
+  // Get the current hash from the URL
+  const hash = window.location.hash
+
+  // Parse the hash into key-value pairs
+  const hashParams = new URLSearchParams(hash.slice(1)) // Remove the `#`
+
+  // Remove each specified key
+  keys.forEach((key) => {
+    hashParams.delete(key)
+  })
+
+  // Update the URL hash
+  window.location.hash = `#${hashParams.toString()}`
+}

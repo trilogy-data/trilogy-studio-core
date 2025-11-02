@@ -1,7 +1,8 @@
 <template>
   <div @click.stop>
     <!-- Button to trigger popup -->
-    <button v-if="props.mode === 'icon'"
+    <button
+      v-if="props.mode === 'icon'"
       class="quick-new-editor-button trilogy-class"
       @click.stop="openPopup"
       :data-testid="`create-datasource-${table.name}`"
@@ -9,14 +10,15 @@
     >
       <i class="mdi mdi-database-plus-outline"></i>
     </button>
-    <button v-else-if="props.mode === 'button'"
+    <button
+      v-else-if="props.mode === 'button'"
       class="alt-create-button"
       @click.stop="openPopup"
       :data-testid="`create-datasource-button-${table.name}`"
     >
-       <i class="mdi mdi-database-plus-outline"></i>Create Datasource
+      <i class="mdi mdi-database-plus-outline"></i>Create Datasource
     </button>
-    
+
     <!-- Teleported Popup Modal -->
     <Teleport to="body">
       <div v-if="showPopup" class="popup-overlay" @click.self="closePopup">
@@ -159,7 +161,11 @@
           </div>
 
           <div class="popup-footer">
-            <button class="cancel-button" @click="closePopup" data-testid="cancel-datasource-button">
+            <button
+              class="cancel-button"
+              @click="closePopup"
+              data-testid="cancel-datasource-button"
+            >
               Cancel
             </button>
             <button
@@ -494,7 +500,9 @@ const createDatasource = async () => {
   max-height: 90vh;
   overflow-y: auto;
   color: var(--text-color);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* Add shadow */
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04); /* Add shadow */
 }
 
 .popup-header {
@@ -872,16 +880,16 @@ const createDatasource = async () => {
   .popup-overlay {
     padding: 4px;
   }
-  
+
   .popup-content {
     width: 100%;
     max-height: 95vh;
   }
-  
+
   .popup-body {
     padding: 12px;
   }
-  
+
   .content-grid {
     gap: 16px;
   }

@@ -1,5 +1,10 @@
 import { ref, type Ref } from 'vue'
-import { pushHashToUrl, removeHashFromUrl, getDefaultValueFromHash } from './urlStore'
+import {
+  pushHashToUrl,
+  removeHashFromUrl,
+  getDefaultValueFromHash,
+  removeHashesFromUrl,
+} from './urlStore'
 import { useEditorStore, useDashboardStore, useUserSettingsStore } from '.'
 import { lastSegment } from '../data/constants'
 import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
@@ -50,6 +55,13 @@ export interface Tab {
   params?: Record<string, string>
 }
 
+interface TabToOpen {
+  screen: ScreenType
+  title: string | null
+  key: string
+  isActive?: boolean
+}
+
 export interface NavigationStore {
   readonly fullScreen: Ref<boolean>
   readonly activeScreen: Ref<string>
@@ -89,12 +101,15 @@ export interface NavigationStore {
   closeOtherTabsExcept(tabId: string): void
   closeTabsToRightOf(tabId: string): void
   onInitialLoad(): void
+  addBackListeners(): void
+  removeBacklisteners(): void
 }
 
 const createNavigationStore = (): NavigationStore => {
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
   const userSettingsStore = useUserSettingsStore()
+  let eventListener: any = null
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
     activeSidebarScreen: ref(
@@ -145,13 +160,18 @@ const createNavigationStore = (): NavigationStore => {
     }
   }
 
-  const openTab = (screen: ScreenType, title: string | null, address: string): void => {
+  const openTab = (
+    screen: ScreenType,
+    title: string | null,
+    address: string,
+    skipUrlUpdate: boolean = false,
+  ): void => {
     // check if tab already exists
     const existingTab = state.tabs.value.find(
       (tab) => tab.screen === screen && tab.address === address,
     )
     if (existingTab) {
-      setActiveTab(existingTab.id)
+      setActiveTab(existingTab.id, skipUrlUpdate)
       return
     }
     const maxTabId = state.tabs.value.reduce((maxId, tab) => {
@@ -159,7 +179,9 @@ const createNavigationStore = (): NavigationStore => {
       return isNaN(idNum) ? maxId : Math.max(maxId, idNum)
     }, 0)
     let tabIdCounter = maxTabId
-    setActiveScreen(screen)
+    if (!skipUrlUpdate) {
+      setActiveScreen(screen)
+    }
     let finalTitle = getName(screen, title, address)
     const tab: Tab = {
       id: `tab-${++tabIdCounter}`,
@@ -169,7 +191,7 @@ const createNavigationStore = (): NavigationStore => {
     }
     state.tabs.value.push(tab)
 
-    setActiveTab(tab.id)
+    setActiveTab(tab.id, skipUrlUpdate)
   }
 
   const closeTab = (tabId: string | null, address: string | null = null): void => {
@@ -222,42 +244,46 @@ const createNavigationStore = (): NavigationStore => {
 
   const cleanupActiveKeys = (): void => {
     let activeKeys = state.tabs.value.map((tab) => tab.screen)
+    let keysToRemove: string[] = []
     if (!activeKeys.includes('editors')) {
       state.activeEditor.value = ''
-      removeHashFromUrl('editors')
-      removeHashFromUrl('activeEditorTabs')
+      keysToRemove.push('editors')
+      keysToRemove.push('activeEditorTab')
     }
     if (!activeKeys.includes('dashboard')) {
       state.activeDashboard.value = ''
-      removeHashFromUrl('dashboard')
+      keysToRemove.push('dashboard')
     }
     if (!activeKeys.includes('connections')) {
       state.activeConnectionKey.value = ''
-      removeHashFromUrl('connections')
+      keysToRemove.push('connections')
     }
     if (!activeKeys.includes('models')) {
       state.activeModelKey.value = ''
-      removeHashFromUrl('model')
+      keysToRemove.push('model')
     }
     if (!activeKeys.includes('community-models')) {
       state.activeCommunityModelKey.value = ''
-      removeHashFromUrl('community-models')
+      keysToRemove.push('community-models')
     }
     if (!activeKeys.includes('tutorial')) {
       state.activeDocumentationKey.value = ''
-      removeHashFromUrl('docs')
+      keysToRemove.push('tutorial')
     }
     if (!activeKeys.includes('llms')) {
       state.activeLLMConnectionKey.value = ''
-      removeHashFromUrl('llms')
+      keysToRemove.push('llms')
     }
     if (!activeKeys.includes('settings')) {
-      removeHashFromUrl('sidebarScreen')
-      removeHashFromUrl('settings')
+      keysToRemove.push('settings')
     }
     if (!activeKeys.includes('profile')) {
-      removeHashFromUrl('sidebarScreen')
+      keysToRemove.push('profile')
     }
+    if (!activeKeys.includes('welcome')) {
+      keysToRemove.push('welcome')
+    }
+    removeHashesFromUrl(keysToRemove)
   }
 
   const closeTabsToRightOf = (tabId: string): void => {
@@ -282,16 +308,13 @@ const createNavigationStore = (): NavigationStore => {
     cleanupActiveKeys()
   }
 
-  const setActiveTab = (tabId: string): void => {
+  const setActiveTab = (tabId: string, skipUrlUpdate: boolean = false): void => {
     // validate the tab exists
     const tabInfo = state.tabs.value.find((tab) => tab.id === tabId)
     if (tabInfo) {
       state.activeTab.value = tabId
       setActiveScreen(tabInfo.screen)
       let baseTips: ModalItem[] = userSettingsStore.getUnreadTips(tips)
-      if (tabInfo.address) {
-        pushHashToUrl(tabInfo.screen, tabInfo.address)
-      }
 
       if (tabInfo.screen === 'editors') {
         state.activeEditor.value = tabInfo.address
@@ -323,9 +346,16 @@ const createNavigationStore = (): NavigationStore => {
       state.mobileMenuOpen.value = false
       state.displayedTips.value = baseTips
       state.showTipModal.value = baseTips.length > 0
+      // push last, so the event listener can detect it
+      if (tabInfo.address && !skipUrlUpdate) {
+        pushHashToUrl(tabInfo.screen, tabInfo.address)
+      }
     }
   }
   const setActiveScreen = (screen: ScreenType): void => {
+    if (state.activeScreen.value === screen) {
+      return
+    }
     pushHashToUrl('screen', screen)
     state.activeScreen.value = screen
   }
@@ -419,9 +449,9 @@ const createNavigationStore = (): NavigationStore => {
     const connectionType = state.connectionImport.value
     let sidebarScreen: ScreenType = 'editors'
     let isImport = false
+
     if (getDefaultValueFromHash('skipTips', '') === 'true') {
       userSettingsStore.updateSetting('skipAllTips', true)
-      console.log('Skipping tips as per URL parameter')
     }
 
     if (importUrl && connectionType) {
@@ -429,44 +459,210 @@ const createNavigationStore = (): NavigationStore => {
       isImport = true
     }
 
+    let activeScreen = state.activeScreen.value
+    let activeSidebarScreen = state.activeSidebarScreen.value
+
+    // Refactored: collect tabs to open in a list
+    const tabsToOpen: TabToOpen[] = []
+
     if (state.activeEditor.value && !isImport) {
-      sidebarScreen = 'editors'
-      openTab('editors', null, state.activeEditor.value)
+      tabsToOpen.push({
+        screen: 'editors',
+        title: null,
+        key: state.activeEditor.value,
+        isActive: activeScreen === 'editors',
+      })
     }
+
     if (state.activeDashboard.value && !isImport) {
-      sidebarScreen = 'dashboard'
-      openTab('dashboard', null, state.activeDashboard.value)
+      tabsToOpen.push({
+        screen: 'dashboard',
+        title: null,
+        key: state.activeDashboard.value,
+        isActive: activeScreen === 'dashboard',
+      })
     }
+
     if (state.activeConnectionKey.value && !isImport) {
-      sidebarScreen = 'connections'
-      openTab('connections', null, state.activeConnectionKey.value)
+      tabsToOpen.push({
+        screen: 'connections',
+        title: null,
+        key: state.activeConnectionKey.value,
+        isActive: activeScreen === 'connections',
+      })
     }
+
     if (state.activeModelKey.value && !isImport) {
-      sidebarScreen = 'models'
-      openTab('models', null, state.activeModelKey.value)
+      tabsToOpen.push({
+        screen: 'models',
+        title: null,
+        key: state.activeModelKey.value,
+        isActive: activeScreen === 'models',
+      })
     }
+
     if (state.activeCommunityModelKey.value && !isImport) {
-      sidebarScreen = 'community-models'
-      openTab('community-models', null, state.activeCommunityModelKey.value)
+      tabsToOpen.push({
+        screen: 'community-models',
+        title: null,
+        key: state.activeCommunityModelKey.value,
+        isActive: activeScreen === 'community-models',
+      })
     }
+
     if (state.activeDocumentationKey.value && !isImport) {
-      sidebarScreen = 'tutorial'
-      openTab('tutorial', null, state.activeDocumentationKey.value)
+      tabsToOpen.push({
+        screen: 'tutorial',
+        title: null,
+        key: state.activeDocumentationKey.value,
+        isActive: activeScreen === 'tutorial',
+      })
     }
+
     if (state.activeLLMConnectionKey.value && !isImport) {
-      sidebarScreen = 'llms'
-      openTab('llms', null, state.activeLLMConnectionKey.value)
+      tabsToOpen.push({
+        screen: 'llms',
+        title: null,
+        key: state.activeLLMConnectionKey.value,
+
+        isActive: activeScreen === 'llms',
+      })
     }
+
     if (state.activeSidebarScreen.value === 'settings') {
-      sidebarScreen = 'settings'
-      openTab('settings', 'Settings', 'settings')
+      tabsToOpen.push({
+        screen: 'settings',
+        title: 'Settings',
+        key: 'settings',
+        isActive: activeScreen === 'settings',
+      })
     }
+
     if (state.activeSidebarScreen.value === 'profile') {
-      sidebarScreen = 'profile'
-      openTab('profile', 'Profile', 'profile')
+      tabsToOpen.push({
+        screen: 'profile',
+        title: 'Profile',
+        key: 'profile',
+        isActive: activeScreen === 'profile',
+      })
+    }
+
+    // Sort tabs so the active screen is opened last (to remain active)
+    tabsToOpen.sort((a, b) => {
+      if (a.isActive) return 1
+      if (b.isActive) return -1
+      return 0
+    })
+
+    // Loop over list and open tabs
+    tabsToOpen.forEach((tab) => {
+      openTab(tab.screen, tab.title, tab.key, true)
+    })
+
+    setActiveScreen(activeScreen)
+
+    // If no sidebar screen is set, derive it from the last opened tab's screen
+    if (!activeSidebarScreen && tabsToOpen.length > 0) {
+      const lastTab = tabsToOpen[tabsToOpen.length - 1]
+      sidebarScreen = lastTab.screen
+    } else if (activeSidebarScreen) {
+      sidebarScreen = activeSidebarScreen
     }
 
     setActiveSidebarScreen(sidebarScreen)
+  }
+
+  const addBackListeners = (): void => {
+    if (eventListener) {
+      return
+    }
+    eventListener = window.addEventListener('hashchange', () => {
+      // Get current hash values
+      const currentEditors = getDefaultValueFromHash('editors', '')
+      const currentDashboard = getDefaultValueFromHash('dashboard', '')
+      const currentConnections = getDefaultValueFromHash('connections', '')
+      const currentModels = getDefaultValueFromHash('model', '')
+      const currentCommunityModels = getDefaultValueFromHash('community-models', '')
+      const currentDocs = getDefaultValueFromHash('docs', '')
+      const currentLLMs = getDefaultValueFromHash('llms', '')
+      const currentScreen = getDefaultValueFromHash('screen', '') as ScreenType
+      const currentSidebarScreen = getDefaultValueFromHash('sidebarScreen', 'editors') as ScreenType
+      let changedScreen = false
+      // Update sidebar screen if it changed
+      if (currentSidebarScreen !== state.activeSidebarScreen.value) {
+        state.activeSidebarScreen.value = currentSidebarScreen
+        setActiveSidebarScreen(currentScreen)
+      }
+
+      if (currentScreen !== state.activeScreen.value) {
+        state.activeScreen.value = currentScreen
+        changedScreen = true
+      }
+
+      // Find which hash value changed and get the corresponding tab
+      const hashToTabMap = [
+        {
+          hash: currentEditors,
+          screen: 'editors' as ScreenType,
+          current: state.activeEditor.value,
+        },
+        {
+          hash: currentDashboard,
+          screen: 'dashboard' as ScreenType,
+          current: state.activeDashboard.value,
+        },
+        {
+          hash: currentConnections,
+          screen: 'connections' as ScreenType,
+          current: state.activeConnectionKey.value,
+        },
+        {
+          hash: currentModels,
+          screen: 'models' as ScreenType,
+          current: state.activeModelKey.value,
+        },
+        {
+          hash: currentCommunityModels,
+          screen: 'community-models' as ScreenType,
+          current: state.activeCommunityModelKey.value,
+        },
+        {
+          hash: currentDocs,
+          screen: 'tutorial' as ScreenType,
+          current: state.activeDocumentationKey.value,
+        },
+        {
+          hash: currentLLMs,
+          screen: 'llms' as ScreenType,
+          current: state.activeLLMConnectionKey.value,
+        },
+      ]
+
+      for (const { hash, screen, current } of hashToTabMap) {
+        if ((hash && hash !== current) || (screen === currentScreen && changedScreen)) {
+          const targetTab = state.tabs.value.find(
+            (tab) => tab.screen === screen && tab.screen === currentScreen && tab.address === hash,
+          )
+          if (targetTab && targetTab.id !== state.activeTab.value) {
+            // Use setActiveTab but skip hash update to avoid recursion
+            setActiveTab(targetTab.id, true)
+            break // Only handle one change at a time
+          }
+          if (!targetTab && hash) {
+            // Tab doesn't exist, open it
+            openTab(screen, null, hash)
+            break // Only handle one change at a time
+          }
+        }
+      }
+    })
+  }
+
+  const removeBacklisteners = (): void => {
+    if (eventListener) {
+      window.removeEventListener('hashchange', eventListener)
+      eventListener = null
+    }
   }
 
   return {
@@ -543,6 +739,8 @@ const createNavigationStore = (): NavigationStore => {
     closeTabsToRightOf,
     onInitialLoad,
     toggleFullScreen,
+    addBackListeners,
+    removeBacklisteners,
   }
 }
 
