@@ -375,7 +375,6 @@ export default defineComponent({
     watch(
       () => [props.columns, props.data, props.containerHeight, props.containerWidth],
       (newValues, oldValues) => {
-        
         if (updatePending) return
         // check they are actually different
         if (JSON.stringify(newValues) === JSON.stringify(oldValues)) return

@@ -92,8 +92,6 @@ const {
   },
 )
 
-
-
 // Desktop-specific reactive state
 const editable = computed(() => dashboard.value?.state === 'editing' || false)
 const loaded = ref(false)
@@ -216,12 +214,26 @@ async function exportToImage() {
 
 <template>
   <div class="dashboard-container" v-if="dashboard">
-    <DashboardHeader :dashboard="dashboard" :edit-mode="editMode" :edits-locked="dashboard.state === 'locked'"
-      :selected-connection="selectedConnection" :filterError="filterError" :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter" :is-exporting-image="isExportingImage" @connection-change="onConnectionChange"
-      @filter-change="handleFilterChange" @import-change="handleImportChange" @add-item="openAddItemModal"
-      @clear-items="clearItems" @toggle-edit-mode="handleToggleEditMode" @refresh="handleRefresh"
-      @clear-filter="handleFilterClear" @title-update="updateTitle" @export-image="exportToImage" />
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edit-mode="editMode"
+      :edits-locked="dashboard.state === 'locked'"
+      :selected-connection="selectedConnection"
+      :filterError="filterError"
+      :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter"
+      :is-exporting-image="isExportingImage"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @toggle-edit-mode="handleToggleEditMode"
+      @refresh="handleRefresh"
+      @clear-filter="handleFilterClear"
+      @title-update="updateTitle"
+      @export-image="exportToImage"
+    />
 
     <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
@@ -229,18 +241,48 @@ async function exportToImage() {
 
     <div v-else class="grid-container">
       <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
-        <GridLayout :col-num="20" :row-height="30" :is-draggable="editable" :is-resizable="editable" :is-bounded="true"
-          :layout="layout" :vertical-compact="true" :use-css-transforms="true" @layout-updated="onLayoutUpdatedDesktop"
-          @layout-ready="layoutReadyEvent">
-          <grid-item v-for="item in layout" :key="item.i" :static="item.static" :x="item.x" :y="item.y" :w="item.w"
-            :h="item.h" :i="item.i" :data-i="item.i" drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle">
-            <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
-              :get-item-data="getItemData" :symbols="globalCompletion"
-              :get-dashboard-query-executor="getDashboardQueryExecutor" @dimension-click="setCrossFilter"
-              :set-item-data="setItemData" @edit-content="openEditor" @remove-filter="removeFilter"
-              @background-click="unSelect" @update-dimensions="updateItemDimensions" @copy-item="copyItem"
-              @remove-item="removeItem" />
+        <GridLayout
+          :col-num="20"
+          :row-height="30"
+          :is-draggable="editable"
+          :is-resizable="editable"
+          :is-bounded="true"
+          :layout="layout"
+          :vertical-compact="true"
+          :use-css-transforms="true"
+          @layout-updated="onLayoutUpdatedDesktop"
+          @layout-ready="layoutReadyEvent"
+        >
+          <grid-item
+            v-for="item in layout"
+            :key="item.i"
+            :static="item.static"
+            :x="item.x"
+            :y="item.y"
+            :w="item.w"
+            :h="item.h"
+            :i="item.i"
+            :data-i="item.i"
+            drag-ignore-from=".no-drag"
+            drag-handle-class=".grid-item-drag-handle"
+          >
+            <DashboardGridItem
+              :dashboard-id="dashboard.id"
+              :item="item"
+              :edit-mode="editMode"
+              :filter="filter"
+              :get-item-data="getItemData"
+              :symbols="globalCompletion"
+              :get-dashboard-query-executor="getDashboardQueryExecutor"
+              @dimension-click="setCrossFilter"
+              :set-item-data="setItemData"
+              @edit-content="openEditor"
+              @remove-filter="removeFilter"
+              @background-click="unSelect"
+              @update-dimensions="updateItemDimensions"
+              @copy-item="copyItem"
+              @remove-item="removeItem"
+            />
           </grid-item>
         </GridLayout>
       </div>
@@ -251,19 +293,26 @@ async function exportToImage() {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor" @save="saveContent"
-        @cancel="closeEditors" />
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <MarkdownEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).structured_content" @save="saveContent"
-        @cancel="closeEditors" />
+        :content="getItemData(editingItem.i, dashboard.id).structured_content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
 
@@ -273,8 +322,11 @@ async function exportToImage() {
       <p>The dashboard "{{ name }}" could not be found.</p>
     </template>
     <template v-else>
-      <dashboard-creator-inline class="inline-creator" :visible="true"
-        @dashboard-created="dashboardCreated"></dashboard-creator-inline>
+      <dashboard-creator-inline
+        class="inline-creator"
+        :visible="true"
+        @dashboard-created="dashboardCreated"
+      ></dashboard-creator-inline>
     </template>
   </div>
 </template>

@@ -1,4 +1,13 @@
-import { ref, type ComputedRef, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
+import {
+  ref,
+  type ComputedRef,
+  computed,
+  onMounted,
+  nextTick,
+  onBeforeUnmount,
+  inject,
+  watch,
+} from 'vue'
 import { useDashboardStore, stripAllWhitespace } from '../../stores/dashboardStore'
 import {
   type LayoutItem,
@@ -31,8 +40,12 @@ export interface UseDashboardEmits {
   fullScreen: (enabled: boolean) => void
 }
 
-export function useDashboard(dashboard: ComputedRef<DashboardModel | null | undefined>, options: UseDashboardOptions, emit: UseDashboardEmits) {
-  if (!dashboard.value) { 
+export function useDashboard(
+  dashboard: ComputedRef<DashboardModel | null | undefined>,
+  options: UseDashboardOptions,
+  emit: UseDashboardEmits,
+) {
+  if (!dashboard.value) {
     throw new Error('Dashboard computed reference is required')
   }
   // Initialize services and stores
@@ -124,7 +137,6 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
 
     // Populate completion for dashboard
     populateCompletion()
-
   }
 
   // Lifecycle hooks
@@ -135,7 +147,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
       if (newId && newId !== oldId && dashboard.value) {
         initializeDashboard(dashboard.value)
       }
-    }
+    },
   )
 
   onMounted(() => {
@@ -225,10 +237,10 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
           extraFilters: [filterWithoutWhere],
           extraContent: rootContent.value,
         },
-        () => { },
-        () => { },
-        () => { },
-        () => { },
+        () => {},
+        () => {},
+        () => {},
+        () => {},
         true,
       )
 
@@ -442,9 +454,9 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
       structured_content: isMarkdownData(item.content)
         ? item.content
         : {
-          markdown: item.type === 'markdown' ? item.content : '',
-          query: item.type !== 'markdown' ? item.content : '',
-        },
+            markdown: item.type === 'markdown' ? item.content : '',
+            query: item.type !== 'markdown' ? item.content : '',
+          },
       name: item.name,
       allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
       width: item.width || 0,
@@ -469,7 +481,12 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
     if (!dashboard.value || !dashboard.value.id) return
 
     if (!dashboardId || dashboard.value.id !== dashboardId) {
-      console.warn('Dashboard ID mismatch. Cannot set item data. Given:', dashboardId, 'Expected:', dashboard.value.id)
+      console.warn(
+        'Dashboard ID mismatch. Cannot set item data. Given:',
+        dashboardId,
+        'Expected:',
+        dashboard.value.id,
+      )
       return
     }
 

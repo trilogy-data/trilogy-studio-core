@@ -147,7 +147,6 @@ export default {
   color: green;
 }
 
-
 .error {
   color: red;
 }

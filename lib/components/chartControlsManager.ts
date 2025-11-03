@@ -111,7 +111,10 @@ export class ChartControlsManager {
   ): boolean {
     const wasValid = this.chartHelpers.validateConfigFields(this.internalConfig.value, columns)
     if (!wasValid) {
-      console.log('Invalid config fields detected, resetting to defaults, had been:', this.internalConfig.value)
+      console.log(
+        'Invalid config fields detected, resetting to defaults, had been:',
+        this.internalConfig.value,
+      )
       this.initializeConfig(data, columns, null, onChartConfigChange, true)
       console.log('new config is:', this.internalConfig.value)
       return false
