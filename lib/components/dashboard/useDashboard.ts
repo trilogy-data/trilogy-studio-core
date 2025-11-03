@@ -1,5 +1,4 @@
-// useDashboard.ts - Composable for shared dashboard logic
-import { ref, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
+import { ref, type ComputedRef, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
 import { useDashboardStore, stripAllWhitespace } from '../../stores/dashboardStore'
 import {
   type LayoutItem,
@@ -16,9 +15,9 @@ import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { DashboardModel } from '../../dashboards/base'
 
 export interface UseDashboardOptions {
-  name: string
   connectionId?: string
   maxWidth?: number
   viewMode?: boolean
@@ -32,7 +31,10 @@ export interface UseDashboardEmits {
   fullScreen: (enabled: boolean) => void
 }
 
-export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmits) {
+export function useDashboard(dashboard: ComputedRef<DashboardModel | null | undefined>, options: UseDashboardOptions, emit: UseDashboardEmits) {
+  if (!dashboard.value) { 
+    throw new Error('Dashboard computed reference is required')
+  }
   // Initialize services and stores
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
@@ -57,22 +59,6 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
 
   // Computed properties
   const dashboardMaxWidth = computed(() => options.maxWidth || '100vw')
-
-  const dashboard = computed(() => {
-    const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === options.name)
-
-    // If dashboard doesn't exist and we have a connectionId, try to create it
-    if (!dashboard && options.connectionId) {
-      try {
-        return dashboardStore.newDashboard(options.name, options.connectionId)
-      } catch (error) {
-        console.error('Failed to create dashboard:', error)
-        return null
-      }
-    }
-
-    return dashboard
-  })
 
   const layout = computed(() => {
     if (!dashboard.value) return []
@@ -105,40 +91,56 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
     }))
   })
 
+  // Centralized dashboard initialization function
+  function initializeDashboard(dashboardData: DashboardModel) {
+    console.log('Initializing dashboard:', dashboardData.id)
+    if (!dashboardData?.id) return
+    console.log('Dashboard data found:', dashboardData)
+    // Handle fullscreen mode
+    if (dashboardData.state !== 'editing') {
+      emit.fullScreen(true)
+    }
+    // Set the active dashboard
+    dashboardStore.setActiveDashboard(dashboardData.id)
+
+    // Reset filter state
+    filterError.value = ''
+    filter.value = ''
+    filterInput.value = ''
+    globalCompletion.value = []
+
+    // Initialize filter from dashboard if it exists
+    if (dashboardData.filter) {
+      filter.value = dashboardData.filter
+      filterInput.value = dashboardData.filter
+    }
+
+    // Run any unrun items in the dashboard
+    const executor = getDashboardQueryExecutor(dashboardData.id)
+    const unRun = Object.keys(dashboardData.gridItems).filter(
+      (itemId) => !dashboardData.gridItems[itemId].results,
+    )
+    executor?.runBatch(unRun)
+
+    // Populate completion for dashboard
+    populateCompletion()
+
+  }
+
   // Lifecycle hooks
   watch(
-    () => options.name,
-    (newId) => {
-      if (newId) {
-        populateCompletion()
+    () => dashboard.value?.id,
+    (newId, oldId) => {
+      // Only initialize if the dashboard ID actually changed
+      if (newId && newId !== oldId && dashboard.value) {
+        initializeDashboard(dashboard.value)
       }
-    },
+    }
   )
 
   onMounted(() => {
-    if (dashboard.value && dashboard.value.id) {
-      let dashboardObj = dashboard.value
-      dashboardStore.setActiveDashboard(dashboard.value.id)
-
-      // Initialize the filter from the dashboard if it exists
-      if (dashboard.value.filter) {
-        filter.value = dashboard.value.filter
-        filterInput.value = dashboard.value.filter
-      }
-      let executor = getDashboardQueryExecutor(dashboard.value.id)
-      // filter gridItems and get the KEYS belonging to VALUEs with no results
-      let unRun = Object.keys(dashboard.value.gridItems).filter(
-        (itemId) => !dashboardObj.gridItems[itemId].results,
-      )
-
-      executor?.runBatch(unRun)
-      if (globalCompletion.value.length === 0) {
-        populateCompletion()
-      }
-
-      if (dashboard.value.state !== 'editing') {
-        emit.fullScreen(true)
-      }
+    if (dashboard.value) {
+      initializeDashboard(dashboard.value)
     }
 
     // Set up resize observer
@@ -186,7 +188,6 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
 
     if (dashboard.value && dashboard.value.id) {
       filter.value = newFilter
-      console.log(rootContent.value)
       await queryExecutionService
         ?.generateQuery(dashboard.value.connection, {
           text: 'select 1 as test;',
@@ -224,10 +225,10 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
           extraFilters: [filterWithoutWhere],
           extraContent: rootContent.value,
         },
-        () => {},
-        () => {},
-        () => {},
-        () => {},
+        () => { },
+        () => { },
+        () => { },
+        () => { },
         true,
       )
 
@@ -441,9 +442,9 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
       structured_content: isMarkdownData(item.content)
         ? item.content
         : {
-            markdown: item.type === 'markdown' ? item.content : '',
-            query: item.type !== 'markdown' ? item.content : '',
-          },
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        },
       name: item.name,
       allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
       width: item.width || 0,
@@ -468,7 +469,7 @@ export function useDashboard(options: UseDashboardOptions, emit: UseDashboardEmi
     if (!dashboard.value || !dashboard.value.id) return
 
     if (!dashboardId || dashboard.value.id !== dashboardId) {
-      console.warn('Dashboard ID mismatch. Cannot set item data.')
+      console.warn('Dashboard ID mismatch. Cannot set item data. Given:', dashboardId, 'Expected:', dashboard.value.id)
       return
     }
 

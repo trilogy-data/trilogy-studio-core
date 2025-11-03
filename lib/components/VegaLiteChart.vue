@@ -204,7 +204,6 @@ export default defineComponent({
 
     // Create debounced resize handler for beeswarm charts
     const debouncedResizeHandler = debounce(() => {
-      console.log('Resize detected for beeswarm chart, re-rendering')
       renderChart(true)
     }, 300)
 
@@ -257,8 +256,6 @@ export default defineComponent({
         resizeObserver = new ResizeObserver((entries) => {
           for (let entry of entries) {
             const { width, height } = entry.contentRect
-            console.log(`Chart content area resized to ${width}x${height}`)
-
             // Store internal dimensions for beeswarm charts
             internalWidth.value = width
             internalHeight.value = height
@@ -365,6 +362,7 @@ export default defineComponent({
     watch(
       () => [props.chartSelection],
       (newValues, oldValues) => {
+        if (updatePending) return
         const [newSelection] = newValues
         const [oldSelection] = oldValues
         if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
@@ -372,20 +370,12 @@ export default defineComponent({
       },
     )
 
-    // Watch for container size changes
-    watch(
-      () => [props.containerHeight, props.containerWidth],
-      () => {
-        console.log('Container size changed, re-rendering chart')
-        renderChart(true)
-      },
-    )
-
     // Watch for data/column changes
     let updatePending = false
     watch(
-      () => [props.columns, props.data],
+      () => [props.columns, props.data, props.containerHeight, props.containerWidth],
       (newValues, oldValues) => {
+        
         if (updatePending) return
         // check they are actually different
         if (JSON.stringify(newValues) === JSON.stringify(oldValues)) return

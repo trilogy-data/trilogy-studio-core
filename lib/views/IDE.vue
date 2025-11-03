@@ -19,7 +19,7 @@
     <!-- Full screen mode - no sidebar -->
     <div v-if="fullScreen" class="full-screen-container">
       <template v-if="activeScreen === 'dashboard'">
-        <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
+        <dashboard :name="activeDashboard" @full-screen="toggleFullScreen" />
       </template>
       <template v-else-if="activeScreen === 'dashboard-import'">
         <dashboard-auto-importer
@@ -106,7 +106,7 @@
           <user-settings />
         </template>
         <template v-else-if="activeScreen === 'dashboard'">
-          <dashboard :name="activeDashboardComputed" @full-screen="toggleFullScreen" />
+          <dashboard :name="activeDashboard" @full-screen="toggleFullScreen" />
         </template>
         <template v-else-if="activeScreen === 'dashboard-import'">
           <dashboard-auto-importer
@@ -469,10 +469,7 @@ export default {
     },
     editors() {
       return this.editorStore.editors
-    },
-    activeDashboardComputed() {
-      return this.activeDashboard
-    },
+    }
   },
 }
 </script>

@@ -170,7 +170,7 @@ export class ChartRenderManager {
 
       // Final abort check before transition
       if (renderOp.aborted) {
-        console.log(`Render ${renderOp.id} aborted before transition`)
+        console.log(`Render ${renderOp.id} on container ${renderOp.container} aborted before transition`)
         this.cleanupContainer(renderOp.container)
         return
       }

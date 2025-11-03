@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick } from 'vue'
+import { nextTick, computed } from 'vue'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
@@ -9,7 +9,7 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
-
+import { useDashboardStore } from '../../stores/dashboardStore'
 const props = defineProps<{
   name: string
   connectionId?: string
@@ -17,11 +17,25 @@ const props = defineProps<{
 }>()
 
 const mobileMinHeight = 400 // Minimum height for mobile items
+const dashboardStore = useDashboardStore()
+const dashboard = computed(() => {
+  const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
 
+  // If dashboard doesn't exist and we have a connectionId, try to create it
+  if (!dashboard && props.connectionId) {
+    try {
+      return dashboardStore.newDashboard(props.name, props.connectionId)
+    } catch (error) {
+      console.error('Failed to create dashboard:', error)
+      return null
+    }
+  }
+
+  return dashboard
+})
 // Use the dashboard composable
 const {
   // State
-  dashboard,
   sortedLayout,
   editMode,
   selectedConnection,
@@ -58,8 +72,8 @@ const {
   unSelect,
   dashboardCreated,
 } = useDashboard(
+  dashboard,
   {
-    name: props.name,
     connectionId: props.connectionId,
     viewMode: props.viewMode,
     isMobile: true,
