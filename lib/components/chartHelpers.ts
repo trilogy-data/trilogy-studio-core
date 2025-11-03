@@ -200,7 +200,6 @@ export class ChromaChartHelpers {
   ): void {
     const append = event.shiftKey
     const control = event.ctrlKey
-
     if (!item || !item.datum) {
       if (
         config.chartType === 'headline' &&
