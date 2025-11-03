@@ -461,6 +461,20 @@ export default {
       }
     },
   },
+  mounted() {
+    // Initialize searchText with selectedLabel if there's a pre-selected value
+    if (this.selectedLabel && !this.searchText) {
+      this.searchText = this.selectedLabel
+    }
+  },
+  watch: {
+    // Watch for external changes to selectedLabel and update searchText accordingly
+    selectedLabel(newLabel) {
+      if (newLabel && !this.showDropdown) {
+        this.searchText = newLabel
+      }
+    }
+  },
   methods: {
     formatValue(value: any, column: ResultColumn): string {
       // Handle different column types
@@ -518,7 +532,7 @@ export default {
     selectOption(option: SelectOption) {
       this.selectedValue = option.value
       this.selectedLabel = option.label
-      this.searchText = ''
+      this.searchText = option.label // Show the selected label in the input
       this.showDropdown = false
       this.handleSelection()
     },
@@ -526,7 +540,7 @@ export default {
     selectAll() {
       this.selectedValue = 'SELECT_ALL'
       this.selectedLabel = 'Select All'
-      this.searchText = ''
+      this.searchText = 'Select All' // Show "Select All" in the input
       this.showDropdown = false
 
       // Emit backgroundClick event when Select All is chosen
@@ -535,8 +549,8 @@ export default {
     },
 
     onSearchInput() {
-      // Clear selection when user starts typing
-      if (this.searchText && this.selectedLabel) {
+      // Clear selection when user starts typing something different
+      if (this.searchText !== this.selectedLabel && this.selectedLabel) {
         this.selectedValue = ''
         this.selectedLabel = ''
       }
@@ -545,9 +559,9 @@ export default {
     },
 
     handleFocus() {
-      // Clear the search text when focused to allow searching
-      if (this.selectedLabel) {
-        this.searchText = ''
+      // Show the selected label in the input when focused (if there is one)
+      if (this.selectedLabel && !this.searchText) {
+        this.searchText = this.selectedLabel
       }
       this.showDropdown = true
       this.updateInputElement()
@@ -561,8 +575,10 @@ export default {
       // Delay to allow click event on dropdown items to fire
       setTimeout(() => {
         this.showDropdown = false
-        // Restore the search text if nothing was selected
-        if (!this.selectedLabel && !this.searchText) {
+        // Restore the selected label if nothing was typed or if current text matches selected
+        if (this.selectedLabel && (!this.searchText || this.searchText !== this.selectedLabel)) {
+          this.searchText = this.selectedLabel
+        } else if (!this.selectedLabel && !this.searchText) {
           this.searchText = ''
         }
       }, 200)
