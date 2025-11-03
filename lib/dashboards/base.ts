@@ -46,11 +46,13 @@ export interface MarkdownData {
 export interface GridItemData {
   type: DashboardTypes['CellType']
   content: string | MarkdownData
+  drilldown?: string | MarkdownData | null | undefined
   name: string
   allowCrossFilter: boolean
   width?: number
   height?: number
   chartConfig?: ChartConfig
+  drilldownChartConfig?: ChartConfig | null
   conceptFilters?: FilterInput[]
   chartFilters?: FilterInput[]
   filters?: Filter[]
@@ -82,6 +84,7 @@ export interface GridItemDataResponse {
   loading?: boolean
   error?: string | null
   loadStartTime?: number | null
+  hasDrilldown: boolean
 }
 
 export interface Dashboard {
@@ -99,6 +102,32 @@ export interface Dashboard {
   version: number
   description: string
   state: 'editing' | 'published' | 'locked'
+}
+
+// Interface for batch updates to item properties
+export interface ItemPropertyUpdates {
+  name?: string
+  content?: string | MarkdownData
+  type?: DashboardTypes['CellType']
+  allowCrossFilter?: boolean
+  width?: number
+  height?: number
+  chartConfig?: ChartConfig
+  drilldown?: string | MarkdownData | null
+  drilldownChartConfig?: ChartConfig | null
+  conceptFilters?: FilterInput[]
+  chartFilters?: FilterInput[]
+  filters?: Filter[]
+  parameters?: Record<string, unknown>
+  results?: Results | null
+  loading?: boolean
+  error?: string | null
+  layoutDimensions?: {
+    x?: number | null
+    y?: number | null
+    w?: number | null
+    h?: number | null
+  }
 }
 
 // Cell types enum
@@ -177,16 +206,16 @@ export class DashboardModel implements Dashboard {
   ): void {
     const layoutItem = this.layout.find((item) => item.i === itemId)
     if (layoutItem) {
-      if (x) {
+      if (x !== null) {
         layoutItem.x = x
       }
-      if (y) {
+      if (y !== null) {
         layoutItem.y = y
       }
-      if (w) {
+      if (w !== null) {
         layoutItem.w = w
       }
-      if (h) {
+      if (h !== null) {
         layoutItem.h = h
       }
 
@@ -267,8 +296,7 @@ export class DashboardModel implements Dashboard {
     }
     let layoutItem = this.layout.find((item) => item.i === itemId)
     if (!layoutItem) {
-      throw new Error(`Layout item with ID "${itemId}" does not exist in the dashboard
-.`)
+      throw new Error(`Layout item with ID "${itemId}" does not exist in the dashboard.`)
     }
     const newItemId = this.nextId.toString()
     this.gridItems[newItemId] = { ...this.gridItems[itemId] }
@@ -332,11 +360,33 @@ export class DashboardModel implements Dashboard {
       }
     } else {
       console.warn(
-        `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot
-  update error.`,
+        `Item with ID "${itemId}" does not exist in dashboard "${this.id}". Cannot update error.`,
       )
     }
   }
+
+  updateItemDrilldown(itemId: string, drilldown: string | null): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        drilldown,
+      }
+      this.updatedAt = new Date()
+      this.changed = true
+    }
+  }
+
+  updateItemDrilldownChartConfig(itemId: string, drilldownChartConfig: ChartConfig | null): void {
+    if (this.gridItems[itemId]) {
+      this.gridItems[itemId] = {
+        ...this.gridItems[itemId],
+        drilldownChartConfig,
+      }
+      this.updatedAt = new Date()
+      this.changed = true
+    }
+  }
+
   updateItemResults(itemId: string, results: Results | null): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
@@ -565,6 +615,189 @@ export class DashboardModel implements Dashboard {
         ...this.gridItems[itemId],
         chartConfig: config,
       }
+      this.updatedAt = new Date()
+      this.changed = true
+    }
+  }
+
+  // NEW METHOD: Update multiple item properties in a single transaction
+  updateItemMultipleProperties(itemId: string, updates: ItemPropertyUpdates): void {
+    if (!this.gridItems[itemId]) {
+      throw new Error(`Item with ID "${itemId}" does not exist in the dashboard.`)
+    }
+
+    const item = this.gridItems[itemId]
+    let hasChanges = false
+
+    // Update basic properties
+    if (updates.name !== undefined && updates.name !== item.name) {
+      item.name = updates.name
+      hasChanges = true
+    }
+
+    if (updates.content !== undefined && updates.content !== item.content) {
+      item.content = updates.content
+      hasChanges = true
+    }
+
+    if (updates.type !== undefined && updates.type !== item.type) {
+      item.type = updates.type
+      hasChanges = true
+    }
+
+    if (
+      updates.allowCrossFilter !== undefined &&
+      updates.allowCrossFilter !== item.allowCrossFilter
+    ) {
+      item.allowCrossFilter = updates.allowCrossFilter
+      hasChanges = true
+    }
+
+    if (updates.width !== undefined && updates.width !== item.width) {
+      item.width = updates.width
+      hasChanges = true
+    }
+
+    if (updates.height !== undefined && updates.height !== item.height) {
+      item.height = updates.height
+      hasChanges = true
+    }
+
+    if (updates.chartConfig !== undefined) {
+      // Deep comparison for chart config
+      const currentConfigStr = JSON.stringify(item.chartConfig)
+      const newConfigStr = JSON.stringify(updates.chartConfig)
+      if (currentConfigStr !== newConfigStr) {
+        item.chartConfig = updates.chartConfig
+        hasChanges = true
+      }
+    }
+
+    if (updates.drilldown !== undefined && updates.drilldown !== item.drilldown) {
+      item.drilldown = updates.drilldown
+      hasChanges = true
+    }
+
+    if (updates.drilldownChartConfig !== undefined) {
+      const currentDrilldownStr = JSON.stringify(item.drilldownChartConfig)
+      const newDrilldownStr = JSON.stringify(updates.drilldownChartConfig)
+      if (currentDrilldownStr !== newDrilldownStr) {
+        item.drilldownChartConfig = updates.drilldownChartConfig
+        hasChanges = true
+      }
+    }
+
+    if (updates.conceptFilters !== undefined) {
+      const currentFiltersStr = JSON.stringify(item.conceptFilters)
+      const newFiltersStr = JSON.stringify(updates.conceptFilters)
+      if (currentFiltersStr !== newFiltersStr) {
+        item.conceptFilters = updates.conceptFilters
+        hasChanges = true
+      }
+    }
+
+    if (updates.chartFilters !== undefined) {
+      const currentChartFiltersStr = JSON.stringify(item.chartFilters)
+      const newChartFiltersStr = JSON.stringify(updates.chartFilters)
+      if (currentChartFiltersStr !== newChartFiltersStr) {
+        item.chartFilters = updates.chartFilters
+        hasChanges = true
+      }
+    }
+
+    if (updates.filters !== undefined) {
+      const currentFiltersStr = JSON.stringify(item.filters)
+      const newFiltersStr = JSON.stringify(updates.filters)
+      if (currentFiltersStr !== newFiltersStr) {
+        item.filters = updates.filters
+        hasChanges = true
+      }
+    }
+
+    if (updates.parameters !== undefined) {
+      const currentParamsStr = JSON.stringify(item.parameters)
+      const newParamsStr = JSON.stringify(updates.parameters)
+      if (currentParamsStr !== newParamsStr) {
+        item.parameters = updates.parameters
+        hasChanges = true
+      }
+    }
+
+    if (updates.results !== undefined && updates.results !== item.results) {
+      item.results = updates.results
+      item.loading = false
+      item.error = null
+      item.loadStartTime = null
+      hasChanges = true
+    }
+
+    if (updates.loading !== undefined && updates.loading !== item.loading) {
+      item.loading = updates.loading
+      if (updates.loading) {
+        item.loadStartTime = Date.now()
+      }
+      hasChanges = true
+    }
+
+    if (updates.error !== undefined && updates.error !== item.error) {
+      item.error = updates.error
+      if (item.error) {
+        item.loading = false
+        item.loadStartTime = null
+      }
+      hasChanges = true
+    }
+
+    // Handle layout dimension updates
+    if (updates.layoutDimensions !== undefined) {
+      const layoutItem = this.layout.find((layoutItem) => layoutItem.i === itemId)
+      if (layoutItem) {
+        let layoutChanged = false
+
+        if (
+          updates.layoutDimensions.x !== undefined &&
+          updates.layoutDimensions.x !== null &&
+          updates.layoutDimensions.x !== layoutItem.x
+        ) {
+          layoutItem.x = updates.layoutDimensions.x
+          layoutChanged = true
+        }
+
+        if (
+          updates.layoutDimensions.y !== undefined &&
+          updates.layoutDimensions.y !== null &&
+          updates.layoutDimensions.y !== layoutItem.y
+        ) {
+          layoutItem.y = updates.layoutDimensions.y
+          layoutChanged = true
+        }
+
+        if (
+          updates.layoutDimensions.w !== undefined &&
+          updates.layoutDimensions.w !== null &&
+          updates.layoutDimensions.w !== layoutItem.w
+        ) {
+          layoutItem.w = updates.layoutDimensions.w
+          layoutChanged = true
+        }
+
+        if (
+          updates.layoutDimensions.h !== undefined &&
+          updates.layoutDimensions.h !== null &&
+          updates.layoutDimensions.h !== layoutItem.h
+        ) {
+          layoutItem.h = updates.layoutDimensions.h
+          layoutChanged = true
+        }
+
+        if (layoutChanged) {
+          hasChanges = true
+        }
+      }
+    }
+
+    // Only update timestamps and changed flag if there were actual changes
+    if (hasChanges) {
       this.updatedAt = new Date()
       this.changed = true
     }

@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import type { LayoutItem, CellType, DashboardImport } from '../dashboards/base'
-import { CELL_TYPES, DashboardModel, type DashboardTypes } from '../dashboards/base'
+import {
+  CELL_TYPES,
+  DashboardModel,
+  type DashboardTypes,
+  type ItemPropertyUpdates,
+} from '../dashboards/base'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import type QueryExecutionService from './queryExecutionService'
@@ -8,7 +13,7 @@ import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
 import { completionToModelInput } from '../llm/utils'
 import type { EditorStoreType } from './editorStore'
-import type { Results } from '../editors/results'
+import type { ChartConfig, Results } from '../editors/results'
 import {
   DashboardQueryExecutor,
   type QueryExecutorDependencies,
@@ -392,6 +397,26 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    updateItemDrilldown(dashboardId: string, itemId: string, drilldown: string | null) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemDrilldown(itemId, drilldown)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
+    updateItemDrilldownChartConfig(
+      dashboardId: string,
+      itemId: string,
+      drilldownChartConfig: ChartConfig | null,
+    ) {
+      if (this.dashboards[dashboardId]) {
+        this.dashboards[dashboardId].updateItemDrilldownChartConfig(itemId, drilldownChartConfig)
+      } else {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+    },
+
     updateItemType(dashboardId: string, itemId: string, type: DashboardTypes['CellType']) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].updateItemType(itemId, type)
@@ -453,8 +478,21 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
     },
-    // Update dashboard connection
 
+    updateMultipleItemProperties(
+      dashboardId: string,
+      itemId: string,
+      updates: ItemPropertyUpdates,
+    ): void {
+      if (!this.dashboards[dashboardId]) {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+
+      // Use the new DashboardModel method for efficient batch updates
+      this.dashboards[dashboardId].updateItemMultipleProperties(itemId, updates)
+    },
+
+    // Update dashboard connection
     updateDashboardConnection(dashboardId: string, connection: string) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].connection = connection

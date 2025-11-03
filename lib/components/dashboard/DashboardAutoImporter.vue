@@ -174,7 +174,7 @@ const performImport = async () => {
     isLoading.value = true
     updateElapsedTime()
 
-    emit('fullScreen', true)
+    // emit('fullScreen', true)
 
     // Create new connection for non-DuckDB types
     let connectionName = `${modelName.value}-connection`

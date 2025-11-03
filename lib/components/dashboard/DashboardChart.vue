@@ -3,6 +3,8 @@
     ref="chartContainer"
     class="chart-placeholder no-drag"
     :class="{ 'chart-placeholder-edit-mode': editMode }"
+    @mouseenter="onChartMouseEnter"
+    @mouseleave="onChartMouseLeave"
   >
     <drilldown-pane
       v-if="activeDrilldown"
@@ -14,7 +16,7 @@
     />
     <ErrorMessage v-else-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
     <VegaLiteChart
-      v-else-if="results && ready"
+      v-else-if="results && ready && !loading"
       :id="`${itemId}-${dashboardId}`"
       :columns="results.headers"
       :data="results.data"
@@ -25,18 +27,43 @@
       :onChartConfigChange="onChartConfigChange"
       :chartSelection
       :chartTitle
+      :drilldown-active="hasDrilldown"
       @dimension-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
       @refresh-click="handleLocalRefresh"
       @drilldown-click="activateDrilldown"
+      @revert-drilldown="revertDrilldown"
     />
     <div v-if="loading && showLoading" class="loading-overlay">
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+    </div>
+    <div
+      v-if="!(results && ready)"
+      class="controls-toggle"
+      :class="{ 'controls-visible': controlsVisible }"
+    >
+      <button
+        @click="handleLocalRefresh"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Refresh table"
+      >
+        <i class="mdi mdi-refresh icon"></i>
+      </button>
+      <button
+        @click="revertDrilldown"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Clear Drilldown"
+      >
+        <i class="mdi mdi-undo icon"></i>
+      </button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+//      v-if="!loading && editMode &&
 import {
   defineComponent,
   inject,
@@ -111,6 +138,10 @@ export default defineComponent({
     const loadingTimeoutId = ref<NodeJS.Timeout | null>(null)
     const activeDrilldown = ref<Drilldown | null>(null)
 
+    const itemData = computed(() => {
+      return props.getItemData(props.itemId, props.dashboardId)
+    })
+
     const getPositionBasedDelay = () => {
       if (!chartContainer.value) return 0
 
@@ -156,51 +187,52 @@ export default defineComponent({
     })
 
     const query = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).content
+      return itemData.value.structured_content.query
     })
 
     const results = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).results || null
+      return itemData.value.results || null
     })
 
     const chartTitle = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).name || ''
+      return itemData.value.name || ''
     })
 
     const chartHeight = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).height || 300) - 75
+      return (itemData.value.height || 300) - 75
     })
 
     const chartWidth = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).width || 300
+      return itemData.value.width || 300
     })
 
     const chartConfig = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).chartConfig || null
+      return itemData.value.chartConfig || null
     })
 
     const loading = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).loading || false
+      return itemData.value.loading || false
     })
 
     const error = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).error || null
+      return itemData.value.error || null
     })
 
     const startTime = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
+      return itemData.value.loadStartTime || null
     })
 
     const chartSelection = computed(() => {
-      return (props.getItemData(props.itemId, props.dashboardId).chartFilters || []).map(
-        (filter) => filter.value,
-      )
+      return (itemData.value.chartFilters || []).map((filter) => filter.value)
+    })
+
+    const hasDrilldown = computed(() => {
+      return itemData.value.hasDrilldown
     })
 
     // Get refresh callback from item data if available
     const onRefresh = computed(() => {
-      const itemData = props.getItemData(props.itemId, props.dashboardId)
-      return itemData.onRefresh || null
+      return itemData.value.onRefresh || null
     })
 
     // Watch loading state and manage the 150ms delay
@@ -231,6 +263,10 @@ export default defineComponent({
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
+      if (hasDrilldown.value) {
+        props.setItemData(props.itemId, props.dashboardId, { drilldownChartConfig: chartConfig })
+        return
+      }
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
     }
 
@@ -301,6 +337,15 @@ export default defineComponent({
       activeDrilldown.value = { remove, filter: filterString }
     }
 
+    const revertDrilldown = async () => {
+      props.setItemData(props.itemId, props.dashboardId, {
+        drilldown: null,
+        drilldownChartConfig: null,
+        loading: true,
+      })
+      await executeQuery()
+    }
+
     const submitDrilldown = async (selected: string[]) => {
       let executor = props.getDashboardQueryExecutor(props.dashboardId)
       let newQuery = await executor.createDrilldownQuery(
@@ -309,9 +354,35 @@ export default defineComponent({
         activeDrilldown.value!.remove,
         activeDrilldown.value!.filter,
       )
-      props.setItemData(props.itemId, props.dashboardId, { content: newQuery })
+      props.setItemData(props.itemId, props.dashboardId, {
+        drilldown: newQuery,
+        drilldownChartConfig: null,
+        loading: true,
+      })
+      ready.value = false
+      showLoading.value = true
       activeDrilldown.value = null
       await executeQuery()
+        .then(() => {
+          ready.value = true
+        })
+        .catch((error) => {
+          console.error('Error executing drilldown query:', error)
+          ready.value = true
+        })
+        .finally(() => {
+          showLoading.value = false
+        })
+    }
+    const controlsVisible = ref(false)
+
+    // Mouse event handlers for hover controls
+    const onChartMouseEnter = () => {
+      controlsVisible.value = true
+    }
+
+    const onChartMouseLeave = () => {
+      controlsVisible.value = false
     }
 
     return {
@@ -336,6 +407,11 @@ export default defineComponent({
       activeDrilldown,
       activateDrilldown,
       submitDrilldown,
+      controlsVisible,
+      onChartMouseEnter,
+      onChartMouseLeave,
+      revertDrilldown,
+      hasDrilldown,
     }
   },
 })
@@ -421,5 +497,59 @@ export default defineComponent({
 
 .chart-placeholder-edit-mode {
   padding-top: 15px;
+}
+
+.controls-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
+}
+
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  background-color: rgba(var(--bg-color), 0.9);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.control-btn:hover {
+  background-color: var(--button-mouseover);
+}
+
+.control-btn:disabled {
+  background-color: var(--border-light);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+.control-btn:disabled:hover {
+  background-color: var(--border-light);
+}
+
+.control-btn.active {
+  background-color: var(--special-text);
+  color: white;
 }
 </style>

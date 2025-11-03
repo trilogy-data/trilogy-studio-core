@@ -112,7 +112,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
 
       try {
         localStorage.setItem(storageKey, JSON.stringify(this.settings))
-        console.log('Settings saved:', this.settings)
         this.hasChanges = false
         return true
       } catch (error) {
@@ -141,7 +140,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
           if (!this.settings.tipsRead) {
             this.settings.tipsRead = []
           }
-          console.log(this.settings.tipsRead)
         }
       } catch (error) {
         console.error('Failed to load settings:', error)

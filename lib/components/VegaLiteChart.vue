@@ -31,6 +31,15 @@
         <i class="mdi mdi-refresh icon"></i>
       </button>
       <button
+        v-if="$props.drilldownActive"
+        @click="revertDrilldown"
+        class="control-btn"
+        data-testid="refresh-chart-btn"
+        title="Clear Drilldown"
+      >
+        <i class="mdi mdi-undo icon"></i>
+      </button>
+      <button
         @click="controlsManager.toggleControls"
         class="control-btn"
         :class="{ active: controlsManager.showingControls.value }"
@@ -152,6 +161,10 @@ export default defineComponent({
     chartTitle: {
       type: String,
       default: '',
+    },
+    drilldownActive: {
+      type: Boolean,
+      default: false,
     },
   },
 
@@ -301,6 +314,10 @@ export default defineComponent({
       operationsManager.refreshChart(emit)
     }
 
+    const revertDrilldown = () => {
+      emit('revert-drilldown')
+    }
+
     const openInVegaEditor = () => {
       const spec = generateVegaSpecInternal()
       operationsManager.openInVegaEditor(spec)
@@ -386,6 +403,7 @@ export default defineComponent({
             props.data,
             props.columns,
             props.onChartConfigChange,
+            props.initialConfig,
           )
           renderChart()
         })
@@ -430,6 +448,7 @@ export default defineComponent({
       refreshChart,
       charts: eligible,
       isShortContainer,
+      revertDrilldown,
     }
   },
 })

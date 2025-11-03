@@ -2,12 +2,7 @@
   <div class="result-select row pa-0 ba-0">
     <div class="select-container">
       <div class="search-input-wrapper">
-        <span 
-          v-if="hasSelection" 
-          class="inline-label"
-        >
-          {{ fieldLabel }}:
-        </span>
+        <span v-if="hasSelection" class="inline-label"> {{ fieldLabel }}: </span>
         <input
           ref="searchInput"
           v-model="searchText"
@@ -421,13 +416,11 @@ export default {
       if (this.hasSelection) {
         return this.selectedLabel || 'Type to search...'
       }
-      
+
       if (!this.selectOptions || this.selectOptions.length === 0) {
         return 'No data available'
       }
-      return this.firstColumn
-        ? `Select ${this.firstColumn?.name}`
-        : 'Select an option'
+      return this.firstColumn ? `Select ${this.firstColumn?.name}` : 'Select an option'
     },
     hasSelection(): boolean {
       return !!(this.selectedLabel && this.selectedValue)
@@ -461,7 +454,7 @@ export default {
       if (newLabel && !this.showDropdown) {
         this.searchText = newLabel
       }
-    }
+    },
   },
   methods: {
     formatValue(value: any, column: ResultColumn): string {
