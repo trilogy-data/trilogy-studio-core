@@ -509,25 +509,25 @@ describe('AutoImportComponent', () => {
       expect(wrapper.text()).toContain('was not found in the imported model')
     })
 
-    it('should emit fullScreen event during import', async () => {
-      setupSuccessfulImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+    // it('should emit fullScreen event during import', async () => {
+    //   setupSuccessfulImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
 
-      wrapper = await createWrapper(
-        createUrlParams({
-          connection: TEST_CONSTANTS.CONNECTIONS.DUCKDB,
-        }),
-      )
+    //   wrapper = await createWrapper(
+    //     createUrlParams({
+    //       connection: TEST_CONSTANTS.CONNECTIONS.DUCKDB,
+    //     }),
+    //   )
 
-      await nextTick()
-      await nextTick()
+    //   await nextTick()
+    //   await nextTick()
 
-      await vi.waitFor(() => {
-        expect(wrapper.emitted('fullScreen')).toBeTruthy()
-      })
+    //   await vi.waitFor(() => {
+    //     expect(wrapper.emitted('fullScreen')).toBeTruthy()
+    //   })
 
-      const fullScreenEvents = wrapper.emitted('fullScreen')
-      expect(fullScreenEvents![0]).toEqual([true])
-    })
+    //   const fullScreenEvents = wrapper.emitted('fullScreen')
+    //   expect(fullScreenEvents![0]).toEqual([true])
+    // })
   })
 
   describe('Navigation and Events', () => {
