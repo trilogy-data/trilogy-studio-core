@@ -469,7 +469,7 @@ export default {
     },
     editors() {
       return this.editorStore.editors
-    }
+    },
   },
 }
 </script>

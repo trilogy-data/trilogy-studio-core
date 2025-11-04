@@ -2,11 +2,13 @@
   <div class="result-select row pa-0 ba-0">
     <div class="select-container">
       <div class="search-input-wrapper">
+        <span v-if="hasSelection" class="inline-label"> {{ fieldLabel }}: </span>
         <input
           ref="searchInput"
           v-model="searchText"
           type="text"
           class="search-input"
+          :class="{ 'has-inline-label': hasSelection }"
           :placeholder="placeholderText"
           :disabled="!selectOptions || selectOptions.length === 0"
           @focus="handleFocus"
@@ -38,7 +40,7 @@
           <!-- Select All option -->
           <div
             class="dropdown-item select-all"
-            :class="{ selected: selectedValue === 'SELECT_ALL' }"
+            :class="{ selected: !selectedValue }"
             @mousedown.prevent="selectAll"
           >
             Select All
@@ -93,37 +95,63 @@
 
 .search-input-wrapper {
   position: relative;
-  width: 100%;
-}
-
-.search-input {
-  width: 100%;
-  padding: 6px 40px 6px 12px;
-  font-size: 14px;
-  /* line-height: 1.5; */
-  color: var(--text-color, #333333);
-  background-color: var(--bg-color, #ffffff);
+  width: 99%;
+  display: flex;
+  align-items: center;
   border: 1px solid var(--border-light, #d0d0d0);
-  box-sizing: border-box;
-  border-radius: 0;
+  background-color: var(--bg-color, #ffffff);
   transition:
     border-color 0.2s,
     background-color 0.2s;
 }
 
-.search-input:hover:not(:disabled) {
+.search-input-wrapper:hover:not(:has(.search-input:disabled)) {
   border-color: var(--border-dark, #999999);
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--primary-color, #0066cc);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+.inline-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-color-muted, #666666);
+  padding-left: 12px;
+  padding-right: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  padding: 6px 40px 6px 0;
+  font-size: 14px;
+  color: var(--text-color, #333333);
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  transition: background-color 0.2s;
+}
+
+.search-input.has-inline-label {
+  padding-left: 0;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: var(--primary-color, #0066cc);
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
 }
 
 .search-input:disabled {
   background-color: var(--border-light, #d0d0d0);
   color: var(--text-color-muted, #999999);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.search-input-wrapper:has(.search-input:disabled) {
+  background-color: var(--border-light, #d0d0d0);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -210,72 +238,6 @@
   padding: 0;
 }
 
-/* Dark theme support */
-.dark-theme .search-input {
-  background-color: var(--dark-bg-color, #2a2a2a);
-  color: var(--dark-text-color, #e0e0e0);
-  border-color: var(--dark-border-color, #555555);
-}
-
-.dark-theme .search-input:hover:not(:disabled) {
-  border-color: var(--dark-border-hover, #777777);
-}
-
-.dark-theme .search-input:focus {
-  border-color: var(--dark-primary-color, #4d94ff);
-  box-shadow: 0 0 0 2px rgba(77, 148, 255, 0.2);
-}
-
-.dark-theme .search-input:disabled {
-  background-color: var(--dark-border-color, #555555);
-  color: var(--dark-text-color-muted, #999999);
-}
-
-.dark-theme .search-icon {
-  color: var(--dark-text-color-muted, #999999);
-}
-
-.dark-theme .dropdown-list {
-  background-color: var(--dark-bg-color, #2a2a2a);
-  border-color: var(--dark-border-color, #555555);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-.dark-theme .dropdown-item {
-  color: var(--dark-text-color, #e0e0e0);
-  border-bottom-color: var(--dark-border-color, #555555);
-}
-
-.dark-theme .dropdown-item:hover {
-  background-color: var(--dark-hover-bg, #3a3a3a);
-}
-
-.dark-theme .dropdown-item.selected {
-  background-color: var(--dark-selected-bg, #1a4d7a);
-}
-
-.dark-theme .dropdown-item.select-all {
-  color: var(--dark-primary-color, #4d94ff);
-  border-bottom-color: var(--dark-border-color, #555555);
-}
-
-.dark-theme .dropdown-item.select-all:hover {
-  background-color: var(--dark-primary-light-bg, #1a3366);
-}
-
-.dark-theme .dropdown-item.select-all.selected {
-  background-color: var(--dark-primary-selected-bg, #2d5aa0);
-}
-
-.dark-theme .dropdown-item.no-results {
-  color: var(--dark-text-color-muted, #999999);
-}
-
-.dark-theme .dropdown-item :deep(mark) {
-  background-color: #ffd54f;
-  color: #000000;
-}
-
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .select-container {
@@ -285,7 +247,17 @@
   .search-input {
     font-size: 16px;
     /* Prevent zoom on iOS */
-    padding: 12px 40px 12px 12px;
+    padding: 12px 40px 12px 0;
+  }
+
+  .search-input.has-inline-label {
+    padding-left: 0;
+  }
+
+  .inline-label {
+    font-size: 11px;
+    padding-left: 12px;
+    padding-right: 6px;
   }
 
   .dropdown-list {
@@ -440,12 +412,21 @@ export default {
       return this.selectOptions.filter((option) => option.label.toLowerCase().includes(searchLower))
     },
     placeholderText(): string {
+      // When something is selected, show a simpler placeholder
+      if (this.hasSelection) {
+        return this.selectedLabel || 'Type to search...'
+      }
+
       if (!this.selectOptions || this.selectOptions.length === 0) {
         return 'No data available'
       }
-      return this.selectedLabel || this.firstColumn
-        ? `Select ${this.firstColumn?.name}`
-        : 'Select an option'
+      return this.firstColumn ? `Select ${this.firstColumn?.name}` : 'Select an option'
+    },
+    hasSelection(): boolean {
+      return !!(this.selectedLabel && this.selectedValue)
+    },
+    fieldLabel(): string {
+      return this.firstColumn?.name || 'Field'
     },
     dropdownStyle(): Record<string, string> {
       if (!this.inputElement) {
@@ -458,6 +439,20 @@ export default {
         top: `${rect.bottom}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
+      }
+    },
+  },
+  mounted() {
+    // Initialize searchText with selectedLabel if there's a pre-selected value
+    if (this.selectedLabel && !this.searchText) {
+      this.searchText = this.selectedLabel
+    }
+  },
+  watch: {
+    // Watch for external changes to selectedLabel and update searchText accordingly
+    selectedLabel(newLabel) {
+      if (newLabel && !this.showDropdown) {
+        this.searchText = newLabel
       }
     },
   },
@@ -518,25 +513,26 @@ export default {
     selectOption(option: SelectOption) {
       this.selectedValue = option.value
       this.selectedLabel = option.label
-      this.searchText = ''
+      this.searchText = option.label // Show the selected label in the input
       this.showDropdown = false
       this.handleSelection()
     },
 
     selectAll() {
-      this.selectedValue = 'SELECT_ALL'
-      this.selectedLabel = 'Select All'
+      // Clear the selection instead of setting a value
+      this.selectedValue = ''
+      this.selectedLabel = ''
       this.searchText = ''
       this.showDropdown = false
 
-      // Emit backgroundClick event when Select All is chosen
+      // Emit backgroundClick event when Select All is chosen to clear filters
       this.$emit('background-click')
       this.backgroundClick()
     },
 
     onSearchInput() {
-      // Clear selection when user starts typing
-      if (this.searchText && this.selectedLabel) {
+      // Clear selection when user starts typing something different
+      if (this.searchText !== this.selectedLabel && this.selectedLabel) {
         this.selectedValue = ''
         this.selectedLabel = ''
       }
@@ -545,10 +541,8 @@ export default {
     },
 
     handleFocus() {
-      // Clear the search text when focused to allow searching
-      if (this.selectedLabel) {
-        this.searchText = ''
-      }
+      // Clear the input when focused to allow fresh searching
+      this.searchText = ''
       this.showDropdown = true
       this.updateInputElement()
     },
@@ -561,9 +555,9 @@ export default {
       // Delay to allow click event on dropdown items to fire
       setTimeout(() => {
         this.showDropdown = false
-        // Restore the search text if nothing was selected
-        if (!this.selectedLabel && !this.searchText) {
-          this.searchText = ''
+        // Restore the selected label if no search was performed
+        if (this.selectedLabel && !this.searchText) {
+          this.searchText = this.selectedLabel
         }
       }, 200)
     },

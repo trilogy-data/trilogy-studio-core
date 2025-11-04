@@ -108,12 +108,19 @@ export class ChartControlsManager {
     data: readonly Row[],
     columns: Map<string, ResultColumn>,
     onChartConfigChange?: (config: ChartConfig) => void,
+    initialConfig?: ChartConfig | null,
   ): boolean {
     const wasValid = this.chartHelpers.validateConfigFields(this.internalConfig.value, columns)
     if (!wasValid) {
-      console.log('Invalid config fields detected, resetting to defaults, had been:', this.internalConfig.value)
-      this.initializeConfig(data, columns, null, onChartConfigChange, true)
-      console.log('new config is:', this.internalConfig.value)
+      this.initializeConfig(data, columns, initialConfig, onChartConfigChange, false)
+      const wasValidWithInitialConfig = this.chartHelpers.validateConfigFields(
+        this.internalConfig.value,
+        columns,
+      )
+      if (!wasValidWithInitialConfig) {
+        this.initializeConfig(data, columns, null, onChartConfigChange, true)
+        return false
+      }
       return false
     }
     return true

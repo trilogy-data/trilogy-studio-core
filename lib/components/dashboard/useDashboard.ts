@@ -1,4 +1,13 @@
-import { ref, type ComputedRef, computed, onMounted, nextTick, onBeforeUnmount, inject, watch } from 'vue'
+import {
+  ref,
+  type ComputedRef,
+  computed,
+  onMounted,
+  nextTick,
+  onBeforeUnmount,
+  inject,
+  watch,
+} from 'vue'
 import { useDashboardStore, stripAllWhitespace } from '../../stores/dashboardStore'
 import {
   type LayoutItem,
@@ -31,8 +40,12 @@ export interface UseDashboardEmits {
   fullScreen: (enabled: boolean) => void
 }
 
-export function useDashboard(dashboard: ComputedRef<DashboardModel | null | undefined>, options: UseDashboardOptions, emit: UseDashboardEmits) {
-  if (!dashboard.value) { 
+export function useDashboard(
+  dashboard: ComputedRef<DashboardModel | null | undefined>,
+  options: UseDashboardOptions,
+  emit: UseDashboardEmits,
+) {
+  if (!dashboard.value) {
     throw new Error('Dashboard computed reference is required')
   }
   // Initialize services and stores
@@ -93,9 +106,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
 
   // Centralized dashboard initialization function
   function initializeDashboard(dashboardData: DashboardModel) {
-    console.log('Initializing dashboard:', dashboardData.id)
     if (!dashboardData?.id) return
-    console.log('Dashboard data found:', dashboardData)
     // Handle fullscreen mode
     if (dashboardData.state !== 'editing') {
       emit.fullScreen(true)
@@ -124,7 +135,6 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
 
     // Populate completion for dashboard
     populateCompletion()
-
   }
 
   // Lifecycle hooks
@@ -135,7 +145,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
       if (newId && newId !== oldId && dashboard.value) {
         initializeDashboard(dashboard.value)
       }
-    }
+    },
   )
 
   onMounted(() => {
@@ -200,7 +210,6 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
           filterError.value = ''
           if (dashboard.value && dashboard.value.id) {
             let updated = dashboardStore.updateDashboardFilter(dashboard.value.id, newFilter)
-            console.log('Updated filter:', updated)
             dashboardStore.getQueryExecutor(dashboard.value.id)?.runBatch(updated)
           }
         })
@@ -225,10 +234,10 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
           extraFilters: [filterWithoutWhere],
           extraContent: rootContent.value,
         },
-        () => { },
-        () => { },
-        () => { },
-        () => { },
+        () => {},
+        () => {},
+        () => {},
+        () => {},
         true,
       )
 
@@ -376,6 +385,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
         imports: [],
         filters: [],
         rootContent: [],
+        hasDrilldown: false,
       }
     }
 
@@ -391,6 +401,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
         imports: [],
         filters: [],
         rootContent: [],
+        hasDrilldown: false,
       }
     }
 
@@ -409,6 +420,7 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
         filters: [],
         rootContent: [],
         connectionName: dashboard.value.connection || '',
+        hasDrilldown: false,
       }
     }
 
@@ -433,23 +445,38 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
         typeof obj.query === 'string'
       )
     }
-
+    let hasDrilldown = false
+    let content = isMarkdownData(item.content)
+      ? item.content
+      : {
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        }
+    if (item.drilldown) {
+      hasDrilldown = true
+      content = isMarkdownData(item.drilldown)
+        ? item.drilldown
+        : {
+            markdown: item.type === 'markdown' ? item.drilldown : '',
+            query: item.type !== 'markdown' ? item.drilldown : '',
+          }
+    }
+    let config = item.chartConfig
+    if (hasDrilldown) {
+      config = item.drilldownChartConfig || undefined
+    }
     return {
       type: item.type,
       // check if it's MarkdownData, and if so, extract markdown
       //
       content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
-      structured_content: isMarkdownData(item.content)
-        ? item.content
-        : {
-          markdown: item.type === 'markdown' ? item.content : '',
-          query: item.type !== 'markdown' ? item.content : '',
-        },
+      // display the drilldown of set
+      structured_content: content,
       name: item.name,
       allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
       width: item.width || 0,
       height: item.height || 0,
-      chartConfig: item.chartConfig,
+      chartConfig: config,
       filters: finalFilters,
       chartFilters: item.chartFilters || [],
       conceptFilters: item.conceptFilters || [],
@@ -462,64 +489,73 @@ export function useDashboard(dashboard: ComputedRef<DashboardModel | null | unde
       error: item.error || '',
       loading: item.loading || false,
       loadStartTime: item.loadStartTime || null, // Include load start time if available
+      hasDrilldown,
     }
   }
 
   function setItemData(itemId: string, dashboardId: string, data: any): void {
     if (!dashboard.value || !dashboard.value.id) return
-
     if (!dashboardId || dashboard.value.id !== dashboardId) {
-      console.warn('Dashboard ID mismatch. Cannot set item data. Given:', dashboardId, 'Expected:', dashboard.value.id)
+      console.warn(
+        'Dashboard ID mismatch. Cannot set item data. Given:',
+        dashboardId,
+        'Expected:',
+        dashboard.value.id,
+      )
       return
     }
 
-    // Update specific properties through store actions
+    // Aggregate all updates into a batch
+    const updates: Parameters<typeof dashboardStore.updateMultipleItemProperties>[2] = {}
+
+    // Collect all the updates
     if (data.name) {
-      dashboardStore.updateItemName(dashboard.value.id, itemId, data.name)
+      updates.name = data.name
     }
-
     if (data.chartConfig) {
-      dashboardStore.updateItemChartConfig(dashboard.value.id, itemId, data.chartConfig)
+      updates.chartConfig = data.chartConfig
+    }
+    if (data.content) {
+      updates.content = data.content
+    }
+    if (data.dimensions) {
+      updates.layoutDimensions = {
+        w: data.dimensions.width,
+        h: data.dimensions.height,
+      }
+    }
+    if (data.width && data.height) {
+      updates.width = data.width
+      updates.height = data.height
+    }
+    if (data.loading !== undefined) {
+      updates.loading = data.loading
+    }
+    if (data.results !== undefined) {
+      updates.results = data.results
+    }
+    if (data.error !== undefined) {
+      updates.error = data.error
+    }
+    if (data.drilldown !== undefined) {
+      updates.drilldown = data.drilldown
+    }
+    if (data.drilldownChartConfig !== undefined) {
+      updates.drilldownChartConfig = data.drilldownChartConfig
+    }
+    if (data.allowCrossFilter !== undefined) {
+      updates.allowCrossFilter = data.allowCrossFilter
     }
 
+    // Apply all updates in a single batch transaction
+    if (Object.keys(updates).length > 0) {
+      dashboardStore.updateMultipleItemProperties(dashboard.value.id, itemId, updates)
+    }
+
+    // Handle side effects after the batch update
     if (data.content) {
-      dashboardStore.updateItemContent(dashboard.value.id, itemId, data.content)
       let executor = getDashboardQueryExecutor(dashboard.value.id)
       executor?.runSingle(itemId)
-    }
-
-    if (data.dimensions) {
-      dashboardStore.updateItemLayoutDimensions(
-        dashboard.value.id,
-        itemId,
-        null,
-        null,
-        data.dimensions.width,
-        data.dimensions.height,
-      )
-    }
-
-    if (data.width && data.height) {
-      dashboardStore.updateItemDimensions(dashboard.value.id, itemId, data.width, data.height)
-    }
-    if (data.loading) {
-      dashboardStore.updateItemLoading(dashboard.value.id, itemId, data.loading)
-    }
-
-    if (data.results) {
-      dashboardStore.updateItemResults(dashboard.value.id, itemId, data.results)
-    }
-
-    if (data.error) {
-      dashboardStore.updateItemError(dashboard.value.id, itemId, data.error)
-    }
-
-    if (data.allowCrossFilter !== undefined) {
-      dashboardStore.updateItemCrossFilterEligibility(
-        dashboard.value.id,
-        itemId,
-        data.allowCrossFilter,
-      )
     }
   }
 
