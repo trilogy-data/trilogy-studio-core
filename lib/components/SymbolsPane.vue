@@ -138,7 +138,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType, watch, computed, reactive } from 'vue'
+import { defineComponent, ref, type PropType, watch, computed, reactive, nextTick } from 'vue'
 import type { CompletionItem } from '../stores/resolver'
 
 // Centralized icon configuration for easier management
@@ -257,14 +257,25 @@ export default defineComponent({
     }
 
     // Show custom tooltip
-    const showTooltip = (event: MouseEvent, symbol: CompletionItem) => {
+    const showTooltip = async (event: MouseEvent, symbol: CompletionItem) => {
       if (tooltipTimeout) {
         clearTimeout(tooltipTimeout)
       }
 
-      tooltipTimeout = setTimeout(() => {
+      tooltipTimeout = setTimeout(async () => {
+        const containerEl = document.querySelector('.symbols-pane') as HTMLElement
+        if (!containerEl) return
+
+        const containerRect = containerEl.getBoundingClientRect()
+        
+        // Set initial position relative to container
+        tooltip.x = event.clientX - containerRect.left + 10
+        tooltip.y = event.clientY - containerRect.top + 10
         tooltip.symbol = symbol
         tooltip.visible = true
+
+        // Wait for DOM update and adjust position
+        await nextTick()
         updateTooltipPosition(event)
       }, 500) // 500ms delay before showing tooltip
     }
@@ -278,36 +289,48 @@ export default defineComponent({
       tooltip.visible = false
     }
 
-    // Update tooltip position
+    // Update tooltip position relative to container
     const updateTooltipPosition = (event: MouseEvent) => {
       if (!tooltip.visible) return
 
       const offset = 10
+      const containerEl = document.querySelector('.symbols-pane') as HTMLElement
       const tooltipEl = document.querySelector('.custom-tooltip') as HTMLElement
 
+      if (!containerEl) return
+
+      const containerRect = containerEl.getBoundingClientRect()
+      
+      // Calculate position relative to container
+      let x = event.clientX - containerRect.left + offset
+      let y = event.clientY - containerRect.top + offset
+
       if (tooltipEl) {
-        const rect = tooltipEl.getBoundingClientRect()
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
-
-        let x = event.clientX + offset
-        let y = event.clientY + offset
-
-        // Adjust if tooltip would go off-screen
-        if (x + rect.width > viewportWidth) {
-          x = event.clientX - rect.width - offset
+        const tooltipRect = tooltipEl.getBoundingClientRect()
+        
+        // Safety check for rendered tooltip
+        if (tooltipRect.width === 0 || tooltipRect.height === 0) {
+          // Tooltip not fully rendered, try again next frame
+          requestAnimationFrame(() => updateTooltipPosition(event))
+          return
+        }
+        
+        // Adjust if tooltip would go outside container bounds
+        if (x + tooltipRect.width > containerRect.width) {
+          x = event.clientX - containerRect.left - tooltipRect.width - offset
         }
 
-        if (y + rect.height > viewportHeight) {
-          y = event.clientY - rect.height - offset
+        if (y + tooltipRect.height > containerRect.height) {
+          y = event.clientY - containerRect.top - tooltipRect.height - offset
         }
 
-        tooltip.x = Math.max(0, x)
-        tooltip.y = Math.max(0, y)
-      } else {
-        tooltip.x = event.clientX + offset
-        tooltip.y = event.clientY + offset
+        // Ensure tooltip stays within container
+        x = Math.max(offset, Math.min(x, containerRect.width - tooltipRect.width - offset))
+        y = Math.max(offset, Math.min(y, containerRect.height - tooltipRect.height - offset))
       }
+
+      tooltip.x = x
+      tooltip.y = y
     }
 
     // Filter symbols based on search query and checkbox filters
@@ -625,7 +648,7 @@ export default defineComponent({
 
 /* Custom Tooltip Styles */
 .custom-tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 1000;
   background-color: var(--result-window-bg);
   border: 1px solid var(--border-color);

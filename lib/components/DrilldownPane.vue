@@ -157,7 +157,6 @@ import {
 } from 'vue'
 
 import type { CompletionItem } from '../stores/resolver'
-import { highlight } from 'prismjs';
 
 // Centralized icon configuration
 const ICON_CONFIG = {
@@ -312,6 +311,9 @@ export default defineComponent({
       const query = searchQuery.value.toLowerCase().trim()
 
       filteredDimensions.value = props.symbols.filter((dimension) => {
+        if (["metric", "const"].includes(dimension.trilogySubType || "")) {
+          return false
+        }
         // Apply search filter
         const matchesSearch =
           !query ||
@@ -433,14 +435,25 @@ export default defineComponent({
     }
 
     // Tooltip functions
-    const showTooltip = (event: MouseEvent, dimension: CompletionItem) => {
+    const showTooltip = async (event: MouseEvent, dimension: CompletionItem) => {
       if (tooltipTimeout) {
         clearTimeout(tooltipTimeout)
       }
 
-      tooltipTimeout = setTimeout(() => {
+      tooltipTimeout = setTimeout(async () => {
+        const containerEl = document.querySelector('.drilldown-pane') as HTMLElement
+        if (!containerEl) return
+
+        const containerRect = containerEl.getBoundingClientRect()
+        
+        // Set initial position relative to container
+        tooltip.x = event.clientX - containerRect.left + 10
+        tooltip.y = event.clientY - containerRect.top + 10
         tooltip.dimension = dimension
         tooltip.visible = true
+
+        // Wait for DOM update and adjust position
+        await nextTick()
         updateTooltipPosition(event)
       }, 500)
     }
@@ -457,31 +470,43 @@ export default defineComponent({
       if (!tooltip.visible) return
 
       const offset = 10
+      const containerEl = document.querySelector('.drilldown-pane') as HTMLElement
       const tooltipEl = document.querySelector('.custom-tooltip') as HTMLElement
 
+      if (!containerEl) return
+
+      const containerRect = containerEl.getBoundingClientRect()
+      
+      // Calculate position relative to container
+      let x = event.clientX - containerRect.left + offset
+      let y = event.clientY - containerRect.top + offset
+
       if (tooltipEl) {
-        const rect = tooltipEl.getBoundingClientRect()
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
-
-        let x = event.clientX + offset
-        let y = event.clientY + offset
-
-        // Adjust if tooltip would go off-screen
-        if (x + rect.width > viewportWidth) {
-          x = event.clientX - rect.width - offset
+        const tooltipRect = tooltipEl.getBoundingClientRect()
+        
+        // Safety check for rendered tooltip
+        if (tooltipRect.width === 0 || tooltipRect.height === 0) {
+          // Tooltip not fully rendered, try again next frame
+          requestAnimationFrame(() => updateTooltipPosition(event))
+          return
+        }
+        
+        // Adjust if tooltip would go outside container bounds
+        if (x + tooltipRect.width > containerRect.width) {
+          x = event.clientX - containerRect.left - tooltipRect.width - offset
         }
 
-        if (y + rect.height > viewportHeight) {
-          y = event.clientY - rect.height - offset
+        if (y + tooltipRect.height > containerRect.height) {
+          y = event.clientY - containerRect.top - tooltipRect.height - offset
         }
 
-        tooltip.x = Math.max(0, x)
-        tooltip.y = Math.max(0, y)
-      } else {
-        tooltip.x = event.clientX + offset
-        tooltip.y = event.clientY + offset
+        // Ensure tooltip stays within container
+        x = Math.max(offset, Math.min(x, containerRect.width - tooltipRect.width - offset))
+        y = Math.max(offset, Math.min(y, containerRect.height - tooltipRect.height - offset))
       }
+
+      tooltip.x = x
+      tooltip.y = y
     }
 
     return {
@@ -527,6 +552,7 @@ export default defineComponent({
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   min-width: 320px;
   min-height: 250px;
+  position: relative;
 }
 
 /* Header styles */
@@ -808,7 +834,7 @@ export default defineComponent({
 
 /* Custom Tooltip Styles */
 .custom-tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 1000;
   background-color: rgba(30, 30, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.2);
