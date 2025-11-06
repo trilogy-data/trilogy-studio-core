@@ -257,7 +257,12 @@ function handleRefresh() {
         </button>
         
         <!-- Mode selector dropdown -->
-        <div class="mode-selector" data-testid="mode-selector-wrapper">
+
+        
+        <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
+          ⟳ Refresh
+        </button>
+                <div class="mode-selector" data-testid="mode-selector-wrapper">
           <div class="select-wrapper">
             <i class="mdi mdi-eye-outline select-icon"></i>
             <select
@@ -275,10 +280,6 @@ function handleRefresh() {
             </select>
           </div>
         </div>
-        
-        <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
-          ⟳ Refresh
-        </button>
       </div>
     </div>
     <DashboardSharePopup

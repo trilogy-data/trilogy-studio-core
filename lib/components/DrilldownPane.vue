@@ -605,6 +605,7 @@ export default defineComponent({
 .selected-dimensions {
   padding-left: 8px;
   border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
 }
 
 .selected-label {
