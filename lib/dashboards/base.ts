@@ -28,6 +28,8 @@ export interface LayoutItem {
 export interface DashboardTypes {
   CellType: 'chart' | 'markdown' | 'table' | 'filter'
 }
+// export types for 'fullscreen' | 'editing' | 'published' | 'locked'
+export type DashboardState = 'fullscreen' | 'editing' | 'published' | 'locked'
 
 export interface Filter {
   source: string
@@ -101,7 +103,7 @@ export interface Dashboard {
   imports: DashboardImport[]
   version: number
   description: string
-  state: 'editing' | 'published' | 'locked'
+  state: DashboardState
 }
 
 // Interface for batch updates to item properties
@@ -154,7 +156,7 @@ export class DashboardModel implements Dashboard {
   filter: string | null = null
   imports: DashboardImport[] = []
   version: number
-  state: 'editing' | 'published' | 'locked' = 'editing'
+  state: DashboardState = 'editing'
   description: string = ''
   changed: boolean = false
   deleted: boolean = false

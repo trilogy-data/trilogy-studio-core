@@ -14,7 +14,6 @@ const props = defineProps({
     type: Object as () => Dashboard,
     required: true,
   },
-  editMode: Boolean,
   editsLocked: Boolean,
   selectedConnection: {
     type: String,
@@ -28,7 +27,7 @@ const props = defineProps({
   validateFilter: {
     type: Function,
     default: () => true,
-  },
+  }
 })
 
 const emit = defineEmits([
@@ -38,7 +37,7 @@ const emit = defineEmits([
   'add-item',
   'clear-items',
   'clear-filter',
-  'toggle-edit-mode',
+  'mode-change',
   'refresh',
   'title-update',
   'export-image',
@@ -81,6 +80,12 @@ async function handleDownloadAction() {
 
   // The action completes successfully after the delay
   return Promise.resolve()
+}
+
+// Handle mode change
+function handleModeChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  emit('mode-change', target.value)
 }
 
 // Title editing methods
@@ -135,7 +140,7 @@ function handleRefresh() {
 <template>
   <div class="dashboard-controls" data-testid="dashboard-controls">
     <!-- Title and Edit Controls row -->
-    <div class="controls-row title-row" v-if="editMode">
+    <div class="controls-row title-row" v-if="dashboard.state === 'editing'">
       <div class="dashboard-title" @click="startEditingTitle">
         <span v-if="!isEditingTitle" class="editable-text">
           {{ dashboard?.name || 'Untitled Dashboard' }}
@@ -250,14 +255,27 @@ function handleRefresh() {
         >
           Export
         </button>
-        <button
-          @click="() => $emit('toggle-edit-mode')"
-          class="btn btn-secondary"
-          data-testid="toggle-edit-mode-button"
-          :disabled="editsLocked"
-        >
-          {{ editMode ? 'Fullscreen' : 'Edit Mode' }}
-        </button>
+        
+        <!-- Mode selector dropdown -->
+        <div class="mode-selector" data-testid="mode-selector-wrapper">
+          <div class="select-wrapper">
+            <i class="mdi mdi-eye-outline select-icon"></i>
+            <select
+              id="viewMode"
+              data-testid="mode-selector"
+              @change="handleModeChange"
+              :value="dashboard.state"
+              :disabled="editsLocked"
+              class="mode-select"
+            >
+            <option value="editing">Edit</option>
+              <option value="published">View</option>
+              
+              <option value="fullscreen">Fullscreen</option>
+            </select>
+          </div>
+        </div>
+        
         <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
           ⟳ Refresh
         </button>
@@ -352,12 +370,12 @@ function handleRefresh() {
   box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
 }
 
-.connection-selector {
+.connection-selector, .mode-selector {
   display: flex;
   align-items: center;
 }
 
-.connection-selector label {
+.connection-selector label, .mode-selector label {
   margin-right: 10px;
   color: var(--text-color);
   font-size: 20px;
@@ -385,7 +403,7 @@ function handleRefresh() {
   box-shadow: none;
 }
 
-.select-wrapper select {
+.select-wrapper select, .mode-select {
   padding: 8px 12px 8px 36px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
@@ -393,12 +411,16 @@ function handleRefresh() {
   background-color: var(--bg-color);
   appearance: none;
   cursor: pointer;
-  min-width: 150px;
+  min-width: 120px;
   outline: none;
   border-radius: 0;
   /* Remove rounded corners */
   -webkit-appearance: none;
   -moz-appearance: none;
+}
+
+.mode-select {
+  min-width: 110px;
 }
 
 /* Add dropdown arrow */
@@ -540,7 +562,7 @@ function handleRefresh() {
     flex-wrap: wrap;
   }
 
-  .connection-selector {
+  .connection-selector, .mode-selector {
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -549,7 +571,7 @@ function handleRefresh() {
     gap: 8px;
   }
 
-  .connection-selector label {
+  .connection-selector label, .mode-selector label {
     margin-right: 0;
     margin-bottom: 0;
   }
@@ -558,7 +580,7 @@ function handleRefresh() {
     width: 100%;
   }
 
-  .select-wrapper select {
+  .select-wrapper select, .mode-select {
     width: 100%;
     text-align: center;
     padding-left: 36px;
@@ -585,11 +607,11 @@ function handleRefresh() {
 }
 
 @media (max-width: 768px) {
-  .connection-selector {
+  .connection-selector, .mode-selector {
     max-width: 100%;
   }
 
-  .select-wrapper select {
+  .select-wrapper select, .mode-select {
     min-width: unset;
   }
 
@@ -626,7 +648,7 @@ function handleRefresh() {
 
 /* Extra small screen size handling */
 @media (max-width: 360px) {
-  .connection-selector {
+  .connection-selector, .mode-selector {
     max-width: 100%;
   }
 
