@@ -135,6 +135,20 @@ function handleImportsChange(newImports: DashboardImport[]) {
 function handleRefresh() {
   emit('refresh')
 }
+
+// Computed property for mode selector icon
+const modeIcon = computed(() => {
+  switch (props.dashboard?.state) {
+    case 'editing':
+      return 'mdi mdi-pencil-outline'
+    case 'published':
+      return 'mdi mdi-eye-outline'
+    case 'fullscreen':
+      return 'mdi mdi-fullscreen'
+    default:
+      return 'mdi mdi-eye-outline'
+  }
+})
 </script>
 
 <template>
@@ -264,7 +278,7 @@ function handleRefresh() {
         </button>
                 <div class="mode-selector" data-testid="mode-selector-wrapper">
           <div class="select-wrapper">
-            <i class="mdi mdi-eye-outline select-icon"></i>
+            <i :class="modeIcon + ' select-icon'"></i>
             <select
               id="viewMode"
               data-testid="mode-selector"

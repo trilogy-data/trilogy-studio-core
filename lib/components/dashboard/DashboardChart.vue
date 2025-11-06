@@ -38,7 +38,7 @@
       <LoadingView :startTime="startTime" text="Loading"></LoadingView>
     </div>
     <div
-      v-if="!(results && ready)"
+      v-if="!editMode || !(results && ready)"
       class="controls-toggle"
       :class="{ 'controls-visible': controlsVisible }"
     >

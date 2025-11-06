@@ -5,7 +5,6 @@
     @mouseenter="controlsManager.onChartMouseEnter"
     @mouseleave="controlsManager.onChartMouseLeave"
   >
-    <!-- Controls positioned based on container height -->
     <div
       class="controls-toggle"
       :class="{

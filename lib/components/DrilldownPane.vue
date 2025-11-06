@@ -157,6 +157,7 @@ import {
 } from 'vue'
 
 import type { CompletionItem } from '../stores/resolver'
+import { highlight } from 'prismjs';
 
 // Centralized icon configuration
 const ICON_CONFIG = {
@@ -222,6 +223,10 @@ export default defineComponent({
 
     onUnmounted(() => {
       document.removeEventListener('keydown', handleGlobalKeydown)
+      selected.value = []
+      highlightedIndex.value = -1
+      dimensionsList.value = null
+      searchQuery.value = ''
     })
 
     // Global keyboard event handler
@@ -258,7 +263,7 @@ export default defineComponent({
             highlightedIndex.value < filteredDimensions.value.length
           ) {
             selectDimension(filteredDimensions.value[highlightedIndex.value])
-            highlightedIndex.value = -1
+            // highlightedIndex is now reset in selectDimension function
           } else {
             // If nothing is highlighted, submit the form
             handleSubmit()
@@ -387,12 +392,32 @@ export default defineComponent({
 
       selected.value.push(dimension.label)
       emit('select-dimension', dimension)
+      
+      // Reset highlighted index after click selection
+      highlightedIndex.value = -1
+      
+      // Refocus the search input to maintain keyboard navigation
+      nextTick(() => {
+        if (drilldownSearchInput.value) {
+          drilldownSearchInput.value.focus()
+        }
+      })
     }
 
     // Remove dimension from selection
     const removeDimension = (dimensionLabel: string) => {
       selected.value = selected.value.filter((label) => label !== dimensionLabel)
       emit('remove-dimension', dimensionLabel)
+      
+      // Reset highlighted index after removal
+      highlightedIndex.value = -1
+      
+      // Refocus the search input after removal
+      nextTick(() => {
+        if (drilldownSearchInput.value) {
+          drilldownSearchInput.value.focus()
+        }
+      })
     }
 
     // Handle submit action

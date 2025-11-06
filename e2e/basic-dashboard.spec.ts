@@ -590,3 +590,123 @@ select rows;
   await page.getByRole('gridcell', { name: '2' }).click()
   console.log('✓ Custom editor dashboard creation test passed')
 })
+
+
+
+
+test('test-drilldown', async ({ page, isMobile }) => {
+  await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
+  // Setup connection
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+  await page.getByTestId('sidebar-link-connections').click()
+  await page.getByTestId('connection-creator-add').click()
+  await page.getByTestId('connection-creator-name').click()
+  await page.getByTestId('connection-creator-name').fill(connectionName)
+  await page.getByTestId('connection-creator-submit').click()
+  await page.getByTestId('refresh-connection-duckdb-test2').click()
+  await page.waitForFunction(() => {
+    const element = document.querySelector('[data-testid="status-icon-duckdb-test2"]')
+    if (!element) return false
+    const style = window.getComputedStyle(element)
+    const backgroundColor = style.backgroundColor
+    // Check if the background color is green (in RGB format)
+    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
+  })
+
+  // Create custom editor
+  await page.getByTestId('sidebar-link-editors').click()
+  await page.getByTestId('editor-creator-add').click()
+  await page.getByTestId('editor-creator-name').click()
+  await page.getByTestId('editor-creator-name').fill('test_one')
+  await page.getByTestId('editor-creator-type').selectOption('preql')
+  await page.getByTestId('editor-creator-connection-select').selectOption(connectionName)
+  await page.getByTestId('editor-creator-submit').click()
+
+  // Switch to test_one editor and add content
+  await page.getByTestId('editor-e-local-duckdb-test2-test_one').click()
+  const editor = page.getByTestId('editor')
+  await editor.click({ clickCount: 3 })
+  // await page.keyboard.press('Control+A')
+  // 3. Delete the selected content
+  await page.keyboard.press('Delete')
+  const testOneContent = `
+auto x <- [1,2,3,4,5];
+
+auto rows <- unnest(x);
+auto alt_labels<- case when rows = 5 then 'massive' else 'small' end;
+auto alt_labels_two <-case when rows >=3 then 'big' else 'tiny' end;
+select rows;
+`
+  await page.keyboard.type(testOneContent)
+  await page.getByTestId('editor-run-button').click()
+  await expect(page.getByTestId('query-results-length')).toContainText('5')
+
+  // Navigate to dashboard creation
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
+  await page.getByTestId('sidebar-link-dashboard').click()
+
+  // Create dashboard with custom editor as source
+  await page.getByTestId('dashboard-creator-add').click()
+  await page.getByTestId('dashboard-creator-name').fill('custom-editor-dashboard')
+  await page.getByTestId('dashboard-creator-connection').selectOption(connectionName)
+  await page.getByTestId('dashboard-creator-import').selectOption('test_one') // Use the custom editor as source
+  await page.getByTestId('dashboard-creator-submit').click()
+
+  // Navigate to the created dashboard
+  if (!isMobile) {
+    const elementExists = await page.isVisible(
+      '[data-testid="dashboard-d-custom-editor-dashboard"]',
+    )
+    if (!elementExists) {
+      await page.getByTestId('dashboard-s-local').click()
+      await page.getByTestId(`dashboard-c-local-${connectionName}`).click()
+    }
+    await page.getByTestId('dashboard-c-local-duckdb-test2').click()
+  }
+
+  // Verify dashboard is using custom editor as source
+  await expect(page.getByText('An Empty Dashboard')).toBeVisible()
+
+  // Add description for the dashboard
+  await page
+    .getByPlaceholder('What is this dashboard for?')
+    .fill('Dashboard using custom editor data source')
+  await page.getByTestId('dashboard-description-save').click()
+
+  // Add a custom item to the dashboard
+  await page.getByTestId('add-item-button').click()
+  await page.getByTestId('dashboard-add-item-confirm').click()
+  await page.getByTestId('edit-dashboard-item-content-0').click()
+
+  // Set content using the custom editor query
+  await page.getByTestId('simple-editor-content').click()
+  await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
+  await page.keyboard.type("select alt_labels, sum(rows) as value;") // Reference the custom editor
+  await page.getByTestId('editor-run-button').click()
+
+  // Save the dashboard item
+  await page.getByTestId('save-dashboard-chart').click()
+
+  // Verify the chart container is visible
+  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
+
+  await page.locator('canvas').click({
+    modifiers: ['ControlOrMeta'],
+    position: {
+      x: // one third of canvas width
+        (await page.locator(vegaSelector).boundingBox()).width / 3,
+      y: // middle of canvas height
+        (await page.locator(vegaSelector).boundingBox()).height / 2,
+    }
+  });
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).fill('alt_labels_two');
+  //enter enter
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter');
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter');
+  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
+  console.log('✓ Custom editor dashboard creation test passed')
+})
