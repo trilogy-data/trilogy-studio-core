@@ -222,6 +222,10 @@ export default defineComponent({
 
     onUnmounted(() => {
       document.removeEventListener('keydown', handleGlobalKeydown)
+      selected.value = []
+      highlightedIndex.value = -1
+      dimensionsList.value = null
+      searchQuery.value = ''
     })
 
     // Global keyboard event handler
@@ -258,7 +262,7 @@ export default defineComponent({
             highlightedIndex.value < filteredDimensions.value.length
           ) {
             selectDimension(filteredDimensions.value[highlightedIndex.value])
-            highlightedIndex.value = -1
+            // highlightedIndex is now reset in selectDimension function
           } else {
             // If nothing is highlighted, submit the form
             handleSubmit()
@@ -307,6 +311,9 @@ export default defineComponent({
       const query = searchQuery.value.toLowerCase().trim()
 
       filteredDimensions.value = props.symbols.filter((dimension) => {
+        if (['metric', 'const'].includes(dimension.trilogySubType || '')) {
+          return false
+        }
         // Apply search filter
         const matchesSearch =
           !query ||
@@ -387,12 +394,32 @@ export default defineComponent({
 
       selected.value.push(dimension.label)
       emit('select-dimension', dimension)
+
+      // Reset highlighted index after click selection
+      highlightedIndex.value = -1
+
+      // Refocus the search input to maintain keyboard navigation
+      nextTick(() => {
+        if (drilldownSearchInput.value) {
+          drilldownSearchInput.value.focus()
+        }
+      })
     }
 
     // Remove dimension from selection
     const removeDimension = (dimensionLabel: string) => {
       selected.value = selected.value.filter((label) => label !== dimensionLabel)
       emit('remove-dimension', dimensionLabel)
+
+      // Reset highlighted index after removal
+      highlightedIndex.value = -1
+
+      // Refocus the search input after removal
+      nextTick(() => {
+        if (drilldownSearchInput.value) {
+          drilldownSearchInput.value.focus()
+        }
+      })
     }
 
     // Handle submit action
@@ -408,14 +435,25 @@ export default defineComponent({
     }
 
     // Tooltip functions
-    const showTooltip = (event: MouseEvent, dimension: CompletionItem) => {
+    const showTooltip = async (event: MouseEvent, dimension: CompletionItem) => {
       if (tooltipTimeout) {
         clearTimeout(tooltipTimeout)
       }
 
-      tooltipTimeout = setTimeout(() => {
+      tooltipTimeout = setTimeout(async () => {
+        const containerEl = document.querySelector('.drilldown-pane') as HTMLElement
+        if (!containerEl) return
+
+        const containerRect = containerEl.getBoundingClientRect()
+
+        // Set initial position relative to container
+        tooltip.x = event.clientX - containerRect.left + 10
+        tooltip.y = event.clientY - containerRect.top + 10
         tooltip.dimension = dimension
         tooltip.visible = true
+
+        // Wait for DOM update and adjust position
+        await nextTick()
         updateTooltipPosition(event)
       }, 500)
     }
@@ -432,31 +470,43 @@ export default defineComponent({
       if (!tooltip.visible) return
 
       const offset = 10
+      const containerEl = document.querySelector('.drilldown-pane') as HTMLElement
       const tooltipEl = document.querySelector('.custom-tooltip') as HTMLElement
 
+      if (!containerEl) return
+
+      const containerRect = containerEl.getBoundingClientRect()
+
+      // Calculate position relative to container
+      let x = event.clientX - containerRect.left + offset
+      let y = event.clientY - containerRect.top + offset
+
       if (tooltipEl) {
-        const rect = tooltipEl.getBoundingClientRect()
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
+        const tooltipRect = tooltipEl.getBoundingClientRect()
 
-        let x = event.clientX + offset
-        let y = event.clientY + offset
-
-        // Adjust if tooltip would go off-screen
-        if (x + rect.width > viewportWidth) {
-          x = event.clientX - rect.width - offset
+        // Safety check for rendered tooltip
+        if (tooltipRect.width === 0 || tooltipRect.height === 0) {
+          // Tooltip not fully rendered, try again next frame
+          requestAnimationFrame(() => updateTooltipPosition(event))
+          return
         }
 
-        if (y + rect.height > viewportHeight) {
-          y = event.clientY - rect.height - offset
+        // Adjust if tooltip would go outside container bounds
+        if (x + tooltipRect.width > containerRect.width) {
+          x = event.clientX - containerRect.left - tooltipRect.width - offset
         }
 
-        tooltip.x = Math.max(0, x)
-        tooltip.y = Math.max(0, y)
-      } else {
-        tooltip.x = event.clientX + offset
-        tooltip.y = event.clientY + offset
+        if (y + tooltipRect.height > containerRect.height) {
+          y = event.clientY - containerRect.top - tooltipRect.height - offset
+        }
+
+        // Ensure tooltip stays within container
+        x = Math.max(offset, Math.min(x, containerRect.width - tooltipRect.width - offset))
+        y = Math.max(offset, Math.min(y, containerRect.height - tooltipRect.height - offset))
       }
+
+      tooltip.x = x
+      tooltip.y = y
     }
 
     return {
@@ -502,6 +552,7 @@ export default defineComponent({
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   min-width: 320px;
   min-height: 250px;
+  position: relative;
 }
 
 /* Header styles */
@@ -605,6 +656,7 @@ export default defineComponent({
 .selected-dimensions {
   padding-left: 8px;
   border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
 }
 
 .selected-label {
@@ -782,7 +834,7 @@ export default defineComponent({
 
 /* Custom Tooltip Styles */
 .custom-tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 1000;
   background-color: rgba(30, 30, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.2);

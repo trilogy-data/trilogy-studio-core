@@ -64,7 +64,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
       if (error.message.includes('Import failed')) {
         throw error
       }
-    }
+  }
   }
 
   if (!dashboardFound) {
@@ -73,12 +73,11 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
 
   // Verify that the imported model and connection exist
   // Navigate to check if the connection was created
+  await page.getByTestId('mode-selector').selectOption('editing');
+
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
-  } else {
-    await page.getByTestId('toggle-edit-mode-button').click()
   }
-
   await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
 
   // Should see the iris_data-connection or similar

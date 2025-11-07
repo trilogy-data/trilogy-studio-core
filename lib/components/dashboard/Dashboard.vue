@@ -10,6 +10,7 @@ import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
+import { type DashboardState } from '../../dashboards/base'
 const props = defineProps<{
   name: string
   connectionId?: string
@@ -56,7 +57,7 @@ const {
   handleImportChange,
   validateFilter,
   onConnectionChange,
-  toggleEditMode,
+  toggleMode,
   onLayoutUpdated,
   openAddItemModal,
   addItem,
@@ -143,9 +144,9 @@ function onLayoutUpdatedDesktop(newLayout: any) {
 }
 
 // Update draggable/resizable when edit mode changes
-function handleToggleEditMode() {
-  toggleEditMode()
-  emit('fullScreen', !editMode.value)
+function handleToggleMode(mode: DashboardState) {
+  toggleMode(mode)
+  emit('fullScreen', mode === 'fullscreen')
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
@@ -216,7 +217,6 @@ async function exportToImage() {
   <div class="dashboard-container" v-if="dashboard">
     <DashboardHeader
       :dashboard="dashboard"
-      :edit-mode="editMode"
       :edits-locked="dashboard.state === 'locked'"
       :selected-connection="selectedConnection"
       :filterError="filterError"
@@ -228,7 +228,7 @@ async function exportToImage() {
       @import-change="handleImportChange"
       @add-item="openAddItemModal"
       @clear-items="clearItems"
-      @toggle-edit-mode="handleToggleEditMode"
+      @mode-change="handleToggleMode"
       @refresh="handleRefresh"
       @clear-filter="handleFilterClear"
       @title-update="updateTitle"

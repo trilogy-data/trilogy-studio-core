@@ -10,6 +10,7 @@ import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 import { useDashboardStore } from '../../stores/dashboardStore'
+import { type DashboardState } from '../../dashboards/base'
 const props = defineProps<{
   name: string
   connectionId?: string
@@ -53,7 +54,7 @@ const {
   handleImportChange,
   validateFilter,
   onConnectionChange,
-  toggleEditMode,
+  toggleMode,
   openAddItemModal,
   addItem,
   clearItems,
@@ -172,15 +173,13 @@ function calculateMobileHeight(item: any): number | string {
 }
 
 // Handle edit mode toggle for mobile
-function handleToggleEditMode() {
-  toggleEditMode()
-
+function handleToggleMode(mode: DashboardState) {
+  toggleMode(mode)
   // Trigger resize on mode toggle to ensure charts update
   nextTick(() => {
     triggerResize()
   })
 }
-
 // Mobile navigation scroll functions
 function scrollToTop() {
   const container = document.getElementById('page-content')
@@ -256,7 +255,6 @@ function scrollDownOne() {
   <div class="dashboard-mobile-container" v-if="dashboard">
     <DashboardHeader
       :dashboard="dashboard"
-      :edit-mode="editMode"
       :edits-locked="dashboard.state === 'locked'"
       :selected-connection="selectedConnection"
       :filterError="filterError"
@@ -267,7 +265,7 @@ function scrollDownOne() {
       @import-change="handleImportChange"
       @add-item="openAddItemModal"
       @clear-items="clearItems"
-      @toggle-edit-mode="handleToggleEditMode"
+      @mode-change="handleToggleMode"
       @refresh="handleRefresh"
       @clear-filter="handleFilterClear"
     />
@@ -294,7 +292,7 @@ function scrollDownOne() {
           :edit-mode="editMode"
           :filter="filter"
           :get-item-data="getItemData"
-          :symbols="[]"
+          :symbols="globalCompletion"
           :get-dashboard-query-executor="getDashboardQueryExecutor"
           @dimension-click="setCrossFilter"
           @background-click="unSelect"
@@ -389,7 +387,8 @@ function scrollDownOne() {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  padding-bottom: 80px; /* Space for navigation bar */
+  padding-bottom: 80px;
+  /* Space for navigation bar */
 }
 
 .mobile-item {

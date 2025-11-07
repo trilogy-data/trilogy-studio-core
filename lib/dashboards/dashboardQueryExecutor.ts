@@ -549,7 +549,17 @@ export class DashboardQueryExecutor {
     filter: string,
   ): Promise<any> {
     let queryType = this.connectionStore.connections[this.connectionName].query_type
-    let sources = this.connectionStore.getConnectionSources(this.connectionName)
+    let dashboard = this.getDashboardData(this.dashboardId)
+    let sources = this.connectionStore.getConnectionSources(this.connectionName).concat(
+      dashboard.imports.map((imp) => ({
+        alias: imp.name,
+        // legacy handling
+        contents:
+          this.editorStore.editors[imp.id]?.contents ||
+          this.editorStore.editors[imp.name]?.contents ||
+          '',
+      })),
+    )
 
     let newQuery = await this.queryExecutionService.createDrilldownQuery(
       query,

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { LayoutItem, CellType, DashboardImport } from '../dashboards/base'
+import type { LayoutItem, CellType, DashboardImport, DashboardState } from '../dashboards/base'
 import {
   CELL_TYPES,
   DashboardModel,
@@ -310,10 +310,9 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
-    toggleEditMode(dashboardId: string) {
+    setState(dashboardId: string, state: DashboardState) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].state =
-          this.dashboards[dashboardId].state === 'editing' ? 'published' : 'editing'
+        this.dashboards[dashboardId].state = state
       }
     },
 

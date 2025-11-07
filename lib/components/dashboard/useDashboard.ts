@@ -18,7 +18,7 @@ import {
   type MarkdownData,
 } from '../../dashboards/base'
 import type { CompletionItem } from '../../stores/resolver'
-import type { DashboardImport } from '../../dashboards/base'
+import type { DashboardImport, DashboardState } from '../../dashboards/base'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
@@ -108,7 +108,7 @@ export function useDashboard(
   function initializeDashboard(dashboardData: DashboardModel) {
     if (!dashboardData?.id) return
     // Handle fullscreen mode
-    if (dashboardData.state !== 'editing') {
+    if (dashboardData.state === 'fullscreen') {
       emit.fullScreen(true)
     }
     // Set the active dashboard
@@ -278,9 +278,9 @@ export function useDashboard(
   }
 
   // Edit mode management
-  const toggleEditMode = () => {
+  const toggleMode = (state: DashboardState) => {
     if (!dashboard.value) return
-    dashboardStore.toggleEditMode(dashboard.value.id)
+    dashboardStore.setState(dashboard.value.id, state)
 
     // Trigger resize on mode toggle to ensure charts update
     nextTick(() => {
@@ -683,7 +683,7 @@ export function useDashboard(
     handleImportChange,
     validateFilter,
     onConnectionChange,
-    toggleEditMode,
+    toggleMode,
     onLayoutUpdated,
     openAddItemModal,
     addItem,
