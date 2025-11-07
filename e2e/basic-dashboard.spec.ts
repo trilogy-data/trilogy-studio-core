@@ -681,7 +681,10 @@ select rows;
 
   // Set content using the custom editor query
   await page.getByTestId('simple-editor-content').click()
-  await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
+  await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
+  // await page.keyboard.press('Control+A')
+  // 3. Delete the selected content
+  await page.keyboard.press('Delete')
   await page.keyboard.type('select alt_labels, sum(rows) as value;') // Reference the custom editor
   await page.getByTestId('editor-run-button').click()
 
