@@ -75,6 +75,9 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to check if the connection was created
   await page.getByTestId('mode-selector').selectOption('editing');
 
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
   await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
 
   // Should see the iris_data-connection or similar
