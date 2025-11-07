@@ -591,7 +591,7 @@ select rows;
   console.log('✓ Custom editor dashboard creation test passed')
 })
 
-test('test-drilldown', async ({ page, isMobile }) => {
+test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   // Setup connection
   if (isMobile) {
@@ -680,9 +680,12 @@ select rows;
   await page.getByTestId('edit-dashboard-item-content-0').click()
 
   // Set content using the custom editor query
-  await page.getByTestId('simple-editor-content').click()
   await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  // await page.keyboard.press('Control+A')
+  console.log(browser.browserType().name()) 
+  if (browser.browserType().name() === 'chromium') {
+    await page.keyboard.press('Control+A')
+  }
+  // 
   // 3. Delete the selected content
   await page.keyboard.press('Delete')
   await page.keyboard.type('select alt_labels, sum(rows) as value;') // Reference the custom editor
