@@ -681,11 +681,11 @@ select rows;
 
   // Set content using the custom editor query
   await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  console.log(browser.browserType().name()) 
+  console.log(browser.browserType().name())
   if (browser.browserType().name() === 'chromium') {
     await page.keyboard.press('Control+A')
   }
-  // 
+  //
   // 3. Delete the selected content
   await page.keyboard.press('Delete')
   await page.keyboard.type('select alt_labels, sum(rows) as value;') // Reference the custom editor
