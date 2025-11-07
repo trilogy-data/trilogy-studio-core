@@ -27,7 +27,7 @@ const props = defineProps({
   validateFilter: {
     type: Function,
     default: () => true,
-  }
+  },
 })
 
 const emit = defineEmits([
@@ -269,14 +269,13 @@ const modeIcon = computed(() => {
         >
           Export
         </button>
-        
+
         <!-- Mode selector dropdown -->
 
-        
         <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
           ⟳ Refresh
         </button>
-                <div class="mode-selector" data-testid="mode-selector-wrapper">
+        <div class="mode-selector" data-testid="mode-selector-wrapper">
           <div class="select-wrapper">
             <i :class="modeIcon + ' select-icon'"></i>
             <select
@@ -287,10 +286,10 @@ const modeIcon = computed(() => {
               :disabled="editsLocked"
               class="mode-select"
             >
-            <option value="editing">Edit</option>
-              <option value="published">View</option>
-              
-              <option value="fullscreen">Fullscreen</option>
+              <option value="editing" data-testid="edit-mode-option">Edit</option>
+              <option value="published" data-testid="view-mode-option">View</option>
+
+              <option value="fullscreen" data-testid="fullscreen-mode-option">Fullscreen</option>
             </select>
           </div>
         </div>
@@ -385,12 +384,14 @@ const modeIcon = computed(() => {
   box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
 }
 
-.connection-selector, .mode-selector {
+.connection-selector,
+.mode-selector {
   display: flex;
   align-items: center;
 }
 
-.connection-selector label, .mode-selector label {
+.connection-selector label,
+.mode-selector label {
   margin-right: 10px;
   color: var(--text-color);
   font-size: 20px;
@@ -418,7 +419,8 @@ const modeIcon = computed(() => {
   box-shadow: none;
 }
 
-.select-wrapper select, .mode-select {
+.select-wrapper select,
+.mode-select {
   padding: 8px 12px 8px 36px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
@@ -577,7 +579,8 @@ const modeIcon = computed(() => {
     flex-wrap: wrap;
   }
 
-  .connection-selector, .mode-selector {
+  .connection-selector,
+  .mode-selector {
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -586,7 +589,8 @@ const modeIcon = computed(() => {
     gap: 8px;
   }
 
-  .connection-selector label, .mode-selector label {
+  .connection-selector label,
+  .mode-selector label {
     margin-right: 0;
     margin-bottom: 0;
   }
@@ -595,7 +599,8 @@ const modeIcon = computed(() => {
     width: 100%;
   }
 
-  .select-wrapper select, .mode-select {
+  .select-wrapper select,
+  .mode-select {
     width: 100%;
     text-align: center;
     padding-left: 36px;
@@ -622,11 +627,13 @@ const modeIcon = computed(() => {
 }
 
 @media (max-width: 768px) {
-  .connection-selector, .mode-selector {
+  .connection-selector,
+  .mode-selector {
     max-width: 100%;
   }
 
-  .select-wrapper select, .mode-select {
+  .select-wrapper select,
+  .mode-select {
     min-width: unset;
   }
 
@@ -663,7 +670,8 @@ const modeIcon = computed(() => {
 
 /* Extra small screen size handling */
 @media (max-width: 360px) {
-  .connection-selector, .mode-selector {
+  .connection-selector,
+  .mode-selector {
     max-width: 100%;
   }
 

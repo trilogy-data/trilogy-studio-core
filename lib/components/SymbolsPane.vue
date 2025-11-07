@@ -267,7 +267,7 @@ export default defineComponent({
         if (!containerEl) return
 
         const containerRect = containerEl.getBoundingClientRect()
-        
+
         // Set initial position relative to container
         tooltip.x = event.clientX - containerRect.left + 10
         tooltip.y = event.clientY - containerRect.top + 10
@@ -300,21 +300,21 @@ export default defineComponent({
       if (!containerEl) return
 
       const containerRect = containerEl.getBoundingClientRect()
-      
+
       // Calculate position relative to container
       let x = event.clientX - containerRect.left + offset
       let y = event.clientY - containerRect.top + offset
 
       if (tooltipEl) {
         const tooltipRect = tooltipEl.getBoundingClientRect()
-        
+
         // Safety check for rendered tooltip
         if (tooltipRect.width === 0 || tooltipRect.height === 0) {
           // Tooltip not fully rendered, try again next frame
           requestAnimationFrame(() => updateTooltipPosition(event))
           return
         }
-        
+
         // Adjust if tooltip would go outside container bounds
         if (x + tooltipRect.width > containerRect.width) {
           x = event.clientX - containerRect.left - tooltipRect.width - offset

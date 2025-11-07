@@ -311,7 +311,7 @@ export default defineComponent({
       const query = searchQuery.value.toLowerCase().trim()
 
       filteredDimensions.value = props.symbols.filter((dimension) => {
-        if (["metric", "const"].includes(dimension.trilogySubType || "")) {
+        if (['metric', 'const'].includes(dimension.trilogySubType || '')) {
           return false
         }
         // Apply search filter
@@ -394,10 +394,10 @@ export default defineComponent({
 
       selected.value.push(dimension.label)
       emit('select-dimension', dimension)
-      
+
       // Reset highlighted index after click selection
       highlightedIndex.value = -1
-      
+
       // Refocus the search input to maintain keyboard navigation
       nextTick(() => {
         if (drilldownSearchInput.value) {
@@ -410,10 +410,10 @@ export default defineComponent({
     const removeDimension = (dimensionLabel: string) => {
       selected.value = selected.value.filter((label) => label !== dimensionLabel)
       emit('remove-dimension', dimensionLabel)
-      
+
       // Reset highlighted index after removal
       highlightedIndex.value = -1
-      
+
       // Refocus the search input after removal
       nextTick(() => {
         if (drilldownSearchInput.value) {
@@ -445,7 +445,7 @@ export default defineComponent({
         if (!containerEl) return
 
         const containerRect = containerEl.getBoundingClientRect()
-        
+
         // Set initial position relative to container
         tooltip.x = event.clientX - containerRect.left + 10
         tooltip.y = event.clientY - containerRect.top + 10
@@ -476,21 +476,21 @@ export default defineComponent({
       if (!containerEl) return
 
       const containerRect = containerEl.getBoundingClientRect()
-      
+
       // Calculate position relative to container
       let x = event.clientX - containerRect.left + offset
       let y = event.clientY - containerRect.top + offset
 
       if (tooltipEl) {
         const tooltipRect = tooltipEl.getBoundingClientRect()
-        
+
         // Safety check for rendered tooltip
         if (tooltipRect.width === 0 || tooltipRect.height === 0) {
           // Tooltip not fully rendered, try again next frame
           requestAnimationFrame(() => updateTooltipPosition(event))
           return
         }
-        
+
         // Adjust if tooltip would go outside container bounds
         if (x + tooltipRect.width > containerRect.width) {
           x = event.clientX - containerRect.left - tooltipRect.width - offset

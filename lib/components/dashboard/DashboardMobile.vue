@@ -80,10 +80,10 @@ const {
     isMobile: true,
   },
   {
-    layoutUpdated: () => { }, // Not needed for mobile
+    layoutUpdated: () => {}, // Not needed for mobile
     dimensionsUpdate: (itemId: string) => updateItemDimensions(itemId),
     triggerResize: () => triggerResize(),
-    fullScreen: () => { }, // Not needed for mobile
+    fullScreen: () => {}, // Not needed for mobile
   },
 )
 
@@ -253,11 +253,22 @@ function scrollDownOne() {
 
 <template>
   <div class="dashboard-mobile-container" v-if="dashboard">
-    <DashboardHeader :dashboard="dashboard" :edits-locked="dashboard.state === 'locked'"
-      :selected-connection="selectedConnection" :filterError="filterError" :globalCompletion="globalCompletion"
-      :validateFilter="validateFilter" @connection-change="onConnectionChange" @filter-change="handleFilterChange"
-      @import-change="handleImportChange" @add-item="openAddItemModal" @clear-items="clearItems"
-            @mode-change="handleToggleMode" @refresh="handleRefresh" @clear-filter="handleFilterClear" />
+    <DashboardHeader
+      :dashboard="dashboard"
+      :edits-locked="dashboard.state === 'locked'"
+      :selected-connection="selectedConnection"
+      :filterError="filterError"
+      :globalCompletion="globalCompletion"
+      :validateFilter="validateFilter"
+      @connection-change="onConnectionChange"
+      @filter-change="handleFilterChange"
+      @import-change="handleImportChange"
+      @add-item="openAddItemModal"
+      @clear-items="clearItems"
+      @mode-change="handleToggleMode"
+      @refresh="handleRefresh"
+      @clear-filter="handleFilterClear"
+    />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
       <DashboardCTA :dashboard-id="dashboard.id" />
@@ -265,15 +276,33 @@ function scrollDownOne() {
 
     <div v-else class="mobile-container">
       <!-- Mobile layout - vertically stacked grid items -->
-      <div v-for="item in sortedLayout" :key="item.i" :data-i="item.i" class="mobile-item" :style="{
-        height: `${calculateMobileHeight(item)}`,
-        width: `${calculateMobileWidth(item)}`,
-      }">
-        <DashboardGridItem :dashboard-id="dashboard.id" :item="item" :edit-mode="editMode" :filter="filter"
-          :get-item-data="getItemData" :symbols="[]" :get-dashboard-query-executor="getDashboardQueryExecutor"
-          @dimension-click="setCrossFilter" @background-click="unSelect" :set-item-data="setItemData"
-          @edit-content="openEditor" @remove-filter="removeFilter" @update-dimensions="updateItemDimensions"
-          @remove-item="removeItem" @copy-item="copyItem" />
+      <div
+        v-for="item in sortedLayout"
+        :key="item.i"
+        :data-i="item.i"
+        class="mobile-item"
+        :style="{
+          height: `${calculateMobileHeight(item)}`,
+          width: `${calculateMobileWidth(item)}`,
+        }"
+      >
+        <DashboardGridItem
+          :dashboard-id="dashboard.id"
+          :item="item"
+          :edit-mode="editMode"
+          :filter="filter"
+          :get-item-data="getItemData"
+          :symbols="globalCompletion"
+          :get-dashboard-query-executor="getDashboardQueryExecutor"
+          @dimension-click="setCrossFilter"
+          @background-click="unSelect"
+          :set-item-data="setItemData"
+          @edit-content="openEditor"
+          @remove-filter="removeFilter"
+          @update-dimensions="updateItemDimensions"
+          @remove-item="removeItem"
+          @copy-item="copyItem"
+        />
       </div>
     </div>
 
@@ -298,19 +327,26 @@ function scrollDownOne() {
 
     <!-- Content Editors -->
     <Teleport to="body" v-if="showQueryEditor && editingItem">
-      <ChartEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <ChartEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).content" :showing="showQueryEditor" @save="saveContent"
-        @cancel="closeEditors" />
+        :content="getItemData(editingItem.i, dashboard.id).content"
+        :showing="showQueryEditor"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
 
     <Teleport to="body" v-if="showMarkdownEditor && editingItem">
-      <MarkdownEditor :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+      <MarkdownEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
-        :content="getItemData(editingItem.i, dashboard.id).structured_content" @save="saveContent"
-        @cancel="closeEditors" />
+        :content="getItemData(editingItem.i, dashboard.id).structured_content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
     </Teleport>
   </div>
 
@@ -321,8 +357,11 @@ function scrollDownOne() {
     </template>
     <template v-else>
       <h2>Ready to <i class="mdi mdi-chart-line"></i>?</h2>
-      <dashboard-creator-inline class="inline-creator" :visible="true"
-        @dashboard-created="dashboardCreated"></dashboard-creator-inline>
+      <dashboard-creator-inline
+        class="inline-creator"
+        :visible="true"
+        @dashboard-created="dashboardCreated"
+      ></dashboard-creator-inline>
     </template>
   </div>
 </template>

@@ -591,9 +591,6 @@ select rows;
   console.log('✓ Custom editor dashboard creation test passed')
 })
 
-
-
-
 test('test-drilldown', async ({ page, isMobile }) => {
   await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
   // Setup connection
@@ -685,7 +682,7 @@ select rows;
   // Set content using the custom editor query
   await page.getByTestId('simple-editor-content').click()
   await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
-  await page.keyboard.type("select alt_labels, sum(rows) as value;") // Reference the custom editor
+  await page.keyboard.type('select alt_labels, sum(rows) as value;') // Reference the custom editor
   await page.getByTestId('editor-run-button').click()
 
   // Save the dashboard item
@@ -697,16 +694,16 @@ select rows;
   await page.locator('canvas').click({
     modifiers: ['ControlOrMeta'],
     position: {
-      x: // one third of canvas width
-        (await page.locator(vegaSelector).boundingBox()).width / 3,
-      y: // middle of canvas height
-        (await page.locator(vegaSelector).boundingBox()).height / 2,
-    }
-  });
-  await page.getByRole('textbox', { name: 'Search dimensions...' }).fill('alt_labels_two');
+      // one third of canvas width
+      x: (await page.locator(vegaSelector).boundingBox()).width / 3,
+      // middle of canvas height
+      y: (await page.locator(vegaSelector).boundingBox()).height / 2,
+    },
+  })
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).fill('alt_labels_two')
   //enter enter
-  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter');
-  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter');
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter')
+  await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter')
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
   console.log('✓ Custom editor dashboard creation test passed')
 })

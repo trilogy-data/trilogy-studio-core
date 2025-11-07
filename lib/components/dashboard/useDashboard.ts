@@ -234,10 +234,10 @@ export function useDashboard(
           extraFilters: [filterWithoutWhere],
           extraContent: rootContent.value,
         },
-        () => { },
-        () => { },
-        () => { },
-        () => { },
+        () => {},
+        () => {},
+        () => {},
+        () => {},
         true,
       )
 
@@ -449,17 +449,17 @@ export function useDashboard(
     let content = isMarkdownData(item.content)
       ? item.content
       : {
-        markdown: item.type === 'markdown' ? item.content : '',
-        query: item.type !== 'markdown' ? item.content : '',
-      }
+          markdown: item.type === 'markdown' ? item.content : '',
+          query: item.type !== 'markdown' ? item.content : '',
+        }
     if (item.drilldown) {
       hasDrilldown = true
       content = isMarkdownData(item.drilldown)
         ? item.drilldown
         : {
-          markdown: item.type === 'markdown' ? item.drilldown : '',
-          query: item.type !== 'markdown' ? item.drilldown : '',
-        }
+            markdown: item.type === 'markdown' ? item.drilldown : '',
+            query: item.type !== 'markdown' ? item.drilldown : '',
+          }
     }
     let config = item.chartConfig
     if (hasDrilldown) {
