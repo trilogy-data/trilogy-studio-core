@@ -254,7 +254,8 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { DrillDownEvent } from '../events/display.ts'
-
+import UserSettings from '../components/user/UserSettings.vue'
+import UserProfile from '../components/user/UserProfile.vue'
 // Lazy load all page components
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -265,8 +266,6 @@ const ResultsView = defineAsyncComponent(() => import('../components/editor/Resu
 
 // Lazy load all view components
 const ModelView = defineAsyncComponent(() => import('./ModelView.vue'))
-const UserSettings = defineAsyncComponent(() => import('../components/user/UserSettings.vue'))
-const UserProfile = defineAsyncComponent(() => import('../components/user/UserProfile.vue'))
 const CommunityModels = defineAsyncComponent(
   () => import('../components/community/CommunityModels.vue'),
 )
