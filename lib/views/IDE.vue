@@ -76,14 +76,14 @@
               />
             </template>
             <template #results="{ containerHeight }" v-if="activeEditorData">
-              <ResultsView
+              <results-view
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
               >
-              </ResultsView>
+              </results-view>
             </template>
           </vertical-split-layout>
         </template>
@@ -118,7 +118,7 @@
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
         </template>
         <template v-else-if="activeScreen === 'llms'">
-          <LLMView />
+          <llm-view />
         </template>
         <template v-else>
           <welcome-page
