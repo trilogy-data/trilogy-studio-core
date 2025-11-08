@@ -121,7 +121,7 @@ const createNavigationStore = (): NavigationStore => {
     activeModelKey: ref(getDefaultValueFromHash('model', '')),
     activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
-    activeDocumentationKey: ref(getDefaultValueFromHash('tutorial', '')),
+    activeDocumentationKey: ref(getDefaultValueFromHash('docs', '')),
     // model import is legacy
     modelImport: ref(getDefaultValueFromHash('import', getDefaultValueFromHash('model', ''))),
     connectionImport: ref(getDefaultValueFromHash('connection', '')),
