@@ -76,14 +76,14 @@
               />
             </template>
             <template #results="{ containerHeight }" v-if="activeEditorData">
-              <ResultsView
+              <results-view
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
               >
-              </ResultsView>
+              </results-view>
             </template>
           </vertical-split-layout>
         </template>
@@ -118,7 +118,7 @@
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
         </template>
         <template v-else-if="activeScreen === 'llms'">
-          <LLMView />
+          <llm-view />
         </template>
         <template v-else>
           <welcome-page
@@ -236,17 +236,13 @@ aside {
 </style>
 
 <script lang="ts">
+// Keep only essential layout components as synchronous
 import SidebarLayout from '../components/layout/SidebarLayout.vue'
 import TabbedBrowser from '../components/layout/TabbedBrowser.vue'
 import VerticalSplitLayout from '../components/layout/VerticalSplitLayout.vue'
-import ErrorMessage from '../components/ErrorMessage.vue'
-import LoadingButton from '../components/LoadingButton.vue'
-import ModelView from './ModelView.vue'
-import UserSettings from '../components/user/UserSettings.vue'
-import UserProfile from '../components/user/UserProfile.vue'
-import CommunityModels from '../components/community/CommunityModels.vue'
-import ConnectionView from './ConnectionView.vue'
-import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter.vue'
+import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
+import PopupModal from '../components/PopupModal.vue'
+
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
@@ -257,18 +253,32 @@ import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
-import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 import type { DrillDownEvent } from '../events/display.ts'
-import PopupModal from '../components/PopupModal.vue'
-
+import UserSettings from '../components/user/UserSettings.vue'
+import UserProfile from '../components/user/UserProfile.vue'
+// Lazy load all page components
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
 const Editor = defineAsyncComponent(() => import('../components/editor/Editor.vue'))
-const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 const WelcomePage = defineAsyncComponent(() => import('./WelcomePage.vue'))
 const Dashboard = defineAsyncComponent(() => import('../components/dashboard/Dashboard.vue'))
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
+
+// Lazy load all view components
+const ModelView = defineAsyncComponent(() => import('./ModelView.vue'))
+const CommunityModels = defineAsyncComponent(
+  () => import('../components/community/CommunityModels.vue'),
+)
+const ConnectionView = defineAsyncComponent(() => import('./ConnectionView.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
+const DashboardAutoImporter = defineAsyncComponent(
+  () => import('../components/dashboard/DashboardAutoImporter.vue'),
+)
+
+// Lazy load utility components
+const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
+const LoadingButton = defineAsyncComponent(() => import('../components/LoadingButton.vue'))
+const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 
 export default {
   name: 'IDEComponent',
@@ -285,27 +295,32 @@ export default {
     },
   },
   components: {
-    Sidebar,
-    Editor,
-    DataTable,
+    // Synchronous components (always needed)
     SidebarLayout,
-    VerticalSplitLayout,
-    ErrorMessage,
-    TutorialPage,
-    ModelView,
-    UserSettings,
-    UserProfile,
-    WelcomePage,
-    Dashboard,
-    LoadingButton,
-    CommunityModels,
-    LLMView,
-    ConnectionView,
-    ResultsView,
-    DashboardAutoImporter,
-    CredentialBackgroundPage,
     TabbedBrowser,
+    VerticalSplitLayout,
+    CredentialBackgroundPage,
     PopupModal,
+
+    // Lazy loaded components (kebab-case for template usage)
+    sidebar: Sidebar,
+    editor: Editor,
+    'tutorial-page': TutorialPage,
+    'model-view': ModelView,
+    'user-settings': UserSettings,
+    'user-profile': UserProfile,
+    'welcome-page': WelcomePage,
+    dashboard: Dashboard,
+    'community-models': CommunityModels,
+    'llm-view': LLMView,
+    'connection-view': ConnectionView,
+    'results-view': ResultsView,
+    'dashboard-auto-importer': DashboardAutoImporter,
+
+    // Utility components (may not be used in template but included for completeness)
+    'error-message': ErrorMessage,
+    'loading-button': LoadingButton,
+    'data-table': DataTable,
   },
   setup() {
     // Create a ref for the editor component

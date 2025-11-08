@@ -63,6 +63,56 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        manualChunks: (id) => {
+          // Monaco Editor splitting
+          // Monaco Editor fine-grained splitting
+          if (id.includes('monaco-editor')) {
+            // Core editor browser components (large)
+            if (id.includes('/editor/browser/')) {
+              return 'monaco-editor-browser'
+            }
+
+            // Editor contributions (features like find, folding, etc.)
+            if (id.includes('/editor/contrib/')) {
+              return 'monaco-editor-contrib'
+            }
+
+            // Common editor utilities
+            if (id.includes('/editor/common/')) {
+              return 'monaco-editor-common'
+            }
+
+            // Standalone editor (main API)
+            if (id.includes('/editor/standalone/')) {
+              return 'monaco-editor-standalone'
+            }
+
+            // Platform services (large - DI, commands, etc.)
+            if (id.includes('/platform/')) {
+              return 'monaco-platform'
+            }
+
+            // Base services
+            if (id.includes('/base/')) {
+              return 'monaco-base'
+            }
+
+            // Language services
+            if (id.includes('/language/') || id.includes('/basic-languages/')) {
+              return 'monaco-languages'
+            }
+
+            // Workers
+            if (id.includes('/worker/')) {
+              return 'monaco-workers'
+            }
+
+            // Everything else monaco
+            return 'monaco-core'
+          }
+        },
+      },
 
       // treeshake: {
       //   //@ts-ignore
