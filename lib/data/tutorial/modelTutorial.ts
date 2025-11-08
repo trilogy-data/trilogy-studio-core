@@ -219,12 +219,6 @@ select
       `Make sure your file looks like the above. Now create a new trilogy editor by clicking the orange document icon by your connection. Copy the below code and run it! 
      `,
     ),
-
-        new Paragraph(
-      'Further Reading',
-      `Go to the model page under the trilogy reference section.
-     `,
-    ),
   ],
   'Model Tutorial',
 )

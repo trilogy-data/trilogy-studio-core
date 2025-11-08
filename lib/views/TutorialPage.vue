@@ -6,7 +6,6 @@
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
         >
-        <markdown-renderer v-else-if="paragraph.type === 'markdown'" :markdown="paragraph.content" />
         <highlight-component v-else-if="paragraph.type === 'warning'" type="warning">
           {{ paragraph.content }}</highlight-component
         >
@@ -142,7 +141,6 @@ import setupDemo from '../data/tutorial/demoSetup'
 import Editor from '../components/editor/Editor.vue'
 import { documentation } from '../data/tutorial/documentation'
 import { KeySeparator } from '../data/constants'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 import { type DashboardStoreType } from '../stores/dashboardStore'
 
@@ -230,7 +228,6 @@ export default {
     TutorialPrompt,
     Dashboard,
     TutorialFunction,
-    MarkdownRenderer,
   },
   computed: {
     demoConfig() {

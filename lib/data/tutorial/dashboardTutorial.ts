@@ -23,8 +23,8 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      `Dashboards are SQL centric - so mostly, you'll just be writing queries. The one special thing on a dashboard is the global where clause. The filter bar at the top defines this; it will be concatenated to the where clause of every query on the dashboard. This is a great way to filter all of your charts at once.
-  You can also cross-filter by clicking on any element in the chart. This will be automatically enabled; you can toggle off cross-filtering behavior on a per-chart basis on the header. (Make it only filter otherse, or not filterable at all.)`,
+      `Dashboards are driven by Trilogy - so mostly, you'll just be writing queries. The one special thing on a dashboard is the global where clause. The filter bar at the top defines this; it will be concatenated to the where clause of every query on the dashboard. This is a great way to filter all of your charts at once.
+  You can also cross-filter by clicking on any element in the chart. This happens by default.`,
     ),
     new Paragraph(
       'Purpose',
@@ -37,6 +37,10 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
+      "Models can only be built off editors you have marked as a source. There's a toggle button in the top right of any trilogy editor to mark it as an eligible. This is intended to make sure you only build off editors that are intended to be reusable resources.",
+    ),
+    new Paragraph(
+      'Purpose',
       "Each chart can have their own query, so it's easy to define metrics in place. For dimensions, it's best to define them in the model so that automatic cross-filtering can be applied; if they are local to a chart, they cannot be applied to other views.",
     ),
     new Paragraph(
@@ -45,7 +49,7 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      "You can only crossfilter if fields exist on all charts. It's best to define anything you want to filter on in the base dashboard file, and avoid aliasing base fields.",
+      "You can only crossfilter if fields exist on all charts. It's best to define anything you want to filter on in the base datasource, and avoid aliasing base fields.",
       'tip',
     ),
     new Paragraph(
@@ -55,7 +59,7 @@ export const DashboardTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'For missing features [such as chart types] or other issues, please open an issue on the <a href="https://github.com/trilogy-data/trilogy-studio-core/issues" target="_blank">studio GitHub repo</a>.',
+      'For missing features [such as chart types] or issues, please open an issue on the studio git repo.',
     ),
   ],
   'Dashboard Tutorial',
