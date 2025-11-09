@@ -703,5 +703,6 @@ export const createMapSpec = (
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
       width: 'container',
       height: 'container',
+      layer:[],
   }
 }

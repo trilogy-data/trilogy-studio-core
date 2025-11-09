@@ -580,11 +580,8 @@ describe('createMapSpec', () => {
       const data = createUSCoordinateData()
       const columns = createCoordinateColumns()
 
-      expect(() => {
-        createMapSpec(config, data, columns, false, intChart)
-      }).toThrow(
-        'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
-      )
+      let build = createMapSpec(config, data, columns, false, intChart)
+      expect(build.layer.length).toBe(0)
     })
 
     it('should return empty object for unsupported configurations', () => {
@@ -595,12 +592,8 @@ describe('createMapSpec', () => {
 
       const data = createUSStateData()
       const columns = createUSStateColumns()
-
-      expect(() => {
-        createMapSpec(config, data, columns, false, intChart)
-      }).toThrow(
-        'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
-      )
+      let build = createMapSpec(config, data, columns, false, intChart)
+      expect(build.layer.length).toBe(0)
     })
   })
 
