@@ -49,6 +49,8 @@ export class ChartRenderManager {
 
   // Clean up a specific container's resources
   cleanupContainer(container: 1 | 2): void {
+    // if has now become active, skip cleanup
+    if (this.activeContainer.value === container) return
     // Clean up event listener
     const listener = this.eventListeners.value.get(container)
     if (listener) {
