@@ -6,7 +6,10 @@
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
         >
-        <markdown-renderer v-else-if="paragraph.type === 'markdown'" :markdown="paragraph.content" />
+        <markdown-renderer
+          v-else-if="paragraph.type === 'markdown'"
+          :markdown="paragraph.content"
+        />
         <highlight-component v-else-if="paragraph.type === 'warning'" type="warning">
           {{ paragraph.content }}</highlight-component
         >

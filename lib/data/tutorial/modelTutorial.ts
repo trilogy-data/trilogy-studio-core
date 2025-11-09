@@ -220,7 +220,7 @@ select
      `,
     ),
 
-        new Paragraph(
+    new Paragraph(
       'Further Reading',
       `Go to the model page under the trilogy reference section.
      `,

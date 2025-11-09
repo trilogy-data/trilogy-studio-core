@@ -76,6 +76,8 @@ jobs:
           run: pnpm exec playwright install --with-deps
         - name: Run Playwright tests
           run: pnpm exec playwright test
+          env:
+            PLAYWRIGHT_USE_PREVIEW: 'true'
         - name: Stop Python server
           if: always()
           run: |

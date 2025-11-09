@@ -1,6 +1,8 @@
 // playwright.config.js
 import { defineConfig, devices } from '@playwright/test'
 
+const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120000,
@@ -40,7 +42,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: usePreview ? 'pnpm preview' : 'pnpm dev',
     port: 5173,
     reuseExistingServer: !process.env.CI,
   },

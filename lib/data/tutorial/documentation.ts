@@ -3,7 +3,7 @@ import { DashboardTutorial } from './dashboardTutorial.ts'
 import { ModelTutorial } from './modelTutorial.ts'
 import { IntroTutorial } from './introTutorial.ts'
 import { llmTutorial } from './llmTutorial.ts'
-import {Reference} from './reference.ts'
+import { Reference } from './reference.ts'
 import { TOS } from './terms_of_service.ts'
 
 export const documentation: DocumentationNode[] = [
@@ -199,5 +199,4 @@ export const documentation: DocumentationNode[] = [
     ]),
   ]),
   TOS,
-  
 ]
