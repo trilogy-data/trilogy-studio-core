@@ -329,7 +329,7 @@ export default defineComponent({
       (newValues, oldValues) => {
         if (updatePending) return
         const [newSelection] = newValues
-        const [oldSelection] = oldValues
+        const oldSelection = oldValues ? oldValues[0] : undefined
         if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
         renderChart(true)
       },
@@ -343,7 +343,7 @@ export default defineComponent({
           return
         }
         // check they are actually different
-        if (JSON.stringify(newValues) === JSON.stringify(oldValues)) {
+        if (oldValues && JSON.stringify(newValues) === JSON.stringify(oldValues)) {
           return
         }
         updatePending = true
@@ -355,7 +355,11 @@ export default defineComponent({
             props.onChartConfigChange,
             props.initialConfig,
           )
-          renderChart()
+          // if containerheight/containerwidth changed, 
+          // force = True
+          const containerHeightChanged = oldValues && props.containerHeight !== oldValues[2]
+          const containerWidthChanged = oldValues && props.containerWidth !== oldValues[3]
+          renderChart(containerHeightChanged || containerWidthChanged)
         })
       },
       { deep: true, immediate: true },
