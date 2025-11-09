@@ -63,7 +63,6 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
-
       // treeshake: {
       //   //@ts-ignore
       //   moduleSideEffects: (id) => {

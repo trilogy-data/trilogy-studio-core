@@ -25,7 +25,7 @@ export class ChartControlsManager {
     showTitle: false,
   })
 
-  constructor(private chartHelpers: ChromaChartHelpers) {}
+  constructor(private chartHelpers: ChromaChartHelpers) { }
 
   // Hover event handlers
   onChartMouseEnter(): void {
@@ -81,16 +81,16 @@ export class ChartControlsManager {
         data,
         columns,
         value as
-          | 'bar'
-          | 'line'
-          | 'barh'
-          | 'point'
-          | 'usa-map'
-          | 'tree'
-          | 'area'
-          | 'headline'
-          | 'donut'
-          | 'heatmap',
+        | 'bar'
+        | 'line'
+        | 'barh'
+        | 'point'
+        | 'usa-map'
+        | 'tree'
+        | 'area'
+        | 'headline'
+        | 'donut'
+        | 'heatmap',
       )
 
       // Update all config fields

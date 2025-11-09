@@ -1,5 +1,9 @@
 import { Article, Paragraph } from './docTypes.ts'
 import { Results } from '../../editors/results.ts'
+
+//TODO: import from the local helpfulArticle.md
+// and add that as a markdown type paragraph
+
 export const IntroTutorial = new Article(
   'Welcome',
   [

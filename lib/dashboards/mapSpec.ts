@@ -699,8 +699,10 @@ export const createMapSpec = (
       config: { view: { stroke: null } },
     }
   }
-  throw new Error(
-    'Unsupported map configuration: must provide either xField and yField for scatter plot or geoField',
-  )
-  return {}
+  return  {
+      $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+      width: 'container',
+      height: 'container',
+      layer:[],
+  }
 }
