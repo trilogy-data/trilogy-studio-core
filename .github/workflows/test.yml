@@ -119,16 +119,6 @@ jobs:
             done
           '
       
-      - name: Test Docker endpoints
-        run: |
-          echo "Testing frontend (nginx)..."
-          curl -f http://localhost:8081/ || (echo "Frontend health check failed" && exit 1)
-          
-          echo "Testing backend health endpoint..."
-          curl -f http://localhost:8081/health || echo "Backend health endpoint not accessible"
-          
-          echo "✅ Docker container health checks passed!"
-      
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
       
@@ -190,11 +180,12 @@ jobs:
         working-directory: ./pyserver
         run: |
           nohup python main.py > server.log 2>&1 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
           echo "Started server with PID: $SERVER_PID"
           sleep 10  
           
-          if ps -p $(echo $SERVER_PID) > /dev/null; then
+          if ps -p $SERVER_PID > /dev/null; then
             echo "Server started successfully!"
           else
             echo "Failed to start server. Showing logs:"

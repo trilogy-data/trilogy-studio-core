@@ -15,7 +15,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.TEST_ENV ==='docker'? 'http://localhost:8080' : 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -42,9 +42,11 @@ export default defineConfig({
     },
   ],
   webServer: {
+    // if in docker; 
     command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
     // command: 'pnpm preview --port 5173',
     port: 5173,
-    reuseExistingServer: !process.env.CI,
+    // in docker tests, we are running the image, use that as abase
+    reuseExistingServer: process.env.TEST_ENV ==='docker' || !process.env.CI,
   },
 })
