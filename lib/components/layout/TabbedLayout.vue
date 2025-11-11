@@ -92,6 +92,7 @@ export default {
   border-bottom: 2px solid transparent;
   padding-left: 20px;
   padding-right: 20px;
+  border-radius: 0px;
   /* max-width:100px; */
 }
 .tab-button:hover {
@@ -100,5 +101,6 @@ export default {
 .tab-button.active {
   color: #0ea5e9;
   border-bottom: 2px solid #0ea5e9;
+  border-radius: 0px;
 }
 </style>

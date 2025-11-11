@@ -23,7 +23,7 @@ import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
-import type { ConnectionStoreType } from '../../stores/connectionStore'
+import useConnectionStore from '../../stores/connectionStore'
 import type { DashboardModel } from '../../dashboards/base'
 
 export interface UseDashboardOptions {
@@ -44,6 +44,7 @@ export function useDashboard(
   dashboard: ComputedRef<DashboardModel | null | undefined>,
   options: UseDashboardOptions,
   emit: UseDashboardEmits,
+  providedQueryExecutionService?: QueryExecutionService,
 ) {
   if (!dashboard.value) {
     throw new Error('Dashboard computed reference is required')
@@ -51,11 +52,13 @@ export function useDashboard(
   // Initialize services and stores
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
-  const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
-  const connectionStore = inject<ConnectionStoreType>('connectionStore')
+  let queryExecutionService = providedQueryExecutionService
+    ? providedQueryExecutionService
+    : inject<QueryExecutionService>('queryExecutionService')
+  const connectionStore = useConnectionStore()
   const { setActiveDashboard } = useScreenNavigation()
 
-  if (!queryExecutionService || !editorStore) {
+  if (!queryExecutionService) {
     throw new Error('QueryExecutionService not provided')
   }
 

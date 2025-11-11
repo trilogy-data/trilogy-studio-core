@@ -27,7 +27,7 @@ test.describe('LLM Connection Tests', () => {
       page.context()?.browser()?.browserType()?.name() || '',
     )
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
+    await page.goto('/#skipTips=true')
 
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
@@ -110,7 +110,7 @@ test.describe('LLM Connection Tests', () => {
   })
 
   // test('should use mocked LLM for query generation', async ({ page }) => {
-  //   await page.goto('http://localhost:5173/trilogy-studio-core/');
+  //   await page.goto('/');
 
   //   // Navigate to a page that uses the LLM for query generation
   //   await page.getByTestId('sidebar-link-concepts').click(); // Assuming there's a concepts section
@@ -138,7 +138,7 @@ test.describe('LLM Connection Tests', () => {
       })
     })
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
+    await page.goto('/#skipTips=true')
 
     // Navigate to LLM testing page
     if (isMobile) {
@@ -196,7 +196,7 @@ limit 10;`,
       }),
     })
 
-    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
+    await page.goto('/#skipTips=true')
 
     // Navigate to LLM testing page
     if (isMobile) {

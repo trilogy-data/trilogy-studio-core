@@ -22,6 +22,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
 from trilogy import CONFIG, __version__
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
 
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
@@ -84,7 +87,16 @@ setup_performance_logging()
 PORT = 5678
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting up...!")
+
+    yield
+
+    print("Shutting down...!")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @dataclass
@@ -125,9 +137,9 @@ async def terminate():
     raise HTTPException(503, "Terminating server")
 
 
-@app.on_event("shutdown")
-def shutdown_event():
-    print("Shutting down...!")
+@server_router.get("/health")
+async def health():
+    return {"status": "healthy"}
 
 
 def _get_last_exc():

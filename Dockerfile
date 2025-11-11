@@ -1,17 +1,14 @@
 # Multi-stage Dockerfile for Trilogy Studio
 # Stage 1: Build Frontend
 FROM node:22-alpine AS frontend-builder
-# ^ use Node 22 LTS for stability; Node 23 is bleeding-edge and may cause pnpm/corepack bugs
-
+# ^ use Node 22 LTS for stability
 WORKDIR /app/frontend
-
 # Enable pnpm via Corepack
 RUN corepack enable pnpm && corepack prepare pnpm@10 --activate
-
 # Copy only dependency manifests first (better cache)
+
 COPY package.json pnpm-lock.yaml ./
 
-# Install ALL dependencies, including dev ones (needed for vue-tsc, typescript, prettier, etc.)
 RUN pnpm install --frozen-lockfile --prod=false
 
 # Copy the rest of the source code
@@ -21,10 +18,10 @@ COPY ./public ./public
 COPY ./docker/index.html index.html
 COPY tsconfig.json tsconfig.json
 COPY tsconfig.node.json tsconfig.node.json
-COPY vite.config.ts vite.config.ts
+
+# Use Docker-specific vite.config.ts for DuckDB WASM bundling
+COPY ./docker/vite.config.ts vite.config.ts
 COPY tsconfig.app.json tsconfig.app.json
-
-
 # Build the frontend (runs vue-tsc, prettier, and vite)
 RUN pnpm run build
 

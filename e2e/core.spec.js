@@ -37,7 +37,7 @@ test('user settings', async ({ page, isMobile }) => {
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-icon-settings').click()
-  expect(page.getByTestId('settings-trilogyResolver')).toHaveValue('http://127.0.0.1:5678')
+  expect(page.getByTestId('settings-trilogyResolver')).toHaveValue(process.env.TEST_ENV === 'docker' ? 'http://localhost:8080/api/' : 'http://127.0.0.1:5678')
   await page.getByRole('button', { name: 'Reset to Defaults' }).click()
   await page.getByRole('button', { name: 'Save' }).click()
   if (isMobile) {

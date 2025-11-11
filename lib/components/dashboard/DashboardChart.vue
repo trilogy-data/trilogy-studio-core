@@ -260,7 +260,10 @@ export default defineComponent({
     )
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
+    const analyticsStore: AnalyticsStoreType | null = inject<AnalyticsStoreType | null>(
+      'analyticsStore',
+      null,
+    )
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
       if (hasDrilldown.value) {

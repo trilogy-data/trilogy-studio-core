@@ -26,10 +26,10 @@ export default async function setupDemo(
   const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
   await modelImportService.importModel(modelName, importAddress, connName)
   // Save state
-  saveEditors(Object.values(editorStore.editors))
-  saveConnections(Object.values(connectionStore.connections))
-  saveModels(Object.values(modelStore.models))
-  saveDashboards(Object.values(dashboardStore.dashboards))
+  await saveEditors(Object.values(editorStore.editors))
+  await saveConnections(Object.values(connectionStore.connections))
+  await saveModels(Object.values(modelStore.models))
+  await saveDashboards(Object.values(dashboardStore.dashboards))
   //@ts-ignore
   return Object.values(editorStore.editors).find(
     (editor) => editor.name === 'tutorial_one_basic' && editor.connection === connName,
