@@ -45,6 +45,6 @@ export default defineConfig({
     command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
     // command: 'pnpm preview --port 5173',
     port: 5173,
-    // reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI,
   },
 })
