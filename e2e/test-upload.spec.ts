@@ -42,7 +42,7 @@ test.describe('CSV Upload and Datasource Creation', () => {
 
   test('should upload CSV file and create datasource from it', async ({ page, isMobile }) => {
     // Navigate to the application
-    await page.goto('http://localhost:5173/trilogy-studio-core/#skipTips=true')
+    await page.goto('/#skipTips=true')
 
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()

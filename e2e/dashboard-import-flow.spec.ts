@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to the URL with all the autoimport parameters
   const autoImportUrl =
-    'http://localhost:5173/trilogy-studio-core/#skipTips=true&screen=dashboard-import&import=https%3A%2F%2Ftrilogy-data.github.io%2Ftrilogy-public-models%2Fstudio%2Firis_data.json&dashboard=overview&modelName=iris_data&connection=duckdb'
+    '/#skipTips=true&screen=dashboard-import&import=https%3A%2F%2Ftrilogy-data.github.io%2Ftrilogy-public-models%2Fstudio%2Firis_data.json&dashboard=overview&modelName=iris_data&connection=duckdb'
 
   await page.goto(autoImportUrl)
 
