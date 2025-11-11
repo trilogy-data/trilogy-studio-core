@@ -8,6 +8,7 @@ import { resolve } from 'node:path'
 import { visualizer } from 'rollup-plugin-visualizer'
 // https://vite.dev/config/
 export default defineConfig({
+assetsInclude: ['**/*.wasm'],
   server: {
     headers: {
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
@@ -49,8 +50,7 @@ export default defineConfig({
   },
   build: {
     copyPublicDir: true,
-    // Ensure WASM files are treated as assets and bundled properly
-    assetsInclude: ['**/*.wasm'],
+   
     // if we ever want a build
     // lib: {
     //   entry: resolve(__dirname, 'lib/main.ts'),
