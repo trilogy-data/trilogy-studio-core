@@ -139,7 +139,7 @@ jobs:
       - name: Run Docker container with health check
         run: |
           # Start container in detached mode
-          CONTAINER_ID=$(docker run -d -p 8081:80 trilogy-studio:test)
+          CONTAINER_ID=$(docker run -d -p 8080:80 trilogy-studio:test)
           echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
           echo "Started container: $CONTAINER_ID"
       
