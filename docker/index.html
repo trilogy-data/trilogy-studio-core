@@ -139,14 +139,16 @@
 		}
 
         function setResolverURL() {
-            // In Docker, we might want to set a different resolver URL
+            // In Docker, default to different resolver URL
             const savedConfig = JSON.parse(localStorage.getItem('userSettings') || '{}')
-            // current url + /api/
+			if (savedConfig.trilogyResolver) return;
+			// current url + /api/
             savedConfig.trilogyResolver = `${window.location.origin}/api/`;
             localStorage.setItem('userSettings', JSON.stringify(savedConfig));
         }
 
 		applyTheme();
+		setResolverURL();
 	</script>
 	<script src="https://apis.google.com/js/api.js"></script>
 	<script type="module" src="/src/main.ts"></script>
