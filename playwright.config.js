@@ -2,7 +2,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
-
+const inDocker = process.env.TEST_ENV ==='docker'
 export default defineConfig({
   testDir: './e2e',
   timeout: 120000,
@@ -15,7 +15,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: process.env.TEST_ENV ==='docker'? 'http://localhost:8080' : 'http://localhost:5173',
+    baseURL:  inDocker ? 'http://localhost:8080' : 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -42,11 +42,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // if in docker; 
+    // if in docker; skip
     command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
     // command: 'pnpm preview --port 5173',
-    port: 5173,
+    port:  inDocker? 8080: 5173,
     // in docker tests, we are running the image, use that as abase
-    reuseExistingServer: process.env.TEST_ENV ==='docker' || !process.env.CI,
+    reuseExistingServer: inDocker || !process.env.CI,
   },
 })
