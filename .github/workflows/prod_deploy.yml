@@ -76,10 +76,7 @@ jobs:
         - name: Run Playwright tests against production
           run: pnpm exec playwright test
           env:
-            PLAYWRIGHT_USE_PREVIEW: 'true'
-            TEST_ENV: 'production'
-            BASE_URL: 'https://trilogydata.dev/trilogy-studio-core'
-        
+            TEST_ENV: 'prod'
         - name: Upload Playwright test results
           uses: actions/upload-artifact@v4
           if: always()
