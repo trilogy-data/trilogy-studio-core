@@ -22,6 +22,7 @@ const connectionCache: Record<
   string,
   { db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }
 > = {}
+
 async function createDuckDB(
   connectionName: string = 'default',
 ): Promise<{ db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }> {
@@ -30,15 +31,58 @@ async function createDuckDB(
     return connectionCache[connectionName]
   }
 
-  // Get the appropriate bundle for the current environment
-  const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles()
-  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES)
+  let bundles: duckdb.DuckDBBundles
+  let useWorkerBlob = false
 
-  // Create a new DuckDB instance
-  const worker_url = URL.createObjectURL(
-    new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
-  )
-  const worker = new Worker(worker_url)
+  // Check if bundled assets should be used
+  const useBundledAssets = import.meta.env.VITE_DUCKDB_BUNDLED === 'true'
+
+  if (useBundledAssets) {
+    // Load bundled assets - no fallback
+    const [
+      { default: duckdb_wasm },
+      { default: mvp_worker },
+      { default: duckdb_wasm_eh },
+      { default: eh_worker },
+    ] = await Promise.all([
+      import('@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url'),
+    ])
+
+    bundles = {
+      mvp: {
+        mainModule: duckdb_wasm,
+        mainWorker: mvp_worker,
+      },
+      eh: {
+        mainModule: duckdb_wasm_eh,
+        mainWorker: eh_worker,
+      },
+    }
+  } else {
+    // Use CDN bundles
+    bundles = duckdb.getJsDelivrBundles()
+    useWorkerBlob = true
+  }
+
+  // Select a bundle based on browser checks
+  const bundle = await duckdb.selectBundle(bundles)
+
+  let worker: Worker
+  if (useWorkerBlob) {
+    // CDN approach - create worker from blob
+    const worker_url = URL.createObjectURL(
+      new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
+    )
+    worker = new Worker(worker_url)
+    URL.revokeObjectURL(worker_url)
+  } else {
+    // Bundled approach - use worker directly
+    worker = new Worker(bundle.mainWorker!)
+  }
+
   const logger = new duckdb.ConsoleLogger()
   const db = new duckdb.AsyncDuckDB(logger, worker)
 

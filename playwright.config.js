@@ -41,9 +41,11 @@ export default defineConfig({
       use: { ...devices['iPhone 13'] },
     },
   ],
-  webServer: inDocker ? undefined : {
-    command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: inDocker
+    ? undefined
+    : {
+        command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
+        port: 5173,
+        reuseExistingServer: !process.env.CI,
+      },
 })
