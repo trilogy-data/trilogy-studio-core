@@ -36,7 +36,8 @@ async function createDuckDB(
 
   // Check if bundled assets should be used
   const useBundledAssets = import.meta.env.VITE_DUCKDB_BUNDLED === 'true'
-
+  let worker: Worker
+  let bundle: duckdb.DuckDBBundle
   if (useBundledAssets) {
     // Load bundled assets - no fallback
     const [
@@ -61,26 +62,17 @@ async function createDuckDB(
         mainWorker: eh_worker,
       },
     }
+    bundle = await duckdb.selectBundle(bundles)
+    worker = new Worker(bundle.mainWorker!)
   } else {
     // Use CDN bundles
     bundles = duckdb.getJsDelivrBundles()
     useWorkerBlob = true
-  }
-
-  // Select a bundle based on browser checks
-  const bundle = await duckdb.selectBundle(bundles)
-
-  let worker: Worker
-  if (useWorkerBlob) {
-    // CDN approach - create worker from blob
+    bundle = await duckdb.selectBundle(bundles)
     const worker_url = URL.createObjectURL(
       new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
     )
     worker = new Worker(worker_url)
-    URL.revokeObjectURL(worker_url)
-  } else {
-    // Bundled approach - use worker directly
-    worker = new Worker(bundle.mainWorker!)
   }
 
   const logger = new duckdb.ConsoleLogger()
