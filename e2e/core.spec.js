@@ -38,7 +38,11 @@ test('user settings', async ({ page, isMobile }) => {
   }
   await page.getByTestId('sidebar-icon-settings').click()
   expect(page.getByTestId('settings-trilogyResolver')).toHaveValue(
-    process.env.TEST_ENV === 'prod' ? 'https://trilogy-service.fly.dev' : process.env.TEST_ENV === 'docker' ? 'http://localhost:8080/api/' : 'http://127.0.0.1:5678',
+    process.env.TEST_ENV === 'prod'
+      ? 'https://trilogy-service.fly.dev'
+      : process.env.TEST_ENV === 'docker'
+        ? 'http://localhost:8080/api/'
+        : 'http://127.0.0.1:5678',
   )
   await page.getByRole('button', { name: 'Reset to Defaults' }).click()
   await page.getByRole('button', { name: 'Save' }).click()

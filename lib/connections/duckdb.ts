@@ -1,4 +1,13 @@
-import * as duckdb from '@duckdb/duckdb-wasm'
+import {
+  AsyncDuckDB,
+  AsyncDuckDBConnection,
+  type DuckDBBundles,
+  type DuckDBBundle,
+  selectBundle,
+  getJsDelivrBundles,
+  ConsoleLogger,
+  DuckDBDataProtocol,
+} from '@duckdb/duckdb-wasm'
 import BaseConnection from './base'
 import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
@@ -18,26 +27,22 @@ interface DuckDBType {
 }
 
 // use a singleton pattern to help avoid memory issues
-const connectionCache: Record<
-  string,
-  { db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }
-> = {}
+const connectionCache: Record<string, { db: AsyncDuckDB; connection: AsyncDuckDBConnection }> = {}
 
 async function createDuckDB(
   connectionName: string = 'default',
-): Promise<{ db: duckdb.AsyncDuckDB; connection: duckdb.AsyncDuckDBConnection }> {
+): Promise<{ db: AsyncDuckDB; connection: AsyncDuckDBConnection }> {
   // Return existing connection if it exists in the cache
   if (connectionCache[connectionName]) {
     return connectionCache[connectionName]
   }
 
-  let bundles: duckdb.DuckDBBundles
-  let useWorkerBlob = false
-
+  let bundles: DuckDBBundles
+  let worker_url: string | null = null
   // Check if bundled assets should be used
   const useBundledAssets = import.meta.env.VITE_DUCKDB_BUNDLED === 'true'
   let worker: Worker
-  let bundle: duckdb.DuckDBBundle
+  let bundle: DuckDBBundle
   if (useBundledAssets) {
     // Load bundled assets - no fallback
     const [
@@ -62,21 +67,20 @@ async function createDuckDB(
         mainWorker: eh_worker,
       },
     }
-    bundle = await duckdb.selectBundle(bundles)
+    bundle = await selectBundle(bundles)
     worker = new Worker(bundle.mainWorker!)
   } else {
     // Use CDN bundles
-    bundles = duckdb.getJsDelivrBundles()
-    useWorkerBlob = true
-    bundle = await duckdb.selectBundle(bundles)
-    const worker_url = URL.createObjectURL(
+    bundles = getJsDelivrBundles()
+    bundle = await selectBundle(bundles)
+    worker_url = URL.createObjectURL(
       new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
     )
     worker = new Worker(worker_url)
   }
 
-  const logger = new duckdb.ConsoleLogger()
-  const db = new duckdb.AsyncDuckDB(logger, worker)
+  const logger = new ConsoleLogger()
+  const db = new AsyncDuckDB(logger, worker)
 
   // Initialize the database
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
@@ -94,15 +98,17 @@ async function createDuckDB(
 
   // Cache the connection
   connectionCache[connectionName] = { db, connection }
-
+  if (worker_url) {
+    URL.revokeObjectURL(worker_url)
+  }
   return { db, connection }
 }
 
 export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
-  private connection: duckdb.AsyncDuckDBConnection
+  private connection: AsyncDuckDBConnection
   // @ts-ignore
-  public db: duckdb.AsyncDuckDB
+  public db: AsyncDuckDB
   private currentQueryIdentifier: string | null = null
 
   static fromJSON(fields: { name: string; model: string | null }): DuckDBConnection {
@@ -249,12 +255,7 @@ export default class DuckDBConnection extends BaseConnection {
     const dbAlias = this.sanitizeTableName(fileName)
     await this.connection.query(`use memory; DETACH DATABASE IF EXISTS ${dbAlias}`)
     // Register the file in DuckDB's virtual file system
-    await this.db.registerFileHandle(
-      file.name,
-      file,
-      duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-      true,
-    )
+    await this.db.registerFileHandle(file.name, file, DuckDBDataProtocol.BROWSER_FILEREADER, true)
 
     try {
       // Attach the database
@@ -289,12 +290,7 @@ export default class DuckDBConnection extends BaseConnection {
       onProgress?.(`Creating table ${tableName}...`)
 
       // Register the file in DuckDB's virtual file system
-      await this.db.registerFileHandle(
-        file.name,
-        file,
-        duckdb.DuckDBDataProtocol.BROWSER_FILEREADER,
-        true,
-      )
+      await this.db.registerFileHandle(file.name, file, DuckDBDataProtocol.BROWSER_FILEREADER, true)
 
       if (fileType === 'csv') {
         await this.processCSV(file, tableName, onProgress)

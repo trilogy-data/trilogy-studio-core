@@ -17,7 +17,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: inProd ? 'https://trilogydata.dev/trilogy-studio-core' : inDocker ? 'http://localhost:8080' : 'http://localhost:5173',
+    baseURL: inProd
+      ? 'https://trilogydata.dev/trilogy-studio-core'
+      : inDocker
+        ? 'http://localhost:8080'
+        : 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -43,11 +47,12 @@ export default defineConfig({
       use: { ...devices['iPhone 13'] },
     },
   ],
-  webServer: (inDocker || inProd)
-    ? undefined
-    : {
-        command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
-        port: 5173,
-        reuseExistingServer: !process.env.CI,
-      },
+  webServer:
+    inDocker || inProd
+      ? undefined
+      : {
+          command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
+          port: 5173,
+          reuseExistingServer: !process.env.CI,
+        },
 })
