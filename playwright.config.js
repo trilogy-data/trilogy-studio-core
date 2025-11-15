@@ -3,7 +3,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 const inDocker = process.env.TEST_ENV === 'docker'
-const inProd = process.env.TEST_ENV === 'prod'
+// const inProd = process.env.TEST_ENV === 'prod'
+const inProd = true;
 export default defineConfig({
   testDir: './e2e',
   timeout: 120000,

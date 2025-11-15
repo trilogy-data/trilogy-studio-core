@@ -58,7 +58,7 @@ async function getPixelColor(page, x, y) {
 }
 
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
-  await page.goto('/#skipTips=true')
+  await page.goto('#skipTips=true')
   // setup
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -472,7 +472,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 const connectionName = 'duckdb-test2'
 
 test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
-  await page.goto('/#skipTips=true')
+  await page.goto('#skipTips=true')
   // Setup connection
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -592,7 +592,7 @@ select rows;
 })
 
 test('test-drilldown', async ({ page, isMobile, browser }) => {
-  await page.goto('/#skipTips=true')
+  await page.goto('#skipTips=true')
   // Setup connection
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
