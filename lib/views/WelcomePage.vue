@@ -185,7 +185,7 @@ h1 {
 }
 
 .btn-secondary:hover {
-  background-color: #1e7e34;
+  background-color: #007bff;
 }
 
 .btn-tertiary {

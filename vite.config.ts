@@ -16,6 +16,10 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     },
   },
+  define: {
+    'import.meta.env.VITE_DUCKDB_BUNDLED': JSON.stringify('false'),
+    'import.meta.env.VITE_DISABLE_TIPS_DEFAULT': JSON.stringify('false'),
+  },
   plugins: [
     vue(),
     visualizer({

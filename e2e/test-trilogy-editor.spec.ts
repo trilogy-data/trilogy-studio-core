@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 const connectionName = 'duckdb-test2'
 
 test('test', async ({ page, isMobile, browser }) => {
-  await page.goto('/#skipTips=true')
+  await page.goto('#skipTips=true')
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
@@ -56,17 +56,14 @@ select unnest(x) as rows;
   await expect(page.getByTestId('query-results-length')).toContainText('5')
 })
 
-
 test('test_demo_editor', async ({ page, isMobile, browser }) => {
-  await page.goto('/#skipTips=true&sidebarScreen=editors&screen=welcome&welcome=welcome');
+  await page.goto('#skipTips=true&sidebarScreen=editors&screen=welcome&welcome=welcome')
 
-  await page.getByTestId('demo-editor-button').click();
-  await page.getByTestId('editor-run-button').click();
-  page.once('dialog', dialog => {
-    console.log(`Dialog message: ${dialog.message()}`);
-    dialog.dismiss().catch(() => { });
-  });
-  await page.getByRole('gridcell', { name: 'R' }).click();
-
-
+  await page.getByTestId('demo-editor-button').click()
+  await page.getByTestId('editor-run-button').click()
+  page.once('dialog', (dialog) => {
+    console.log(`Dialog message: ${dialog.message()}`)
+    dialog.dismiss().catch(() => {})
+  })
+  await page.getByRole('gridcell', { name: 'R' }).click()
 })

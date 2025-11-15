@@ -66,6 +66,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
       this.settings.tipsRead = []
       this.hasChanges = true
       this.saveSettings()
+      this.settings.skipAllTips = false
     },
     markTipRead(tipId: string) {
       if (!this.settings.tipsRead.includes(tipId)) {
