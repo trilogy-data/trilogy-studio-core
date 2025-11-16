@@ -5,7 +5,11 @@ on:
       - main
 jobs:
   publish:
+    environment: production
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  
+      contents: read
     steps:
       - uses: actions/checkout@v3
       
@@ -25,7 +29,21 @@ jobs:
       - name: Build
         run: cd lib && pnpm run build
       
+      - name: Check if version needs publishing
+        id: version-check
+        run: |
+          cd lib
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          
+          if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version 2>/dev/null; then
+            echo "Version $PACKAGE_VERSION already published"
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version $PACKAGE_VERSION not found, will publish"
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Publish
-        run: cd lib && pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        if: steps.version-check.outputs.should-publish == 'true'
+        run: cd lib && pnpm publish --no-git-checks --provenance --access public

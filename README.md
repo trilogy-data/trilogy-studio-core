@@ -19,9 +19,9 @@ This repo contains the studio frontend, a minimal FastAPI language server that p
 
 The suggested local execution option for now. (An app will come at some point!)
 
-A docker container is available in the base repo.  Includes image with syntax resolution service + frontend. 
+A docker container is available in the base repo. Image runs resolution service [FastAPI] + statically serves frontend. 
 
-No telemetry; requires internet to get WASM bundles. (This will be removed in future to get full offline usage).
+No telemetry enabled by default.
 
 From repo root:
 
@@ -41,7 +41,7 @@ Access on http://localhost:8080 (or alternative port used).
 
 Explore data with easy, interactive visuals. Connect them in rich, interactive dashboards that can be shared.
 
-Native cross filtering, drilldown, and NLP filtering. 
+Native cross filtering, drilldown, and LLM-enhanced filtering. 
 
 <p align="center">
 <img src="docs/dashboard.png" width="515" height="599" alt="Dashboard View">
@@ -49,7 +49,7 @@ Native cross filtering, drilldown, and NLP filtering.
 
 ### Rich Query Editing
 
-All the modern IDE features you expect, and a built in semantic auto-complete. 
+All the modern IDE features you expect, built-in autocomplete, type checking.
 
 <p align="center">
 <img src="https://github.com/user-attachments/assets/2eee9a88-be64-437b-bd86-954ab0c1d7b3" width="515" height="559" alt="Editor View">

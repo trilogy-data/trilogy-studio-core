@@ -8,7 +8,11 @@ import { resolve } from 'node:path'
 import { visualizer } from 'rollup-plugin-visualizer'
 // https://vite.dev/config/
 export default defineConfig({
-assetsInclude: ['**/*.wasm'],
+  assetsInclude: ['**/*.wasm'],
+  define: {
+    'import.meta.env.VITE_DUCKDB_BUNDLED': JSON.stringify('true'),
+    'import.meta.env.VITE_DISABLE_TIPS_DEFAULT': JSON.stringify('true'),
+  },
   server: {
     headers: {
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
@@ -25,7 +29,7 @@ assetsInclude: ['**/*.wasm'],
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
-    nodePolyfills({ include: ['crypto', 'stream'], exclude: ['prismjs'] }),
+    nodePolyfills({ include: ['crypto', 'stream'] }),
     prism({
       languages: ['sql'],
       plugins: ['line-numbers'],
@@ -50,7 +54,7 @@ assetsInclude: ['**/*.wasm'],
   },
   build: {
     copyPublicDir: true,
-   
+
     // if we ever want a build
     // lib: {
     //   entry: resolve(__dirname, 'lib/main.ts'),

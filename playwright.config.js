@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 const inDocker = process.env.TEST_ENV === 'docker'
+const inProd = process.env.TEST_ENV === 'prod'
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120000,
@@ -15,7 +17,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: inDocker ? 'http://localhost:8080' : 'http://localhost:5173',
+    baseURL: inProd
+      ? 'https://trilogydata.dev/trilogy-studio-core'
+      : inDocker
+        ? 'http://localhost:8080'
+        : 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -41,9 +47,12 @@ export default defineConfig({
       use: { ...devices['iPhone 13'] },
     },
   ],
-  webServer: inDocker ? undefined : {
-    command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer:
+    inDocker || inProd
+      ? undefined
+      : {
+          command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
+          port: 5173,
+          reuseExistingServer: !process.env.CI,
+        },
 })

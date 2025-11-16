@@ -62,6 +62,7 @@
     "pinia": "^2.3.1",
     "prismjs": "^1.30.0",
     "tabulator-tables": "^6.3.1",
+    "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
     "vega-lite": "^6.4.1",
     "vite-plugin-prismjs": "^0.0.11",

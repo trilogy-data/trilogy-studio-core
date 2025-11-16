@@ -36,8 +36,7 @@ jobs:
         - name: Build
           run: pnpm run build
           env:
-            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/
-        
+            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/        
         - name: Upload
           uses: SamKirkland/FTP-Deploy-Action@v4.3.5
           with:
@@ -47,3 +46,38 @@ jobs:
               local-dir: ./dist/
               server-dir: /trilogy-studio-core/
               protocol: 'ftps'
+        # Install Playwright and run tests against deployed site
+        - name: Install Playwright Browsers
+          run: pnpm exec playwright install --with-deps       
+        # Wait for deployment to be available
+        - name: Wait for deployment
+          run: |
+            echo "Waiting for deployment to be available..."
+            timeout 300 bash -c '
+              while true; do
+                HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://trilogydata.dev/trilogy-studio-core/ || echo "000")
+                echo "Current HTTP status: $HTTP_STATUS"
+                
+                if [ "$HTTP_STATUS" = "200" ]; then
+                  echo "✅ Site is available!"
+                  break
+                elif [ "$HTTP_STATUS" = "404" ] || [ "$HTTP_STATUS" = "500" ]; then
+                  echo "❌ Site returned error status: $HTTP_STATUS"
+                  exit 1
+                else
+                  echo "⏳ Waiting for site to be available... (status: $HTTP_STATUS)"
+                  sleep 10
+                fi
+              done
+            '
+        - name: Run Playwright tests against production
+          run: pnpm exec playwright test
+          env:
+            TEST_ENV: 'prod'
+        - name: Upload Playwright test results
+          uses: actions/upload-artifact@v4
+          if: always()
+          with:
+            name: playwright-report-production
+            path: playwright-report/
+            retention-days: 30
