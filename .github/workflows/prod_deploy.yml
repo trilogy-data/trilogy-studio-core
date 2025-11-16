@@ -3,13 +3,11 @@ on:
   push:
     branches:
       - 'main'
-      - 'docker-round-two'
-
 jobs:
   setup-build-deploy:
     name: Deploy Production
     runs-on: ubuntu-latest
-    # environment: production
+    environment: production
     # Add "id-token" with the intended permissions.
     permissions:
       contents: 'read'
@@ -38,17 +36,16 @@ jobs:
         - name: Build
           run: pnpm run build
           env:
-            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/
-        
-        # - name: Upload
-        #   uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        #   with:
-        #       server: ${{ secrets.FTP_SERVER }}
-        #       username: ${{ secrets.FTP_USER }}
-        #       password: ${{ secrets.FTP_SECRET }}
-        #       local-dir: ./dist/
-        #       server-dir: /trilogy-studio-core/
-        #       protocol: 'ftps'
+            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/        
+        - name: Upload
+          uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          with:
+              server: ${{ secrets.FTP_SERVER }}
+              username: ${{ secrets.FTP_USER }}
+              password: ${{ secrets.FTP_SECRET }}
+              local-dir: ./dist/
+              server-dir: /trilogy-studio-core/
+              protocol: 'ftps'
         # Install Playwright and run tests against deployed site
         - name: Install Playwright Browsers
           run: pnpm exec playwright install --with-deps       
