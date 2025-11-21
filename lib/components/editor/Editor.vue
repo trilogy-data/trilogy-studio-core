@@ -236,7 +236,6 @@ export default defineComponent({
           this.navigationStore?.openTab('editors', null, foundEditor)
         }
       }
-      
     },
     setContent(newContent: string) {
       // Update the editor store

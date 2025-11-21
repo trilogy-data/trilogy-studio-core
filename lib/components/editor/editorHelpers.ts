@@ -1,4 +1,11 @@
-import { KeyMod, KeyCode, type IRange, type IDisposable, Position, type CancellationToken } from 'monaco-editor'
+import {
+  KeyMod,
+  KeyCode,
+  type IRange,
+  type IDisposable,
+  Position,
+  type CancellationToken,
+} from 'monaco-editor'
 import { editor, languages } from 'monaco-editor/esm/vs/editor/editor.api'
 
 // Maps to track editor instances (exported for component use)
@@ -102,43 +109,43 @@ export const getEditorRange = (context: string): IRange | null => {
 
 // Helper function to find import path for go-to-definition
 export const findImportPath = (
-  word: string, 
+  word: string,
   model: editor.ITextModel,
-  position: Position
+  position: Position,
 ): string | null => {
   const content = model.getValue()
   const lines = content.split('\n')
-  
+
   // Get the line where the cursor is positioned
   const currentLine = lines[position.lineNumber - 1]
-  
+
   console.log('Checking word:', word)
   console.log('Current line:', currentLine)
-  
+
   // Check if we're on an import line
   const importMatch = currentLine.match(/^\s*import\s+(.+?)\s*;/)
   if (!importMatch) {
     console.log('Not on an import line')
     return null
   }
-  
+
   const importStatement = importMatch[1]
   console.log('Import statement:', importStatement)
-  
+
   // Handle different import patterns:
   // 1. import std.money; -> extract "std.money"
   // 2. import order as order; -> extract "order" (the first one)
   // 3. import supplier as supplier; -> extract "supplier" (the first one)
-  
+
   if (importStatement.includes(' as ')) {
     // Pattern: import X as Y
     const asMatch = importStatement.match(/^(.+?)\s+as\s+(.+?)$/)
     if (asMatch) {
       const originalName = asMatch[1].trim()
       const aliasName = asMatch[2].trim()
-      
+
       console.log('Original name:', originalName, 'Alias name:', aliasName)
-      
+
       // Check if the clicked word matches either the original name or the alias
       if (word === originalName || word === aliasName) {
         console.log('Found import path:', originalName)
@@ -148,14 +155,14 @@ export const findImportPath = (
   } else {
     // Simple import pattern: import std.money;
     const simplePath = importStatement.trim()
-    
+
     // Check if the clicked word is part of this import path
     if (simplePath.includes(word)) {
       console.log('Found import path:', simplePath)
       return simplePath
     }
   }
-  
+
   console.log('Word not found in import statement')
   return null
 }
@@ -164,7 +171,7 @@ export const findImportPath = (
 const handleGoToDefinition = (
   model: editor.ITextModel,
   position: Position,
-  onGoToDefinition: null | ((data: any) => void )
+  onGoToDefinition: null | ((data: any) => void),
 ): boolean => {
   const word = model.getWordAtPosition(position)
   if (!word) {
@@ -177,25 +184,25 @@ const handleGoToDefinition = (
     startLineNumber: position.lineNumber,
     startColumn: word.startColumn,
     endLineNumber: position.lineNumber,
-    endColumn: word.endColumn
+    endColumn: word.endColumn,
   }
 
   console.log('Go to definition triggered for word:', wordText)
-  
+
   // Look for import path
   const importPath = findImportPath(wordText, model, position)
-  
+
   if (importPath && onGoToDefinition) {
     console.log('Triggering go-to-definition callback for import:', importPath)
-    
+
     // Call the callback with the definition data
     onGoToDefinition({
       word: wordText,
       importPath: importPath,
       position: position,
-      range: range
+      range: range,
     })
-    
+
     return true
   }
 
@@ -207,16 +214,13 @@ const handleGoToDefinition = (
 export const provideDefinition = (
   model: editor.ITextModel,
   position: Position,
-  token: CancellationToken,
-  editorInstance: editor.IStandaloneCodeEditor,
-  onGoToDefinition: (data: any) => void
+  //TODO: use definition provider for mouseovers
+  _token: CancellationToken,
+  _editorInstance: editor.IStandaloneCodeEditor,
+  _onGoToDefinition: (data: any) => void,
 ): languages.ProviderResult<languages.Definition> => {
-  
-  // Use shared logic
-  const handled = handleGoToDefinition(model, position, null)
-  
-  // Return null since we're handling this externally
-  // The provider can still be used by other Monaco features
+  handleGoToDefinition(model, position, null)
+
   return null
 }
 
@@ -225,26 +229,29 @@ export const setupGoToDefinitionProvider = (
   editorInstance: editor.IStandaloneCodeEditor,
   editorType: string,
   onGoToDefinition: (data: any) => void,
-  providerDisposables: IDisposable[]
+  providerDisposables: IDisposable[],
 ): void => {
   // Clear any existing providers
-  providerDisposables.forEach(d => d.dispose())
+  providerDisposables.forEach((d) => d.dispose())
   providerDisposables.length = 0
 
   const model = editorInstance.getModel()
   if (!model) return
 
-  console.log('Setting up go-to-definition provider for language:', editorType === 'sql' ? 'sql' : 'trilogy')
+  console.log(
+    'Setting up go-to-definition provider for language:',
+    editorType === 'sql' ? 'sql' : 'trilogy',
+  )
 
   const disposable = languages.registerDefinitionProvider(
     editorType === 'sql' ? 'sql' : 'trilogy',
     {
       provideDefinition: (model, position, token) => {
         return provideDefinition(model, position, token, editorInstance, onGoToDefinition)
-      }
-    }
+      },
+    },
   )
-  
+
   providerDisposables.push(disposable)
 }
 
@@ -252,7 +259,7 @@ export const setupGoToDefinitionProvider = (
 export const setupGoToDefinitionClickHandler = (
   editorInstance: editor.IStandaloneCodeEditor,
   onGoToDefinition: (data: any) => void,
-  providerDisposables: IDisposable[]
+  providerDisposables: IDisposable[],
 ): void => {
   const model = editorInstance.getModel()
   if (!model) return
@@ -272,18 +279,8 @@ export const setupGoToDefinitionClickHandler = (
     console.log('Ctrl+Click detected')
     handleGoToDefinition(model, position, onGoToDefinition)
   })
-  
+
   providerDisposables.push(clickDisposable)
-
-  // Add keyboard shortcut for F12 (Go to Definition) - more explicit than provider
-  const keyboardDisposable = editorInstance.addCommand(KeyCode.F12, () => {
-    const position = editorInstance.getPosition()
-    if (!position) return
-
-    console.log('F12 pressed for go-to-definition')
-    handleGoToDefinition(model, position, onGoToDefinition)
-  })
-
 }
 
 // Define editor themes
@@ -317,7 +314,7 @@ export const createEditor = (
   editorElement: HTMLElement,
   props: Props,
   callbacks: EditorEventCallbacks,
-  providerDisposables: IDisposable[]
+  providerDisposables: IDisposable[],
 ): void => {
   if (!editorElement) {
     console.error('Editor element is not available')
@@ -365,10 +362,10 @@ export const createEditor = (
   }
 
   console.log('Creating new editor instance')
-  
+
   // Define themes first
   defineEditorThemes()
-  
+
   // Create editor
   const editorInstance = editor.create(editorElement, {
     value: props.contents,
@@ -390,19 +387,24 @@ export const createEditor = (
   mountedMap.set(props.context, true)
 
   // Set up go-to-definition provider (must be done after editor creation)
-  setupGoToDefinitionProvider(editorInstance, props.editorType, callbacks.onGoToDefinition, providerDisposables)
+  setupGoToDefinitionProvider(
+    editorInstance,
+    props.editorType,
+    callbacks.onGoToDefinition,
+    providerDisposables,
+  )
 
   // Set up additional click handler for more controlled behavior
   setupGoToDefinitionClickHandler(editorInstance, callbacks.onGoToDefinition, providerDisposables)
 
   // Set up content change handler
   setupContentChangeHandler(editorInstance, callbacks)
-  
+
   editorInstance.setScrollPosition({
     scrollTop: props.scrollPosition?.line || 1,
     scrollLeft: props.scrollPosition?.column || 1,
   })
-  
+
   // Set up keyboard shortcuts
   setupKeyBindings(editorInstance, props.editorType, callbacks)
 
@@ -413,7 +415,7 @@ export const createEditor = (
 // Handle editor content changes
 export const setupContentChangeHandler = (
   editorInstance: editor.IStandaloneCodeEditor,
-  callbacks: EditorEventCallbacks
+  callbacks: EditorEventCallbacks,
 ): void => {
   let suggestDebounceTimer: number | null = null
   let keywordDebounceTimer: number | null = null
@@ -480,7 +482,7 @@ export const setupContentChangeHandler = (
 export const setupKeyBindings = (
   editorInstance: editor.IStandaloneCodeEditor,
   editorType: string,
-  callbacks: EditorEventCallbacks
+  callbacks: EditorEventCallbacks,
 ): void => {
   // Validate query: Ctrl+Shift+V
   editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
@@ -498,7 +500,7 @@ export const setupKeyBindings = (
       callbacks.onFormatQuery()
     })
   }
-  
+
   // LLM query generation: Ctrl+Shift+Enter
   editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
     callbacks.onGenerateLlmQuery()
@@ -524,7 +526,11 @@ export const setValue = (context: string, value: string): void => {
   }
 }
 
-export const executeEdits = (context: string, source: string, edits: editor.IIdentifiedSingleEditOperation[]): void => {
+export const executeEdits = (
+  context: string,
+  source: string,
+  edits: editor.IIdentifiedSingleEditOperation[],
+): void => {
   const editorInstance = editorMap.get(context)
   if (editorInstance) {
     editorInstance.executeEdits(source, edits)

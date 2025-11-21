@@ -84,7 +84,8 @@ export default defineComponent({
     // Create callbacks object that maps to Vue emit
     const callbacks: EditorEventCallbacks = {
       onContentsChange: (content: string) => emit('contents-change', content),
-      onScrollChange: (position: { line: number; column: number }) => emit('scroll-change', position),
+      onScrollChange: (position: { line: number; column: number }) =>
+        emit('scroll-change', position),
       onRunQuery: () => emit('run-query'),
       onValidateQuery: () => emit('validate-query'),
       onFormatQuery: () => emit('format-query'),
@@ -133,9 +134,9 @@ export default defineComponent({
         editorMap.delete(props.context)
         mountedMap.delete(props.context)
       }
-      
+
       // Clean up providers
-      providerDisposables.value.forEach(d => d.dispose())
+      providerDisposables.value.forEach((d) => d.dispose())
       providerDisposables.value = []
     })
 

@@ -169,6 +169,10 @@ export function configureTrilogy() {
 
         // Match hidden
         [/\-\-.*/, 'hidden'],
+
+        // Triple single quote start - transition to tripleQuoteString state
+        [/'''/, { token: 'string', next: '@tripleQuoteString', nextEmbedded: 'sql' }],
+
         // match first part of <a,b>.b or a.b
         [/\<[a-zA-Z0-9\_\.\,]+\>\./, 'property'],
         [/([a-zA-Z0-9\_\.]+)\./, { token: 'property', next: '@afterDot' }],
@@ -211,6 +215,11 @@ export function configureTrilogy() {
         // Additional special handling for `->` or `as` for renaming (like `sum(line_item.extended_price)-> base_price`)
         [/\->|\sas\s/, 'operator'],
       ],
+      tripleQuoteString: [
+    [/'''/, { token: 'string', next: '@pop', nextEmbedded: '@pop' }],  // End triple quote - go back to root
+    [/[^']+/, 'string'],                         // Any non-quote content
+    [/'/, 'string'],                             // Single quotes inside (not triple)
+  ],
       afterDot: [[/[a-zA-Z0-9\_]+/, { token: 'variable', next: '@pop' }]],
       functionCheck: [
         [/\s*\(/, { token: 'delimiter', next: '@pop' }],
