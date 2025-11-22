@@ -37,6 +37,7 @@
           @generate-llm-query="handleLLMTrigger"
           @drill-query="drilldownQuery"
           @save="$emit('save-editors')"
+          @go-to-definition-requested="goToDefinition"
         />
         <SymbolsPane
           :symbols="editorData.completionSymbols || []"
@@ -91,6 +92,7 @@ import { Range } from 'monaco-editor'
 import { completionToModelInput } from '../../llm/utils.ts'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { leadIn, conceptsToFieldPrompt } from '../../llm/data/prompts.ts'
+import { type GoToDefinitionEvent } from './events'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -219,6 +221,22 @@ export default defineComponent({
     },
   },
   methods: {
+    goToDefinition(e: GoToDefinitionEvent): void {
+      let parsedPath = e.importPath.replace('.', '/')
+      let model = this.connectionStore.connections[this.editorData.connection].model
+      // if the parsedPath starts with 'std', not supported yet
+      // exit early
+      if (parsedPath.startsWith('std')) {
+        return
+      }
+      if (model) {
+        let modelConfig = this.modelStore.models[model]
+        let foundEditor = modelConfig.getEditorByName(parsedPath)
+        if (foundEditor) {
+          this.navigationStore?.openTab('editors', null, foundEditor)
+        }
+      }
+    },
     setContent(newContent: string) {
       // Update the editor store
       this.editorStore.setEditorContents(this.editorId, newContent)

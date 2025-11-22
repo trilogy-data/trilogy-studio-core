@@ -407,6 +407,16 @@ export class ModelConfig {
     this.changed = true
   }
 
+  getEditorByName(editorName: string): string | null {
+    for (let source of this.sources) {
+      if (source.alias === editorName) {
+        //find editor by alias
+        return source.editor
+      }
+    }
+    return null
+  }
+
   static fromJSON(data: any): ModelConfig {
     let base = new ModelConfig({
       name: data.name,

@@ -2,7 +2,7 @@
   <div class="menu-bar">
     <div class="menu-left">
       <div class="menu-title" @click="startEditing">
-        <span v-if="!isEditing" class="editable-text">
+        <span v-if="!isEditing" class="editable-text" data-testid="editor-name-display">
           {{ name }}
           <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
         </span>

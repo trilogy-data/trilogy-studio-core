@@ -66,4 +66,14 @@ test('test_demo_editor', async ({ page, isMobile, browser }) => {
     dialog.dismiss().catch(() => {})
   })
   await page.getByRole('gridcell', { name: 'R' }).click()
+  if (isMobile) {
+    await page.getByTestId('editor-tab').click();
+  }
+  await page
+    .getByTestId('editor')
+    .getByText('lineitem')
+    .click({
+      modifiers: ['ControlOrMeta'],
+    })
+  await expect(page.getByTestId('editor-name-display')).toContainText('lineitem')
 })
