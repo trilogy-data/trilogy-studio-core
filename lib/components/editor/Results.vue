@@ -1,5 +1,5 @@
 <template>
-  <div class="results-container">
+  <div class="results-container" :style="{ height: containerHeight + 'px' }">
     <div class="tabs">
       <button
         class="tab-button"

@@ -45,6 +45,8 @@
 import Split from 'split.js'
 import { defineComponent, ref } from 'vue'
 
+const DEFAULT_SIZE = [60, 40]
+
 export default defineComponent({
   name: 'VerticalSplitLayout',
   data() {
@@ -67,7 +69,7 @@ export default defineComponent({
     // @ts-ignore
     this.split = Split([this.$refs.editor, this.$refs.results], {
       direction: 'vertical',
-      sizes: [60, 40],
+      sizes: DEFAULT_SIZE,
       minSize: [250, 250],
       // minSize: 200,
       // expandToMin: true,
@@ -81,7 +83,7 @@ export default defineComponent({
     })
 
     // Initialize the results height
-    this.updateResultsHeight([60, 40])
+    this.updateResultsHeight(DEFAULT_SIZE)
   },
   beforeUnmount() {
     if (this.split) {
@@ -97,7 +99,7 @@ export default defineComponent({
 
       if (this.$refs.results) {
         // @ts-ignore
-        this.resultsHeight = resultHeight * (split[1] / 100)
+        this.resultsHeight = resultHeight * (split[1] / 100) -25
       }
       if (this.$refs.editor) {
         // @ts-ignore

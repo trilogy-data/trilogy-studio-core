@@ -1,5 +1,5 @@
 <template>
-  <div class="results-view">
+  <div class="results-view" :style="{ height: containerHeight + 'px' }">
     <LLMChatRefinement
       :messages="editorData.chatInteraction.messages"
       :validateFn="editorData.chatInteraction.validationFn"
