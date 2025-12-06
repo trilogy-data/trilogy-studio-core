@@ -49,6 +49,10 @@ export class ChartControlsManager {
     onChartConfigChange?: (config: ChartConfig) => void,
     force: boolean = false,
   ): void {
+    // Preserve user preferences for display settings
+    const preservedShowTitle = this.internalConfig.value.showTitle
+    const preservedHideLegend = this.internalConfig.value.hideLegend
+
     if (initialConfig && !force) {
       // Use external config if provided
       this.internalConfig.value = { ...this.internalConfig.value, ...initialConfig }
@@ -59,6 +63,14 @@ export class ChartControlsManager {
       if (onChartConfigChange) {
         onChartConfigChange({ ...this.internalConfig.value })
       }
+    }
+
+    // Restore user preferences for display settings (unless initialConfig explicitly sets them)
+    if (!initialConfig || (initialConfig.showTitle === undefined && !force)) {
+      this.internalConfig.value.showTitle = preservedShowTitle
+    }
+    if (!initialConfig || (initialConfig.hideLegend === undefined && !force)) {
+      this.internalConfig.value.hideLegend = preservedHideLegend
     }
   }
 
