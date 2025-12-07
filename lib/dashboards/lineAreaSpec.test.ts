@@ -355,7 +355,7 @@ describe('Line and Area Chart Specs', (): void => {
 
         const layers = spec.layer as any[]
         layers.forEach((layer: any) => {
-          expect(layer.data.values).toBeNull()
+          expect(layer.data).toBeUndefined()
         })
       })
 
