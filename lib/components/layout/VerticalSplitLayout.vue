@@ -15,7 +15,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   /* flex: 1 1 100%; */
-  height: 99.9%;
+  height: 100%;
   background-color: var(--main-bg-color);
   max-height: 100%;
 }
@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
+  overflow: hidden;
   /* flex: 1 1 calc(100%-60px); */
   /* height: 100%; */
 }
@@ -33,6 +34,7 @@
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 1;
+  overflow: hidden;
   /* flex-wrap: wrap; */
   /* height: 100%; */
 }
@@ -94,16 +96,15 @@ export default defineComponent({
   methods: {
     updateResultsHeight(split: number[]) {
       // @ts-ignore
-      // 50 is a constant to account for the header
       let resultHeight = this.$refs.wrapper.getBoundingClientRect().height
 
       if (this.$refs.results) {
         // @ts-ignore
-        this.resultsHeight = resultHeight * (split[1] / 100) -25
+        this.resultsHeight = resultHeight * (split[1] / 100)
       }
       if (this.$refs.editor) {
         // @ts-ignore
-        this.editorHeight = resultHeight * (split[0] / 100) - 50
+        this.editorHeight = resultHeight * (split[0] / 100)
       }
     },
   },

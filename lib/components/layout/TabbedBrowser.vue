@@ -248,8 +248,9 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: calc(100%);
+  height: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 .tabbed-container {
@@ -405,7 +406,8 @@ export default defineComponent({
 
 /* Content Area */
 .tab-content {
-  height: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* Drag and Drop Visual Feedback */

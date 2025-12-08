@@ -1,5 +1,5 @@
 <template>
-  <div class="results-container" :style="{ height: containerHeight + 'px' }">
+  <div class="results-container">
     <div class="tabs">
       <button
         class="tab-button"
@@ -42,7 +42,7 @@
         <vega-lite-chart
           :data="results.data"
           :columns="results.headers"
-          :containerHeight="containerHeight"
+          :containerHeight="tabContentHeight"
           :initialConfig="chartConfig"
           :onChartConfigChange="onChartChange"
           @refresh-click="handleLocalRefresh"
@@ -74,7 +74,7 @@
         v-else
         :headers="results.headers"
         :results="results.data"
-        :containerHeight="containerHeight"
+        :containerHeight="tabContentHeight"
         @drilldown-click="activateDrilldown"
       />
     </div>
@@ -138,6 +138,7 @@ export default {
     return {
       activeTab: getDefaultValueFromHash('activeEditorTab', 'results'),
       activeDrilldown: null as Drilldown | null,
+      TABS_HEIGHT: 30, // Height of the tabs header
     }
   },
   methods: {
@@ -174,6 +175,10 @@ export default {
     },
   },
   computed: {
+    tabContentHeight(): number {
+      // Subtract tabs height from container height for components that need explicit heights
+      return this.containerHeight ? this.containerHeight - this.TABS_HEIGHT : 0
+    },
     eligibleTabs() {
       if (this.type === 'sql') {
         return ['results']
@@ -227,6 +232,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .tabs {
@@ -269,6 +275,7 @@ export default {
   background: var(--result-window-bg);
   color: var(--text-color);
   height: 100%;
+  overflow: auto;
 }
 
 .sql-view pre {
