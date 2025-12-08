@@ -224,18 +224,18 @@ def get_syntax_docs() -> str:
 - All fields exist in a global namespace; field paths look like `order.product.id`. Always use the full path. NEVER include a from clause.
 - If a field has a grain defined, and that grain is not in the query output, aggregate it to get desired result. 
 - If a field has a 'alias_for' defined, it is shorthand for that calculation. Use the field name instead of the calculation in your query to be concise. 
-- Newly created fields at the output of the select must be aliased with as (e.g. `sum(births) as all_births`). 
+- Newly created fields at the output of the select must be aliased with `as` (e.g. `sum(births) as all_births`). 
 - Aliases cannot happen inside calculations or in the where/having/order clause. Never alias fields with existing names. 'sum(revenue) as total_revenue' is valid, but '(sum(births) as total_revenue) +1 as revenue_plus_one' is not.
 - Implicit grouping: NEVER include a group by clause. Grouping is by non-aggregated fields in the SELECT clause.
 - You can dynamically group inline to get groups at different grains - ex:  `sum(metric) by dim1, dim2 as sum_by_dim1_dm2` for alternate grouping.
-- Count must specify a field (no `count(*)`) Counts are automatically deduplicated. Do not ever use DISTINCT.
+- Count must specify a field (no `count(*)`) Counts are automatically deduplicated for key fields. Do not ever use DISTINCT.
 - Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. `sum(1) by x as count`). 
 - Aggregates in SELECT must be filtered via HAVING. Use WHERE for pre-aggregation filters.
 - Use `field ? condition` for inline filters (e.g. `sum(x ? x > 0)`).
-- Always use a reasonable `LIMIT` for final queries unless the request is for a time series or line chart.
+- Always use a reasonable `LIMIT` for final queries, keeping in mind the end result. Line/table charts (or charts) in general should have large result sets, for example, to avoid dropping data.
 - Window functions: `rank entity [optional over group] by field desc` (e.g. `rank name over state by sum(births) desc as top_name`).
-- For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
-- For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
+- For lag/lead, offset is first: `lag/lead offset field order by expr asc/desc`.
+- For lag/lead with a window clause: `lag/lead offset field by window_clause order by expr asc/desc`.
 - Use `::type` casting, e.g., `"2020-01-01"::date`.
 - Comments use `#` only, per line.
 - Two example queries: "where year between 1940 and 1950
@@ -362,6 +362,5 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
 
 @mcp.tool()
 def clear_cache() -> str:
-    """Clear the HTTP request cache"""
     clear_http_cache()
     return "HTTP cache cleared successfully."
