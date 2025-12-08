@@ -161,8 +161,6 @@ export const generateVegaSpec = (
     localData,
   )
 
-
-
   const tooltipFields = generateTooltipFields(config, columns)
 
   // Generate chart specification based on chart type
@@ -327,6 +325,7 @@ export const generateVegaSpec = (
     return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
   }
   // Handle trellis (facet) layout if specified
+
   if (config.trellisField && config.chartType === 'line') {
     // set width and height based on container size
     // get unique dimension values
@@ -339,15 +338,17 @@ export const generateVegaSpec = (
           columns.get(config.trellisField)?.description || config.trellisField,
         ),
         // columns: isMobile ? 2 : 4,
-      }
+      },
     }
     delete spec.width
     delete spec.height
-    let uniqueValues = Math.ceil((Array.from(new Set(data?.map((d) => d[config.trellisField]) || [])).length))
+    let uniqueValues = Math.ceil(
+      Array.from(new Set(data?.map((d) => d[config.trellisField!]) || [])).length,
+    )
     spec.spec = {
-      width: (containerWidth - (uniqueValues * 70)) / uniqueValues - 20,
+      width: (containerWidth - uniqueValues * 70) / uniqueValues - 20,
       height: containerHeight - 50,
-      ...spec.spec
+      ...spec.spec,
     }
   }
   return spec

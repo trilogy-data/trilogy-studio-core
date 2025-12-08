@@ -67,7 +67,7 @@ test('test_demo_editor', async ({ page, isMobile, browser }) => {
   })
   await page.getByRole('gridcell', { name: 'R' }).click()
   if (isMobile) {
-    await page.getByTestId('editor-tab').click();
+    await page.getByTestId('editor-tab').click()
   }
   await page
     .getByTestId('editor')

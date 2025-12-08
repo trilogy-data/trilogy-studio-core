@@ -131,7 +131,7 @@ export const Controls: ChartControl[] = [
     visibleFor: ['line'],
     filterGroup: 'appearance',
   },
-    {
+  {
     id: 'trellis-row-field',
     label: 'Split Rows By',
     field: 'trellisRowField',

@@ -41,10 +41,6 @@ describe('ChartControlsManager', () => {
 
     // Track config changes
     configChanges = []
-    const onConfigChange = (config: ChartConfig) => {
-      configChanges.push({ ...config })
-    }
-
     // Create manager instance
     const chartHelpers = new ChromaChartHelpers({
       onDimensionClick: () => {},
@@ -98,7 +94,7 @@ describe('ChartControlsManager', () => {
       expect(manager.internalConfig.value.showTitle).toBe(false)
 
       // Validate config (which should pass)
-      const isValid = manager.validateAndResetConfig(testData, testColumns, undefined, initialConfig as ChartConfig)
+      manager.validateAndResetConfig(testData, testColumns, undefined, initialConfig as ChartConfig)
 
       // showTitle should still be false after validation
       expect(manager.internalConfig.value.showTitle).toBe(false)

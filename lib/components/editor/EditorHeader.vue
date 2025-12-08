@@ -181,7 +181,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  min-width:50%;
+  min-width: 50%;
 }
 
 .menu-title {
@@ -194,8 +194,7 @@ export default defineComponent({
   white-space: nowrap;
   /* overflow: hidden; */
   text-overflow: ellipsis;
-  width:100%;
-  
+  width: 100%;
 }
 
 .menu-title:hover .edit-indicator {
