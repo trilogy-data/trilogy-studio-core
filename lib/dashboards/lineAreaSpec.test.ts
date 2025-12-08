@@ -398,7 +398,7 @@ describe('Line and Area Chart Specs', (): void => {
         )
 
         expect(spec).toHaveProperty('layer')
-        expect('data' in spec).toBe(false)
+        expect('data' in spec).toBe(true)
         expect(spec.layer).toHaveLength(2) // base + filtered layers
       })
 

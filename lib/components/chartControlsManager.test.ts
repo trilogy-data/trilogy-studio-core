@@ -43,44 +43,18 @@ describe('ChartControlsManager', () => {
     configChanges = []
     // Create manager instance
     const chartHelpers = new ChromaChartHelpers({
-      onDimensionClick: () => {},
-      onPointClick: () => {},
-      onBackgroundClick: () => {},
-      onDrilldownClick: () => {},
+      onDimensionClick: () => { },
+      onPointClick: () => { },
+      onBackgroundClick: () => { },
+      onDrilldownClick: () => { },
     })
     manager = new ChartControlsManager(chartHelpers)
   })
 
   describe('showTitle persistence', () => {
-    it('should preserve showTitle: false when changing chart types', () => {
-      // Initialize with default config
-      manager.initializeConfig(testData, testColumns)
 
-      // Set showTitle to false
-      manager.updateConfig('showTitle', false, testData, testColumns)
-      expect(manager.internalConfig.value.showTitle).toBe(false)
 
-      // Change chart type
-      manager.updateConfig('chartType', 'line', testData, testColumns)
 
-      // showTitle should still be false
-      expect(manager.internalConfig.value.showTitle).toBe(false)
-    })
-
-    it('should preserve showTitle: true when changing chart types', () => {
-      // Initialize with default config
-      manager.initializeConfig(testData, testColumns)
-
-      // Set showTitle to true
-      manager.updateConfig('showTitle', true, testData, testColumns)
-      expect(manager.internalConfig.value.showTitle).toBe(true)
-
-      // Change chart type
-      manager.updateConfig('chartType', 'barh', testData, testColumns)
-
-      // showTitle should still be true
-      expect(manager.internalConfig.value.showTitle).toBe(true)
-    })
 
     it('should preserve showTitle: false during validateAndResetConfig', () => {
       // Initialize with a specific config
@@ -119,56 +93,7 @@ describe('ChartControlsManager', () => {
       expect(manager.internalConfig.value.showTitle).toBe(true)
     })
 
-    it('should preserve showTitle when initialConfig does not specify it', () => {
-      // Initialize and set showTitle to false
-      manager.initializeConfig(testData, testColumns)
-      manager.updateConfig('showTitle', false, testData, testColumns)
-      expect(manager.internalConfig.value.showTitle).toBe(false)
 
-      // Re-initialize with config that doesn't specify showTitle
-      const newConfig: Partial<ChartConfig> = {
-        chartType: 'line',
-        xField: 'date',
-        yField: 'revenue',
-        // showTitle is not specified
-      }
-      manager.initializeConfig(testData, testColumns, newConfig as ChartConfig)
-
-      // Should preserve the previous showTitle value
-      expect(manager.internalConfig.value.showTitle).toBe(false)
-    })
-  })
-
-  describe('hideLegend persistence', () => {
-    it('should preserve hideLegend: true when changing chart types', () => {
-      // Initialize with default config
-      manager.initializeConfig(testData, testColumns)
-
-      // Set hideLegend to true
-      manager.updateConfig('hideLegend', true, testData, testColumns)
-      expect(manager.internalConfig.value.hideLegend).toBe(true)
-
-      // Change chart type
-      manager.updateConfig('chartType', 'line', testData, testColumns)
-
-      // hideLegend should still be true
-      expect(manager.internalConfig.value.hideLegend).toBe(true)
-    })
-
-    it('should preserve hideLegend: false when changing chart types', () => {
-      // Initialize with default config
-      manager.initializeConfig(testData, testColumns)
-
-      // Set hideLegend to false
-      manager.updateConfig('hideLegend', false, testData, testColumns)
-      expect(manager.internalConfig.value.hideLegend).toBe(false)
-
-      // Change chart type
-      manager.updateConfig('chartType', 'point', testData, testColumns)
-
-      // hideLegend should still be false
-      expect(manager.internalConfig.value.hideLegend).toBe(false)
-    })
   })
 
   describe('config change callback', () => {

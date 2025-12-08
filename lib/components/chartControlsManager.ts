@@ -49,10 +49,6 @@ export class ChartControlsManager {
     onChartConfigChange?: (config: ChartConfig) => void,
     force: boolean = false,
   ): void {
-    // Preserve user preferences for display settings
-    const preservedShowTitle = this.internalConfig.value.showTitle
-    const preservedHideLegend = this.internalConfig.value.hideLegend
-
     if (initialConfig && !force) {
       // Use external config if provided
       this.internalConfig.value = { ...this.internalConfig.value, ...initialConfig }
@@ -63,14 +59,6 @@ export class ChartControlsManager {
       if (onChartConfigChange) {
         onChartConfigChange({ ...this.internalConfig.value })
       }
-    }
-
-    // Restore user preferences for display settings (unless initialConfig explicitly sets them)
-    if (!initialConfig || (initialConfig.showTitle === undefined && !force)) {
-      this.internalConfig.value.showTitle = preservedShowTitle
-    }
-    if (!initialConfig || (initialConfig.hideLegend === undefined && !force)) {
-      this.internalConfig.value.hideLegend = preservedHideLegend
     }
   }
 
@@ -88,10 +76,6 @@ export class ChartControlsManager {
     console.log(`Updated config field ${field} to`, value)
 
     if (field === 'chartType') {
-      // Preserve user preferences for display settings
-      const preservedShowTitle = this.internalConfig.value.showTitle
-      const preservedHideLegend = this.internalConfig.value.hideLegend
-
       // Reset other fields when changing chart type
       const configDefaults = determineDefaultConfig(
         data,
@@ -111,10 +95,6 @@ export class ChartControlsManager {
 
       // Update all config fields
       Object.assign(this.internalConfig.value, configDefaults)
-
-      // Restore user preferences for display settings
-      this.internalConfig.value.showTitle = preservedShowTitle
-      this.internalConfig.value.hideLegend = preservedHideLegend
     }
 
     // Notify parent component if the callback is provided
