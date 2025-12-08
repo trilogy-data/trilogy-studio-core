@@ -17,6 +17,10 @@ from trilogy.core.models.environment import DictImportResolver, EnvironmentOptio
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
     ProcessedValidateStatement,
+    ProcessedQuery,
+    ProcessedStaticValueOutput,
+    ProcessedShowStatement,
+    PROCESSED_STATEMENT_TYPES,
 )
 from functools import wraps
 
@@ -316,6 +320,25 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
             QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
             for col in result.keys()
         ]
+    elif isinstance(
+        parsed,
+        (
+            ProcessedQuery,
+            ProcessedStaticValueOutput,
+            ProcessedShowStatement,
+        ),
+    ):
+        headers = [
+            QueryHeader(
+                name=col.name,
+                datatype=concept_to_str_datatype(
+                    executor.environment.concepts[col.address]
+                ),
+            )
+            for col in parsed.output_columns
+        ]
+    elif isinstance(parsed, (ProcessedValidateStatement, PROCESSED_STATEMENT_TYPES)):
+        headers = ([],)
     else:
         headers = [
             QueryHeader(

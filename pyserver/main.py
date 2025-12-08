@@ -23,7 +23,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
 from trilogy import CONFIG, __version__
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
 
 
 # Import the reusable endpoints module
