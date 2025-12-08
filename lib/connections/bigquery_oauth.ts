@@ -447,12 +447,15 @@ export default class BigQueryOauthConnection extends BaseConnection {
       // Check if the query completed immediately
       if (initialResult.jobComplete) {
         // Process results as before if job completed immediately
-        const headers = new Map(
-          initialResult.schema.fields.map((field: any) => [
-            field.name,
-            this.fieldToResultColumn(field),
-          ]),
-        ) as Map<string, ResultColumn>
+        let headers = new Map() as Map<string, ResultColumn>
+        if (initialResult.schema) {
+          headers = new Map(
+            initialResult.schema.fields.map((field: any) => [
+              field.name,
+              this.fieldToResultColumn(field),
+            ]),
+          ) as Map<string, ResultColumn>
+        }
 
         if (!initialResult.rows) {
           return new Results(headers, [])
