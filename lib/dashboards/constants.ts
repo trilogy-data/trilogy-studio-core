@@ -11,6 +11,8 @@ export interface ChartControl {
   options?: string[] // For fields with predefined options (like scale types)
 }
 
+export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'point', 'heatmap']
+
 export const Controls: ChartControl[] = [
   {
     id: 'group-by',
@@ -128,7 +130,7 @@ export const Controls: ChartControl[] = [
     field: 'trellisField',
     columnFilter: 'categorical',
     allowEmpty: true,
-    visibleFor: ['line'],
+    visibleFor: TRELLIS_ELIGIBLE,
     filterGroup: 'appearance',
   },
   {
@@ -137,7 +139,7 @@ export const Controls: ChartControl[] = [
     field: 'trellisRowField',
     columnFilter: 'categorical',
     allowEmpty: true,
-    visibleFor: ['line'],
+    visibleFor: TRELLIS_ELIGIBLE,
     filterGroup: 'appearance',
   },
   {

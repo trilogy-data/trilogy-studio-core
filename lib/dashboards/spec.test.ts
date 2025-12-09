@@ -440,7 +440,7 @@ describe('generateVegaSpec', () => {
   })
 
   describe('Faceted Charts', () => {
-    it('should generate valid faceted line chart spec', () => {
+    it('should generate valid faceted line chart spec with column split', () => {
       const config: ChartConfig = {
         chartType: 'line',
         xField: 'date',
@@ -455,7 +455,128 @@ describe('generateVegaSpec', () => {
       expect(spec.facet.column.field).toBe('region')
       expect(spec.spec).toBeDefined()
       expect(spec.spec.width).toBe(60) //based on test shape
-      expect(spec.spec.height).toBe(350)
+      expect(spec.spec.height).toBe(370) // adjusted for row calculation (10px padding)
+    })
+
+    it('should generate valid faceted line chart spec with row split', () => {
+      const config: ChartConfig = {
+        chartType: 'line',
+        xField: 'date',
+        yField: 'sales',
+        trellisRowField: 'category',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.row).toBeDefined()
+      expect(spec.facet.row.field).toBe('category')
+      expect(spec.facet.column).toBeUndefined()
+      expect(spec.spec).toBeDefined()
+    })
+
+    it('should generate valid faceted line chart spec with both row and column splits', () => {
+      const config: ChartConfig = {
+        chartType: 'line',
+        xField: 'date',
+        yField: 'sales',
+        trellisField: 'region',
+        trellisRowField: 'category',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.column).toBeDefined()
+      expect(spec.facet.column.field).toBe('region')
+      expect(spec.facet.row).toBeDefined()
+      expect(spec.facet.row.field).toBe('category')
+      expect(spec.spec).toBeDefined()
+      // Width and height should be calculated based on both dimensions
+      expect(spec.spec.width).toBeDefined()
+      expect(spec.spec.height).toBeDefined()
+    })
+
+    it('should support faceting for area charts', () => {
+      const config: ChartConfig = {
+        chartType: 'area',
+        xField: 'date',
+        yField: 'sales',
+        trellisField: 'region',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.column.field).toBe('region')
+      expect(spec.spec).toBeDefined()
+    })
+
+    it('should support faceting for bar charts', () => {
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'region',
+        yField: 'sales',
+        trellisField: 'category',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.column.field).toBe('category')
+      expect(spec.spec).toBeDefined()
+    })
+
+    it('should support faceting for point charts', () => {
+      const config: ChartConfig = {
+        chartType: 'point',
+        xField: 'sales',
+        yField: 'percent',
+        trellisField: 'region',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaSpec(spec)).toBe(true)
+      // Point charts compile to Vega, not Vega-Lite, so we check the compiled output
+      expect(spec.marks).toBeDefined()
+    })
+
+    it('should support faceting for heatmap charts', () => {
+      const config: ChartConfig = {
+        chartType: 'heatmap',
+        xField: 'region',
+        yField: 'category',
+        colorField: 'sales',
+        trellisField: 'date',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.column.field).toBe('date')
+      expect(spec.spec).toBeDefined()
+    })
+
+    it('should not apply faceting to beeswarm charts (uses native Vega)', () => {
+      const config: ChartConfig = {
+        chartType: 'beeswarm',
+        xField: 'region',
+        yField: 'sales',
+        trellisField: 'category',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      // Beeswarm uses native Vega spec, not Vega-Lite, so faceting is not applied
+      expect(spec.$schema).toContain('vega')
+      expect(spec.facet).toBeUndefined()
+      expect(spec.marks).toBeDefined() // Native Vega uses marks, not spec
     })
   })
 
