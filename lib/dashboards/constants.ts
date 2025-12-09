@@ -11,7 +11,7 @@ export interface ChartControl {
   options?: string[] // For fields with predefined options (like scale types)
 }
 
-export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'point', 'heatmap']
+export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'barh', 'point', 'heatmap', ]
 
 export const Controls: ChartControl[] = [
   {
