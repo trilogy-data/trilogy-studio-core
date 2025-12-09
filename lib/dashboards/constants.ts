@@ -11,7 +11,7 @@ export interface ChartControl {
   options?: string[] // For fields with predefined options (like scale types)
 }
 
-export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'barh', 'point', 'heatmap', 'usa-map']
+export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'barh', 'point', 'heatmap']
 
 // Chart types that don't have axes (no axis labels or ticks)
 export const NO_AXES_CHARTS: chartTypes[] = ['usa-map', 'tree', 'donut', 'headline']

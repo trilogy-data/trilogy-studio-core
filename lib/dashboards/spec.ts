@@ -251,8 +251,7 @@ export const generateVegaSpec = (
       break
 
     case 'usa-map':
-      const hasTrellis = (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
-      chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme, hasTrellis)
+      chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme)
       break
 
     case 'boxplot':
