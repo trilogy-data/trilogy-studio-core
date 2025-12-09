@@ -15,7 +15,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   /* flex: 1 1 100%; */
-  height: 99.9%;
+  height: 100%;
   background-color: var(--main-bg-color);
   max-height: 100%;
 }
@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
+  overflow: hidden;
   /* flex: 1 1 calc(100%-60px); */
   /* height: 100%; */
 }
@@ -33,6 +34,7 @@
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 1;
+  overflow: hidden;
   /* flex-wrap: wrap; */
   /* height: 100%; */
 }
@@ -44,6 +46,8 @@
 <script lang="ts">
 import Split from 'split.js'
 import { defineComponent, ref } from 'vue'
+
+const DEFAULT_SIZE = [60, 40]
 
 export default defineComponent({
   name: 'VerticalSplitLayout',
@@ -67,7 +71,7 @@ export default defineComponent({
     // @ts-ignore
     this.split = Split([this.$refs.editor, this.$refs.results], {
       direction: 'vertical',
-      sizes: [60, 40],
+      sizes: DEFAULT_SIZE,
       minSize: [250, 250],
       // minSize: 200,
       // expandToMin: true,
@@ -81,7 +85,7 @@ export default defineComponent({
     })
 
     // Initialize the results height
-    this.updateResultsHeight([60, 40])
+    this.updateResultsHeight(DEFAULT_SIZE)
   },
   beforeUnmount() {
     if (this.split) {
@@ -92,7 +96,6 @@ export default defineComponent({
   methods: {
     updateResultsHeight(split: number[]) {
       // @ts-ignore
-      // 50 is a constant to account for the header
       let resultHeight = this.$refs.wrapper.getBoundingClientRect().height
 
       if (this.$refs.results) {
@@ -101,7 +104,7 @@ export default defineComponent({
       }
       if (this.$refs.editor) {
         // @ts-ignore
-        this.editorHeight = resultHeight * (split[0] / 100) - 50
+        this.editorHeight = resultHeight * (split[0] / 100)
       }
     },
   },

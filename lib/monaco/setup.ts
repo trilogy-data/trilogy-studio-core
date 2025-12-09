@@ -216,10 +216,10 @@ export function configureTrilogy() {
         [/\->|\sas\s/, 'operator'],
       ],
       tripleQuoteString: [
-    [/'''/, { token: 'string', next: '@pop', nextEmbedded: '@pop' }],  // End triple quote - go back to root
-    [/[^']+/, 'string'],                         // Any non-quote content
-    [/'/, 'string'],                             // Single quotes inside (not triple)
-  ],
+        [/'''/, { token: 'string', next: '@pop', nextEmbedded: '@pop' }], // End triple quote - go back to root
+        [/[^']+/, 'string'], // Any non-quote content
+        [/'/, 'string'], // Single quotes inside (not triple)
+      ],
       afterDot: [[/[a-zA-Z0-9\_]+/, { token: 'variable', next: '@pop' }]],
       functionCheck: [
         [/\s*\(/, { token: 'delimiter', next: '@pop' }],

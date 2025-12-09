@@ -452,10 +452,10 @@ describe('generateVegaSpec', () => {
 
       expect(validateVegaLiteSpec(spec)).toBe(true)
       expect(spec.facet).toBeDefined()
-      expect(spec.facet.field).toBe('region')
+      expect(spec.facet.column.field).toBe('region')
       expect(spec.spec).toBeDefined()
-      expect(spec.spec.width).toBe('container')
-      expect(spec.spec.height).toBe(200)
+      expect(spec.spec.width).toBe(60) //based on test shape
+      expect(spec.spec.height).toBe(350)
     })
   })
 

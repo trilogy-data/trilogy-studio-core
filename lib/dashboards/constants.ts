@@ -124,8 +124,17 @@ export const Controls: ChartControl[] = [
   },
   {
     id: 'trellis-field',
-    label: 'Split Chart By',
+    label: 'Split Columns By',
     field: 'trellisField',
+    columnFilter: 'categorical',
+    allowEmpty: true,
+    visibleFor: ['line'],
+    filterGroup: 'appearance',
+  },
+  {
+    id: 'trellis-row-field',
+    label: 'Split Rows By',
+    field: 'trellisRowField',
     columnFilter: 'categorical',
     allowEmpty: true,
     visibleFor: ['line'],

@@ -161,18 +161,6 @@ export const generateVegaSpec = (
     localData,
   )
 
-  // Handle trellis (facet) layout if specified
-  if (config.trellisField && config.chartType === 'line') {
-    spec.facet = {
-      field: config.trellisField,
-      type: getVegaFieldType(config.trellisField, columns),
-      title: snakeCaseToCapitalizedWords(
-        columns.get(config.trellisField)?.description || config.trellisField,
-      ),
-    }
-    spec.spec = { width: 'container', height: 200 }
-  }
-
   const tooltipFields = generateTooltipFields(config, columns)
 
   // Generate chart specification based on chart type
@@ -335,6 +323,33 @@ export const generateVegaSpec = (
       size: { signal: '[width + 100, height]' },
     }
     return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
+  }
+  // Handle trellis (facet) layout if specified
+
+  if (config.trellisField && config.chartType === 'line') {
+    // set width and height based on container size
+    // get unique dimension values
+
+    spec.facet = {
+      column: {
+        field: config.trellisField,
+        type: getVegaFieldType(config.trellisField, columns),
+        title: snakeCaseToCapitalizedWords(
+          columns.get(config.trellisField)?.description || config.trellisField,
+        ),
+        // columns: isMobile ? 2 : 4,
+      },
+    }
+    delete spec.width
+    delete spec.height
+    let uniqueValues = Math.ceil(
+      Array.from(new Set(data?.map((d) => d[config.trellisField!]) || [])).length,
+    )
+    spec.spec = {
+      width: (containerWidth - uniqueValues * 70) / uniqueValues - 20,
+      height: containerHeight - 50,
+      ...spec.spec,
+    }
   }
   return spec
 }

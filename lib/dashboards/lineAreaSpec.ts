@@ -42,7 +42,6 @@ const createInteractiveLayer = (
       ...(filtered ? { color: markColor } : { color: 'lightgray' }),
       interpolate: 'step-after',
     },
-    data: { values: data },
 
     encoding: {
       x: createFieldEncoding(config.xField || '', columns, {
@@ -134,7 +133,6 @@ const createInteractiveLayer = (
       ...(filtered ? { color: 'orange' } : { color: 'lightgray' }),
       strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
     },
-    data: { values: data },
     transform: [{ filter: `datum.${config.yField2} != null` }],
     encoding: {
       x: createFieldEncoding(config.xField || '', columns),
@@ -211,7 +209,6 @@ export const createLineChartSpec = (
     layers = [...base, ...filtered]
   }
   return {
-    data: undefined,
     layer: layers,
   }
 }

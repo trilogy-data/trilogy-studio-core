@@ -259,7 +259,10 @@ export default defineComponent({
 
     // Setup resize observer for beeswarm charts
     const setupResizeObserver = () => {
-      if (controlsManager.internalConfig.value.chartType === 'beeswarm' && chartContentArea.value) {
+      if (
+        !props.containerWidth ||
+        (controlsManager.internalConfig.value.chartType === 'beeswarm' && chartContentArea.value)
+      ) {
         if (resizeObserver) {
           resizeObserver.disconnect()
         }
@@ -275,11 +278,13 @@ export default defineComponent({
           }
         })
 
-        resizeObserver.observe(chartContentArea.value)
+        if (chartContentArea.value) {
+          resizeObserver.observe(chartContentArea.value)
 
-        // Set initial internal dimensions
-        internalWidth.value = chartContentArea.value.clientWidth
-        internalHeight.value = chartContentArea.value.clientHeight
+          // Set initial internal dimensions
+          internalWidth.value = chartContentArea.value.clientWidth
+          internalHeight.value = chartContentArea.value.clientHeight
+        }
 
         console.log('Resize observer set up for beeswarm chart')
       } else {

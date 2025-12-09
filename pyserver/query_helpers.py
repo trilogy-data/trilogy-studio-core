@@ -28,6 +28,7 @@ from trilogy.core.statements.execute import (
     ProcessedQuery,
     ProcessedCopyStatement,
     ProcessedValidateStatement,
+    PROCESSED_STATEMENT_TYPES,
 )
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
@@ -124,13 +125,7 @@ def generate_single_query(
     base_filter_idx: int = 0,
     cleanup_concepts: bool = False,
 ) -> tuple[
-    ProcessedQuery
-    | ProcessedQueryPersist
-    | ProcessedShowStatement
-    | ProcessedRawSQLStatement
-    | ProcessedCopyStatement
-    | ProcessedValidateStatement
-    | None,
+    PROCESSED_STATEMENT_TYPES | None,
     list[QueryOutColumn],
     list[dict] | None,
 ]:
@@ -303,13 +298,7 @@ def generate_query_core(
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
 ) -> tuple[
-    ProcessedQuery
-    | ProcessedQueryPersist
-    | ProcessedShowStatement
-    | ProcessedRawSQLStatement
-    | ProcessedCopyStatement
-    | ProcessedValidateStatement
-    | None,
+    PROCESSED_STATEMENT_TYPES | None,
     list[QueryOutColumn],
     list[dict] | None,
 ]:
@@ -367,14 +356,7 @@ def generate_multi_query_core(
 ) -> list[
     tuple[
         str | None,
-        ProcessedQuery
-        | ProcessedQueryPersist
-        | ProcessedShowStatement
-        | ProcessedRawSQLStatement
-        | ProcessedCopyStatement
-        | ProcessedValidateStatement
-        | Exception
-        | None,
+        PROCESSED_STATEMENT_TYPES | Exception | None,
         list[QueryOutColumn],
         list[dict] | None,
     ],
@@ -413,14 +395,7 @@ def generate_multi_query_core(
     all: list[
         tuple[
             str | None,
-            ProcessedQuery
-            | ProcessedQueryPersist
-            | ProcessedShowStatement
-            | ProcessedRawSQLStatement
-            | ProcessedCopyStatement
-            | ProcessedValidateStatement
-            | Exception
-            | None,
+            PROCESSED_STATEMENT_TYPES | Exception | None,
             list[QueryOutColumn],
             list[dict] | None,
         ]
