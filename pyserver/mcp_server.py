@@ -310,7 +310,7 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     result = executor.execute_query(parsed)
     if not result:
         return QueryResult(headers=[], results=[])
-    headers:list[QueryHeader] = []
+    headers: list[QueryHeader] = []
     if isinstance(parsed, ProcessedRawSQLStatement):
         headers = [
             QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
