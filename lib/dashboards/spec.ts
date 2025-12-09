@@ -18,7 +18,7 @@ import { createHeatmapSpec } from './heatmapSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 import { createBeeSwarmSpec } from './beeSwarmSpec'
-import { TRELLIS_ELIGIBLE } from './constants'
+import { TRELLIS_ELIGIBLE, NO_AXES_CHARTS } from './constants'
 
 const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
@@ -251,7 +251,8 @@ export const generateVegaSpec = (
       break
 
     case 'usa-map':
-      chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme)
+      const hasTrellis = (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
+      chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme, hasTrellis)
       break
 
     case 'boxplot':
@@ -358,10 +359,13 @@ export const generateVegaSpec = (
       )
     }
 
+    // Charts without axes need less horizontal padding since they don't have axis labels
+    const horizontalPadding = NO_AXES_CHARTS.includes(config.chartType) ? 10 : 70
+
     spec.spec = {
-      width: (containerWidth - uniqueColumnValues * 70) / uniqueColumnValues - 20,
-      height: (containerHeight - uniqueRowValues * 10) / uniqueRowValues - 20,
       ...spec.spec,
+      width: (containerWidth - uniqueColumnValues * horizontalPadding) / uniqueColumnValues - 20,
+      height: (containerHeight - uniqueRowValues * 10) / uniqueRowValues - 20,
     }
   }
 

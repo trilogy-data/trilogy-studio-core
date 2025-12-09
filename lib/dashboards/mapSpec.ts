@@ -478,6 +478,7 @@ const createUSChoroplethMapSpec = (
   isMobile: boolean = false,
   currentTheme: string = 'light',
   stateList: 'short' | 'full' = 'short',
+  hasTrellis: boolean = false,
 ) => {
   const dataFields = [config.colorField, config.sizeField, config.geoField].filter(Boolean)
   let colorConfig = {}
@@ -493,10 +494,8 @@ const createUSChoroplethMapSpec = (
   } else {
     colorConfig = { value: 'steelblue' }
   }
-  return {
-    $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
-    width: 'container',
-    height: 'container',
+
+  const baseSpec = {
     projection: { type: 'albersUsa' },
     layer: [
       createUSBaseLayer(),
@@ -532,7 +531,9 @@ const createUSChoroplethMapSpec = (
           {
             lookup: stateList === 'short' ? 'abbr' : 'name',
             from: {
-              data: { values: data },
+              // When trellis is enabled, reference the top-level data source
+              // Otherwise use inline data values
+              ...(hasTrellis ? { data: { name: 'source' } } : { data: { values: data } }),
               key: config.geoField,
               fields: dataFields,
             },
@@ -540,6 +541,20 @@ const createUSChoroplethMapSpec = (
         ],
       },
     ],
+  }
+
+  // When trellis is enabled, return just the layer structure
+  // The parent will handle $schema, width, height, and data
+  if (hasTrellis) {
+    return baseSpec
+  }
+
+  // When not using trellis, return complete spec
+  return {
+    $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+    width: 'container',
+    height: 'container',
+    ...baseSpec,
   }
 }
 
@@ -553,6 +568,7 @@ export const createMapSpec = (
   isMobile: boolean,
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
+  hasTrellis: boolean = false,
 ) => {
   if (!data || data.length === 0) {
     // TODO: return blank map schema
@@ -578,7 +594,7 @@ export const createMapSpec = (
 
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme, 'short', hasTrellis)
   } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state')) {
     return createUSChoroplethMapSpec(
       config,
@@ -588,6 +604,7 @@ export const createMapSpec = (
       isMobile,
       currentTheme,
       'full',
+      hasTrellis,
     )
   }
   // Handle country map case
@@ -613,10 +630,21 @@ export const createMapSpec = (
         config.hideLegend,
       )
     }
-    return {
-      $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
-      width: 'container',
-      height: 'container',
+
+    // For country maps, we need to add an 'id' field for the lookup
+    const transformedData = data?.map((row) => {
+      return {
+        id: idLookup(row),
+        ...row,
+      }
+    })
+
+    // When trellis is enabled, we need to:
+    // 1. Add a transform to compute the id field from the geo field
+    // 2. Use a lookup that references this transformed data inline (not the main data source)
+    // This is because we can't easily do the country name -> id lookup in Vega-Lite expressions
+
+    const baseSpec = {
       layer: [
         {
           data: {
@@ -640,16 +668,20 @@ export const createMapSpec = (
             {
               lookup: 'id',
               from: {
-                data: {
-                  values: data?.map((row) => {
-                    return {
-                      id: idLookup(row),
-                      ...row,
+                // For trellis, lookup from the main data source with a secondary lookup
+                // For non-trellis, use the transformed data directly
+                ...(hasTrellis
+                  ? {
+                      data: { name: 'source' },
+                      key: config.geoField,
+                      fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
                     }
-                  }),
-                },
-                key: 'id',
-                fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
+                  : {
+                      data: { values: transformedData },
+                      key: 'id',
+                      fields: [config.colorField, config.sizeField, config.geoField].filter((x) => x),
+                    }
+                ),
               },
             },
           ],
@@ -697,6 +729,19 @@ export const createMapSpec = (
         },
       ],
       config: { view: { stroke: null } },
+    }
+
+    // When trellis is enabled, return just the layer/projection structure
+    if (hasTrellis) {
+      return baseSpec
+    }
+
+    // When not using trellis, return complete spec
+    return {
+      $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+      width: 'container',
+      height: 'container',
+      ...baseSpec,
     }
   }
   return {
