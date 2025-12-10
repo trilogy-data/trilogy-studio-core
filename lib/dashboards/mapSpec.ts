@@ -578,7 +578,7 @@ export const createMapSpec = (
 
   // Handle choropleth case
   if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state_short')) {
-    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme)
+    return createUSChoroplethMapSpec(config, data, columns, intChart, isMobile, currentTheme, 'short')
   } else if (config.geoField && getColumnHasTrait(config.geoField, columns, 'us_state')) {
     return createUSChoroplethMapSpec(
       config,
@@ -613,6 +613,7 @@ export const createMapSpec = (
         config.hideLegend,
       )
     }
+
     return {
       $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
       width: 'container',

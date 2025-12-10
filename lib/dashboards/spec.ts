@@ -18,13 +18,8 @@ import { createHeatmapSpec } from './heatmapSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 import { createBeeSwarmSpec } from './beeSwarmSpec'
-/**
- * Create a field encoding for Vega-Lite
- */
+import { TRELLIS_ELIGIBLE, NO_AXES_CHARTS } from './constants'
 
-/**
- * Generate tooltip fields with proper formatting
- */
 const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
 
@@ -283,7 +278,8 @@ export const generateVegaSpec = (
   }
 
   // Apply chart spec to main spec
-  if (config.trellisField && !['headline', 'usa-map'].includes(config.chartType)) {
+  const hasTrellis = (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
+  if (hasTrellis) {
     spec.spec = { ...spec.spec, ...chartSpec }
   } else {
     spec = { ...spec, ...chartSpec }
@@ -315,6 +311,64 @@ export const generateVegaSpec = (
       color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
     }
   }
+
+  // Handle trellis (facet) layout if specified - must be done before compiling to Vega
+  if ((config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)) {
+    // set width and height based on container size
+    // get unique dimension values
+
+    spec.facet = {}
+
+    if (config.trellisField) {
+      spec.facet.column = {
+        field: config.trellisField,
+        type: getVegaFieldType(config.trellisField, columns),
+        title: snakeCaseToCapitalizedWords(
+          columns.get(config.trellisField)?.description || config.trellisField,
+        ),
+      }
+    }
+
+    if (config.trellisRowField) {
+      spec.facet.row = {
+        field: config.trellisRowField,
+        type: getVegaFieldType(config.trellisRowField, columns),
+        title: snakeCaseToCapitalizedWords(
+          columns.get(config.trellisRowField)?.description || config.trellisRowField,
+        ),
+      }
+    }
+
+    delete spec.width
+    delete spec.height
+
+    // Calculate dimensions based on faceting
+    let uniqueColumnValues = 1
+    let uniqueRowValues = 1
+
+    if (config.trellisField) {
+      uniqueColumnValues = Math.ceil(
+        Array.from(new Set(data?.map((d) => d[config.trellisField!]) || [])).length,
+      )
+    }
+
+    if (config.trellisRowField) {
+      uniqueRowValues = Math.ceil(
+        Array.from(new Set(data?.map((d) => d[config.trellisRowField!]) || [])).length,
+      )
+    }
+
+    // Charts without axes need less horizontal padding since they don't have axis labels
+    const horizontalPadding = NO_AXES_CHARTS.includes(config.chartType) ? 10 : 70
+
+    spec.spec = {
+      ...spec.spec,
+      width: (containerWidth - uniqueColumnValues * horizontalPadding) / uniqueColumnValues - 20,
+      height: (containerHeight - uniqueRowValues * 10) / uniqueRowValues - 20,
+    }
+  }
+
+  // Compile point charts to Vega after faceting is applied
   if (config.chartType === 'point') {
     const customLabelTransform = {
       type: 'label',
@@ -324,32 +378,6 @@ export const generateVegaSpec = (
     }
     return addLabelTransformToTextMarks(compile(spec).spec, customLabelTransform)
   }
-  // Handle trellis (facet) layout if specified
 
-  if (config.trellisField && config.chartType === 'line') {
-    // set width and height based on container size
-    // get unique dimension values
-
-    spec.facet = {
-      column: {
-        field: config.trellisField,
-        type: getVegaFieldType(config.trellisField, columns),
-        title: snakeCaseToCapitalizedWords(
-          columns.get(config.trellisField)?.description || config.trellisField,
-        ),
-        // columns: isMobile ? 2 : 4,
-      },
-    }
-    delete spec.width
-    delete spec.height
-    let uniqueValues = Math.ceil(
-      Array.from(new Set(data?.map((d) => d[config.trellisField!]) || [])).length,
-    )
-    spec.spec = {
-      width: (containerWidth - uniqueValues * 70) / uniqueValues - 20,
-      height: containerHeight - 50,
-      ...spec.spec,
-    }
-  }
   return spec
 }

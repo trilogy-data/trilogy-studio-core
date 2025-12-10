@@ -278,6 +278,16 @@ export const determineDefaultConfig = (
     if (numericColumns.length > 1 && !defaults.colorField) {
       defaults.colorField = numericColumns[1].name
     }
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
+    }
   } else if (defaults.chartType === 'donut') {
     defaults.yField = categoricalColumns[0].name
     defaults.xField = numericColumns[0].name
@@ -312,10 +322,30 @@ export const determineDefaultConfig = (
     if (!defaults.colorField && nonAssignedNumeric.length > 1) {
       defaults.colorField = nonAssignedNumeric[1].name
     }
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
+    }
   } else if (defaults.chartType === 'heatmap') {
     defaults.xField = categoricalColumns[0].name
     defaults.yField = categoricalColumns[1].name
     defaults.colorField = numericColumns[0].name
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
+    }
   } else if (defaults.chartType === 'bar') {
     defaults.xField = categoricalColumns[0].name
     let nonDateNumeric = numericColumns.filter(
@@ -330,6 +360,16 @@ export const determineDefaultConfig = (
     }
     if (numericColumns.length > 1 && !defaults.colorField) {
       defaults.colorField = numericColumns[1].name
+    }
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'headline') {
     defaults.xField = numericColumns[0].name
@@ -352,6 +392,16 @@ export const determineDefaultConfig = (
     )
     if (nonAssignedCategorical.length > 0) {
       defaults.colorField = nonAssignedCategorical[0].name
+    }
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'usa-map') {
     // For USA map, we need:
@@ -382,10 +432,25 @@ export const determineDefaultConfig = (
       (col) =>
         col.name !== defaults.colorField &&
         col.name !== defaults.xField &&
-        col.name !== defaults.yField,
+        col.name !== defaults.yField &&
+        col.name !== defaults.geoField,
     )
     if (nonAssignedCategorical.length > 0 && !defaults.annotationField) {
       defaults.annotationField = nonAssignedCategorical[0].name
+    }
+    // Use extra categorical columns for trellising
+    const trellisableCategorical = categoricalColumns.filter(
+      (col) => col.name !== defaults.geoField &&
+               col.name !== defaults.xField &&
+               col.name !== defaults.yField &&
+               col.name !== defaults.colorField &&
+               col.name !== defaults.annotationField,
+    )
+    if (trellisableCategorical.length > 0) {
+      defaults.trellisRowField = trellisableCategorical[0].name
+    }
+    if (trellisableCategorical.length > 1) {
+      defaults.trellisField = trellisableCategorical[1].name
     }
   }
 
