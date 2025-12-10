@@ -5,9 +5,9 @@
         <button @click="communityStore.refreshData()" :disabled="communityStore.loading">
           {{ communityStore.loading ? 'Refreshing...' : 'Refresh' }}
         </button>
-        <!-- <button @click="communityStore.openAddRepositoryModal()" :disabled="communityStore.loading">
-          Add Repository
-        </button> -->
+        <button @click="communityStore.openAddStoreModal()" :disabled="communityStore.loading">
+          Add Store
+        </button>
       </div>
     </template>
 
@@ -36,7 +36,15 @@
       @model-selected="handleModelSelected"
     />
 
-    <!-- Add Repository Modal -->
+    <!-- Add Store Modal -->
+    <AddStoreModal
+      :show="communityStore.showAddStoreModal"
+      :loading="communityStore.addingStore"
+      @close="communityStore.closeAddStoreModal()"
+      @add="handleAddStoreSubmit"
+    />
+
+    <!-- Add Repository Modal (Deprecated - kept for backward compatibility) -->
     <div
       v-if="communityStore.showAddRepositoryModal"
       class="confirmation-overlay"
@@ -107,6 +115,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useCommunityApiStore, useScreenNavigation } from '../../stores'
 import SidebarList from './SidebarList.vue'
 import CommunityModelListItem from './CommunityModelListItem.vue'
+import AddStoreModal from '../community/AddStoreModal.vue'
 import type { ModelFile, ModelRoot } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 
@@ -151,6 +160,17 @@ export default {
       }
     }
 
+    // Handle adding a store from the modal
+    const handleAddStoreSubmit = async (store: any) => {
+      addError.value = null
+      try {
+        await communityStore.addStore(store)
+        communityStore.closeAddStoreModal()
+      } catch (error) {
+        addError.value = error instanceof Error ? error.message : 'Failed to add store'
+      }
+    }
+
     // Handle model selection
     const handleModelSelected = (model: ModelFile, key: string, modelRoot: ModelRoot) => {
       navigationStore.openTab('community-models', model.name, key)
@@ -185,6 +205,7 @@ export default {
       addError,
       getModelRootByKey,
       handleAddRepository,
+      handleAddStoreSubmit,
       handleModelSelected,
       handleItemClick,
       handleItemToggle,
@@ -195,6 +216,7 @@ export default {
   components: {
     SidebarList,
     CommunityModelListItem,
+    AddStoreModal,
   },
 }
 </script>
@@ -242,6 +264,7 @@ export default {
   color: #991b1b;
 }
 
+/* Deprecated modal styles kept for backward compatibility with Add Repository modal */
 .confirmation-overlay {
   position: fixed;
   top: 0;
@@ -285,7 +308,8 @@ export default {
   color: #dc2626;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
@@ -294,7 +318,8 @@ export default {
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 1px #2563eb;
