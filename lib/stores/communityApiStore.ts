@@ -10,7 +10,6 @@ import {
   type AnyModelStore,
   type GithubModelStore,
   type GenericModelStore,
-  DEFAULT_MODEL_ROOT,
   DEFAULT_GITHUB_STORE,
 } from '../remotes/models'
 import { fetchFromAllStores } from '../remotes/storeService'
@@ -54,8 +53,8 @@ const useCommunityApiStore = defineStore('communityApi', {
     stores: [DEFAULT_GITHUB_STORE],
     filesByStore: {},
 
-    // Backward compatibility
-    modelRoots: [DEFAULT_MODEL_ROOT],
+    // Backward compatibility - empty by default since we're using the new stores system
+    modelRoots: [],
     filesByRoot: {},
 
     errors: {},

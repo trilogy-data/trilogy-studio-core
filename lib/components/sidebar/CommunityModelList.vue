@@ -126,10 +126,16 @@ export default {
     const navigationStore = useScreenNavigation()
     const collapsed = ref<Record<string, boolean>>({})
 
+    // Initialize collapsed state for legacy modelRoots
     for (const key in communityStore.modelRoots) {
       collapsed.value[
         `${communityStore.modelRoots[key].owner}-${communityStore.modelRoots[key].repo}-${communityStore.modelRoots[key].branch}`
       ] = false
+    }
+
+    // Initialize collapsed state for new stores
+    for (const store of communityStore.stores) {
+      collapsed.value[store.id] = false
     }
 
     // Local state for error handling in the modal
@@ -191,6 +197,8 @@ export default {
         communityStore.modelRoots,
         communityStore.filesByRoot,
         collapsed.value,
+        communityStore.stores,
+        communityStore.filesByStore,
       )
     })
 

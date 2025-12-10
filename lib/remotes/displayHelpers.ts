@@ -1,6 +1,6 @@
 // modelTreeBuilder.ts
 
-import { type ModelRoot, type ModelFile } from './models'
+import { type ModelRoot, type ModelFile, type AnyModelStore } from './models'
 import { KeySeparator } from '../data/constants'
 
 export interface TreeNode {
@@ -10,22 +10,96 @@ export interface TreeNode {
   indent: number
   modelRoot: ModelRoot
   model?: ModelFile
+  store?: AnyModelStore
 }
 
 /**
  * Build a nested tree structure with model roots, engines, and models
- * @param modelRoots Array of model roots to include
- * @param allFiles All model files organized by model root
+ * Supports both new store system and legacy modelRoot system
+ * @param modelRoots Array of model roots to include (legacy)
+ * @param allFiles All model files organized by model root (legacy)
  * @param collapsed Object tracking which nodes are collapsed
+ * @param stores Array of stores to include (new system)
+ * @param filesByStore All model files organized by store ID (new system)
  * @returns Tree structure with nested hierarchy
  */
 export const buildCommunityModelTree = (
   modelRoots: ModelRoot[] = [],
   allFiles: Record<string, ModelFile[]> = {},
   collapsed: Record<string, boolean> = {},
+  stores: AnyModelStore[] = [],
+  filesByStore: Record<string, ModelFile[]> = {},
 ): TreeNode[] => {
   const tree: TreeNode[] = []
 
+  // Process new store system
+  stores.forEach((store) => {
+    const rootKey = store.id
+    const rootDisplayName = store.name
+
+    // Create a pseudo-ModelRoot for backward compatibility
+    const pseudoModelRoot: ModelRoot = {
+      owner: store.type === 'github' ? store.owner : '',
+      repo: store.type === 'github' ? store.repo : '',
+      branch: store.type === 'github' ? store.branch : 'main',
+      displayName: rootDisplayName,
+    }
+
+    // Add the store root node
+    tree.push({
+      type: 'root',
+      label: rootDisplayName,
+      key: rootKey,
+      indent: 0,
+      modelRoot: pseudoModelRoot,
+      store,
+    })
+
+    // If this root is not collapsed, add its engines and models
+    if (!collapsed[rootKey]) {
+      const files = filesByStore[rootKey] || []
+      const engines: Record<string, ModelFile[]> = {}
+
+      // Group files by engine
+      files.forEach((file) => {
+        if (!engines[file.engine]) {
+          engines[file.engine] = []
+        }
+        engines[file.engine].push(file)
+      })
+
+      // Add engine nodes
+      Object.keys(engines)
+        .sort()
+        .forEach((engine) => {
+          const engineKey = `${rootKey}${KeySeparator}${engine}`
+          tree.push({
+            type: 'engine',
+            label: engine,
+            key: engineKey,
+            indent: 1,
+            modelRoot: pseudoModelRoot,
+            store,
+          })
+          // If this engine is not collapsed, add its models
+          if (!collapsed[engineKey]) {
+            engines[engine].forEach((file) => {
+              tree.push({
+                type: 'model',
+                label: file.name,
+                key: `${engineKey}${KeySeparator}${file.name}`,
+                indent: 2,
+                model: file,
+                modelRoot: pseudoModelRoot,
+                store,
+              })
+            })
+          }
+        })
+    }
+  })
+
+  // Process legacy modelRoots system for backward compatibility
   modelRoots.forEach((modelRoot) => {
     const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
     const rootDisplayName =
