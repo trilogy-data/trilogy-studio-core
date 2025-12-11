@@ -29,3 +29,9 @@ mypy . --explicit-package-bases
 ruff check . --fix
 black
 ```
+
+The virtual env should always be referenced from base of repo; always use a virtual env.
+
+example on windows:
+
+```./venv/Scripts/python.exe```

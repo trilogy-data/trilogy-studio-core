@@ -6,7 +6,7 @@
         <div class="form-group">
           <label>Store Type: <span class="required">*</span></label>
           <select v-model="storeType">
-            <option value="generic">Generic URL Store</option>
+            <option value="generic">Generic</option>
             <option value="github">GitHub Repository</option>
           </select>
         </div>
