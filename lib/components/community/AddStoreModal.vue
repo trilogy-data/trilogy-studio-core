@@ -15,12 +15,7 @@
         <template v-if="storeType === 'generic'">
           <div class="form-group">
             <label>Store Name: <span class="required">*</span></label>
-            <input
-              v-model="storeName"
-              type="text"
-              placeholder="e.g., Local Dev Store"
-              required
-            />
+            <input v-model="storeName" type="text" placeholder="e.g., Local Dev Store" required />
           </div>
           <div class="form-group">
             <label>Base URL: <span class="required">*</span></label>
@@ -46,12 +41,7 @@
           </div>
           <div class="form-group">
             <label>Repository Name: <span class="required">*</span></label>
-            <input
-              v-model="repo"
-              type="text"
-              placeholder="e.g., trilogy-public-models"
-              required
-            />
+            <input v-model="repo" type="text" placeholder="e.g., trilogy-public-models" required />
           </div>
           <div class="form-group">
             <label>Branch: <span class="required">*</span></label>

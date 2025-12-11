@@ -1,12 +1,7 @@
 import { defineStore } from 'pinia'
-import {
-  fetchAllModelFiles,
-  filterModelFiles,
-  getAvailableEngines,
-} from '../remotes/githubApiService'
+import { filterModelFiles, getAvailableEngines } from '../remotes/githubApiService'
 import {
   type ModelFile,
-  type ModelRoot,
   type AnyModelStore,
   type GithubModelStore,
   type GenericModelStore,
@@ -18,13 +13,9 @@ import type { ModelConfigStoreType } from './modelStore'
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
 
 export interface CommunityApiState {
-  // Multiple store support (new)
+  // Multiple store support
   stores: AnyModelStore[]
   filesByStore: Record<string, ModelFile[]>
-
-  // Backward compatibility
-  modelRoots: ModelRoot[]
-  filesByRoot: Record<string, ModelFile[]>
 
   errors: Record<string, string>
   loading: boolean
@@ -40,11 +31,6 @@ export interface CommunityApiState {
     repo: string
     branch: string
   }
-
-  // Deprecated modal state
-  showAddRepositoryModal: boolean
-  addingRepository: boolean
-  newRepo: ModelRoot
 }
 
 const useCommunityApiStore = defineStore('communityApi', {
@@ -53,14 +39,10 @@ const useCommunityApiStore = defineStore('communityApi', {
     stores: [DEFAULT_GITHUB_STORE],
     filesByStore: {},
 
-    // Backward compatibility - empty by default since we're using the new stores system
-    modelRoots: [],
-    filesByRoot: {},
-
     errors: {},
     loading: false,
 
-    // New modal state
+    // Modal state
     showAddStoreModal: false,
     addingStore: false,
     newStore: {
@@ -71,16 +53,6 @@ const useCommunityApiStore = defineStore('communityApi', {
       repo: '',
       branch: 'main',
     },
-
-    // Deprecated modal state
-    showAddRepositoryModal: false,
-    addingRepository: false,
-    newRepo: {
-      owner: '',
-      repo: '',
-      branch: 'main',
-      displayName: '',
-    },
   }),
 
   getters: {
@@ -90,10 +62,6 @@ const useCommunityApiStore = defineStore('communityApi', {
       Object.values(state.filesByStore).forEach((storeFiles) => {
         files.push(...storeFiles)
       })
-      // Backward compatibility: also include files from filesByRoot
-      Object.values(state.filesByRoot).forEach((rootFiles) => {
-        files.push(...rootFiles)
-      })
       return files
     },
 
@@ -102,9 +70,6 @@ const useCommunityApiStore = defineStore('communityApi', {
       const files: ModelFile[] = []
       Object.values(state.filesByStore).forEach((storeFiles) => {
         files.push(...storeFiles)
-      })
-      Object.values(state.filesByRoot).forEach((rootFiles) => {
-        files.push(...rootFiles)
       })
       return getAvailableEngines(files)
     },
@@ -165,19 +130,11 @@ const useCommunityApiStore = defineStore('communityApi', {
       try {
         console.log('Fetching community model files from all stores...')
 
-        // Fetch from new store system
+        // Fetch from store system
         const storeResult = await fetchFromAllStores(this.stores)
         console.log('Fetched from stores:', storeResult)
         this.filesByStore = storeResult.filesByStore
         Object.assign(this.errors, storeResult.errors)
-
-        // Backward compatibility: also fetch from old modelRoots system if any exist beyond default
-        if (this.modelRoots.length > 0) {
-          const rootResult = await fetchAllModelFiles(this.modelRoots)
-          console.log('Fetched from legacy roots:', rootResult)
-          this.filesByRoot = rootResult.filesByRoot
-          Object.assign(this.errors, rootResult.errors)
-        }
       } catch (error) {
         console.error('Error fetching all model files:', error)
         // Set a general error if the whole operation fails
@@ -195,76 +152,7 @@ const useCommunityApiStore = defineStore('communityApi', {
     },
 
     /**
-     * Add a new model repository
-     */
-    async addRepository(newModelRoot: ModelRoot): Promise<boolean> {
-      if (!newModelRoot.owner || !newModelRoot.repo || !newModelRoot.branch) {
-        throw new Error('Owner, repo, and branch are required')
-      }
-
-      // Check if repository already exists
-      const repoKey = `${newModelRoot.owner}/${newModelRoot.repo}:${newModelRoot.branch}`
-      const exists = this.modelRoots.some(
-        (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
-      )
-
-      if (exists) {
-        throw new Error('This repository is already added')
-      }
-
-      this.addingRepository = true
-      try {
-        // Add display name if not provided
-        const modelRoot: ModelRoot = {
-          ...newModelRoot,
-          displayName:
-            newModelRoot.displayName ||
-            `${newModelRoot.owner}/${newModelRoot.repo}:${newModelRoot.branch}`,
-        }
-
-        // Add to the list of model roots
-        this.modelRoots.push(modelRoot)
-
-        // Refresh data to include the new repository
-        await this.fetchAllFiles()
-
-        return true
-      } catch (error) {
-        console.error('Error adding repository:', error)
-        // Remove the repository if it was added but failed to fetch
-        const addedIndex = this.modelRoots.findIndex(
-          (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
-        )
-        if (addedIndex > -1) {
-          this.modelRoots.splice(addedIndex, 1)
-        }
-        throw error
-      } finally {
-        this.addingRepository = false
-      }
-    },
-
-    /**
-     * Remove a model repository
-     */
-    removeRepository(modelRoot: ModelRoot): void {
-      const repoKey = `${modelRoot.owner}/${modelRoot.repo}:${modelRoot.branch}`
-      const index = this.modelRoots.findIndex(
-        (root) => `${root.owner}/${root.repo}:${root.branch}` === repoKey,
-      )
-
-      if (index > -1) {
-        this.modelRoots.splice(index, 1)
-
-        // Remove associated data
-        const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
-        delete this.filesByRoot[rootKey]
-        delete this.errors[rootKey]
-      }
-    },
-
-    /**
-     * Filter files across all repositories
+     * Filter files across all stores
      */
     filteredFiles(
       searchQuery: string,
@@ -278,7 +166,7 @@ const useCommunityApiStore = defineStore('communityApi', {
       }
       let base = this.allFiles
       if (remote) {
-        base = this.filesByRoot[remote]
+        base = this.filesByStore[remote]
       }
       if (!base) {
         return []
@@ -287,51 +175,10 @@ const useCommunityApiStore = defineStore('communityApi', {
     },
 
     /**
-     * Get files from a specific repository
+     * Get files from a specific store
      */
-    getFilesByRepository(modelRoot: ModelRoot): ModelFile[] {
-      const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
-      return this.filesByRoot[rootKey] || []
-    },
-
-    /**
-     * Modal management actions
-     */
-    openAddRepositoryModal(): void {
-      this.showAddRepositoryModal = true
-      this.newRepo = {
-        owner: '',
-        repo: '',
-        branch: 'main',
-        displayName: '',
-      }
-    },
-
-    closeAddRepositoryModal(): void {
-      this.showAddRepositoryModal = false
-      this.newRepo = {
-        owner: '',
-        repo: '',
-        branch: 'main',
-        displayName: '',
-      }
-    },
-
-    /**
-     * Handle the complete add repository flow including modal management
-     */
-    async handleAddRepository(): Promise<void> {
-      if (!this.newRepo.owner || !this.newRepo.repo || !this.newRepo.branch) {
-        throw new Error('Please fill in all required fields')
-      }
-
-      try {
-        await this.addRepository({ ...this.newRepo })
-        this.closeAddRepositoryModal()
-      } catch (error) {
-        // Re-throw to let the component handle the error display
-        throw error
-      }
+    getFilesByStore(storeId: string): ModelFile[] {
+      return this.filesByStore[storeId] || []
     },
 
     /**
@@ -488,11 +335,10 @@ const useCommunityApiStore = defineStore('communityApi', {
     },
 
     /**
-     * Clear error for a specific repository
+     * Clear error for a specific store
      */
-    clearRepositoryError(modelRoot: ModelRoot): void {
-      const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
-      delete this.errors[rootKey]
+    clearStoreError(storeId: string): void {
+      delete this.errors[storeId]
     },
   },
 })

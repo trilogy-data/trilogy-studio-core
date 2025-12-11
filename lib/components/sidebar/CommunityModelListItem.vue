@@ -35,7 +35,20 @@
       </template>
       <template v-else-if="item.type === 'root'">
         <span class="tag-container hover-icon">
-          <!-- Add any root-specific actions here -->
+          <!-- Only show delete button for non-default stores -->
+          <tooltip
+            v-if="item.store && !isDefaultStore(item.store)"
+            content="Remove Store"
+            position="left"
+          >
+            <span
+              class="remove-btn hover-icon"
+              @click.stop="$emit('delete-store', item.store)"
+              :data-testid="`delete-store-${item.store.id}`"
+            >
+              <i class="mdi mdi-trash-can-outline"></i>
+            </span>
+          </tooltip>
         </span>
       </template>
     </template>
@@ -45,6 +58,9 @@
 <script lang="ts">
 import SidebarItem from './GenericSidebarItem.vue'
 import ConnectionIcon from './ConnectionIcon.vue'
+import Tooltip from '../Tooltip.vue'
+import { DEFAULT_GITHUB_STORE } from '../../remotes/models'
+import type { AnyModelStore } from '../../remotes/models'
 
 export default {
   name: 'ModelListItem',
@@ -66,7 +82,7 @@ export default {
       default: false,
     },
   },
-  emits: ['item-click', 'model-selected', 'model-details', 'item-toggle'],
+  emits: ['item-click', 'model-selected', 'model-details', 'item-toggle', 'delete-store'],
   setup(props, { emit }) {
     const handleItemClick = () => {
       if (props.item.type === 'model') {
@@ -91,21 +107,33 @@ export default {
       return ''
     }
 
+    const isDefaultStore = (store: AnyModelStore): boolean => {
+      return store.id === DEFAULT_GITHUB_STORE.id
+    }
+
     return {
       handleItemClick,
       handleToggle,
       getItemIcon,
+      isDefaultStore,
     }
   },
   components: {
     SidebarItem,
     ConnectionIcon,
+    Tooltip,
   },
 }
 </script>
 
 <style scoped>
 .details-btn {
+  margin-left: auto;
+  cursor: pointer;
+  flex: 1;
+}
+
+.remove-btn {
   margin-left: auto;
   cursor: pointer;
   flex: 1;

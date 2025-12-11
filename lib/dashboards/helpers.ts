@@ -280,7 +280,10 @@ export const determineDefaultConfig = (
     }
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+      (col) =>
+        col.name !== defaults.yField &&
+        col.name !== defaults.xField &&
+        col.name !== defaults.colorField,
     )
     if (trellisableCategorical.length > 0) {
       defaults.trellisRowField = trellisableCategorical[0].name
@@ -324,7 +327,10 @@ export const determineDefaultConfig = (
     }
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+      (col) =>
+        col.name !== defaults.yField &&
+        col.name !== defaults.xField &&
+        col.name !== defaults.colorField,
     )
     if (trellisableCategorical.length > 0) {
       defaults.trellisRowField = trellisableCategorical[0].name
@@ -363,7 +369,10 @@ export const determineDefaultConfig = (
     }
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+      (col) =>
+        col.name !== defaults.yField &&
+        col.name !== defaults.xField &&
+        col.name !== defaults.colorField,
     )
     if (trellisableCategorical.length > 0) {
       defaults.trellisRowField = trellisableCategorical[0].name
@@ -395,7 +404,10 @@ export const determineDefaultConfig = (
     }
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField && col.name !== defaults.colorField,
+      (col) =>
+        col.name !== defaults.yField &&
+        col.name !== defaults.xField &&
+        col.name !== defaults.colorField,
     )
     if (trellisableCategorical.length > 0) {
       defaults.trellisRowField = trellisableCategorical[0].name
@@ -440,11 +452,12 @@ export const determineDefaultConfig = (
     }
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.geoField &&
-               col.name !== defaults.xField &&
-               col.name !== defaults.yField &&
-               col.name !== defaults.colorField &&
-               col.name !== defaults.annotationField,
+      (col) =>
+        col.name !== defaults.geoField &&
+        col.name !== defaults.xField &&
+        col.name !== defaults.yField &&
+        col.name !== defaults.colorField &&
+        col.name !== defaults.annotationField,
     )
     if (trellisableCategorical.length > 0) {
       defaults.trellisRowField = trellisableCategorical[0].name

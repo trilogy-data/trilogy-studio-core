@@ -116,10 +116,9 @@ const handleDashboardLinkCopy = (component: any): void => {
 
 onMounted(async () => {
   let refresh = false
-  // loop over communityApiStore.modelRoots and make sure each is in
-  // communityApiStore.filesByRoot
-  for (const rootKey of Object.keys(communityApiStore.modelRoots)) {
-    if (!communityApiStore.filesByRoot[rootKey]) {
+  // Check if we need to refresh data for any stores
+  for (const store of communityApiStore.stores) {
+    if (!communityApiStore.filesByStore[store.id]) {
       refresh = true
       break
     }

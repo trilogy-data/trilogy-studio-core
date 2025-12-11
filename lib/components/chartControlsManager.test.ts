@@ -43,19 +43,15 @@ describe('ChartControlsManager', () => {
     configChanges = []
     // Create manager instance
     const chartHelpers = new ChromaChartHelpers({
-      onDimensionClick: () => { },
-      onPointClick: () => { },
-      onBackgroundClick: () => { },
-      onDrilldownClick: () => { },
+      onDimensionClick: () => {},
+      onPointClick: () => {},
+      onBackgroundClick: () => {},
+      onDrilldownClick: () => {},
     })
     manager = new ChartControlsManager(chartHelpers)
   })
 
   describe('showTitle persistence', () => {
-
-
-
-
     it('should preserve showTitle: false during validateAndResetConfig', () => {
       // Initialize with a specific config
       const initialConfig: Partial<ChartConfig> = {
@@ -92,8 +88,6 @@ describe('ChartControlsManager', () => {
       // Should use the explicit value from initialConfig
       expect(manager.internalConfig.value.showTitle).toBe(true)
     })
-
-
   })
 
   describe('config change callback', () => {

@@ -278,7 +278,8 @@ export const generateVegaSpec = (
   }
 
   // Apply chart spec to main spec
-  const hasTrellis = (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
+  const hasTrellis =
+    (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
   if (hasTrellis) {
     spec.spec = { ...spec.spec, ...chartSpec }
   } else {
@@ -313,7 +314,10 @@ export const generateVegaSpec = (
   }
 
   // Handle trellis (facet) layout if specified - must be done before compiling to Vega
-  if ((config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)) {
+  if (
+    (config.trellisField || config.trellisRowField) &&
+    TRELLIS_ELIGIBLE.includes(config.chartType)
+  ) {
     // set width and height based on container size
     // get unique dimension values
 
