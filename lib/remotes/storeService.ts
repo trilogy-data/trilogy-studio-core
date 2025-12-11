@@ -5,7 +5,7 @@ import type {
   ModelFile,
   StoreIndex,
 } from './models'
-import { fetchWithBackoff } from './githubApiService'
+import { fetchWithBackoff } from './modelApiService'
 
 /**
  * Fetch models from a generic store

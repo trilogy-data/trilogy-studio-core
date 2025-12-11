@@ -114,7 +114,7 @@
 import { ref, computed, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
-import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/githubApiService'
+import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/modelApiService'
 import type { ModelFile } from '../../remotes/models'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 

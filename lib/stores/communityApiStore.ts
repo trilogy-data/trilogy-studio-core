@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { filterModelFiles, getAvailableEngines } from '../remotes/githubApiService'
+import { filterModelFiles, getAvailableEngines } from '../remotes/modelApiService'
 import {
   type ModelFile,
   type AnyModelStore,
