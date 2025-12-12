@@ -12,12 +12,15 @@ import type { ModelConfigStoreType } from './modelStore'
 
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
 
+export type StoreStatus = 'idle' | 'connected' | 'failed'
+
 export interface CommunityApiState {
   // Multiple store support
   stores: AnyModelStore[]
   filesByStore: Record<string, ModelFile[]>
 
   errors: Record<string, string>
+  storeStatus: Record<string, StoreStatus>
   loading: boolean
 
   // Modal state for adding stores
@@ -40,6 +43,7 @@ const useCommunityApiStore = defineStore('communityApi', {
     filesByStore: {},
 
     errors: {},
+    storeStatus: {},
     loading: false,
 
     // Modal state
@@ -135,6 +139,15 @@ const useCommunityApiStore = defineStore('communityApi', {
         console.log('Fetched from stores:', storeResult)
         this.filesByStore = storeResult.filesByStore
         Object.assign(this.errors, storeResult.errors)
+
+        // Update store statuses based on results
+        for (const store of this.stores) {
+          if (storeResult.errors[store.id]) {
+            this.storeStatus[store.id] = 'failed'
+          } else {
+            this.storeStatus[store.id] = 'connected'
+          }
+        }
       } catch (error) {
         console.error('Error fetching all model files:', error)
         // Set a general error if the whole operation fails
@@ -339,6 +352,15 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     clearStoreError(storeId: string): void {
       delete this.errors[storeId]
+      // Update status to idle when clearing error
+      this.storeStatus[storeId] = 'idle'
+    },
+
+    /**
+     * Get status for a specific store
+     */
+    getStoreStatus(storeId: string): StoreStatus {
+      return this.storeStatus[storeId] || 'idle'
     },
   },
 })

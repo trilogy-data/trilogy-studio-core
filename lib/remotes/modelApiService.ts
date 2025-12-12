@@ -8,6 +8,80 @@ import type { ModelFile } from './models'
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
+ * Track URLs that have been blocked by CSP
+ * Store both the original blocked URI and normalized versions
+ */
+const blockedUrls = new Set<string>()
+const blockedHosts = new Set<string>()
+
+/**
+ * Initialize CSP violation tracking
+ * This should be called once when the app starts
+ */
+export const initializeCspTracking = (): void => {
+  if (typeof window === 'undefined') return
+
+  window.addEventListener('securitypolicyviolation', (e) => {
+    if (e.blockedURI) {
+      console.warn('CSP violation detected:', e.blockedURI, e.violatedDirective)
+      blockedUrls.add(e.blockedURI)
+
+      // Also extract and store the hostname for partial matching
+      // Sometimes CSP reports just the hostname (e.g., "localhost")
+      // and sometimes the full URL (e.g., "http://0.0.0.0:8100/index.json")
+      try {
+        // If it's a full URL, parse it
+        if (e.blockedURI.includes('://')) {
+          const urlObj = new URL(e.blockedURI)
+          blockedHosts.add(urlObj.host) // host includes port
+          blockedHosts.add(urlObj.hostname) // hostname without port
+        } else {
+          // It's just a hostname or host:port
+          blockedHosts.add(e.blockedURI)
+        }
+      } catch (err) {
+        // If parsing fails, just store as-is
+        blockedHosts.add(e.blockedURI)
+      }
+    }
+  })
+}
+
+/**
+ * Check if a URL has been blocked by CSP
+ * @param url The URL to check
+ * @returns True if the URL has been blocked by CSP
+ */
+const isUrlBlockedByCsp = (url: string): boolean => {
+  // Direct match
+  if (blockedUrls.has(url)) {
+    return true
+  }
+
+  // Try to parse the URL and check if its host has been blocked
+  let urlToParse = url
+
+  // If URL doesn't have a protocol, add http:// for parsing
+  if (!url.includes('://')) {
+    urlToParse = `http://${url}`
+  }
+
+  try {
+    const urlObj = new URL(urlToParse)
+    const host = urlObj.host
+    const hostname = urlObj.hostname
+
+    if (blockedHosts.has(host) || blockedHosts.has(hostname)) {
+      return true
+    }
+  } catch (err) {
+    // URL parsing failed, can't do host matching
+  }
+
+  return false
+}
+
+/**
  * Fetch with exponential backoff for handling rate limiting
  * @param url URL to fetch
  * @param options Fetch options
@@ -21,6 +95,13 @@ export const fetchWithBackoff = async (
   maxRetries = 5,
   initialBackoff = 1000,
 ): Promise<Response> => {
+  // Check if URL has been blocked by CSP before attempting fetch
+  if (isUrlBlockedByCsp(url)) {
+    throw new Error(
+      `Cannot connect to ${url} - blocked by Content Security Policy. This URL is not allowed by the browser's security settings.`,
+    )
+  }
+
   let retries = 0
   let backoffTime = initialBackoff
 
@@ -49,6 +130,14 @@ export const fetchWithBackoff = async (
 
       return response
     } catch (error) {
+      // After the first failed attempt, check if the URL was blocked by CSP
+      // The securitypolicyviolation event should have fired by now
+      if (isUrlBlockedByCsp(url)) {
+        throw new Error(
+          `Cannot connect to ${url} - blocked by Content Security Policy. This URL is not allowed by the browser's security settings.`,
+        )
+      }
+
       if (retries >= maxRetries) {
         throw error
       }
