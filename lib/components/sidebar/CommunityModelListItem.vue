@@ -54,6 +54,7 @@
             v-if="item.store"
             :status="getStoreStatus(item.store)"
             :message="getStoreStatusMessage(item.store)"
+            :test-name="item.store.id"
           />
         </span>
       </template>

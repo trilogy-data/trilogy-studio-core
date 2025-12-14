@@ -160,7 +160,7 @@ onMounted(async () => {
 }
 
 .refresh-button:hover:not(:disabled) {
-  background-color: var( --button-mouseover, #1d4ed8);
+  background-color: var(--button-mouseover, #1d4ed8);
 }
 
 .refresh-button:disabled {
@@ -227,7 +227,7 @@ onMounted(async () => {
 }
 
 .retry-button:hover {
-  background-color: var( --button-mouseover, #1d4ed8);
+  background-color: var(--button-mouseover, #1d4ed8);
 }
 
 .bg-button {
@@ -235,7 +235,7 @@ onMounted(async () => {
 }
 
 .bg-button-hover:hover {
-  background-color: var( --button-mouseover);
+  background-color: var(--button-mouseover);
 }
 
 /* Make filter row more responsive */

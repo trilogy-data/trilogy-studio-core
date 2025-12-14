@@ -1,11 +1,11 @@
 <template>
   <div v-if="show" class="confirmation-overlay" @click="$emit('close')">
-    <div class="confirmation-dialog" @click.stop>
+    <div class="confirmation-dialog" data-testid="add-store-modal" @click.stop>
       <h3>Add Model Store</h3>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
           <label>Store Type: <span class="required">*</span></label>
-          <select v-model="storeType">
+          <select v-model="storeType" data-testid="store-type-select">
             <option value="generic">Generic</option>
             <option value="github">GitHub Repository</option>
           </select>
@@ -15,7 +15,13 @@
         <template v-if="storeType === 'generic'">
           <div class="form-group">
             <label>Store Name: <span class="required">*</span></label>
-            <input v-model="storeName" type="text" placeholder="e.g., Local Dev Store" required />
+            <input
+              v-model="storeName"
+              type="text"
+              placeholder="e.g., Local Dev Store"
+              data-testid="store-name-input"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Base URL: <span class="required">*</span></label>
@@ -23,6 +29,7 @@
               v-model="baseUrl"
               type="url"
               placeholder="e.g., http://localhost:8000"
+              data-testid="store-url-input"
               required
             />
             <small>URL should serve an index.json file at /index.json</small>
@@ -33,28 +40,64 @@
         <template v-if="storeType === 'github'">
           <div class="form-group">
             <label>Display Name: <span class="required">*</span></label>
-            <input v-model="storeName" type="text" placeholder="e.g., My Custom Models" required />
+            <input
+              v-model="storeName"
+              type="text"
+              placeholder="e.g., My Custom Models"
+              data-testid="store-name-input"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Repository Owner: <span class="required">*</span></label>
-            <input v-model="owner" type="text" placeholder="e.g., trilogy-data" required />
+            <input
+              v-model="owner"
+              type="text"
+              placeholder="e.g., trilogy-data"
+              data-testid="github-owner-input"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Repository Name: <span class="required">*</span></label>
-            <input v-model="repo" type="text" placeholder="e.g., trilogy-public-models" required />
+            <input
+              v-model="repo"
+              type="text"
+              placeholder="e.g., trilogy-public-models"
+              data-testid="github-repo-input"
+              required
+            />
           </div>
           <div class="form-group">
             <label>Branch: <span class="required">*</span></label>
-            <input v-model="branch" type="text" placeholder="e.g., main" required />
+            <input
+              v-model="branch"
+              type="text"
+              placeholder="e.g., main"
+              data-testid="github-branch-input"
+              required
+            />
           </div>
         </template>
 
-        <div v-if="error" class="form-error">
+        <div v-if="error" class="form-error" data-testid="add-store-error">
           {{ error }}
         </div>
         <div class="dialog-actions">
-          <button type="button" class="cancel-btn" @click="$emit('close')">Cancel</button>
-          <button type="submit" class="confirm-btn" :disabled="loading">
+          <button
+            type="button"
+            class="cancel-btn"
+            data-testid="add-store-cancel"
+            @click="$emit('close')"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="confirm-btn"
+            data-testid="add-store-submit"
+            :disabled="loading"
+          >
             {{ loading ? 'Adding...' : 'Add Store' }}
           </button>
         </div>

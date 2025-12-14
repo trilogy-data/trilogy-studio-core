@@ -138,6 +138,18 @@ export const fetchWithBackoff = async (
         )
       }
 
+      // Check if this is a fatal network error that shouldn't be retried
+      const isFatalError =
+        error instanceof TypeError &&
+        (error.message.includes('Failed to fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('ERR_CONNECTION_REFUSED'))
+
+      // Don't retry on fatal connection errors
+      if (isFatalError) {
+        throw error
+      }
+
       if (retries >= maxRetries) {
         throw error
       }

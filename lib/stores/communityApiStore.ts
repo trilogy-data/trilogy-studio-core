@@ -146,7 +146,9 @@ const useCommunityApiStore = defineStore('communityApi', {
       }
 
       try {
-        console.log(`Fetching community model files from ${this.stores.map(s => s.id).join(', ')}...`)
+        console.log(
+          `Fetching community model files from ${this.stores.map((s) => s.id).join(', ')}...`,
+        )
 
         // Fetch from store system with real-time callback
         const storeResult = await fetchFromAllStores(this.stores, (storeId, result) => {
@@ -156,7 +158,7 @@ const useCommunityApiStore = defineStore('communityApi', {
           if (result.error) {
             this.errors[storeId] = result.error
             this.storeStatus[storeId] = 'failed'
-          } else  {
+          } else {
             this.storeStatus[storeId] = 'connected'
           }
 
