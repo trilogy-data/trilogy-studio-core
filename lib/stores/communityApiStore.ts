@@ -43,7 +43,8 @@ const useCommunityApiStore = defineStore('communityApi', {
     filesByStore: {},
 
     errors: {},
-    storeStatus: {},
+    // Initialize default store status as idle
+    storeStatus: { [DEFAULT_GITHUB_STORE.id]: 'idle' },
     loading: false,
 
     // Modal state
@@ -107,6 +108,13 @@ const useCommunityApiStore = defineStore('communityApi', {
             (store, index, self) => index === self.findIndex((s) => s.id === store.id),
           )
           this.stores = uniqueStores
+
+          // Initialize all loaded stores with 'idle' status
+          uniqueStores.forEach((store) => {
+            if (!this.storeStatus[store.id]) {
+              this.storeStatus[store.id] = 'idle'
+            }
+          })
         }
       } catch (error) {
         console.error('Error loading stores from localStorage:', error)
@@ -131,23 +139,31 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     async fetchAllFiles(): Promise<void> {
       this.loading = true
+
+      // Set all stores to 'idle' before fetching to show gray status
+      for (const store of this.stores) {
+        this.storeStatus[store.id] = 'idle'
+      }
+
       try {
-        console.log('Fetching community model files from all stores...')
+        console.log(`Fetching community model files from ${this.stores.map(s => s.id).join(', ')}...`)
 
-        // Fetch from store system
-        const storeResult = await fetchFromAllStores(this.stores)
-        console.log('Fetched from stores:', storeResult)
-        this.filesByStore = storeResult.filesByStore
-        Object.assign(this.errors, storeResult.errors)
+        // Fetch from store system with real-time callback
+        const storeResult = await fetchFromAllStores(this.stores, (storeId, result) => {
+          // Update status immediately as each store completes
+          this.filesByStore[storeId] = result.files
 
-        // Update store statuses based on results
-        for (const store of this.stores) {
-          if (storeResult.errors[store.id]) {
-            this.storeStatus[store.id] = 'failed'
-          } else {
-            this.storeStatus[store.id] = 'connected'
+          if (result.error) {
+            this.errors[storeId] = result.error
+            this.storeStatus[storeId] = 'failed'
+          } else  {
+            this.storeStatus[storeId] = 'connected'
           }
-        }
+
+          console.log(`Store ${storeId} completed: ${result.error ? 'failed' : 'success'}`)
+        })
+
+        console.log('All stores fetched:', storeResult)
       } catch (error) {
         console.error('Error fetching all model files:', error)
         // Set a general error if the whole operation fails

@@ -161,10 +161,12 @@ export const fetchFromStore = async (
 /**
  * Fetch models from multiple stores
  * @param stores Array of store configurations
+ * @param onStoreComplete Optional callback called when each store completes (success or failure)
  * @returns Object with files organized by store ID and any errors
  */
 export const fetchFromAllStores = async (
   stores: AnyModelStore[],
+  onStoreComplete?: (storeId: string, result: { files: ModelFile[]; error: string | null }) => void,
 ): Promise<{
   filesByStore: Record<string, ModelFile[]>
   errors: Record<string, string>
@@ -180,9 +182,20 @@ export const fetchFromAllStores = async (
         if (error) {
           errors[store.id] = error
         }
+
+        // Call callback immediately when this store completes
+        if (onStoreComplete) {
+          onStoreComplete(store.id, { files, error })
+        }
       } catch (err) {
-        errors[store.id] = err instanceof Error ? err.message : 'Unknown error'
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        errors[store.id] = errorMessage
         filesByStore[store.id] = []
+
+        // Call callback for error case too
+        if (onStoreComplete) {
+          onStoreComplete(store.id, { files: [], error: errorMessage })
+        }
       }
     }),
   )

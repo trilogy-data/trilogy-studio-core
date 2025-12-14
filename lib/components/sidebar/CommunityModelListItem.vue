@@ -49,7 +49,6 @@
               <i class="mdi mdi-trash-can-outline"></i>
             </span>
           </tooltip>
-
           <!-- Store status icon should always be visible -->
           <status-icon
             v-if="item.store"

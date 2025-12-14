@@ -4,7 +4,8 @@ Minimal FastAPI server for testing generic model store functionality.
 This server serves a basic example model index and model files for E2E testing
 of the generic store feature in Trilogy Studio.
 
-Run with: uvicorn mock_model_server:app --reload --port 8000
+Run with: python mock_model_server.py
+Or: uvicorn mock_model_server:app --reload --port 8100
 """
 
 from fastapi import FastAPI
@@ -22,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+PORT = 8100
+BASE_URL = f"http://localhost:{PORT}"
 
 
 # Pydantic Models
@@ -76,7 +80,7 @@ EXAMPLE_MODEL = ModelImport(
             purpose="source",
         ),
         ImportFile(
-            url="http://localhost:8000/dashboards/example-dashboard.json",
+            url=f"{BASE_URL}/dashboards/example-dashboard.json",
             name="Example Dashboard",
             alias="",
             type="dashboard",
@@ -109,7 +113,7 @@ EXAMPLE_DASHBOARD = {
     "gridItems": {
         "0": {
             "type": "chart",
-            "content": "select class, passenger_id.count;",
+            "content": "select unnest(['first', 'second', 'third']) as class, unnest([1,2,45]) as passenger_id.count;",
             "name": "Passenger Class Distribution",
             "width": 1108,
             "height": 475,
@@ -141,7 +145,7 @@ EXAMPLE_DASHBOARD = {
     "imports": [{"name": "example", "alias": ""}],
     "version": 1,
     "state": "editing",
-    "description": "Example dashboard showing Titanic passenger data",
+    "description": "Example dashboard.",
 }
 
 
@@ -177,11 +181,11 @@ async def get_index() -> StoreIndex:
         models=[
             StoreModelIndex(
                 name="Example DuckDB Model",
-                url="http://localhost:8000/models/example-duckdb.json",
+                url=f"{BASE_URL}/models/example-duckdb.json",
             ),
             StoreModelIndex(
                 name="Example BigQuery Model",
-                url="http://localhost:8000/models/example-bigquery.json",
+                url=f"{BASE_URL}/models/example-bigquery.json",
             ),
         ],
     )
@@ -204,7 +208,7 @@ async def get_example_dashboard():
     """Return the example dashboard."""
     return EXAMPLE_DASHBOARD
 
-PORT = 8100
+
 
 if __name__ == "__main__":
     import uvicorn
