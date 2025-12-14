@@ -217,7 +217,7 @@ export const determineDefaultConfig = (
   if (columns.size === 0) {
     return {}
   }
-  if (numericColumns.length === 0) {
+  if (numericColumns.length === 0 && (geoColumns.length === 0 && longitudeColumns.length === 0 && latitudeColumns.length === 0)) {
     defaults.chartType = 'headline'
     return defaults
   }
@@ -492,7 +492,11 @@ export const determineEligibleChartTypes = (
     eligibleCharts.push('beeswarm')
   }
   // If no numeric columns, very limited chart options
-  if (numericColumns.length === 0) {
+  if (numericColumns.length === 0 ) {
+    
+    if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
+      eligibleCharts.push('usa-map')
+    }
     eligibleCharts.push('headline')
     return eligibleCharts
   }
@@ -661,11 +665,11 @@ export const createFieldEncoding = (
     ...(sort ? getSortOrder(fieldName, columns) : {}),
     ...(options.scale !== undefined || options.zero !== undefined
       ? {
-          scale: {
-            ...(options.scale !== undefined && { type: options.scale }),
-            ...(options.zero !== undefined && { zero: options.zero }),
-          },
-        }
+        scale: {
+          ...(options.scale !== undefined && { type: options.scale }),
+          ...(options.zero !== undefined && { zero: options.zero }),
+        },
+      }
       : {}),
   }
 }

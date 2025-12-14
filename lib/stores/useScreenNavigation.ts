@@ -5,9 +5,10 @@ import {
   getDefaultValueFromHash,
   removeHashesFromUrl,
 } from './urlStore'
-import { useEditorStore, useDashboardStore, useUserSettingsStore } from '.'
-import { lastSegment } from '../data/constants'
+import { useEditorStore, useDashboardStore, useUserSettingsStore, useCommunityApiStore } from '.'
+import { lastSegment, KeySeparator } from '../data/constants'
 import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
+
 
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
@@ -109,6 +110,7 @@ const createNavigationStore = (): NavigationStore => {
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
   const userSettingsStore = useUserSettingsStore()
+  const communityApiStore = useCommunityApiStore()
   let eventListener: any = null
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
@@ -147,6 +149,25 @@ const createNavigationStore = (): NavigationStore => {
       let editor = editorStore.editors[address]
       if (editor) {
         return editor.name || 'Untitled Editor'
+      }
+    } else if (screen === 'community-models') {
+      // Parse the address to get the store ID (first part before KeySeparator)
+      const parts = address.split(KeySeparator)
+      const storeId = parts[0]
+
+      // Look up the store by ID and return its name
+      const store = communityApiStore.stores.find((s) => s.id === storeId)
+      if (store) {
+        // If there are more parts (engine or model), append them to the store name
+        if (parts.length === 2) {
+          // Engine level: "Store Name - engine"
+          return `${store.name} - ${parts[1]}`
+        } else if (parts.length === 3) {
+          // Model level: just the model name
+          return parts[2]
+        }
+        // Store root level: just the store name
+        return store.name
       }
     }
     return lastSegment(address, null)
