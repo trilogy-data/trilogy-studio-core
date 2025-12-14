@@ -139,11 +139,20 @@ export const fetchWithBackoff = async (
       }
 
       // Check if this is a fatal network error that shouldn't be retried
+      // Different browsers use different error messages for connection failures:
+      // - Chrome: "Failed to fetch", "ERR_CONNECTION_REFUSED"
+      // - Firefox: "NetworkError"
+      // - Safari: "Load failed", "The network connection was lost", "Could not connect to the server"
+      const errorMessage = error instanceof Error ? error.message : String(error)
       const isFatalError =
-        error instanceof TypeError &&
-        (error.message.includes('Failed to fetch') ||
-          error.message.includes('NetworkError') ||
-          error.message.includes('ERR_CONNECTION_REFUSED'))
+        error instanceof TypeError ||
+        errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('NetworkError') ||
+        errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+        errorMessage.includes('Load failed') ||
+        errorMessage.includes('network connection was lost') ||
+        errorMessage.includes('Could not connect to the server') ||
+        errorMessage.includes('fetch failed')
 
       // Don't retry on fatal connection errors
       if (isFatalError) {

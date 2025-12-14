@@ -10,10 +10,10 @@ const __dirname = path.dirname(__filename)
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
 
-  // Skip these tests in production environment since they require a local mock server
+  // Skip these tests in production and docker environments since they require a local mock server
   test.skip(
-    process.env.TEST_ENV === 'prod',
-    'Custom store tests require local mock server, not available in production',
+    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
+    'Custom store tests require local mock server, not available in production or docker environments',
   )
 
   // Start the mock server before all tests
@@ -145,11 +145,16 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(1000)
 
     // Verify we can see the DuckDB engine category
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
     await expect(page.getByTestId(`community-${storeId}+duckdb`)).toBeVisible()
 
     // Expand the DuckDB category
     await page.getByTestId(`community-${storeId}+duckdb`).click()
-
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
     // Verify we can see the Example DuckDB Model
     await expect(page.getByTestId(`community-${storeId}+duckdb+Example DuckDB Model`)).toBeVisible()
 
