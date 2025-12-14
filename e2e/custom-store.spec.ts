@@ -10,16 +10,31 @@ const __dirname = path.dirname(__filename)
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
 
+  // Skip these tests in production environment since they require a local mock server
+  test.skip(
+    process.env.TEST_ENV === 'prod',
+    'Custom store tests require local mock server, not available in production',
+  )
+
   // Start the mock server before all tests
   test.beforeAll(async () => {
     const projectRoot = path.join(__dirname, '..')
     const serverPath = path.join(projectRoot, 'pyserver', 'mock_model_server.py')
 
-    // Determine the Python executable path based on OS
+    // Determine the Python executable path based on OS and environment
     const isWindows = process.platform === 'win32'
-    const pythonExecutable = isWindows
-      ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
-      : path.join(projectRoot, '.venv', 'bin', 'python')
+    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
+
+    let pythonExecutable: string
+    if (isCI) {
+      // In CI, use system Python
+      pythonExecutable = 'python'
+    } else {
+      // Locally, use virtual environment
+      pythonExecutable = isWindows
+        ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
+        : path.join(projectRoot, '.venv', 'bin', 'python')
+    }
 
     console.log(`Starting mock server with ${pythonExecutable}...`)
 
