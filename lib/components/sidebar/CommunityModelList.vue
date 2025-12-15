@@ -5,9 +5,9 @@
         <button @click="communityStore.refreshData()" :disabled="communityStore.loading">
           {{ communityStore.loading ? 'Refreshing...' : 'Refresh' }}
         </button>
-        <!-- <button @click="communityStore.openAddRepositoryModal()" :disabled="communityStore.loading">
-          Add Repository
-        </button> -->
+        <button @click="communityStore.openAddStoreModal()" :disabled="communityStore.loading">
+          Add Store
+        </button>
       </div>
     </template>
 
@@ -15,12 +15,7 @@
     <div v-if="communityStore.hasErrors" class="error-container">
       <div v-for="error in communityStore.errorList" :key="error.root" class="error-item">
         <span class="error-text">{{ error.root }}: {{ error.error }}</span>
-        <button
-          @click="communityStore.clearRepositoryError(getModelRootByKey(error.root))"
-          class="clear-error"
-        >
-          ×
-        </button>
+        <button @click="communityStore.clearStoreError(error.root)" class="clear-error">×</button>
       </div>
     </div>
 
@@ -34,68 +29,38 @@
       @item-click="handleItemClick"
       @item-toggle="handleItemToggle"
       @model-selected="handleModelSelected"
+      @delete-store="showDeleteStoreConfirmation"
     />
 
-    <!-- Add Repository Modal -->
+    <!-- Add Store Modal -->
+    <AddStoreModal
+      :show="communityStore.showAddStoreModal"
+      :loading="communityStore.addingStore"
+      @close="communityStore.closeAddStoreModal()"
+      @add="handleAddStoreSubmit"
+    />
+
+    <!-- Delete Store Confirmation Modal -->
     <div
-      v-if="communityStore.showAddRepositoryModal"
+      v-if="showDeleteConfirmationState"
       class="confirmation-overlay"
-      @click="communityStore.closeAddRepositoryModal()"
+      @click.self="cancelDeleteStore"
     >
-      <div class="confirmation-dialog" @click.stop>
-        <h3>Add Model Repository</h3>
-        <form @submit.prevent="handleAddRepository">
-          <div class="form-group">
-            <label>Repository Owner: <span class="required">*</span></label>
-            <input
-              v-model="communityStore.newRepo.owner"
-              type="text"
-              placeholder="e.g., trilogy-data"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Repository Name: <span class="required">*</span></label>
-            <input
-              v-model="communityStore.newRepo.repo"
-              type="text"
-              placeholder="e.g., trilogy-public-models"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Branch: <span class="required">*</span></label>
-            <input
-              v-model="communityStore.newRepo.branch"
-              type="text"
-              placeholder="e.g., main"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Display Name (optional):</label>
-            <input
-              v-model="communityStore.newRepo.displayName"
-              type="text"
-              placeholder="e.g., My Custom Models"
-            />
-          </div>
-          <div v-if="addError" class="form-error">
-            {{ addError }}
-          </div>
-          <div class="dialog-actions">
-            <button
-              type="button"
-              class="cancel-btn"
-              @click="communityStore.closeAddRepositoryModal()"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="confirm-btn" :disabled="communityStore.addingRepository">
-              {{ communityStore.addingRepository ? 'Adding...' : 'Add Repository' }}
-            </button>
-          </div>
-        </form>
+      <div class="confirmation-dialog">
+        <h3>Confirm Store Removal</h3>
+        <p>Are you sure you want to remove this store? This will not delete any imported models.</p>
+        <div class="dialog-actions">
+          <button class="cancel-btn" data-testid="cancel-store-deletion" @click="cancelDeleteStore">
+            Cancel
+          </button>
+          <button
+            class="confirm-btn"
+            data-testid="confirm-store-deletion"
+            @click="confirmDeleteStore"
+          >
+            Remove
+          </button>
+        </div>
       </div>
     </div>
   </sidebar-list>
@@ -107,7 +72,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useCommunityApiStore, useScreenNavigation } from '../../stores'
 import SidebarList from './SidebarList.vue'
 import CommunityModelListItem from './CommunityModelListItem.vue'
-import type { ModelFile, ModelRoot } from '../../remotes/models'
+import AddStoreModal from '../community/AddStoreModal.vue'
+import type { ModelFile, ModelRoot, AnyModelStore } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 
 export default {
@@ -117,38 +83,77 @@ export default {
     const navigationStore = useScreenNavigation()
     const collapsed = ref<Record<string, boolean>>({})
 
-    for (const key in communityStore.modelRoots) {
-      collapsed.value[
-        `${communityStore.modelRoots[key].owner}-${communityStore.modelRoots[key].repo}-${communityStore.modelRoots[key].branch}`
-      ] = false
+    // Get the currently active model key
+    const activeKey = navigationStore.activeCommunityModelKey.value || ''
+
+    // Helper to expand ancestors of active key
+    const expandAncestors = (key: string) => {
+      // Parse the key to get store/root, engine, and model parts
+      // Keys are formatted as: storeId+engine+model
+      const parts = key.split('+')
+
+      if (parts.length > 0) {
+        // Expand the root/store
+        collapsed.value[parts[0]] = false
+
+        if (parts.length > 1) {
+          // Expand the engine
+          const engineKey = `${parts[0]}+${parts[1]}`
+          collapsed.value[engineKey] = false
+        }
+      }
+    }
+
+    // Initialize collapsed state for stores (collapsed by default)
+    for (const store of communityStore.stores) {
+      collapsed.value[store.id] = true
+    }
+
+    // Expand ancestors of active item if there is one
+    if (activeKey) {
+      expandAncestors(activeKey)
+    } else {
+      // If no active key, expand the first store by default
+      if (communityStore.stores.length > 0) {
+        collapsed.value[communityStore.stores[0].id] = false
+      }
     }
 
     // Local state for error handling in the modal
     const addError = ref<string | null>(null)
 
-    // Helper function to get model root by key (for error display)
-    const getModelRootByKey = (rootKey: string): ModelRoot => {
-      // Parse the rootKey to extract owner, repo, branch
-      const match = rootKey.match(/^(.+)-(.+)-(.+)$/)
-      if (match) {
-        return {
-          owner: match[1],
-          repo: match[2],
-          branch: match[3],
-        }
-      }
-      // Fallback
-      return { owner: '', repo: '', branch: 'main' }
-    }
+    // State for delete confirmation
+    const showDeleteConfirmationState = ref(false)
+    const storeToDelete = ref<AnyModelStore | null>(null)
 
-    // Handle adding a repository with error management
-    const handleAddRepository = async () => {
+    // Handle adding a store from the modal
+    const handleAddStoreSubmit = async (store: any) => {
       addError.value = null
       try {
-        await communityStore.handleAddRepository()
+        await communityStore.addStore(store)
+        communityStore.closeAddStoreModal()
       } catch (error) {
-        addError.value = error instanceof Error ? error.message : 'Failed to add repository'
+        addError.value = error instanceof Error ? error.message : 'Failed to add store'
       }
+    }
+
+    // Handle store deletion
+    const showDeleteStoreConfirmation = (store: AnyModelStore) => {
+      storeToDelete.value = store
+      showDeleteConfirmationState.value = true
+    }
+
+    const cancelDeleteStore = () => {
+      showDeleteConfirmationState.value = false
+      storeToDelete.value = null
+    }
+
+    const confirmDeleteStore = () => {
+      if (storeToDelete.value) {
+        communityStore.removeStore(storeToDelete.value.id)
+      }
+      showDeleteConfirmationState.value = false
+      storeToDelete.value = null
     }
 
     // Handle model selection
@@ -168,9 +173,9 @@ export default {
 
     const displayTree = computed(() => {
       return buildCommunityModelTree(
-        communityStore.modelRoots,
-        communityStore.filesByRoot,
         collapsed.value,
+        communityStore.stores,
+        communityStore.filesByStore,
       )
     })
 
@@ -183,8 +188,11 @@ export default {
       communityStore,
       navigationStore,
       addError,
-      getModelRootByKey,
-      handleAddRepository,
+      handleAddStoreSubmit,
+      showDeleteStoreConfirmation,
+      cancelDeleteStore,
+      confirmDeleteStore,
+      showDeleteConfirmationState,
       handleModelSelected,
       handleItemClick,
       handleItemToggle,
@@ -195,6 +203,7 @@ export default {
   components: {
     SidebarList,
     CommunityModelListItem,
+    AddStoreModal,
   },
 }
 </script>
@@ -285,7 +294,8 @@ export default {
   color: #dc2626;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
@@ -294,7 +304,8 @@ export default {
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 1px #2563eb;

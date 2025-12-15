@@ -104,6 +104,7 @@ export default {
   align-items: center;
   width: 100%;
   cursor: pointer;
+  height: var(--sidebar-list-item-height);
 }
 
 .sidebar-padding {

@@ -5,6 +5,8 @@
 
 This should be reusable outside this package, via a published NPM package.
 
+Vue project.
+
 ### /pyserver
 /pyserver contains backend server python code
 
@@ -19,3 +21,17 @@ Deployed on github CI
 ## Development
 
 Always use pnpm, not npm.
+
+After updating python scripts (in the pyserver subfolder, always cd into it for python work)
+
+```bash
+mypy . --explicit-package-bases
+ruff check . --fix
+black
+```
+
+The virtual env should always be referenced from base of repo; always use a virtual env.
+
+example on windows:
+
+```./venv/Scripts/python.exe```

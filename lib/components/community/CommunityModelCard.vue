@@ -11,7 +11,7 @@
 
     <div class="model-item-header">
       <div class="model-info">
-        <div class="font-semibold flex items-center">
+        <div class="font-semibold flex items-center" :data-testid="`model-card-title-${file.name}`">
           <span
             class="imported-indicator mr-2"
             v-if="modelExists"
@@ -63,6 +63,7 @@
               'description-truncated': !isDescriptionExpanded && shouldTruncateDescription,
             },
           ]"
+          :data-testid="`model-card-description-${file.name}`"
         >
           <markdown-renderer :markdown="file.description" />
         </div>
@@ -114,7 +115,7 @@
 import { ref, computed, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
-import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/githubApiService'
+import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/modelApiService'
 import type { ModelFile } from '../../remotes/models'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 

@@ -5,7 +5,7 @@
       v-model:selectedEngine="selectedEngine"
       v-model:importStatus="importStatus"
       :availableEngines="availableEngines"
-      :loading="loading"
+      :loading="loading && !error"
       :remote="remote"
       :engineDisabled="!!props.engine"
       @refresh="refreshData"
@@ -26,7 +26,14 @@
         />
       </div>
 
-      <p v-if="error" class="text-error">{{ error }}</p>
+      <error-message v-if="error" type="error">
+        {{ error }}
+        <template #action>
+          <button @click="refreshData" class="retry-button" data-testid="retry-fetch-button">
+            Retry
+          </button>
+        </template>
+      </error-message>
       <p v-else-if="loading" class="text-loading">Loading community models...</p>
       <p v-else-if="!filteredFiles.length" class="text-faint mt-4">
         No models match your search criteria.
@@ -41,6 +48,7 @@ import { type ModelConfigStoreType } from '../../stores/modelStore'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import CommunityModelHeader from './CommunityModelHeader.vue'
 import CommunityModelCard from './CommunityModelCard.vue'
+import ErrorMessage from '../ErrorMessage.vue'
 
 const props = defineProps({
   initialSearch: {
@@ -58,9 +66,10 @@ const props = defineProps({
 })
 
 const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
-const { errors, refreshData, availableEngines } = communityApiStore
+const { refreshData, availableEngines } = communityApiStore
 
-const error = props.remote ? errors[props.remote] : null
+// Make error reactive by computing it from the store
+const error = computed(() => (props.remote ? communityApiStore.errors[props.remote] : null))
 
 const modelStore = inject<ModelConfigStoreType>('modelStore')
 if (!modelStore) {
@@ -116,10 +125,9 @@ const handleDashboardLinkCopy = (component: any): void => {
 
 onMounted(async () => {
   let refresh = false
-  // loop over communityApiStore.modelRoots and make sure each is in
-  // communityApiStore.filesByRoot
-  for (const rootKey of Object.keys(communityApiStore.modelRoots)) {
-    if (!communityApiStore.filesByRoot[rootKey]) {
+  // Check if we need to refresh data for any stores
+  for (const store of communityApiStore.stores) {
+    if (!communityApiStore.filesByStore[store.id]) {
       refresh = true
       break
     }
@@ -152,7 +160,7 @@ onMounted(async () => {
 }
 
 .refresh-button:hover:not(:disabled) {
-  background-color: var(--button-hover-bg, #1d4ed8);
+  background-color: var(--button-mouseover, #1d4ed8);
 }
 
 .refresh-button:disabled {
@@ -206,12 +214,28 @@ onMounted(async () => {
   color: var(--error-color, #e53935);
 }
 
+.retry-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--text-color);
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 12px;
+}
+
+.retry-button:hover {
+  background-color: var(--button-mouseover, #1d4ed8);
+}
+
 .bg-button {
   background-color: var(--button-bg);
 }
 
 .bg-button-hover:hover {
-  background-color: var(--button-hover-bg);
+  background-color: var(--button-mouseover);
 }
 
 /* Make filter row more responsive */

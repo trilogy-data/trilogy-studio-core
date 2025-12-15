@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="section-header">
-      {{ remote || 'Community Models' }}
+      {{ displayName }}
       <button @click="$emit('refresh')" :disabled="loading" data-testid="refresh-models-button">
         <span v-if="!loading">Refresh</span>
         <span v-else>Refreshing...</span>
@@ -54,7 +54,10 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed, inject } from 'vue'
+import { type CommunityApiStoreType } from '../../stores/communityApiStore'
+
+const props = defineProps<{
   searchQuery: string
   selectedEngine: string
   importStatus: string
@@ -70,6 +73,16 @@ defineEmits<{
   (e: 'update:selectedEngine', value: string): void
   (e: 'update:importStatus', value: string): void
 }>()
+
+const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
+
+// Get the display name from the store if remote is provided, otherwise default text
+const displayName = computed(() => {
+  if (!props.remote) return 'Community Models'
+
+  const store = communityApiStore.stores.find((s) => s.id === props.remote)
+  return store?.name || props.remote
+})
 </script>
 
 <style scoped>

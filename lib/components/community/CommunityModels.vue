@@ -104,12 +104,13 @@ const modelFile = computed((): ModelFile | null => {
     return null
   }
 
-  const filesForRoot = communityApiStore.filesByRoot[selectedRootKey.value]
-  if (!filesForRoot) {
+  const filesForStore = communityApiStore.filesByStore[selectedRootKey.value]
+
+  if (!filesForStore) {
     return null
   }
 
-  return filesForRoot.find((file) => file.name === selectedModelName.value) || null
+  return filesForStore.find((file) => file.name === selectedModelName.value) || null
 })
 
 // Event handlers
@@ -149,7 +150,7 @@ const handleDashboardLinkCopy = (component: any) => {
 watch(
   () => [selectedRootKey.value, selectedType.value],
   async ([newRootKey, newType]) => {
-    if (newType === 'model' && newRootKey && !communityApiStore.filesByRoot[newRootKey]) {
+    if (newType === 'model' && newRootKey && !communityApiStore.filesByStore[newRootKey]) {
       isLoading.value = true
       try {
         await communityApiStore.refreshData()

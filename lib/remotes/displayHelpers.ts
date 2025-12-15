@@ -1,6 +1,6 @@
 // modelTreeBuilder.ts
 
-import { type ModelRoot, type ModelFile } from './models'
+import { type ModelRoot, type ModelFile, type AnyModelStore } from './models'
 import { KeySeparator } from '../data/constants'
 
 export interface TreeNode {
@@ -10,39 +10,49 @@ export interface TreeNode {
   indent: number
   modelRoot: ModelRoot
   model?: ModelFile
+  store?: AnyModelStore
 }
 
 /**
- * Build a nested tree structure with model roots, engines, and models
- * @param modelRoots Array of model roots to include
- * @param allFiles All model files organized by model root
+ * Build a nested tree structure with stores, engines, and models
  * @param collapsed Object tracking which nodes are collapsed
+ * @param stores Array of stores to include
+ * @param filesByStore All model files organized by store ID
  * @returns Tree structure with nested hierarchy
  */
 export const buildCommunityModelTree = (
-  modelRoots: ModelRoot[] = [],
-  allFiles: Record<string, ModelFile[]> = {},
   collapsed: Record<string, boolean> = {},
+  stores: AnyModelStore[] = [],
+  filesByStore: Record<string, ModelFile[]> = {},
 ): TreeNode[] => {
   const tree: TreeNode[] = []
 
-  modelRoots.forEach((modelRoot) => {
-    const rootKey = `${modelRoot.owner}-${modelRoot.repo}-${modelRoot.branch}`
-    const rootDisplayName =
-      modelRoot.displayName || `${modelRoot.owner}/${modelRoot.repo}:${modelRoot.branch}`
+  // Process store system
+  stores.forEach((store) => {
+    const rootKey = store.id
+    const rootDisplayName = store.name
 
-    // Add the model root node
+    // Create a pseudo-ModelRoot for backward compatibility with TreeNode interface
+    const pseudoModelRoot: ModelRoot = {
+      owner: store.type === 'github' ? store.owner : '',
+      repo: store.type === 'github' ? store.repo : '',
+      branch: store.type === 'github' ? store.branch : 'main',
+      displayName: rootDisplayName,
+    }
+
+    // Add the store root node
     tree.push({
       type: 'root',
       label: rootDisplayName,
       key: rootKey,
       indent: 0,
-      modelRoot,
+      modelRoot: pseudoModelRoot,
+      store,
     })
 
     // If this root is not collapsed, add its engines and models
     if (!collapsed[rootKey]) {
-      const files = allFiles[rootKey] || []
+      const files = filesByStore[rootKey] || []
       const engines: Record<string, ModelFile[]> = {}
 
       // Group files by engine
@@ -63,7 +73,8 @@ export const buildCommunityModelTree = (
             label: engine,
             key: engineKey,
             indent: 1,
-            modelRoot,
+            modelRoot: pseudoModelRoot,
+            store,
           })
           // If this engine is not collapsed, add its models
           if (!collapsed[engineKey]) {
@@ -74,7 +85,8 @@ export const buildCommunityModelTree = (
                 key: `${engineKey}${KeySeparator}${file.name}`,
                 indent: 2,
                 model: file,
-                modelRoot,
+                modelRoot: pseudoModelRoot,
+                store,
               })
             })
           }
@@ -122,22 +134,22 @@ export const generateModelKey = (
 }
 
 /**
- * Get all expandable node keys for a given set of model roots and files
- * @param modelRoots Array of model roots
- * @param allFiles All model files organized by model root
+ * Get all expandable node keys for a given set of stores and files
+ * @param stores Array of stores
+ * @param filesByStore All model files organized by store
  * @returns Array of keys that can be expanded/collapsed
  */
 export const getExpandableKeys = (
-  modelRoots: ModelRoot[] = [],
-  allFiles: Record<string, ModelFile[]> = {},
+  stores: AnyModelStore[] = [],
+  filesByStore: Record<string, ModelFile[]> = {},
 ): string[] => {
   const expandableKeys: string[] = []
 
-  modelRoots.forEach((modelRoot) => {
-    const rootKey = generateRootKey(modelRoot)
+  stores.forEach((store) => {
+    const rootKey = store.id
     expandableKeys.push(rootKey)
 
-    const files = allFiles[rootKey] || []
+    const files = filesByStore[rootKey] || []
     const engines = new Set<string>()
 
     // Collect unique engines
@@ -147,7 +159,7 @@ export const getExpandableKeys = (
 
     // Add engine keys
     engines.forEach((engine) => {
-      const engineKey = generateEngineKey(modelRoot, engine)
+      const engineKey = `${rootKey}${KeySeparator}${engine}`
       expandableKeys.push(engineKey)
     })
   })

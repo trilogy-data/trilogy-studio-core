@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
+import { initializeCspTracking } from '../lib/remotes/modelApiService'
 import '@mdi/font/css/materialdesignicons.css'
 import './style.css'
 import './tabulator-style.css'
@@ -13,6 +14,9 @@ import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
 import '@fontsource/inter/600.css'
 import '@fontsource/inter/700.css'
+
+// Initialize CSP violation tracking
+initializeCspTracking()
 self.MonacoEnvironment = {
   getWorker: async function (_, label) {
     switch (label) {
