@@ -286,9 +286,7 @@ const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 const DashboardAutoImporter = defineAsyncComponent(
   () => import('../components/dashboard/DashboardAutoImporter.vue'),
 )
-const AssetAutoImporter = defineAsyncComponent(
-  () => import('../components/AssetAutoImporter.vue'),
-)
+const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))

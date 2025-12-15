@@ -165,7 +165,11 @@ const transitionToStep = async (step: 'registering' | 'importing' | 'connecting'
   const remainingTime = Math.max(0, minDisplayTime - elapsedSinceStep)
 
   // Wait for minimum time if needed
-  if (remainingTime > 0 && currentStep.value !== 'registering' && currentStep.value !== 'importing') {
+  if (
+    remainingTime > 0 &&
+    currentStep.value !== 'registering' &&
+    currentStep.value !== 'importing'
+  ) {
     await new Promise((resolve) => setTimeout(resolve, remainingTime))
   }
 
@@ -198,7 +202,10 @@ const registerStoreIfNeeded = async (): Promise<void> => {
   }
 
   // Generate store ID from URL
-  const storeId = storeUrl.value.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/\//g, '-')
+  const storeId = storeUrl.value
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+    .replace(/\//g, '-')
 
   // Check if store already exists
   const existingStore = communityApiStore.stores.find((s) => s.id === storeId)
@@ -420,7 +427,8 @@ onMounted(async () => {
     }
 
     if (!modelUrlParam || !finalAssetName || !modelNameParam || !connectionParam) {
-      error.value = 'Missing required import parameters (import, assetName/dashboard, modelName, connection)'
+      error.value =
+        'Missing required import parameters (import, assetName/dashboard, modelName, connection)'
       isLoading.value = false
       stopTimer()
       return
@@ -578,7 +586,9 @@ const switchToManualImport = () => {
         <h2 class="import-headline">Import Model & {{ assetTypeDisplayName }}</h2>
         <div class="import-details">
           <p><strong>Model:</strong> {{ modelName }}</p>
-          <p><strong>{{ assetTypeDisplayName }}:</strong> {{ assetName }}</p>
+          <p>
+            <strong>{{ assetTypeDisplayName }}:</strong> {{ assetName }}
+          </p>
           <p v-if="storeUrl" class="import-source"><strong>Store:</strong> {{ storeUrl }}</p>
           <p class="import-source"><strong>From:</strong> {{ modelUrl }}</p>
         </div>

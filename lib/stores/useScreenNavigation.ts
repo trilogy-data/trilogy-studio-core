@@ -9,7 +9,6 @@ import { useEditorStore, useDashboardStore, useUserSettingsStore, useCommunityAp
 import { lastSegment, KeySeparator } from '../data/constants'
 import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
 
-
 // Define valid screen types in one place to reduce duplication
 type ScreenType =
   | 'editors'

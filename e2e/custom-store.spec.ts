@@ -416,7 +416,10 @@ test.describe('Asset Auto-Import via URL', () => {
     }
   })
 
-  test('should auto-import dashboard via URL with store registration', async ({ page, isMobile }) => {
+  test('should auto-import dashboard via URL with store registration', async ({
+    page,
+    isMobile,
+  }) => {
     // Build the auto-import URL with all parameters
     const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
     const storeUrl = MOCK_SERVER_URL
@@ -446,10 +449,9 @@ test.describe('Asset Auto-Import via URL', () => {
 
     // Wait for import to complete and redirect to dashboard
     // The import process should auto-redirect to the dashboard
-    await page.waitForFunction(
-      () => window.location.hash.includes('screen=dashboard'),
-      { timeout: 30000 },
-    )
+    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
+      timeout: 30000,
+    })
 
     // Verify we're on the dashboard screen
     await expect(page.locator('.dashboard-container, [data-testid="dashboard"]')).toBeVisible({
@@ -493,10 +495,9 @@ test.describe('Asset Auto-Import via URL', () => {
     await page.waitForSelector('.loading-state', { timeout: 10000 })
 
     // Wait for import to complete and redirect to editors
-    await page.waitForFunction(
-      () => window.location.hash.includes('screen=editors'),
-      { timeout: 30000 },
-    )
+    await page.waitForFunction(() => window.location.hash.includes('screen=editors'), {
+      timeout: 30000,
+    })
 
     // Verify we're on the editor screen
     await expect(page.getByTestId('editor')).toBeVisible({ timeout: 10000 })
@@ -554,10 +555,9 @@ test.describe('Asset Auto-Import via URL', () => {
     await page.waitForSelector('.loading-state', { timeout: 10000 })
 
     // Wait for import to complete and redirect to dashboard
-    await page.waitForFunction(
-      () => window.location.hash.includes('screen=dashboard'),
-      { timeout: 30000 },
-    )
+    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
+      timeout: 30000,
+    })
 
     // Verify we're on the dashboard screen
     await expect(page.locator('.dashboard-container, [data-testid="dashboard"]')).toBeVisible({
