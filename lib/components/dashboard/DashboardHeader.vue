@@ -118,7 +118,8 @@ const availableImports: Ref<DashboardImport[]> = computed(() => {
 
   return imports.map((importItem) => ({
     id: importItem.id,
-    name: importItem.name,
+    // Convert folder path separators (/) to Python import syntax (.)
+    name: importItem.name.replace(/\//g, '.'),
     alias: '',
   }))
 })
