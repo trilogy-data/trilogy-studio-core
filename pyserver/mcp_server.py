@@ -13,7 +13,7 @@ from trilogy.core.models.core import (
     StructComponent,
 )
 import httpx
-from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
+from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
     ProcessedValidateStatement,
@@ -198,7 +198,7 @@ def create_model_connection(name: str, model_name: str):
     env = Environment()
     resolved = get_model_files(model.filename)
     resolver = DictImportResolver(content=resolved.files)
-    env = Environment(config=EnvironmentOptions(import_resolver=resolver))
+    env = Environment(config=EnvironmentConfig(import_resolver=resolver))
     engine = Dialects(model.engine).default_executor(environment=env)
 
     for x in resolved.startup_sql:
