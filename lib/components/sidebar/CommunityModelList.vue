@@ -14,7 +14,7 @@
     <!-- Error Display -->
     <div v-if="communityStore.hasErrors" class="error-container">
       <div v-for="error in communityStore.errorList" :key="error.root" class="error-item">
-        <span class="error-text">{{ error.root }}: {{ error.error }}</span>
+        <span class="error-text">{{ error.name }}: {{ error.error }}</span>
         <button @click="communityStore.clearStoreError(error.root)" class="clear-error">×</button>
       </div>
     </div>

@@ -454,7 +454,7 @@ test.describe('Asset Auto-Import via URL', () => {
     })
 
     // Verify we're on the dashboard screen
-    await expect(page.locator('.dashboard-container, [data-testid="dashboard"]')).toBeVisible({
+    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
       timeout: 10000,
     })
 
@@ -560,7 +560,7 @@ test.describe('Asset Auto-Import via URL', () => {
     })
 
     // Verify we're on the dashboard screen
-    await expect(page.locator('.dashboard-container, [data-testid="dashboard"]')).toBeVisible({
+    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
       timeout: 10000,
     })
   })

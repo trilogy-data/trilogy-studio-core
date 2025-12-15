@@ -85,11 +85,15 @@ const useCommunityApiStore = defineStore('communityApi', {
     },
 
     // Get errors as an array for display
-    errorList: (state): Array<{ root: string; error: string }> => {
-      return Object.entries(state.errors).map(([storeId, error]) => ({
-        root: storeId,
-        error,
-      }))
+    errorList: (state): Array<{ root: string; name: string; error: string }> => {
+      return Object.entries(state.errors).map(([storeId, error]) => {
+        const store = state.stores.find((s) => s.id === storeId)
+        return {
+          root: storeId,
+          name: store?.name || storeId,
+          error,
+        }
+      })
     },
   },
 

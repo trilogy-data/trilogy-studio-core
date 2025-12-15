@@ -94,12 +94,26 @@
               }}</span>
             </div>
           </div>
-          <div v-if="component.type === 'dashboard'" class="dashboard-actions">
+          <div v-if="component.type === 'dashboard'" class="component-actions">
             <button
               @click="copyDashboardLink(component)"
               class="copy-import-button"
               :title="'Copy import link for ' + component.name"
               data-testid="copy-dashboard-share-button"
+            >
+              <i class="mdi mdi-content-copy"></i>
+              Copy Share Link
+            </button>
+          </div>
+          <div
+            v-else-if="component.type === 'trilogy' || component.type === 'sql'"
+            class="component-actions"
+          >
+            <button
+              @click="copyEditorLink(component)"
+              class="copy-import-button"
+              :title="'Copy import link for ' + component.name"
+              data-testid="copy-editor-share-button"
             >
               <i class="mdi mdi-content-copy"></i>
               Copy Share Link
@@ -138,6 +152,7 @@ const emit = defineEmits<{
   (e: 'components-toggled', isExpanded: boolean): void
   (e: 'description-toggled', isExpanded: boolean): void
   (e: 'dashboard-link-copied', component: any): void
+  (e: 'editor-link-copied', component: any): void
 }>()
 
 // Inject stores
@@ -196,19 +211,23 @@ const toggleDescription = () => {
   emit('description-toggled', isDescriptionExpanded.value)
 }
 
-const copyDashboardLink = async (component: any): Promise<void> => {
+const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'): Promise<void> => {
   // Get current base URL
   const currentBase = window.location.origin + window.location.pathname
 
-  // Construct the import link
-  const importLink = `${currentBase}#screen=dashboard-import&import=${encodeURIComponent(props.file.downloadUrl)}&dashboard=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
+  // Construct the import link using the new unified format
+  const importLink = `${currentBase}#screen=asset-import&import=${encodeURIComponent(props.file.downloadUrl)}&assetType=${encodeURIComponent(assetType)}&assetName=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
 
   try {
     await navigator.clipboard.writeText(importLink)
-    emit('dashboard-link-copied', component)
-    console.log('Dashboard import link copied to clipboard:', importLink)
+    if (assetType === 'dashboard') {
+      emit('dashboard-link-copied', component)
+    } else {
+      emit('editor-link-copied', component)
+    }
+    console.log(`${assetType} import link copied to clipboard:`, importLink)
   } catch (err) {
-    console.error('Failed to copy dashboard import link:', err)
+    console.error(`Failed to copy ${assetType} import link:`, err)
     // Fallback: create a temporary textarea and copy from it
     const textArea = document.createElement('textarea')
     textArea.value = importLink
@@ -216,8 +235,20 @@ const copyDashboardLink = async (component: any): Promise<void> => {
     textArea.select()
     document.execCommand('copy')
     document.body.removeChild(textArea)
-    emit('dashboard-link-copied', component)
+    if (assetType === 'dashboard') {
+      emit('dashboard-link-copied', component)
+    } else {
+      emit('editor-link-copied', component)
+    }
   }
+}
+
+const copyDashboardLink = async (component: any): Promise<void> => {
+  await copyAssetLink(component, 'dashboard')
+}
+
+const copyEditorLink = async (component: any): Promise<void> => {
+  await copyAssetLink(component, 'editor')
 }
 
 // Expose methods for parent components that need to control state
@@ -451,7 +482,7 @@ defineExpose({
   font-size: 12px;
 }
 
-.dashboard-actions {
+.component-actions {
   flex-shrink: 0;
 }
 
@@ -498,7 +529,7 @@ defineExpose({
     gap: 8px;
   }
 
-  .dashboard-actions {
+  .component-actions {
     align-self: flex-start;
   }
 }

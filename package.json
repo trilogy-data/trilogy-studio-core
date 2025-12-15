@@ -13,6 +13,7 @@
     "dev": "pnpm install ./lib -D && vite",
     "local": "node scripts/run_local.js",
     "build": "vue-tsc -b && prettier --write \"./**/*.{js,ts,vue}\" && vite build",
+    "build:lib": "pnpm -C lib build",
     "preview": "vite preview",
     "test": "vitest",
     "test-playwright": "playwright test",
