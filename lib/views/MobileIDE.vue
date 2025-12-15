@@ -75,6 +75,9 @@
       <template v-else-if="activeScreen === 'dashboard-import'">
         <dashboard-auto-importer @import-complete="handleImportComplete" />
       </template>
+      <template v-else-if="activeScreen === 'asset-import'">
+        <asset-auto-importer @import-complete="handleAssetImportComplete" />
+      </template>
       <template v-else-if="activeScreen === 'community-models'">
         <community-models :activeCommunityModelKey="activeCommunityModelKey" />
       </template>
@@ -164,6 +167,7 @@ import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
 import CommunityModels from '../components/community/CommunityModels.vue'
 import ConnectionView from './ConnectionView.vue'
 import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter.vue'
+import AssetAutoImporter from '../components/AssetAutoImporter.vue'
 import TabbedLayout from '../components/layout/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingView from '../components/LoadingView.vue'
@@ -210,6 +214,7 @@ export default {
     WelcomePage,
     MobileDashboard,
     DashboardAutoImporter,
+    AssetAutoImporter,
     LoadingButton,
     TabbedLayout,
     MobileSidebarLayout,
@@ -340,6 +345,9 @@ export default {
     },
     handleImportComplete(dashboardId: string) {
       console.log(`Dashboard import completed: ${dashboardId}`)
+    },
+    handleAssetImportComplete(assetId: string, assetType: string) {
+      console.log(`Asset import completed: ${assetType} ${assetId}`)
     },
   },
   computed: {

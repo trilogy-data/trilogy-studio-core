@@ -17,6 +17,7 @@ type ScreenType =
   | 'llms'
   | 'dashboard'
   | 'dashboard-import'
+  | 'asset-import'
   | 'models'
   | 'community-models'
   | 'welcome'
@@ -358,7 +359,7 @@ const createNavigationStore = (): NavigationStore => {
         state.activeDocumentationKey.value = tabInfo.address
       } else if (tabInfo.screen === 'models') {
         state.activeModelKey.value = tabInfo.address
-      } else if (tabInfo.screen === 'dashboard-import') {
+      } else if (tabInfo.screen === 'dashboard-import' || tabInfo.screen === 'asset-import') {
         baseTips = []
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
@@ -476,7 +477,17 @@ const createNavigationStore = (): NavigationStore => {
     }
 
     if (importUrl && connectionType) {
-      openTab('dashboard-import', null, 'dashboard-import')
+      // Check if we have new-style asset import params or legacy dashboard import
+      const assetType = getDefaultValueFromHash('assetType', '')
+      const assetName = getDefaultValueFromHash('assetName', '')
+
+      if (assetType && assetName) {
+        // New asset import format
+        openTab('asset-import', null, 'asset-import')
+      } else {
+        // Legacy dashboard import format
+        openTab('dashboard-import', null, 'dashboard-import')
+      }
       isImport = true
     }
 

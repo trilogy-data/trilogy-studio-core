@@ -209,6 +209,192 @@ async def get_example_dashboard():
     return EXAMPLE_DASHBOARD
 
 
+class ShareLinkRequest(BaseModel):
+    """Request parameters for generating a share link"""
+
+    model: str  # Model name from the store
+    asset_name: str  # Asset (dashboard or editor) name to open
+    asset_type: str = "dashboard"  # Asset type: dashboard, editor, trilogy
+    base_app_url: str = "http://localhost:5173"  # Base URL of the app
+
+
+class ShareLinkResponse(BaseModel):
+    """Response containing both readable and encoded share links"""
+
+    readable: str
+    encoded: str
+    model_url: str
+    store_url: str
+
+
+@app.post("/share-link", response_model=ShareLinkResponse)
+async def generate_share_link(request: ShareLinkRequest) -> ShareLinkResponse:
+    """
+    Generate a share link for importing a model and opening an asset.
+
+    This endpoint creates URLs that can be shared to allow others to:
+    1. Register the model store automatically
+    2. Import the specified model
+    3. Open the specified asset (dashboard or editor)
+
+    Example usage:
+    POST /share-link
+    {
+        "model": "example-duckdb",
+        "asset_name": "Example DuckDB Dashboard",
+        "asset_type": "dashboard",
+        "base_app_url": "http://localhost:5173"
+    }
+    """
+    from urllib.parse import quote
+
+    from fastapi import HTTPException
+
+    # Map model names to their URLs
+    model_urls = {
+        "example-duckdb": f"{BASE_URL}/models/example-duckdb.json",
+        "example-bigquery": f"{BASE_URL}/models/example-bigquery.json",
+    }
+
+    # Map model names to their model config names
+    model_names = {
+        "example-duckdb": EXAMPLE_MODEL.name,
+        "example-bigquery": EXAMPLE_BIGQUERY_MODEL.name,
+    }
+
+    # Map model names to their engines (connection types)
+    model_engines = {
+        "example-duckdb": EXAMPLE_MODEL.engine,
+        "example-bigquery": EXAMPLE_BIGQUERY_MODEL.engine,
+    }
+
+    if request.model not in model_urls:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model '{request.model}' not found. Available: {list(model_urls.keys())}",
+        )
+
+    model_url = model_urls[request.model]
+    model_name = model_names[request.model]
+    engine = model_engines[request.model]
+    store_url = BASE_URL
+
+    # Build the readable URL (human-friendly, not encoded)
+    readable_params = f"#skipTips=true&screen=asset-import&import={model_url}&store={store_url}&assetType={request.asset_type}&assetName={request.asset_name}&modelName={model_name}&connection={engine}"
+    readable_url = f"{request.base_app_url}{readable_params}"
+
+    # Build the encoded URL (safe for sharing)
+    encoded_params = (
+        f"#skipTips=true"
+        f"&screen=asset-import"
+        f"&import={quote(model_url, safe='')}"
+        f"&store={quote(store_url, safe='')}"
+        f"&assetType={quote(request.asset_type, safe='')}"
+        f"&assetName={quote(request.asset_name, safe='')}"
+        f"&modelName={quote(model_name, safe='')}"
+        f"&connection={quote(engine, safe='')}"
+    )
+    encoded_url = f"{request.base_app_url}{encoded_params}"
+
+    return ShareLinkResponse(
+        readable=readable_url,
+        encoded=encoded_url,
+        model_url=model_url,
+        store_url=store_url,
+    )
+
+
+@app.get("/share-link/example-dashboard")
+async def get_example_dashboard_share_link(
+    base_app_url: str = "http://localhost:5173",
+) -> ShareLinkResponse:
+    """
+    Convenience endpoint to get a share link for the example DuckDB dashboard.
+
+    Query params:
+    - base_app_url: The base URL of the app (default: http://localhost:5173)
+    """
+    from urllib.parse import quote
+
+    model_url = f"{BASE_URL}/models/example-duckdb.json"
+    store_url = BASE_URL
+    model_name = EXAMPLE_MODEL.name
+    asset_name = "Example DuckDB Dashboard"
+    asset_type = "dashboard"
+    engine = EXAMPLE_MODEL.engine
+
+    # Build the readable URL
+    readable_params = f"#skipTips=true&screen=asset-import&import={model_url}&store={store_url}&assetType={asset_type}&assetName={asset_name}&modelName={model_name}&connection={engine}"
+    readable_url = f"{base_app_url}{readable_params}"
+
+    # Build the encoded URL
+    encoded_params = (
+        f"#skipTips=true"
+        f"&screen=asset-import"
+        f"&import={quote(model_url, safe='')}"
+        f"&store={quote(store_url, safe='')}"
+        f"&assetType={quote(asset_type, safe='')}"
+        f"&assetName={quote(asset_name, safe='')}"
+        f"&modelName={quote(model_name, safe='')}"
+        f"&connection={quote(engine, safe='')}"
+    )
+    encoded_url = f"{base_app_url}{encoded_params}"
+
+    return ShareLinkResponse(
+        readable=readable_url,
+        encoded=encoded_url,
+        model_url=model_url,
+        store_url=store_url,
+    )
+
+
+@app.get("/share-link/example-editor")
+async def get_example_editor_share_link(
+    base_app_url: str = "http://localhost:5173",
+) -> ShareLinkResponse:
+    """
+    Convenience endpoint to get a share link for the example trilogy editor.
+
+    Query params:
+    - base_app_url: The base URL of the app (default: http://localhost:5173)
+    """
+    from urllib.parse import quote
+
+    model_url = f"{BASE_URL}/models/example-duckdb.json"
+    store_url = BASE_URL
+    model_name = EXAMPLE_MODEL.name
+    # Get the trilogy component name from the model
+    trilogy_component = next(
+        (c for c in EXAMPLE_MODEL.components if c.type == "trilogy"), None
+    )
+    asset_name = trilogy_component.name if trilogy_component else "Example Query"
+    asset_type = "trilogy"
+    engine = EXAMPLE_MODEL.engine
+
+    # Build the readable URL
+    readable_params = f"#skipTips=true&screen=asset-import&import={model_url}&store={store_url}&assetType={asset_type}&assetName={asset_name}&modelName={model_name}&connection={engine}"
+    readable_url = f"{base_app_url}{readable_params}"
+
+    # Build the encoded URL
+    encoded_params = (
+        f"#skipTips=true"
+        f"&screen=asset-import"
+        f"&import={quote(model_url, safe='')}"
+        f"&store={quote(store_url, safe='')}"
+        f"&assetType={quote(asset_type, safe='')}"
+        f"&assetName={quote(asset_name, safe='')}"
+        f"&modelName={quote(model_name, safe='')}"
+        f"&connection={quote(engine, safe='')}"
+    )
+    encoded_url = f"{base_app_url}{encoded_params}"
+
+    return ShareLinkResponse(
+        readable=readable_url,
+        encoded=encoded_url,
+        model_url=model_url,
+        store_url=store_url,
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
