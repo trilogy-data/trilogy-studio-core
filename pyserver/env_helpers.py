@@ -9,7 +9,7 @@ from io_models import (
 )
 from common import concept_to_description
 from trilogy.parsing.parse_engine import ParseError
-from trilogy.core.models.environment import DictImportResolver, EnvironmentOptions
+from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.authoring import (
     Concept,
 )
@@ -31,7 +31,7 @@ def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment
             for _, source in enumerate(sources)
         }
     )
-    env = Environment(config=EnvironmentOptions(import_resolver=resolver))
+    env = Environment(config=EnvironmentConfig(import_resolver=resolver))
 
     return env
 

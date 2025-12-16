@@ -426,6 +426,7 @@ const iconMap = ref({
   llms: 'mdi mdi-creation-outline',
   dashboard: 'mdi mdi-chart-multiple',
   'dashboard-import': 'mdi mdi-chart-multiple',
+  'asset-import': 'mdi mdi-import',
   models: 'mdi mdi-set-center',
   'community-models': 'mdi mdi-library-outline',
   tutorial: 'mdi mdi-help',

@@ -27,6 +27,12 @@
           @full-screen="toggleFullScreen"
         />
       </template>
+      <template v-else-if="activeScreen === 'asset-import'">
+        <asset-auto-importer
+          @import-complete="handleAssetImportComplete"
+          @full-screen="toggleFullScreen"
+        />
+      </template>
     </div>
 
     <!-- Normal mode with sidebar -->
@@ -111,6 +117,12 @@
         <template v-else-if="activeScreen === 'dashboard-import'">
           <dashboard-auto-importer
             @import-complete="handleImportComplete"
+            @full-screen="toggleFullScreen"
+          />
+        </template>
+        <template v-else-if="activeScreen === 'asset-import'">
+          <asset-auto-importer
+            @import-complete="handleAssetImportComplete"
             @full-screen="toggleFullScreen"
           />
         </template>
@@ -274,6 +286,7 @@ const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 const DashboardAutoImporter = defineAsyncComponent(
   () => import('../components/dashboard/DashboardAutoImporter.vue'),
 )
+const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -316,6 +329,7 @@ export default {
     'connection-view': ConnectionView,
     'results-view': ResultsView,
     'dashboard-auto-importer': DashboardAutoImporter,
+    'asset-auto-importer': AssetAutoImporter,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
@@ -471,6 +485,9 @@ export default {
     },
     handleImportComplete(dashboardId: string) {
       console.log(`Dashboard import completed: ${dashboardId}`)
+    },
+    handleAssetImportComplete(assetId: string, assetType: string) {
+      console.log(`Asset import completed: ${assetType} ${assetId}`)
     },
   },
   computed: {

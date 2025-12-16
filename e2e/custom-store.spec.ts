@@ -7,6 +7,10 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Constants for mock server
+const MOCK_SERVER_PORT = 8100
+const MOCK_SERVER_URL = `http://localhost:${MOCK_SERVER_PORT}`
+
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
 
@@ -321,6 +325,243 @@ test.describe('Custom Model Store', () => {
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, {
       state: 'detached',
       timeout: 5000,
+    })
+  })
+})
+
+test.describe('Asset Auto-Import via URL', () => {
+  let mockServer: ChildProcess | null = null
+
+  // Skip these tests in production and docker environments since they require a local mock server
+  test.skip(
+    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
+    'Auto-import tests require local mock server, not available in production or docker environments',
+  )
+
+  // Start the mock server before all tests
+  test.beforeAll(async () => {
+    const projectRoot = path.join(__dirname, '..')
+    const serverPath = path.join(projectRoot, 'pyserver', 'mock_model_server.py')
+
+    // Determine the Python executable path based on OS and environment
+    const isWindows = process.platform === 'win32'
+    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
+
+    let pythonExecutable: string
+    if (isCI) {
+      pythonExecutable = 'python'
+    } else {
+      pythonExecutable = isWindows
+        ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
+        : path.join(projectRoot, '.venv', 'bin', 'python')
+    }
+
+    console.log(`Starting mock server with ${pythonExecutable}...`)
+
+    mockServer = spawn(pythonExecutable, [serverPath], {
+      cwd: path.join(projectRoot, 'pyserver'),
+      stdio: 'pipe',
+    })
+
+    mockServer.stdout?.on('data', (data) => {
+      console.log(`Mock server: ${data}`)
+    })
+
+    mockServer.stderr?.on('data', (data) => {
+      console.error(`Mock server error: ${data}`)
+    })
+
+    // Wait for server to be ready
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Mock server failed to start within 10 seconds'))
+      }, 10000)
+
+      const checkServer = async () => {
+        try {
+          const response = await fetch(`${MOCK_SERVER_URL}/`)
+          if (response.ok) {
+            clearTimeout(timeout)
+            console.log('Mock server is ready!')
+            resolve()
+          } else {
+            setTimeout(checkServer, 100)
+          }
+        } catch (error) {
+          setTimeout(checkServer, 100)
+        }
+      }
+
+      checkServer()
+    })
+  })
+
+  // Stop the mock server after all tests
+  test.afterAll(async () => {
+    if (mockServer) {
+      console.log('Stopping mock server...')
+      mockServer.kill()
+      await new Promise<void>((resolve) => {
+        mockServer?.on('exit', () => {
+          console.log('Mock server stopped')
+          resolve()
+        })
+        setTimeout(() => {
+          if (mockServer && !mockServer.killed) {
+            mockServer.kill('SIGKILL')
+            resolve()
+          }
+        }, 5000)
+      })
+    }
+  })
+
+  test('should auto-import dashboard via URL with store registration', async ({
+    page,
+    isMobile,
+  }) => {
+    // Build the auto-import URL with all parameters
+    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
+    const storeUrl = MOCK_SERVER_URL
+    const assetName = 'Example DuckDB Dashboard'
+    const assetType = 'dashboard'
+    const modelName = 'Example DuckDB Model'
+    const connection = 'duckdb'
+
+    const autoImportUrl =
+      `#skipTips=true` +
+      `&screen=asset-import` +
+      `&import=${encodeURIComponent(modelUrl)}` +
+      `&store=${encodeURIComponent(storeUrl)}` +
+      `&assetType=${encodeURIComponent(assetType)}` +
+      `&assetName=${encodeURIComponent(assetName)}` +
+      `&modelName=${encodeURIComponent(modelName)}` +
+      `&connection=${encodeURIComponent(connection)}`
+
+    // Navigate to the auto-import URL
+    await page.goto(autoImportUrl)
+
+    // Wait for the loading state to appear
+    await page.waitForSelector('.loading-state', { timeout: 10000 })
+
+    // Verify we see the step indicator
+    await expect(page.locator('.step-indicator')).toBeVisible()
+
+    // Wait for import to complete and redirect to dashboard
+    // The import process should auto-redirect to the dashboard
+    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
+      timeout: 30000,
+    })
+
+    // Verify we're on the dashboard screen
+    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
+      timeout: 10000,
+    })
+
+    // Verify the store was registered by checking the sidebar
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
+    await page.getByTestId('sidebar-link-community-models').click()
+
+    // The store should now appear in the community models list
+    const storeId = 'localhost:8100'
+    await expect(page.getByTestId(`community-${storeId}`)).toBeVisible({ timeout: 5000 })
+  })
+
+  test('should auto-import trilogy editor via URL', async ({ page, isMobile }) => {
+    // Build the auto-import URL for a trilogy editor
+    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
+    const storeUrl = MOCK_SERVER_URL
+    const assetName = 'Example Query'
+    const assetType = 'trilogy'
+    const modelName = 'Example DuckDB Model'
+    const connection = 'duckdb'
+
+    const autoImportUrl =
+      `#skipTips=true` +
+      `&screen=asset-import` +
+      `&import=${encodeURIComponent(modelUrl)}` +
+      `&store=${encodeURIComponent(storeUrl)}` +
+      `&assetType=${encodeURIComponent(assetType)}` +
+      `&assetName=${encodeURIComponent(assetName)}` +
+      `&modelName=${encodeURIComponent(modelName)}` +
+      `&connection=${encodeURIComponent(connection)}`
+
+    // Navigate to the auto-import URL
+    await page.goto(autoImportUrl)
+
+    // Wait for the loading state to appear
+    await page.waitForSelector('.loading-state', { timeout: 10000 })
+
+    // Wait for import to complete and redirect to editors
+    await page.waitForFunction(() => window.location.hash.includes('screen=editors'), {
+      timeout: 30000,
+    })
+
+    // Verify we're on the editor screen
+    await expect(page.getByTestId('editor')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('should show error for invalid asset name', async ({ page }) => {
+    // Build the auto-import URL with an invalid asset name
+    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
+    const storeUrl = MOCK_SERVER_URL
+    const assetName = 'NonExistent Dashboard'
+    const assetType = 'dashboard'
+    const modelName = 'Example DuckDB Model'
+    const connection = 'duckdb'
+
+    const autoImportUrl =
+      `#skipTips=true` +
+      `&screen=asset-import` +
+      `&import=${encodeURIComponent(modelUrl)}` +
+      `&store=${encodeURIComponent(storeUrl)}` +
+      `&assetType=${encodeURIComponent(assetType)}` +
+      `&assetName=${encodeURIComponent(assetName)}` +
+      `&modelName=${encodeURIComponent(modelName)}` +
+      `&connection=${encodeURIComponent(connection)}`
+
+    // Navigate to the auto-import URL
+    await page.goto(autoImportUrl)
+
+    // Wait for error state to appear
+    await page.waitForSelector('.error-state', { timeout: 30000 })
+
+    // Verify error message mentions the missing dashboard
+    await expect(page.locator('.error-message')).toContainText('was not found')
+  })
+
+  test('should support legacy dashboard parameter format', async ({ page }) => {
+    // Build the auto-import URL using legacy 'dashboard' parameter
+    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
+    const dashboardName = 'Example DuckDB Dashboard'
+    const modelName = 'Example DuckDB Model'
+    const connection = 'duckdb'
+
+    // Use the legacy format (dashboard-import screen with dashboard param)
+    const autoImportUrl =
+      `#skipTips=true` +
+      `&screen=dashboard-import` +
+      `&import=${encodeURIComponent(modelUrl)}` +
+      `&dashboard=${encodeURIComponent(dashboardName)}` +
+      `&modelName=${encodeURIComponent(modelName)}` +
+      `&connection=${encodeURIComponent(connection)}`
+
+    // Navigate to the auto-import URL
+    await page.goto(autoImportUrl)
+
+    // Wait for the loading state to appear
+    await page.waitForSelector('.loading-state', { timeout: 10000 })
+
+    // Wait for import to complete and redirect to dashboard
+    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
+      timeout: 30000,
+    })
+
+    // Verify we're on the dashboard screen
+    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
+      timeout: 10000,
     })
   })
 })
