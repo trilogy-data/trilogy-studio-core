@@ -37,6 +37,59 @@ docker build -t trilogy-studio:latest . ; docker run  -p 8080:80 trilogy-studio:
 
 Access on http://localhost:8080 (or alternative port used).
 
+## Creating Direct Links
+
+You can create shareable links that automatically import dashboards or editors from model stores into Trilogy Studio and open the relevant file.. This is useful for sharing pre-configured dashboards or example queries with others.
+
+### URL Format
+
+Import links use the following URL structure:
+
+```
+https://trilogydata.dev/trilogy-studio-core/#import=<model-url>&assetType=<type>&assetName=<name>&modelName=<model>&connection=<connection-type>[&store=<store-url>]
+```
+
+### Store
+
+The store parameter is optional, if provided it will register the relevant store as a store
+in the browser UX (useful if the model will be refreshed or updated over time).
+
+### Parameters
+
+| Parameter | Required | Description | Example |
+|-----------|----------|-------------|---------|
+| `import` | Yes | URL to the model JSON file | `https://example.com/models/my-model.json` |
+| `assetType` | Yes | Type of asset to import: `dashboard`, `editor`, or `trilogy` | `dashboard` |
+| `assetName` | Yes | Name of the specific asset within the model | `Sales Overview` |
+| `modelName` | Yes | Name for the model configuration | `MyModel` |
+| `connection` | Yes | Connection type: `duckdb`, `bigquery`, or `snowflake` | `duckdb` |
+| `store` | No | Base URL of the model store for auto-registration | `https://example.com/store` |
+
+### Examples
+
+#### Dashboard Link (DuckDB)
+```
+https://trilogydata.dev/trilogy-studio-core/#import=https://trilogy-public-models.s3.us-west-1.amazonaws.com/tpcds.json&assetType=dashboard&assetName=Sales%20Dashboard&modelName=TPCDSModel&connection=duckdb
+```
+
+#### Editor Link (DuckDB)
+```
+https://trilogydata.dev/trilogy-studio-core/#import=https://trilogy-public-models.s3.us-west-1.amazonaws.com/tpcds.json&assetType=editor&assetName=Customer%20Query&modelName=TPCDSModel&connection=duckdb
+```
+
+#### Dashboard Link with Store Registration
+```
+https://trilogydata.dev/trilogy-studio-core/#import=https://example.com/models/sales.json&assetType=dashboard&assetName=Q4%20Sales&modelName=SalesModel&connection=duckdb&store=https://example.com/models
+```
+
+### Connection Types
+
+Different connection types may require additional inputs to create the connection for the end user.
+
+- **BigQuery**: Prompts for Google Cloud project ID to use for billing. 
+- **Snowflake**: Prompts for account, username, and private key
+
+
 ### Flexible Visualization
 
 Explore data with easy, interactive visuals. Connect them in rich, interactive dashboards that can be shared.
