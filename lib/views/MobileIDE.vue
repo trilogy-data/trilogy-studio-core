@@ -166,7 +166,6 @@ aside {
 import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
 import CommunityModels from '../components/community/CommunityModels.vue'
 import ConnectionView from './ConnectionView.vue'
-import DashboardAutoImporter from '../components/dashboard/DashboardAutoImporter.vue'
 import AssetAutoImporter from '../components/AssetAutoImporter.vue'
 import TabbedLayout from '../components/layout/TabbedLayout.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
@@ -213,7 +212,7 @@ export default {
     HintComponent,
     WelcomePage,
     MobileDashboard,
-    DashboardAutoImporter,
+    DashboardAutoImporter: AssetAutoImporter,
     AssetAutoImporter,
     LoadingButton,
     TabbedLayout,

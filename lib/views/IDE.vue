@@ -283,9 +283,6 @@ const CommunityModels = defineAsyncComponent(
 )
 const ConnectionView = defineAsyncComponent(() => import('./ConnectionView.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
-const DashboardAutoImporter = defineAsyncComponent(
-  () => import('../components/dashboard/DashboardAutoImporter.vue'),
-)
 const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
 
 // Lazy load utility components
@@ -328,7 +325,7 @@ export default {
     'llm-view': LLMView,
     'connection-view': ConnectionView,
     'results-view': ResultsView,
-    'dashboard-auto-importer': DashboardAutoImporter,
+    'dashboard-auto-importer': AssetAutoImporter,
     'asset-auto-importer': AssetAutoImporter,
 
     // Utility components (may not be used in template but included for completeness)
