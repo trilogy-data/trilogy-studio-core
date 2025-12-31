@@ -256,7 +256,6 @@ export const createAreaChartSpec = (
     layers = [...base, ...filtered]
   }
   return {
-    data: undefined,
     layer: layers,
   }
 }

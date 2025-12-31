@@ -17,7 +17,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Verify the steps are present
   await expect(page.getByText('Importing model')).toBeVisible()
   await expect(page.getByText('Establishing connection')).toBeVisible()
-  await expect(page.getByText('Preparing data')).toBeVisible()
+  await expect(page.getByText('Preparing dashboard')).toBeVisible()
 
   // Wait for the import to complete - this might take a while
   // We expect to see the active step changing during the process
