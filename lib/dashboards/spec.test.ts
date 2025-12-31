@@ -274,6 +274,46 @@ describe('generateVegaSpec', () => {
       )
       expect(areaLayer).toBeDefined()
     })
+
+    it('should include data in spec when trellising is not set', () => {
+      const config: ChartConfig = {
+        chartType: 'area',
+        xField: 'date',
+        yField: 'sales',
+        colorField: 'region',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      // Data should be present at the top level
+      expect(spec.data).toBeDefined()
+      expect(spec.data.values).toBeDefined()
+      expect(spec.data.values).toEqual(testData)
+      // Should not have faceting
+      expect(spec.facet).toBeUndefined()
+    })
+
+    it('should include data in spec when trellising is set', () => {
+      const config: ChartConfig = {
+        chartType: 'area',
+        xField: 'date',
+        yField: 'sales',
+        colorField: 'region',
+        trellisField: 'category',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      // Data should be present at the top level for faceted charts
+      expect(spec.data).toBeDefined()
+      expect(spec.data.values).toBeDefined()
+      expect(spec.data.values).toEqual(testData)
+      // Should have faceting
+      expect(spec.facet).toBeDefined()
+      expect(spec.facet.column.field).toBe('category')
+    })
   })
 
   describe('Point Chart', () => {
