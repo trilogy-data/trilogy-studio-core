@@ -519,7 +519,7 @@ export default defineComponent({
     })
 
     // Handle chat messages for the chat view
-    const handleChatMessage = async (message: string, chatMessages: ChatMessage[]) => {
+    const handleChatMessage = async (message: string, _chatMessages: ChatMessage[]) => {
       if (!llmConnectionStore.activeConnection) {
         return {
           response: 'No LLM connection available. Please configure an LLM provider first.',
