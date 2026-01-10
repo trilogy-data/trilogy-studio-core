@@ -1,5 +1,35 @@
 <template>
-  <div class="debug-container">
+  <div class="llm-view-container">
+    <!-- View Tabs -->
+    <div class="view-tabs">
+      <button
+        class="view-tab"
+        :class="{ active: activeView === 'chat' }"
+        @click="activeView = 'chat'"
+      >
+        Chat
+      </button>
+      <button
+        class="view-tab"
+        :class="{ active: activeView === 'validation' }"
+        @click="activeView = 'validation'"
+      >
+        Validation Tests
+      </button>
+    </div>
+
+    <!-- Chat View -->
+    <div v-if="activeView === 'chat'" class="chat-view">
+      <l-l-m-chat-with-artifacts
+        ref="chatWithArtifacts"
+        title="LLM Chat"
+        placeholder="Type your message... (Enter to send)"
+        :onSendMessage="handleChatMessage"
+      />
+    </div>
+
+    <!-- Validation View (existing content) -->
+    <div v-else class="debug-container">
     <!-- Left side: LLM Chat -->
     <div class="llm-chat-container">
       <div class="section-header">
@@ -107,6 +137,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -117,6 +148,8 @@ import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
 import { extractLastTripleQuotedText } from '../stores/llmStore'
+import LLMChatWithArtifacts from '../components/llm/LLMChatWithArtifacts.vue'
+import type { ChatMessage } from '../components/llm/LLMChat.vue'
 
 export interface TestResult {
   passed: boolean
@@ -135,7 +168,9 @@ export interface MessageWithTest extends LLMMessage {
 
 export default defineComponent({
   name: 'LLMChatDebugComponent',
-
+  components: {
+    LLMChatWithArtifacts,
+  },
   props: {
     initialProvider: {
       type: String,
@@ -151,6 +186,10 @@ export default defineComponent({
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
     // TODO: validate query syntax on resolver
+
+    // View state
+    const activeView = ref<'chat' | 'validation'>('chat')
+    const chatWithArtifacts = ref<InstanceType<typeof LLMChatWithArtifacts> | null>(null)
 
     // Chat state
     const messages = ref<MessageWithTest[]>([])
@@ -479,7 +518,38 @@ export default defineComponent({
       }
     })
 
+    // Handle chat messages for the chat view
+    const handleChatMessage = async (message: string, chatMessages: ChatMessage[]) => {
+      if (!llmConnectionStore.activeConnection) {
+        return {
+          response: 'No LLM connection available. Please configure an LLM provider first.',
+        }
+      }
+
+      try {
+        const options: LLMRequestOptions = {
+          prompt: message,
+        }
+
+        const response: LLMResponse = await llmConnectionStore.generateCompletion(
+          llmConnectionStore.activeConnection,
+          options,
+        )
+
+        return {
+          response: response.text,
+        }
+      } catch (err) {
+        return {
+          response: `Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`,
+        }
+      }
+    }
+
     return {
+      activeView,
+      chatWithArtifacts,
+      handleChatMessage,
       messages,
       userInput,
       isLoading,
@@ -506,6 +576,46 @@ pre {
   /* Preserves whitespace and wraps lines */
   word-wrap: break-word;
   /* Ensures long words break properly */
+}
+
+.llm-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.view-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--sidebar-bg);
+  padding: 0 10px;
+}
+
+.view-tab {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--font-size);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.view-tab:hover {
+  color: var(--special-text);
+}
+
+.view-tab.active {
+  color: var(--special-text);
+  border-bottom-color: var(--special-text);
+}
+
+.chat-view {
+  flex: 1;
+  overflow: hidden;
 }
 
 .debug-container {
