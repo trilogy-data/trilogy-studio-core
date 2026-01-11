@@ -20,12 +20,14 @@
           @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
+          @llm-key-selected="setActiveLLMConnectionKey"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
           :activeModelKey="activeModelKey"
           :activeDashboardKey="activeDashboard"
+          :activeLLMKey="activeLLMConnectionKey"
         />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
@@ -267,6 +269,8 @@ export default {
       setActiveConnectionKey,
       setActiveModelKey,
       setActiveDocumentationKey,
+      activeLLMConnectionKey,
+      setActiveLLMConnectionKey,
       activeCommunityModelKey,
       mobileMenuOpen,
       toggleMobileMenu,
@@ -315,6 +319,8 @@ export default {
       setActiveConnectionKey,
       setActiveModelKey,
       setActiveDocumentationKey,
+      activeLLMConnectionKey,
+      setActiveLLMConnectionKey,
       mobileMenuOpen,
       toggleMobileMenu,
       tabs,
