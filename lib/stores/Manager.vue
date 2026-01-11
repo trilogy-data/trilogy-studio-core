@@ -37,6 +37,7 @@ import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
 import type { CommunityApiStoreType } from './communityApiStore'
+import type { OrchestrationStoreType } from './orchestrationStore'
 import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
 import useScreenNavigation from './useScreenNavigation'
@@ -86,6 +87,10 @@ const props = defineProps({
   },
   communityApiStore: {
     type: Object as PropType<CommunityApiStoreType>,
+    required: true,
+  },
+  orchestrationStore: {
+    type: Object as PropType<OrchestrationStoreType>,
     required: true,
   },
   trilogyResolver: {
@@ -344,6 +349,7 @@ provide('userSettingsStore', props.userSettingsStore)
 provide('llmConnectionStore', props.llmConnectionStore)
 provide('dashboardStore', props.dashboardStore)
 provide('communityApiStore', props.communityApiStore)
+provide('orchestrationStore', props.orchestrationStore)
 const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)

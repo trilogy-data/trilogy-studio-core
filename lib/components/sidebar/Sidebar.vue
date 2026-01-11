@@ -148,6 +148,11 @@
         @toggle-mobile-menu="toggleMobileMenu"
       />
       <CommunityModelList v-show="active === 'community-models'" />
+      <OrchestrationSidebar
+        v-show="active === 'orchestration'"
+        @schedule-key-selected="scheduleKeySelected"
+        :activeScheduleKey="activeOrchestrationKey"
+      />
     </div>
   </div>
 </template>
@@ -161,6 +166,7 @@ import ModelSidebar from './ModelSidebar.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
 import DashboardList from './DashboardList.vue'
 import CommunityModelList from './CommunityModelList.vue'
+import OrchestrationSidebar from './OrchestrationSidebar.vue'
 import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
@@ -203,6 +209,11 @@ export default defineComponent({
       default: getDefaultValueFromHash('dashboard'),
       optional: true,
     },
+    activeOrchestrationKey: {
+      type: String,
+      default: getDefaultValueFromHash('orchestration'),
+      optional: true,
+    },
     containerWidth: {
       type: Number,
       default: 200,
@@ -225,6 +236,12 @@ export default defineComponent({
         tooltip: 'Chart',
         icon: 'mdi mdi-chart-multiple',
         screen: 'dashboard',
+      },
+      {
+        name: 'orchestration',
+        tooltip: 'Schedule',
+        icon: 'mdi mdi-clock-outline',
+        screen: 'orchestration',
       },
       {
         name: 'models',
@@ -299,6 +316,7 @@ export default defineComponent({
     LLMConnectionList,
     DashboardList,
     CommunityModelList,
+    OrchestrationSidebar,
   },
 
   watch: {
@@ -350,6 +368,9 @@ export default defineComponent({
     },
     dashboardKeySelected(key: string) {
       this.$emit('dashboard-key-selected', key)
+    },
+    scheduleKeySelected(key: string) {
+      this.$emit('schedule-key-selected', key)
     },
     toggleMobileMenu() {
       this.$emit('toggle-mobile-menu')

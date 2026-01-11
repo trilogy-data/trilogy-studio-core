@@ -23,6 +23,7 @@ type ScreenType =
   | 'profile'
   | 'settings'
   | 'connections'
+  | 'orchestration'
   | ''
 
 interface NavigationState {
@@ -36,6 +37,7 @@ interface NavigationState {
   activeCommunityModelKey: Ref<string>
   activeDocumentationKey: Ref<string>
   activeLLMConnectionKey: Ref<string>
+  activeOrchestrationKey: Ref<string>
   modelImport: Ref<string>
   connectionImport: Ref<string>
   mobileMenuOpen: Ref<boolean>
@@ -74,6 +76,7 @@ export interface NavigationStore {
   readonly activeCommunityModelKey: Ref<string>
   readonly activeDocumentationKey: Ref<string>
   readonly activeLLMConnectionKey: Ref<string>
+  readonly activeOrchestrationKey: Ref<string>
   readonly modelImport: Ref<string>
   readonly connectionImport: Ref<string>
   readonly mobileMenuOpen: Ref<boolean>
@@ -94,6 +97,7 @@ export interface NavigationStore {
   setActiveDocumentationKey(documentation: string | null): void
 
   setActiveLLMConnectionKey(llmConnection: string | null): void
+  setActiveOrchestrationKey(orchestration: string | null): void
   toggleMobileMenu(): void
   toggleFullScreen(s: boolean): void
   updateTabName(screen: ScreenType, title: string | null, address: string): void
@@ -124,6 +128,7 @@ const createNavigationStore = (): NavigationStore => {
     activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
     activeDocumentationKey: ref(getDefaultValueFromHash('tutorial', '')),
+    activeOrchestrationKey: ref(getDefaultValueFromHash('orchestration', '')),
     // model import is legacy
     modelImport: ref(getDefaultValueFromHash('import', getDefaultValueFromHash('model', ''))),
     connectionImport: ref(getDefaultValueFromHash('connection', '')),
@@ -304,6 +309,10 @@ const createNavigationStore = (): NavigationStore => {
     if (!activeKeys.includes('welcome')) {
       keysToRemove.push('welcome')
     }
+    if (!activeKeys.includes('orchestration')) {
+      state.activeOrchestrationKey.value = ''
+      keysToRemove.push('orchestration')
+    }
     removeHashesFromUrl(keysToRemove)
   }
 
@@ -363,6 +372,8 @@ const createNavigationStore = (): NavigationStore => {
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
         baseTips = baseTips.concat(userSettingsStore.getUnreadTips(communityTips))
+      } else if (tabInfo.screen === 'orchestration') {
+        state.activeOrchestrationKey.value = tabInfo.address
       }
       state.mobileMenuOpen.value = false
       state.displayedTips.value = baseTips
@@ -455,6 +466,15 @@ const createNavigationStore = (): NavigationStore => {
       return
     }
     openTab('llms', null, llmConnection)
+  }
+
+  const setActiveOrchestrationKey = (orchestration: string | null): void => {
+    if (orchestration === null) {
+      removeHashFromUrl('orchestration')
+      state.activeOrchestrationKey.value = ''
+      return
+    }
+    openTab('orchestration', null, orchestration)
   }
 
   const toggleMobileMenu = (): void => {
@@ -724,6 +744,9 @@ const createNavigationStore = (): NavigationStore => {
     get activeLLMConnectionKey() {
       return state.activeLLMConnectionKey
     },
+    get activeOrchestrationKey() {
+      return state.activeOrchestrationKey
+    },
     get modelImport() {
       return state.modelImport
     },
@@ -758,6 +781,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveConnectionKey,
     setActiveDocumentationKey,
     setActiveLLMConnectionKey,
+    setActiveOrchestrationKey,
     setActiveCommunityModelKey,
     toggleMobileMenu,
     setActiveModelKey,

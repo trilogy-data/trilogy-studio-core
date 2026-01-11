@@ -47,6 +47,7 @@
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
           @dashboard-key-selected="setActiveDashboard"
+          @schedule-key-selected="setActiveOrchestrationKey"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
@@ -54,6 +55,7 @@
           :activeConnectionKey="activeConnectionKey"
           :containerWidth="containerWidth"
           :activeDashboardKey="activeDashboard"
+          :activeOrchestrationKey="activeOrchestrationKey"
         />
       </template>
       <template v-if="showingCredentialPrompt">
@@ -131,6 +133,9 @@
         </template>
         <template v-else-if="activeScreen === 'llms'">
           <llm-view />
+        </template>
+        <template v-else-if="activeScreen === 'orchestration'">
+          <orchestration-view :activeScheduleKey="activeOrchestrationKey" />
         </template>
         <template v-else>
           <welcome-page
@@ -287,6 +292,7 @@ const DashboardAutoImporter = defineAsyncComponent(
   () => import('../components/dashboard/DashboardAutoImporter.vue'),
 )
 const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
+const OrchestrationView = defineAsyncComponent(() => import('./OrchestrationView.vue'))
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -330,6 +336,7 @@ export default {
     'results-view': ResultsView,
     'dashboard-auto-importer': DashboardAutoImporter,
     'asset-auto-importer': AssetAutoImporter,
+    'orchestration-view': OrchestrationView,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
@@ -384,6 +391,7 @@ export default {
       activeLLMConnectionKey,
       activeCommunityModelKey,
       activeDashboard,
+      activeOrchestrationKey,
       setActiveScreen,
       setActiveSidebarScreen,
       activeSidebarScreen,
@@ -394,6 +402,7 @@ export default {
       setActiveConnectionKey,
       setActiveLLMConnectionKey,
       setActiveDashboard,
+      setActiveOrchestrationKey,
       onInitialLoad,
       showTipModal,
       displayedTips,
@@ -444,6 +453,8 @@ export default {
       setActiveEditor,
       activeDashboard,
       setActiveDashboard,
+      activeOrchestrationKey,
+      setActiveOrchestrationKey,
       editorRef,
       displayedTips,
       fullScreen,
