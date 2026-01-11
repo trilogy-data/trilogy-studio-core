@@ -1,12 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
 
-// NOTE: These tests are skipped because clicking on an LLM connection in the sidebar
-// doesn't navigate to the LLMView due to a pre-existing navigation bug in Sidebar.vue.
-// The LLMConnectionList emits 'llm-connection-key-selected' which is handled by
-// connectionKeySelected(), but that emits 'connection-key-selected' instead of
-// 'llm-key-selected'. The chat feature itself works correctly when navigated to manually.
-
 test.describe('LLM Chat with Artifacts Tests', () => {
   // Set a reasonable timeout for all tests
   test.setTimeout(60000)
@@ -25,7 +19,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     })
   })
 
-  test.skip('should display chat interface and send messages', async ({ page, isMobile }) => {
+  test('should display chat interface and send messages', async ({ page, isMobile }) => {
     await page.goto('#skipTips=true')
 
     if (isMobile) {
@@ -46,7 +40,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
 
     // The LLM view should now be visible with the chat tabs
     // Should see the view tabs
-    await expect(page.getByRole('button', { name: 'Chat' })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('button', { name: 'Chat' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: 'Validation Tests' })).toBeVisible({
       timeout: 5000,
     })
@@ -73,7 +67,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('message-assistant-1')).toContainText('How can I help you')
   })
 
-  test.skip('should switch between chat and validation tabs', async ({ page, isMobile }) => {
+  test('should switch between chat and validation tabs', async ({ page, isMobile }) => {
     await page.goto('#skipTips=true')
 
     if (isMobile) {
@@ -93,6 +87,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await page.getByTestId('llm-connection-test-openai').click()
 
     // Chat tab should be active by default
+    await expect(page.getByRole('button', { name: 'Chat' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: 'Chat' })).toHaveClass(/active/)
     await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 5000 })
 
@@ -110,7 +105,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 5000 })
   })
 
-  test.skip('should disable send button when input is empty', async ({ page, isMobile }) => {
+  test('should disable send button when input is empty', async ({ page, isMobile }) => {
     await page.goto('#skipTips=true')
 
     if (isMobile) {
@@ -130,7 +125,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await page.getByTestId('llm-connection-test-openai').click()
 
     // Wait for chat to be visible
-    await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 10000 })
 
     // Send button should be disabled when input is empty
     await expect(page.getByTestId('send-button')).toBeDisabled()

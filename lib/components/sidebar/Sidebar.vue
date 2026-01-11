@@ -127,7 +127,7 @@
       />
       <LLMConnectionList
         v-show="active === 'llms'"
-        @llm-connection-key-selected="connectionKeySelected"
+        @llm-connection-key-selected="llmKeySelected"
         :activeLLMKey="activeLLMKey"
       />
       <ModelSidebar
