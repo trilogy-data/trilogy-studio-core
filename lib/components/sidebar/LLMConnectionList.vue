@@ -117,9 +117,14 @@ export default {
     }
 
     const toggleCollapse = async (id: string, connectionName: string, type: string) => {
-      // Emit selection event for connections
-      if (['connection', 'model'].includes(type)) {
-        emit('llm-connection-key-selected', id)
+      // Handle chat/validation item clicks - these navigate to the LLM view with specific tab
+      if (type === 'open-chat') {
+        emit('llm-open-view', connectionName, 'chat')
+        return
+      }
+      if (type === 'open-validation') {
+        emit('llm-open-view', connectionName, 'validation')
+        return
       }
 
       // If expanding a connection, fetch its details
@@ -165,6 +170,8 @@ export default {
           | 'error'
           | 'api-key'
           | 'loading'
+          | 'open-chat'
+          | 'open-validation'
         connection: any | undefined
       }> = []
 
@@ -201,6 +208,23 @@ export default {
 
         // If expanded, show connection details
         if (collapsed.value[name] === false) {
+          // Chat and Validation navigation items
+          list.push({
+            id: `${name}-open-chat`,
+            name: 'Chat',
+            indent: 1,
+            count: 0,
+            type: 'open-chat',
+            connection,
+          })
+          list.push({
+            id: `${name}-open-validation`,
+            name: 'Validation Tests',
+            indent: 1,
+            count: 0,
+            type: 'open-validation',
+            connection,
+          })
           // API Key setting
           list.push({
             id: `${name}-api-key`,

@@ -128,6 +128,7 @@
       <LLMConnectionList
         v-show="active === 'llms'"
         @llm-connection-key-selected="llmKeySelected"
+        @llm-open-view="llmOpenView"
         :activeLLMKey="activeLLMKey"
       />
       <ModelSidebar
@@ -356,6 +357,9 @@ export default defineComponent({
     },
     llmKeySelected(key: string) {
       this.$emit('llm-key-selected', key)
+    },
+    llmOpenView(connectionName: string, tab: string) {
+      this.$emit('llm-open-view', connectionName, tab)
     },
     saveEditors() {
       this.$emit('save-editors')

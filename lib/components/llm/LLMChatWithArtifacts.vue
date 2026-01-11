@@ -81,11 +81,7 @@
           >
             <i :class="artifactExpanded ? 'mdi mdi-arrow-collapse' : 'mdi mdi-arrow-expand'"></i>
           </button>
-          <button
-            class="panel-action-btn"
-            @click="closeArtifactPanel"
-            title="Close"
-          >
+          <button class="panel-action-btn" @click="closeArtifactPanel" title="Close">
             <i class="mdi mdi-close"></i>
           </button>
         </div>
@@ -212,7 +208,11 @@ export default defineComponent({
     // Custom message handler for integrations
     onSendMessage: {
       type: [Function, null] as PropType<
-        ((message: string, messages: ChatMessage[]) => Promise<{ response?: string; artifact?: ChatArtifactType } | void>) | null
+        | ((
+            message: string,
+            messages: ChatMessage[],
+          ) => Promise<{ response?: string; artifact?: ChatArtifactType } | void>)
+        | null
       >,
       default: undefined,
     },
@@ -262,7 +262,8 @@ export default defineComponent({
       if (artifactPanelContent.value) {
         const headerHeight = 40 // Header height
         const tabsHeight = currentArtifact.value?.type === 'results' ? 36 : 0
-        artifactViewHeight.value = artifactPanelContent.value.clientHeight - headerHeight - tabsHeight - 20
+        artifactViewHeight.value =
+          artifactPanelContent.value.clientHeight - headerHeight - tabsHeight - 20
       }
     }
 
@@ -416,7 +417,10 @@ export default defineComponent({
     }
 
     // Public methods for external control
-    const addArtifact = (artifact: ChatArtifactType, messageText: string = 'Here are the results:') => {
+    const addArtifact = (
+      artifact: ChatArtifactType,
+      messageText: string = 'Here are the results:',
+    ) => {
       const message: ChatMessage = {
         role: 'assistant',
         content: messageText,

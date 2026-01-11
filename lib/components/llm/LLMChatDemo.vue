@@ -20,12 +20,7 @@
 
         <div class="form-group" v-if="selectedProvider">
           <label for="api-key">API Key</label>
-          <input
-            id="api-key"
-            type="password"
-            v-model="apiKey"
-            placeholder="Enter your API key"
-          />
+          <input id="api-key" type="password" v-model="apiKey" placeholder="Enter your API key" />
         </div>
 
         <div class="form-group" v-if="selectedProvider && providerModels.length > 0">
@@ -37,11 +32,7 @@
           </select>
         </div>
 
-        <button
-          class="connect-btn"
-          @click="connectProvider"
-          :disabled="!canConnect"
-        >
+        <button class="connect-btn" @click="connectProvider" :disabled="!canConnect">
           Connect
         </button>
 
@@ -139,7 +130,11 @@ export default defineComponent({
     // Custom message handler for full control over responses
     customMessageHandler: {
       type: [Function, null] as PropType<
-        ((message: string, messages: ChatMessage[]) => Promise<{ response?: string; artifact?: ChatArtifact } | void>) | null
+        | ((
+            message: string,
+            messages: ChatMessage[],
+          ) => Promise<{ response?: string; artifact?: ChatArtifact } | void>)
+        | null
       >,
       default: undefined,
     },

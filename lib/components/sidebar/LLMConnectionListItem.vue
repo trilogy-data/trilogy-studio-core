@@ -28,6 +28,8 @@
           :provider-type="getProviderType(item.connection)"
         />
         <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle node-icon"></i>
+        <i v-else-if="item.type === 'open-chat'" class="mdi mdi-chat-outline node-icon"></i>
+        <i v-else-if="item.type === 'open-validation'" class="mdi mdi-test-tube node-icon"></i>
       </template>
 
       <!-- Custom name slot for complex content -->
@@ -190,6 +192,8 @@ export interface ListItem {
     | 'model'
     | 'toggle-save-credential'
     | 'loading'
+    | 'open-chat'
+    | 'open-validation'
   connection: LLMProvider
 }
 
@@ -325,9 +329,12 @@ export default defineComponent({
       return props.item.name
     }
 
-    // Handle item click (toggle collapse)
+    // Handle item click (toggle collapse or navigate)
     const handleItemClick = () => {
       if (isExpandable.value) {
+        toggleCollapse(props.item.id)
+      } else if (props.item.type === 'open-chat' || props.item.type === 'open-validation') {
+        // These items navigate to the LLM view with a specific tab
         toggleCollapse(props.item.id)
       }
     }

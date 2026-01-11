@@ -46,6 +46,7 @@
           @documentation-key-selected="setActiveDocumentationKey"
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
+          @llm-open-view="handleLLMOpenView"
           @dashboard-key-selected="setActiveDashboard"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
@@ -130,7 +131,7 @@
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
         </template>
         <template v-else-if="activeScreen === 'llms'">
-          <llm-view />
+          <llm-view :initialTab="llmInitialTab" />
         </template>
         <template v-else>
           <welcome-page
@@ -412,6 +413,22 @@ export default {
 
     const markTipRead = userSettingsStore.markTipRead
 
+    // LLM view tab management
+    const llmInitialTab = ref<'chat' | 'validation' | ''>('')
+
+    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation') => {
+      // Set the active connection
+      setActiveLLMConnectionKey(connectionName)
+      // Set the initial tab
+      llmInitialTab.value = tab
+      // Navigate to the LLMs screen
+      setActiveScreen('llms')
+      // Reset the tab after a short delay so subsequent navigations work correctly
+      setTimeout(() => {
+        llmInitialTab.value = ''
+      }, 100)
+    }
+
     return {
       connectionStore,
       editorStore,
@@ -447,6 +464,8 @@ export default {
       markTipRead,
       showTipModal,
       toggleFullScreen,
+      llmInitialTab,
+      handleLLMOpenView,
     }
   },
   methods: {

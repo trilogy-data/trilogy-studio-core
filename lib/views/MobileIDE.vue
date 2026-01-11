@@ -21,6 +21,7 @@
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
+          @llm-open-view="handleLLMOpenView"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
@@ -84,7 +85,7 @@
         <community-models :activeCommunityModelKey="activeCommunityModelKey" />
       </template>
       <template v-else-if="activeScreen === 'llms'">
-        <LLMView />
+        <LLMView :initialTab="llmInitialTab" />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -180,7 +181,7 @@ import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, defineAsyncComponent, provide, onBeforeUnmount } from 'vue'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
@@ -293,6 +294,27 @@ export default {
       removeBacklisteners()
     })
     provide('navigationStore', screenNavigation)
+
+    // LLM view tab management
+    const llmInitialTab = ref<'chat' | 'validation' | ''>('')
+
+    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation') => {
+      // Set the active connection
+      setActiveLLMConnectionKey(connectionName)
+      // Set the initial tab
+      llmInitialTab.value = tab
+      // Navigate to the LLMs screen
+      setActiveScreen('llms')
+      // Close the mobile menu
+      if (mobileMenuOpen.value) {
+        toggleMobileMenu()
+      }
+      // Reset the tab after a short delay so subsequent navigations work correctly
+      setTimeout(() => {
+        llmInitialTab.value = ''
+      }, 100)
+    }
+
     return {
       connectionStore,
       editorStore,
@@ -328,6 +350,8 @@ export default {
       closeTab,
       closeOtherTabsExcept,
       tabSelected,
+      llmInitialTab,
+      handleLLMOpenView,
     }
   },
   methods: {

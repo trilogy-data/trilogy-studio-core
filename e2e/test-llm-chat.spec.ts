@@ -34,10 +34,17 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await page.getByTestId('llm-connection-creator-api-key').fill('test-api-key')
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Wait for connection to be created and click on it to open the LLM view
+    // Wait for connection to be created and expand it
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
 
+    // Click on the Chat item to navigate to the LLM view with Chat tab
+    await expect(page.getByTestId('llm-connection-test-openai-open-chat')).toBeVisible({
+      timeout: 5000,
+    })
+    await page.getByTestId('llm-connection-test-openai-open-chat').click()
+
+    // On mobile, close sidebar if needed (navigation should auto-close it)
 
     // The LLM view should now be visible with the chat tabs
     // Should see the view tabs
@@ -83,11 +90,15 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await page.getByTestId('llm-connection-creator-api-key').fill('test-api-key')
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Click on the connection to open the LLM view
+    // Expand the connection
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
 
-
+    // Click on the Chat item to navigate to the LLM view
+    await expect(page.getByTestId('llm-connection-test-openai-open-chat')).toBeVisible({
+      timeout: 5000,
+    })
+    await page.getByTestId('llm-connection-test-openai-open-chat').click()
 
     // Chat tab should be active by default
     await expect(page.getByRole('button', { name: 'Chat' })).toBeVisible({ timeout: 10000 })
@@ -123,10 +134,13 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await page.getByTestId('llm-connection-creator-api-key').fill('test-api-key')
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Click on the connection to open the LLM view
+    // Expand the connection and click on Chat
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
-
+    await expect(page.getByTestId('llm-connection-test-openai-open-chat')).toBeVisible({
+      timeout: 5000,
+    })
+    await page.getByTestId('llm-connection-test-openai-open-chat').click()
 
     // Wait for chat to be visible
     await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 10000 })

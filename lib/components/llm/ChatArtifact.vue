@@ -79,10 +79,7 @@
 
       <!-- Code Display -->
       <template v-else-if="artifact.type === 'code'">
-        <code-block
-          :language="artifact.config?.language || 'sql'"
-          :content="artifact.data || ''"
-        />
+        <code-block :language="artifact.config?.language || 'sql'" :content="artifact.data || ''" />
       </template>
 
       <!-- Custom/Unknown -->

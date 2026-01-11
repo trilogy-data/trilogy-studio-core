@@ -30,119 +30,128 @@
 
     <!-- Validation View (existing content) -->
     <div v-else class="debug-container">
-    <!-- Left side: LLM Chat -->
-    <div class="llm-chat-container">
-      <div class="section-header">
-        LLM Validation
-        <span class="text-faint text-small"
-          >Test that your LLM connection will deliver acceptable experience.</span
-        >
-      </div>
-      <div class="connection-controls">
-        <div class="provider-selector">
-          <label for="provider-select">Provider:</label>
-          <select id="provider-select" v-model="selectedProvider">
-            <option v-for="provider in availableProviders" :key="provider" :value="provider">
-              {{ provider }}
-              <span v-if="getConnectionStatus(provider)">
-                ({{ getConnectionStatus(provider) }})
+      <!-- Left side: LLM Chat -->
+      <div class="llm-chat-container">
+        <div class="section-header">
+          LLM Validation
+          <span class="text-faint text-small"
+            >Test that your LLM connection will deliver acceptable experience.</span
+          >
+        </div>
+        <div class="connection-controls">
+          <div class="provider-selector">
+            <label for="provider-select">Provider:</label>
+            <select id="provider-select" v-model="selectedProvider">
+              <option v-for="provider in availableProviders" :key="provider" :value="provider">
+                {{ provider }}
+                <span v-if="getConnectionStatus(provider)">
+                  ({{ getConnectionStatus(provider) }})
+                </span>
+              </option>
+            </select>
+            <span class="status-indicator" :class="getConnectionStatus(selectedProvider)"></span>
+          </div>
+        </div>
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
+        <div class="chat-messages" ref="messagesContainer">
+          <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
+            <div class="message-header">
+              <strong>{{ message.role === 'user' ? 'You' : 'AI' }}</strong>
+              <span v-if="message.role === 'assistant' && message.modelInfo" class="model-info">
+                {{ message.modelInfo.totalTokens }} tokens
               </span>
-            </option>
-          </select>
-          <span class="status-indicator" :class="getConnectionStatus(selectedProvider)"></span>
+            </div>
+            <div class="message-content">
+              <pre>{{ message.content }}</pre>
+            </div>
+            <div
+              v-if="message.testResult"
+              :class="['test-result', message.testResult.passed ? 'passed' : 'failed']"
+            >
+              Test: {{ message.testResult.passed ? 'PASSED ✓' : 'FAILED ✗' }}
+              <div v-if="!message.testResult.passed" class="failure-reason">
+                {{ message.testResult.reason }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-container">
+          <textarea
+            v-model="userInput"
+            @keydown.enter.ctrl="sendPrompt"
+            placeholder="Type your message here... (Ctrl+Enter to send)"
+            :disabled="isLoading || !isProviderSelected"
+          >
+          </textarea>
+          <button
+            @click="sendPrompt"
+            :disabled="isLoading || !userInput.trim() || !isProviderSelected"
+          >
+            {{ isLoading ? 'Sending...' : 'Send' }}
+          </button>
         </div>
       </div>
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
-      <div class="chat-messages" ref="messagesContainer">
-        <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
-          <div class="message-header">
-            <strong>{{ message.role === 'user' ? 'You' : 'AI' }}</strong>
-            <span v-if="message.role === 'assistant' && message.modelInfo" class="model-info">
-              {{ message.modelInfo.totalTokens }} tokens
-            </span>
+
+      <!-- Right side: Scenarios -->
+      <div class="scenarios-container">
+        <div class="section-header">
+          Test Scenarios
+          <div class="header-controls">
+            <button
+              @click="runAllScenarios"
+              :disabled="isLoading || !isProviderSelected"
+              class="run-all-button"
+            >
+              {{ isRunningAll ? 'Running...' : 'Run All Tests' }}
+            </button>
+            <span
+              class="pass-indicator text-small"
+              v-if="
+                Object.values(scenarioResults).length == scenarios.length &&
+                Object.values(scenarioResults).every((v) => v?.passed)
+              "
+              >✓ All passed, LLM integration should meet expectations!</span
+            >
           </div>
-          <div class="message-content">
-            <pre>{{ message.content }}</pre>
-          </div>
+        </div>
+
+        <div class="scenarios-list">
           <div
-            v-if="message.testResult"
-            :class="['test-result', message.testResult.passed ? 'passed' : 'failed']"
+            v-for="(scenario, index) in scenarios"
+            :key="index"
+            :class="['scenario-item', { passed: scenarioResults[index]?.passed }]"
+            @click="runScenario(index)"
           >
-            Test: {{ message.testResult.passed ? 'PASSED ✓' : 'FAILED ✗' }}
-            <div v-if="!message.testResult.passed" class="failure-reason">
-              {{ message.testResult.reason }}
+            <div class="scenario-name">{{ scenario.name }}</div>
+            <div class="scenario-description">{{ scenario.description }}</div>
+            <div v-if="scenarioResults[index]" class="scenario-result-indicator">
+              <span v-if="scenarioResults[index].passed" class="pass-indicator">✓</span>
+              <span v-else class="fail-indicator">✗</span>
+            </div>
+            <div v-if="testRunDetails[index]" class="test-run-details">
+              {{ testRunDetails[index].passed }}/5 runs passed
             </div>
           </div>
         </div>
       </div>
-
-      <div class="input-container">
-        <textarea
-          v-model="userInput"
-          @keydown.enter.ctrl="sendPrompt"
-          placeholder="Type your message here... (Ctrl+Enter to send)"
-          :disabled="isLoading || !isProviderSelected"
-        >
-        </textarea>
-        <button
-          @click="sendPrompt"
-          :disabled="isLoading || !userInput.trim() || !isProviderSelected"
-        >
-          {{ isLoading ? 'Sending...' : 'Send' }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Right side: Scenarios -->
-    <div class="scenarios-container">
-      <div class="section-header">
-        Test Scenarios
-        <div class="header-controls">
-          <button
-            @click="runAllScenarios"
-            :disabled="isLoading || !isProviderSelected"
-            class="run-all-button"
-          >
-            {{ isRunningAll ? 'Running...' : 'Run All Tests' }}
-          </button>
-          <span
-            class="pass-indicator text-small"
-            v-if="
-              Object.values(scenarioResults).length == scenarios.length &&
-              Object.values(scenarioResults).every((v) => v?.passed)
-            "
-            >✓ All passed, LLM integration should meet expectations!</span
-          >
-        </div>
-      </div>
-
-      <div class="scenarios-list">
-        <div
-          v-for="(scenario, index) in scenarios"
-          :key="index"
-          :class="['scenario-item', { passed: scenarioResults[index]?.passed }]"
-          @click="runScenario(index)"
-        >
-          <div class="scenario-name">{{ scenario.name }}</div>
-          <div class="scenario-description">{{ scenario.description }}</div>
-          <div v-if="scenarioResults[index]" class="scenario-result-indicator">
-            <span v-if="scenarioResults[index].passed" class="pass-indicator">✓</span>
-            <span v-else class="fail-indicator">✗</span>
-          </div>
-          <div v-if="testRunDetails[index]" class="test-run-details">
-            {{ testRunDetails[index].passed }}/5 runs passed
-          </div>
-        </div>
-      </div>
-    </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, nextTick, watch, inject } from 'vue'
+import {
+  defineComponent,
+  ref,
+  computed,
+  onMounted,
+  nextTick,
+  watch,
+  inject,
+  type PropType,
+} from 'vue'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import testCases from '../llm/data/testCases'
@@ -180,16 +189,32 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    initialTab: {
+      type: String as PropType<'chat' | 'validation' | ''>,
+      default: '',
+    },
   },
 
-  setup(_) {
+  setup(props) {
     // Inject the store
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
     // TODO: validate query syntax on resolver
 
-    // View state
-    const activeView = ref<'chat' | 'validation'>('chat')
+    // View state - use initialTab if provided, otherwise default to 'chat'
+    const activeView = ref<'chat' | 'validation'>(
+      props.initialTab === 'chat' || props.initialTab === 'validation' ? props.initialTab : 'chat',
+    )
     const chatWithArtifacts = ref<InstanceType<typeof LLMChatWithArtifacts> | null>(null)
+
+    // Watch for changes to initialTab prop
+    watch(
+      () => props.initialTab,
+      (newTab) => {
+        if (newTab === 'chat' || newTab === 'validation') {
+          activeView.value = newTab
+        }
+      },
+    )
 
     // Chat state
     const messages = ref<MessageWithTest[]>([])
@@ -588,29 +613,32 @@ pre {
 
 .view-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--sidebar-bg);
-  padding: 0 10px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--sidebar-bg);
+  min-height: 30px;
+  z-index: 99;
 }
 
 .view-tab {
-  padding: 10px 20px;
   border: none;
-  background: transparent;
-  color: var(--text-color);
+  background: none;
   cursor: pointer;
-  font-size: var(--font-size);
+  font-size: 0.875rem;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  padding-left: 20px;
+  padding-right: 20px;
+  color: var(--text-color);
+  border-radius: 0px;
 }
 
 .view-tab:hover {
-  color: var(--special-text);
+  color: #0ea5e9;
 }
 
 .view-tab.active {
-  color: var(--special-text);
-  border-bottom-color: var(--special-text);
+  color: #0ea5e9;
+  border-bottom: 2px solid #0ea5e9;
+  border-radius: 0px;
 }
 
 .chat-view {

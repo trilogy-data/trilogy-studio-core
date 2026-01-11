@@ -56,7 +56,11 @@ export default defineComponent({
     },
     customMessageHandler: {
       type: [Function, null] as PropType<
-        ((message: string, messages: ChatMessage[]) => Promise<{ response?: string; artifact?: ChatArtifact } | void>) | null
+        | ((
+            message: string,
+            messages: ChatMessage[],
+          ) => Promise<{ response?: string; artifact?: ChatArtifact } | void>)
+        | null
       >,
       default: undefined,
     },

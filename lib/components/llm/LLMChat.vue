@@ -20,9 +20,7 @@
               <pre>{{ getMessageTextWithoutArtifact(message) }}</pre>
             </div>
             <slot name="artifact" :artifact="message.artifact" :message="message">
-              <div class="artifact-placeholder">
-                [Artifact: {{ message.artifact.type }}]
-              </div>
+              <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
             </slot>
           </template>
           <!-- Regular message rendering -->
@@ -70,8 +68,21 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, nextTick, watch, onMounted, inject, type PropType, computed } from 'vue'
-import { type LLMConnectionStoreType, replaceTripleQuotedText, extractLastTripleQuotedText } from '../../stores/llmStore'
+import {
+  defineComponent,
+  ref,
+  nextTick,
+  watch,
+  onMounted,
+  inject,
+  type PropType,
+  computed,
+} from 'vue'
+import {
+  type LLMConnectionStoreType,
+  replaceTripleQuotedText,
+  extractLastTripleQuotedText,
+} from '../../stores/llmStore'
 import { type LLMMessage } from '../../llm'
 import CodeBlock from '../CodeBlock.vue'
 
@@ -137,7 +148,9 @@ export default defineComponent({
     },
     // Custom send handler - if provided, component won't use llmStore
     customSendHandler: {
-      type: [Function, null] as PropType<((message: string, messages: ChatMessage[]) => Promise<void>) | null>,
+      type: [Function, null] as PropType<
+        ((message: string, messages: ChatMessage[]) => Promise<void>) | null
+      >,
       default: undefined,
     },
   },
@@ -161,14 +174,22 @@ export default defineComponent({
     })
 
     // Sync with external messages prop
-    watch(() => props.messages, (newMessages) => {
-      internalMessages.value = [...newMessages]
-    }, { deep: true })
+    watch(
+      () => props.messages,
+      (newMessages) => {
+        internalMessages.value = [...newMessages]
+      },
+      { deep: true },
+    )
 
     // Scroll to bottom when messages are updated
-    watch(internalMessages, () => {
-      scrollToBottom()
-    }, { deep: true })
+    watch(
+      internalMessages,
+      () => {
+        scrollToBottom()
+      },
+      { deep: true },
+    )
 
     const scrollToBottom = () => {
       nextTick(() => {
