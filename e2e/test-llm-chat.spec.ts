@@ -38,10 +38,6 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
 
-    // On mobile, close the sidebar to see the main content
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
 
     // The LLM view should now be visible with the chat tabs
     // Should see the view tabs
@@ -91,10 +87,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
 
-    // On mobile, close the sidebar to see the main content
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
+
 
     // Chat tab should be active by default
     await expect(page.getByRole('button', { name: 'Chat' })).toBeVisible({ timeout: 10000 })
@@ -134,10 +127,6 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-connection-test-openai')).toBeVisible({ timeout: 5000 })
     await page.getByTestId('llm-connection-test-openai').click()
 
-    // On mobile, close the sidebar to see the main content
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
 
     // Wait for chat to be visible
     await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 10000 })
