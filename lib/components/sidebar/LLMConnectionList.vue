@@ -119,7 +119,7 @@ export default {
     const toggleCollapse = async (id: string, connectionName: string, type: string) => {
       // Emit selection event for connections
       if (['connection', 'model'].includes(type)) {
-        emit('connection-key-selected', id)
+        emit('llm-connection-key-selected', id)
       }
 
       // If expanding a connection, fetch its details
