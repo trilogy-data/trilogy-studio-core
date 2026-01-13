@@ -262,6 +262,7 @@ IMPORTANT GUIDELINES:
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
 7. If you need fields that aren't available, use add_import to import the relevant data source first
+8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
 `
 }
 
