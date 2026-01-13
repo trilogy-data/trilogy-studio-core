@@ -67,6 +67,25 @@ export class AnthropicProvider extends LLMProvider {
     this.validateRequestOptions(options)
     history = history || []
     try {
+      // Build request body
+      const requestBody: Record<string, any> = {
+        model: this.model,
+        messages: history.concat([{ role: 'user', content: options.prompt }]),
+        max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+        temperature: options.temperature || DEFAULT_TEMPERATURE,
+        top_p: options.topP || 1.0,
+      }
+
+      // Add system prompt if provided
+      if (options.systemPrompt) {
+        requestBody.system = options.systemPrompt
+      }
+
+      // Add tools if provided
+      if (options.tools && options.tools.length > 0) {
+        requestBody.tools = options.tools
+      }
+
       const response = await fetchWithRetry(
         () =>
           fetch(this.baseUrl, {
@@ -77,20 +96,30 @@ export class AnthropicProvider extends LLMProvider {
               'anthropic-version': '2023-06-01',
               'anthropic-dangerous-direct-browser-access': 'true',
             },
-            body: JSON.stringify({
-              model: this.model,
-              messages: history.concat([{ role: 'user', content: options.prompt }]),
-              max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-              temperature: options.temperature || DEFAULT_TEMPERATURE,
-              top_p: options.topP || 1.0,
-            }),
+            body: JSON.stringify(requestBody),
           }),
         this.retryOptions,
       )
 
       const data = await response.json()
+
+      // Handle tool use responses - extract text and tool_use blocks
+      let responseText = ''
+      if (Array.isArray(data.content)) {
+        for (const block of data.content) {
+          if (block.type === 'text') {
+            responseText += block.text
+          } else if (block.type === 'tool_use') {
+            // Format tool use as a parseable block
+            responseText += `\n<tool_use>{"name": "${block.name}", "input": ${JSON.stringify(block.input)}}</tool_use>\n`
+          }
+        }
+      } else {
+        responseText = data.content[0]?.text || ''
+      }
+
       return {
-        text: data.content[0].text,
+        text: responseText,
         usage: {
           promptTokens: data.usage.input_tokens,
           completionTokens: data.usage.output_tokens,

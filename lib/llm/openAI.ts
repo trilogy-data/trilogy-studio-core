@@ -64,10 +64,37 @@ export class OpenAIProvider extends LLMProvider {
     this.validateRequestOptions(options)
 
     let messages: LLMMessage[] = []
+
+    // Add system prompt if provided
+    if (options.systemPrompt) {
+      messages.push({ role: 'system', content: options.systemPrompt })
+    }
+
     if (history) {
-      messages = [...history, { role: 'user', content: options.prompt }]
+      messages = [...messages, ...history, { role: 'user', content: options.prompt }]
     } else {
-      messages = [{ role: 'user', content: options.prompt }]
+      messages = [...messages, { role: 'user', content: options.prompt }]
+    }
+
+    // Build request body
+    const requestBody: Record<string, any> = {
+      model: this.model,
+      messages: messages,
+      // max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+      // temperature: options.temperature || DEFAULT_TEMPERATURE,
+      // top_p: options.topP || 1.0,
+    }
+
+    // Add tools if provided (OpenAI format)
+    if (options.tools && options.tools.length > 0) {
+      requestBody.tools = options.tools.map((tool) => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.input_schema,
+        },
+      }))
     }
 
     try {
@@ -79,20 +106,28 @@ export class OpenAIProvider extends LLMProvider {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.apiKey}`,
             },
-            body: JSON.stringify({
-              model: this.model,
-              messages: messages,
-              // max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-              // temperature: options.temperature || DEFAULT_TEMPERATURE,
-              // top_p: options.topP || 1.0,
-            }),
+            body: JSON.stringify(requestBody),
           }),
         this.retryOptions,
       )
 
       const data = await response.json()
+
+      // Handle tool calls in the response
+      let responseText = data.choices[0].message.content || ''
+      const toolCalls = data.choices[0].message.tool_calls
+
+      if (toolCalls && toolCalls.length > 0) {
+        for (const toolCall of toolCalls) {
+          if (toolCall.type === 'function') {
+            const input = JSON.parse(toolCall.function.arguments)
+            responseText += `\n<tool_use>{"name": "${toolCall.function.name}", "input": ${JSON.stringify(input)}}</tool_use>\n`
+          }
+        }
+      }
+
       return {
-        text: data.choices[0].message.content,
+        text: responseText,
         usage: {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,

@@ -16,6 +16,7 @@ import {
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards/base'
+import { Chat } from '../chats/chat'
 
 export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
@@ -24,6 +25,7 @@ export default class LocalStorage extends AbstractStorage {
   private modelStorageKey: string
   private userSettingsStorageKey: string
   private dashboardStorageKey: string
+  private chatStorageKey: string
   public type: string
 
   constructor(prefix: string = '') {
@@ -34,6 +36,7 @@ export default class LocalStorage extends AbstractStorage {
     this.modelStorageKey = prefix + 'modelConfig'
     this.userSettingsStorageKey = prefix + 'userSettings'
     this.dashboardStorageKey = prefix + 'dashboards'
+    this.chatStorageKey = prefix + 'chats'
     this.type = 'local'
   }
 
@@ -342,5 +345,61 @@ export default class LocalStorage extends AbstractStorage {
   async hasDashboard(id: string): Promise<boolean> {
     const dashboards = await this.loadDashboards()
     return id in dashboards
+  }
+
+  // Chat methods implementation
+  async saveChats(chatsList: Chat[]): Promise<void> {
+    const chats = await this.loadChats()
+
+    chatsList.forEach((chat) => {
+      if (chat.changed) {
+        chats[chat.id] = chat
+        chat.changed = false
+      }
+      if (chat.deleted) {
+        delete chats[chat.id]
+      }
+    })
+
+    localStorage.setItem(
+      this.chatStorageKey,
+      JSON.stringify(
+        Object.values(chats).map((chat) => chat.serialize()),
+      ),
+    )
+  }
+
+  async loadChats(): Promise<Record<string, Chat>> {
+    const storedData = localStorage.getItem(this.chatStorageKey)
+    let raw = storedData ? JSON.parse(storedData) : []
+
+    return raw.reduce((acc: Record<string, Chat>, chatData: any) => {
+      const chat = Chat.fromSerialized(chatData)
+      acc[chat.id] = reactive(chat) as Chat
+      acc[chat.id].storage = 'local'
+      return acc
+    }, {})
+  }
+
+  async deleteChat(id: string): Promise<void> {
+    const chats = await this.loadChats()
+    if (chats[id]) {
+      delete chats[id]
+      localStorage.setItem(
+        this.chatStorageKey,
+        JSON.stringify(
+          Object.values(chats).map((chat) => chat.serialize()),
+        ),
+      )
+    }
+  }
+
+  async clearChats(): Promise<void> {
+    localStorage.removeItem(this.chatStorageKey)
+  }
+
+  async hasChat(id: string): Promise<boolean> {
+    const chats = await this.loadChats()
+    return id in chats
   }
 }

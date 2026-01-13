@@ -16,6 +16,12 @@
         }
       "
     />
+    <ChatCreatorModal
+      :visible="showChatCreatorModal"
+      :preselectedConnection="chatCreatorPreselectedConnection"
+      @close="showChatCreatorModal = false"
+      @chat-created="handleChatCreated"
+    />
     <!-- Full screen mode - no sidebar -->
     <div v-if="fullScreen" class="full-screen-container">
       <template v-if="activeScreen === 'dashboard'">
@@ -47,6 +53,7 @@
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
           @llm-open-view="handleLLMOpenView"
+          @create-new-chat="handleCreateNewChat"
           @dashboard-key-selected="setActiveDashboard"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
@@ -263,6 +270,7 @@ import { inject, ref, defineAsyncComponent, provide, onBeforeUnmount } from 'vue
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
+import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import type { DashboardStoreType } from '../stores/dashboardStore.ts'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
@@ -285,6 +293,9 @@ const CommunityModels = defineAsyncComponent(
 const ConnectionView = defineAsyncComponent(() => import('./ConnectionView.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
+const ChatCreatorModal = defineAsyncComponent(
+  () => import('../components/llm/ChatCreatorModal.vue'),
+)
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -328,6 +339,7 @@ export default {
     'results-view': ResultsView,
     'dashboard-auto-importer': AssetAutoImporter,
     'asset-auto-importer': AssetAutoImporter,
+    ChatCreatorModal,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
@@ -416,14 +428,36 @@ export default {
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
 
-    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation') => {
-      // Set the active connection
-      setActiveLLMConnectionKey(connectionName)
+    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation', chatId?: string) => {
+      // Build the address with optional chat ID
+      const address = chatId ? `${connectionName}${KeySeparator}${chatId}` : connectionName
+      // Set the active connection (with chat ID if present)
+      setActiveLLMConnectionKey(address)
       // Set the initial tab
       llmInitialTab.value = tab
       // Navigate to the LLMs screen
       setActiveScreen('llms')
       // Reset the tab after a short delay so subsequent navigations work correctly
+      setTimeout(() => {
+        llmInitialTab.value = ''
+      }, 100)
+    }
+
+    // Chat creator modal management
+    const showChatCreatorModal = ref(false)
+    const chatCreatorPreselectedConnection = ref('')
+
+    const handleCreateNewChat = (connectionName: string) => {
+      chatCreatorPreselectedConnection.value = connectionName
+      showChatCreatorModal.value = true
+    }
+
+    const handleChatCreated = (chat: any) => {
+      // Navigate to the LLMs screen to show the new chat with chat ID in URL
+      const address = `${chat.llmConnectionName}${KeySeparator}${chat.id}`
+      setActiveLLMConnectionKey(address)
+      llmInitialTab.value = 'chat'
+      setActiveScreen('llms')
       setTimeout(() => {
         llmInitialTab.value = ''
       }, 100)
@@ -466,6 +500,10 @@ export default {
       toggleFullScreen,
       llmInitialTab,
       handleLLMOpenView,
+      showChatCreatorModal,
+      chatCreatorPreselectedConnection,
+      handleCreateNewChat,
+      handleChatCreated,
     }
   },
   methods: {

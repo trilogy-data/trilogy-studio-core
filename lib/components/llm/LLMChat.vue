@@ -1,7 +1,14 @@
 <template>
   <div class="llm-chat-container" data-testid="llm-chat-container">
     <div class="chat-header" v-if="showHeader">
-      <div class="chat-title">{{ title }}</div>
+      <editable-title
+        v-if="editableTitle"
+        :modelValue="title"
+        @update:modelValue="$emit('title-update', $event)"
+        testId="chat-title"
+        class="chat-title"
+      />
+      <div v-else class="chat-title">{{ title }}</div>
       <slot name="header-actions"></slot>
     </div>
 
@@ -85,6 +92,7 @@ import {
 } from '../../stores/llmStore'
 import { type LLMMessage } from '../../llm'
 import CodeBlock from '../CodeBlock.vue'
+import EditableTitle from '../EditableTitle.vue'
 
 export interface ChatArtifact {
   type: 'results' | 'chart' | 'code' | 'custom'
@@ -103,6 +111,7 @@ export default defineComponent({
   name: 'LLMChatComponent',
   components: {
     CodeBlock,
+    EditableTitle,
   },
   props: {
     messages: {
@@ -112,6 +121,10 @@ export default defineComponent({
     title: {
       type: String,
       default: 'Chat',
+    },
+    editableTitle: {
+      type: Boolean,
+      default: false,
     },
     showHeader: {
       type: Boolean,
@@ -155,7 +168,7 @@ export default defineComponent({
     },
   },
 
-  emits: ['message-sent', 'response-received', 'artifact-created', 'update:messages'],
+  emits: ['message-sent', 'response-received', 'artifact-created', 'update:messages', 'title-update'],
 
   setup(props, { emit }) {
     const internalMessages = ref<ChatMessage[]>([...props.messages])

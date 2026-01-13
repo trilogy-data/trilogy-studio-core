@@ -18,13 +18,28 @@
       </button>
     </div>
 
-    <!-- Chat View -->
+    <!-- Chat View with Split Layout -->
     <div v-if="activeView === 'chat'" class="chat-view">
-      <l-l-m-chat-with-artifacts
-        ref="chatWithArtifacts"
-        title="LLM Chat"
-        placeholder="Type your message... (Enter to send)"
-        :onSendMessage="handleChatMessage"
+      <l-l-m-chat-split-view
+        ref="chatSplitView"
+        :title="activeChatTitle"
+        :editableTitle="true"
+        placeholder="Ask about your data... (Enter to send)"
+        :systemPrompt="chatSystemPrompt"
+        :connectionInfo="chatConnectionInfo"
+        :availableImports="availableImportsForChat"
+        :activeImports="activeImportsForChat"
+        :symbols="chatSymbols"
+        :initialMessages="activeChatMessages"
+        :initialArtifacts="activeChatArtifacts"
+        :initialActiveArtifactIndex="activeChatArtifactIndex"
+        :externalLoading="isChatLoading"
+        :onSendMessage="handleChatMessageWithTools"
+        @update:messages="handleMessagesUpdate"
+        @update:artifacts="handleArtifactsUpdate"
+        @update:activeArtifactIndex="handleActiveArtifactUpdate"
+        @import-change="handleImportChange"
+        @title-update="handleTitleUpdate"
       />
     </div>
 
@@ -154,11 +169,25 @@ import {
 } from 'vue'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
+import type { ConnectionStoreType } from '../stores/connectionStore'
+import type QueryExecutionService from '../stores/queryExecutionService'
+import type { ChatStoreType } from '../stores/chatStore'
+import type { EditorStoreType } from '../stores/editorStore'
+import type { NavigationStore } from '../stores/useScreenNavigation'
+import { KeySeparator } from '../data/constants'
 import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
 import { extractLastTripleQuotedText } from '../stores/llmStore'
-import LLMChatWithArtifacts from '../components/llm/LLMChatWithArtifacts.vue'
-import type { ChatMessage } from '../components/llm/LLMChat.vue'
+import LLMChatSplitView from '../components/llm/LLMChatSplitView.vue'
+import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
+import { ChatToolExecutor } from '../llm/chatToolExecutor'
+import {
+  buildChatAgentSystemPrompt,
+  parseToolCalls,
+  CHAT_TOOLS,
+} from '../llm/chatAgentPrompt'
+import type { ModelConceptInput } from '../llm/data/models'
+import type { ContentInput, CompletionItem } from '../stores/resolver'
 
 export interface TestResult {
   passed: boolean
@@ -178,7 +207,7 @@ export interface MessageWithTest extends LLMMessage {
 export default defineComponent({
   name: 'LLMChatDebugComponent',
   components: {
-    LLMChatWithArtifacts,
+    LLMChatSplitView,
   },
   props: {
     initialProvider: {
@@ -196,15 +225,223 @@ export default defineComponent({
   },
 
   setup(props) {
-    // Inject the store
+    // Inject stores and services
     const llmConnectionStore = inject('llmConnectionStore') as LLMConnectionStoreType
-    // TODO: validate query syntax on resolver
+    const connectionStore = inject('connectionStore') as ConnectionStoreType | null
+    const queryExecutionService = inject('queryExecutionService') as QueryExecutionService | null
+    const chatStore = inject('chatStore') as ChatStoreType | null
+    const editorStore = inject('editorStore') as EditorStoreType | null
+    const navigationStore = inject('navigationStore') as NavigationStore | null
 
     // View state - use initialTab if provided, otherwise default to 'chat'
     const activeView = ref<'chat' | 'validation'>(
       props.initialTab === 'chat' || props.initialTab === 'validation' ? props.initialTab : 'chat',
     )
-    const chatWithArtifacts = ref<InstanceType<typeof LLMChatWithArtifacts> | null>(null)
+    const chatSplitView = ref<InstanceType<typeof LLMChatSplitView> | null>(null)
+
+    // Chat state
+    const isChatLoading = ref(false)
+    const activeChatMessages = ref<ChatMessage[]>([])
+    const activeChatArtifacts = ref<ChatArtifact[]>([])
+    const activeChatArtifactIndex = ref(-1)
+
+    // Create tool executor if dependencies are available
+    const toolExecutor = computed(() => {
+      if (connectionStore && queryExecutionService) {
+        return new ChatToolExecutor(
+          queryExecutionService,
+          connectionStore,
+          chatStore || undefined,
+          editorStore || undefined,
+        )
+      }
+      return null
+    })
+
+    // Computed properties for chat
+    const activeChatTitle = computed(() => {
+      if (chatStore?.activeChat) {
+        return chatStore.activeChat.name
+      }
+      return 'LLM Chat'
+    })
+
+    const chatConnectionInfo = computed(() => {
+      const parts: string[] = []
+      if (llmConnectionStore.activeConnection) {
+        const conn = llmConnectionStore.getConnection(llmConnectionStore.activeConnection)
+        if (conn) {
+          parts.push(`${conn.name} (${conn.model})`)
+        }
+      }
+      if (chatStore?.activeChat?.dataConnectionName) {
+        parts.push(`Data: ${chatStore.activeChat.dataConnectionName}`)
+      }
+      return parts.join(' | ')
+    })
+
+    // Available imports for current data connection
+    const availableImportsForChat = computed((): ChatImport[] => {
+      const connectionName = chatStore?.activeChat?.dataConnectionName
+      if (!connectionName || !editorStore) return []
+
+      return Object.values(editorStore.editors)
+        .filter((editor) => editor.connection === connectionName)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((editor) => ({
+          id: editor.id,
+          name: editor.name.replace(/\//g, '.'),
+          alias: '',
+        }))
+    })
+
+    // Currently active imports for chat
+    const activeImportsForChat = computed((): ChatImport[] => {
+      return chatStore?.activeChat?.imports || []
+    })
+
+    // Concepts fetched from active imports
+    const chatConcepts = ref<ModelConceptInput[]>([])
+    // Raw completion items for the symbols pane
+    const chatSymbols = ref<CompletionItem[]>([])
+
+    // Function to fetch concepts/symbols from imports - can be called externally
+    const refreshChatSymbols = async (): Promise<CompletionItem[]> => {
+      const imports = chatStore?.activeChat?.imports
+      const connectionName = chatStore?.activeChat?.dataConnectionName
+
+      if (!connectionName) {
+        chatConcepts.value = []
+        chatSymbols.value = []
+        return []
+      }
+
+      // Start with model sources from the connection (root imports)
+      const modelSources = connectionStore?.getConnectionSources(connectionName) || []
+      console.log('Chat symbols refresh - model sources:', modelSources.length, modelSources.map((s) => s.alias))
+
+      // Add extra content from chat imports
+      const importContent: ContentInput[] = (imports || []).map((imp) => ({
+        alias: imp.alias || imp.name,
+        contents: editorStore?.editors[imp.id]?.contents || '',
+      }))
+      console.log('Chat symbols refresh - import content:', importContent.length, importContent.map((s) => s.alias))
+
+      // Combine model sources with import content
+      const extraContent: ContentInput[] = [...modelSources, ...importContent]
+
+      // If no sources at all, return empty
+      if (extraContent.length === 0) {
+        console.log('Chat symbols refresh - no sources, returning empty')
+        chatConcepts.value = []
+        chatSymbols.value = []
+        return []
+      }
+
+      try {
+        // Build imports array from chat imports to actually import the concepts
+        // The Import type expects { name: string, alias: string }
+        const importsForValidation = (imports || []).map((imp) => ({
+          name: imp.name,
+          alias: imp.alias || '',
+        }))
+
+        // Use validation to get parsed concepts
+        const queryInput = {
+          text: 'SELECT 1', // Minimal query just to parse sources
+          editorType: 'trilogy' as const,
+          imports: importsForValidation,
+          extraContent,
+        }
+
+        const validation = await queryExecutionService?.validateQuery(
+          connectionName,
+          queryInput,
+          false, // Don't log
+        )
+
+        if (validation?.data?.completion_items) {
+          // Debug: log what we're getting
+          console.log(
+            'Chat symbols refresh - completion_items count:',
+            validation.data.completion_items.length,
+          )
+          console.log(
+            'Chat symbols refresh - trilogyTypes:',
+            [...new Set(validation.data.completion_items.map((i) => i.trilogyType))],
+          )
+
+          // Store raw completion items for the symbols pane
+          chatSymbols.value = validation.data.completion_items.filter(
+            (item) => item.trilogyType === 'concept',
+          )
+
+          console.log('Chat symbols refresh - filtered concepts count:', chatSymbols.value.length)
+
+          // Map CompletionItem to ModelConceptInput for the system prompt
+          chatConcepts.value = chatSymbols.value.map((item) => ({
+            name: item.label,
+            type: item.datatype || item.type,
+            description: item.description || undefined,
+            calculation: item.calculation || undefined,
+            keys: item.keys || undefined,
+          }))
+
+          return chatSymbols.value
+        }
+      } catch (error) {
+        console.error('Failed to fetch concepts from imports:', error)
+        chatConcepts.value = []
+        chatSymbols.value = []
+      }
+      return []
+    }
+
+    // Watch for import changes and fetch concepts
+    watch(
+      () => chatStore?.activeChat?.imports,
+      async () => {
+        await refreshChatSymbols()
+      },
+      { deep: true, immediate: true },
+    )
+
+    // Also watch for active chat changes to refresh symbols with model sources
+    watch(
+      () => chatStore?.activeChat?.dataConnectionName,
+      async () => {
+        await refreshChatSymbols()
+      },
+      { immediate: true },
+    )
+
+    const chatSystemPrompt = computed(() => {
+      const dataConnectionName = chatStore?.activeChat?.dataConnectionName || null
+      const availableConnections = connectionStore
+        ? Object.keys(connectionStore.connections)
+        : []
+
+      // Check if the data connection is currently active/connected
+      const isDataConnectionActive = dataConnectionName && connectionStore
+        ? connectionStore.connections[dataConnectionName]?.connected ?? false
+        : false
+
+      return buildChatAgentSystemPrompt({
+        dataConnectionName,
+        availableConnections,
+        availableConcepts: chatConcepts.value,
+        activeImports: activeImportsForChat.value,
+        availableImportsForConnection: availableImportsForChat.value,
+        isDataConnectionActive,
+      })
+    })
+
+    // Handle import changes from UI
+    const handleImportChange = (newImports: ChatImport[]) => {
+      if (chatStore?.activeChatId) {
+        chatStore.setImports(chatStore.activeChatId, newImports)
+      }
+    }
 
     // Watch for changes to initialTab prop
     watch(
@@ -214,6 +451,49 @@ export default defineComponent({
           activeView.value = newTab
         }
       },
+    )
+
+    // Watch for active chat changes
+    watch(
+      () => chatStore?.activeChat,
+      (chat) => {
+        if (chat) {
+          activeChatMessages.value = [...chat.messages]
+          activeChatArtifacts.value = [...chat.artifacts]
+          activeChatArtifactIndex.value = chat.activeArtifactIndex
+        } else {
+          activeChatMessages.value = []
+          activeChatArtifacts.value = []
+          activeChatArtifactIndex.value = -1
+        }
+      },
+      { immediate: true },
+    )
+
+    // Auto-connect the LLM connection when opening chat view if it's idle
+    const autoConnectIfNeeded = async () => {
+      const activeConn = llmConnectionStore.activeConnection
+      if (activeConn) {
+        const status = llmConnectionStore.getConnectionStatus(activeConn)
+        if (status === 'disabled') {
+          try {
+            await llmConnectionStore.resetConnection(activeConn)
+          } catch (err) {
+            console.error('Failed to auto-connect LLM:', err)
+          }
+        }
+      }
+    }
+
+    // Watch for chat view becoming active
+    watch(
+      () => activeView.value,
+      (newView) => {
+        if (newView === 'chat') {
+          autoConnectIfNeeded()
+        }
+      },
+      { immediate: true },
     )
 
     // Chat state
@@ -543,38 +823,206 @@ export default defineComponent({
       }
     })
 
-    // Handle chat messages for the chat view
-    const handleChatMessage = async (message: string, _chatMessages: ChatMessage[]) => {
+    // Handle chat messages with tool execution loop
+    const handleChatMessageWithTools = async (
+      message: string,
+      chatMessages: ChatMessage[],
+    ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> => {
+      const MAX_TOOL_ITERATIONS = 50 // Safety limit - agent decides when to stop
+
       if (!llmConnectionStore.activeConnection) {
         return {
           response: 'No LLM connection available. Please configure an LLM provider first.',
         }
       }
 
+      isChatLoading.value = true
+
       try {
-        const options: LLMRequestOptions = {
-          prompt: message,
+        const allArtifacts: ChatArtifact[] = []
+        let currentMessages = [...chatMessages]
+        let currentPrompt = message
+        let finalResponseText = ''
+
+        // Tool use loop - keep going until LLM stops calling tools or we hit max iterations
+        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+          const options: LLMRequestOptions = {
+            prompt: currentPrompt,
+            systemPrompt: chatSystemPrompt.value,
+            tools: CHAT_TOOLS,
+          }
+
+          // Generate completion from LLM
+          const response: LLMResponse = await llmConnectionStore.generateCompletion(
+            llmConnectionStore.activeConnection,
+            options,
+            currentMessages,
+          )
+
+          const responseText = response.text
+          const toolCalls = parseToolCalls(responseText)
+
+          // If no tool calls, we're done - return the final response
+          if (toolCalls.length === 0 || !toolExecutor.value) {
+            finalResponseText = responseText
+            break
+          }
+
+          // Execute tool calls and build tool results
+          const toolResults: string[] = []
+
+          for (const toolCall of toolCalls) {
+            const result = await toolExecutor.value.executeToolCall(toolCall.name, toolCall.input)
+
+            if (result.success) {
+              // Check if this tool triggers a symbol refresh (e.g., add_import, remove_import)
+              let symbolInfo = ''
+              if (result.triggersSymbolRefresh) {
+                const updatedSymbols = await refreshChatSymbols()
+                if (updatedSymbols.length > 0) {
+                  // Include updated symbol names in the result for the agent
+                  const symbolNames = updatedSymbols
+                    .slice(0, 50) // Limit to first 50 symbols
+                    .map((s) => s.label)
+                    .join(', ')
+                  symbolInfo = `\n\nUpdated available fields (${updatedSymbols.length} total): ${symbolNames}${updatedSymbols.length > 50 ? '...' : ''}`
+                } else {
+                  symbolInfo = '\n\nNo fields available after import change.'
+                }
+              }
+
+              if (result.artifact) {
+                allArtifacts.push(result.artifact)
+                // Format result for LLM - include actual data so agent can analyze it
+                const config = result.artifact.config
+                const artifactData = result.artifact.data
+                let dataPreview = ''
+                if (artifactData) {
+                  // Convert Results to JSON for the agent
+                  const jsonData = typeof artifactData.toJSON === 'function'
+                    ? artifactData.toJSON()
+                    : artifactData
+                  // Limit data rows to avoid token overflow
+                  const limitedData = {
+                    ...jsonData,
+                    data: jsonData.data?.slice(0, 100) // Limit to first 100 rows
+                  }
+                  dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 100):\n${JSON.stringify(limitedData, null, 2)}`
+                }
+                const artifactInfo = config
+                  ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
+                  : ''
+                toolResults.push(
+                  `<tool_result name="${toolCall.name}">\nSuccess. ${result.message || artifactInfo}${dataPreview}${symbolInfo}\n</tool_result>`,
+                )
+              } else if (result.message) {
+                toolResults.push(
+                  `<tool_result name="${toolCall.name}">\n${result.message}${symbolInfo}\n</tool_result>`,
+                )
+              }
+            } else {
+              toolResults.push(
+                `<tool_result name="${toolCall.name}">\nError: ${result.error}\n</tool_result>`,
+              )
+            }
+          }
+
+          // Add assistant response and tool results to conversation for next iteration
+          currentMessages = [
+            ...currentMessages,
+            { role: 'assistant' as const, content: responseText },
+            {
+              role: 'user' as const,
+              content: toolResults.join('\n\n'),
+              hidden: true, // Tool results are hidden in UI
+            },
+          ]
+
+          // Clear prompt for continuation (context is in messages)
+          currentPrompt = 'Continue based on the tool results.'
+
+          // If this is the last iteration, save the response
+          if (iteration === MAX_TOOL_ITERATIONS - 1) {
+            finalResponseText = responseText + '\n\n(Max tool iterations reached)'
+          }
         }
 
-        const response: LLMResponse = await llmConnectionStore.generateCompletion(
-          llmConnectionStore.activeConnection,
-          options,
-        )
-
         return {
-          response: response.text,
+          response: finalResponseText,
+          artifacts: allArtifacts.length > 0 ? allArtifacts : undefined,
         }
       } catch (err) {
         return {
           response: `Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`,
+        }
+      } finally {
+        isChatLoading.value = false
+      }
+    }
+
+    // Update handlers for chat state synchronization with store
+    const handleMessagesUpdate = (newMessages: ChatMessage[]) => {
+      activeChatMessages.value = newMessages
+      if (chatStore?.activeChatId) {
+        // Sync messages to the active chat in the store
+        const chat = chatStore.chats[chatStore.activeChatId]
+        if (chat) {
+          chat.messages = [...newMessages]
+          chat.changed = true
+        }
+      }
+    }
+
+    const handleArtifactsUpdate = (newArtifacts: ChatArtifact[]) => {
+      activeChatArtifacts.value = newArtifacts
+      if (chatStore?.activeChatId) {
+        const chat = chatStore.chats[chatStore.activeChatId]
+        if (chat) {
+          chat.artifacts = [...newArtifacts]
+          chat.changed = true
+        }
+      }
+    }
+
+    const handleActiveArtifactUpdate = (index: number) => {
+      activeChatArtifactIndex.value = index
+      if (chatStore?.activeChatId) {
+        chatStore.setActiveArtifact(chatStore.activeChatId, index)
+      }
+    }
+
+    const handleTitleUpdate = (newTitle: string) => {
+      if (chatStore?.activeChatId) {
+        chatStore.updateChatName(chatStore.activeChatId, newTitle)
+        // Also update the tab name in navigation
+        const chat = chatStore.activeChat
+        if (chat && navigationStore) {
+          const address = `${chat.llmConnectionName}${KeySeparator}${chat.id}`
+          navigationStore.updateTabName('llms', newTitle, address)
         }
       }
     }
 
     return {
       activeView,
-      chatWithArtifacts,
-      handleChatMessage,
+      chatSplitView,
+      // Chat view props
+      activeChatTitle,
+      chatConnectionInfo,
+      chatSystemPrompt,
+      availableImportsForChat,
+      activeImportsForChat,
+      chatSymbols,
+      activeChatMessages,
+      activeChatArtifacts,
+      activeChatArtifactIndex,
+      isChatLoading,
+      handleChatMessageWithTools,
+      handleMessagesUpdate,
+      handleArtifactsUpdate,
+      handleActiveArtifactUpdate,
+      handleTitleUpdate,
+      handleImportChange,
       messages,
       userInput,
       isLoading,

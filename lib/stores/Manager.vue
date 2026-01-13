@@ -37,6 +37,7 @@ import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
 import type { CommunityApiStoreType } from './communityApiStore'
+import type { ChatStoreType } from './chatStore'
 import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
 import useScreenNavigation from './useScreenNavigation'
@@ -86,6 +87,10 @@ const props = defineProps({
   },
   communityApiStore: {
     type: Object as PropType<CommunityApiStoreType>,
+    required: true,
+  },
+  chatStore: {
+    type: Object as PropType<ChatStoreType>,
     required: true,
   },
   trilogyResolver: {
@@ -344,6 +349,7 @@ provide('userSettingsStore', props.userSettingsStore)
 provide('llmConnectionStore', props.llmConnectionStore)
 provide('dashboardStore', props.dashboardStore)
 provide('communityApiStore', props.communityApiStore)
+provide('chatStore', props.chatStore)
 const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)
@@ -414,6 +420,13 @@ for (let source of props.storageSources) {
     source.loadDashboards().then((dashboards) => {
       for (let dashboard of Object.values(dashboards)) {
         props.dashboardStore.addDashboard(dashboard)
+      }
+    }),
+  )
+  loadingPromises.push(
+    source.loadChats().then((chats) => {
+      for (let chat of Object.values(chats)) {
+        props.chatStore.addChat(chat)
       }
     }),
   )
@@ -526,6 +539,17 @@ const saveDashboards = async () => {
   }
 }
 
+const saveChats = async () => {
+  console.log('saving chats')
+  for (let source of props.storageSources) {
+    await source.saveChats(
+      Object.values(props.chatStore.chats).filter(
+        (chat) => chat.storage == source.type,
+      ),
+    )
+  }
+}
+
 const saveAll = async () => {
   await Promise.all([
     saveEditors(),
@@ -533,6 +557,7 @@ const saveAll = async () => {
     saveModels(),
     saveLLMConnections(),
     saveDashboards(),
+    saveChats(),
   ])
 }
 
@@ -542,7 +567,8 @@ const unSaved = computed(() => {
     Number(props.connectionStore.unsavedConnections || 0) +
     Number(props.modelStore.unsavedModels || 0) +
     Number(props.llmConnectionStore.unsavedConnections || 0) +
-    Number(props.dashboardStore.unsavedDashboards || 0)
+    Number(props.dashboardStore.unsavedDashboards || 0) +
+    Number(props.chatStore.unsavedChats || 0)
   )
 })
 
@@ -604,6 +630,7 @@ provide('saveConnections', saveConnections)
 provide('saveModels', saveModels)
 provide('saveLLMConnections', saveLLMConnections)
 provide('saveDashboards', saveDashboards)
+provide('saveChats', saveChats)
 provide('saveAll', saveAll)
 provide('unSaved', unSaved)
 

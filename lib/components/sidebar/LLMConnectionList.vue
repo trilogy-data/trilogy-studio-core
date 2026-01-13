@@ -37,10 +37,12 @@ import LoadingButton from '../LoadingButton.vue'
 import StatusIcon from '../StatusIcon.vue'
 import Tooltip from '../Tooltip.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
+import type { ChatStoreType } from '../../stores/chatStore'
 import { KeySeparator } from '../../data/constants'
 import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
+import type { Chat } from '../../chats/chat'
 
 export default {
   name: 'LLMConnectionList',
@@ -56,9 +58,11 @@ export default {
       optional: true,
     },
   },
+  emits: ['llm-open-view', 'create-new-chat', 'open-chat'],
   setup(_, { emit }) {
     const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const saveConnections = inject<Function>('saveLLMConnections')
+    const chatStore = inject<ChatStoreType>('chatStore', null as any)
     if (!llmConnectionStore || !saveConnections) {
       throw new Error('LLM connection store is not provided!')
     }
@@ -116,7 +120,25 @@ export default {
       delete isLoading.value[id]
     }
 
-    const toggleCollapse = async (id: string, connectionName: string, type: string) => {
+    const toggleCollapse = async (id: string, connectionName: string, type: string, extraData?: any) => {
+      // Handle new chat creation
+      if (type === 'new-chat') {
+        emit('create-new-chat', connectionName)
+        return
+      }
+
+      // Handle existing chat selection
+      if (type === 'chat-item') {
+        if (chatStore && extraData?.chatId) {
+          chatStore.setActiveChat(extraData.chatId)
+          // Set this LLM connection as active
+          llmConnectionStore.activeConnection = connectionName
+        }
+        // Include chatId in the event so it can be stored in URL
+        emit('llm-open-view', connectionName, 'chat', extraData?.chatId)
+        return
+      }
+
       // Handle chat/validation item clicks - these navigate to the LLM view with specific tab
       if (type === 'open-chat') {
         emit('llm-open-view', connectionName, 'chat')
@@ -172,7 +194,12 @@ export default {
           | 'loading'
           | 'open-chat'
           | 'open-validation'
+          | 'new-chat'
+          | 'chat-item'
+          | 'chats-header'
         connection: any | undefined
+        chat?: Chat
+        chatId?: string
       }> = []
 
       // Sort connections by status and name
@@ -208,15 +235,34 @@ export default {
 
         // If expanded, show connection details
         if (collapsed.value[name] === false) {
-          // Chat and Validation navigation items
+          // Get chats for this connection
+          const connectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+
+          // Chats section header with new chat button
           list.push({
-            id: `${name}-open-chat`,
-            name: 'Chat',
+            id: `${name}-new-chat`,
+            name: '+ New Chat',
             indent: 1,
-            count: 0,
-            type: 'open-chat',
+            count: connectionChats.length,
+            type: 'new-chat',
             connection,
           })
+
+          // Add existing chats for this connection
+          connectionChats.forEach((chat) => {
+            list.push({
+              id: `${name}-chat-${chat.id}`,
+              name: chat.name,
+              indent: 2,
+              count: chat.messages.length,
+              type: 'chat-item',
+              connection,
+              chat,
+              chatId: chat.id,
+            })
+          })
+
+          // Validation Tests navigation
           list.push({
             id: `${name}-open-validation`,
             name: 'Validation Tests',

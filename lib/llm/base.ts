@@ -8,12 +8,25 @@ export interface LLMResponse {
   }
 }
 
+// Tool definition interface for LLM function calling
+export interface LLMToolDefinition {
+  name: string
+  description: string
+  input_schema: {
+    type: string
+    properties: Record<string, any>
+    required?: string[]
+  }
+}
+
 // Generic interface for LLM request options
 export interface LLMRequestOptions {
   prompt: string
   maxTokens?: number
   temperature?: number
   topP?: number
+  systemPrompt?: string
+  tools?: LLMToolDefinition[]
 }
 
 export interface LLMMessage {

@@ -184,6 +184,7 @@ import TrilogyResolver from '../stores/resolver.ts'
 import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
+import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
@@ -298,9 +299,11 @@ export default {
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
 
-    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation') => {
-      // Set the active connection
-      setActiveLLMConnectionKey(connectionName)
+    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation', chatId?: string) => {
+      // Build the address with optional chat ID
+      const address = chatId ? `${connectionName}${KeySeparator}${chatId}` : connectionName
+      // Set the active connection (with chat ID if present)
+      setActiveLLMConnectionKey(address)
       // Set the initial tab
       llmInitialTab.value = tab
       // Navigate to the LLMs screen
