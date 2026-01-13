@@ -44,6 +44,7 @@
           class="sidebar-tab"
           :class="{ active: sidebarTab === 'symbols' }"
           @click="sidebarTab = 'symbols'"
+          data-testid="llm-sidebar-tab-fields"
         >
           Fields
         </button>
@@ -51,6 +52,7 @@
           class="sidebar-tab"
           :class="{ active: sidebarTab === 'artifacts' }"
           @click="sidebarTab = 'artifacts'"
+          data-testid="llm-sidebar-tab-artifacts"
         >
           Artifacts
           <span v-if="artifacts.length > 0" class="artifact-count">{{ artifacts.length }}</span>

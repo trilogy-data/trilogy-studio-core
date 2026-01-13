@@ -6,6 +6,7 @@
         class="view-tab"
         :class="{ active: activeView === 'chat' }"
         @click="activeView = 'chat'"
+        data-testid="llm-view-tab-chat"
       >
         Chat
       </button>
@@ -13,6 +14,7 @@
         class="view-tab"
         :class="{ active: activeView === 'validation' }"
         @click="activeView = 'validation'"
+        data-testid="llm-view-tab-validation"
       >
         Validation Tests
       </button>

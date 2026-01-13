@@ -25,13 +25,14 @@
       @updateModel="updateModel"
       @setActive="setActiveConnection"
       @deleteConnection="deleteConnection"
+      @deleteChat="deleteChat"
       @toggleSaveCredential="toggleSaveCredential"
     />
   </sidebar-list>
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
 import StatusIcon from '../StatusIcon.vue'
@@ -39,6 +40,7 @@ import Tooltip from '../Tooltip.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ChatStoreType } from '../../stores/chatStore'
 import { KeySeparator } from '../../data/constants'
+import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
@@ -176,6 +178,20 @@ export default {
     Object.entries(llmConnectionStore.connections).forEach(([name, _]) => {
       let connectionKey = name
       collapsed.value[connectionKey] = true
+    })
+
+    // On mount, expand to the active LLM connection/chat from URL
+    onMounted(() => {
+      const currentLLMKey = getDefaultValueFromHash('llm-key', '')
+      if (currentLLMKey) {
+        // The key may contain a chat ID after KeySeparator (e.g., "connectionName+chatId")
+        const connectionName = currentLLMKey.split(KeySeparator)[0]
+
+        // Expand the connection
+        if (connectionName && llmConnectionStore.connections[connectionName]) {
+          collapsed.value[connectionName] = false
+        }
+      }
     })
 
     const contentList = computed(() => {
@@ -333,6 +349,7 @@ export default {
 
     return {
       llmConnectionStore,
+      chatStore,
       contentList,
       toggleCollapse,
       collapsed,
@@ -378,6 +395,15 @@ export default {
         // If this was the active connection, reset active connection
         if (this.llmConnectionStore.activeConnection === id) {
           this.llmConnectionStore.activeConnection = ''
+        }
+      }
+    },
+
+    deleteChat(chatId: string, _connectionName: string) {
+      // Ask for confirmation before deleting
+      if (confirm('Are you sure you want to delete this chat?')) {
+        if (this.chatStore) {
+          this.chatStore.removeChat(chatId)
         }
       }
     },

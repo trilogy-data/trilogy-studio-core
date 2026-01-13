@@ -129,6 +129,15 @@
 
       <!-- Custom extra content slot for connection actions -->
       <template #extra-content>
+        <!-- Delete button for chat items -->
+        <div class="chat-actions" v-if="item.type === 'chat-item'">
+          <tooltip class="tactile-button" content="Delete Chat" position="left">
+            <span class="remove-btn hover-icon" @click.stop="deleteChat(item.chatId)">
+              <i class="mdi mdi-trash-can-outline"></i>
+            </span>
+          </tooltip>
+        </div>
+
         <div class="connection-actions" v-if="item.type === 'connection'">
           <!-- Set Active Button for Connection -->
           <i
@@ -238,6 +247,7 @@ export default defineComponent({
     'updateModel',
     'toggleSaveCredential',
     'deleteConnection',
+    'deleteChat',
   ],
   setup(props, { emit }) {
     const apiKeyInput = ref<string>('')
@@ -397,6 +407,13 @@ export default defineComponent({
       emit('deleteConnection', id, props.item.connection?.name || '')
     }
 
+    // Delete a chat
+    const deleteChat = (chatId: string | undefined) => {
+      if (chatId) {
+        emit('deleteChat', chatId, props.item.connection?.name || '')
+      }
+    }
+
     // Update API key
     const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       emit('updateApiKey', connection, apiKey)
@@ -425,6 +442,7 @@ export default defineComponent({
       updateModel,
       toggleSaveCredential,
       deleteConnection,
+      deleteChat,
       // Context menu
       contextMenuVisible,
       contextMenuPosition,
@@ -591,5 +609,25 @@ export default defineComponent({
 .md-token-container {
   display: flex;
   flex-grow: 1;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.remove-btn {
+  cursor: pointer;
+}
+
+/* Show hover icons when parent sidebar item is hovered */
+:deep(.sidebar-item:hover) .hover-icon {
+  opacity: 1;
+}
+
+.hover-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 </style>
