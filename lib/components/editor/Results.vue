@@ -133,10 +133,15 @@ export default {
     },
     containerHeight: Number,
     generatedSql: String,
+    defaultTab: {
+      type: String,
+      required: false,
+      default: null,
+    },
   },
   data() {
     return {
-      activeTab: getDefaultValueFromHash('activeEditorTab', 'results'),
+      activeTab: this.defaultTab || getDefaultValueFromHash('activeEditorTab', 'results'),
       activeDrilldown: null as Drilldown | null,
       TABS_HEIGHT: 30, // Height of the tabs header
     }

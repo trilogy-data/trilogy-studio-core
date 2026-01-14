@@ -28,6 +28,11 @@
           :provider-type="getProviderType(item.connection)"
         />
         <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle node-icon"></i>
+        <i v-else-if="item.type === 'open-chat'" class="mdi mdi-chat-outline node-icon"></i>
+        <i v-else-if="item.type === 'open-validation'" class="mdi mdi-test-tube node-icon"></i>
+        <i v-else-if="item.type === 'new-chat'" class="mdi mdi-chat-plus-outline node-icon"></i>
+        <i v-else-if="item.type === 'chat-item'" class="mdi mdi-chat node-icon"></i>
+        <i v-else-if="item.type === 'chats-header'" class="mdi mdi-folder-outline node-icon"></i>
       </template>
 
       <!-- Custom name slot for complex content -->
@@ -124,6 +129,15 @@
 
       <!-- Custom extra content slot for connection actions -->
       <template #extra-content>
+        <!-- Delete button for chat items -->
+        <div class="chat-actions" v-if="item.type === 'chat-item'">
+          <tooltip class="tactile-button" content="Delete Chat" position="left">
+            <span class="remove-btn hover-icon" @click.stop="deleteChat(item.chatId)">
+              <i class="mdi mdi-trash-can-outline"></i>
+            </span>
+          </tooltip>
+        </div>
+
         <div class="connection-actions" v-if="item.type === 'connection'">
           <!-- Set Active Button for Connection -->
           <i
@@ -190,7 +204,14 @@ export interface ListItem {
     | 'model'
     | 'toggle-save-credential'
     | 'loading'
+    | 'open-chat'
+    | 'open-validation'
+    | 'new-chat'
+    | 'chat-item'
+    | 'chats-header'
   connection: LLMProvider
+  chat?: any
+  chatId?: string
 }
 
 export default defineComponent({
@@ -226,6 +247,7 @@ export default defineComponent({
     'updateModel',
     'toggleSaveCredential',
     'deleteConnection',
+    'deleteChat',
   ],
   setup(props, { emit }) {
     const apiKeyInput = ref<string>('')
@@ -325,15 +347,25 @@ export default defineComponent({
       return props.item.name
     }
 
-    // Handle item click (toggle collapse)
+    // Handle item click (toggle collapse or navigate)
     const handleItemClick = () => {
       if (isExpandable.value) {
+        toggleCollapse(props.item.id)
+      } else if (
+        props.item.type === 'open-chat' ||
+        props.item.type === 'open-validation' ||
+        props.item.type === 'new-chat' ||
+        props.item.type === 'chat-item'
+      ) {
+        // These items navigate to the LLM view with a specific tab
         toggleCollapse(props.item.id)
       }
     }
 
     const toggleCollapse = (id: string) => {
-      emit('toggle', id, props.item.connection?.name || '', props.item.type)
+      // Pass extra data for chat items
+      const extraData = props.item.type === 'chat-item' ? { chatId: props.item.chatId } : undefined
+      emit('toggle', id, props.item.connection?.name || '', props.item.type, extraData)
     }
 
     // Handle refresh connection
@@ -375,6 +407,13 @@ export default defineComponent({
       emit('deleteConnection', id, props.item.connection?.name || '')
     }
 
+    // Delete a chat
+    const deleteChat = (chatId: string | undefined) => {
+      if (chatId) {
+        emit('deleteChat', chatId, props.item.connection?.name || '')
+      }
+    }
+
     // Update API key
     const updateApiKey = (connection: LLMProvider, apiKey: string) => {
       emit('updateApiKey', connection, apiKey)
@@ -403,6 +442,7 @@ export default defineComponent({
       updateModel,
       toggleSaveCredential,
       deleteConnection,
+      deleteChat,
       // Context menu
       contextMenuVisible,
       contextMenuPosition,
@@ -569,5 +609,25 @@ export default defineComponent({
 .md-token-container {
   display: flex;
   flex-grow: 1;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.remove-btn {
+  cursor: pointer;
+}
+
+/* Show hover icons when parent sidebar item is hovered */
+:deep(.sidebar-item:hover) .hover-icon {
+  opacity: 1;
+}
+
+.hover-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 </style>

@@ -5,7 +5,7 @@ import {
   getDefaultValueFromHash,
   removeHashesFromUrl,
 } from './urlStore'
-import { useEditorStore, useDashboardStore, useUserSettingsStore, useCommunityApiStore } from '.'
+import { useEditorStore, useDashboardStore, useUserSettingsStore, useCommunityApiStore, useChatStore } from '.'
 import { lastSegment, KeySeparator } from '../data/constants'
 import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
 
@@ -111,6 +111,7 @@ const createNavigationStore = (): NavigationStore => {
   const editorStore = useEditorStore()
   const userSettingsStore = useUserSettingsStore()
   const communityApiStore = useCommunityApiStore()
+  const chatStore = useChatStore()
   let eventListener: any = null
   const state: NavigationState = {
     activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
@@ -150,6 +151,21 @@ const createNavigationStore = (): NavigationStore => {
       if (editor) {
         return editor.name || 'Untitled Editor'
       }
+    } else if (screen === 'llms') {
+      // Address format: connectionName or connectionName+chatId
+      const parts = address.split(KeySeparator)
+      const connectionName = parts[0]
+      const chatId = parts.length > 1 ? parts[1] : null
+
+      if (chatId) {
+        // Look up the chat name
+        const chat = chatStore.getChatById(chatId)
+        if (chat) {
+          return chat.name
+        }
+      }
+      // Fall back to connection name or "LLM Chat"
+      return connectionName || 'LLM Chat'
     } else if (screen === 'community-models') {
       // Parse the address to get the store ID (first part before KeySeparator)
       const parts = address.split(KeySeparator)
@@ -354,6 +370,12 @@ const createNavigationStore = (): NavigationStore => {
         state.activeConnectionKey.value = tabInfo.address
       } else if (tabInfo.screen === 'llms') {
         state.activeLLMConnectionKey.value = tabInfo.address
+        // Parse chat ID from address if present (format: connectionName+chatId)
+        const parts = tabInfo.address.split(KeySeparator)
+        if (parts.length > 1) {
+          const chatId = parts[1]
+          chatStore.setActiveChat(chatId)
+        }
       } else if (tabInfo.screen === 'tutorial') {
         state.activeDocumentationKey.value = tabInfo.address
       } else if (tabInfo.screen === 'models') {

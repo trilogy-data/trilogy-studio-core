@@ -8,6 +8,7 @@ import {
   SnowflakeJwtConnection,
 } from '../connections'
 import { LLMProvider } from '../llm'
+import { Chat } from '../chats/chat'
 export default abstract class AbstractStorage {
   public type: string
 
@@ -46,4 +47,9 @@ export default abstract class AbstractStorage {
   abstract loadDashboards(): Promise<Record<string, DashboardModel>>
   abstract deleteDashboard(name: string): Promise<void>
   abstract clearDashboards(): Promise<void>
+
+  abstract saveChats(chats: Chat[]): Promise<void>
+  abstract loadChats(): Promise<Record<string, Chat>>
+  abstract deleteChat(id: string): Promise<void>
+  abstract clearChats(): Promise<void>
 }

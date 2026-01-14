@@ -3,7 +3,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { type DashboardImport } from '../../dashboards/base'
 
-interface ImportSelectorProps {
+export interface ImportSelectorProps {
   availableImports: DashboardImport[]
   activeImports: DashboardImport[]
 }

@@ -10,6 +10,7 @@ import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from 
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards'
+import { Chat } from '../chats/chat'
 
 interface GitHubConfig {
   token: string
@@ -317,5 +318,49 @@ export default class GitHubStorage extends AbstractStorage {
 
   async clearDashboards(): Promise<void> {
     await this.saveFile('dashboards.json', [])
+  }
+
+  // Chat methods implementation
+  async saveChats(chatsList: Chat[]): Promise<void> {
+    const chats = await this.loadChats()
+
+    chatsList.forEach((chat) => {
+      if (chat.changed) {
+        chats[chat.id] = chat
+        chat.changed = false
+      }
+      if (chat.deleted) {
+        delete chats[chat.id]
+      }
+    })
+
+    await this.saveFile(
+      'chats.json',
+      Object.values(chats).map((chat) => chat.serialize()),
+    )
+  }
+
+  async loadChats(): Promise<Record<string, Chat>> {
+    const response = await this.fetchFile('chats.json')
+    let raw = response?.content || []
+
+    return raw.reduce((acc: Record<string, Chat>, chatData: any) => {
+      const chat = Chat.fromSerialized(chatData)
+      acc[chat.id] = reactive(chat) as Chat
+      acc[chat.id].storage = 'github'
+      return acc
+    }, {})
+  }
+
+  async deleteChat(id: string): Promise<void> {
+    const chats = await this.loadChats()
+    if (chats[id]) {
+      delete chats[id]
+      await this.saveChats(Object.values(chats))
+    }
+  }
+
+  async clearChats(): Promise<void> {
+    await this.saveFile('chats.json', [])
   }
 }

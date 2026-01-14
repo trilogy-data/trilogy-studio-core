@@ -25,22 +25,26 @@
       @updateModel="updateModel"
       @setActive="setActiveConnection"
       @deleteConnection="deleteConnection"
+      @deleteChat="deleteChat"
       @toggleSaveCredential="toggleSaveCredential"
     />
   </sidebar-list>
 </template>
 
 <script lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
 import StatusIcon from '../StatusIcon.vue'
 import Tooltip from '../Tooltip.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
+import type { ChatStoreType } from '../../stores/chatStore'
 import { KeySeparator } from '../../data/constants'
+import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
+import type { Chat } from '../../chats/chat'
 
 export default {
   name: 'LLMConnectionList',
@@ -56,9 +60,11 @@ export default {
       optional: true,
     },
   },
+  emits: ['llm-open-view', 'create-new-chat', 'open-chat'],
   setup(_, { emit }) {
     const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const saveConnections = inject<Function>('saveLLMConnections')
+    const chatStore = inject<ChatStoreType>('chatStore', null as any)
     if (!llmConnectionStore || !saveConnections) {
       throw new Error('LLM connection store is not provided!')
     }
@@ -116,10 +122,33 @@ export default {
       delete isLoading.value[id]
     }
 
-    const toggleCollapse = async (id: string, connectionName: string, type: string) => {
-      // Emit selection event for connections
-      if (['connection', 'model'].includes(type)) {
-        emit('connection-key-selected', id)
+    const toggleCollapse = async (id: string, connectionName: string, type: string, extraData?: any) => {
+      // Handle new chat creation
+      if (type === 'new-chat') {
+        emit('create-new-chat', connectionName)
+        return
+      }
+
+      // Handle existing chat selection
+      if (type === 'chat-item') {
+        if (chatStore && extraData?.chatId) {
+          chatStore.setActiveChat(extraData.chatId)
+          // Set this LLM connection as active
+          llmConnectionStore.activeConnection = connectionName
+        }
+        // Include chatId in the event so it can be stored in URL
+        emit('llm-open-view', connectionName, 'chat', extraData?.chatId)
+        return
+      }
+
+      // Handle chat/validation item clicks - these navigate to the LLM view with specific tab
+      if (type === 'open-chat') {
+        emit('llm-open-view', connectionName, 'chat')
+        return
+      }
+      if (type === 'open-validation') {
+        emit('llm-open-view', connectionName, 'validation')
+        return
       }
 
       // If expanding a connection, fetch its details
@@ -151,6 +180,20 @@ export default {
       collapsed.value[connectionKey] = true
     })
 
+    // On mount, expand to the active LLM connection/chat from URL
+    onMounted(() => {
+      const currentLLMKey = getDefaultValueFromHash('llm-key', '')
+      if (currentLLMKey) {
+        // The key may contain a chat ID after KeySeparator (e.g., "connectionName+chatId")
+        const connectionName = currentLLMKey.split(KeySeparator)[0]
+
+        // Expand the connection
+        if (connectionName && llmConnectionStore.connections[connectionName]) {
+          collapsed.value[connectionName] = false
+        }
+      }
+    })
+
     const contentList = computed(() => {
       const list: Array<{
         id: string
@@ -165,7 +208,14 @@ export default {
           | 'error'
           | 'api-key'
           | 'loading'
+          | 'open-chat'
+          | 'open-validation'
+          | 'new-chat'
+          | 'chat-item'
+          | 'chats-header'
         connection: any | undefined
+        chat?: Chat
+        chatId?: string
       }> = []
 
       // Sort connections by status and name
@@ -201,6 +251,42 @@ export default {
 
         // If expanded, show connection details
         if (collapsed.value[name] === false) {
+          // Get chats for this connection
+          const connectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+
+          // Chats section header with new chat button
+          list.push({
+            id: `${name}-new-chat`,
+            name: '+ New Chat',
+            indent: 1,
+            count: connectionChats.length,
+            type: 'new-chat',
+            connection,
+          })
+
+          // Add existing chats for this connection
+          connectionChats.forEach((chat) => {
+            list.push({
+              id: `${name}-chat-${chat.id}`,
+              name: chat.name,
+              indent: 2,
+              count: chat.messages.length,
+              type: 'chat-item',
+              connection,
+              chat,
+              chatId: chat.id,
+            })
+          })
+
+          // Validation Tests navigation
+          list.push({
+            id: `${name}-open-validation`,
+            name: 'Validation Tests',
+            indent: 1,
+            count: 0,
+            type: 'open-validation',
+            connection,
+          })
           // API Key setting
           list.push({
             id: `${name}-api-key`,
@@ -263,6 +349,7 @@ export default {
 
     return {
       llmConnectionStore,
+      chatStore,
       contentList,
       toggleCollapse,
       collapsed,
@@ -308,6 +395,15 @@ export default {
         // If this was the active connection, reset active connection
         if (this.llmConnectionStore.activeConnection === id) {
           this.llmConnectionStore.activeConnection = ''
+        }
+      }
+    },
+
+    deleteChat(chatId: string, _connectionName: string) {
+      // Ask for confirmation before deleting
+      if (confirm('Are you sure you want to delete this chat?')) {
+        if (this.chatStore) {
+          this.chatStore.removeChat(chatId)
         }
       }
     },

@@ -356,7 +356,7 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
         values = result.fetchall()
     return QueryResult(
         headers=headers,
-        results=[{"_index": idx, **dict(row)} for idx, row in enumerate(values)],
+        results=[{"_index": idx, **dict(row._mapping)} for idx, row in enumerate(values)],
     )
 
 

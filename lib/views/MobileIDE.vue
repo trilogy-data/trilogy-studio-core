@@ -20,12 +20,15 @@
           @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
           @connection-key-selected="setActiveConnectionKey"
+          @llm-key-selected="setActiveLLMConnectionKey"
+          @llm-open-view="handleLLMOpenView"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
           :activeModelKey="activeModelKey"
           :activeDashboardKey="activeDashboard"
+          :activeLLMKey="activeLLMConnectionKey"
         />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
@@ -82,7 +85,7 @@
         <community-models :activeCommunityModelKey="activeCommunityModelKey" />
       </template>
       <template v-else-if="activeScreen === 'llms'">
-        <LLMView />
+        <LLMView :initialTab="llmInitialTab" />
       </template>
       <template v-else>
         <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
@@ -178,9 +181,10 @@ import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, defineAsyncComponent, provide, onBeforeUnmount } from 'vue'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
+import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
@@ -267,6 +271,8 @@ export default {
       setActiveConnectionKey,
       setActiveModelKey,
       setActiveDocumentationKey,
+      activeLLMConnectionKey,
+      setActiveLLMConnectionKey,
       activeCommunityModelKey,
       mobileMenuOpen,
       toggleMobileMenu,
@@ -289,6 +295,29 @@ export default {
       removeBacklisteners()
     })
     provide('navigationStore', screenNavigation)
+
+    // LLM view tab management
+    const llmInitialTab = ref<'chat' | 'validation' | ''>('')
+
+    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation', chatId?: string) => {
+      // Build the address with optional chat ID
+      const address = chatId ? `${connectionName}${KeySeparator}${chatId}` : connectionName
+      // Set the active connection (with chat ID if present)
+      setActiveLLMConnectionKey(address)
+      // Set the initial tab
+      llmInitialTab.value = tab
+      // Navigate to the LLMs screen
+      setActiveScreen('llms')
+      // Close the mobile menu
+      if (mobileMenuOpen.value) {
+        toggleMobileMenu()
+      }
+      // Reset the tab after a short delay so subsequent navigations work correctly
+      setTimeout(() => {
+        llmInitialTab.value = ''
+      }, 100)
+    }
+
     return {
       connectionStore,
       editorStore,
@@ -315,6 +344,8 @@ export default {
       setActiveConnectionKey,
       setActiveModelKey,
       setActiveDocumentationKey,
+      activeLLMConnectionKey,
+      setActiveLLMConnectionKey,
       mobileMenuOpen,
       toggleMobileMenu,
       tabs,
@@ -322,6 +353,8 @@ export default {
       closeTab,
       closeOtherTabsExcept,
       tabSelected,
+      llmInitialTab,
+      handleLLMOpenView,
     }
   },
   methods: {

@@ -127,7 +127,9 @@
       />
       <LLMConnectionList
         v-show="active === 'llms'"
-        @llm-connection-key-selected="connectionKeySelected"
+        @llm-connection-key-selected="llmKeySelected"
+        @llm-open-view="llmOpenView"
+        @create-new-chat="createNewChat"
         :activeLLMKey="activeLLMKey"
       />
       <ModelSidebar
@@ -356,6 +358,12 @@ export default defineComponent({
     },
     llmKeySelected(key: string) {
       this.$emit('llm-key-selected', key)
+    },
+    llmOpenView(connectionName: string, tab: string, chatId?: string) {
+      this.$emit('llm-open-view', connectionName, tab, chatId)
+    },
+    createNewChat(connectionName: string) {
+      this.$emit('create-new-chat', connectionName)
     },
     saveEditors() {
       this.$emit('save-editors')

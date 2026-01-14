@@ -255,9 +255,8 @@ const completeSequence = () => {
 }
 
 const skipSequence = () => {
-  if (currentItem.value) {
-    // Mark current item as read
-    emit('mark-item-read', currentItem.value.id)
+  for (const item of props.activeItems) {
+    emit('mark-item-read', item.id)
   }
   emit('close-modal')
 }

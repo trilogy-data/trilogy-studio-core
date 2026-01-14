@@ -1,0 +1,531 @@
+<template>
+  <div class="llm-chat-container" data-testid="llm-chat-container">
+    <div class="chat-header" v-if="showHeader">
+      <editable-title
+        v-if="editableTitle"
+        :modelValue="title"
+        @update:modelValue="$emit('title-update', $event)"
+        testId="chat-title"
+        class="chat-title"
+      />
+      <div v-else class="chat-title">{{ title }}</div>
+      <slot name="header-actions"></slot>
+    </div>
+
+    <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
+      <div
+        v-for="(message, index) in visibleMessages"
+        :key="index"
+        class="message"
+        :class="message.role"
+        :data-testid="`message-${message.role}-${index}`"
+      >
+        <div class="message-content">
+          <!-- Render artifacts if present -->
+          <template v-if="message.artifact">
+            <div class="message-text" v-if="getMessageTextWithoutArtifact(message)">
+              <pre>{{ getMessageTextWithoutArtifact(message) }}</pre>
+            </div>
+            <slot name="artifact" :artifact="message.artifact" :message="message">
+              <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
+            </slot>
+          </template>
+          <!-- Regular message rendering -->
+          <template v-else-if="message.role === 'assistant' && containsCode(message)">
+            <div v-html="formatMessageWithPlaceholder(message)"></div>
+            <div class="extracted-content">
+              <div class="extracted-label">Generated Code:</div>
+              <code-block
+                :language="codeLanguage"
+                :content="extractCode(message) || ''"
+              ></code-block>
+            </div>
+          </template>
+          <pre v-else>{{ message.content }}</pre>
+        </div>
+        <div v-if="message.modelInfo" class="message-meta">
+          {{ message.modelInfo.totalTokens }} tokens
+        </div>
+      </div>
+
+      <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
+        <span>{{ loadingText }}</span>
+      </div>
+    </div>
+
+    <div class="input-container">
+      <textarea
+        v-model="userInput"
+        @keydown="handleKeyDown"
+        :placeholder="placeholder"
+        :disabled="isLoading || disabled"
+        ref="inputTextarea"
+        data-testid="input-textarea"
+      ></textarea>
+      <button
+        @click="sendMessage"
+        :disabled="isLoading || disabled || !userInput.trim()"
+        data-testid="send-button"
+        class="send-button"
+      >
+        {{ sendButtonText }}
+      </button>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import {
+  defineComponent,
+  ref,
+  nextTick,
+  watch,
+  onMounted,
+  inject,
+  type PropType,
+  computed,
+} from 'vue'
+import {
+  type LLMConnectionStoreType,
+  replaceTripleQuotedText,
+  extractLastTripleQuotedText,
+} from '../../stores/llmStore'
+import { type LLMMessage } from '../../llm'
+import CodeBlock from '../CodeBlock.vue'
+import EditableTitle from '../EditableTitle.vue'
+
+export interface ChatArtifact {
+  type: 'results' | 'chart' | 'code' | 'custom'
+  data: any
+  config?: any
+}
+
+export interface ChatMessage extends LLMMessage {
+  artifact?: ChatArtifact
+  modelInfo?: {
+    totalTokens: number
+  }
+}
+
+export default defineComponent({
+  name: 'LLMChatComponent',
+  components: {
+    CodeBlock,
+    EditableTitle,
+  },
+  props: {
+    messages: {
+      type: Array as PropType<ChatMessage[]>,
+      default: () => [],
+    },
+    title: {
+      type: String,
+      default: 'Chat',
+    },
+    editableTitle: {
+      type: Boolean,
+      default: false,
+    },
+    showHeader: {
+      type: Boolean,
+      default: true,
+    },
+    placeholder: {
+      type: String,
+      default: 'Type your message... (Enter to send)',
+    },
+    sendButtonText: {
+      type: String,
+      default: 'Send',
+    },
+    loadingText: {
+      type: String,
+      default: 'Generating response...',
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    codeLanguage: {
+      type: String as PropType<'sql' | 'trilogy'>,
+      default: 'sql',
+    },
+    systemPrompt: {
+      type: String,
+      default: '',
+    },
+    // Allow external control of loading state
+    externalLoading: {
+      type: Boolean,
+      default: false,
+    },
+    // Custom send handler - if provided, component won't use llmStore
+    customSendHandler: {
+      type: [Function, null] as PropType<
+        ((message: string, messages: ChatMessage[]) => Promise<void>) | null
+      >,
+      default: undefined,
+    },
+  },
+
+  emits: ['message-sent', 'response-received', 'artifact-created', 'update:messages', 'title-update'],
+
+  setup(props, { emit }) {
+    const internalMessages = ref<ChatMessage[]>([...props.messages])
+    const userInput = ref('')
+    const internalLoading = ref(false)
+    const messagesContainer = ref<HTMLElement | null>(null)
+    const inputTextarea = ref<HTMLTextAreaElement | null>(null)
+
+    // Try to inject llmStore, but don't require it
+    const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore', null as any)
+
+    const isLoading = computed(() => props.externalLoading || internalLoading.value)
+
+    const visibleMessages = computed(() => {
+      return internalMessages.value.filter((m) => !m.hidden)
+    })
+
+    // Sync with external messages prop
+    watch(
+      () => props.messages,
+      (newMessages) => {
+        internalMessages.value = [...newMessages]
+      },
+      { deep: true },
+    )
+
+    // Scroll to bottom when messages are updated
+    watch(
+      internalMessages,
+      () => {
+        scrollToBottom()
+      },
+      { deep: true },
+    )
+
+    const scrollToBottom = () => {
+      nextTick(() => {
+        if (messagesContainer.value) {
+          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+        }
+      })
+    }
+
+    const focusInput = () => {
+      nextTick(() => {
+        if (inputTextarea.value) {
+          inputTextarea.value.focus()
+        }
+      })
+    }
+
+    onMounted(() => {
+      scrollToBottom()
+      focusInput()
+
+      // Add system prompt as hidden message if provided
+      if (props.systemPrompt && internalMessages.value.length === 0) {
+        internalMessages.value.push({
+          role: 'system',
+          content: props.systemPrompt,
+          hidden: true,
+        })
+      }
+    })
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        sendMessage()
+      }
+    }
+
+    const containsCode = (message: ChatMessage) => {
+      return message.content.includes('```')
+    }
+
+    const extractCode = (message: ChatMessage) => {
+      return extractLastTripleQuotedText(message.content)
+    }
+
+    const formatMessageWithPlaceholder = (message: ChatMessage) => {
+      return replaceTripleQuotedText(message.content, '<code>')
+    }
+
+    const getMessageTextWithoutArtifact = (message: ChatMessage) => {
+      // Return message content without artifact data reference
+      return message.content
+    }
+
+    const sendMessage = async () => {
+      if (isLoading.value || !userInput.value.trim()) return
+
+      const content = userInput.value.trim()
+
+      // Add user message
+      const userMessage: ChatMessage = {
+        role: 'user',
+        content: content,
+      }
+      internalMessages.value.push(userMessage)
+      emit('update:messages', internalMessages.value)
+      emit('message-sent', userMessage)
+
+      const messageContent = content
+      userInput.value = ''
+      scrollToBottom()
+
+      // Use custom handler if provided
+      if (props.customSendHandler) {
+        await props.customSendHandler(messageContent, internalMessages.value)
+        return
+      }
+
+      // Otherwise use the llmStore
+      if (!llmStore) {
+        internalMessages.value.push({
+          role: 'assistant',
+          content: 'Error: No LLM connection available. Please configure an LLM provider.',
+        })
+        emit('update:messages', internalMessages.value)
+        return
+      }
+
+      internalLoading.value = true
+
+      try {
+        await llmStore.generateValidatedCompletion(
+          messageContent,
+          () => true, // No validation
+          3,
+          llmStore.activeConnection,
+          internalMessages.value,
+          false,
+        )
+
+        const lastMessage = internalMessages.value[internalMessages.value.length - 1]
+        emit('update:messages', internalMessages.value)
+        emit('response-received', lastMessage)
+      } catch (error) {
+        internalMessages.value.push({
+          role: 'assistant',
+          content: 'Sorry, there was an error processing your request.',
+        })
+        emit('update:messages', internalMessages.value)
+      } finally {
+        internalLoading.value = false
+        focusInput()
+        scrollToBottom()
+      }
+    }
+
+    const addMessage = (message: ChatMessage) => {
+      internalMessages.value.push(message)
+      emit('update:messages', internalMessages.value)
+      scrollToBottom()
+    }
+
+    const addArtifact = (artifact: ChatArtifact, text: string = '') => {
+      const message: ChatMessage = {
+        role: 'assistant',
+        content: text,
+        artifact,
+      }
+      internalMessages.value.push(message)
+      emit('update:messages', internalMessages.value)
+      emit('artifact-created', artifact)
+      scrollToBottom()
+    }
+
+    const clearMessages = () => {
+      internalMessages.value = []
+      if (props.systemPrompt) {
+        internalMessages.value.push({
+          role: 'system',
+          content: props.systemPrompt,
+          hidden: true,
+        })
+      }
+      emit('update:messages', internalMessages.value)
+    }
+
+    return {
+      internalMessages,
+      visibleMessages,
+      userInput,
+      isLoading,
+      messagesContainer,
+      inputTextarea,
+      handleKeyDown,
+      sendMessage,
+      containsCode,
+      extractCode,
+      formatMessageWithPlaceholder,
+      getMessageTextWithoutArtifact,
+      addMessage,
+      addArtifact,
+      clearMessages,
+      scrollToBottom,
+      focusInput,
+    }
+  },
+})
+</script>
+
+<style scoped>
+.llm-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-color);
+  overflow: hidden;
+  color: var(--text-color);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.chat-title {
+  font-size: var(--font-size);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--result-window-bg);
+}
+
+.message {
+  padding: 10px 12px;
+  max-width: 85%;
+  word-break: break-word;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: var(--sidebar-selector-selected-bg);
+  color: var(--sidebar-selector-font);
+}
+
+.message.assistant {
+  align-self: flex-start;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-font);
+}
+
+.message.system {
+  display: none;
+}
+
+.message-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: var(--font-size);
+}
+
+.message-meta {
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.loading-indicator {
+  align-self: center;
+  padding: 8px 12px;
+  background-color: var(--bg-loading);
+  border-radius: 12px;
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+}
+
+.input-container {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid var(--border-light);
+  background-color: var(--sidebar-bg);
+  gap: 10px;
+}
+
+.input-container textarea {
+  flex-grow: 1;
+  min-height: 50px;
+  max-height: 150px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  resize: vertical;
+  font-family: inherit;
+  background-color: var(--query-window-bg);
+  color: var(--query-window-font);
+  font-size: var(--font-size);
+}
+
+.send-button {
+  padding: 0 15px;
+  cursor: pointer;
+  align-self: flex-end;
+  height: 36px;
+  border: 1px solid var(--border);
+  background-color: var(--button-bg);
+  color: var(--button-text);
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: var(--button-mouseover);
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.extracted-content {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
+.extracted-label {
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.artifact-placeholder {
+  padding: 8px;
+  background-color: var(--query-window-bg);
+  border: 1px dashed var(--border);
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.message-text {
+  margin-bottom: 8px;
+}
+
+@media screen and (max-width: 768px) {
+  .input-container textarea {
+    font-size: var(--font-size);
+  }
+
+  .send-button {
+    font-size: var(--button-font-size);
+  }
+}
+</style>
