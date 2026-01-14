@@ -32,7 +32,7 @@ export interface ChatSessionData {
   imports: ChatImport[] // Data source imports for this chat
   createdAt: Date
   updatedAt: Date
-  storage: 'local' | 'remote'
+  storage: 'local' | 'github' | 'remote'
   changed: boolean
   deleted: boolean
 }
