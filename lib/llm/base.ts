@@ -43,6 +43,7 @@ export abstract class LLMProvider {
   public models: string[]
   public name: string
   public model: string
+  public fastModel: string | null = null // Used for summarization and light tasks, falls back to model if not set
   public storage: string
   public type: string = 'generic'
   public connected: boolean
@@ -58,6 +59,7 @@ export abstract class LLMProvider {
     this.models = []
     this.name = name
     this.model = model
+    this.fastModel = null
     // revisit if we load storage from any other location
     this.storage = 'local'
     this.connected = false
@@ -83,6 +85,19 @@ export abstract class LLMProvider {
     }
     this.changed = true
     this.model = model
+  }
+
+  setFastModel(fastModel: string | null): void {
+    if (this.fastModel === fastModel) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    this.fastModel = fastModel
+  }
+
+  getFastModel(): string {
+    // Falls back to primary model if fast model is not set
+    return this.fastModel || this.model
   }
 
   getApiKey(): string {
@@ -113,6 +128,7 @@ export abstract class LLMProvider {
     return {
       name: this.name,
       model: this.model,
+      fastModel: this.fastModel,
       type: this.type,
       // redacted will trigger a fetch from the secure store
       apiKey: this.saveCredential ? 'saved' : null,
@@ -139,6 +155,7 @@ export abstract class LLMProvider {
       restored.saveCredential,
     )
     instance.isDefault = restored.isDefault || false
+    instance.fastModel = restored.fastModel || null
     return instance
   }
 }

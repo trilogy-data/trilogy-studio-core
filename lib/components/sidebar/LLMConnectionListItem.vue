@@ -102,6 +102,38 @@
           </form>
         </div>
 
+        <div v-else-if="item.type === 'fast-model'" class="api-key-container" @click.stop>
+          <form
+            @submit.prevent="updateFastModel(item.connection, selectedFastModel || null)"
+            :data-testid="`fast-model-update-form-${item.connection.name}`"
+          >
+            <button
+              type="submit"
+              class="customize-button"
+              :data-testid="`update-fast-model-${item.connection.name}`"
+            >
+              Update Fast Model
+            </button>
+            <select
+              v-model="selectedFastModel"
+              class="connection-customize"
+              :data-testid="`fast-model-select-${item.connection.name}`"
+            >
+              <option value="" :data-testid="`fast-model-option-none`">
+                (Use primary model)
+              </option>
+              <option
+                v-for="model in item.connection.models"
+                :value="model"
+                :key="model"
+                :data-testid="`fast-model-option-${model}`"
+              >
+                {{ model }}
+              </option>
+            </select>
+          </form>
+        </div>
+
         <div
           v-else-if="item.type === 'toggle-save-credential'"
           class="md-token-container"
@@ -202,6 +234,7 @@ export interface ListItem {
     | 'refresh-connection'
     | 'api-key'
     | 'model'
+    | 'fast-model'
     | 'toggle-save-credential'
     | 'loading'
     | 'open-chat'
@@ -245,6 +278,7 @@ export default defineComponent({
     'refresh',
     'updateApiKey',
     'updateModel',
+    'updateFastModel',
     'toggleSaveCredential',
     'deleteConnection',
     'deleteChat',
@@ -253,6 +287,7 @@ export default defineComponent({
     const apiKeyInput = ref<string>('')
     const showApiKey = ref<boolean>(false)
     const selectedModel = ref<string>('')
+    const selectedFastModel = ref<string>('')
 
     // Initialize values on mount
     onMounted(() => {
@@ -262,6 +297,10 @@ export default defineComponent({
 
       if (props.item.type === 'model' && props.item.connection?.model) {
         selectedModel.value = props.item.connection.model
+      }
+
+      if (props.item.type === 'fast-model') {
+        selectedFastModel.value = props.item.connection?.fastModel || ''
       }
     })
 
@@ -282,6 +321,17 @@ export default defineComponent({
       (newModel) => {
         if (props.item.type === 'model' && newModel) {
           selectedModel.value = newModel
+        }
+      },
+      { immediate: true },
+    )
+
+    // Watch for external fast model changes
+    watch(
+      () => props.item.connection?.fastModel,
+      (newFastModel) => {
+        if (props.item.type === 'fast-model') {
+          selectedFastModel.value = newFastModel || ''
         }
       },
       { immediate: true },
@@ -338,7 +388,7 @@ export default defineComponent({
     const getItemName = () => {
       // Return empty string for complex items that use the name slot
       if (
-        ['api-key', 'model', 'toggle-save-credential', 'refresh-connection'].includes(
+        ['api-key', 'model', 'fast-model', 'toggle-save-credential', 'refresh-connection'].includes(
           props.item.type,
         )
       ) {
@@ -424,6 +474,11 @@ export default defineComponent({
       emit('updateModel', connection, model)
     }
 
+    // Update fast model
+    const updateFastModel = (connection: LLMProvider, fastModel: string | null) => {
+      emit('updateFastModel', connection, fastModel)
+    }
+
     const toggleApiKeyVisibility = () => {
       showApiKey.value = !showApiKey.value
     }
@@ -431,6 +486,7 @@ export default defineComponent({
     return {
       apiKeyInput,
       selectedModel,
+      selectedFastModel,
       isExpandable,
       getItemName,
       handleItemClick,
@@ -440,6 +496,7 @@ export default defineComponent({
       setAsActive,
       updateApiKey,
       updateModel,
+      updateFastModel,
       toggleSaveCredential,
       deleteConnection,
       deleteChat,

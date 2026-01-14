@@ -23,6 +23,7 @@
       @refresh="refreshId"
       @updateApiKey="updateApiKey"
       @updateModel="updateModel"
+      @updateFastModel="updateFastModel"
       @setActive="setActiveConnection"
       @deleteConnection="deleteConnection"
       @deleteChat="deleteChat"
@@ -91,6 +92,13 @@ export default {
         // save our new model
         saveConnections()
       }
+    }
+
+    const updateFastModel = (connection: LLMProvider, fastModel: string | null) => {
+      // Set fast model for light tasks like summarization
+      llmConnectionStore.connections[connection.name].setFastModel(fastModel)
+      // save our new fast model
+      saveConnections()
     }
 
     const collapsed = ref<Record<string, boolean>>({})
@@ -202,6 +210,7 @@ export default {
         count: number
         type:
           | 'model'
+          | 'fast-model'
           | 'connection'
           | 'toggle-save-credential'
           | 'refresh-connection'
@@ -305,6 +314,14 @@ export default {
             connection,
           })
           list.push({
+            id: `${name}-fast-model`,
+            name: 'Fast Model',
+            indent: 1,
+            count: 0,
+            type: 'fast-model',
+            connection,
+          })
+          list.push({
             id: `${name}-toggle-save-credential`,
             name: 'Toggle Save Credential',
             indent: 1,
@@ -356,6 +373,7 @@ export default {
       saveConnections,
       updateApiKey,
       updateModel,
+      updateFastModel,
       refreshId,
       rightSplit,
       creatorVisible,
