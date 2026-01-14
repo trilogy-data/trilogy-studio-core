@@ -1,14 +1,17 @@
 <template>
   <div class="llm-chat-container" data-testid="llm-chat-container">
     <div class="chat-header" v-if="showHeader">
-      <editable-title
-        v-if="editableTitle"
-        :modelValue="title"
-        @update:modelValue="$emit('title-update', $event)"
-        testId="chat-title"
-        class="chat-title"
-      />
-      <div v-else class="chat-title">{{ title }}</div>
+      <div class="chat-header-left">
+        <slot name="header-prefix"></slot>
+        <editable-title
+          v-if="editableTitle"
+          :modelValue="title"
+          @update:modelValue="$emit('title-update', $event)"
+          testId="chat-title"
+          class="chat-title"
+        />
+        <div v-else class="chat-title">{{ title }}</div>
+      </div>
       <slot name="header-actions"></slot>
     </div>
 
@@ -24,23 +27,21 @@
           <!-- Render artifacts if present -->
           <template v-if="message.artifact">
             <div class="message-text" v-if="getMessageTextWithoutArtifact(message)">
-              <pre>{{ getMessageTextWithoutArtifact(message) }}</pre>
+              <markdown-renderer
+                v-if="message.role === 'assistant'"
+                :markdown="getMessageTextWithoutArtifact(message)"
+              />
+              <pre v-else>{{ getMessageTextWithoutArtifact(message) }}</pre>
             </div>
             <slot name="artifact" :artifact="message.artifact" :message="message">
               <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
             </slot>
           </template>
-          <!-- Regular message rendering -->
-          <template v-else-if="message.role === 'assistant' && containsCode(message)">
-            <div v-html="formatMessageWithPlaceholder(message)"></div>
-            <div class="extracted-content">
-              <div class="extracted-label">Generated Code:</div>
-              <code-block
-                :language="codeLanguage"
-                :content="extractCode(message) || ''"
-              ></code-block>
-            </div>
+          <!-- Assistant message with markdown -->
+          <template v-else-if="message.role === 'assistant'">
+            <markdown-renderer :markdown="message.content" />
           </template>
+          <!-- User messages rendered as plain text -->
           <pre v-else>{{ message.content }}</pre>
         </div>
         <div v-if="message.modelInfo" class="message-meta">
@@ -85,14 +86,10 @@ import {
   type PropType,
   computed,
 } from 'vue'
-import {
-  type LLMConnectionStoreType,
-  replaceTripleQuotedText,
-  extractLastTripleQuotedText,
-} from '../../stores/llmStore'
+import { type LLMConnectionStoreType } from '../../stores/llmStore'
 import { type LLMMessage } from '../../llm'
-import CodeBlock from '../CodeBlock.vue'
 import EditableTitle from '../EditableTitle.vue'
+import MarkdownRenderer from '../MarkdownRenderer.vue'
 
 export interface ChatArtifact {
   type: 'results' | 'chart' | 'code' | 'custom'
@@ -110,8 +107,8 @@ export interface ChatMessage extends LLMMessage {
 export default defineComponent({
   name: 'LLMChatComponent',
   components: {
-    CodeBlock,
     EditableTitle,
+    MarkdownRenderer,
   },
   props: {
     messages: {
@@ -241,18 +238,6 @@ export default defineComponent({
       }
     }
 
-    const containsCode = (message: ChatMessage) => {
-      return message.content.includes('```')
-    }
-
-    const extractCode = (message: ChatMessage) => {
-      return extractLastTripleQuotedText(message.content)
-    }
-
-    const formatMessageWithPlaceholder = (message: ChatMessage) => {
-      return replaceTripleQuotedText(message.content, '<code>')
-    }
-
     const getMessageTextWithoutArtifact = (message: ChatMessage) => {
       // Return message content without artifact data reference
       return message.content
@@ -359,9 +344,6 @@ export default defineComponent({
       inputTextarea,
       handleKeyDown,
       sendMessage,
-      containsCode,
-      extractCode,
-      formatMessageWithPlaceholder,
       getMessageTextWithoutArtifact,
       addMessage,
       addArtifact,
@@ -392,6 +374,12 @@ export default defineComponent({
   padding: 8px 12px;
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chat-title {
@@ -493,18 +481,6 @@ export default defineComponent({
 .send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.extracted-content {
-  margin-top: 10px;
-  border-top: 1px dashed var(--border);
-  padding-top: 8px;
-}
-
-.extracted-label {
-  font-size: var(--small-font-size);
-  color: var(--text-faint);
-  margin-bottom: 4px;
 }
 
 .artifact-placeholder {

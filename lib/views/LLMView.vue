@@ -42,7 +42,34 @@
         @update:activeArtifactIndex="handleActiveArtifactUpdate"
         @import-change="handleImportChange"
         @title-update="handleTitleUpdate"
-      />
+      >
+        <template #header-prefix>
+          <button
+            class="auto-name-btn"
+            :class="{ 'is-loading': isGeneratingName }"
+            @click="generateChatName"
+            :disabled="isGeneratingName || activeChatMessages.length === 0"
+            title="Auto-generate chat name"
+            data-testid="auto-name-chat-btn"
+          >
+            <i v-if="!isGeneratingName" class="mdi mdi-auto-fix"></i>
+            <span v-else class="spinner"></span>
+          </button>
+        </template>
+        <template #header-actions>
+          <div class="chat-header-controls">
+            <dashboard-import-selector
+              v-if="availableImportsForChat.length > 0"
+              :available-imports="availableImportsForChat"
+              :active-imports="activeImportsForChat"
+              @update:imports="handleImportChange"
+            />
+            <span v-if="chatConnectionInfo" class="connection-info">
+              {{ chatConnectionInfo }}
+            </span>
+          </div>
+        </template>
+      </l-l-m-chat-split-view>
     </div>
 
     <!-- Validation View (existing content) -->
@@ -181,6 +208,7 @@ import testCases from '../llm/data/testCases'
 import type { TestScenario } from '../llm/data/testCases'
 import { extractLastTripleQuotedText } from '../stores/llmStore'
 import LLMChatSplitView from '../components/llm/LLMChatSplitView.vue'
+import DashboardImportSelector from '../components/dashboard/DashboardImportSelector.vue'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
 import {
@@ -210,6 +238,7 @@ export default defineComponent({
   name: 'LLMChatDebugComponent',
   components: {
     LLMChatSplitView,
+    DashboardImportSelector,
   },
   props: {
     initialProvider: {
@@ -243,6 +272,7 @@ export default defineComponent({
 
     // Chat state
     const isChatLoading = ref(false)
+    const isGeneratingName = ref(false)
     const activeChatMessages = ref<ChatMessage[]>([])
     const activeChatArtifacts = ref<ChatArtifact[]>([])
     const activeChatArtifactIndex = ref(-1)
@@ -1005,6 +1035,26 @@ export default defineComponent({
       }
     }
 
+    // Generate a chat name using the fast model
+    const generateChatName = async () => {
+      if (!llmConnectionStore.activeConnection || activeChatMessages.value.length === 0) {
+        return
+      }
+
+      isGeneratingName.value = true
+      try {
+        const newName = await llmConnectionStore.generateChatName(
+          llmConnectionStore.activeConnection,
+          activeChatMessages.value,
+        )
+        handleTitleUpdate(newName)
+      } catch (error) {
+        console.error('Failed to generate chat name:', error)
+      } finally {
+        isGeneratingName.value = false
+      }
+    }
+
     return {
       activeView,
       chatSplitView,
@@ -1019,6 +1069,8 @@ export default defineComponent({
       activeChatArtifacts,
       activeChatArtifactIndex,
       isChatLoading,
+      isGeneratingName,
+      generateChatName,
       handleChatMessageWithTools,
       handleMessagesUpdate,
       handleArtifactsUpdate,
@@ -1094,6 +1146,68 @@ pre {
 .chat-view {
   flex: 1;
   overflow: hidden;
+}
+
+.chat-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auto-name-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  background-color: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.auto-name-btn:hover:not(:disabled) {
+  background-color: var(--button-mouseover);
+  color: var(--special-text);
+}
+
+.auto-name-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auto-name-btn i {
+  font-size: 16px;
+}
+
+.auto-name-btn.is-loading {
+  cursor: wait;
+}
+
+.auto-name-btn .spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--special-text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.connection-info {
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+  padding: 2px 8px;
+  background-color: var(--bg-color);
+  border-radius: 4px;
 }
 
 .debug-container {

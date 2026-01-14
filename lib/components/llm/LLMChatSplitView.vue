@@ -18,6 +18,9 @@
         @response-received="handleResponseReceived"
         @title-update="$emit('title-update', $event)"
       >
+        <template #header-prefix>
+          <slot name="header-prefix"></slot>
+        </template>
         <template #header-actions>
           <slot name="header-actions">
             <div class="chat-header-controls">

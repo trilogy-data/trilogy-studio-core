@@ -9,6 +9,8 @@ import {
   createPrompt,
   createDashboardPrompt,
   createFilterPrompt,
+  createChatNamePrompt,
+  extractChatName,
 } from '../llm'
 
 export interface ValidatedResponse {
@@ -305,6 +307,49 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return this.generateValidatedCompletion(base, validator, maxAttempts).then((response) => {
         return response.content
       })
+    },
+
+    /**
+     * Generate a concise name for a chat based on its message history.
+     * Uses the fast model if configured, otherwise falls back to the primary model.
+     * @param connectionName - The LLM connection to use
+     * @param messages - The chat messages to summarize
+     * @returns The generated chat name
+     */
+    async generateChatName(connectionName: string, messages: LLMMessage[]): Promise<string> {
+      const connection = this.connections[connectionName]
+      if (!connection) {
+        throw new Error(`LLM connection with name "${connectionName}" not found.`)
+      }
+
+      const prompt = createChatNamePrompt(messages)
+
+      // Use fast model if available, otherwise use primary model
+      const originalModel = connection.model
+      const fastModel = connection.getFastModel()
+
+      try {
+        // Temporarily switch to fast model if different
+        if (fastModel !== originalModel) {
+          connection.model = fastModel
+        }
+
+        const response = await connection.generateCompletion(
+          {
+            prompt,
+            maxTokens: 50, // Short response expected
+            temperature: 0.7,
+          },
+          null,
+        )
+
+        return extractChatName(response.text)
+      } finally {
+        // Restore original model
+        if (fastModel !== originalModel) {
+          connection.model = originalModel
+        }
+      }
     },
 
     async generateCompletion(
