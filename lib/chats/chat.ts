@@ -48,7 +48,7 @@ export class Chat implements ChatSessionData {
   imports: ChatImport[]
   createdAt: Date
   updatedAt: Date
-  storage: 'local' | 'remote'
+  storage: 'local' | 'github' | 'remote'
   changed: boolean
   deleted: boolean
 
