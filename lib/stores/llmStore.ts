@@ -147,6 +147,28 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       return connection
     },
 
+    // Fetch available models for a provider type without persisting a connection
+    async fetchModelsForProvider(type: string, apiKey: string): Promise<string[]> {
+      let provider: LLMProvider | null = null
+      const tempName = `__temp_${type}_${Date.now()}`
+
+      if (type === 'anthropic') {
+        provider = new AnthropicProvider(tempName, apiKey, '', false)
+      } else if (type === 'openai') {
+        provider = new OpenAIProvider(tempName, apiKey, '', false)
+      } else if (type === 'mistral') {
+        provider = new MistralProvider(tempName, apiKey, '', false)
+      } else if (type === 'google') {
+        provider = new GoogleProvider(tempName, apiKey, '', false)
+      } else {
+        throw new Error(`LLM provider type "${type}" not found.`)
+      }
+
+      // Call reset() to fetch models from the API
+      await provider.reset()
+      return provider.models
+    },
+
     // Common method for generating and validating LLM responses
     async generateValidatedCompletion(
       base: string,

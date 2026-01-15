@@ -3,7 +3,13 @@ import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-  plugins: [vue(), dts()],
+  plugins: [
+    vue(),
+    dts({
+      insertTypesEntry: true,
+      exclude: ['**/*.test.ts', '**/*.spec.ts'],
+    })
+  ],
   build: {
     lib: {
       entry: 'main.ts',
@@ -11,10 +17,11 @@ export default defineConfig({
       fileName: 'main',
     },
     rollupOptions: {
-      external: ['vue'],
+      external: ['vue', 'pinia'],
       output: {
         globals: {
           vue: 'Vue',
+          pinia: 'Pinia',
         },
       },
     },

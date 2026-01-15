@@ -415,17 +415,31 @@ export class ChatToolExecutor {
 
     // Check if already connected
     if (connection.connected) {
+      // Even if already connected, update the chat's data connection if different
+      if (this.chatStore?.activeChatId) {
+        const chat = this.chatStore.activeChat
+        if (chat && chat.dataConnectionName !== connectionName) {
+          this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+        }
+      }
       return {
         success: true,
-        message: `Connection "${connectionName}" is already active.`,
+        message: `Connection "${connectionName}" is already active and set as the data connection for this chat.`,
       }
     }
 
     try {
       await this.connectionStore.connectConnection(connectionName)
+
+      // Update the chat's data connection after successful connection
+      if (this.chatStore?.activeChatId) {
+        this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+      }
+
       return {
         success: true,
-        message: `Successfully connected to "${connectionName}". You can now run queries against this connection.`,
+        message: `Successfully connected to "${connectionName}" and set as the data connection for this chat. You can now run queries against this connection.`,
+        triggersSymbolRefresh: true, // Refresh symbols since data connection changed
       }
     } catch (error) {
       return {

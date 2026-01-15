@@ -170,7 +170,7 @@ export default defineComponent({
     const updateDefaultModel = (providerType: string) => {
       switch (providerType) {
         case 'openai':
-          connectionDetails.value.options.model = 'gpt-4.1-mini'
+          connectionDetails.value.options.model = 'gpt-5.2-mini'
           break
         case 'anthropic':
           connectionDetails.value.options.model = 'claude-3-sonnet-20240229'
@@ -182,7 +182,7 @@ export default defineComponent({
           connectionDetails.value.options.model = 'mistral-large-latest'
           break
         case 'google':
-          connectionDetails.value.options.model = 'models/gemini-2.0-flash'
+          connectionDetails.value.options.model = 'models/gemini-2.5-flash'
           break
         default:
           connectionDetails.value.options.model = ''

@@ -50,7 +50,10 @@
       </div>
 
       <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
-        <span>{{ loadingText }}</span>
+        <span class="loading-spinner"></span>
+        <span class="loading-message">
+          {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
+        </span>
       </div>
     </div>
 
@@ -137,7 +140,12 @@ export default defineComponent({
     },
     loadingText: {
       type: String,
-      default: 'Generating response...',
+      default: 'Thinking...',
+    },
+    // Current tool being executed (for inline indicator)
+    activeToolName: {
+      type: String,
+      default: '',
     },
     disabled: {
       type: Boolean,
@@ -243,6 +251,19 @@ export default defineComponent({
       return message.content
     }
 
+    // Get display text for tool indicator
+    const getToolDisplayText = (toolName: string): string => {
+      const toolLabels: Record<string, string> = {
+        run_trilogy_query: 'Running query...',
+        chart_trilogy_query: 'Running query for chart...',
+        add_import: 'Adding import...',
+        remove_import: 'Removing import...',
+        list_available_imports: 'Listing imports...',
+        connect_data_connection: 'Connecting...',
+      }
+      return toolLabels[toolName] || `Using ${toolName}...`
+    }
+
     const sendMessage = async () => {
       if (isLoading.value || !userInput.value.trim()) return
 
@@ -345,6 +366,7 @@ export default defineComponent({
       handleKeyDown,
       sendMessage,
       getMessageTextWithoutArtifact,
+      getToolDisplayText,
       addMessage,
       addArtifact,
       clearMessages,
@@ -435,12 +457,36 @@ export default defineComponent({
 }
 
 .loading-indicator {
-  align-self: center;
-  padding: 8px 12px;
-  background-color: var(--bg-loading);
-  border-radius: 12px;
-  font-size: var(--small-font-size);
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: var(--sidebar-bg);
+  border-radius: 4px;
+  font-size: var(--font-size);
+  color: var(--text-color);
+  max-width: 85%;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--special-text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.loading-message {
   color: var(--text-faint);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .input-container {
