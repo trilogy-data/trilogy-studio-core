@@ -188,27 +188,46 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
       return []
     }
 
-    // Start with model sources from the connection (root imports)
-    const modelSources = connectionStore?.getConnectionSources(connectionName) || []
-    console.log(
-      'Chat symbols refresh - model sources:',
-      modelSources.length,
-      modelSources.map((s) => s.alias),
-    )
+    // Build extra content: connection sources + all editors for this connection
+    // This ensures symbols in files with cross-file dependencies (like 'import etl') can be parsed
+    console.log(`[useChatWithTools] Refreshing symbols for connection: "${connectionName}"`)
+    const allConnectionEditors = editorStore
+      ? Object.values(editorStore.editors)
+        .filter((editor) => {
+          const matches = editor.connection === connectionName && !editor.deleted
+          return matches
+        })
+        .map((editor) => ({
+          alias: editor.name,
+          contents: editor.contents,
+        }))
+      : []
+    console.log(`[useChatWithTools] Found ${allConnectionEditors.length} editors:`, allConnectionEditors.map(e => e.alias))
 
-    // Add extra content from chat imports
+    const modelSources = connectionStore?.getConnectionSources(connectionName) || []
+
+    const extraContentMap = new Map<string, string>()
+
+    // Start with connection sources
+    modelSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+    // Add/overwrite with all editors for this connection
+    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+    // Also include chat imports content explicitly
     const importContent: ContentInput[] = (imports || []).map((imp) => ({
       alias: imp.alias || imp.name,
       contents: editorStore?.editors[imp.id]?.contents || '',
     }))
-    console.log(
-      'Chat symbols refresh - import content:',
-      importContent.length,
-      importContent.map((s) => s.alias),
-    )
 
-    // Combine model sources with import content
-    const extraContent: ContentInput[] = [...modelSources, ...importContent]
+    importContent.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
+      ([alias, contents]) => ({
+        alias,
+        contents,
+      }),
+    )
 
     // If no sources at all, return empty
     if (extraContent.length === 0) {

@@ -73,7 +73,6 @@ export class AnthropicProvider extends LLMProvider {
         messages: history.concat([{ role: 'user', content: options.prompt }]),
         max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
         temperature: options.temperature || DEFAULT_TEMPERATURE,
-        top_p: options.topP || 1.0,
       }
 
       // Add system prompt if provided

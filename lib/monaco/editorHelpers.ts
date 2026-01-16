@@ -22,7 +22,10 @@ export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
       { token: 'hidden', foreground: '#D6D6C8', fontStyle: 'italic' },
       { token: 'property', foreground: '#BFBFBF' },
     ],
-    colors: {},
+    colors: {
+      'editorCursor.foreground': theme === 'light' ? '#333333' : '#ffffff',
+      'editorCursor.background': theme === 'light' ? '#ffffff' : '#000000',
+    },
   })
 
   // Set the active theme

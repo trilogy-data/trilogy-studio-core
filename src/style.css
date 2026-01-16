@@ -17,6 +17,7 @@
 
 /* Dark Mode Colors */
 :root.dark-theme {
+  color-scheme: dark;
   --text-color: #FFFFFF;
   --text-faint: #B3B3B3;
   --special-text: #cc6900;
@@ -51,6 +52,7 @@
 
 
 :root.light-theme {
+  color-scheme: light;
   --text-color: #333333;
   --text-faint: #B3B3B3;
   --special-text: #0066cc;

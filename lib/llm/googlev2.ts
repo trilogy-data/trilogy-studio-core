@@ -1,6 +1,6 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-import { GoogleGenAI, type Content } from '@google/genai'
+import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolDefinition } from './base'
+import { GoogleGenAI, type Content, type FunctionDeclaration, type Tool } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
 const MAX_RETRIES = 3
@@ -120,7 +120,7 @@ export class GoogleProvider extends LLMProvider {
       if (history && history.length > 0) {
         // Create a chat with history
         console.log(this.convertToGeminiHistory(history))
-        const args = {
+        const args: Record<string, any> = {
           // if the model has models/ prefixed, split it
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           history: this.convertToGeminiHistory(history),
@@ -129,6 +129,12 @@ export class GoogleProvider extends LLMProvider {
             temperature: options.temperature || DEFAULT_TEMPERATURE,
           },
         }
+
+        // Add tools if provided
+        if (options.tools && options.tools.length > 0) {
+          args.tools = this.convertToGeminiTools(options.tools)
+        }
+
         const chat = this.genAIClient!.chats.create(args)
 
         // Send the message
@@ -139,7 +145,7 @@ export class GoogleProvider extends LLMProvider {
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
 
         return {
-          text: result.text || '',
+          text: this.extractResponseText(result),
           usage: {
             promptTokens,
             completionTokens,
@@ -149,21 +155,28 @@ export class GoogleProvider extends LLMProvider {
       } else {
         console.log('using simple completion without history')
         // Simple completion without history
-        const result = await this.genAIClient!.models.generateContent({
+        const requestArgs: Record<string, any> = {
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           contents: options.prompt,
           config: {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
           },
-        })
+        }
+
+        // Add tools if provided
+        if (options.tools && options.tools.length > 0) {
+          requestArgs.tools = this.convertToGeminiTools(options.tools)
+        }
+
+        const result = await this.genAIClient!.models.generateContent(requestArgs)
 
         // Get token usage if available
         const promptTokens = result.usageMetadata?.promptTokenCount || 0
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
 
         return {
-          text: result.text || '',
+          text: this.extractResponseText(result),
           usage: {
             promptTokens,
             completionTokens,
@@ -173,6 +186,39 @@ export class GoogleProvider extends LLMProvider {
       }
     })
   }
+
+  private convertToGeminiTools(tools: LLMToolDefinition[]): Tool[] {
+    const functionDeclarations: FunctionDeclaration[] = tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.input_schema,
+    }))
+    return [{ functionDeclarations }]
+  }
+
+  private extractResponseText(result: any): string {
+    // Handle responses that may contain text and/or function calls
+    let responseText = ''
+    const candidates = result.candidates || []
+
+    for (const candidate of candidates) {
+      const content = candidate.content
+      if (!content || !content.parts) continue
+
+      for (const part of content.parts) {
+        if (part.text) {
+          responseText += part.text
+        } else if (part.functionCall) {
+          // Format tool use similar to Anthropic format for consistency
+          responseText += `\n<tool_use>{"name": "${part.functionCall.name}", "input": ${JSON.stringify(part.functionCall.args)}}</tool_use>\n`
+        }
+      }
+    }
+
+    // Fall back to result.text if no content was extracted
+    return responseText || result.text || ''
+  }
+
   private convertToGeminiHistory(messages: LLMMessage[]): Content[] {
     const result: Content[] = []
 

@@ -152,7 +152,7 @@ export default defineComponent({
     )
 
     // Auto-connect the LLM connection when opening chat view if it's idle
-    const autoConnectIfNeeded = async () => {
+    const autoConnectLLMIfNeeded = async () => {
       const activeConn = llmConnectionStore.activeConnection
       if (activeConn) {
         const status = llmConnectionStore.getConnectionStatus(activeConn)
@@ -166,16 +166,49 @@ export default defineComponent({
       }
     }
 
+    // Auto-connect the DB connection associated with the active chat if it's idle
+    const autoConnectDBIfNeeded = async () => {
+      if (!connectionStore || !chatStore?.activeChat) return
+
+      const dataConnectionName = chatStore.activeChat.dataConnectionName
+      if (!dataConnectionName) return
+
+      const connection = connectionStore.connections[dataConnectionName]
+      if (!connection) return
+
+      const status = connectionStore.connectionStateToStatus(connection)
+      if (status === 'disabled') {
+        try {
+          await connectionStore.resetConnection(dataConnectionName)
+        } catch (err) {
+          console.error('Failed to auto-connect DB:', err)
+        }
+      }
+    }
+
     // Watch for chat view becoming active
     watch(
       () => activeView.value,
       (newView) => {
         if (newView === 'chat') {
-          autoConnectIfNeeded()
+          autoConnectLLMIfNeeded()
+          autoConnectDBIfNeeded()
         }
       },
       { immediate: true },
     )
+
+    // Also watch for active chat changes to auto-connect its DB connection
+    if (chatStore) {
+      watch(
+        () => chatStore?.activeChat?.dataConnectionName,
+        (dataConnectionName) => {
+          if (activeView.value === 'chat' && dataConnectionName) {
+            autoConnectDBIfNeeded()
+          }
+        },
+      )
+    }
 
     return {
       activeView,

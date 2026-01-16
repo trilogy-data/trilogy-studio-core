@@ -21,6 +21,10 @@ export type { ChatArtifactType, ChatMessage } from './components/llm'
 export { default as useLLMConnectionStore } from './stores/llmStore'
 export type { LLMConnectionStoreType } from './stores/llmStore'
 
+// Settings Store
+export { default as useUserSettingsStore } from './stores/userSettingsStore'
+export type { UserSettingsStoreType } from './stores/userSettingsStore'
+
 // Chat composables
 export { useChatWithTools } from './composables/useChatWithTools'
 export type { UseChatWithToolsOptions, UseChatWithToolsReturn } from './composables/useChatWithTools'

@@ -10,6 +10,7 @@ import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatStoreType } from '../stores/chatStore'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 
 export interface TrilogyCoreOptions {
@@ -26,6 +27,8 @@ export interface TrilogyCoreReturn {
   editorStore: EditorStoreType
   chatStore: ChatStoreType
   navigationStore: NavigationStore
+  userSettingsStore: UserSettingsStoreType
+
 
   // Services
   queryExecutionService: QueryExecutionService
@@ -82,6 +85,8 @@ export function useTrilogyCore(options: TrilogyCoreOptions = {}): TrilogyCoreRet
     editorStore,
     chatStore,
     navigationStore,
+    userSettingsStore,
+
 
     // Services
     queryExecutionService,
