@@ -243,4 +243,31 @@ code {
   color: #555;
   display: block;
 }
+
+/* Table styles */
+.md-table-wrapper {
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.md-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+.md-table th,
+.md-table td {
+  border: 1px solid var(--border-color, #e1e5e9);
+  padding: 8px 12px;
+}
+
+.md-table th {
+  background-color: var(--sidebar-bg, #f8f9fa);
+  font-weight: 600;
+}
+
+.md-table tbody tr:hover {
+  background-color: var(--hover-bg, rgba(0, 0, 0, 0.02));
+}
 </style>

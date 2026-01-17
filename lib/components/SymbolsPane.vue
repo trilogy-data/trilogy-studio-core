@@ -56,7 +56,7 @@
           <div v-if="symbol.calculation" class="symbol-description">{{ symbol.calculation }}</div>
         </div>
       </div>
-      <div v-if="filteredSymbols.length === 0" class="no-symbols">No matching symbols found</div>
+      <div v-if="filteredSymbols.length === 0 && symbols.length > 0" class="no-symbols">No matching symbols found</div>
     </div>
 
     <!-- Custom Tooltip -->

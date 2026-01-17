@@ -204,6 +204,105 @@ Line three`
     })
   })
 
+  describe('Tables', () => {
+    it('should convert basic markdown table to HTML', () => {
+      const markdown = `| Country | Total Sales |
+|---------|-------------|
+| CANADA | $109.6M |
+| EGYPT | $106.4M |`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('<div class="md-table-wrapper">')
+      expect(result).toContain('<table class="md-table">')
+      expect(result).toContain('<thead>')
+      expect(result).toContain('<th')
+      expect(result).toContain('Country')
+      expect(result).toContain('Total Sales')
+      expect(result).toContain('<tbody>')
+      expect(result).toContain('<td')
+      expect(result).toContain('CANADA')
+      expect(result).toContain('$109.6M')
+      expect(result).toContain('EGYPT')
+      expect(result).toContain('$106.4M')
+    })
+
+    it('should handle tables with multiple columns', () => {
+      const markdown = `| Country | Total Sales | Orders | Avg Order Value |
+|---------|-------------|--------|-----------------|
+| CANADA | $109.6M | 775 | $141.4k |
+| EGYPT | $106.4M | 712 | $149.5k |`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('Country')
+      expect(result).toContain('Total Sales')
+      expect(result).toContain('Orders')
+      expect(result).toContain('Avg Order Value')
+      expect(result).toContain('775')
+      expect(result).toContain('$141.4k')
+    })
+
+    it('should handle column alignment', () => {
+      const markdown = `| Left | Center | Right |
+|:-----|:------:|------:|
+| L | C | R |`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('style="text-align: left"')
+      expect(result).toContain('style="text-align: center"')
+      expect(result).toContain('style="text-align: right"')
+    })
+
+    it('should escape HTML in table cells', () => {
+      const markdown = `| Name | Value |
+|------|-------|
+| <script> | test |`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('&lt;script&gt;')
+      expect(result).not.toContain('<script>')
+    })
+
+    it('should handle tables without leading/trailing pipes', () => {
+      const markdown = `Name | Value
+-----|------
+A | 1
+B | 2`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('<table class="md-table">')
+      expect(result).toContain('Name')
+      expect(result).toContain('Value')
+      expect(result).toContain('A')
+      expect(result).toContain('1')
+    })
+
+    it('should handle tables with surrounding content', () => {
+      const markdown = `# Sales Report
+
+Here's the data:
+
+| Country | Sales |
+|---------|-------|
+| USA | $100M |
+
+More text after the table.`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('<h1 class="rendered-markdown-h1">Sales Report</h1>')
+      expect(result).toContain('<table class="md-table">')
+      expect(result).toContain('USA')
+      expect(result).toContain('$100M')
+      expect(result).toContain('More text after the table.')
+    })
+
+    it('should not convert invalid table syntax', () => {
+      const markdown = `| Only header row |`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).not.toContain('<table')
+    })
+  })
+
   describe('Mixed Content', () => {
     it('should handle complex markdown with all elements', () => {
       const markdown = `# Main Title

@@ -7,12 +7,15 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-
+    "skipLibCheck": true,
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["**/*.ts", "**/*.vue"]
+  "include": [
+    "**/*.ts",
+    "**/*.vue"
+  ]
 }

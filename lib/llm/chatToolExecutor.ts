@@ -5,6 +5,7 @@ import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatArtifact, ChatImport } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
+import type { ContentInput } from '../stores/resolver'
 
 export interface ToolCallResult {
   success: boolean
@@ -60,10 +61,8 @@ export class ChatToolExecutor {
           'chart',
           toolInput.chartConfig,
         )
-      case 'add_import':
-        return this.addImport(toolInput.import_name)
-      case 'remove_import':
-        return this.removeImport(toolInput.import_name)
+      case 'select_active_import':
+        return this.selectActiveImport(toolInput.import_name)
       case 'list_available_imports':
         return this.listAvailableImports()
       case 'connect_data_connection':
@@ -71,7 +70,7 @@ export class ChatToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, add_import, remove_import, list_available_imports, connect_data_connection`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection`,
         }
     }
   }
@@ -125,14 +124,50 @@ export class ChatToolExecutor {
       alias: imp.alias || '',
     }))
 
-    // Build extra content: connection sources + import file contents
-    const extraContent = [
-      ...this.connectionStore.getConnectionSources(connectionName),
-      ...activeImports.map((imp) => ({
-        alias: imp.alias || imp.name,
-        contents: this.editorStore?.editors[imp.id]?.contents || '',
-      })),
-    ]
+    // Build extra content: connection sources + all editors for this connection
+    // This ensures cross-file dependencies (like 'import etl') can be resolved
+    console.log(`[ChatToolExecutor] Building extraContent for connection: "${connectionName}"`)
+    const allConnectionEditors = this.editorStore
+      ? Object.values(this.editorStore.editors)
+        .filter((editor) => {
+          const matches = editor.connection === connectionName && !editor.deleted
+          return matches
+        })
+        .map((editor) => ({
+          alias: editor.name,
+          contents: editor.contents,
+        }))
+      : []
+
+    console.log(`[ChatToolExecutor] Found ${allConnectionEditors.length} editors for this connection:`, allConnectionEditors.map(e => e.alias))
+
+    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
+    console.log(`[ChatToolExecutor] Found ${connectionSources.length} connection sources:`, connectionSources.map(s => s.alias))
+
+    // Combine and remove duplicates (preferring connection editors for latest content)
+    const extraContentMap = new Map<string, string>()
+
+    // Start with connection sources
+    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+    // Add/overwrite with all editors for this connection
+    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+    // Also include chat imports (though they should already be in allConnectionEditors)
+    activeImports.forEach((imp) => {
+      const alias = imp.alias || imp.name
+      const contents = this.editorStore?.editors[imp.id]?.contents || ''
+      if (contents) {
+        extraContentMap.set(alias, contents)
+      }
+    })
+
+    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
+      ([alias, contents]) => ({
+        alias,
+        contents,
+      }),
+    )
 
     const queryInput: QueryInput = {
       text: query.trim(),
@@ -227,14 +262,35 @@ export class ChatToolExecutor {
       alias: imp.alias || '',
     }))
 
-    // Build extra content: connection sources + import file contents
-    const extraContent = [
-      ...this.connectionStore.getConnectionSources(connectionName),
-      ...activeImports.map((imp) => ({
-        alias: imp.alias || imp.name,
-        contents: this.editorStore?.editors[imp.id]?.contents || '',
-      })),
-    ]
+    // Build extra content matching executeTrilogyQuery logic
+    const allConnectionEditors = this.editorStore
+      ? Object.values(this.editorStore.editors)
+        .filter((editor) => editor.connection === connectionName && !editor.deleted)
+        .map((editor) => ({
+          alias: editor.name,
+          contents: editor.contents,
+        }))
+      : []
+
+    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
+    const extraContentMap = new Map<string, string>()
+
+    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
+    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
+    activeImports.forEach((imp) => {
+      const alias = imp.alias || imp.name
+      const contents = this.editorStore?.editors[imp.id]?.contents || ''
+      if (contents) {
+        extraContentMap.set(alias, contents)
+      }
+    })
+
+    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
+      ([alias, contents]) => ({
+        alias,
+        contents,
+      }),
+    )
 
     const queryInput: QueryInput = {
       text: query.trim(),
@@ -279,8 +335,8 @@ export class ChatToolExecutor {
     return Object.keys(this.connectionStore.connections)
   }
 
-  // Import management tools
-  private addImport(importName: string): ToolCallResult {
+  // Import management tools - single import model
+  private async selectActiveImport(importName: string): Promise<ToolCallResult> {
     if (!this.chatStore?.activeChatId || !this.editorStore) {
       return {
         success: false,
@@ -296,63 +352,127 @@ export class ChatToolExecutor {
       }
     }
 
+    // Handle clearing the selection
+    if (!importName || importName.trim() === '') {
+      this.chatStore.setImports(this.chatStore.activeChatId, [])
+      return {
+        success: true,
+        message: 'Cleared active data source selection.',
+        triggersSymbolRefresh: true,
+      }
+    }
+
     // Find the import in available imports
     const available = this.getAvailableImports(chat.dataConnectionName)
-    const importToAdd = available.find(
+    const importToSelect = available.find(
       (i) => i.name === importName || i.name.endsWith(`.${importName}`),
     )
 
-    if (!importToAdd) {
+    if (!importToSelect) {
       return {
         success: false,
         error: `Import "${importName}" not found. Available imports: ${available.map((i) => i.name).join(', ') || 'none'}`,
       }
     }
 
-    // Check if already imported
-    if (chat.imports.some((i) => i.id === importToAdd.id)) {
+    // Check if already the active import
+    if (chat.imports.length === 1 && chat.imports[0].id === importToSelect.id) {
+      // Already active, but still fetch and return the concepts
+      const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
       return {
-        success: false,
-        error: `Import "${importName}" is already active`,
+        success: true,
+        message: `"${importToSelect.name}" is already the active data source.\n\n${conceptsOutput}`,
+        triggersSymbolRefresh: false, // No change needed
       }
     }
 
-    // Add the import
-    this.chatStore.addImportToChat(this.chatStore.activeChatId, importToAdd)
+    // Set as the single active import (replaces any previous selection)
+    this.chatStore.setImports(this.chatStore.activeChatId, [importToSelect])
+
+    // Fetch and return the full concept output
+    const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
 
     return {
       success: true,
-      message: `Successfully added import "${importToAdd.name}". Fields from this data source are now available for queries.`,
+      message: `Successfully selected "${importToSelect.name}" as the active data source.\n\n${conceptsOutput}`,
       triggersSymbolRefresh: true, // Signal that symbols should be refreshed
     }
   }
 
-  private removeImport(importName: string): ToolCallResult {
-    if (!this.chatStore?.activeChatId) {
-      return {
-        success: false,
-        error: 'No active chat',
+  // Helper to fetch concepts for a specific import and format them
+  private async getConceptsForImport(imp: ChatImport, connectionName: string): Promise<string> {
+    try {
+      // Build extra content for the import
+      const editorContent = this.editorStore?.editors[imp.id]?.contents || ''
+      if (!editorContent) {
+        return 'No fields found in this data source.'
       }
-    }
 
-    const chat = this.chatStore.activeChat
-    const importToRemove = chat?.imports.find(
-      (i) => i.name === importName || i.name.endsWith(`.${importName}`),
-    )
+      // Get all connection sources and editors for dependency resolution
+      const allConnectionEditors = this.editorStore
+        ? Object.values(this.editorStore.editors)
+          .filter((editor) => editor.connection === connectionName && !editor.deleted)
+          .map((editor) => ({
+            alias: editor.name,
+            contents: editor.contents,
+          }))
+        : []
 
-    if (!importToRemove) {
-      return {
-        success: false,
-        error: `Import "${importName}" is not currently active. Active imports: ${chat?.imports.map((i) => i.name).join(', ') || 'none'}`,
+      const connectionSources = this.connectionStore.getConnectionSources(connectionName)
+      const extraContentMap = new Map<string, string>()
+
+      connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
+      allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+      const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
+        ([alias, contents]) => ({
+          alias,
+          contents,
+        }),
+      )
+
+      // Validate to get completion items
+      const queryInput: QueryInput = {
+        text: 'SELECT 1',
+        editorType: 'trilogy' as const,
+        imports: [{ name: imp.name, alias: imp.alias || '' }],
+        extraContent,
       }
-    }
 
-    this.chatStore.removeImportFromChat(this.chatStore.activeChatId, importToRemove.id)
+      const validation = await this.queryExecutionService.validateQuery(
+        connectionName,
+        queryInput,
+        false,
+      )
 
-    return {
-      success: true,
-      message: `Successfully removed import "${importToRemove.name}".`,
-      triggersSymbolRefresh: true, // Signal that symbols should be refreshed
+      if (validation?.data?.completion_items) {
+        const concepts = validation.data.completion_items.filter(
+          (item) => item.trilogyType === 'concept',
+        )
+
+        if (concepts.length === 0) {
+          return 'No fields found in this data source.'
+        }
+
+        // Format concepts with full details including descriptions
+        const conceptsList = concepts.map((c) => {
+          let entry = `- ${c.label} (${c.datatype || c.type})`
+          if (c.description) {
+            entry += `: ${c.description}`
+          }
+          if (c.calculation) {
+            entry += ` [calculated: ${c.calculation}]`
+          }
+          return entry
+        }).join('\n')
+
+        return `AVAILABLE FIELDS (${concepts.length} total):\n${conceptsList}`
+      }
+
+      return 'Unable to fetch field information for this data source.'
+    } catch (error) {
+      console.error('Failed to fetch concepts for import:', error)
+      return 'Error fetching field information for this data source.'
     }
   }
 
@@ -366,18 +486,22 @@ export class ChatToolExecutor {
     }
 
     const available = this.getAvailableImports(chat.dataConnectionName)
-    const active = chat.imports
+    const activeImport = chat.imports.length > 0 ? chat.imports[0] : null
 
     if (available.length === 0) {
       return {
         success: true,
-        message: `No data sources available for import on connection "${chat.dataConnectionName}".`,
+        message: `No data sources available on connection "${chat.dataConnectionName}".`,
       }
     }
 
+    const currentStatus = activeImport
+      ? `Current active data source: ${activeImport.name}\n\n`
+      : 'No data source currently selected.\n\n'
+
     return {
       success: true,
-      message: `Available imports for connection "${chat.dataConnectionName}":\n${available.map((i) => `- ${i.name}${active.some((a) => a.id === i.id) ? ' (active)' : ''}`).join('\n')}`,
+      message: `${currentStatus}Available data sources for connection "${chat.dataConnectionName}":\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}\n\nUse select_active_import to select a data source.`,
     }
   }
 
@@ -415,17 +539,31 @@ export class ChatToolExecutor {
 
     // Check if already connected
     if (connection.connected) {
+      // Even if already connected, update the chat's data connection if different
+      if (this.chatStore?.activeChatId) {
+        const chat = this.chatStore.activeChat
+        if (chat && chat.dataConnectionName !== connectionName) {
+          this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+        }
+      }
       return {
         success: true,
-        message: `Connection "${connectionName}" is already active.`,
+        message: `Connection "${connectionName}" is already active and set as the data connection for this chat.`,
       }
     }
 
     try {
       await this.connectionStore.connectConnection(connectionName)
+
+      // Update the chat's data connection after successful connection
+      if (this.chatStore?.activeChatId) {
+        this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+      }
+
       return {
         success: true,
-        message: `Successfully connected to "${connectionName}". You can now run queries against this connection.`,
+        message: `Successfully connected to "${connectionName}" and set as the data connection for this chat. You can now run queries against this connection.`,
+        triggersSymbolRefresh: true, // Refresh symbols since data connection changed
       }
     } catch (error) {
       return {

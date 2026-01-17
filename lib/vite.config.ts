@@ -1,9 +1,17 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig({
-  plugins: [vue(), dts()],
+  plugins: [
+    vue(),
+    dts({
+      insertTypesEntry: true,
+      exclude: ['**/*.test.ts', '**/*.spec.ts'],
+    }),
+    nodePolyfills({ include: ['crypto', 'stream'] }) as PluginOption,
+  ],
   build: {
     lib: {
       entry: 'main.ts',
@@ -11,10 +19,11 @@ export default defineConfig({
       fileName: 'main',
     },
     rollupOptions: {
-      external: ['vue'],
+      external: ['vue', 'pinia'],
       output: {
         globals: {
           vue: 'Vue',
+          pinia: 'Pinia',
         },
       },
     },

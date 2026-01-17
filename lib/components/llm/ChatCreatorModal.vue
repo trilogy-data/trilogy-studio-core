@@ -48,8 +48,9 @@
                 v-for="conn in sortedDataConnections"
                 :key="conn.name"
                 :value="conn.name"
+                :class="{ 'active-connection': conn.name === activeDataConnectionName }"
               >
-                {{ conn.name }}
+                {{ conn.name }}{{ conn.name === activeDataConnectionName ? ' (active)' : '' }}
               </option>
             </select>
             <status-icon
@@ -98,6 +99,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChatStoreType } from '../../stores/chatStore'
 import StatusIcon from '../StatusIcon.vue'
 import type { Status } from '../StatusIcon.vue'
+import { KeySeparator } from '../../data/constants'
 
 export default defineComponent({
   name: 'ChatCreatorModal',
@@ -110,6 +112,10 @@ export default defineComponent({
       default: false,
     },
     preselectedConnection: {
+      type: String,
+      default: '',
+    },
+    activeDataConnection: {
       type: String,
       default: '',
     },
@@ -193,6 +199,12 @@ export default defineComponent({
       return { status: 'connected', message: 'Connected' }
     })
 
+    // Extract the connection name from the activeDataConnection key (format: connectionName+database+schema+table)
+    const activeDataConnectionName = computed(() => {
+      if (!props.activeDataConnection) return ''
+      return props.activeDataConnection.split(KeySeparator)[0]
+    })
+
     const availableDataConnections = computed(() => {
       if (!connectionStore) return []
       return Object.values(connectionStore.connections)
@@ -265,6 +277,7 @@ export default defineComponent({
       availableDataConnections,
       sortedDataConnections,
       selectedDataConnectionStatus,
+      activeDataConnectionName,
       createChat,
     }
   },
@@ -356,6 +369,11 @@ h3 {
 
 .form-group option:disabled {
   color: var(--text-faint);
+}
+
+.form-group option.active-connection {
+  font-weight: 600;
+  color: var(--success-color, #22c55e);
 }
 
 .form-group small {

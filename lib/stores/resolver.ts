@@ -1,5 +1,5 @@
 import { ModelConfig } from '../models'
-import crypto from 'crypto'
+
 import { type UserSettingsStoreType } from './userSettingsStore'
 
 // Define a generic LRU Cache
@@ -143,10 +143,14 @@ export default class TrilogyResolver {
     this.modelCache = new LRUCache<ModelConfig>(cacheSize)
   }
 
-  // Helper function to create hash from request parameters
+  // Helper function to create hash from request parameters using djb2
   private createHash(params: any): string {
-    const stringified = JSON.stringify(params)
-    return crypto.createHash('md5').update(stringified).digest('hex')
+    const str = JSON.stringify(params)
+    let hash = 5381
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 33) ^ str.charCodeAt(i)
+    }
+    return (hash >>> 0).toString(16)
   }
 
   // Create normalized query cache key that's consistent between single and batch queries

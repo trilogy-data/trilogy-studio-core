@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-split-container">
+  <div class="chat-split-container" :class="{ 'is-resizing': isResizing }">
     <!-- Left: Chat Panel -->
     <div class="chat-panel">
       <l-l-m-chat
@@ -12,12 +12,16 @@
         :systemPrompt="systemPrompt"
         :disabled="disabled"
         :externalLoading="isLoading"
+        :activeToolName="activeToolName"
         :customSendHandler="handleSendMessage"
         @update:messages="handleMessagesUpdate"
         @message-sent="$emit('message-sent', $event)"
         @response-received="handleResponseReceived"
         @title-update="$emit('title-update', $event)"
       >
+        <template #header-prefix>
+          <slot name="header-prefix"></slot>
+        </template>
         <template #header-actions>
           <slot name="header-actions">
             <div class="chat-header-controls">
@@ -36,8 +40,14 @@
       </l-l-m-chat>
     </div>
 
+    <!-- Resizer -->
+    <div
+      class="panel-resizer"
+      @mousedown="startResize"
+    ></div>
+
     <!-- Right: Sidebar with Symbols/Artifacts tabs -->
-    <div class="sidebar-panel">
+    <div class="sidebar-panel" :style="{ width: sidebarWidth + 'px' }">
       <!-- Sidebar tabs -->
       <div class="sidebar-tabs">
         <button
@@ -228,6 +238,11 @@ export default defineComponent({
       type: Array as PropType<CompletionItem[]>,
       default: () => [],
     },
+    // Current tool being executed (for inline indicator)
+    activeToolName: {
+      type: String,
+      default: '',
+    },
   },
   emits: [
     'message-sent',
@@ -252,6 +267,37 @@ export default defineComponent({
     const sidebarTab = ref<'symbols' | 'artifacts'>('symbols')
     const internalLoading = ref(false)
     const artifactContentHeight = ref(400)
+
+    // Resizer state
+    const isResizing = ref(false)
+    const sidebarWidth = ref(350)
+
+    const startResize = (e: MouseEvent) => {
+      isResizing.value = true
+      document.addEventListener('mousemove', handleResize)
+      document.addEventListener('mouseup', stopResize)
+      e.preventDefault()
+    }
+
+    const handleResize = (e: MouseEvent) => {
+      if (!isResizing.value) return
+      const container = document.querySelector('.chat-split-container') as HTMLElement
+      if (!container) return
+
+      const containerRect = container.getBoundingClientRect()
+      const newWidth = containerRect.right - e.clientX
+
+      // Clamp between 200 and 600 pixels
+      sidebarWidth.value = Math.min(1200, Math.max(200, newWidth))
+    }
+
+    const stopResize = () => {
+      isResizing.value = false
+      document.removeEventListener('mousemove', handleResize)
+      document.removeEventListener('mouseup', stopResize)
+      // Dispatch a resize event to trigger chart redraw at new dimensions
+      window.dispatchEvent(new Event('resize'))
+    }
 
     const isLoading = computed(() => props.externalLoading || internalLoading.value)
 
@@ -341,7 +387,13 @@ export default defineComponent({
     }
 
     const handleSendMessage = async (message: string, msgs: ChatMessage[]) => {
-      internalLoading.value = true
+      // Only use internalLoading when there's NO onSendMessage handler (fallback mode)
+      // When onSendMessage is provided, the caller manages loading state via externalLoading prop
+      const useInternalLoading = !props.onSendMessage
+
+      if (useInternalLoading) {
+        internalLoading.value = true
+      }
 
       try {
         if (props.onSendMessage) {
@@ -371,7 +423,9 @@ export default defineComponent({
         })
         emit('update:messages', messages.value)
       } finally {
-        internalLoading.value = false
+        if (useInternalLoading) {
+          internalLoading.value = false
+        }
       }
     }
 
@@ -495,6 +549,10 @@ export default defineComponent({
       getMessages,
       getArtifacts,
       handleSymbolSelect,
+      // Resizer
+      isResizing,
+      sidebarWidth,
+      startResize,
     }
   },
 })
@@ -515,6 +573,22 @@ export default defineComponent({
   overflow: hidden;
 }
 
+.chat-split-container.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.panel-resizer {
+  flex: 0 0 4px;
+  background-color: var(--border-light);
+  cursor: col-resize;
+  transition: background-color 0.15s ease;
+}
+
+.panel-resizer:hover {
+  background-color: var(--special-text);
+}
+
 .chat-header-controls {
   display: flex;
   align-items: center;
@@ -531,13 +605,11 @@ export default defineComponent({
 
 /* Sidebar Panel with tabs */
 .sidebar-panel {
-  width: 350px;
-  min-width: 250px;
-  max-width: 500px;
+  min-width: 200px;
+  max-width: 1200px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border-light);
   background-color: var(--bg-color);
 }
 
@@ -552,6 +624,7 @@ export default defineComponent({
   flex: 1;
   padding: 8px 12px;
   border: none;
+  border-radius: 0;
   background: transparent;
   color: var(--text-color);
   font-size: var(--font-size);
@@ -705,12 +778,15 @@ export default defineComponent({
     min-height: 50%;
   }
 
+  .panel-resizer {
+    display: none;
+  }
+
   .sidebar-panel {
-    width: 100%;
+    width: 100% !important;
     max-width: 100%;
     min-width: 100%;
     height: 50%;
-    border-left: none;
     border-top: 1px solid var(--border-light);
   }
 

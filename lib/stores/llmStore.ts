@@ -9,7 +9,13 @@ import {
   createPrompt,
   createDashboardPrompt,
   createFilterPrompt,
+  createChatNamePrompt,
+  extractChatName,
 } from '../llm'
+import {
+  createAutoContinuePrompt,
+  parseAutoContinueResponse,
+} from '../llm/chatHelpers'
 
 export interface ValidatedResponse {
   success: boolean
@@ -143,6 +149,28 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       this.addConnection(connection)
       this.resetConnection(name)
       return connection
+    },
+
+    // Fetch available models for a provider type without persisting a connection
+    async fetchModelsForProvider(type: string, apiKey: string): Promise<string[]> {
+      let provider: LLMProvider | null = null
+      const tempName = `__temp_${type}_${Date.now()}`
+
+      if (type === 'anthropic') {
+        provider = new AnthropicProvider(tempName, apiKey, '', false)
+      } else if (type === 'openai') {
+        provider = new OpenAIProvider(tempName, apiKey, '', false)
+      } else if (type === 'mistral') {
+        provider = new MistralProvider(tempName, apiKey, '', false)
+      } else if (type === 'google') {
+        provider = new GoogleProvider(tempName, apiKey, '', false)
+      } else {
+        throw new Error(`LLM provider type "${type}" not found.`)
+      }
+
+      // Call reset() to fetch models from the API
+      await provider.reset()
+      return provider.models
     },
 
     // Common method for generating and validating LLM responses
@@ -307,6 +335,49 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       })
     },
 
+    /**
+     * Generate a concise name for a chat based on its message history.
+     * Uses the fast model if configured, otherwise falls back to the primary model.
+     * @param connectionName - The LLM connection to use
+     * @param messages - The chat messages to summarize
+     * @returns The generated chat name
+     */
+    async generateChatName(connectionName: string, messages: LLMMessage[]): Promise<string> {
+      const connection = this.connections[connectionName]
+      if (!connection) {
+        throw new Error(`LLM connection with name "${connectionName}" not found.`)
+      }
+
+      const prompt = createChatNamePrompt(messages)
+
+      // Use fast model if available, otherwise use primary model
+      const originalModel = connection.model
+      const fastModel = connection.getFastModel()
+
+      try {
+        // Temporarily switch to fast model if different
+        if (fastModel !== originalModel) {
+          connection.model = fastModel
+        }
+
+        const response = await connection.generateCompletion(
+          {
+            prompt,
+            maxTokens: 50, // Short response expected
+            temperature: 0.7,
+          },
+          null,
+        )
+
+        return extractChatName(response.text)
+      } finally {
+        // Restore original model
+        if (fastModel !== originalModel) {
+          connection.model = originalModel
+        }
+      }
+    },
+
     async generateCompletion(
       name: string,
       options: LLMRequestOptions,
@@ -316,6 +387,56 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         throw new Error(`LLM connection with name "${name}" not found.`)
       }
       return await this.connections[name].generateCompletion(options, history)
+    },
+
+    /**
+     * Evaluate if the LLM should auto-continue based on the last assistant message.
+     * Uses the fast model to quickly determine if the assistant stated an intention
+     * to take an action but hasn't actually done it yet.
+     * @param connectionName - The LLM connection to use
+     * @param lastAssistantMessage - The last message from the assistant to evaluate
+     * @returns True if the chat should auto-continue
+     */
+    async shouldAutoContinue(connectionName: string, lastAssistantMessage: string): Promise<boolean> {
+      const connection = this.connections[connectionName]
+      if (!connection) {
+        console.warn(`LLM connection with name "${connectionName}" not found for auto-continue check.`)
+        return false
+      }
+
+      const prompt = createAutoContinuePrompt(lastAssistantMessage)
+
+      // Use fast model if available, otherwise use primary model
+      const originalModel = connection.model
+      const fastModel = connection.getFastModel()
+
+      try {
+        // Temporarily switch to fast model if different
+        if (fastModel !== originalModel) {
+          connection.model = fastModel
+        }
+
+        const response = await connection.generateCompletion(
+          {
+            prompt,
+            maxTokens: 10, // Very short response expected (YES or NO)
+            temperature: 0, // Deterministic response
+          },
+          null,
+        )
+
+        const shouldContinue = parseAutoContinueResponse(response.text)
+        console.log(`[Auto-continue check] Response: "${response.text.trim()}" -> ${shouldContinue}`)
+        return shouldContinue
+      } catch (error) {
+        console.error('Failed to evaluate auto-continue:', error)
+        return false
+      } finally {
+        // Restore original model
+        if (fastModel !== originalModel) {
+          connection.model = originalModel
+        }
+      }
     },
   },
 

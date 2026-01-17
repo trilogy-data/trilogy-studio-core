@@ -6,7 +6,6 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -17,6 +16,7 @@
 
 /* Dark Mode Colors */
 :root.dark-theme {
+  color-scheme: dark;
   --text-color: #FFFFFF;
   --text-faint: #B3B3B3;
   --special-text: #cc6900;
@@ -51,6 +51,7 @@
 
 
 :root.light-theme {
+  color-scheme: light;
   --text-color: #333333;
   --text-faint: #B3B3B3;
   --special-text: #0066cc;
