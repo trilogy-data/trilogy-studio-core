@@ -380,6 +380,17 @@ export const useChatStore = defineStore('chats', {
                 // Add artifact to chat immediately so it persists
                 this.addArtifactToChat(chatId, result.artifact)
 
+                // For chart artifacts, inject the chart into the chat as a message
+                // so the user sees it inline in the conversation
+                if (result.artifact.type === 'chart') {
+                  this.addMessageToChat(chatId, {
+                    role: 'assistant',
+                    content: '',
+                    artifact: result.artifact,
+                    hidden: false,
+                  })
+                }
+
                 // Format result for LLM - include actual data so agent can analyze it
                 const config = result.artifact.config
                 const artifactData = result.artifact.data

@@ -20,7 +20,7 @@
         v-for="(message, index) in visibleMessages"
         :key="index"
         class="message"
-        :class="message.role"
+        :class="[message.role, { 'has-artifact': message.artifact }]"
         :data-testid="`message-${message.role}-${index}`"
       >
         <div class="message-content">
@@ -440,6 +440,15 @@ export default defineComponent({
 
 .message.system {
   display: none;
+}
+
+/* Messages with artifacts should be centered and wider */
+.message.has-artifact {
+  align-self: center;
+  max-width: 95%;
+  width: 100%;
+  background-color: transparent;
+  padding: 0;
 }
 
 .message-content pre {

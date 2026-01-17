@@ -67,8 +67,14 @@ export class AnthropicProvider extends LLMProvider {
     this.validateRequestOptions(options)
     history = history || []
     try {
+      // Extract system message from history (if any) - Anthropic expects system as a top-level parameter
+      const systemMessage = history.find(({ role }) => role === 'system')
+
       // Strip messages to only include role and content (Anthropic rejects extra fields like 'hidden')
-      const cleanedHistory = history.map(({ role, content }) => ({ role, content }))
+      // Also filter out system messages since they go in the top-level system parameter
+      const cleanedHistory = history
+        .filter(({ role }) => role !== 'system')
+        .map(({ role, content }) => ({ role, content }))
 
       // Build request body
       const requestBody: Record<string, any> = {
@@ -78,9 +84,10 @@ export class AnthropicProvider extends LLMProvider {
         temperature: options.temperature || DEFAULT_TEMPERATURE,
       }
 
-      // Add system prompt if provided
-      if (options.systemPrompt) {
-        requestBody.system = options.systemPrompt
+      // Add system prompt - prefer options.systemPrompt, fall back to system message from history
+      const systemPrompt = options.systemPrompt || systemMessage?.content
+      if (systemPrompt) {
+        requestBody.system = systemPrompt
       }
 
       // Add tools if provided
