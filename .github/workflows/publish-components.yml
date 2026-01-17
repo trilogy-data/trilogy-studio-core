@@ -42,8 +42,8 @@ jobs:
       # 6. Check if version already exists
       - name: Check if version needs publishing
         id: version-check
-        working-directory: ./lib
         run: |
+          cd lib
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           
@@ -53,6 +53,7 @@ jobs:
           else
             echo "Version $PACKAGE_VERSION not found, will publish"
             echo "should-publish=true" >> $GITHUB_OUTPUT
+          fi
 
       # 7. Publish to NPM
       - name: Publish
