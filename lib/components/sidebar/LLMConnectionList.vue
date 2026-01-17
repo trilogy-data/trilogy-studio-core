@@ -18,7 +18,7 @@
       :key="item.id"
       :item="item"
       :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === llmConnectionStore.activeConnection"
+      :isSelected="isItemSelected(item)"
       @toggle="toggleCollapse"
       @refresh="refreshId"
       @updateApiKey="updateApiKey"
@@ -193,11 +193,21 @@ export default {
       const currentLLMKey = getDefaultValueFromHash('llm-key', '')
       if (currentLLMKey) {
         // The key may contain a chat ID after KeySeparator (e.g., "connectionName+chatId")
-        const connectionName = currentLLMKey.split(KeySeparator)[0]
+        const parts = currentLLMKey.split(KeySeparator)
+        const connectionName = parts[0]
+        const chatId = parts[1]
 
         // Expand the connection
         if (connectionName && llmConnectionStore.connections[connectionName]) {
           collapsed.value[connectionName] = false
+
+          // Set the active connection
+          llmConnectionStore.activeConnection = connectionName
+
+          // If there's a chat ID, set it as active in the chat store
+          if (chatId && chatStore) {
+            chatStore.setActiveChat(chatId)
+          }
         }
       }
     })
@@ -266,7 +276,7 @@ export default {
           // Chats section header with new chat button
           list.push({
             id: `${name}-new-chat`,
-            name: '+ New Chat',
+            name: 'New Chat',
             indent: 1,
             count: connectionChats.length,
             type: 'new-chat',
@@ -359,6 +369,18 @@ export default {
       return list
     })
 
+    const isItemSelected = (item: any): boolean => {
+      // For chat items, check if the chat matches the active chat
+      if (item.type === 'chat-item' && item.chatId && chatStore) {
+        return item.chatId === chatStore.activeChatId
+      }
+      // For connection items, check if it matches the active connection
+      if (item.type === 'connection') {
+        return item.id === llmConnectionStore.activeConnection
+      }
+      return false
+    }
+
     const rightSplit = (str: string) => {
       const index = str.lastIndexOf(KeySeparator)
       return index !== -1 ? str.substring(0, index) : str
@@ -377,6 +399,7 @@ export default {
       refreshId,
       rightSplit,
       creatorVisible,
+      isItemSelected,
     }
   },
   components: {

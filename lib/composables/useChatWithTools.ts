@@ -1,6 +1,5 @@
 import { ref, computed, watch } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
-import type { LLMRequestOptions, LLMResponse } from '../llm'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
@@ -9,11 +8,8 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 import { KeySeparator } from '../data/constants'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
-import { ChatToolExecutor } from '../llm/chatToolExecutor'
 import {
   buildChatAgentSystemPrompt,
-  parseToolCalls,
-  CHAT_TOOLS,
 } from '../llm/chatAgentPrompt'
 import type { ModelConceptInput } from '../llm/data/models'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
@@ -50,9 +46,9 @@ export interface UseChatWithToolsOptions {
 
 export interface UseChatWithToolsReturn {
   // State
-  isChatLoading: Ref<boolean>
+  isChatLoading: ComputedRef<boolean>
   isGeneratingName: Ref<boolean>
-  activeToolName: Ref<string>
+  activeToolName: ComputedRef<string>
   activeChatMessages: Ref<ChatMessage[]>
   activeChatArtifacts: Ref<ChatArtifact[]>
   activeChatArtifactIndex: Ref<number>
@@ -98,10 +94,12 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
   const standaloneImports = ref<ChatImport[]>([])
   const standaloneDataConnection = ref(initialDataConnectionName || null)
 
-  // Chat state
-  const isChatLoading = ref(false)
+  // Local state for standalone mode (when no chatStore)
+  const standaloneLoading = ref(false)
+  const standaloneActiveToolName = ref('')
+
+  // Chat state refs for UI binding
   const isGeneratingName = ref(false)
-  const activeToolName = ref('')
   const activeChatMessages = ref<ChatMessage[]>([])
   const activeChatArtifacts = ref<ChatArtifact[]>([])
   const activeChatArtifactIndex = ref(-1)
@@ -111,19 +109,6 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
   // Raw completion items for the symbols pane
   const chatSymbols = ref<CompletionItem[]>([])
 
-  // Create tool executor if dependencies are available
-  const toolExecutor = computed(() => {
-    if (connectionStore && queryExecutionService) {
-      return new ChatToolExecutor(
-        queryExecutionService,
-        connectionStore,
-        chatStore || undefined,
-        editorStore || undefined,
-      )
-    }
-    return null
-  })
-
   // Helper to get current data connection (from chatStore or standalone)
   const currentDataConnectionName = computed(() => {
     return chatStore?.activeChat?.dataConnectionName ?? standaloneDataConnection.value
@@ -132,6 +117,22 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
   // Helper to get current imports (from chatStore or standalone)
   const currentImports = computed(() => {
     return chatStore?.activeChat?.imports ?? standaloneImports.value
+  })
+
+  // Loading state - reads from store if available, otherwise local ref
+  const isChatLoading = computed(() => {
+    if (chatStore?.activeChatId) {
+      return chatStore.isChatExecuting(chatStore.activeChatId)
+    }
+    return standaloneLoading.value
+  })
+
+  // Active tool name - reads from store if available, otherwise local ref
+  const activeToolName = computed(() => {
+    if (chatStore?.activeChatId) {
+      return chatStore.getChatActiveToolName(chatStore.activeChatId)
+    }
+    return standaloneActiveToolName.value
   })
 
   // Computed properties for chat
@@ -359,143 +360,93 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
       },
       { immediate: true },
     )
+
+    // Also watch for changes to the active chat's messages/artifacts
+    // This ensures UI updates when execution adds messages in the background
+    watch(
+      () => chatStore?.activeChat?.messages,
+      (messages) => {
+        if (messages) {
+          activeChatMessages.value = [...messages]
+        }
+      },
+      { deep: true },
+    )
+
+    watch(
+      () => chatStore?.activeChat?.artifacts,
+      (artifacts) => {
+        if (artifacts) {
+          activeChatArtifacts.value = [...artifacts]
+        }
+      },
+      { deep: true },
+    )
+
+    watch(
+      () => chatStore?.activeChat?.activeArtifactIndex,
+      (index) => {
+        if (index !== undefined) {
+          activeChatArtifactIndex.value = index
+        }
+      },
+    )
   }
 
-  // Handle chat messages with tool execution loop
+  /**
+   * Handle chat messages with tool execution loop.
+   * Delegates to chatStore.executeMessage for persistent chats,
+   * which allows execution to continue even if the component unmounts.
+   */
   const handleChatMessageWithTools = async (
     message: string,
     chatMessages: ChatMessage[],
   ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> => {
-    const MAX_TOOL_ITERATIONS = 50 // Safety limit - agent decides when to stop
+    // For persistent chats, delegate to the store
+    if (chatStore?.activeChatId && connectionStore && queryExecutionService && editorStore) {
+      return chatStore.executeMessage(
+        chatStore.activeChatId,
+        message,
+        {
+          llmConnectionStore,
+          connectionStore,
+          queryExecutionService,
+          editorStore,
+        },
+        {
+          onSymbolsRefresh: refreshChatSymbols,
+        },
+      )
+    }
 
+    // Standalone mode: execute locally (won't persist across navigation)
+    // This path is used for embedded/throwaway chats without a chatStore
     if (!llmConnectionStore.activeConnection) {
       return {
         response: 'No LLM connection available. Please configure an LLM provider first.',
       }
     }
 
-    isChatLoading.value = true
-
+    // For standalone mode, we still need basic execution
+    // but it won't persist if the component unmounts
+    standaloneLoading.value = true
     try {
-      const allArtifacts: ChatArtifact[] = []
-      let currentMessages = [...chatMessages]
-      let currentPrompt = message
-      let finalResponseText = ''
-
-      // Tool use loop - keep going until LLM stops calling tools or we hit max iterations
-      for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-        const options: LLMRequestOptions = {
-          prompt: currentPrompt,
+      const response = await llmConnectionStore.generateCompletion(
+        llmConnectionStore.activeConnection,
+        {
+          prompt: message,
           systemPrompt: chatSystemPrompt.value,
-          tools: CHAT_TOOLS,
-        }
-
-        // Generate completion from LLM
-        const response: LLMResponse = await llmConnectionStore.generateCompletion(
-          llmConnectionStore.activeConnection,
-          options,
-          currentMessages,
-        )
-
-        const responseText = response.text
-        const toolCalls = parseToolCalls(responseText)
-
-        // If no tool calls, we're done - return the final response
-        if (toolCalls.length === 0 || !toolExecutor.value) {
-          finalResponseText = responseText
-          break
-        }
-
-        // Execute tool calls and build tool results
-        const toolResults: string[] = []
-
-        for (const toolCall of toolCalls) {
-          activeToolName.value = toolCall.name
-          const result = await toolExecutor.value.executeToolCall(toolCall.name, toolCall.input)
-
-          if (result.success) {
-            // Check if this tool triggers a symbol refresh (e.g., add_import, remove_import)
-            let symbolInfo = ''
-            if (result.triggersSymbolRefresh) {
-              const updatedSymbols = await refreshChatSymbols()
-              if (updatedSymbols.length > 0) {
-                // Include updated symbol names in the result for the agent
-                const symbolNames = updatedSymbols
-                  .slice(0, 50) // Limit to first 50 symbols
-                  .map((s) => s.label)
-                  .join(', ')
-                symbolInfo = `\n\nUpdated available fields (${updatedSymbols.length} total): ${symbolNames}${updatedSymbols.length > 50 ? '...' : ''}`
-              } else {
-                symbolInfo = '\n\nNo fields available after import change.'
-              }
-            }
-
-            if (result.artifact) {
-              allArtifacts.push(result.artifact)
-              // Format result for LLM - include actual data so agent can analyze it
-              const config = result.artifact.config
-              const artifactData = result.artifact.data
-              let dataPreview = ''
-              if (artifactData) {
-                // Convert Results to JSON for the agent
-                const jsonData =
-                  typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-                // Limit data rows to avoid token overflow
-                const limitedData = {
-                  ...jsonData,
-                  data: jsonData.data?.slice(0, 100), // Limit to first 100 rows
-                }
-                dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 100):\n${JSON.stringify(limitedData, null, 2)}`
-              }
-              const artifactInfo = config
-                ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
-                : ''
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\nSuccess. ${result.message || artifactInfo}${dataPreview}${symbolInfo}\n</tool_result>`,
-              )
-            } else if (result.message) {
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\n${result.message}${symbolInfo}\n</tool_result>`,
-              )
-            }
-          } else {
-            toolResults.push(
-              `<tool_result name="${toolCall.name}">\nError: ${result.error}\n</tool_result>`,
-            )
-          }
-        }
-
-        // Add assistant response and tool results to conversation for next iteration
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant' as const, content: responseText },
-          {
-            role: 'user' as const,
-            content: toolResults.join('\n\n'),
-            hidden: true, // Tool results are hidden in UI
-          },
-        ]
-
-        // Clear prompt for continuation (context is in messages)
-        currentPrompt = 'Continue based on the tool results.'
-
-        // If this is the last iteration, save the response
-        if (iteration === MAX_TOOL_ITERATIONS - 1) {
-          finalResponseText = responseText + '\n\n(Max tool iterations reached)'
-        }
-      }
-
-      return {
-        response: finalResponseText,
-        artifacts: allArtifacts.length > 0 ? allArtifacts : undefined,
-      }
+        },
+        chatMessages,
+      )
+      return { response: response.text }
     } catch (err) {
       return {
         response: `Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`,
       }
     } finally {
-      isChatLoading.value = false
-      activeToolName.value = ''
+      standaloneLoading.value = false
+      standaloneActiveToolName.value = ''
     }
   }
 
@@ -576,7 +527,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
   }
 
   return {
-    // State
+    // State (now computed from store for persistent chats)
     isChatLoading,
     isGeneratingName,
     activeToolName,

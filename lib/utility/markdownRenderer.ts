@@ -62,6 +62,12 @@ export function sanitizeHtml(html: string): string {
       'rect',
       'path',
       'polyline',
+      'table',
+      'thead',
+      'tbody',
+      'tr',
+      'th',
+      'td',
     ],
     ALLOWED_ATTR: [
       'href',
@@ -670,6 +676,136 @@ function processParagraphs(html: string): string {
 }
 
 /**
+ * Process markdown tables
+ */
+function processTables(html: string): string {
+  const lines = html.split('\n')
+  const result: string[] = []
+  let inTable = false
+  let tableRows: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+
+    // Check if this line looks like a table row (starts and ends with |, or has | separators)
+    const isTableRow = /^\|.*\|$/.test(line) || /^[^|]+\|[^|]+/.test(line)
+    const isSeparatorRow = /^\|?[\s\-:|]+\|[\s\-:|]*\|?$/.test(line)
+
+    if (isTableRow || isSeparatorRow) {
+      if (!inTable) {
+        inTable = true
+        tableRows = []
+      }
+      tableRows.push(line)
+    } else {
+      if (inTable) {
+        // End of table, process accumulated rows
+        const tableHtml = convertTableRowsToHtml(tableRows)
+        if (tableHtml) {
+          result.push(tableHtml)
+        } else {
+          // Not a valid table, restore original lines
+          result.push(...tableRows)
+        }
+        inTable = false
+        tableRows = []
+      }
+      result.push(lines[i])
+    }
+  }
+
+  // Handle table at end of content
+  if (inTable && tableRows.length > 0) {
+    const tableHtml = convertTableRowsToHtml(tableRows)
+    if (tableHtml) {
+      result.push(tableHtml)
+    } else {
+      result.push(...tableRows)
+    }
+  }
+
+  return result.join('\n')
+}
+
+/**
+ * Convert table rows to HTML table
+ */
+function convertTableRowsToHtml(rows: string[]): string | null {
+  if (rows.length < 2) return null
+
+  // Find the separator row (contains dashes and optionally colons for alignment)
+  let separatorIndex = -1
+  for (let i = 0; i < rows.length; i++) {
+    if (/^\|?[\s\-:|]+\|[\s\-:|]*\|?$/.test(rows[i]) && rows[i].includes('-')) {
+      separatorIndex = i
+      break
+    }
+  }
+
+  if (separatorIndex === -1 || separatorIndex === 0) return null
+
+  // Parse alignment from separator row
+  const separatorCells = parseCells(rows[separatorIndex])
+  const alignments: string[] = separatorCells.map((cell) => {
+    const trimmed = cell.trim()
+    const leftColon = trimmed.startsWith(':')
+    const rightColon = trimmed.endsWith(':')
+    if (leftColon && rightColon) return 'center'
+    if (rightColon) return 'right'
+    return 'left'
+  })
+
+  // Parse header row(s)
+  const headerRows = rows.slice(0, separatorIndex)
+  const dataRows = rows.slice(separatorIndex + 1)
+
+  let tableHtml = '<div class="md-table-wrapper"><table class="md-table">'
+
+  // Add header
+  tableHtml += '<thead>'
+  for (const headerRow of headerRows) {
+    const cells = parseCells(headerRow)
+    tableHtml += '<tr>'
+    cells.forEach((cell, index) => {
+      const align = alignments[index] || 'left'
+      tableHtml += `<th style="text-align: ${align}">${escapeHtml(cell.trim())}</th>`
+    })
+    tableHtml += '</tr>'
+  }
+  tableHtml += '</thead>'
+
+  // Add body
+  if (dataRows.length > 0) {
+    tableHtml += '<tbody>'
+    for (const dataRow of dataRows) {
+      const cells = parseCells(dataRow)
+      tableHtml += '<tr>'
+      cells.forEach((cell, index) => {
+        const align = alignments[index] || 'left'
+        tableHtml += `<td style="text-align: ${align}">${escapeHtml(cell.trim())}</td>`
+      })
+      tableHtml += '</tr>'
+    }
+    tableHtml += '</tbody>'
+  }
+
+  tableHtml += '</table></div>'
+  return tableHtml
+}
+
+/**
+ * Parse table row into cells
+ */
+function parseCells(row: string): string[] {
+  // Remove leading and trailing pipes if present
+  let cleaned = row.trim()
+  if (cleaned.startsWith('|')) cleaned = cleaned.substring(1)
+  if (cleaned.endsWith('|')) cleaned = cleaned.substring(0, cleaned.length - 1)
+
+  return cleaned.split('|')
+}
+
+/**
  * Restore code blocks by replacing placeholders
  */
 function restoreCodeBlocks(html: string, placeholders: CodeBlockPlaceholder): string {
@@ -690,6 +826,7 @@ export function convertMarkdownToHtml(text: string): string {
   // Process other markdown elements
   let html = htmlWithoutCode
   html = processHeaders(html)
+  html = processTables(html) // Process tables before lists to avoid conflicts
   html = processLists(html)
   html = processEmphasis(html)
   html = processLinks(html)

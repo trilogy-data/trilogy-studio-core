@@ -134,31 +134,16 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
     },
   },
   {
-    name: 'add_import',
+    name: 'select_active_import',
     description:
-      'Add a data source import to make its fields/concepts available for queries. Use this when you need fields from a specific data model that is not yet imported. After adding an import, the fields from that data source will be available for your queries.',
+      'Select a single data source import to use for queries. This replaces any previously selected import. Only one import can be active at a time. After selecting an import, the tool will return the full list of available fields/concepts from that data source including their descriptions. Use list_available_imports first to see what data sources are available.',
     input_schema: {
       type: 'object',
       properties: {
         import_name: {
           type: 'string',
           description:
-            'The name of the import to add (e.g., "sales.orders" or "finance.revenue"). Use list_available_imports to see available options.',
-        },
-      },
-      required: ['import_name'],
-    },
-  },
-  {
-    name: 'remove_import',
-    description:
-      'Remove a data source import. Use this to clean up unused imports or switch to a different data model.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        import_name: {
-          type: 'string',
-          description: 'The name of the import to remove',
+            'The name of the import to select (e.g., "sales.orders" or "finance.revenue"). Use list_available_imports to see available options. Pass an empty string or null to clear the current selection.',
         },
       },
       required: ['import_name'],
@@ -195,7 +180,6 @@ export interface ChatAgentPromptOptions {
   dataConnectionName: string | null
   availableConnections: string[]
   availableConcepts?: ModelConceptInput[]
-  maxConceptsToShow?: number
   activeImports?: ChatImport[] // Currently imported data sources
   availableImportsForConnection?: ChatImport[] // All available imports for current connection
   isDataConnectionActive?: boolean // Whether the current data connection is connected
@@ -206,7 +190,6 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
     dataConnectionName,
     availableConnections,
     availableConcepts,
-    maxConceptsToShow = 100,
     activeImports = [],
     availableImportsForConnection = [],
     isDataConnectionActive = true,
@@ -214,7 +197,7 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
 
   const conceptsSection =
     availableConcepts && availableConcepts.length > 0
-      ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts.slice(0, maxConceptsToShow))}${availableConcepts.length > maxConceptsToShow ? `\n... and ${availableConcepts.length - maxConceptsToShow} more fields` : ''}`
+      ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
       : ''
 
   const connectionStatusNote = dataConnectionName && !isDataConnectionActive
@@ -225,15 +208,15 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
     ? `ACTIVE DATA CONNECTION: ${dataConnectionName}${connectionStatusNote}`
     : 'No data connection currently selected. Ask the user which connection to use.'
 
-  // Build imports section
+  // Build imports section (single import model)
   const activeImportsSection =
     activeImports.length > 0
-      ? `\nACTIVE IMPORTS:\n${activeImports.map((i) => `- ${i.name}`).join('\n')}`
-      : '\nNo data sources currently imported. Use add_import to import a data source, or use list_available_imports to see what is available.'
+      ? `\nACTIVE DATA SOURCE: ${activeImports[0].name}`
+      : '\nNo data source currently selected. Use select_active_import to select a data source, or use list_available_imports to see what is available.'
 
   const availableImportsSection =
     availableImportsForConnection.length > 0
-      ? `\n\nAVAILABLE DATA SOURCES FOR IMPORT:\n${availableImportsForConnection.map((i) => `- ${i.name}${activeImports.some((a) => a.id === i.id) ? ' (active)' : ''}`).join('\n')}`
+      ? `\n\nAVAILABLE DATA SOURCES:\n${availableImportsForConnection.map((i) => `- ${i.name}${activeImports.some((a) => a.id === i.id) ? ' (active)' : ''}`).join('\n')}`
       : ''
 
   return `You are a data analysis assistant with access to Trilogy query capabilities.
@@ -261,7 +244,7 @@ IMPORTANT GUIDELINES:
 4. When showing data, prefer tables for detailed exploration and charts for trends/comparisons
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
-7. If you need fields that aren't available, use add_import to import the relevant data source first
+7. If you need fields that aren't available, use select_active_import to switch to a different data source (only one can be active at a time)
 8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
 `
 }

@@ -63,18 +63,17 @@ export class OpenAIProvider extends LLMProvider {
   ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
 
-    let messages: LLMMessage[] = []
+    // Strip messages to only include role and content (OpenAI rejects extra fields like 'hidden')
+    const cleanHistory = (history || []).map(({ role, content }) => ({ role, content }))
+
+    let messages: { role: string; content: string }[] = []
 
     // Add system prompt if provided
     if (options.systemPrompt) {
       messages.push({ role: 'system', content: options.systemPrompt })
     }
 
-    if (history) {
-      messages = [...messages, ...history, { role: 'user', content: options.prompt }]
-    } else {
-      messages = [...messages, { role: 'user', content: options.prompt }]
-    }
+    messages = [...messages, ...cleanHistory, { role: 'user', content: options.prompt }]
 
     // Build request body
     const requestBody: Record<string, any> = {

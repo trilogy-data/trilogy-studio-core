@@ -19,6 +19,7 @@
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
+      :activeDataConnection="activeConnectionKey"
       @close="showChatCreatorModal = false"
       @chat-created="handleChatCreated"
     />

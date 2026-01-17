@@ -67,10 +67,13 @@ export class AnthropicProvider extends LLMProvider {
     this.validateRequestOptions(options)
     history = history || []
     try {
+      // Strip messages to only include role and content (Anthropic rejects extra fields like 'hidden')
+      const cleanedHistory = history.map(({ role, content }) => ({ role, content }))
+
       // Build request body
       const requestBody: Record<string, any> = {
         model: this.model,
-        messages: history.concat([{ role: 'user', content: options.prompt }]),
+        messages: cleanedHistory.concat([{ role: 'user', content: options.prompt }]),
         max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
         temperature: options.temperature || DEFAULT_TEMPERATURE,
       }

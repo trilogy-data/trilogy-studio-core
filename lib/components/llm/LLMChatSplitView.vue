@@ -295,6 +295,8 @@ export default defineComponent({
       isResizing.value = false
       document.removeEventListener('mousemove', handleResize)
       document.removeEventListener('mouseup', stopResize)
+      // Dispatch a resize event to trigger chart redraw at new dimensions
+      window.dispatchEvent(new Event('resize'))
     }
 
     const isLoading = computed(() => props.externalLoading || internalLoading.value)
@@ -385,7 +387,13 @@ export default defineComponent({
     }
 
     const handleSendMessage = async (message: string, msgs: ChatMessage[]) => {
-      internalLoading.value = true
+      // Only use internalLoading when there's NO onSendMessage handler (fallback mode)
+      // When onSendMessage is provided, the caller manages loading state via externalLoading prop
+      const useInternalLoading = !props.onSendMessage
+
+      if (useInternalLoading) {
+        internalLoading.value = true
+      }
 
       try {
         if (props.onSendMessage) {
@@ -415,7 +423,9 @@ export default defineComponent({
         })
         emit('update:messages', messages.value)
       } finally {
-        internalLoading.value = false
+        if (useInternalLoading) {
+          internalLoading.value = false
+        }
       }
     }
 

@@ -23,7 +23,7 @@ export function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
   return conceptInputs
     .map(
       (field) =>
-        `[name: ${field.name} | type:${field.type}${field.calculation ? ' | alias_for:' + field.calculation : ''} ${field.description ? ' | description:' + field.description : ''} ${field.keys ? ' | grain:' + field.keys : ''}]`,
+        `[name: ${field.name} | type:${field.type}${field.calculation ? ' | alias_for:' + field.calculation : ''}${field.description ? ' | description:' + field.description : ''}]`,
     )
     .join(', ')
 }
