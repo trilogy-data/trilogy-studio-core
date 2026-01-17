@@ -35,6 +35,8 @@
     "pinia": "^2.3.1"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.29.1-dev269.0",
+    "@google/genai": "^0.12.0",
     "@mdi/font": "^7.4.47",
     "luxon": "^3.5.0",
     "monaco-editor": "^0.52.2",
