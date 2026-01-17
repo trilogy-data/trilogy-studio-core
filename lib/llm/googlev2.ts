@@ -1,6 +1,14 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolDefinition } from './base'
-import { GoogleGenAI, type Content, type FunctionDeclaration, type Tool } from '@google/genai'
+import {
+  GoogleGenAI,
+  Type,
+  type Content,
+  type FunctionDeclaration,
+  type Tool,
+  type CreateChatParameters,
+  type GenerateContentParameters,
+} from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
 const MAX_RETRIES = 3
@@ -120,19 +128,15 @@ export class GoogleProvider extends LLMProvider {
       if (history && history.length > 0) {
         // Create a chat with history
         console.log(this.convertToGeminiHistory(history))
-        const args: Record<string, any> = {
+        const args: CreateChatParameters = {
           // if the model has models/ prefixed, split it
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           history: this.convertToGeminiHistory(history),
           config: {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
+            tools: options.tools && options.tools.length > 0 ? this.convertToGeminiTools(options.tools) : undefined,
           },
-        }
-
-        // Add tools if provided
-        if (options.tools && options.tools.length > 0) {
-          args.tools = this.convertToGeminiTools(options.tools)
         }
 
         const chat = this.genAIClient!.chats.create(args)
@@ -155,18 +159,14 @@ export class GoogleProvider extends LLMProvider {
       } else {
         console.log('using simple completion without history')
         // Simple completion without history
-        const requestArgs: Record<string, any> = {
+        const requestArgs: GenerateContentParameters = {
           model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
           contents: options.prompt,
           config: {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
+            tools: options.tools && options.tools.length > 0 ? this.convertToGeminiTools(options.tools) : undefined,
           },
-        }
-
-        // Add tools if provided
-        if (options.tools && options.tools.length > 0) {
-          requestArgs.tools = this.convertToGeminiTools(options.tools)
         }
 
         const result = await this.genAIClient!.models.generateContent(requestArgs)
@@ -191,7 +191,11 @@ export class GoogleProvider extends LLMProvider {
     const functionDeclarations: FunctionDeclaration[] = tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
-      parameters: tool.input_schema,
+      parameters: {
+        type: Type.OBJECT,
+        properties: tool.input_schema.properties,
+        required: tool.input_schema.required,
+      },
     }))
     return [{ functionDeclarations }]
   }

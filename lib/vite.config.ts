@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
@@ -10,7 +10,7 @@ export default defineConfig({
       insertTypesEntry: true,
       exclude: ['**/*.test.ts', '**/*.spec.ts'],
     }),
-    nodePolyfills({ include: ['crypto', 'stream'] })
+    nodePolyfills({ include: ['crypto', 'stream'] }) as PluginOption,
   ],
   build: {
     lib: {
