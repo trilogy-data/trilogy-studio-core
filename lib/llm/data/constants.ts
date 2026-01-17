@@ -26,6 +26,7 @@ SELECT RULES:
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
 - Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`.
 - Comments use \`#\` only, per line.
+- Use \`--\` before a field in a select to hide it from output. This is useful for having a field available for filtering without returning it when making charts, for example.
 - Two example queries: "where year between 1940 and 1950
   select
       name,
@@ -33,7 +34,8 @@ SELECT RULES:
       sum(births) AS all_births,
       sum(births ? state = 'VT') AS vermont_births,
       rank name over state by all_births desc AS state_rank,
-      rank name by sum(births) by name desc AS all_rank
+      rank name by sum(births) by name desc AS all_rank,
+      -- sum(births ? state = 'MA') as hidden_mass_births
   having 
       all_rank<11
       and state = 'ID'
