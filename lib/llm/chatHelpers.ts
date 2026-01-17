@@ -33,6 +33,50 @@ Chat name:`
 }
 
 /**
+ * Creates a prompt to evaluate if the LLM should auto-continue after a response.
+ * This is used to detect when the LLM has stated an intention to do something
+ * but hasn't actually done it (e.g., "I'll execute this query now").
+ */
+export function createAutoContinuePrompt(lastAssistantMessage: string): string {
+  // Truncate very long messages to focus on the ending
+  const messageEnd = lastAssistantMessage.length > 1500
+    ? lastAssistantMessage.slice(-1500)
+    : lastAssistantMessage
+
+  return `Analyze the following assistant message ending. Determine if the assistant has stated an intention to take an action (like executing a query, running code, trying something) but has not yet actually performed that action.
+
+Answer ONLY "YES" if:
+- The message ends with phrases like "I'll execute this now", "Let me try this", "I'll run this query", "Let's execute", "I will now execute", etc.
+- The assistant has proposed a solution and stated they will test/run/execute it
+- The message indicates the assistant is about to take an action but stopped
+
+Answer ONLY "NO" if:
+- The message is asking a question to the user
+- The message is presenting results or conclusions
+- The message ends with a completed thought that doesn't require follow-up action
+- The assistant is waiting for user input or confirmation
+- The message ends with a tool call that was executed
+- The assistant has already executed the action and shown results
+
+Message ending:
+"""
+${messageEnd}
+"""
+
+Answer (YES or NO):`
+}
+
+/**
+ * Parses the auto-continue evaluation response.
+ * Returns true if the LLM should auto-continue.
+ */
+export function parseAutoContinueResponse(response: string): boolean {
+  const normalized = response.trim().toUpperCase()
+  // Check for YES at the start of the response
+  return normalized === 'YES' || normalized.startsWith('YES')
+}
+
+/**
  * Extracts a clean chat name from an LLM response.
  * Handles various response formats and cleans up the output.
  */

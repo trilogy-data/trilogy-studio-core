@@ -143,10 +143,16 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     return standaloneTitle.value
   })
 
+  // Helper to get current LLM connection (from chatStore or standalone - fallback to global active)
+  const currentLLMConnectionName = computed(() => {
+    return chatStore?.activeChat?.llmConnectionName ?? llmConnectionStore.activeConnection
+  })
+
   const chatConnectionInfo = computed(() => {
     const parts: string[] = []
-    if (llmConnectionStore.activeConnection) {
-      const conn = llmConnectionStore.getConnection(llmConnectionStore.activeConnection)
+    const llmConnName = currentLLMConnectionName.value
+    if (llmConnName) {
+      const conn = llmConnectionStore.getConnection(llmConnName)
       if (conn) {
         parts.push(`${conn.name} (${conn.model})`)
       }

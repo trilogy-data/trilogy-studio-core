@@ -252,6 +252,7 @@ export const useChatStore = defineStore('chats', {
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const MAX_TOOL_ITERATIONS = 50
+      const MAX_AUTO_CONTINUE = 3 // Limit auto-continuation to prevent infinite loops
 
       const chat = this.chats[chatId]
       if (!chat) {
@@ -260,7 +261,9 @@ export const useChatStore = defineStore('chats', {
 
       const { llmConnectionStore, connectionStore, queryExecutionService, editorStore } = deps
 
-      if (!llmConnectionStore.activeConnection) {
+      // Use the chat's LLM connection, falling back to global active connection
+      const llmConnectionName = chat.llmConnectionName || llmConnectionStore.activeConnection
+      if (!llmConnectionName) {
         return {
           response: 'No LLM connection available. Please configure an LLM provider first.',
         }
@@ -274,6 +277,7 @@ export const useChatStore = defineStore('chats', {
         let currentMessages = [...chat.messages]
         let currentPrompt = message
         let finalResponseText = ''
+        let autoContinueCount = 0
 
         // Create tool executor for this execution
         const toolExecutor = new ChatToolExecutor(
@@ -296,7 +300,7 @@ export const useChatStore = defineStore('chats', {
 
           // Generate completion from LLM
           const response: LLMResponse = await llmConnectionStore.generateCompletion(
-            llmConnectionStore.activeConnection,
+            llmConnectionName,
             llmOptions,
             currentMessages,
           )
@@ -304,7 +308,7 @@ export const useChatStore = defineStore('chats', {
           const responseText = response.text
           const toolCalls = parseToolCalls(responseText)
 
-          // If no tool calls, we're done - add final response to chat and return
+          // If no tool calls, check if we should auto-continue
           if (toolCalls.length === 0) {
             finalResponseText = responseText
             // Add the final assistant response directly to the correct chat
@@ -312,6 +316,39 @@ export const useChatStore = defineStore('chats', {
               role: 'assistant',
               content: responseText,
             })
+
+            // Check if we should auto-continue (LLM stated intention but didn't act)
+            if (autoContinueCount < MAX_AUTO_CONTINUE) {
+              try {
+                const shouldContinue = await llmConnectionStore.shouldAutoContinue(
+                  llmConnectionName,
+                  responseText,
+                )
+
+                if (shouldContinue) {
+                  autoContinueCount++
+                  console.log(`[Auto-continue] Triggering continuation ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
+
+                  // Update messages to include the response we just added
+                  currentMessages = [
+                    ...currentMessages,
+                    { role: 'assistant' as const, content: responseText },
+                    {
+                      role: 'user' as const,
+                      content: 'Continue with the action you described.',
+                      hidden: true,
+                    },
+                  ]
+                  currentPrompt = 'Continue with the action you described.'
+                  // Continue the loop instead of breaking
+                  continue
+                }
+              } catch (error) {
+                console.error('[Auto-continue] Error checking auto-continue:', error)
+                // On error, just proceed normally (don't auto-continue)
+              }
+            }
+
             break
           }
 
@@ -387,6 +424,10 @@ export const useChatStore = defineStore('chats', {
 
           // Clear prompt for continuation (context is in messages)
           currentPrompt = 'Continue based on the tool results.'
+
+          // Reset auto-continue count after successful tool execution
+          // This allows a fresh set of auto-continues after each tool action
+          autoContinueCount = 0
 
           // If this is the last iteration, add response with warning to chat
           if (iteration === MAX_TOOL_ITERATIONS - 1) {

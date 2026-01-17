@@ -288,7 +288,7 @@ export default defineComponent({
       const newWidth = containerRect.right - e.clientX
 
       // Clamp between 200 and 600 pixels
-      sidebarWidth.value = Math.min(600, Math.max(200, newWidth))
+      sidebarWidth.value = Math.min(1200, Math.max(200, newWidth))
     }
 
     const stopResize = () => {
@@ -606,7 +606,7 @@ export default defineComponent({
 /* Sidebar Panel with tabs */
 .sidebar-panel {
   min-width: 200px;
-  max-width: 600px;
+  max-width: 1200px;
   height: 100%;
   display: flex;
   flex-direction: column;
