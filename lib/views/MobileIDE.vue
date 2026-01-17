@@ -200,6 +200,8 @@ const MobileDashboard = defineAsyncComponent(
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 
+export interface MobileIDEProps {}
+
 export default {
   name: 'MobileIDEComponent',
   data() {},

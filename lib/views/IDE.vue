@@ -303,6 +303,10 @@ const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessa
 const LoadingButton = defineAsyncComponent(() => import('../components/LoadingButton.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 
+export interface IDEProps {
+  showingCredentialPrompt?: boolean
+}
+
 export default {
   name: 'IDEComponent',
   data() {
@@ -310,13 +314,12 @@ export default {
       activeTab: 'results',
     }
   },
-  //add an argument for if the credential prompt is up
   props: {
     showingCredentialPrompt: {
       type: Boolean,
       default: false,
     },
-  },
+  } as const,
   components: {
     // Synchronous components (always needed)
     SidebarLayout,

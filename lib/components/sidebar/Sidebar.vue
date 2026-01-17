@@ -167,50 +167,53 @@ import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 
+export interface SidebarProps {
+  active?: string
+  activeEditor?: string
+  activeModelKey?: string
+  activeDocumentationKey?: string
+  activeConnectionKey?: string
+  activeLLMKey?: string
+  activeDashboardKey?: string
+  containerWidth?: number
+}
+
 export default defineComponent({
   name: 'Sidebar',
   props: {
     active: {
       type: String,
       default: getDefaultValueFromHash('screen'),
-      optional: true,
     },
     activeEditor: {
       type: String,
       default: getDefaultValueFromHash('editor'),
-      optional: true,
     },
     activeModelKey: {
       type: String,
       default: getDefaultValueFromHash('model'),
-      optional: true,
     },
     activeDocumentationKey: {
       type: String,
       default: getDefaultValueFromHash('documentationKey'),
-      optional: true,
     },
     activeConnectionKey: {
       type: String,
       default: getDefaultValueFromHash('connection'),
-      optional: true,
     },
     activeLLMKey: {
       type: String,
       default: getDefaultValueFromHash('llm'),
-      optional: true,
     },
     activeDashboardKey: {
       type: String,
       default: getDefaultValueFromHash('dashboard'),
-      optional: true,
     },
     containerWidth: {
       type: Number,
       default: 200,
-      optional: true,
     },
-  },
+  } as const,
   setup() {
     const isSaving = ref(false)
     const previousUnSaved = ref(null)
