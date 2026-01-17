@@ -76,6 +76,8 @@ import AddStoreModal from '../community/AddStoreModal.vue'
 import type { ModelFile, ModelRoot, AnyModelStore } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 
+export interface CommunityModelListProps {}
+
 export default {
   name: 'CommunityModelList',
   setup() {
