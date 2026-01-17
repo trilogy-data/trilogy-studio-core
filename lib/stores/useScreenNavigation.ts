@@ -5,7 +5,13 @@ import {
   getDefaultValueFromHash,
   removeHashesFromUrl,
 } from './urlStore'
-import { useEditorStore, useDashboardStore, useUserSettingsStore, useCommunityApiStore, useChatStore } from '.'
+import {
+  useEditorStore,
+  useDashboardStore,
+  useUserSettingsStore,
+  useCommunityApiStore,
+  useChatStore,
+} from '.'
 import { lastSegment, KeySeparator } from '../data/constants'
 import { tips, editorTips, communityTips, dashboardTips, type ModalItem } from '../data/tips'
 

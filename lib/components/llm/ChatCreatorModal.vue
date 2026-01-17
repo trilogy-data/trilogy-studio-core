@@ -182,9 +182,7 @@ export default defineComponent({
     // Get status for the selected connection
     const selectedConnectionStatus = computed((): { status: Status; message: string } | null => {
       if (!selectedLLMConnection.value) return null
-      const conn = availableLLMConnections.value.find(
-        (c) => c.name === selectedLLMConnection.value,
-      )
+      const conn = availableLLMConnections.value.find((c) => c.name === selectedLLMConnection.value)
       if (!conn) return null
 
       if (!conn.connected) {
@@ -229,24 +227,26 @@ export default defineComponent({
     })
 
     // Get status for the selected data connection
-    const selectedDataConnectionStatus = computed((): { status: Status; message: string } | null => {
-      if (!selectedDataConnection.value) return null
-      const conn = availableDataConnections.value.find(
-        (c) => c.name === selectedDataConnection.value,
-      )
-      if (!conn) return null
+    const selectedDataConnectionStatus = computed(
+      (): { status: Status; message: string } | null => {
+        if (!selectedDataConnection.value) return null
+        const conn = availableDataConnections.value.find(
+          (c) => c.name === selectedDataConnection.value,
+        )
+        if (!conn) return null
 
-      if (!conn.connected) {
-        return { status: 'disabled', message: 'Disconnected' }
-      }
-      if (conn.running) {
-        return { status: 'running', message: 'Running' }
-      }
-      if (conn.error) {
-        return { status: 'failed', message: conn.error }
-      }
-      return { status: 'connected', message: 'Connected' }
-    })
+        if (!conn.connected) {
+          return { status: 'disabled', message: 'Disconnected' }
+        }
+        if (conn.running) {
+          return { status: 'running', message: 'Running' }
+        }
+        if (conn.error) {
+          return { status: 'failed', message: conn.error }
+        }
+        return { status: 'connected', message: 'Connected' }
+      },
+    )
 
     const createChat = () => {
       if (!selectedLLMConnection.value || !chatStore) return

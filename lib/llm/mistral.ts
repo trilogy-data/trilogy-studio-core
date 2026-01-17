@@ -1,11 +1,24 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse } from './base'
+import { fetchWithRetry, type RetryOptions } from './utils'
 
 export class MistralProvider extends LLMProvider {
   private baseUrl = 'https://api.mistral.ai/v1/chat/completions'
   public type: string = 'mistral'
+  private retryOptions: RetryOptions
+
   constructor(name: string, apiKey: string, model: string, saveCredential: boolean = false) {
     super(name, apiKey, model, saveCredential)
+    this.retryOptions = {
+      maxRetries: 3,
+      initialDelayMs: 1000,
+      retryStatusCodes: [429, 500, 502, 503, 504],
+      onRetry: (attempt, delayMs, error) => {
+        console.warn(
+          `Mistral API retry attempt ${attempt} after ${delayMs}ms delay due to error: ${error.message}`,
+        )
+      },
+    }
   }
 
   async generateCompletion(options: LLMRequestOptions): Promise<LLMResponse> {
@@ -22,20 +35,30 @@ export class MistralProvider extends LLMProvider {
         top_p: options.topP || 1.0,
       }
 
-      // Make API request to Mistral
-      const response = await fetch(this.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
+      // Merge retry options with request-specific backoff callback
+      const effectiveRetryOptions = {
+        ...this.retryOptions,
+        onRetry: (attempt: number, delayMs: number, error: Error) => {
+          // Call the default retry handler
+          this.retryOptions.onRetry?.(attempt, delayMs, error)
+          // Also notify the request-specific callback if provided
+          options.onRateLimitBackoff?.(attempt, delayMs, error)
         },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(`Mistral API error: ${errorData.error?.message || response.statusText}`)
       }
+
+      // Make API request to Mistral with retry
+      const response = await fetchWithRetry(
+        () =>
+          fetch(this.baseUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.apiKey}`,
+            },
+            body: JSON.stringify(requestBody),
+          }),
+        effectiveRetryOptions,
+      )
 
       const data = await response.json()
 

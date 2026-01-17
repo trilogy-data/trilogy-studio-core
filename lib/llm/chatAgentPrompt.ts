@@ -37,7 +37,7 @@ export const CHAT_TOOLS = [
   },
   {
     name: 'chart_trilogy_query',
-    description: `Execute a Trilogy query and display results as a chart. The chart type is auto-detected based on data shape unless you specify a chartConfig. Only provide chartConfig if the user specifically requests a chart type or configuration; otherwise let auto-detection handle it.
+    description: `Execute a Trilogy query and display results as a chart. The chart type is auto-detected based on data shape unless you specify a chartConfig. Only provide chartConfig if the user specifically requests a chart type or configuration; otherwise let auto-detection handle it. Hiding fields used only for filtering/query structure from output with -- syntax may be useful to get the right auto-formatting.
 
 Example chartConfig: ${JSON.stringify(CHART_CONFIG_EXAMPLE)}
 
@@ -200,9 +200,10 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
       ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
       : ''
 
-  const connectionStatusNote = dataConnectionName && !isDataConnectionActive
-    ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
-    : ''
+  const connectionStatusNote =
+    dataConnectionName && !isDataConnectionActive
+      ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
+      : ''
 
   const connectionInfo = dataConnectionName
     ? `ACTIVE DATA CONNECTION: ${dataConnectionName}${connectionStatusNote}`

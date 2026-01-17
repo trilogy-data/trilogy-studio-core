@@ -130,7 +130,12 @@ export default {
       delete isLoading.value[id]
     }
 
-    const toggleCollapse = async (id: string, connectionName: string, type: string, extraData?: any) => {
+    const toggleCollapse = async (
+      id: string,
+      connectionName: string,
+      type: string,
+      extraData?: any,
+    ) => {
       // Handle new chat creation
       if (type === 'new-chat') {
         emit('create-new-chat', connectionName)

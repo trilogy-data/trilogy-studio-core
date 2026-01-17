@@ -97,6 +97,17 @@ export class OpenAIProvider extends LLMProvider {
     }
 
     try {
+      // Merge retry options with request-specific backoff callback
+      const effectiveRetryOptions = {
+        ...this.retryOptions,
+        onRetry: (attempt: number, delayMs: number, error: Error) => {
+          // Call the default retry handler
+          this.retryOptions.onRetry?.(attempt, delayMs, error)
+          // Also notify the request-specific callback if provided
+          options.onRateLimitBackoff?.(attempt, delayMs, error)
+        },
+      }
+
       const response = await fetchWithRetry(
         () =>
           fetch(this.baseCompletionUrl, {
@@ -107,7 +118,7 @@ export class OpenAIProvider extends LLMProvider {
             },
             body: JSON.stringify(requestBody),
           }),
-        this.retryOptions,
+        effectiveRetryOptions,
       )
 
       const data = await response.json()

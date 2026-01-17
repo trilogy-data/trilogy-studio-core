@@ -29,7 +29,6 @@ export interface TrilogyCoreReturn {
   navigationStore: NavigationStore
   userSettingsStore: UserSettingsStoreType
 
-
   // Services
   queryExecutionService: QueryExecutionService
   resolver: TrilogyResolver
@@ -86,7 +85,6 @@ export function useTrilogyCore(options: TrilogyCoreOptions = {}): TrilogyCoreRet
     chatStore,
     navigationStore,
     userSettingsStore,
-
 
     // Services
     queryExecutionService,

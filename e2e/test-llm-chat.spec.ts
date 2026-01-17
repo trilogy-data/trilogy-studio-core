@@ -38,7 +38,6 @@ async function navigateToChatView(page: any, connectionName = 'test-openai', isM
     })
     await page.getByTestId(`llm-connection-${connectionName}-open-validation`).click()
 
-
     // Wait for view tabs to be visible and switch to Chat
     await expect(page.getByTestId('llm-view-tab-chat')).toBeVisible({ timeout: 10000 })
     await page.getByTestId('llm-view-tab-chat').click()
@@ -234,8 +233,6 @@ test.describe('LLM Chat with Artifacts Tests', () => {
       timeout: 5000,
     })
     await page.getByTestId('llm-connection-test-openai-open-validation').click()
-
-
 
     // Wait for the view tabs to be visible
     await expect(page.getByTestId('llm-view-tab-validation')).toBeVisible({

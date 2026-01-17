@@ -85,7 +85,10 @@ export class GoogleProvider extends LLMProvider {
     }
   }
 
-  private async withRetry<T>(apiCall: () => Promise<T>): Promise<T> {
+  private async withRetry<T>(
+    apiCall: () => Promise<T>,
+    onBackoff?: (attempt: number, delayMs: number, error: Error) => void,
+  ): Promise<T> {
     let retries = 0
 
     while (true) {
@@ -106,6 +109,12 @@ export class GoogleProvider extends LLMProvider {
         retries++
         const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1) // Exponential backoff
         console.log(`Rate limited (429). Retry ${retries}/${MAX_RETRIES} after ${delayMs}ms`)
+
+        // Notify callback if provided
+        if (onBackoff && error instanceof Error) {
+          onBackoff(retries, delayMs, error)
+        }
+
         await new Promise((resolve) => setTimeout(resolve, delayMs))
       }
     }
@@ -135,7 +144,10 @@ export class GoogleProvider extends LLMProvider {
           config: {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
-            tools: options.tools && options.tools.length > 0 ? this.convertToGeminiTools(options.tools) : undefined,
+            tools:
+              options.tools && options.tools.length > 0
+                ? this.convertToGeminiTools(options.tools)
+                : undefined,
           },
         }
 
@@ -165,7 +177,10 @@ export class GoogleProvider extends LLMProvider {
           config: {
             maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
             temperature: options.temperature || DEFAULT_TEMPERATURE,
-            tools: options.tools && options.tools.length > 0 ? this.convertToGeminiTools(options.tools) : undefined,
+            tools:
+              options.tools && options.tools.length > 0
+                ? this.convertToGeminiTools(options.tools)
+                : undefined,
           },
         }
 
@@ -184,7 +199,7 @@ export class GoogleProvider extends LLMProvider {
           },
         }
       }
-    })
+    }, options.onRateLimitBackoff)
   }
 
   private convertToGeminiTools(tools: LLMToolDefinition[]): Tool[] {

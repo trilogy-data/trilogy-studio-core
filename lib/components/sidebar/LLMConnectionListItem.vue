@@ -119,9 +119,7 @@
               class="connection-customize"
               :data-testid="`fast-model-select-${item.connection.name}`"
             >
-              <option value="" :data-testid="`fast-model-option-none`">
-                (Use primary model)
-              </option>
+              <option value="" :data-testid="`fast-model-option-none`">(Use primary model)</option>
               <option
                 v-for="model in item.connection.models"
                 :value="model"

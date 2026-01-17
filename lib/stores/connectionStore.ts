@@ -79,7 +79,7 @@ const useConnectionStore = defineStore('connections', {
       }
 
       // Use Promise.race to implement timeout
-      const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {
+      const operationPromise = Promise.race([resetPromise(), timeoutPromise]).finally(() => {
         // Clean up when operation completes or fails (including timeout)
         pendingOperations.delete(operationKey)
       })

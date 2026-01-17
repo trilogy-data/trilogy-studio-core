@@ -12,10 +12,7 @@ import {
   createChatNamePrompt,
   extractChatName,
 } from '../llm'
-import {
-  createAutoContinuePrompt,
-  parseAutoContinueResponse,
-} from '../llm/chatHelpers'
+import { createAutoContinuePrompt, parseAutoContinueResponse } from '../llm/chatHelpers'
 
 export interface ValidatedResponse {
   success: boolean
@@ -397,10 +394,15 @@ const useLLMConnectionStore = defineStore('llmConnections', {
      * @param lastAssistantMessage - The last message from the assistant to evaluate
      * @returns True if the chat should auto-continue
      */
-    async shouldAutoContinue(connectionName: string, lastAssistantMessage: string): Promise<boolean> {
+    async shouldAutoContinue(
+      connectionName: string,
+      lastAssistantMessage: string,
+    ): Promise<boolean> {
       const connection = this.connections[connectionName]
       if (!connection) {
-        console.warn(`LLM connection with name "${connectionName}" not found for auto-continue check.`)
+        console.warn(
+          `LLM connection with name "${connectionName}" not found for auto-continue check.`,
+        )
         return false
       }
 
@@ -426,7 +428,9 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         )
 
         const shouldContinue = parseAutoContinueResponse(response.text)
-        console.log(`[Auto-continue check] Response: "${response.text.trim()}" -> ${shouldContinue}`)
+        console.log(
+          `[Auto-continue check] Response: "${response.text.trim()}" -> ${shouldContinue}`,
+        )
         return shouldContinue
       } catch (error) {
         console.error('Failed to evaluate auto-continue:', error)

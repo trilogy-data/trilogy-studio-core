@@ -37,14 +37,31 @@
             </div>
           </slot>
         </template>
+        <!-- Render inline artifacts (charts) in messages -->
+        <template #artifact="{ artifact }">
+          <div
+            class="inline-artifact"
+            v-if="artifact.type === 'chart' && getArtifactResults(artifact)"
+          >
+            <results-component
+              :type="'trilogy'"
+              :results="getArtifactResults(artifact)!"
+              :chartConfig="artifact.config?.chartConfig"
+              :generatedSql="artifact.config?.generatedSql"
+              :containerHeight="400"
+              :defaultTab="'visualize'"
+              @config-change="
+                (config: ChartConfig) => handleInlineChartConfigChange(artifact, config)
+              "
+            />
+          </div>
+          <div v-else class="artifact-placeholder">[Artifact: {{ artifact.type }}]</div>
+        </template>
       </l-l-m-chat>
     </div>
 
     <!-- Resizer -->
-    <div
-      class="panel-resizer"
-      @mousedown="startResize"
-    ></div>
+    <div class="panel-resizer" @mousedown="startResize"></div>
 
     <!-- Right: Sidebar with Symbols/Artifacts tabs -->
     <div class="sidebar-panel" :style="{ width: sidebarWidth + 'px' }">
@@ -71,10 +88,7 @@
 
       <!-- Symbols Pane -->
       <div v-if="sidebarTab === 'symbols'" class="sidebar-content">
-        <SymbolsPane
-          :symbols="symbols"
-          @select-symbol="handleSymbolSelect"
-        />
+        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
       </div>
 
       <!-- Artifacts Pane -->
@@ -136,15 +150,7 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  ref,
-  computed,
-  watch,
-  onMounted,
-  onUnmounted,
-  type PropType,
-} from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../../chats/chat'
 import ResultsComponent from '../editor/Results.vue'
@@ -466,6 +472,28 @@ export default defineComponent({
       }
     }
 
+    // Convert artifact data to Results for inline display
+    const getArtifactResults = (artifact: ChatArtifact): Results | null => {
+      const data = artifact.data
+
+      if (data instanceof Results) {
+        return data
+      }
+
+      if (data?.headers && data?.data) {
+        return Results.fromJSON(data)
+      }
+
+      return null
+    }
+
+    // Handle chart config changes for inline artifacts
+    const handleInlineChartConfigChange = (artifact: ChatArtifact, config: ChartConfig) => {
+      artifact.config = { ...artifact.config, chartConfig: config }
+      emit('update:artifacts', artifacts.value)
+      emit('update:messages', messages.value)
+    }
+
     // Helper functions for artifact display
     const getArtifactIcon = (artifact: ChatArtifact): string => {
       switch (artifact.type) {
@@ -484,7 +512,12 @@ export default defineComponent({
       if (artifact.config?.title) {
         return artifact.config.title
       }
-      const typeLabel = artifact.type === 'results' ? 'Query Result' : artifact.type === 'chart' ? 'Chart' : artifact.type
+      const typeLabel =
+        artifact.type === 'results'
+          ? 'Query Result'
+          : artifact.type === 'chart'
+            ? 'Chart'
+            : artifact.type
       return `${typeLabel} #${index + 1}`
     }
 
@@ -541,6 +574,8 @@ export default defineComponent({
       collapseArtifact,
       addArtifact,
       handleChartConfigChange,
+      getArtifactResults,
+      handleInlineChartConfigChange,
       getArtifactIcon,
       getArtifactLabel,
       getArtifactMeta,
@@ -601,6 +636,27 @@ export default defineComponent({
   padding: 2px 8px;
   background-color: var(--bg-color);
   border-radius: 4px;
+}
+
+/* Inline artifact in chat messages */
+.inline-artifact {
+  width: 100%;
+  min-height: 400px;
+  height: 450px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.artifact-placeholder {
+  padding: 16px;
+  background-color: var(--query-window-bg);
+  border: 1px dashed var(--border);
+  text-align: center;
+  color: var(--text-faint);
+  border-radius: 8px;
 }
 
 /* Sidebar Panel with tabs */

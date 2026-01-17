@@ -7,18 +7,23 @@ import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
-import {
-  buildChatAgentSystemPrompt,
-  parseToolCalls,
-  CHAT_TOOLS,
-} from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt, parseToolCalls, CHAT_TOOLS } from '../llm/chatAgentPrompt'
 import type { CompletionItem } from './resolver'
+
+/** Rate limit backoff state */
+export interface RateLimitBackoff {
+  isWaiting: boolean
+  attempt: number
+  delayMs: number
+  startedAt: number // timestamp when backoff started
+}
 
 /** Per-chat execution state */
 export interface ChatExecution {
   isLoading: boolean
   activeToolName: string
   error: string | null
+  rateLimitBackoff: RateLimitBackoff | null
 }
 
 /** Dependencies needed to execute a chat message */
@@ -40,7 +45,8 @@ export const useChatStore = defineStore('chats', {
   getters: {
     chatList: (state) => Object.values(state.chats).filter((c) => !c.deleted),
 
-    unsavedChats: (state) => Object.values(state.chats).filter((c) => c.changed && !c.deleted).length,
+    unsavedChats: (state) =>
+      Object.values(state.chats).filter((c) => c.changed && !c.deleted).length,
 
     activeChat: (state) => (state.activeChatId ? state.chats[state.activeChatId] : null),
 
@@ -73,6 +79,12 @@ export const useChatStore = defineStore('chats', {
       (state) =>
       (chatId: string): string =>
         state.chatExecutions[chatId]?.activeToolName ?? '',
+
+    /** Get rate limit backoff state for a specific chat */
+    getChatRateLimitBackoff:
+      (state) =>
+      (chatId: string): RateLimitBackoff | null =>
+        state.chatExecutions[chatId]?.rateLimitBackoff ?? null,
   },
 
   actions: {
@@ -211,6 +223,26 @@ export const useChatStore = defineStore('chats', {
         isLoading: true,
         activeToolName: '',
         error: null,
+        rateLimitBackoff: null,
+      }
+    },
+
+    /** Update rate limit backoff state during execution */
+    setRateLimitBackoff(chatId: string, attempt: number, delayMs: number): void {
+      if (this.chatExecutions[chatId]) {
+        this.chatExecutions[chatId].rateLimitBackoff = {
+          isWaiting: true,
+          attempt,
+          delayMs,
+          startedAt: Date.now(),
+        }
+      }
+    },
+
+    /** Clear rate limit backoff state */
+    clearRateLimitBackoff(chatId: string): void {
+      if (this.chatExecutions[chatId]) {
+        this.chatExecutions[chatId].rateLimitBackoff = null
       }
     },
 
@@ -296,6 +328,10 @@ export const useChatStore = defineStore('chats', {
             prompt: currentPrompt,
             systemPrompt,
             tools: CHAT_TOOLS,
+            // Notify the store when rate-limited so UI can show feedback
+            onRateLimitBackoff: (attempt, delayMs) => {
+              this.setRateLimitBackoff(chatId, attempt, delayMs)
+            },
           }
 
           // Generate completion from LLM
@@ -304,6 +340,9 @@ export const useChatStore = defineStore('chats', {
             llmOptions,
             currentMessages,
           )
+
+          // Clear backoff state after successful completion
+          this.clearRateLimitBackoff(chatId)
 
           const responseText = response.text
           const toolCalls = parseToolCalls(responseText)
@@ -327,7 +366,9 @@ export const useChatStore = defineStore('chats', {
 
                 if (shouldContinue) {
                   autoContinueCount++
-                  console.log(`[Auto-continue] Triggering continuation ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
+                  console.log(
+                    `[Auto-continue] Triggering continuation ${autoContinueCount}/${MAX_AUTO_CONTINUE}`,
+                  )
 
                   // Update messages to include the response we just added
                   currentMessages = [
@@ -379,6 +420,17 @@ export const useChatStore = defineStore('chats', {
                 allArtifacts.push(result.artifact)
                 // Add artifact to chat immediately so it persists
                 this.addArtifactToChat(chatId, result.artifact)
+
+                // For chart artifacts, inject the chart into the chat as a message
+                // so the user sees it inline in the conversation
+                if (result.artifact.type === 'chart') {
+                  this.addMessageToChat(chatId, {
+                    role: 'assistant',
+                    content: '',
+                    artifact: result.artifact,
+                    hidden: false,
+                  })
+                }
 
                 // Format result for LLM - include actual data so agent can analyze it
                 const config = result.artifact.config
@@ -468,7 +520,7 @@ export const useChatStore = defineStore('chats', {
       // Check if the data connection is currently active/connected
       const isDataConnectionActive =
         dataConnectionName && connectionStore
-          ? connectionStore.connections[dataConnectionName]?.connected ?? false
+          ? (connectionStore.connections[dataConnectionName]?.connected ?? false)
           : false
 
       // Get available imports for the connection

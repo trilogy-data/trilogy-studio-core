@@ -42,18 +42,10 @@ export class ChatToolExecutor {
     this.editorStore = editorStore || null
   }
 
-  async executeToolCall(
-    toolName: string,
-    toolInput: Record<string, any>,
-  ): Promise<ToolCallResult> {
+  async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
       case 'run_trilogy_query':
-        return this.executeTrilogyQuery(
-          toolInput.query,
-          toolInput.connection,
-          'results',
-          undefined,
-        )
+        return this.executeTrilogyQuery(toolInput.query, toolInput.connection, 'results', undefined)
       case 'chart_trilogy_query':
         return this.executeTrilogyQuery(
           toolInput.query,
@@ -129,20 +121,26 @@ export class ChatToolExecutor {
     console.log(`[ChatToolExecutor] Building extraContent for connection: "${connectionName}"`)
     const allConnectionEditors = this.editorStore
       ? Object.values(this.editorStore.editors)
-        .filter((editor) => {
-          const matches = editor.connection === connectionName && !editor.deleted
-          return matches
-        })
-        .map((editor) => ({
-          alias: editor.name,
-          contents: editor.contents,
-        }))
+          .filter((editor) => {
+            const matches = editor.connection === connectionName && !editor.deleted
+            return matches
+          })
+          .map((editor) => ({
+            alias: editor.name,
+            contents: editor.contents,
+          }))
       : []
 
-    console.log(`[ChatToolExecutor] Found ${allConnectionEditors.length} editors for this connection:`, allConnectionEditors.map(e => e.alias))
+    console.log(
+      `[ChatToolExecutor] Found ${allConnectionEditors.length} editors for this connection:`,
+      allConnectionEditors.map((e) => e.alias),
+    )
 
     const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    console.log(`[ChatToolExecutor] Found ${connectionSources.length} connection sources:`, connectionSources.map(s => s.alias))
+    console.log(
+      `[ChatToolExecutor] Found ${connectionSources.length} connection sources:`,
+      connectionSources.map((s) => s.alias),
+    )
 
     // Combine and remove duplicates (preferring connection editors for latest content)
     const extraContentMap = new Map<string, string>()
@@ -265,11 +263,11 @@ export class ChatToolExecutor {
     // Build extra content matching executeTrilogyQuery logic
     const allConnectionEditors = this.editorStore
       ? Object.values(this.editorStore.editors)
-        .filter((editor) => editor.connection === connectionName && !editor.deleted)
-        .map((editor) => ({
-          alias: editor.name,
-          contents: editor.contents,
-        }))
+          .filter((editor) => editor.connection === connectionName && !editor.deleted)
+          .map((editor) => ({
+            alias: editor.name,
+            contents: editor.contents,
+          }))
       : []
 
     const connectionSources = this.connectionStore.getConnectionSources(connectionName)
@@ -378,7 +376,10 @@ export class ChatToolExecutor {
     // Check if already the active import
     if (chat.imports.length === 1 && chat.imports[0].id === importToSelect.id) {
       // Already active, but still fetch and return the concepts
-      const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
+      const conceptsOutput = await this.getConceptsForImport(
+        importToSelect,
+        chat.dataConnectionName,
+      )
       return {
         success: true,
         message: `"${importToSelect.name}" is already the active data source.\n\n${conceptsOutput}`,
@@ -411,11 +412,11 @@ export class ChatToolExecutor {
       // Get all connection sources and editors for dependency resolution
       const allConnectionEditors = this.editorStore
         ? Object.values(this.editorStore.editors)
-          .filter((editor) => editor.connection === connectionName && !editor.deleted)
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
+            .filter((editor) => editor.connection === connectionName && !editor.deleted)
+            .map((editor) => ({
+              alias: editor.name,
+              contents: editor.contents,
+            }))
         : []
 
       const connectionSources = this.connectionStore.getConnectionSources(connectionName)
@@ -455,16 +456,18 @@ export class ChatToolExecutor {
         }
 
         // Format concepts with full details including descriptions
-        const conceptsList = concepts.map((c) => {
-          let entry = `- ${c.label} (${c.datatype || c.type})`
-          if (c.description) {
-            entry += `: ${c.description}`
-          }
-          if (c.calculation) {
-            entry += ` [calculated: ${c.calculation}]`
-          }
-          return entry
-        }).join('\n')
+        const conceptsList = concepts
+          .map((c) => {
+            let entry = `- ${c.label} (${c.datatype || c.type})`
+            if (c.description) {
+              entry += `: ${c.description}`
+            }
+            if (c.calculation) {
+              entry += ` [calculated: ${c.calculation}]`
+            }
+            return entry
+          })
+          .join('\n')
 
         return `AVAILABLE FIELDS (${concepts.length} total):\n${conceptsList}`
       }
