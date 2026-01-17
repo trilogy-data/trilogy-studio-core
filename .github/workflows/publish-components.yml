@@ -1,34 +1,45 @@
 name: Publish Trilogy Studio Components
+
 on:
   push:
     branches:
       - main
+
 jobs:
   publish:
     environment: production
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  
+      id-token: write
       contents: read
+
     steps:
+      # 1. Checkout code
       - uses: actions/checkout@v3
-      
+
+      # 2. Setup PNPM
       - uses: pnpm/action-setup@v4
         with:
           version: 10
-      
-      - uses: actions/setup-node@v3
+
+      # 3. Setup Node with OIDC for NPM
+      - uses: actions/setup-node@v4
         with:
-          node-version: 23
-          registry-url: 'https://registry.npmjs.org/'
-          cache: 'pnpm'
-      
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      # 4. Install dependencies
       - name: Install dependencies
-        run: cd lib && pnpm install --frozen-lockfile
-      
+        working-directory: ./lib
+        run: |
+          pnpm install --frozen-lockfile
+
+      # 5. Build package
       - name: Build
-        run: cd lib && pnpm run build
-      
+        working-directory: ./lib
+        run: |
+          pnpm run build
+
+      # 6. Check if version already exists
       - name: Check if version needs publishing
         id: version-check
         run: |
@@ -42,8 +53,10 @@ jobs:
           else
             echo "Version $PACKAGE_VERSION not found, will publish"
             echo "should-publish=true" >> $GITHUB_OUTPUT
-          fi
-      
+
+      # 7. Publish to NPM
       - name: Publish
         if: steps.version-check.outputs.should-publish == 'true'
-        run: cd lib && npm publish --provenance --access public
+        run: |
+          cd lib
+          npm publish 
