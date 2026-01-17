@@ -37,7 +37,7 @@ export const CHAT_TOOLS = [
   },
   {
     name: 'chart_trilogy_query',
-    description: `Execute a Trilogy query and display results as a chart. The chart type is auto-detected based on data shape unless you specify a chartConfig. Only provide chartConfig if the user specifically requests a chart type or configuration; otherwise let auto-detection handle it.
+    description: `Execute a Trilogy query and display results as a chart. The chart type is auto-detected based on data shape unless you specify a chartConfig. Only provide chartConfig if the user specifically requests a chart type or configuration; otherwise let auto-detection handle it. Hiding fields used only for filtering/query structure from output with -- syntax may be useful to get the right auto-formatting.
 
 Example chartConfig: ${JSON.stringify(CHART_CONFIG_EXAMPLE)}
 
