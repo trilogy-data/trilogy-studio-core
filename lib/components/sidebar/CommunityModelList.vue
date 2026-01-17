@@ -67,7 +67,7 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, defineComponent } from 'vue'
 
 import { useCommunityApiStore, useScreenNavigation } from '../../stores'
 import SidebarList from './SidebarList.vue'
@@ -76,9 +76,7 @@ import AddStoreModal from '../community/AddStoreModal.vue'
 import type { ModelFile, ModelRoot, AnyModelStore } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 
-export interface CommunityModelListProps {}
-
-export default {
+export default defineComponent({
   name: 'CommunityModelList',
   setup() {
     const communityStore = useCommunityApiStore()
@@ -207,7 +205,7 @@ export default {
     CommunityModelListItem,
     AddStoreModal,
   },
-}
+})
 </script>
 
 <style scoped>
