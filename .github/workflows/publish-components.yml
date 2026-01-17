@@ -46,4 +46,4 @@ jobs:
       
       - name: Publish
         if: steps.version-check.outputs.should-publish == 'true'
-        run: cd lib && pnpm publish --no-git-checks --provenance --access public
+        run: cd lib && npm publish --provenance --access public
