@@ -20,7 +20,7 @@ export default defineConfig({
       fileName: 'main',
     },
     rollupOptions: {
-      external: ['vue', 'pinia'],
+      external: ['vue', 'pinia', '@motherduck/wasm-client'],
       output: {
         globals: {
           vue: 'Vue',

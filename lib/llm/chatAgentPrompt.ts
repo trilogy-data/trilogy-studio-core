@@ -221,7 +221,7 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
 
   return `You are a data analysis assistant with access to Trilogy query capabilities.
 
-You have access to tools that can execute queries and generate visualizations. When a user asks about data, analyze their request, write a valid Trilogy query, and use the appropriate tool.
+You have access to tools that can select datasources, execute queries and generate visualizations. When a user asks about data, analyze their request, make sure you are looking at the right source, write a valid Trilogy query, and use the appropriate tool.
 
 ${connectionInfo}
 AVAILABLE DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'None configured - user needs to set up a data connection first'}
@@ -244,7 +244,7 @@ IMPORTANT GUIDELINES:
 4. When showing data, prefer tables for detailed exploration and charts for trends/comparisons
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
-7. If you need fields that aren't available, use select_active_import to switch to a different data source (only one can be active at a time)
+7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
 8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
 `
 }
