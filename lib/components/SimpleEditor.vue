@@ -109,7 +109,7 @@ import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
 import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
 import type { ContentInput } from '../stores/resolver'
-interface OperationState {
+export interface OperationState {
   success: boolean
   duration: number
   rows?: number

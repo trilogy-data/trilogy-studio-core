@@ -11,14 +11,16 @@ interface EditorRef {
   getContent: () => string
 }
 
-const props = defineProps<{
+export interface DashboardMarkdownEditorProps {
   content: MarkdownData
   connectionName: string
   imports: Import[]
   rootContent: ContentInput[]
   initialWidth?: number
   initialHeight?: number
-}>()
+}
+
+const props = defineProps<DashboardMarkdownEditorProps>()
 
 const emit = defineEmits(['save', 'cancel'])
 

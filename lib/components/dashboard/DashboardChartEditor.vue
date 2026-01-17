@@ -10,7 +10,7 @@ interface EditorRef {
   getContent: () => string
 }
 
-const props = defineProps<{
+export interface DashboardChartEditorProps {
   content: string
   connectionName: string
   imports: Import[]
@@ -18,7 +18,9 @@ const props = defineProps<{
   showing: boolean
   initialWidth?: number
   initialHeight?: number
-}>()
+}
+
+const props = defineProps<DashboardChartEditorProps>()
 
 const emit = defineEmits(['save', 'cancel'])
 const queryText = ref(props.content)
