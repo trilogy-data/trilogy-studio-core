@@ -432,7 +432,11 @@ export default {
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
 
-    const handleLLMOpenView = (connectionName: string, tab: 'chat' | 'validation', chatId?: string) => {
+    const handleLLMOpenView = (
+      connectionName: string,
+      tab: 'chat' | 'validation',
+      chatId?: string,
+    ) => {
       // Build the address with optional chat ID
       const address = chatId ? `${connectionName}${KeySeparator}${chatId}` : connectionName
       // Set the active connection (with chat ID if present)

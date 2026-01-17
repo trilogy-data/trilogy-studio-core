@@ -543,9 +543,7 @@ const saveChats = async () => {
   console.log('saving chats')
   for (let source of props.storageSources) {
     await source.saveChats(
-      Object.values(props.chatStore.chats).filter(
-        (chat) => chat.storage == source.type,
-      ),
+      Object.values(props.chatStore.chats).filter((chat) => chat.storage == source.type),
     )
   }
 }

@@ -3,14 +3,12 @@ import type { Ref, ComputedRef } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
-import type { ChatStoreType } from '../stores/chatStore'
+import type { ChatStoreType, RateLimitBackoff } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 import { KeySeparator } from '../data/constants'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
-import {
-  buildChatAgentSystemPrompt,
-} from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
 import type { ModelConceptInput } from '../llm/data/models'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 
@@ -49,6 +47,7 @@ export interface UseChatWithToolsReturn {
   isChatLoading: ComputedRef<boolean>
   isGeneratingName: Ref<boolean>
   activeToolName: ComputedRef<string>
+  rateLimitBackoff: ComputedRef<RateLimitBackoff | null>
   activeChatMessages: Ref<ChatMessage[]>
   activeChatArtifacts: Ref<ChatArtifact[]>
   activeChatArtifactIndex: Ref<number>
@@ -135,6 +134,14 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     return standaloneActiveToolName.value
   })
 
+  // Rate limit backoff state - reads from store if available
+  const rateLimitBackoff = computed((): RateLimitBackoff | null => {
+    if (chatStore?.activeChatId) {
+      return chatStore.getChatRateLimitBackoff(chatStore.activeChatId)
+    }
+    return null
+  })
+
   // Computed properties for chat
   const activeChatTitle = computed(() => {
     if (chatStore?.activeChat) {
@@ -200,16 +207,19 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     console.log(`[useChatWithTools] Refreshing symbols for connection: "${connectionName}"`)
     const allConnectionEditors = editorStore
       ? Object.values(editorStore.editors)
-        .filter((editor) => {
-          const matches = editor.connection === connectionName && !editor.deleted
-          return matches
-        })
-        .map((editor) => ({
-          alias: editor.name,
-          contents: editor.contents,
-        }))
+          .filter((editor) => {
+            const matches = editor.connection === connectionName && !editor.deleted
+            return matches
+          })
+          .map((editor) => ({
+            alias: editor.name,
+            contents: editor.contents,
+          }))
       : []
-    console.log(`[useChatWithTools] Found ${allConnectionEditors.length} editors:`, allConnectionEditors.map(e => e.alias))
+    console.log(
+      `[useChatWithTools] Found ${allConnectionEditors.length} editors:`,
+      allConnectionEditors.map((e) => e.alias),
+    )
 
     const modelSources = connectionStore?.getConnectionSources(connectionName) || []
 
@@ -270,10 +280,9 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
           'Chat symbols refresh - completion_items count:',
           validation.data.completion_items.length,
         )
-        console.log(
-          'Chat symbols refresh - trilogyTypes:',
-          [...new Set(validation.data.completion_items.map((i) => i.trilogyType))],
-        )
+        console.log('Chat symbols refresh - trilogyTypes:', [
+          ...new Set(validation.data.completion_items.map((i) => i.trilogyType)),
+        ])
 
         // Store raw completion items for the symbols pane
         chatSymbols.value = validation.data.completion_items.filter(
@@ -326,7 +335,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     // Check if the data connection is currently active/connected
     const isDataConnectionActive =
       dataConnectionName && connectionStore
-        ? connectionStore.connections[dataConnectionName]?.connected ?? false
+        ? (connectionStore.connections[dataConnectionName]?.connected ?? false)
         : false
 
     return buildChatAgentSystemPrompt({
@@ -537,6 +546,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     isChatLoading,
     isGeneratingName,
     activeToolName,
+    rateLimitBackoff,
     activeChatMessages,
     activeChatArtifacts,
     activeChatArtifactIndex,

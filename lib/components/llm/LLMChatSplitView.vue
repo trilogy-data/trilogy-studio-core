@@ -39,7 +39,10 @@
         </template>
         <!-- Render inline artifacts (charts) in messages -->
         <template #artifact="{ artifact }">
-          <div class="inline-artifact" v-if="artifact.type === 'chart' && getArtifactResults(artifact)">
+          <div
+            class="inline-artifact"
+            v-if="artifact.type === 'chart' && getArtifactResults(artifact)"
+          >
             <results-component
               :type="'trilogy'"
               :results="getArtifactResults(artifact)!"
@@ -47,7 +50,9 @@
               :generatedSql="artifact.config?.generatedSql"
               :containerHeight="400"
               :defaultTab="'visualize'"
-              @config-change="(config: ChartConfig) => handleInlineChartConfigChange(artifact, config)"
+              @config-change="
+                (config: ChartConfig) => handleInlineChartConfigChange(artifact, config)
+              "
             />
           </div>
           <div v-else class="artifact-placeholder">[Artifact: {{ artifact.type }}]</div>
@@ -56,10 +61,7 @@
     </div>
 
     <!-- Resizer -->
-    <div
-      class="panel-resizer"
-      @mousedown="startResize"
-    ></div>
+    <div class="panel-resizer" @mousedown="startResize"></div>
 
     <!-- Right: Sidebar with Symbols/Artifacts tabs -->
     <div class="sidebar-panel" :style="{ width: sidebarWidth + 'px' }">
@@ -86,10 +88,7 @@
 
       <!-- Symbols Pane -->
       <div v-if="sidebarTab === 'symbols'" class="sidebar-content">
-        <SymbolsPane
-          :symbols="symbols"
-          @select-symbol="handleSymbolSelect"
-        />
+        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
       </div>
 
       <!-- Artifacts Pane -->
@@ -151,15 +150,7 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  ref,
-  computed,
-  watch,
-  onMounted,
-  onUnmounted,
-  type PropType,
-} from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../../chats/chat'
 import ResultsComponent from '../editor/Results.vue'
@@ -521,7 +512,12 @@ export default defineComponent({
       if (artifact.config?.title) {
         return artifact.config.title
       }
-      const typeLabel = artifact.type === 'results' ? 'Query Result' : artifact.type === 'chart' ? 'Chart' : artifact.type
+      const typeLabel =
+        artifact.type === 'results'
+          ? 'Query Result'
+          : artifact.type === 'chart'
+            ? 'Chart'
+            : artifact.type
       return `${typeLabel} #${index + 1}`
     }
 

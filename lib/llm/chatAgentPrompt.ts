@@ -200,9 +200,10 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
       ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
       : ''
 
-  const connectionStatusNote = dataConnectionName && !isDataConnectionActive
-    ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
-    : ''
+  const connectionStatusNote =
+    dataConnectionName && !isDataConnectionActive
+      ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
+      : ''
 
   const connectionInfo = dataConnectionName
     ? `ACTIVE DATA CONNECTION: ${dataConnectionName}${connectionStatusNote}`

@@ -74,10 +74,7 @@
     </div>
 
     <!-- Validation View -->
-    <l-l-m-validation-view
-      v-else
-      :initialProvider="initialProvider"
-    />
+    <l-l-m-validation-view v-else :initialProvider="initialProvider" />
   </div>
 </template>
 
@@ -155,7 +152,8 @@ export default defineComponent({
     // Uses the chat's LLM connection, falling back to global active connection
     const autoConnectLLMIfNeeded = async () => {
       // Prefer the chat's stored LLM connection over the global active connection
-      const llmConnName = chatStore?.activeChat?.llmConnectionName || llmConnectionStore.activeConnection
+      const llmConnName =
+        chatStore?.activeChat?.llmConnectionName || llmConnectionStore.activeConnection
       if (llmConnName) {
         const status = llmConnectionStore.getConnectionStatus(llmConnName)
         if (status === 'disabled') {

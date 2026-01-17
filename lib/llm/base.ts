@@ -19,6 +19,9 @@ export interface LLMToolDefinition {
   }
 }
 
+/** Callback for rate limit backoff notifications */
+export type RateLimitBackoffCallback = (attempt: number, delayMs: number, error: Error) => void
+
 // Generic interface for LLM request options
 export interface LLMRequestOptions {
   prompt: string
@@ -27,6 +30,8 @@ export interface LLMRequestOptions {
   topP?: number
   systemPrompt?: string
   tools?: LLMToolDefinition[]
+  /** Optional callback invoked when rate-limited and backing off */
+  onRateLimitBackoff?: RateLimitBackoffCallback
 }
 
 export interface LLMMessage {

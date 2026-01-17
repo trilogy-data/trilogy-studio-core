@@ -173,7 +173,13 @@ export default defineComponent({
     },
   },
 
-  emits: ['message-sent', 'response-received', 'artifact-created', 'update:messages', 'title-update'],
+  emits: [
+    'message-sent',
+    'response-received',
+    'artifact-created',
+    'update:messages',
+    'title-update',
+  ],
 
   setup(props, { emit }) {
     const internalMessages = ref<ChatMessage[]>([...props.messages])

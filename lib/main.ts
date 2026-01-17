@@ -10,11 +10,7 @@ export { default as MobileIDE } from './views/MobileIDE.vue'
 export { default as Manager } from './stores/Manager.vue'
 
 // LLM Chat Components
-export {
-  LLMChat,
-  LLMChatSplitView,
-  ChatArtifact,
-} from './components/llm'
+export { LLMChat, LLMChatSplitView, ChatArtifact } from './components/llm'
 export type { ChatArtifactType, ChatMessage } from './components/llm'
 
 // LLM Store
@@ -27,7 +23,10 @@ export type { UserSettingsStoreType } from './stores/userSettingsStore'
 
 // Chat composables
 export { useChatWithTools } from './composables/useChatWithTools'
-export type { UseChatWithToolsOptions, UseChatWithToolsReturn } from './composables/useChatWithTools'
+export type {
+  UseChatWithToolsOptions,
+  UseChatWithToolsReturn,
+} from './composables/useChatWithTools'
 
 // Trilogy composables - simplified entry points
 export { useTrilogyCore } from './composables/useTrilogyCore'

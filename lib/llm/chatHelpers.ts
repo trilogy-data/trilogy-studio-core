@@ -6,9 +6,7 @@ import type { LLMMessage } from './base'
  */
 export function createChatNamePrompt(messages: LLMMessage[]): string {
   // Filter out system messages and hidden messages, take recent messages for context
-  const visibleMessages = messages
-    .filter((m) => m.role !== 'system' && !m.hidden)
-    .slice(0, 10) // Limit to first 10 messages for efficiency
+  const visibleMessages = messages.filter((m) => m.role !== 'system' && !m.hidden).slice(0, 10) // Limit to first 10 messages for efficiency
 
   if (visibleMessages.length === 0) {
     return 'Generate a short, descriptive name for a new chat conversation. Return only the name, nothing else. Maximum 5 words.'
@@ -39,9 +37,8 @@ Chat name:`
  */
 export function createAutoContinuePrompt(lastAssistantMessage: string): string {
   // Truncate very long messages to focus on the ending
-  const messageEnd = lastAssistantMessage.length > 1500
-    ? lastAssistantMessage.slice(-1500)
-    : lastAssistantMessage
+  const messageEnd =
+    lastAssistantMessage.length > 1500 ? lastAssistantMessage.slice(-1500) : lastAssistantMessage
 
   return `Analyze the following assistant message ending. Determine if the assistant has stated an intention to take an action (like executing a query, running code, trying something) but has not yet actually performed that action.
 

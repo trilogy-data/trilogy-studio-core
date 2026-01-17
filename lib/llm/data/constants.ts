@@ -26,7 +26,7 @@ SELECT RULES:
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
 - Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`.
 - Comments use \`#\` only, per line.
-- Use \`--\` before a field in a select to hide it from output. This is useful for having a field available for filtering without returning it when making charts, for example.
+- Use \`--\` before a field in a select to hide it from output. This is useful for having a field available for filtering without returning it when making charts, for example. Hidden fields are still available for use in WHERE, HAVING, ORDER BY, and calculations.
 - Two example queries: "where year between 1940 and 1950
   select
       name,

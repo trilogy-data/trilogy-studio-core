@@ -363,9 +363,7 @@ export default class LocalStorage extends AbstractStorage {
 
     localStorage.setItem(
       this.chatStorageKey,
-      JSON.stringify(
-        Object.values(chats).map((chat) => chat.serialize()),
-      ),
+      JSON.stringify(Object.values(chats).map((chat) => chat.serialize())),
     )
   }
 
@@ -387,9 +385,7 @@ export default class LocalStorage extends AbstractStorage {
       delete chats[id]
       localStorage.setItem(
         this.chatStorageKey,
-        JSON.stringify(
-          Object.values(chats).map((chat) => chat.serialize()),
-        ),
+        JSON.stringify(Object.values(chats).map((chat) => chat.serialize())),
       )
     }
   }
