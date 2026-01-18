@@ -9,9 +9,19 @@ const CHART_CONFIG_EXAMPLE: ChartConfig = {
   chartType: 'bar' as chartTypes,
   xField: 'category',
   yField: 'revenue',
+  yField2: 'cost',
   colorField: 'region',
+  sizeField: 'quantity',
+  groupField: 'year',
+  trellisField: 'department',
+  trellisRowField: 'quarter',
+  geoField: 'state_code',
+  annotationField: 'notes',
   hideLegend: false,
   showTitle: true,
+  scaleX: 'linear',
+  scaleY: 'linear',
+  linkY2: false,
 }
 
 // Tool definitions in JSON Schema format (Anthropic/OpenAI compatible)
@@ -103,11 +113,19 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
             },
             trellisField: {
               type: 'string',
-              description: 'Field for small multiples/faceting (optional)',
+              description: 'Field for small multiples/faceting columns (optional)',
+            },
+            trellisRowField: {
+              type: 'string',
+              description: 'Field for small multiples/faceting rows (optional)',
             },
             geoField: {
               type: 'string',
               description: 'Field for geographic data (optional)',
+            },
+            annotationField: {
+              type: 'string',
+              description: 'Field for data point annotations/labels (optional)',
             },
             hideLegend: {
               type: 'boolean',
@@ -126,6 +144,10 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
               type: 'string',
               enum: ['linear', 'log', 'sqrt'],
               description: 'Scale type for y-axis',
+            },
+            linkY2: {
+              type: 'boolean',
+              description: 'Whether to link the secondary y-axis scale to the primary y-axis',
             },
           },
         },
