@@ -13,8 +13,9 @@ SELECT RULES:
 - Newly created fields at the output of the select must be aliased with as (e.g. \`sum(births) as all_births\`). 
 - Aliases cannot happen inside calculations or in the where/having/order clause. Never alias fields with existing names. 'sum(revenue) as total_revenue' is valid, but '(sum(births) as total_revenue) +1 as revenue_plus_one' is not.
 - Implicit grouping: NEVER include a group by clause. Grouping is by non-aggregated fields in the SELECT clause.
-- You can dynamically group inline to get groups at different grains - ex:  \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for alternate grouping. If you are grouping a defined aggregate
+- You can dynamically group inline to get groups at different grains - ex:  \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for grouping different from inferred by dimension fields. Aggregate by \`*\` to get the total regardless of select dimensions.
 - Count must specify a field (no \`count(*)\`) Counts are automatically deduplicated. Do not ever use DISTINCT.
+- Use a sum/count/avg/max/min over a field to get aggregates at different grains (e.g. \`sum(births) over state as state_births\`).
 - Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. \`sum(1) by x as count\`). 
 - Aggregates in SELECT must be filtered via HAVING. Use WHERE for pre-aggregation filters.
 - Use \`field ? condition\` for inline filters (e.g. \`sum(x ? x > 0)\`).
@@ -31,7 +32,8 @@ SELECT RULES:
   select
       name,
       state,
-      sum(births) AS all_births,
+      sum(births) by * as all_births_no_dims,
+      sum(births) AS births_by_name_state,
       sum(births ? state = 'VT') AS vermont_births,
       rank name over state by all_births desc AS state_rank,
       rank name by sum(births) by name desc AS all_rank,
