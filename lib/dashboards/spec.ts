@@ -250,7 +250,7 @@ export const generateVegaSpec = (
       )
       break
 
-    case 'usa-map':
+    case 'geo-map':
       chartSpec = createMapSpec(config, localData || [], columns, isMobile, intChart, currentTheme)
       break
 

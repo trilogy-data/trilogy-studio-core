@@ -51,7 +51,7 @@ export const CHAT_TOOLS = [
 
 Example chartConfig: ${JSON.stringify(CHART_CONFIG_EXAMPLE)}
 
-Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap', 'treemap', 'boxplot', 'beeswarm', 'headline', 'usa-map', 'tree'`,
+Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap', 'treemap', 'boxplot', 'beeswarm', 'headline', 'geo-map', 'tree'`,
     input_schema: {
       type: 'object',
       properties: {
@@ -75,7 +75,7 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
                 'bar',
                 'barh',
                 'point',
-                'usa-map',
+                'geo-map',
                 'tree',
                 'area',
                 'headline',
@@ -89,11 +89,11 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
             },
             xField: {
               type: 'string',
-              description: 'Field name for x-axis',
+              description: 'Field name for x-axis. Longitude for geo-map charts if geofield not provided.',
             },
             yField: {
               type: 'string',
-              description: 'Field name for y-axis',
+              description: 'Field name for y-axis. Latitude for geo-map charts if geofield not provided.',
             },
             yField2: {
               type: 'string',
@@ -129,25 +129,25 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
             },
             hideLegend: {
               type: 'boolean',
-              description: 'Whether to hide the legend',
+              description: 'Whether to hide the legend (optional)',
             },
             showTitle: {
               type: 'boolean',
-              description: 'Whether to show the chart title',
+              description: 'Whether to show the chart title (optional)',
             },
             scaleX: {
               type: 'string',
               enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for x-axis',
+              description: 'Scale type for x-axis (optional)',
             },
             scaleY: {
               type: 'string',
               enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for y-axis',
+              description: 'Scale type for y-axis (optional)',
             },
             linkY2: {
               type: 'boolean',
-              description: 'Whether to link the secondary y-axis scale to the primary y-axis',
+              description: 'Whether to link the secondary y-axis scale to the primary y-axis (optional)',
             },
           },
         },

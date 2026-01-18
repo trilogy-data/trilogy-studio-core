@@ -230,7 +230,7 @@ describe('createMapSpec', () => {
   describe('US Choropleth Maps', () => {
     it('should generate valid US choropleth map spec', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'population',
       }
@@ -262,7 +262,7 @@ describe('createMapSpec', () => {
 
     it('should include interaction parameters for choropleth maps', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'gdp',
       }
@@ -291,7 +291,7 @@ describe('createMapSpec', () => {
 
     it('should apply proper formatting for USD values', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'gdp',
       }
@@ -311,7 +311,7 @@ describe('createMapSpec', () => {
   describe('US Scatter Maps', () => {
     it('should generate valid US scatter map spec', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         sizeField: 'population',
@@ -338,7 +338,7 @@ describe('createMapSpec', () => {
 
     it('should handle scatter map with color encoding', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         colorField: 'population',
@@ -358,7 +358,7 @@ describe('createMapSpec', () => {
 
     it('should use default color when no color field specified', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -378,7 +378,7 @@ describe('createMapSpec', () => {
   describe('World Scatter Maps', () => {
     it('should generate valid world scatter map spec', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         sizeField: 'population',
@@ -410,7 +410,7 @@ describe('createMapSpec', () => {
 
     it('should calculate proper projection center for world map', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -430,7 +430,7 @@ describe('createMapSpec', () => {
   describe('Country Choropleth Maps', () => {
     it('should generate valid country choropleth map spec', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'country',
         colorField: 'gdp',
       }
@@ -460,7 +460,7 @@ describe('createMapSpec', () => {
 
     it('should handle country lookup transformation correctly', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'country',
         colorField: 'population',
       }
@@ -483,7 +483,7 @@ describe('createMapSpec', () => {
 
     it('should include proper tooltip configuration for countries', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'country',
         colorField: 'gdp',
       }
@@ -511,7 +511,7 @@ describe('createMapSpec', () => {
   describe('Mobile Optimizations', () => {
     it('should apply mobile-specific configurations for scatter maps', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         colorField: 'population',
@@ -537,7 +537,7 @@ describe('createMapSpec', () => {
       ])
 
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         colorField: 'category',
@@ -558,7 +558,7 @@ describe('createMapSpec', () => {
   describe('Error Handling', () => {
     it('should handle empty data gracefully', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'population',
       }
@@ -572,7 +572,7 @@ describe('createMapSpec', () => {
 
     it('should handle missing required fields gracefully', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         // Missing yField for scatter map
       }
@@ -586,7 +586,7 @@ describe('createMapSpec', () => {
 
     it('should return empty object for unsupported configurations', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         // No valid field configuration
       }
 
@@ -600,7 +600,7 @@ describe('createMapSpec', () => {
   describe('Data Boundary Detection', () => {
     it('should correctly identify US data and use US projection', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -616,7 +616,7 @@ describe('createMapSpec', () => {
 
     it('should correctly identify world data and use mercator projection', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
       }
@@ -634,7 +634,7 @@ describe('createMapSpec', () => {
   describe('Tooltip Configuration', () => {
     it('should include all relevant fields in scatter map tooltips', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         xField: 'longitude',
         yField: 'latitude',
         sizeField: 'population',
@@ -661,7 +661,7 @@ describe('createMapSpec', () => {
 
     it('should apply proper formatting to tooltip fields', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'gdp',
       }

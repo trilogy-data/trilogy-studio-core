@@ -14,7 +14,7 @@ export interface ChartControl {
 export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'barh', 'point', 'heatmap']
 
 // Chart types that don't have axes (no axis labels or ticks)
-export const NO_AXES_CHARTS: chartTypes[] = ['usa-map', 'tree', 'donut', 'headline']
+export const NO_AXES_CHARTS: chartTypes[] = ['geo-map', 'tree', 'donut', 'headline']
 
 export const Controls: ChartControl[] = [
   {
@@ -95,7 +95,7 @@ export const Controls: ChartControl[] = [
     field: 'colorField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['heatmap', 'usa-map'],
+    visibleFor: ['heatmap', 'geo-map'],
     filterGroup: 'appearance',
   },
   // this is the numeric version
@@ -124,7 +124,7 @@ export const Controls: ChartControl[] = [
     field: 'sizeField',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['point', 'usa-map', 'tree', 'beeswarm'],
+    visibleFor: ['point', 'geo-map', 'tree', 'beeswarm'],
     filterGroup: 'appearance',
   },
   {
@@ -149,7 +149,7 @@ export const Controls: ChartControl[] = [
     id: 'geo-field',
     label: 'Geo Field',
     field: 'geoField',
-    visibleFor: ['usa-map'],
+    visibleFor: ['geo-map'],
     allowEmpty: true,
     columnFilter: 'categorical',
     filterGroup: 'axes',
@@ -158,7 +158,7 @@ export const Controls: ChartControl[] = [
     id: 'latitude',
     label: 'Latitude',
     field: 'yField',
-    visibleFor: ['usa-map'],
+    visibleFor: ['geo-map'],
     allowEmpty: true,
     columnFilter: 'latitude',
     filterGroup: 'axes',
@@ -167,7 +167,7 @@ export const Controls: ChartControl[] = [
     id: 'longitude',
     label: 'Longtitude',
     field: 'xField',
-    visibleFor: ['usa-map'],
+    visibleFor: ['geo-map'],
     allowEmpty: true,
     columnFilter: 'longitude',
     filterGroup: 'axes',
@@ -187,7 +187,7 @@ export const Controls: ChartControl[] = [
     field: 'annotationField',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'point', 'heatmap', 'beeswarm', 'line'],
+    visibleFor: ['geo-map', 'point', 'heatmap', 'beeswarm', 'line'],
     filterGroup: 'appearance',
   },
   {
@@ -216,7 +216,7 @@ export const Controls: ChartControl[] = [
     field: 'hideLegend',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'heatmap'],
+    visibleFor: ['geo-map', 'bar', 'barh', 'line', 'point', 'area', 'heatmap'],
     filterGroup: 'appearance',
   },
   {
@@ -243,7 +243,7 @@ export const Controls: ChartControl[] = [
     field: 'showTitle',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['usa-map', 'bar', 'barh', 'line', 'point', 'area', 'headline', 'beeswarm'],
+    visibleFor: ['geo-map', 'bar', 'barh', 'line', 'point', 'area', 'headline', 'beeswarm'],
     filterGroup: 'appearance',
   },
 ]
@@ -285,7 +285,7 @@ export const Charts = [
     icon: 'mdi mdi-chart-box',
   },
   {
-    value: 'usa-map',
+    value: 'geo-map',
     label: 'Map',
     icon: 'mdi mdi-map',
   },

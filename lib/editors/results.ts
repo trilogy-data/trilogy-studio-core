@@ -68,7 +68,7 @@ export type chartTypes =
   | 'bar'
   | 'barh'
   | 'point'
-  | 'usa-map'
+  | 'geo-map'
   | 'tree'
   | 'area'
   | 'headline'
@@ -96,6 +96,30 @@ export interface ChartConfig {
   scaleX?: 'linear' | 'log' | 'sqrt'
   scaleY?: 'linear' | 'log' | 'sqrt'
   linkY2?: boolean
+}
+
+// Migration map for deprecated chart type names
+const CHART_TYPE_MIGRATIONS: Record<string, chartTypes> = {
+  'usa-map': 'geo-map',
+}
+
+/**
+ * Migrates a ChartConfig from older versions to the current schema.
+ * Handles renamed chart types (e.g., 'usa-map' -> 'geo-map').
+ * Returns a new config object if migration was needed, or the original if not.
+ */
+export function migrateChartConfig(config: ChartConfig | undefined | null): ChartConfig | undefined {
+  if (!config) return undefined
+
+  const migratedType = CHART_TYPE_MIGRATIONS[config.chartType]
+  if (migratedType) {
+    return {
+      ...config,
+      chartType: migratedType,
+    }
+  }
+
+  return config
 }
 
 type SerializableValue =

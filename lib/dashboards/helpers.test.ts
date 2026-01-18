@@ -345,23 +345,23 @@ describe('Chart Utils', () => {
       expect(eligibleCharts).toContain('heatmap')
     })
 
-    it('should include usa-map when geographic columns exist', () => {
+    it('should include geo-map when geographic columns exist', () => {
       const limitedColumns = new Map<string, ResultColumn>()
       limitedColumns.set('state', testColumns.get('state')!)
       limitedColumns.set('revenue', testColumns.get('revenue')!)
 
       const eligibleCharts = determineEligibleChartTypes(testData, limitedColumns)
-      expect(eligibleCharts).toContain('usa-map')
+      expect(eligibleCharts).toContain('geo-map')
     })
 
-    it('should include usa-map when lat/lng columns exist', () => {
+    it('should include geo-map when lat/lng columns exist', () => {
       const limitedColumns = new Map<string, ResultColumn>()
       limitedColumns.set('lat', testColumns.get('lat')!)
       limitedColumns.set('lng', testColumns.get('lng')!)
       limitedColumns.set('revenue', testColumns.get('revenue')!)
 
       const eligibleCharts = determineEligibleChartTypes(testData, limitedColumns)
-      expect(eligibleCharts).toContain('usa-map')
+      expect(eligibleCharts).toContain('geo-map')
     })
 
     it('should include headline and boxplot when only numeric columns exist', () => {
@@ -435,9 +435,9 @@ describe('Chart Utils', () => {
       expect(defaults.xField).toBe('revenue')
     })
 
-    it('should set defaults for usa-map with state data', () => {
-      const defaults = determineDefaultConfig(testData, testColumns, 'usa-map')
-      expect(defaults.chartType).toBe('usa-map')
+    it('should set defaults for geo-map with state data', () => {
+      const defaults = determineDefaultConfig(testData, testColumns, 'geo-map')
+      expect(defaults.chartType).toBe('geo-map')
       expect(defaults.yField).toBe('lat')
       expect(defaults.xField).toBe('lng')
       expect(defaults.sizeField).toBe('revenue')
@@ -445,25 +445,25 @@ describe('Chart Utils', () => {
       expect(defaults.geoField).toBe('state')
     })
 
-    it('should set defaults for usa-map with only geo field', () => {
+    it('should set defaults for geo-map with only geo field', () => {
       const limitedColumns = new Map<string, ResultColumn>()
       limitedColumns.set('state', testColumns.get('state')!)
       limitedColumns.set('revenue', testColumns.get('revenue')!)
 
-      const defaults = determineDefaultConfig(testData, limitedColumns, 'usa-map')
-      expect(defaults.chartType).toBe('usa-map')
+      const defaults = determineDefaultConfig(testData, limitedColumns, 'geo-map')
+      expect(defaults.chartType).toBe('geo-map')
       expect(defaults.geoField).toBe('state')
       expect(defaults.colorField).toBe('revenue')
     })
 
-    it('should set defaults for usa-map with only lat/lng fields', () => {
+    it('should set defaults for geo-map with only lat/lng fields', () => {
       const limitedColumns = new Map<string, ResultColumn>()
       limitedColumns.set('lat', testColumns.get('lat')!)
       limitedColumns.set('lng', testColumns.get('lng')!)
       limitedColumns.set('revenue', testColumns.get('revenue')!)
 
-      const defaults = determineDefaultConfig(testData, limitedColumns, 'usa-map')
-      expect(defaults.chartType).toBe('usa-map')
+      const defaults = determineDefaultConfig(testData, limitedColumns, 'geo-map')
+      expect(defaults.chartType).toBe('geo-map')
       expect(defaults.yField).toBe('lat')
       expect(defaults.xField).toBe('lng')
       expect(defaults.sizeField).toBe('revenue')
@@ -509,7 +509,7 @@ describe('Chart Utils', () => {
       limitedColumns.set('revenue', testColumns.get('revenue')!)
 
       defaults = determineDefaultConfig(testData, limitedColumns)
-      expect(defaults.chartType).toBe('usa-map')
+      expect(defaults.chartType).toBe('geo-map')
     })
   })
 

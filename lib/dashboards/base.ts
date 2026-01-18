@@ -1,6 +1,7 @@
 // Define types for dashboard layouts
 import type { ChartConfig } from '../editors/results'
 import type { Results } from '../editors/results'
+import { migrateChartConfig } from '../editors/results'
 import { objectToSqlExpression } from './conditions'
 import type { ContentInput } from '../stores/resolver'
 
@@ -885,11 +886,14 @@ export class DashboardModel implements Dashboard {
   // Create a dashboard from stored data
   static fromSerialized(data: Dashboard): DashboardModel {
     // set all gridItems to have allowCrossFilter as true if not explicit false
+    // and migrate any deprecated chart types
     const gridItems: Record<string, GridItemData> = {}
     for (const [itemId, itemData] of Object.entries(data.gridItems)) {
       gridItems[itemId] = {
         ...itemData,
         allowCrossFilter: itemData.allowCrossFilter !== false, // Default to true if not explicitly false
+        chartConfig: migrateChartConfig(itemData.chartConfig),
+        drilldownChartConfig: migrateChartConfig(itemData.drilldownChartConfig),
       }
     }
     return new DashboardModel({
