@@ -72,7 +72,7 @@ order by
             ... your query here`,
           hints: ['select count(order.id) as order_count;'],
           validationFn: (results: Results) => {
-            return results.data?.length === 1 && results.data?.[0]?.order_count === 30000
+            return results.data?.length === 1 && results.data?.[0]?.order_count === 15000
           },
         },
         {
