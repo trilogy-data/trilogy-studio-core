@@ -58,14 +58,22 @@
     </div>
 
     <div class="input-container">
-      <textarea
-        v-model="userInput"
-        @keydown="handleKeyDown"
-        :placeholder="placeholder"
-        :disabled="isLoading || disabled"
-        ref="inputTextarea"
-        data-testid="input-textarea"
-      ></textarea>
+      <div class="textarea-wrapper">
+        <textarea
+          v-model="userInput"
+          @keydown="handleKeyDown"
+          :disabled="isLoading || disabled"
+          ref="inputTextarea"
+          data-testid="input-textarea"
+        ></textarea>
+        <span
+          v-if="!userInput"
+          class="animated-placeholder"
+          :class="{ 'fade-transition': isPlaceholderTransitioning }"
+        >
+          {{ currentPlaceholder }}
+        </span>
+      </div>
       <button
         @click="sendMessage"
         :disabled="isLoading || disabled || !userInput.trim()"
@@ -85,6 +93,7 @@ import {
   nextTick,
   watch,
   onMounted,
+  onUnmounted,
   inject,
   type PropType,
   computed,
@@ -131,7 +140,7 @@ export default defineComponent({
       default: true,
     },
     placeholder: {
-      type: String,
+      type: [String, Array] as PropType<string | string[]>,
       default: 'Type your message... (Enter to send)',
     },
     sendButtonText: {
@@ -188,6 +197,39 @@ export default defineComponent({
     const messagesContainer = ref<HTMLElement | null>(null)
     const inputTextarea = ref<HTMLTextAreaElement | null>(null)
 
+    // Placeholder cycling logic
+    const placeholderIndex = ref(0)
+    const isPlaceholderTransitioning = ref(false)
+    let placeholderInterval: ReturnType<typeof setInterval> | null = null
+
+    const currentPlaceholder = computed(() => {
+      if (Array.isArray(props.placeholder)) {
+        return props.placeholder[placeholderIndex.value] || ''
+      }
+      return props.placeholder
+    })
+
+    const startPlaceholderCycle = () => {
+      if (Array.isArray(props.placeholder) && props.placeholder.length > 1) {
+        placeholderInterval = setInterval(() => {
+          // Start fade out
+          isPlaceholderTransitioning.value = true
+          // After fade out, change text and fade in
+          setTimeout(() => {
+            placeholderIndex.value = (placeholderIndex.value + 1) % (props.placeholder as string[]).length
+            isPlaceholderTransitioning.value = false
+          }, 300)
+        }, 3500)
+      }
+    }
+
+    const stopPlaceholderCycle = () => {
+      if (placeholderInterval) {
+        clearInterval(placeholderInterval)
+        placeholderInterval = null
+      }
+    }
+
     // Try to inject llmStore, but don't require it
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore', null as any)
 
@@ -234,6 +276,7 @@ export default defineComponent({
     onMounted(() => {
       scrollToBottom()
       focusInput()
+      startPlaceholderCycle()
 
       // Add system prompt as hidden message if provided
       if (props.systemPrompt && internalMessages.value.length === 0) {
@@ -243,6 +286,10 @@ export default defineComponent({
           hidden: true,
         })
       }
+    })
+
+    onUnmounted(() => {
+      stopPlaceholderCycle()
     })
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -369,6 +416,8 @@ export default defineComponent({
       isLoading,
       messagesContainer,
       inputTextarea,
+      currentPlaceholder,
+      isPlaceholderTransitioning,
       handleKeyDown,
       sendMessage,
       getMessageTextWithoutArtifact,
@@ -512,8 +561,13 @@ export default defineComponent({
   gap: 10px;
 }
 
-.input-container textarea {
+.textarea-wrapper {
   flex-grow: 1;
+  position: relative;
+}
+
+.textarea-wrapper textarea {
+  width: 100%;
   min-height: 50px;
   max-height: 150px;
   padding: 8px;
@@ -523,6 +577,21 @@ export default defineComponent({
   background-color: var(--query-window-bg);
   color: var(--query-window-font);
   font-size: var(--font-size);
+}
+
+.animated-placeholder {
+  position: absolute;
+  top: 8px;
+  left: 9px;
+  color: var(--text-faint);
+  font-size: var(--font-size);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.animated-placeholder.fade-transition {
+  opacity: 0;
 }
 
 .send-button {
@@ -557,7 +626,7 @@ export default defineComponent({
 }
 
 @media screen and (max-width: 768px) {
-  .input-container textarea {
+  .textarea-wrapper textarea {
     font-size: var(--font-size);
   }
 
