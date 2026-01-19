@@ -25,7 +25,8 @@ SELECT RULES:
 - For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
 - For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
-- Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`.
+- Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`. date parts are: year, quarter, month, week, day, day_of_week, hour, minute, second.
+- date_parts can be accessed directly through dot notation, e.g., \`order_date.year\`.
 - Comments use \`#\` only, per line.
 - Use \`--\` before a field in a select to hide it from output. This is useful for having a field available for filtering without returning it when making charts, for example. Hidden fields are still available for use in WHERE, HAVING, ORDER BY, and calculations.
 - Two example queries: "where year between 1940 and 1950
