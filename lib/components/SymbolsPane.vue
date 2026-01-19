@@ -27,6 +27,11 @@
         <i class="mdi mdi-cube-outline" title="Show Metrics"></i>
         <!-- <span>Metrics</span> -->
       </label>
+      <label class="filter-label auto-derived-label">
+        <input type="checkbox" v-model="filters.showAutoDerived" @change="filterSymbols" />
+        <i class="mdi mdi-calendar-clock-outline" title="Show Auto-Derived Concepts"></i>
+        <!-- <span>Auto-Derived</span> -->
+      </label>
       <button
         v-if="isFiltering"
         class="clear-filters-btn"
@@ -142,6 +147,7 @@
 <script lang="ts">
 import { defineComponent, ref, type PropType, watch, computed, reactive, nextTick } from 'vue'
 import type { CompletionItem } from '../stores/resolver'
+import { isAutoDerivedDateConcept } from '../llm/data/conceptFilters'
 
 // Centralized icon configuration for easier management
 const ICON_CONFIG = {
@@ -196,6 +202,7 @@ export default defineComponent({
       keys: true,
       properties: true,
       metrics: true,
+      showAutoDerived: false,
     })
 
     // Tooltip state
@@ -210,7 +217,12 @@ export default defineComponent({
 
     // Computed property to check if any filters are applied
     const isFiltering = computed(() => {
-      return !filters.value.keys || !filters.value.properties || !filters.value.metrics
+      return (
+        !filters.value.keys ||
+        !filters.value.properties ||
+        !filters.value.metrics ||
+        filters.value.showAutoDerived
+      )
     })
 
     // Function to clear all filters (reset to default state)
@@ -218,6 +230,7 @@ export default defineComponent({
       filters.value.keys = true
       filters.value.properties = true
       filters.value.metrics = true
+      filters.value.showAutoDerived = false
       filterSymbols()
     }
 
@@ -346,6 +359,14 @@ export default defineComponent({
 
       // Start with all symbols
       let filtered = [...props.symbols]
+
+      // Filter out auto-derived date concepts unless showAutoDerived is enabled
+      if (!filters.value.showAutoDerived) {
+        filtered = filtered.filter((symbol: CompletionItem) => {
+          const name = symbol.label || ''
+          return !isAutoDerivedDateConcept(name)
+        })
+      }
 
       // Apply type filters (keys, properties, metrics)
       filtered = filtered.filter((symbol: CompletionItem) => {
@@ -533,6 +554,10 @@ export default defineComponent({
 
 .filter-label i.mdi-cube-outline {
   color: #75beff;
+}
+
+.filter-label i.mdi-calendar-clock-outline {
+  color: #c586c0;
 }
 
 .clear-filters-btn {
