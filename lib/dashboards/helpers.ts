@@ -194,7 +194,7 @@ export const determineDefaultConfig = (
     | 'bar'
     | 'barh'
     | 'point'
-    | 'usa-map'
+    | 'geo-map'
     | 'tree'
     | 'area'
     | 'heatmap'
@@ -232,9 +232,9 @@ export const determineDefaultConfig = (
     defaults.chartType = chartType
   } else if (longitudeColumns.length > 0 && latitudeColumns.length > 0) {
     // Geospatial data - use map
-    defaults.chartType = 'usa-map'
+    defaults.chartType = 'geo-map'
   } else if (geoColumns.length > 0) {
-    defaults.chartType = 'usa-map'
+    defaults.chartType = 'geo-map'
   } else if (temporalColumns.length > 0 && numericColumns.length > 0) {
     // Time series data - use line chart
     defaults.chartType = 'line'
@@ -420,7 +420,7 @@ export const determineDefaultConfig = (
     if (trellisableCategorical.length > 1) {
       defaults.trellisField = trellisableCategorical[1].name
     }
-  } else if (defaults.chartType === 'usa-map') {
+  } else if (defaults.chartType === 'geo-map') {
     // For USA map, we need:
     // 1. A field to join with geographic data (state codes/names)
     // 2. A numeric field for the color encoding
@@ -499,7 +499,7 @@ export const determineEligibleChartTypes = (
   // If no numeric columns, very limited chart options
   if (numericColumns.length === 0) {
     if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
-      eligibleCharts.push('usa-map')
+      eligibleCharts.push('geo-map')
     }
     eligibleCharts.push('headline')
     return eligibleCharts
@@ -543,7 +543,7 @@ export const determineEligibleChartTypes = (
     eligibleCharts.push('headline')
   }
   if ((latitudeColumns.length > 0 && longitudeColumns.length > 0) || geoColumns.length > 0) {
-    eligibleCharts.push('usa-map')
+    eligibleCharts.push('geo-map')
   }
   // Ensure all chart types are from the predefined list
   return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))

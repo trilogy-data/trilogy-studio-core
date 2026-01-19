@@ -85,7 +85,7 @@ export class ChartControlsManager {
           | 'line'
           | 'barh'
           | 'point'
-          | 'usa-map'
+          | 'geo-map'
           | 'tree'
           | 'area'
           | 'headline'

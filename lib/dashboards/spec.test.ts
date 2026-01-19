@@ -796,9 +796,9 @@ describe('generateVegaSpec', () => {
       expect(spec.mark).toBe('rect') // From our mock
     })
 
-    it('should handle usa-map chart type (mocked)', () => {
+    it('should handle geo-map chart type (mocked)', () => {
       const config: ChartConfig = {
-        chartType: 'usa-map',
+        chartType: 'geo-map',
         geoField: 'state',
         colorField: 'sales',
         showTitle: true,

@@ -2,6 +2,24 @@ import { rulesInput, functions, aggFunctions, datatypes } from './constants'
 import type { ModelConceptInput } from './models'
 import { generateDashboardPrompt } from '../../dashboards/prompts'
 
+const DATE_PART_SUFFIXES = [
+  '.year',
+  '.quarter',
+  '.month',
+  '.week',
+  '.day',
+  '.day_of_week',
+  '.hour',
+  '.minute',
+  '.second',
+]
+
+export function filterDatePartConcepts(concepts: ModelConceptInput[]): ModelConceptInput[] {
+  return concepts.filter(
+    (concept) => !DATE_PART_SUFFIXES.some((suffix) => concept.name.endsWith(suffix)),
+  )
+}
+
 export const leadIn = `You are a world-class assistant for generating queries in Trilogy, a SQL inspired language with similar syntax, Use the the syntax description below and field information to answer the user request. Return your answer with a short reasoning and a valid Trilogy query in triple double quotes.
 
 Key Trilogy Syntax Rules:
@@ -19,8 +37,9 @@ Valid types:
 For any response to the user, use this format -> put your actual response within triple double quotes with thinking and justification before it, in this format (replace placeholders with relevant content): Reasoning: {{reasoning}} """{{ response }}"""
 `
 
+
 export function conceptsToFieldPrompt(conceptInputs: ModelConceptInput[]) {
-  return conceptInputs
+  return filterDatePartConcepts(conceptInputs)
     .map(
       (field) =>
         `[name: ${field.name} | type:${field.type}${field.calculation ? ' | alias_for:' + field.calculation : ''}${field.description ? ' | description:' + field.description : ''}]`,
