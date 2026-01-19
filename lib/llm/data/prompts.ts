@@ -1,23 +1,10 @@
 import { rulesInput, functions, aggFunctions, datatypes } from './constants'
 import type { ModelConceptInput } from './models'
 import { generateDashboardPrompt } from '../../dashboards/prompts'
-
-const DATE_PART_SUFFIXES = [
-  '.year',
-  '.quarter',
-  '.month',
-  '.week',
-  '.day',
-  '.day_of_week',
-  '.hour',
-  '.minute',
-  '.second',
-]
+import { filterAutoDerivedConcepts } from './conceptFilters'
 
 export function filterDatePartConcepts(concepts: ModelConceptInput[]): ModelConceptInput[] {
-  return concepts.filter(
-    (concept) => !DATE_PART_SUFFIXES.some((suffix) => concept.name.endsWith(suffix)),
-  )
+  return filterAutoDerivedConcepts(concepts)
 }
 
 export const leadIn = `You are a world-class assistant for generating queries in Trilogy, a SQL inspired language with similar syntax, Use the the syntax description below and field information to answer the user request. Return your answer with a short reasoning and a valid Trilogy query in triple double quotes.
