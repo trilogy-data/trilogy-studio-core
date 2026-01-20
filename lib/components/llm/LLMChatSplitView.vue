@@ -183,7 +183,7 @@ export default defineComponent({
       default: true,
     },
     placeholder: {
-      type: String,
+      type: [String, Array] as PropType<string | string[]>,
       default: 'Type your message... (Enter to send)',
     },
     systemPrompt: {
