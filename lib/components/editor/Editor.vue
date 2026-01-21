@@ -595,6 +595,11 @@ export default defineComponent({
       }
     },
 
+    // Public method to open LLM refinement (called from parent component)
+    openLLMRefinement(): void {
+      this.handleLLMTrigger()
+    },
+
     // Open LLM refinement session for SQL editor
     async generateLLMQuerySQL(): Promise<void> {
       if (!this.llmStore || !this.editorData) {

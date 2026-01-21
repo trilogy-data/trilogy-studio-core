@@ -449,7 +449,9 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 30px;
+  min-height: 30px;
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
 }

@@ -94,10 +94,12 @@
               <results-view
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
+                :canOpenChat="canOpenChat"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
                 @content-change="handleEditorContentChange"
+                @open-chat="handleOpenChat"
               >
               </results-view>
             </template>
@@ -358,6 +360,7 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const llmConnectionStore = inject<any>('llmConnectionStore', null)
 
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
@@ -502,6 +505,7 @@ export default {
       activeDashboard,
       setActiveDashboard,
       editorRef,
+      llmConnectionStore,
       displayedTips,
       fullScreen,
       markTipRead,
@@ -538,6 +542,12 @@ export default {
         this.editorRef.setContent(content)
       }
     },
+    handleOpenChat() {
+      // Open LLM refinement chat on the editor
+      if (this.editorRef) {
+        this.editorRef.openLLMRefinement()
+      }
+    },
     async startDemo() {
       let editor = await setupDemo(
         this.editorStore,
@@ -564,6 +574,10 @@ export default {
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
+    },
+    canOpenChat(): boolean {
+      // Check if LLM connections are available
+      return !!(this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0)
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

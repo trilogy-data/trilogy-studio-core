@@ -1,32 +1,44 @@
 <template>
   <div class="results-container">
     <div class="tabs">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'results' }"
-        @click="setTab('results')"
-        data-testid="results-tab-button"
-      >
-        Results (<span v-if="error">Error</span
-        ><span v-else data-testid="query-results-length">{{ results.data.length }}</span
-        >)
-      </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'visualize' }"
-        @click="setTab('visualize')"
-      >
-        Visualize
-      </button>
-      <button
-        class="tab-button"
-        v-if="!(type === 'sql')"
-        :class="{ active: activeTab === 'sql' }"
-        @click="setTab('sql')"
-      >
-        Generated SQL
-      </button>
+      <div class="tabs-left">
+        <button
+          class="tab-button"
+          :class="{ active: activeTab === 'results' }"
+          @click="setTab('results')"
+          data-testid="results-tab-button"
+        >
+          Results (<span v-if="error">Error</span
+          ><span v-else data-testid="query-results-length">{{ results.data.length }}</span
+          >)
+        </button>
+        <button
+          class="tab-button"
+          v-if="!(type === 'sql')"
+          :class="{ active: activeTab === 'visualize' }"
+          @click="setTab('visualize')"
+        >
+          Visualize
+        </button>
+        <button
+          class="tab-button"
+          v-if="!(type === 'sql')"
+          :class="{ active: activeTab === 'sql' }"
+          @click="setTab('sql')"
+        >
+          Generated SQL
+        </button>
+      </div>
+      <div class="tabs-right">
+        <button
+          v-if="showChatButton"
+          class="chat-button"
+          @click="$emit('open-chat')"
+          title="Open AI Chat"
+        >
+          <i class="mdi mdi-chat-outline"></i>
+        </button>
+      </div>
     </div>
     <div class="tab-content">
       <drilldown-pane
@@ -94,9 +106,7 @@ import ErrorMessage from '../ErrorMessage.vue'
 import LoadingButton from '../LoadingButton.vue'
 import CodeBlock from '../CodeBlock.vue'
 import DrilldownPane from '../DrilldownPane.vue'
-import LLMEditorRefinement from '../llm/LLMEditorRefinement.vue'
 import type { ChartConfig } from '../../editors/results'
-import type { EditorRefinementSession } from '../../editors/editor'
 import type { CompletionItem } from '../../stores/resolver'
 import { objectToSqlExpression } from '../../dashboards/conditions'
 import type { DrillDownTriggerEvent } from '../../events/display'
@@ -108,7 +118,7 @@ export interface Drilldown {
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane, LLMEditorRefinement },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane },
   props: {
     type: {
       type: String,
@@ -141,21 +151,12 @@ export default {
       required: false,
       default: null,
     },
-    // Refinement chat props
-    refinementSession: {
-      type: Object as PropType<EditorRefinementSession | null>,
-      default: null,
-    },
-    connectionName: {
-      type: String,
-      default: '',
-    },
-    editorContents: {
-      type: String,
-      default: '',
+    showChatButton: {
+      type: Boolean,
+      default: false,
     },
   },
-  emits: ['config-change', 'drilldown-click', 'refresh-click', 'chat-accept', 'chat-discard', 'chat-content-change', 'chat-chart-config-change', 'chat-session-change'],
+  emits: ['config-change', 'drilldown-click', 'refresh-click', 'open-chat'],
   data() {
     return {
       activeTab: this.defaultTab || getDefaultValueFromHash('activeEditorTab', 'results'),
@@ -202,14 +203,7 @@ export default {
       return this.containerHeight ? this.containerHeight - this.TABS_HEIGHT : 0
     },
     eligibleTabs() {
-      const tabs: string[] = []
-
-      // Chat tab first if there's an active refinement session
-      if (this.refinementSession) {
-        tabs.push('chat')
-      }
-
-      tabs.push('results')
+      const tabs: string[] = ['results']
 
       if (this.type !== 'sql') {
         if (!this.error) {
@@ -219,9 +213,6 @@ export default {
       }
 
       return tabs
-    },
-    hasActiveChat(): boolean {
-      return this.refinementSession !== null && this.refinementSession !== undefined
     },
     displayTab() {
       return this.eligibleTabs.filter((tab) => this.activeTab === tab)[0]
@@ -270,11 +261,48 @@ export default {
 }
 
 .tabs {
-  /* display: flex; */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border-bottom: 1px solid var(--border-light);
   background: var(--sidebar-bg);
   min-height: 30px;
+  height: 30px;
   z-index: 99;
+}
+
+.tabs-left {
+  display: flex;
+  align-items: center;
+}
+
+.tabs-right {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+}
+
+.chat-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.chat-button:hover {
+  background: var(--border-light);
+  color: var(--special-text);
+}
+
+.chat-button i {
+  font-size: 16px;
 }
 
 .tab-button {

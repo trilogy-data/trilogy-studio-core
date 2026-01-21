@@ -29,7 +29,7 @@
             data-testid="discard-button"
           >
             <i class="mdi mdi-close"></i>
-            Discard
+            Close
           </button>
         </div>
       </template>

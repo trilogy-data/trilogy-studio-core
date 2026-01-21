@@ -24,6 +24,7 @@
   "devDependencies": {
     "@motherduck/wasm-client": "^0.6.6",
     "@playwright/test": "^1.56.1",
+    "@trilogy-data/trilogy-studio-components": "link:lib",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.19.0",
