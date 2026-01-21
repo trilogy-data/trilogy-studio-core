@@ -97,6 +97,7 @@
                 :canOpenChat="canOpenChat"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
+                @run-editor-query="runQuery"
                 @drilldown-click="drilldownClick"
                 @content-change="handleEditorContentChange"
                 @open-chat="handleOpenChat"

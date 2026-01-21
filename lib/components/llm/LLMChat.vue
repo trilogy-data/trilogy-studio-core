@@ -58,30 +58,32 @@
     </div>
 
     <div class="input-container">
-      <div class="textarea-wrapper">
-        <textarea
-          v-model="userInput"
-          @keydown="handleKeyDown"
-          :disabled="isLoading || disabled"
-          ref="inputTextarea"
-          data-testid="input-textarea"
-        ></textarea>
-        <span
-          v-if="!userInput"
-          class="animated-placeholder"
-          :class="{ 'fade-transition': isPlaceholderTransitioning }"
+      <div class="input-wrapper">
+        <div class="textarea-wrapper">
+          <textarea
+            v-model="userInput"
+            @keydown="handleKeyDown"
+            :disabled="isLoading || disabled"
+            ref="inputTextarea"
+            data-testid="input-textarea"
+          ></textarea>
+          <span
+            v-if="!userInput"
+            class="animated-placeholder"
+            :class="{ 'fade-transition': isPlaceholderTransitioning }"
+          >
+            {{ currentPlaceholder }}
+          </span>
+        </div>
+        <button
+          @click="sendMessage"
+          :disabled="isLoading || disabled || !userInput.trim()"
+          data-testid="send-button"
+          class="send-button"
         >
-          {{ currentPlaceholder }}
-        </span>
+          {{ sendButtonText }}
+        </button>
       </div>
-      <button
-        @click="sendMessage"
-        :disabled="isLoading || disabled || !userInput.trim()"
-        data-testid="send-button"
-        class="send-button"
-      >
-        {{ sendButtonText }}
-      </button>
     </div>
   </div>
 </template>
@@ -561,7 +563,16 @@ export default defineComponent({
   padding: 10px;
   border-top: 1px solid var(--border-light);
   background-color: var(--sidebar-bg);
-  gap: 10px;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  border: 1px solid var(--border);
+  background-color: var(--query-window-bg);
+  padding: 6px;
+  gap: 8px;
 }
 
 .textarea-wrapper {
@@ -571,15 +582,16 @@ export default defineComponent({
 
 .textarea-wrapper textarea {
   width: 100%;
-  min-height: 50px;
+  min-height: 36px;
   max-height: 150px;
   padding: 8px;
-  border: 1px solid var(--border);
-  resize: vertical;
+  border: none;
+  resize: none;
   font-family: inherit;
-  background-color: var(--query-window-bg);
+  background-color: transparent;
   color: var(--query-window-font);
   font-size: var(--font-size);
+  outline: none;
 }
 
 .animated-placeholder {
@@ -600,15 +612,20 @@ export default defineComponent({
 .send-button {
   padding: 0 15px;
   cursor: pointer;
-  align-self: flex-end;
-  height: 36px;
-  border: 1px solid var(--border);
-  background-color: var(--button-bg);
-  color: var(--button-text);
+  height: 28px;
+  border: none;
+  background-color: var(--special-text);
+  color: white;
+  font-weight: 300;
+  font-size: 12px;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: var(--button-mouseover);
+  opacity: 0.9;
 }
 
 .send-button:disabled {

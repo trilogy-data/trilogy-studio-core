@@ -112,7 +112,7 @@ export default defineComponent({
     },
   },
 
-  emits: ['accept', 'discard', 'content-change', 'chart-config-change', 'session-change'],
+  emits: ['accept', 'discard', 'content-change', 'chart-config-change', 'session-change', 'run-editor-query'],
 
   setup(props, { emit }) {
     const chatRef = ref<InstanceType<typeof LLMChat> | null>(null)
@@ -164,6 +164,9 @@ export default defineComponent({
       },
       onSessionChange: (session) => {
         emit('session-change', session)
+      },
+      onRunActiveEditorQuery: () => {
+        emit('run-editor-query')
       },
     })
 

@@ -40,11 +40,14 @@ export function createAutoContinuePrompt(lastAssistantMessage: string): string {
   const messageEnd =
     lastAssistantMessage.length > 1500 ? lastAssistantMessage.slice(-1500) : lastAssistantMessage
 
-  return `Analyze the following assistant message ending. Determine if the assistant has stated an intention to take an action (like executing a query, running code, trying something) but has not yet actually performed that action.
+  return `Analyze the following assistant message ending. 
+Determine if the assistant has definitively stated an intention to take an action (like executing a query, running code, trying something) but has not yet actually performed that action.
+
+Err on the side of waiting for the user if there is ambiguity.
 
 Answer ONLY "YES" if:
-- The message ends with phrases like "I'll execute this now", "Let me try this", "I'll run this query", "Let's execute", "I will now execute", etc.
-- The assistant has proposed a solution and stated they will test/run/execute it
+- The message ends with phrases like "I'll execute this now", "Let me try/do this", "I'll run this query", "Let's execute", "I will now execute", etc.
+- The assistant has proposed a solution and definitively stated they will test/run/execute it
 - The message indicates the assistant is about to take an action but stopped
 
 Answer ONLY "NO" if:

@@ -193,6 +193,16 @@ export const EDITOR_REFINEMENT_TOOLS = [
     },
   },
   {
+    name: 'run_active_editor_query',
+    description:
+      'Run the current editor query and display results in the main results pane. Use this when the user asks to "see results", "run it", "show me", or after making changes to the chart configuration. This runs the query that is currently in the editor (not a test query).',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'request_close',
     description:
       'Request to close the refinement session. Call this when you believe you are done making changes. The user will have a chance to reply with follow-up requests before confirming. Include a summary of what was done.',
@@ -274,7 +284,8 @@ DATA CONNECTION: ${connectionName}
 
 AVAILABLE TOOLS:
 - validate_query: Check if a query is valid without running it (also returns available fields)
-- run_query: Execute a query to see results
+- run_query: Execute a query to see results (returns results privately to you)
+- run_active_editor_query: Run the current editor query and show results in the main results pane
 - format_query: Format/prettify a query
 - edit_chart_config: Update chart visualization settings
 - edit_editor: Write changes to the editor
@@ -293,7 +304,7 @@ VALID DATA TYPES: ${datatypes.join(', ')}
 WORKFLOW:
 1. Understand what the user wants to change
 2. Use validate_query to check your changes
-3. Optionally use run_query to test and see results
+3. Optionally use run_query to test and see results privately
 4. Use format_query to clean up formatting if needed
 5. Use edit_editor to write the final result
 6. Call request_close with a summary - user can then reply or confirm
@@ -303,5 +314,7 @@ IMPORTANT:
 - You can iterate: write → validate → fix → write again
 - Use request_close when done - this gives the user a chance to ask for more changes
 - Only use close_session after the user explicitly confirms (e.g., says "done", "looks good", "close it")
-- If the user selected specific text, use replaceSelection: true to only modify that part`
+- If the user selected specific text, use replaceSelection: true to only modify that part
+- After updating chart configuration with edit_chart_config, use run_active_editor_query to show the user the updated visualization
+- When the user asks to "run it", "see the results", "show me", or similar, use run_active_editor_query to execute and display in the main results pane`
 }

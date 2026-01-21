@@ -51,6 +51,7 @@ export interface UseEditorRefinementOptions {
   onFinish?: (message?: string) => void
   onDiscard?: () => void
   onSessionChange?: (session: EditorRefinementSession) => void
+  onRunActiveEditorQuery?: () => void
 }
 
 export interface UseEditorRefinementReturn {
@@ -95,6 +96,7 @@ export function useEditorRefinement(
     onFinish,
     onDiscard,
     onSessionChange,
+    onRunActiveEditorQuery,
   } = options
 
   // Use the generic tool loop
@@ -221,6 +223,11 @@ export function useEditorRefinement(
     onFinish: (message?: string) => {
       onFinish?.(message)
     },
+    onRunActiveEditorQuery: onRunActiveEditorQuery
+      ? () => {
+          onRunActiveEditorQuery()
+        }
+      : undefined,
   })
 
   // Build system prompt

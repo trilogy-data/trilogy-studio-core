@@ -31,6 +31,7 @@ export interface EditorContext {
   onEditorContentChange: (content: string, replaceSelection?: boolean) => void
   onChartConfigChange: (config: ChartConfig) => void
   onFinish: (message?: string) => void
+  onRunActiveEditorQuery?: () => void
 }
 
 export class EditorRefinementToolExecutor {
@@ -63,6 +64,8 @@ export class EditorRefinementToolExecutor {
         return this.editChartConfig(toolInput.chartConfig)
       case 'edit_editor':
         return this.editEditor(toolInput.content, toolInput.replaceSelection)
+      case 'run_active_editor_query':
+        return this.runActiveEditorQuery()
       case 'request_close':
         return this.requestClose(toolInput.message)
       case 'close_session':
@@ -73,7 +76,7 @@ export class EditorRefinementToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: validate_query, run_query, format_query, edit_chart_config, edit_editor, request_close, close_session`,
+          error: `Unknown tool: ${toolName}. Available tools: validate_query, run_query, run_active_editor_query, format_query, edit_chart_config, edit_editor, request_close, close_session`,
         }
     }
   }
@@ -322,6 +325,28 @@ export class EditorRefinementToolExecutor {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update editor',
+      }
+    }
+  }
+
+  private runActiveEditorQuery(): ToolCallResult {
+    if (!this.editorContext.onRunActiveEditorQuery) {
+      return {
+        success: false,
+        error: 'Run active editor query is not available in this context',
+      }
+    }
+
+    try {
+      this.editorContext.onRunActiveEditorQuery()
+      return {
+        success: true,
+        message: 'Query execution triggered. Results will appear in the main results pane.',
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to trigger query execution',
       }
     }
   }

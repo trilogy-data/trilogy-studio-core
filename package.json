@@ -16,6 +16,7 @@
     "build:lib": "pnpm -C lib build",
     "preview": "vite preview",
     "test": "vitest",
+    "typecheck": "vue-tsc --noEmit",
     "test-playwright": "playwright test",
     "test-playwright:ui": "playwright test --ui",
     "format": "prettier --write \"./**/*.{js,ts,vue}\"",

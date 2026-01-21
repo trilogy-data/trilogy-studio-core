@@ -51,6 +51,7 @@
           @content-change="handleContentChange"
           @chart-config-change="handleChartConfigChange"
           @session-change="handleSessionChange"
+          @run-editor-query="handleRunEditorQuery"
         />
       </div>
     </div>
@@ -114,7 +115,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat'],
+  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat', 'run-editor-query'],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
@@ -179,6 +180,9 @@ export default defineComponent({
     },
     handleOpenChat() {
       this.$emit('open-chat')
+    },
+    handleRunEditorQuery() {
+      this.$emit('run-editor-query')
     },
     startDragging(e: MouseEvent) {
       e.preventDefault()
