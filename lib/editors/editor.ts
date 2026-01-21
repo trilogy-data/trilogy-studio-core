@@ -1,7 +1,22 @@
 import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
-import type { ChatInteraction } from '../llm'
 import { type CompletionItem } from '../stores/resolver'
+import type { ChatMessage, ChatArtifact } from '../chats/chat'
+
+/**
+ * Refinement session state - stored in memory only, NOT persisted to storage.
+ * Allows users to tab away and return to an ongoing refinement session.
+ */
+export interface EditorRefinementSession {
+  messages: ChatMessage[]
+  artifacts: ChatArtifact[]
+  originalContent: string
+  originalChartConfig?: ChartConfig
+  currentContent: string
+  currentChartConfig?: ChartConfig
+  selectedText?: string
+  selectionRange?: { start: number; end: number }
+}
 // enum of tags
 export enum EditorTag {
   SOURCE = 'source',
@@ -29,7 +44,7 @@ export interface EditorInterface {
   changed: boolean
   deleted: boolean
   chartConfig?: ChartConfig | null
-  chatInteraction?: ChatInteraction | null
+  refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
 }
 
@@ -54,7 +69,7 @@ export default class Editor implements EditorInterface {
   deleted: boolean
   chartConfig?: ChartConfig | null
   completionSymbols: CompletionItem[]
-  chatInteraction?: ChatInteraction | null
+  refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
 
   defaultContents(type: string) {
@@ -151,9 +166,20 @@ export default class Editor implements EditorInterface {
     this.changed = true
   }
 
-  // chat interactions don't need to persist through saves
-  setChatInteraction(chatInteraction: ChatInteraction | null) {
-    this.chatInteraction = chatInteraction
+  /**
+   * Set the refinement session. This is stored in memory only and NOT persisted to storage.
+   * Allows the user to tab away and return to an ongoing refinement chat.
+   */
+  setRefinementSession(session: EditorRefinementSession | null) {
+    this.refinementSession = session
+    // Note: Do NOT set this.changed = true - refinement sessions should not trigger saves
+  }
+
+  /**
+   * Check if there is an active refinement session
+   */
+  hasActiveRefinement(): boolean {
+    return this.refinementSession !== null && this.refinementSession !== undefined
   }
 
   delete() {

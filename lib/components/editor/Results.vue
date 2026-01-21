@@ -94,7 +94,10 @@ import ErrorMessage from '../ErrorMessage.vue'
 import LoadingButton from '../LoadingButton.vue'
 import CodeBlock from '../CodeBlock.vue'
 import DrilldownPane from '../DrilldownPane.vue'
+import LLMEditorRefinement from '../llm/LLMEditorRefinement.vue'
 import type { ChartConfig } from '../../editors/results'
+import type { EditorRefinementSession } from '../../editors/editor'
+import type { CompletionItem } from '../../stores/resolver'
 import { objectToSqlExpression } from '../../dashboards/conditions'
 import type { DrillDownTriggerEvent } from '../../events/display'
 
@@ -105,7 +108,7 @@ export interface Drilldown {
 
 export default {
   name: 'ResultsContainer',
-  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane },
+  components: { DataTable, VegaLiteChart, ErrorMessage, LoadingButton, CodeBlock, DrilldownPane, LLMEditorRefinement },
   props: {
     type: {
       type: String,
@@ -128,7 +131,7 @@ export default {
       required: false,
     },
     symbols: {
-      type: Object as PropType<any>,
+      type: Object as PropType<CompletionItem[]>,
       required: false,
     },
     containerHeight: Number,
@@ -138,7 +141,21 @@ export default {
       required: false,
       default: null,
     },
+    // Refinement chat props
+    refinementSession: {
+      type: Object as PropType<EditorRefinementSession | null>,
+      default: null,
+    },
+    connectionName: {
+      type: String,
+      default: '',
+    },
+    editorContents: {
+      type: String,
+      default: '',
+    },
   },
+  emits: ['config-change', 'drilldown-click', 'refresh-click', 'chat-accept', 'chat-discard', 'chat-content-change', 'chat-chart-config-change', 'chat-session-change'],
   data() {
     return {
       activeTab: this.defaultTab || getDefaultValueFromHash('activeEditorTab', 'results'),
@@ -185,14 +202,26 @@ export default {
       return this.containerHeight ? this.containerHeight - this.TABS_HEIGHT : 0
     },
     eligibleTabs() {
-      if (this.type === 'sql') {
-        return ['results']
+      const tabs: string[] = []
+
+      // Chat tab first if there's an active refinement session
+      if (this.refinementSession) {
+        tabs.push('chat')
       }
-      if (this.error) {
-        // results page is what displays the error
-        return ['results', 'sql']
+
+      tabs.push('results')
+
+      if (this.type !== 'sql') {
+        if (!this.error) {
+          tabs.push('visualize')
+        }
+        tabs.push('sql')
       }
-      return ['results', 'visualize', 'sql']
+
+      return tabs
+    },
+    hasActiveChat(): boolean {
+      return this.refinementSession !== null && this.refinementSession !== undefined
     },
     displayTab() {
       return this.eligibleTabs.filter((tab) => this.activeTab === tab)[0]

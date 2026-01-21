@@ -1,13 +1,19 @@
 <template>
   <div class="results-view">
-    <LLMChatRefinement
-      :messages="editorData.chatInteraction.messages"
-      :validateFn="editorData.chatInteraction.validationFn"
-      :extractionFn="editorData.chatInteraction.extractionFn"
-      :mutationFn="editorData.chatInteraction.mutationFn"
-      :closeFn="() => editorData.setChatInteraction(null)"
-      @accepted="llmQueryAccepted"
-      v-if="editorData.chatInteraction"
+    <LLMEditorRefinement
+      v-if="editorData.refinementSession || editorData.hasActiveRefinement()"
+      :connectionName="editorData.connection"
+      :initialContent="editorData.contents"
+      :selectedText="editorData.refinementSession?.selectedText || ''"
+      :selectionRange="editorData.refinementSession?.selectionRange || null"
+      :chartConfig="editorData.chartConfig || undefined"
+      :completionSymbols="editorData.completionSymbols"
+      :existingSession="editorData.refinementSession"
+      @accept="handleAccept"
+      @discard="handleDiscard"
+      @content-change="handleContentChange"
+      @chart-config-change="handleChartConfigChange"
+      @session-change="handleSessionChange"
     />
     <loading-view
       v-else-if="editorData.loading"
@@ -29,31 +35,28 @@
       @drilldown-click="(data) => handleDrilldown(data)"
       @refresh-click="() => $emit('refresh-click')"
     />
-    <!-- <llm-interaction></llm-interaction> -->
     <hint-component v-else />
   </div>
 </template>
 
 <script lang="ts">
+import { defineComponent, inject, type PropType } from 'vue'
 import LoadingView from '../LoadingView.vue'
-import ErrorMessage from '../ErrorMessage.vue'
-import LoadingButton from '../LoadingButton.vue'
 import ResultsContainer from './Results.vue'
 import HintComponent from '../HintComponent.vue'
-import LLMChatRefinement from '../llm/LLMChatRefinement.vue'
-import { inject, type PropType } from 'vue'
-import type { ConnectionStoreType } from '../../stores/connectionStore.ts'
-import type { EditorModel } from '../../main.ts'
+import LLMEditorRefinement from '../llm/LLMEditorRefinement.vue'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { EditorModel } from '../../main'
+import type { EditorRefinementSession } from '../../editors/editor'
+import type { ChartConfig } from '../../editors/results'
 
-export default {
+export default defineComponent({
   name: 'ResultsView',
   components: {
     LoadingView,
-    ErrorMessage,
-    LoadingButton,
     ResultsContainer,
     HintComponent,
-    LLMChatRefinement,
+    LLMEditorRefinement,
   },
   props: {
     editorData: {
@@ -65,6 +68,7 @@ export default {
       default: 0,
     },
   },
+  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change'],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
@@ -77,14 +81,32 @@ export default {
     }
   },
   methods: {
-    llmQueryAccepted() {
+    handleAccept(_message?: string) {
+      // Clear the refinement session
+      this.editorData.setRefinementSession(null)
       this.$emit('llm-query-accepted')
+    },
+    handleDiscard() {
+      // Clear the refinement session (content is restored by the composable)
+      this.editorData.setRefinementSession(null)
+    },
+    handleContentChange(content: string, _replaceSelection?: boolean) {
+      // Update editor content
+      this.editorData.setContent(content)
+      this.$emit('content-change', content)
+    },
+    handleChartConfigChange(config: ChartConfig) {
+      this.editorData.setChartConfig(config)
+    },
+    handleSessionChange(session: EditorRefinementSession) {
+      // Persist session to editor for tab-away support
+      this.editorData.setRefinementSession(session)
     },
     handleDrilldown(data: any) {
       this.$emit('drilldown-click', data)
     },
   },
-}
+})
 </script>
 
 <style scoped>

@@ -9,6 +9,7 @@ import type { NavigationStore } from '../stores/useScreenNavigation'
 import { KeySeparator } from '../data/constants'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
 import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
+import { completionItemsToConcepts } from '../llm/editorRefinementTools'
 import type { ModelConceptInput } from '../llm/data/models'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 
@@ -284,21 +285,15 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
           ...new Set(validation.data.completion_items.map((i) => i.trilogyType)),
         ])
 
-        // Store raw completion items for the symbols pane
+        // Convert to concepts (filters to trilogyType === 'concept' and maps to ModelConceptInput)
+        chatConcepts.value = completionItemsToConcepts(validation.data.completion_items)
+
+        // Store filtered symbols for the symbols pane (same filter as completionItemsToConcepts)
         chatSymbols.value = validation.data.completion_items.filter(
           (item) => item.trilogyType === 'concept',
         )
 
         console.log('Chat symbols refresh - filtered concepts count:', chatSymbols.value.length)
-
-        // Map CompletionItem to ModelConceptInput for the system prompt
-        chatConcepts.value = chatSymbols.value.map((item) => ({
-          name: item.label,
-          type: item.datatype || item.type,
-          description: item.description || undefined,
-          calculation: item.calculation || undefined,
-          keys: item.keys || undefined,
-        }))
 
         return chatSymbols.value
       }

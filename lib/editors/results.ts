@@ -108,7 +108,9 @@ const CHART_TYPE_MIGRATIONS: Record<string, chartTypes> = {
  * Handles renamed chart types (e.g., 'usa-map' -> 'geo-map').
  * Returns a new config object if migration was needed, or the original if not.
  */
-export function migrateChartConfig(config: ChartConfig | undefined | null): ChartConfig | undefined {
+export function migrateChartConfig(
+  config: ChartConfig | undefined | null,
+): ChartConfig | undefined {
   if (!config) return undefined
 
   const migratedType = CHART_TYPE_MIGRATIONS[config.chartType]

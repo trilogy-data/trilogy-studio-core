@@ -216,7 +216,8 @@ export default defineComponent({
           isPlaceholderTransitioning.value = true
           // After fade out, change text and fade in
           setTimeout(() => {
-            placeholderIndex.value = (placeholderIndex.value + 1) % (props.placeholder as string[]).length
+            placeholderIndex.value =
+              (placeholderIndex.value + 1) % (props.placeholder as string[]).length
             isPlaceholderTransitioning.value = false
           }, 300)
         }, 3500)

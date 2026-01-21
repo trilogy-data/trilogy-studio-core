@@ -87,11 +87,8 @@ import type { QueryResult, QueryUpdate } from '../../stores/queryExecutionServic
 import SymbolsPane from '../SymbolsPane.vue'
 import EditorHeader from './EditorHeader.vue'
 import CodeEditor from './EditorCode.vue'
-import { extractLastTripleQuotedText } from '../../stores/llmStore.ts'
 import { Range } from 'monaco-editor'
-import { completionToModelInput } from '../../llm/utils.ts'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
-import { leadIn, conceptsToFieldPrompt } from '../../llm/data/prompts.ts'
 import { type GoToDefinitionEvent } from './events'
 
 // Define interfaces for the refs
@@ -473,9 +470,8 @@ export default defineComponent({
     },
     async runQuery(): Promise<any> {
       this.$emit('query-started')
-      // clear existing inteaction state
+      // clear existing error state (but keep refinement session so user can continue chatting)
       this.editorData.setError(null)
-      this.editorData.setChatInteraction(null)
 
       const id = this.editorId
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
@@ -599,9 +595,8 @@ export default defineComponent({
       }
     },
 
-    // Add the LLM query generation method
+    // Open LLM refinement session for SQL editor
     async generateLLMQuerySQL(): Promise<void> {
-      console.log('Generating LLM SQL query...')
       if (!this.llmStore || !this.editorData) {
         console.error('LLM store or editor data is not available')
         return
@@ -609,15 +604,8 @@ export default defineComponent({
 
       if (!this.loading && this.llmStore) {
         try {
-          let editorId = this.editorData.id
-
-          this.editorData.loading = true
-          this.editorData.startTime = Date.now()
-          this.editorData.results = new Results(new Map(), [])
-          this.editorData.setError(null)
-          this.editorData.setChatInteraction(null)
-
-          let targetEditor = this.editorStore.editors[editorId]
+          const editorId = this.editorData.id
+          const targetEditor = this.editorStore.editors[editorId]
           if (!targetEditor) {
             throw new Error('Target editor not found.')
           }
@@ -628,73 +616,43 @@ export default defineComponent({
           }
 
           const text = codeEditorRef.getEditorText(this.editorData.contents)
-          let range: Range = codeEditorRef.getEditorRange()
+          const range: Range = codeEditorRef.getEditorRange()
 
-          // Define validator function for SQL
-          const validator = async (_: string): Promise<boolean> => {
-            // For SQL, we can attempt to parse or validate syntax
-            // For now, return true as SQL validation may vary by dialect
-            return true
-          }
-
-          // Define mutation function
-          let replacementLen = 0
-          const mutation = (responseText: string | null) => {
-            // Determine where to insert the query text
-            let insertionPosition = range
-              ? range.startLineNumber
-              : targetEditor.contents.split('\n').length
-            let contentLines = targetEditor.contents.split('\n')
-
-            // Insert the query at the appropriate position
-            contentLines.splice(insertionPosition, replacementLen, responseText || '')
-
-            // Update the editor contents directly
-            targetEditor.setContent(contentLines.join('\n'))
-
-            let op = {
-              range: range,
-              text: `${responseText}`,
-              forceMoveMarkers: true,
-            }
-            codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
-
-            // Cache for next time
-            replacementLen = (responseText || '').split('\n').length
-            range = new Range(
-              range.startLineNumber,
-              range.startColumn,
-              range.endLineNumber + replacementLen,
-              range.endColumn,
-            )
-            codeEditorRef.getEditorInstance().setSelection(range)
-            return true
-          }
-
-          // Set up chat interaction similar to generateLLMQuery
-          let initMessage = `How can I help? I'm ready to assist with writing a SQL query.`
+          // Set up refinement session
+          // Calculate selection range as character offsets
+          let selectionRange: { start: number; end: number } | undefined
+          let selectedText = ''
           if (range && text) {
-            initMessage += `Based on selection, focused on editing this text:\n\`\`\`${text}\n\`\`\`. If the text includes a prompt, hit enter and I'll go ahead and get working - or you can give me some more instructions.`
+            // Convert line/column to character offsets
+            const lines = targetEditor.contents.split('\n')
+            let startOffset = 0
+            for (let i = 0; i < range.startLineNumber - 1; i++) {
+              startOffset += lines[i].length + 1 // +1 for newline
+            }
+            startOffset += range.startColumn - 1
+
+            let endOffset = 0
+            for (let i = 0; i < range.endLineNumber - 1; i++) {
+              endOffset += lines[i].length + 1
+            }
+            endOffset += range.endColumn - 1
+
+            selectionRange = { start: startOffset, end: endOffset }
+            selectedText = text
           }
 
-          this.editorData.setChatInteraction({
-            messages: [
-              {
-                role: 'system',
-                content: `You are a SQL query generation assistant. Generate SQL queries for ${this.editorData.syntax} syntax. Return your answer in triple quotes to make it easy to extract.`,
-                hidden: true,
-              },
-              {
-                role: 'user',
-                content: `Here is a SQL file I'm editing. ${targetEditor.contents}.`,
-                hidden: true,
-              },
-              { role: 'system', content: initMessage },
-            ],
-            validationFn: validator,
-            extractionFn: extractLastTripleQuotedText,
-            mutationFn: mutation,
-          })
+          // Reuse existing session if available, otherwise create new one
+          if (!this.editorData.hasActiveRefinement()) {
+            this.editorData.setRefinementSession({
+              messages: [],
+              artifacts: [],
+              originalContent: targetEditor.contents,
+              currentContent: targetEditor.contents,
+              selectedText,
+              selectionRange,
+            })
+          }
+          // If session exists, just show it (don't overwrite messages/artifacts)
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM SQL query:', error)
@@ -707,16 +665,13 @@ export default defineComponent({
         }
       }
     },
+    // Open LLM refinement session for Trilogy editor
     async generateLLMQuery(): Promise<void> {
       if (!this.loading && this.llmStore) {
         try {
-          let editorId = this.editorData.id
+          const editorId = this.editorData.id
+          const targetEditor = this.editorStore.editors[editorId]
 
-          this.editorData.loading = true
-          this.editorData.startTime = Date.now()
-          this.editorData.results = new Results(new Map(), [])
-          this.editorData.setError(null)
-          let targetEditor = this.editorStore.editors[editorId]
           // Get text and range from the CodeEditor
           const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
           if (!codeEditorRef) {
@@ -724,107 +679,43 @@ export default defineComponent({
           }
 
           const text = codeEditorRef.getEditorText(this.editorData.contents)
-          let range: Range = codeEditorRef.getEditorRange()
+          const range: Range = codeEditorRef.getEditorRange()
 
-          // Run our async call
-          await this.validateQuery(false)
-          let concepts = completionToModelInput(this.editorData.completionSymbols)
-
-          if (concepts.length === 0) {
-            this.editorData.setError('There are no imported concepts for LLM generation')
-            throw new Error(
-              'Invalid editor for LLM generation - there are no parsed concepts. Check imports and concept definitions.',
-            )
-          }
-
-          const validator = async (testText: string): Promise<boolean> => {
-            const queryPartial = await this.buildQueryArgs(text)
-            const queryInput: QueryInput = {
-              // run an explain here, not the query
-              text: testText,
-              editorType: queryPartial.editorType,
-              imports: queryPartial.imports,
+          // Set up refinement session
+          // Calculate selection range as character offsets
+          let selectionRange: { start: number; end: number } | undefined
+          let selectedText = ''
+          if (range && text) {
+            // Convert line/column to character offsets
+            const lines = targetEditor.contents.split('\n')
+            let startOffset = 0
+            for (let i = 0; i < range.startLineNumber - 1; i++) {
+              startOffset += lines[i].length + 1 // +1 for newline
             }
+            startOffset += range.startColumn - 1
 
-            const onError = (error: any) => {
-              throw error
+            let endOffset = 0
+            for (let i = 0; i < range.endLineNumber - 1; i++) {
+              endOffset += lines[i].length + 1
             }
+            endOffset += range.endColumn - 1
 
-            let results = await this.queryExecutionService.executeQuery(
-              this.editorData.connection,
-              queryInput,
-              // Starter callback (empty for now)
-              () => {},
-              // Progress callback
-              () => {},
-              // Failure callback
-              onError,
-              // Success callback
-              () => {
-                return true
-              },
-              true,
-            )
-            // wait on that promise
-            await results.resultPromise
-            return true
+            selectionRange = { start: startOffset, end: endOffset }
+            selectedText = text
           }
 
-          const mutation = (responseText: string | null) => {
-            let replacementLen = 0
-            // Split the content into lines
-            // Determine where to insert the query text
-            // If we have a range, calculate the insertion position
-            let insertionPosition = range
-              ? range.startLineNumber
-              : this.editorData.contents.split('\n').length
-            let contentLines = targetEditor.contents.split('\n')
-
-            // Insert the query at the appropriate position
-            contentLines.splice(insertionPosition, replacementLen, responseText || '')
-            // store our length so we can replace this query if user has more edits
-            // this is the length of the split array
-
-            // Update the editor contents directly
-            targetEditor.setContent(contentLines.join('\n'))
-            // const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-            let op = {
-              range: range,
-              text: `${responseText}`,
-              forceMoveMarkers: true,
-            }
-            codeEditorRef.executeEdits('gen-ai-prompt-shortcut', [op])
-
-            // cache for next time
-            replacementLen = (responseText || '').split('\n').length
-            range = new Range(
-              range.startLineNumber,
-              range.startColumn,
-              range.endLineNumber + replacementLen,
-              range.endColumn,
-            )
-            codeEditorRef.getEditorInstance().setSelection(range)
-            return true
+          // Reuse existing session if available, otherwise create new one
+          if (!this.editorData.hasActiveRefinement()) {
+            this.editorData.setRefinementSession({
+              messages: [],
+              artifacts: [],
+              originalContent: targetEditor.contents,
+              currentContent: targetEditor.contents,
+              selectedText,
+              selectionRange,
+            })
           }
-          // detect if the user had a highlighted range or the entire editor
-          let initMessage = `How can I help? I've been loaded with context on Trilogy and this file. `
-          if (range) {
-            initMessage += `Based on selection, focused on editing this text:\n\`\`\`${text}\n\`\`\`. If the text includes a prompt, hit enter and I'll go ahead and get working - or you can give me some more instructions.`
-          }
-          this.editorData.setChatInteraction({
-            messages: [
-              { role: 'system', content: leadIn, hidden: true },
-              {
-                role: 'user',
-                content: `Here is a file I'm editing in the Trilogy language. ${targetEditor.contents}. Here are the available concepts in the environment: ${conceptsToFieldPrompt(concepts)}`,
-                hidden: true,
-              },
-              { role: 'system', content: initMessage },
-            ],
-            validationFn: validator,
-            extractionFn: extractLastTripleQuotedText,
-            mutationFn: mutation,
-          })
+          // If session exists, just show it (don't overwrite messages/artifacts)
         } catch (error) {
           if (error instanceof Error) {
             console.error('Error generating LLM query:', error)

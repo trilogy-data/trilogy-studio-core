@@ -97,6 +97,7 @@
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
+                @content-change="handleEditorContentChange"
               >
               </results-view>
             </template>
@@ -529,6 +530,12 @@ export default {
     drilldownClick(e: DrillDownEvent) {
       if (this.editorRef) {
         this.editorRef.drilldownQuery(e.remove, e.add, e.filter)
+      }
+    },
+    handleEditorContentChange(content: string) {
+      // Update the Monaco editor directly when content changes from refinement
+      if (this.editorRef) {
+        this.editorRef.setContent(content)
       }
     },
     async startDemo() {
