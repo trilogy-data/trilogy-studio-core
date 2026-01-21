@@ -76,6 +76,15 @@
           </span>
         </div>
         <button
+          v-if="isLoading && customStopHandler"
+          @click="handleStop"
+          data-testid="stop-button"
+          class="send-button stop-button"
+        >
+          {{ stopButtonText }}
+        </button>
+        <button
+          v-else
           @click="sendMessage"
           :disabled="isLoading || disabled || !userInput.trim()"
           data-testid="send-button"
@@ -181,6 +190,16 @@ export default defineComponent({
         ((message: string, messages: ChatMessage[]) => Promise<void>) | null
       >,
       default: undefined,
+    },
+    // Custom stop handler - called when user clicks stop during loading
+    customStopHandler: {
+      type: [Function, null] as PropType<(() => void) | null>,
+      default: undefined,
+    },
+    // Text to show on stop button
+    stopButtonText: {
+      type: String,
+      default: 'Stop',
     },
   },
 
@@ -307,6 +326,13 @@ export default defineComponent({
       return message.content
     }
 
+    // Handle stop button click
+    const handleStop = () => {
+      if (props.customStopHandler) {
+        props.customStopHandler()
+      }
+    }
+
     // Get display text for tool indicator
     const getToolDisplayText = (toolName: string): string => {
       const toolLabels: Record<string, string> = {
@@ -423,6 +449,7 @@ export default defineComponent({
       isPlaceholderTransitioning,
       handleKeyDown,
       sendMessage,
+      handleStop,
       getMessageTextWithoutArtifact,
       getToolDisplayText,
       addMessage,
@@ -631,6 +658,10 @@ export default defineComponent({
 .send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.send-button.stop-button {
+  background-color: var(--delete-color, #dc3545);
 }
 
 .artifact-placeholder {

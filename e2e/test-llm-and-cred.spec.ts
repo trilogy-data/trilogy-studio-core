@@ -347,15 +347,12 @@ select
           ],
         ),
         // After validate tool result - close session
-        'Success': createToolCallResponse(
-          'The query is valid and ready.',
-          [
-            {
-              name: 'request_close',
-              input: { message: 'Query created and validated successfully.' },
-            },
-          ],
-        ),
+        Success: createToolCallResponse('The query is valid and ready.', [
+          {
+            name: 'request_close',
+            input: { message: 'Query created and validated successfully.' },
+          },
+        ]),
         // Default response for any other continuation
         default: 'I have completed the requested changes.',
       }),

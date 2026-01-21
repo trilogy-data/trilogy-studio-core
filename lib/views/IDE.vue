@@ -578,7 +578,9 @@ export default {
     },
     canOpenChat(): boolean {
       // Check if LLM connections are available
-      return !!(this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0)
+      return !!(
+        this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0
+      )
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

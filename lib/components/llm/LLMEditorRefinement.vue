@@ -8,6 +8,7 @@
       :externalLoading="isLoading"
       :activeToolName="activeToolName"
       :customSendHandler="handleSendMessage"
+      :customStopHandler="handleStop"
       :placeholder="placeholders"
       @update:messages="handleMessagesUpdate"
     >
@@ -106,7 +107,14 @@ export default defineComponent({
     },
   },
 
-  emits: ['accept', 'discard', 'content-change', 'chart-config-change', 'session-change', 'run-editor-query'],
+  emits: [
+    'accept',
+    'discard',
+    'content-change',
+    'chart-config-change',
+    'session-change',
+    'run-editor-query',
+  ],
 
   setup(props, { emit }) {
     const chatRef = ref<InstanceType<typeof LLMChat> | null>(null)
@@ -184,6 +192,7 @@ export default defineComponent({
       sendMessage,
       accept,
       discard,
+      stop,
     } = refinement
 
     // Handle sending messages
@@ -204,6 +213,11 @@ export default defineComponent({
     // Handle discard button
     const handleDiscard = () => {
       discard()
+    }
+
+    // Handle stop button
+    const handleStop = () => {
+      stop()
     }
 
     // Convert artifact data to Results for display
@@ -235,6 +249,7 @@ export default defineComponent({
       handleMessagesUpdate,
       handleAccept,
       handleDiscard,
+      handleStop,
       getArtifactResults,
     }
   },

@@ -1,11 +1,7 @@
 <template>
   <div class="results-view">
     <!-- Horizontal split when chat is active -->
-    <div
-      v-if="hasActiveChat"
-      class="split-view"
-      ref="splitViewRef"
-    >
+    <div v-if="hasActiveChat" class="split-view" ref="splitViewRef">
       <div class="results-pane" :style="{ width: resultsPaneWidth }">
         <!-- Loading in results pane -->
         <loading-view
@@ -31,10 +27,7 @@
         <!-- Hint when no results yet -->
         <hint-component v-else />
       </div>
-      <div
-        class="divider"
-        @mousedown="startDragging"
-      >
+      <div class="divider" @mousedown="startDragging">
         <div class="divider-handle"></div>
       </div>
       <div class="chat-pane" :style="{ width: chatPaneWidth }">
@@ -115,7 +108,14 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat', 'run-editor-query'],
+  emits: [
+    'llm-query-accepted',
+    'drilldown-click',
+    'refresh-click',
+    'content-change',
+    'open-chat',
+    'run-editor-query',
+  ],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 

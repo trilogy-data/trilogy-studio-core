@@ -37,11 +37,12 @@ export interface UseToolLoopReturn {
     systemPrompt: string,
     toolExecutor: ToolExecutor,
     options?: ToolLoopOptions,
-  ) => Promise<{ terminated: boolean; finalMessage?: string }>
+  ) => Promise<{ terminated: boolean; finalMessage?: string; stopped?: boolean }>
   addMessage: (message: ChatMessage) => void
   clearMessages: () => void
   setMessages: (msgs: ChatMessage[]) => void
   setArtifacts: (arts: ChatArtifact[]) => void
+  stop: () => void
 }
 
 /**
@@ -54,6 +55,15 @@ export function useToolLoop(): UseToolLoopReturn {
   const isLoading = ref(false)
   const activeToolName = ref('')
   const error = ref<string | null>(null)
+
+  // Abort controller for stopping execution
+  let abortController: AbortController | null = null
+
+  const stop = () => {
+    if (abortController) {
+      abortController.abort()
+    }
+  }
 
   const addMessage = (message: ChatMessage) => {
     messages.value = [...messages.value, message]
@@ -88,7 +98,7 @@ export function useToolLoop(): UseToolLoopReturn {
     systemPrompt: string,
     toolExecutor: ToolExecutor,
     options: ToolLoopOptions = { tools: [] },
-  ): Promise<{ terminated: boolean; finalMessage?: string }> => {
+  ): Promise<{ terminated: boolean; finalMessage?: string; stopped?: boolean }> => {
     const MAX_ITERATIONS = options.maxIterations ?? 20
     const MAX_AUTO_CONTINUE = options.maxAutoContinue ?? 3
 
@@ -101,6 +111,10 @@ export function useToolLoop(): UseToolLoopReturn {
     activeToolName.value = ''
     error.value = null
 
+    // Create new abort controller for this execution
+    abortController = new AbortController()
+    const signal = abortController.signal
+
     // Add user message
     addMessage({
       role: 'user',
@@ -111,8 +125,24 @@ export function useToolLoop(): UseToolLoopReturn {
       let currentMessages: LLMMessage[] = [...messages.value]
       let currentPrompt = userMessage
       let autoContinueCount = 0
+      let lastResponseText = ''
 
       for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+        // Check for abort before starting iteration
+        if (signal.aborted) {
+          // Add pause message for conversation continuity
+          addMessage({
+            role: 'assistant',
+            content: lastResponseText || '(Response in progress when stopped)',
+          })
+          addMessage({
+            role: 'user',
+            content: '[User requested pause - conversation can be continued]',
+            hidden: true,
+          })
+          return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
+        }
+
         const llmOptions: LLMRequestOptions = {
           prompt: currentPrompt,
           systemPrompt,
@@ -127,7 +157,23 @@ export function useToolLoop(): UseToolLoopReturn {
         )
 
         const responseText = response.text
+        lastResponseText = responseText
         const toolCalls = parseToolCalls(responseText)
+
+        // Check for abort after LLM response
+        if (signal.aborted) {
+          // Add the response we got and pause message
+          addMessage({
+            role: 'assistant',
+            content: responseText,
+          })
+          addMessage({
+            role: 'user',
+            content: '[User requested pause - conversation can be continued]',
+            hidden: true,
+          })
+          return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
+        }
 
         // If no tool calls, we're done (or check for auto-continue)
         if (toolCalls.length === 0) {
@@ -136,15 +182,15 @@ export function useToolLoop(): UseToolLoopReturn {
             content: responseText,
           })
 
-          // Check if we should auto-continue
-          if (autoContinueCount < MAX_AUTO_CONTINUE) {
+          // Check if we should auto-continue (skip if aborted)
+          if (autoContinueCount < MAX_AUTO_CONTINUE && !signal.aborted) {
             try {
               const shouldContinue = await llmStore.shouldAutoContinue(
                 llmConnectionName,
                 responseText,
               )
 
-              if (shouldContinue) {
+              if (shouldContinue && !signal.aborted) {
                 autoContinueCount++
                 console.log(`[useToolLoop] Auto-continue ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
 
@@ -172,6 +218,20 @@ export function useToolLoop(): UseToolLoopReturn {
         const toolResults: string[] = []
 
         for (const toolCall of toolCalls) {
+          // Check for abort before each tool call
+          if (signal.aborted) {
+            addMessage({
+              role: 'assistant',
+              content: responseText,
+            })
+            addMessage({
+              role: 'user',
+              content: '[User requested pause - conversation can be continued]',
+              hidden: true,
+            })
+            return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
+          }
+
           activeToolName.value = toolCall.name
           const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
 
@@ -265,6 +325,7 @@ export function useToolLoop(): UseToolLoopReturn {
     } finally {
       isLoading.value = false
       activeToolName.value = ''
+      abortController = null
     }
   }
 
@@ -279,5 +340,6 @@ export function useToolLoop(): UseToolLoopReturn {
     clearMessages,
     setMessages,
     setArtifacts,
+    stop,
   }
 }

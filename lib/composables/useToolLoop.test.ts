@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useToolLoop, type ToolExecutor, type ToolLoopOptions } from './useToolLoop'
+import { useToolLoop, type ToolExecutor } from './useToolLoop'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
 
@@ -129,9 +129,9 @@ describe('useToolLoop', () => {
 
   describe('executeMessage with tool calls', () => {
     it('should execute tool calls from LLM response', async () => {
-      // First response has tool call
+      // First response has tool call (using supported <tool_use> format)
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Let me edit the query.\n<tool_call name="edit_editor">\n{"content": "SELECT * FROM users;"}\n</tool_call>',
+        text: 'Let me edit the query.\n<tool_use>{"name": "edit_editor", "input": {"content": "SELECT * FROM users;"}}</tool_use>',
       })
 
       // Second response after tool result
@@ -144,7 +144,7 @@ describe('useToolLoop', () => {
         message: 'Editor updated.',
       })
 
-      const { executeMessage, messages } = useToolLoop()
+      const { executeMessage } = useToolLoop()
 
       const result = await executeMessage(
         'Write a query',
@@ -164,7 +164,7 @@ describe('useToolLoop', () => {
 
     it('should handle tool execution errors', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_call name="edit_editor">\n{"content": ""}\n</tool_call>',
+        text: '<tool_use>{"name": "edit_editor", "input": {"content": ""}}</tool_use>',
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -192,7 +192,7 @@ describe('useToolLoop', () => {
 
     it('should terminate loop when tool returns terminatesLoop', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_call name="close_session">\n{}\n</tool_call>',
+        text: '<tool_use>{"name": "close_session", "input": {}}</tool_use>',
       })
 
       executeToolCallSpy.mockResolvedValue({
@@ -201,7 +201,7 @@ describe('useToolLoop', () => {
         terminatesLoop: true,
       })
 
-      const { executeMessage, messages } = useToolLoop()
+      const { executeMessage } = useToolLoop()
 
       const result = await executeMessage(
         'Close the session',
@@ -234,7 +234,7 @@ describe('useToolLoop', () => {
       }
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_call name="run_query">\n{"query": "SELECT * FROM users"}\n</tool_call>',
+        text: '<tool_use>{"name": "run_query", "input": {"query": "SELECT * FROM users"}}</tool_use>',
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -266,7 +266,7 @@ describe('useToolLoop', () => {
       const onToolResult = vi.fn()
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_call name="validate_query">\n{"query": "SELECT 1"}\n</tool_call>',
+        text: '<tool_use>{"name": "validate_query", "input": {"query": "SELECT 1"}}</tool_use>',
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -299,7 +299,7 @@ describe('useToolLoop', () => {
     it('should stop after max iterations', async () => {
       // Always return tool calls to trigger iteration loop
       mockLLMStore.generateCompletion.mockResolvedValue({
-        text: '<tool_call name="edit_editor">\n{"content": "test"}\n</tool_call>',
+        text: '<tool_use>{"name": "edit_editor", "input": {"content": "test"}}</tool_use>',
       })
 
       executeToolCallSpy.mockResolvedValue({
@@ -307,7 +307,7 @@ describe('useToolLoop', () => {
         message: 'Done.',
       })
 
-      const { executeMessage, messages } = useToolLoop()
+      const { executeMessage } = useToolLoop()
 
       const result = await executeMessage(
         'Keep editing',
@@ -342,7 +342,7 @@ describe('useToolLoop', () => {
       // shouldAutoContinue returns false to stop
       mockLLMStore.shouldAutoContinue.mockResolvedValueOnce(false)
 
-      const { executeMessage, messages } = useToolLoop()
+      const { executeMessage } = useToolLoop()
 
       const result = await executeMessage(
         'Help me',
@@ -367,7 +367,7 @@ describe('useToolLoop', () => {
       const { executeMessage } = useToolLoop()
 
       // With maxAutoContinue = 2, it should stop after 2 auto-continues
-      const result = await executeMessage(
+      await executeMessage(
         'Help',
         mockLLMStore as unknown as LLMConnectionStoreType,
         'test-connection',
@@ -403,8 +403,6 @@ describe('useToolLoop', () => {
     })
 
     it('should set isLoading correctly during execution', async () => {
-      let loadingDuringExecution = false
-
       mockLLMStore.generateCompletion.mockImplementation(async () => {
         // Check loading state during execution
         return { text: 'Response' }
@@ -438,12 +436,8 @@ describe('useToolLoop', () => {
     it('should execute multiple tool calls sequentially', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: `Let me do both things.
-<tool_call name="validate_query">
-{"query": "SELECT 1"}
-</tool_call>
-<tool_call name="edit_editor">
-{"content": "SELECT 1;"}
-</tool_call>`,
+<tool_use>{"name": "validate_query", "input": {"query": "SELECT 1"}}</tool_use>
+<tool_use>{"name": "edit_editor", "input": {"content": "SELECT 1;"}}</tool_use>`,
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -470,6 +464,52 @@ describe('useToolLoop', () => {
       expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
       expect(executeToolCallSpy).toHaveBeenCalledWith('validate_query', { query: 'SELECT 1' })
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', { content: 'SELECT 1;' })
+    })
+
+    it('should handle real Anthropic response with text + nested JSON tool calls', async () => {
+      // This test simulates the exact format returned by Anthropic API
+      // where content array has text block followed by multiple tool_use blocks
+      // with nested JSON objects in the input (like chartConfig)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: `Interesting data! There does appear to be a general trend that larger aircraft (more seats) tend to fly longer distances, though it's not perfectly linear. Let me write this query to the editor and set up a scatter plot visualization to show this relationship clearly:
+<tool_use>{"name": "edit_editor", "input": {"content": "import flight;\\n\\n# Do planes that fly longer distances tend to carry more passengers?\\nselect\\n    aircraft.aircraft_model.seats,\\n    avg(distance) as avg_distance,\\n    count(id2) as flight_count\\norder by\\n    aircraft.aircraft_model.seats asc\\nlimit 100;"}}</tool_use>
+<tool_use>{"name": "edit_chart_config", "input": {"chartConfig": {"chartType": "point", "xField": "aircraft_aircraft_model_seats", "yField": "avg_distance", "sizeField": "flight_count"}}}</tool_use>`,
+      })
+
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'I have updated the editor and chart configuration.',
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Done.',
+      })
+
+      const { executeMessage } = useToolLoop()
+
+      await executeMessage(
+        'Show me if larger planes fly longer distances as a scatter plot',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Both tool calls should have been executed
+      expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
+      expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', {
+        content:
+          'import flight;\n\n# Do planes that fly longer distances tend to carry more passengers?\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance,\n    count(id2) as flight_count\norder by\n    aircraft.aircraft_model.seats asc\nlimit 100;',
+      })
+      expect(executeToolCallSpy).toHaveBeenCalledWith('edit_chart_config', {
+        chartConfig: {
+          chartType: 'point',
+          xField: 'aircraft_aircraft_model_seats',
+          yField: 'avg_distance',
+          sizeField: 'flight_count',
+        },
+      })
     })
   })
 })

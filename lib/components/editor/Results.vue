@@ -46,7 +46,7 @@
         :drilldown-remove="activeDrilldown.remove"
         :drilldown-filter="activeDrilldown.filter"
         @close="activeDrilldown = null"
-        :symbols="symbols"
+        :symbols="symbols || []"
         @submit="submitDrilldown"
       />
 

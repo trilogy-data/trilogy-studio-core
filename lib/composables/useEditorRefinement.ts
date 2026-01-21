@@ -11,7 +11,6 @@ import { useToolLoop } from './useToolLoop'
 import {
   EditorRefinementToolExecutor,
   type EditorContext,
-  type ToolCallResult,
 } from '../llm/editorRefinementToolExecutor'
 import {
   EDITOR_REFINEMENT_TOOLS,
@@ -70,6 +69,7 @@ export interface UseEditorRefinementReturn {
   sendMessage: (message: string) => Promise<void>
   accept: () => void
   discard: () => void
+  stop: () => void
 }
 
 /**
@@ -298,6 +298,11 @@ export function useEditorRefinement(
     onDiscard?.()
   }
 
+  // Stop current execution
+  const stop = () => {
+    toolLoop.stop()
+  }
+
   return {
     messages: toolLoop.messages,
     artifacts: toolLoop.artifacts,
@@ -309,5 +314,6 @@ export function useEditorRefinement(
     sendMessage,
     accept,
     discard,
+    stop,
   }
 }

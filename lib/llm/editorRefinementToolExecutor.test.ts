@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  EditorRefinementToolExecutor,
-  type EditorContext,
-  type ToolCallResult,
-} from './editorRefinementToolExecutor'
+import { EditorRefinementToolExecutor, type EditorContext } from './editorRefinementToolExecutor'
 import type QueryExecutionService from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
-import type { EditorStoreType } from '../stores/editorStore'
 
 // Mock types for testing
 type MockQueryExecutionService = {
@@ -77,7 +72,10 @@ describe('EditorRefinementToolExecutor', () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain('Updated editor contents')
-      expect(onEditorContentChangeSpy).toHaveBeenCalledWith('SELECT id, name FROM users;', undefined)
+      expect(onEditorContentChangeSpy).toHaveBeenCalledWith(
+        'SELECT id, name FROM users;',
+        undefined,
+      )
     })
 
     it('should support replace selection mode', async () => {
