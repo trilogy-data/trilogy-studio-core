@@ -13,15 +13,9 @@
     >
       <template #header-actions>
         <div class="refinement-actions">
-          <button
-            class="action-btn accept-btn"
-            @click="handleAccept"
-            :disabled="isLoading"
-            data-testid="accept-button"
-          >
-            <i class="mdi mdi-check"></i>
-            Accept
-          </button>
+          <span v-if="connectionInfo" class="connection-info">
+            {{ connectionInfo }}
+          </span>
           <button
             class="action-btn discard-btn"
             @click="handleDiscard"
@@ -59,7 +53,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, type PropType } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -128,6 +122,15 @@ export default defineComponent({
         'LLMEditorRefinement requires llmConnectionStore, connectionStore, and queryExecutionService to be provided',
       )
     }
+
+    // Connection info for display
+    const connectionInfo = computed(() => {
+      const activeName = llmConnectionStore.activeConnection
+      if (!activeName) return ''
+      const connection = llmConnectionStore.connections[activeName]
+      if (!connection) return activeName
+      return connection.model ? `${activeName} (${connection.model})` : activeName
+    })
 
     // Placeholders for input
     const placeholders = [
@@ -226,6 +229,7 @@ export default defineComponent({
       activeToolName,
       currentContent,
       currentChartConfig,
+      connectionInfo,
       placeholders,
       handleSendMessage,
       handleMessagesUpdate,
@@ -252,11 +256,19 @@ export default defineComponent({
   align-items: center;
 }
 
+.connection-info {
+  font-size: var(--small-font-size);
+  color: var(--text-faint);
+  padding: 2px 8px;
+  background-color: var(--bg-color);
+  border-radius: 4px;
+}
+
 .action-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
+  padding: 2px 12px;
   border-radius: 4px;
   font-size: var(--font-size);
   cursor: pointer;

@@ -560,7 +560,7 @@ export default defineComponent({
 
 .input-container {
   display: flex;
-  padding: 10px;
+  padding: 5px;
   border-top: 1px solid var(--border-light);
   background-color: var(--sidebar-bg);
 }
