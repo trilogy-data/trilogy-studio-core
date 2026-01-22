@@ -7,7 +7,7 @@ import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
-import { buildChatAgentSystemPrompt, parseToolCalls, CHAT_TOOLS } from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
 import type { LLMToolCall } from '../llm/base'
 import type { CompletionItem } from './resolver'
 
@@ -346,10 +346,9 @@ export const useChatStore = defineStore('chats', {
           this.clearRateLimitBackoff(chatId)
 
           const responseText = response.text
-          // Prefer structured tool calls, fall back to text parsing
-          const toolCalls: Array<{ name: string; input: Record<string, any> }> = response.toolCalls
-            ? response.toolCalls.map((tc: LLMToolCall) => ({ name: tc.name, input: tc.input }))
-            : parseToolCalls(responseText)
+          // Use structured tool calls from response
+          const toolCalls: Array<{ name: string; input: Record<string, any> }> =
+            response.toolCalls?.map((tc: LLMToolCall) => ({ name: tc.name, input: tc.input })) ?? []
 
           // If no tool calls, check if we should auto-continue
           if (toolCalls.length === 0) {

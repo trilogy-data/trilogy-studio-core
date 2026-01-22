@@ -3,7 +3,6 @@ import type { Ref } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { LLMMessage, LLMRequestOptions, LLMResponse } from '../llm/base'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
-import { parseToolCalls } from '../llm/chatAgentPrompt'
 import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
 
 export interface ToolExecutor {
@@ -164,10 +163,9 @@ export function useToolLoop(): UseToolLoopReturn {
         const responseText = response.text
         lastResponseText = responseText
 
-        // Prefer structured tool calls from response, fall back to text parsing
-        const toolCalls = response.toolCalls
-          ? response.toolCalls.map((tc) => ({ name: tc.name, input: tc.input }))
-          : parseToolCalls(responseText)
+        // Use structured tool calls from response
+        const toolCalls =
+          response.toolCalls?.map((tc) => ({ name: tc.name, input: tc.input })) ?? []
 
         // Check for abort after LLM response
         if (signal.aborted) {

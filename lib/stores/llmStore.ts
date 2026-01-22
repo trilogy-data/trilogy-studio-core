@@ -4,7 +4,6 @@ import type { LLMRequestOptions, LLMMessage, ModelConceptInput, LLMResponse } fr
 import {
   AnthropicProvider,
   OpenAIProvider,
-  MistralProvider,
   GoogleProvider,
   createPrompt,
   createDashboardPrompt,
@@ -131,13 +130,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         )
       } else if (type === 'openai') {
         connection = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
-      } else if (type === 'mistral') {
-        connection = new MistralProvider(
-          name,
-          options.apiKey,
-          options.model,
-          options.saveCredential,
-        )
       } else if (type === 'google') {
         connection = new GoogleProvider(name, options.apiKey, options.model, options.saveCredential)
       } else {
@@ -157,8 +149,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         provider = new AnthropicProvider(tempName, apiKey, '', false)
       } else if (type === 'openai') {
         provider = new OpenAIProvider(tempName, apiKey, '', false)
-      } else if (type === 'mistral') {
-        provider = new MistralProvider(tempName, apiKey, '', false)
       } else if (type === 'google') {
         provider = new GoogleProvider(tempName, apiKey, '', false)
       } else {

@@ -20,7 +20,6 @@ import {
   buildEditorRefinementPrompt,
   type EditorRefinementContext,
 } from '../llm/editorRefinementTools'
-import { parseToolCalls, stripToolCalls } from '../llm/chatAgentPrompt'
 import type { LLMToolCall } from '../llm/base'
 
 /** Per-editor refinement execution state */
@@ -424,10 +423,9 @@ const useEditorStore = defineStore('editors', {
           const responseText = response.text
           lastResponseText = responseText
 
-          // Prefer structured tool calls from response, fall back to text parsing
-          const toolCalls: Array<{ name: string; input: Record<string, any> }> = response.toolCalls
-            ? response.toolCalls.map((tc: LLMToolCall) => ({ name: tc.name, input: tc.input }))
-            : parseToolCalls(responseText)
+          // Use structured tool calls from response
+          const toolCalls: Array<{ name: string; input: Record<string, any> }> =
+            response.toolCalls?.map((tc: LLMToolCall) => ({ name: tc.name, input: tc.input })) ?? []
 
           // Check for abort after LLM response
           if (signal?.aborted) {
@@ -493,7 +491,7 @@ const useEditorStore = defineStore('editors', {
             if (signal?.aborted) {
               this.addRefinementMessage(editorId, {
                 role: 'assistant',
-                content: stripToolCalls(responseText),
+                content: responseText,
                 toolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
               })
               this.addRefinementMessage(editorId, {
@@ -583,13 +581,11 @@ const useEditorStore = defineStore('editors', {
 
           this.setRefinementActiveToolName(editorId, '')
 
-          // Add assistant message with tool calls for display (strip tool call JSON from content)
-          const cleanedContent = stripToolCalls(responseText)
-          // Only add message if there's content or tool calls to show
-          if (cleanedContent || executedToolCalls.length > 0) {
+          // Add assistant message with tool calls for display
+          if (responseText || executedToolCalls.length > 0) {
             this.addRefinementMessage(editorId, {
               role: 'assistant',
-              content: cleanedContent,
+              content: responseText,
               toolCalls: executedToolCalls,
             })
           }

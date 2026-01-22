@@ -9,7 +9,6 @@ import {
 import {
   LLMProvider,
   OpenAIProvider,
-  MistralProvider,
   AnthropicProvider,
   GoogleProvider,
 } from '../llm'
@@ -229,10 +228,6 @@ export default class LocalStorage extends AbstractStorage {
         case 'openai':
           // @ts-ignore
           connections[connection.name] = reactive(await OpenAIProvider.fromJSON(connection))
-          break
-        case 'mistral':
-          // @ts-ignore
-          connections[connection.name] = reactive(await MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // Handle the async operation properly

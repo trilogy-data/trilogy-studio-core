@@ -26,8 +26,6 @@
             Anthropic
           </option>
           <option value="google" data-testid="llm-connection-creator-google">Google</option>
-          <!-- <option value="cohere">Cohere</option> -->
-          <!-- <option value="mistral">Mistral AI</option> -->
         </select>
       </div>
 
@@ -174,12 +172,6 @@ export default defineComponent({
           break
         case 'anthropic':
           connectionDetails.value.options.model = 'claude-3-sonnet-20240229'
-          break
-        case 'cohere':
-          connectionDetails.value.options.model = 'command'
-          break
-        case 'mistral':
-          connectionDetails.value.options.model = 'mistral-large-latest'
           break
         case 'google':
           connectionDetails.value.options.model = 'models/gemini-2.5-flash'
