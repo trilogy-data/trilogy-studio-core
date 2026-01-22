@@ -175,14 +175,14 @@ export const EDITOR_REFINEMENT_TOOLS = [
   {
     name: 'edit_editor',
     description:
-      'Write content to the editor. Use this to update the query the user is working on. You can continue to validate/format/run after writing. Replaces the entire editor.',
+      'Write content to the editor and automatically validate it. Returns validation results (errors or success with available fields). Use this to update the query - no need to call validate_query separately after editing.',
     input_schema: {
       type: 'object',
       properties: {
         content: {
           type: 'string',
           description: 'The new content to write to the editor',
-        }
+        },
       },
       required: ['content'],
     },
@@ -313,15 +313,15 @@ VALID DATA TYPES: ${datatypes.join(', ')}
 
 WORKFLOW:
 1. Understand what the user wants to change
-2. Use validate_query to check your changes
+2. Use edit_editor to write your changes (this automatically validates and returns errors/available fields)
 3. Optionally use run_query to test and see results privately
 4. Use format_query to clean up formatting if needed
-5. Use edit_editor to write the final result
-6. Call request_close with a summary - user can then reply or confirm
+5. Call request_close with a summary - user can then reply or confirm
 
 IMPORTANT:
 - Always use edit_editor to write your final answer - don't just show the query in text
-- You can iterate: write → validate → fix → write again
+- edit_editor automatically validates, so you don't need to call validate_query separately after editing
+- You can iterate: write → fix based on validation errors → write again
 - Use request_close when done - this gives the user a chance to ask for more changes
 - Only use close_session after the user explicitly confirms (e.g., says "done", "looks good", "close it")
 - If the user selected specific text, use replaceSelection: true to only modify that part

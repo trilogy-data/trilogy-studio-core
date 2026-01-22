@@ -323,7 +323,7 @@ export class EditorRefinementToolExecutor {
     }
   }
 
-  private editEditor(content: string, replaceSelection?: boolean): ToolCallResult {
+  private async editEditor(content: string, replaceSelection?: boolean): Promise<ToolCallResult> {
     if (!content || typeof content !== 'string') {
       return {
         success: false,
@@ -333,9 +333,25 @@ export class EditorRefinementToolExecutor {
 
     try {
       this.editorContext.onEditorContentChange(content, replaceSelection)
-      return {
-        success: true,
-        message: replaceSelection ? 'Updated selected text in editor' : 'Updated editor contents',
+
+      // Automatically validate the new content
+      const validationResult = await this.validateQuery(content)
+
+      const updateMessage = replaceSelection ? 'Updated selected text in editor' : 'Updated editor contents'
+
+      if (validationResult.success) {
+        return {
+          success: true,
+          message: `${updateMessage}. ${validationResult.message}`,
+          availableSymbols: validationResult.availableSymbols,
+        }
+      } else {
+        // Editor was updated but validation found errors
+        return {
+          success: true, // Edit succeeded, but we report validation errors
+          message: `${updateMessage}.\n\nValidation errors found:\n${validationResult.error}`,
+          availableSymbols: validationResult.availableSymbols,
+        }
       }
     } catch (error) {
       return {

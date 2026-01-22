@@ -67,17 +67,48 @@ describe('EditorRefinementToolExecutor', () => {
   })
 
   describe('edit_editor tool', () => {
-    it('should update editor content', async () => {
+    it('should update editor content and run validation', async () => {
+      mockQueryExecutionService.validateQuery.mockResolvedValue({
+        data: {
+          items: [],
+          completion_items: [
+            { label: 'users.id', trilogyType: 'concept', datatype: 'int' },
+            { label: 'users.name', trilogyType: 'concept', datatype: 'string' },
+          ],
+        },
+      })
+
       const result = await executor.executeToolCall('edit_editor', {
         content: 'SELECT id, name FROM users;',
       })
 
       expect(result.success).toBe(true)
       expect(result.message).toContain('Updated editor contents')
+      expect(result.message).toContain('Query is valid')
+      expect(result.availableSymbols).toHaveLength(2)
       expect(onEditorContentChangeSpy).toHaveBeenCalledWith(
         'SELECT id, name FROM users;',
         false, // Always replace whole editor, not selection
       )
+    })
+
+    it('should update editor and report validation errors', async () => {
+      mockQueryExecutionService.validateQuery.mockResolvedValue({
+        data: {
+          items: [{ severity: 8, message: 'Unknown column: foo' }],
+          completion_items: [],
+        },
+      })
+
+      const result = await executor.executeToolCall('edit_editor', {
+        content: 'SELECT foo FROM users;',
+      })
+
+      expect(result.success).toBe(true) // Edit succeeded even though validation failed
+      expect(result.message).toContain('Updated editor contents')
+      expect(result.message).toContain('Validation errors found')
+      expect(result.message).toContain('Unknown column: foo')
+      expect(onEditorContentChangeSpy).toHaveBeenCalledWith('SELECT foo FROM users;', false)
     })
 
     it('should fail with empty content', async () => {
