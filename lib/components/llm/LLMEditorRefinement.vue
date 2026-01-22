@@ -17,6 +17,15 @@
           <span v-if="connectionInfo" class="connection-info">
             {{ connectionInfo }}
           </span>
+            <button
+            class="action-btn accept-btn"
+            @click="handleAccept"
+            :disabled="isLoading"
+            data-testid="accept-button"
+          >
+            <i class="mdi mdi-close"></i>
+            Close
+          </button>
           <button
             class="action-btn discard-btn"
             @click="handleDiscard"
@@ -24,7 +33,7 @@
             data-testid="discard-button"
           >
             <i class="mdi mdi-close"></i>
-            Close
+            Discard Changes
           </button>
         </div>
       </template>

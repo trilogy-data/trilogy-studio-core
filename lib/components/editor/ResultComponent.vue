@@ -12,6 +12,7 @@
         <!-- Results in results pane -->
         <results-container
           v-else-if="hasResults"
+          ref="resultsContainerRef"
           :results="editorData.results"
           :generatedSql="editorData.generated_sql || undefined"
           :containerHeight="containerHeight"
@@ -120,6 +121,7 @@ export default defineComponent({
     }
 
     const splitViewRef = ref<HTMLElement | null>(null)
+    const resultsContainerRef = ref<InstanceType<typeof ResultsContainer> | null>(null)
     const splitRatio = ref(0.5) // Start at 50/50
     const isDragging = ref(false)
     const minPaneWidth = 200 // Minimum width in pixels
@@ -127,6 +129,7 @@ export default defineComponent({
     return {
       connectionStore,
       splitViewRef,
+      resultsContainerRef,
       splitRatio,
       isDragging,
       minPaneWidth,
@@ -164,6 +167,8 @@ export default defineComponent({
     },
     handleChartConfigChange(config: ChartConfig) {
       this.editorData.setChartConfig(config)
+      // Switch to visualize tab when chart config is updated via LLM
+      this.resultsContainerRef?.switchToVisualizeTab()
     },
     handleDrilldown(data: any) {
       this.$emit('drilldown-click', data)

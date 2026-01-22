@@ -165,6 +165,11 @@ export default {
     }
   },
   methods: {
+    switchToVisualizeTab() {
+      if (this.type !== 'sql') {
+        this.setTab('visualize')
+      }
+    },
     setTab(tab: string) {
       this.activeTab = tab
       pushHashToUrl('activeEditorTab', tab)
