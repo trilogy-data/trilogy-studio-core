@@ -1,6 +1,6 @@
 export { LLMProvider } from './base'
 export type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-export { OpenAIProvider } from './openAI'
+export { OpenAIProvider } from './openai'
 export { AnthropicProvider } from './anthropic'
 export { MistralProvider } from './mistral'
 export { GoogleProvider } from './googlev2'

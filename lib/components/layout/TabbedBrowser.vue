@@ -14,11 +14,7 @@
         :data-testid="`tab-${tab.address}`"
       >
         <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
-        <StatusIcon
-          v-if="getTabStatus(tab)"
-          :status="getTabStatus(tab)!"
-          class="tab-status"
-        />
+        <StatusIcon v-if="getTabStatus(tab)" :status="getTabStatus(tab)!" class="tab-status" />
         <span class="tab-title truncate-text">{{ tab.title }}</span>
         <button class="tab-close-btn" @click.stop="closeTab(tab.id, null)" v-if="tabs.length > 1">
           ×
@@ -61,7 +57,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent } from 'vue'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import { type ScreenType, type Tab } from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'

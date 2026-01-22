@@ -9,7 +9,7 @@ import type { LLMRequestOptions, LLMResponse } from '../llm'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
-import type { CompletionItem, ContentInput } from './resolver'
+import type { CompletionItem } from './resolver'
 import {
   EditorRefinementToolExecutor,
   type EditorContext,
@@ -328,36 +328,17 @@ const useEditorStore = defineStore('editors', {
 
       try {
         const session = editor.refinementSession
-        let currentMessages: Array<{ role: 'user' | 'assistant' | 'system'; content: string; hidden?: boolean }> = [
-          ...session.messages,
-        ]
+        let currentMessages: Array<{
+          role: 'user' | 'assistant' | 'system'
+          content: string
+          hidden?: boolean
+        }> = [...session.messages]
         let currentPrompt = message
         let autoContinueCount = 0
         let lastResponseText = ''
 
         // Track available symbols for system prompt updates
         let availableSymbols: CompletionItem[] = editor.completionSymbols || []
-
-        // Build extra content helper
-        const buildExtraContent = (): ContentInput[] => {
-          const extraContentMap = new Map<string, string>()
-
-          // Add connection sources
-          const connectionSources = connectionStore.getConnectionSources(editor.connection)
-          connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-          // Add all editors for this connection
-          Object.values(this.editors)
-            .filter((e) => e.connection === editor.connection && !e.deleted)
-            .forEach((e) => {
-              extraContentMap.set(e.name, e.contents)
-            })
-
-          return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({
-            alias,
-            contents,
-          }))
-        }
 
         // Build editor context for tool executor
         const buildEditorContext = (): EditorContext => ({

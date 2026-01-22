@@ -106,13 +106,7 @@ export default defineComponent({
       default: undefined,
     },
   },
-  emits: [
-    'llm-query-accepted',
-    'drilldown-click',
-    'refresh-click',
-    'content-change',
-    'open-chat',
-  ],
+  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat'],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
@@ -193,7 +187,7 @@ export default defineComponent({
       }
 
       // Convert Results object to the expected format
-      const headers = result.results ? [...result.results.headers.keys()] : []
+      const headers = result.results ? [...result.results.headers.keys()].map((k) => String(k)) : []
       return {
         success: result.success,
         results: result.results

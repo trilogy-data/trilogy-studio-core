@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { AnthropicProvider } from './anthropic'
-import { OpenAIProvider } from './openAI'
+import { OpenAIProvider } from './openai'
 import { GoogleProvider } from './googlev2'
 import type { LLMToolDefinition, LLMMessage } from './base'
 

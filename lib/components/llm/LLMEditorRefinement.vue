@@ -17,7 +17,7 @@
           <span v-if="connectionInfo" class="connection-info">
             {{ connectionInfo }}
           </span>
-            <button
+          <button
             class="action-btn accept-btn"
             @click="handleAccept"
             :disabled="isLoading"
@@ -63,17 +63,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType, watch } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
-import type { ChartConfig } from '../../editors/results'
-import type { CompletionItem } from '../../stores/resolver'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
-import type { EditorStoreType
-} from '../../stores/editorStore'
+import type { EditorStoreType } from '../../stores/editorStore'
 import { Results } from '../../editors/results'
 import type { QueryExecutionResult } from '../../llm/editorRefinementToolExecutor'
 

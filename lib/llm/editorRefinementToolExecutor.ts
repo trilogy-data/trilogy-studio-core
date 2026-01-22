@@ -337,7 +337,9 @@ export class EditorRefinementToolExecutor {
       // Automatically validate the new content
       const validationResult = await this.validateQuery(content)
 
-      const updateMessage = replaceSelection ? 'Updated selected text in editor' : 'Updated editor contents'
+      const updateMessage = replaceSelection
+        ? 'Updated selected text in editor'
+        : 'Updated editor contents'
 
       if (validationResult.success) {
         return {

@@ -53,10 +53,16 @@
               :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
             >
               <span class="tool-icon">
-                <i :class="toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"></i>
+                <i
+                  :class="
+                    toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'
+                  "
+                ></i>
               </span>
               <span class="tool-name">{{ getToolDisplayName(toolCall.name) }}</span>
-              <span v-if="toolCall.result?.error" class="tool-error">{{ toolCall.result.error }}</span>
+              <span v-if="toolCall.result?.error" class="tool-error">{{
+                toolCall.result.error
+              }}</span>
             </div>
           </div>
         </div>

@@ -4,7 +4,8 @@ import { parseToolCalls } from './chatAgentPrompt'
 describe('parseToolCalls', () => {
   describe('tool_use format (Anthropic style)', () => {
     it('should parse single tool call without text', () => {
-      const response = '<tool_use>{"name": "edit_editor", "input": {"content": "SELECT * FROM users;"}}</tool_use>'
+      const response =
+        '<tool_use>{"name": "edit_editor", "input": {"content": "SELECT * FROM users;"}}</tool_use>'
       const calls = parseToolCalls(response)
 
       expect(calls).toHaveLength(1)

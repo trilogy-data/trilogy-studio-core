@@ -231,9 +231,7 @@ export function useEditorRefinement(
     onFinish: (message?: string) => {
       onFinish?.(message)
     },
-    onRunActiveEditorQuery: onRunActiveEditorQuery
-      ? () => onRunActiveEditorQuery()
-      : undefined,
+    onRunActiveEditorQuery: onRunActiveEditorQuery ? () => onRunActiveEditorQuery() : undefined,
   })
 
   // Build system prompt
