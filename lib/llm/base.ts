@@ -5,6 +5,13 @@ export interface LLMToolCall {
   input: Record<string, any>
 }
 
+// Tool result to be sent back to the LLM
+export interface LLMToolResult {
+  toolCallId: string
+  toolName: string
+  result: string
+}
+
 // Generic interface for LLM responses
 export interface LLMResponse {
   text: string
@@ -50,6 +57,10 @@ export interface LLMMessage {
     totalTokens: number
   }
   hidden?: boolean // Used to hide messages in the UI
+  // Tool calls made by the assistant (for assistant messages)
+  toolCalls?: LLMToolCall[]
+  // Tool results from execution (for user messages responding to tool calls)
+  toolResults?: LLMToolResult[]
 }
 
 export abstract class LLMProvider {

@@ -70,11 +70,40 @@ export class AnthropicProvider extends LLMProvider {
       // Extract system message from history (if any) - Anthropic expects system as a top-level parameter
       const systemMessage = history.find(({ role }) => role === 'system')
 
-      // Strip messages to only include role and content (Anthropic rejects extra fields like 'hidden')
-      // Also filter out system messages since they go in the top-level system parameter
-      const cleanedHistory = history
-        .filter(({ role }) => role !== 'system')
-        .map(({ role, content }) => ({ role, content }))
+      // Build Anthropic-formatted messages from history
+      // Anthropic expects tool_use blocks in assistant messages and tool_result blocks in user messages
+      const cleanedHistory: Array<{ role: string; content: any }> = []
+      for (const msg of history) {
+        if (msg.role === 'system') continue // System messages go in top-level parameter
+
+        if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+          // Assistant message with tool calls - format as content array with text and tool_use blocks
+          const content: any[] = []
+          if (msg.content) {
+            content.push({ type: 'text', text: msg.content })
+          }
+          for (const tc of msg.toolCalls) {
+            content.push({
+              type: 'tool_use',
+              id: tc.id,
+              name: tc.name,
+              input: tc.input,
+            })
+          }
+          cleanedHistory.push({ role: 'assistant', content })
+        } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
+          // User message with tool results - format as content array with tool_result blocks
+          const content: any[] = msg.toolResults.map((tr) => ({
+            type: 'tool_result',
+            tool_use_id: tr.toolCallId,
+            content: tr.result,
+          }))
+          cleanedHistory.push({ role: 'user', content })
+        } else {
+          // Regular text message
+          cleanedHistory.push({ role: msg.role, content: msg.content })
+        }
+      }
 
       // Build request body
       const requestBody: Record<string, any> = {

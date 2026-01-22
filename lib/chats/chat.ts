@@ -14,7 +14,11 @@ export interface ChatArtifact {
   config?: any
 }
 
+// Tool call with execution result - used for UI display
+// Note: LLMMessage already has toolCalls (LLMToolCall[]) and toolResults (LLMToolResult[])
+// for LLM history. This type adds the execution result for displaying in the UI.
 export interface ChatToolCall {
+  id: string
   name: string
   input: Record<string, any>
   result?: {
@@ -26,10 +30,9 @@ export interface ChatToolCall {
 
 export interface ChatMessage extends LLMMessage {
   artifact?: ChatArtifact
-  modelInfo?: {
-    totalTokens: number
-  }
-  toolCalls?: ChatToolCall[]
+  // executedToolCalls stores tool calls with their execution results for UI display
+  // The inherited toolCalls/toolResults from LLMMessage are used for LLM history
+  executedToolCalls?: ChatToolCall[]
 }
 
 export interface ChatSessionData {

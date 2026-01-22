@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
-import type { LLMMessage, LLMRequestOptions, LLMResponse } from '../llm/base'
+import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMToolCall, LLMToolResult } from '../llm/base'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
 import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
 
@@ -163,9 +163,8 @@ export function useToolLoop(): UseToolLoopReturn {
         const responseText = response.text
         lastResponseText = responseText
 
-        // Use structured tool calls from response
-        const toolCalls =
-          response.toolCalls?.map((tc) => ({ name: tc.name, input: tc.input })) ?? []
+        // Use structured tool calls from response (preserve full LLMToolCall objects)
+        const toolCalls: LLMToolCall[] = response.toolCalls ?? []
 
         // Check for abort after LLM response
         if (signal.aborted) {
@@ -222,7 +221,7 @@ export function useToolLoop(): UseToolLoopReturn {
         }
 
         // Execute tool calls
-        const toolResults: string[] = []
+        const toolResults: LLMToolResult[] = []
 
         for (const toolCall of toolCalls) {
           // Check for abort before each tool call
@@ -256,6 +255,8 @@ export function useToolLoop(): UseToolLoopReturn {
             return { terminated: true, finalMessage: result.message }
           }
 
+          // Build result text for LLM
+          let resultText = ''
           if (result.success) {
             if (result.artifact) {
               artifacts.value = [...artifacts.value, result.artifact]
@@ -276,21 +277,21 @@ export function useToolLoop(): UseToolLoopReturn {
               const artifactInfo = config
                 ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
                 : ''
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\nSuccess. ${result.message || artifactInfo}${dataPreview}\n</tool_result>`,
-              )
+              resultText = `Success. ${result.message || artifactInfo}${dataPreview}`
             } else if (result.message) {
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\n${result.message}\n</tool_result>`,
-              )
+              resultText = result.message
             } else {
-              toolResults.push(`<tool_result name="${toolCall.name}">\nSuccess.\n</tool_result>`)
+              resultText = 'Success.'
             }
           } else {
-            toolResults.push(
-              `<tool_result name="${toolCall.name}">\nError: ${result.error}\n</tool_result>`,
-            )
+            resultText = `Error: ${result.error}`
           }
+
+          toolResults.push({
+            toolCallId: toolCall.id,
+            toolName: toolCall.name,
+            result: resultText,
+          })
         }
 
         activeToolName.value = ''
@@ -298,10 +299,15 @@ export function useToolLoop(): UseToolLoopReturn {
         // Add tool results to message history for next iteration
         currentMessages = [
           ...currentMessages,
-          { role: 'assistant' as const, content: responseText },
+          {
+            role: 'assistant' as const,
+            content: responseText,
+            toolCalls: toolCalls,
+          },
           {
             role: 'user' as const,
-            content: toolResults.join('\n\n'),
+            content: '', // Content handled by toolResults
+            toolResults: toolResults,
             hidden: true,
           },
         ]

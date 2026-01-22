@@ -195,10 +195,11 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         })
       }
 
-      // Add the response message to the history
+      // Add the response message to the history (preserve toolCalls if any)
       history.push({
         role: 'assistant',
         content: raw.text,
+        toolCalls: raw.toolCalls,
       })
 
       // Extract the response
@@ -252,6 +253,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
             history.push({
               role: 'assistant',
               content: raw.text,
+              toolCalls: raw.toolCalls,
             })
 
             // Extract the new response

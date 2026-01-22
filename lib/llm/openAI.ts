@@ -63,10 +63,40 @@ export class OpenAIProvider extends LLMProvider {
   ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
 
-    // Strip messages to only include role and content (OpenAI rejects extra fields like 'hidden')
-    const cleanHistory = (history || []).map(({ role, content }) => ({ role, content }))
+    // Build OpenAI-formatted messages from history
+    // OpenAI expects tool_calls in assistant messages and role: 'tool' for tool results
+    const cleanHistory: Array<Record<string, any>> = []
+    for (const msg of history || []) {
+      if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+        // Assistant message with tool calls
+        cleanHistory.push({
+          role: 'assistant',
+          content: msg.content || null,
+          tool_calls: msg.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: {
+              name: tc.name,
+              arguments: JSON.stringify(tc.input),
+            },
+          })),
+        })
+      } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
+        // Tool results - OpenAI uses role: 'tool' for each result
+        for (const tr of msg.toolResults) {
+          cleanHistory.push({
+            role: 'tool',
+            tool_call_id: tr.toolCallId,
+            content: tr.result,
+          })
+        }
+      } else {
+        // Regular text message
+        cleanHistory.push({ role: msg.role, content: msg.content })
+      }
+    }
 
-    let messages: { role: string; content: string }[] = []
+    let messages: Record<string, any>[] = []
 
     // Add system prompt if provided
     if (options.systemPrompt) {

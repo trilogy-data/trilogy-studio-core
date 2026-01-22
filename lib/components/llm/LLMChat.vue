@@ -44,10 +44,10 @@
           <!-- User messages rendered as plain text -->
           <pre v-else>{{ message.content }}</pre>
 
-          <!-- Tool calls display -->
-          <div v-if="message.toolCalls && message.toolCalls.length > 0" class="tool-calls">
+          <!-- Tool calls display (uses executedToolCalls which has result info for UI) -->
+          <div v-if="message.executedToolCalls && message.executedToolCalls.length > 0" class="tool-calls">
             <div
-              v-for="(toolCall, toolIndex) in message.toolCalls"
+              v-for="(toolCall, toolIndex) in message.executedToolCalls"
               :key="toolIndex"
               class="tool-call"
               :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
@@ -133,32 +133,12 @@ import {
 } from 'vue'
 import { type LLMConnectionStoreType } from '../../stores/llmStore'
 import { type LLMMessage } from '../../llm'
+import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 
-export interface ChatArtifact {
-  type: 'results' | 'chart' | 'code' | 'custom'
-  data: any
-  config?: any
-}
-
-export interface ChatToolCall {
-  name: string
-  input: Record<string, any>
-  result?: {
-    success: boolean
-    message?: string
-    error?: string
-  }
-}
-
-export interface ChatMessage extends LLMMessage {
-  artifact?: ChatArtifact
-  modelInfo?: {
-    totalTokens: number
-  }
-  toolCalls?: ChatToolCall[]
-}
+// Re-export for backwards compatibility
+export type { ChatMessage, ChatArtifact, ChatToolCall }
 
 export default defineComponent({
   name: 'LLMChatComponent',
@@ -558,12 +538,12 @@ export default defineComponent({
   padding: 15px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background-color: var(--result-window-bg);
 }
 
 .message {
-  padding: 10px 12px;
+  padding: 8px;
   max-width: 85%;
   word-break: break-word;
 }
@@ -591,6 +571,12 @@ export default defineComponent({
   width: 100%;
   background-color: transparent;
   padding: 0;
+}
+
+/* Messages with only tool calls should be minimal (no bg, less padding) */
+.message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
+  background-color: transparent;
+  padding: 2px 0;
 }
 
 .message-content pre {
@@ -734,30 +720,27 @@ export default defineComponent({
 /* Tool calls display */
 .tool-calls {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 4px;
-  margin-top: 8px;
 }
 
 .tool-call {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: var(--small-font-size);
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
 }
 
 .tool-call.success {
-  background-color: rgba(40, 167, 69, 0.1);
-  border: 1px solid rgba(40, 167, 69, 0.3);
-  color: var(--text-color);
+  background-color: rgba(40, 167, 69, 0.08);
+  color: var(--text-faint);
 }
 
 .tool-call.error {
-  background-color: rgba(220, 53, 69, 0.1);
-  border: 1px solid rgba(220, 53, 69, 0.3);
-  color: var(--text-color);
+  background-color: rgba(220, 53, 69, 0.08);
+  color: var(--text-faint);
 }
 
 .tool-icon {

@@ -264,10 +264,37 @@ export class GoogleProvider extends LLMProvider {
       const message = messages[i]
       const role = message.role === 'assistant' ? 'model' : 'user'
 
-      result.push({
-        parts: [{ text: message.content }],
-        role,
-      })
+      if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
+        // Assistant message with tool calls - include functionCall parts
+        const parts: any[] = []
+        if (message.content) {
+          parts.push({ text: message.content })
+        }
+        for (const tc of message.toolCalls) {
+          parts.push({
+            functionCall: {
+              name: tc.name,
+              args: tc.input,
+            },
+          })
+        }
+        result.push({ parts, role: 'model' })
+      } else if (message.role === 'user' && message.toolResults && message.toolResults.length > 0) {
+        // User message with tool results - include functionResponse parts
+        const parts: any[] = message.toolResults.map((tr) => ({
+          functionResponse: {
+            name: tr.toolName,
+            response: { result: tr.result },
+          },
+        }))
+        result.push({ parts, role: 'user' })
+      } else {
+        // Regular text message
+        result.push({
+          parts: [{ text: message.content }],
+          role,
+        })
+      }
 
       // If this is a user message and the next message is also a user message (or doesn't exist and we need model response)
       // OR if this is the last message and it's from the user (shouldn't happen but safety check)

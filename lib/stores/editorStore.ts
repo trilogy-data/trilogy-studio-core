@@ -20,7 +20,7 @@ import {
   buildEditorRefinementPrompt,
   type EditorRefinementContext,
 } from '../llm/editorRefinementTools'
-import type { LLMToolCall } from '../llm/base'
+import type { LLMToolCall, LLMToolResult } from '../llm/base'
 
 /** Per-editor refinement execution state */
 export interface RefinementExecution {
@@ -423,9 +423,8 @@ const useEditorStore = defineStore('editors', {
           const responseText = response.text
           lastResponseText = responseText
 
-          // Use structured tool calls from response
-          const toolCalls: Array<{ name: string; input: Record<string, any> }> =
-            response.toolCalls?.map((tc: LLMToolCall) => ({ name: tc.name, input: tc.input })) ?? []
+          // Use structured tool calls from response (preserve full LLMToolCall objects)
+          const toolCalls: LLMToolCall[] = response.toolCalls ?? []
 
           // Check for abort after LLM response
           if (signal?.aborted) {
@@ -483,7 +482,7 @@ const useEditorStore = defineStore('editors', {
           }
 
           // Execute tool calls
-          const toolResults: string[] = []
+          const toolResults: LLMToolResult[] = []
           const executedToolCalls: ChatToolCall[] = []
 
           for (const toolCall of toolCalls) {
@@ -492,7 +491,8 @@ const useEditorStore = defineStore('editors', {
               this.addRefinementMessage(editorId, {
                 role: 'assistant',
                 content: responseText,
-                toolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
+                toolCalls: toolCalls.slice(0, executedToolCalls.length), // Only include executed ones
+                executedToolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
               })
               this.addRefinementMessage(editorId, {
                 role: 'user',
@@ -505,8 +505,9 @@ const useEditorStore = defineStore('editors', {
             this.setRefinementActiveToolName(editorId, toolCall.name)
             const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
 
-            // Track executed tool call
+            // Track executed tool call for UI display
             const chatToolCall: ChatToolCall = {
+              id: toolCall.id,
               name: toolCall.name,
               input: toolCall.input,
               result: {
@@ -527,7 +528,8 @@ const useEditorStore = defineStore('editors', {
                 this.addRefinementMessage(editorId, {
                   role: 'assistant',
                   content: result.message,
-                  toolCalls: executedToolCalls,
+                  toolCalls: toolCalls.slice(0, executedToolCalls.length),
+                  executedToolCalls: executedToolCalls,
                 })
               }
               return { terminated: true, finalMessage: result.message }
@@ -538,11 +540,14 @@ const useEditorStore = defineStore('editors', {
               this.addRefinementMessage(editorId, {
                 role: 'assistant',
                 content: result.message || '',
-                toolCalls: executedToolCalls,
+                toolCalls: toolCalls.slice(0, executedToolCalls.length),
+                executedToolCalls: executedToolCalls,
               })
               return { terminated: false, finalMessage: result.message }
             }
 
+            // Build result text for LLM
+            let resultText = ''
             if (result.success) {
               if (result.artifact) {
                 this.addRefinementArtifact(editorId, result.artifact)
@@ -562,41 +567,48 @@ const useEditorStore = defineStore('editors', {
                 const artifactInfo = config
                   ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
                   : ''
-                toolResults.push(
-                  `<tool_result name="${toolCall.name}">\nSuccess. ${result.message || artifactInfo}${dataPreview}\n</tool_result>`,
-                )
+                resultText = `Success. ${result.message || artifactInfo}${dataPreview}`
               } else if (result.message) {
-                toolResults.push(
-                  `<tool_result name="${toolCall.name}">\n${result.message}\n</tool_result>`,
-                )
+                resultText = result.message
               } else {
-                toolResults.push(`<tool_result name="${toolCall.name}">\nSuccess.\n</tool_result>`)
+                resultText = 'Success.'
               }
             } else {
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\nError: ${result.error}\n</tool_result>`,
-              )
+              resultText = `Error: ${result.error}`
             }
+
+            toolResults.push({
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              result: resultText,
+            })
           }
 
           this.setRefinementActiveToolName(editorId, '')
 
-          // Add assistant message with tool calls for display
+          // Add assistant message with tool calls for display and LLM history
           if (responseText || executedToolCalls.length > 0) {
             this.addRefinementMessage(editorId, {
               role: 'assistant',
               content: responseText,
-              toolCalls: executedToolCalls,
+              toolCalls: toolCalls, // For LLM history
+              toolResults: toolResults, // Store tool results with message for history reconstruction
+              executedToolCalls: executedToolCalls, // For UI display
             })
           }
 
           // Add tool results to message history for next iteration
           currentMessages = [
             ...currentMessages,
-            { role: 'assistant' as const, content: responseText },
+            {
+              role: 'assistant' as const,
+              content: responseText,
+              toolCalls: toolCalls,
+            },
             {
               role: 'user' as const,
-              content: toolResults.join('\n\n'),
+              content: '', // Content handled by toolResults
+              toolResults: toolResults,
               hidden: true,
             },
           ]
