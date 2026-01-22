@@ -54,7 +54,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType, watch } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -63,12 +63,10 @@ import type { CompletionItem } from '../../stores/resolver'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
-import type { EditorStoreType } from '../../stores/editorStore'
+import type { EditorStoreType
+} from '../../stores/editorStore'
 import { Results } from '../../editors/results'
-import {
-  useEditorRefinement,
-  type EditorRefinementSession,
-} from '../../composables/useEditorRefinement'
+import type { QueryExecutionResult } from '../../llm/editorRefinementToolExecutor'
 
 export default defineComponent({
   name: 'LLMEditorRefinement',
@@ -77,44 +75,17 @@ export default defineComponent({
     ResultsComponent,
   },
   props: {
-    connectionName: {
+    editorId: {
       type: String,
       required: true,
     },
-    initialContent: {
-      type: String,
-      required: true,
-    },
-    selectedText: {
-      type: String,
-      default: '',
-    },
-    selectionRange: {
-      type: Object as PropType<{ start: number; end: number } | null>,
-      default: null,
-    },
-    chartConfig: {
-      type: Object as PropType<ChartConfig | undefined>,
+    runEditorQuery: {
+      type: Function as PropType<() => Promise<QueryExecutionResult>>,
       default: undefined,
-    },
-    completionSymbols: {
-      type: Array as PropType<CompletionItem[]>,
-      default: () => [],
-    },
-    existingSession: {
-      type: Object as PropType<EditorRefinementSession | null>,
-      default: null,
     },
   },
 
-  emits: [
-    'accept',
-    'discard',
-    'content-change',
-    'chart-config-change',
-    'session-change',
-    'run-editor-query',
-  ],
+  emits: ['accept', 'discard', 'content-change', 'chart-config-change'],
 
   setup(props, { emit }) {
     const chatRef = ref<InstanceType<typeof LLMChat> | null>(null)
@@ -125,11 +96,24 @@ export default defineComponent({
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const editorStore = inject<EditorStoreType>('editorStore')
 
-    if (!llmConnectionStore || !connectionStore || !queryExecutionService) {
+    if (!llmConnectionStore || !connectionStore || !queryExecutionService || !editorStore) {
       throw new Error(
-        'LLMEditorRefinement requires llmConnectionStore, connectionStore, and queryExecutionService to be provided',
+        'LLMEditorRefinement requires llmConnectionStore, connectionStore, queryExecutionService, and editorStore to be provided',
       )
     }
+
+    // Get editor and session from store
+    const editor = computed(() => editorStore.editors[props.editorId])
+    const session = computed(() => editor.value?.refinementSession)
+
+    // Get execution state from store
+    const execution = computed(() => editorStore.getRefinementExecution(props.editorId))
+    const isLoading = computed(() => execution.value?.isLoading ?? false)
+    const activeToolName = computed(() => execution.value?.activeToolName ?? '')
+
+    // Get messages and artifacts from session
+    const messages = computed(() => session.value?.messages ?? [])
+    const artifacts = computed(() => session.value?.artifacts ?? [])
 
     // Connection info for display
     const connectionInfo = computed(() => {
@@ -148,76 +132,63 @@ export default defineComponent({
       'Try: "Group by region and show totals"',
     ]
 
-    // Use the editor refinement composable
-    const refinement = useEditorRefinement({
-      llmConnectionStore,
-      connectionStore,
-      queryExecutionService,
-      editorStore,
-      connectionName: props.connectionName,
-      initialContent: props.initialContent,
-      selectedText: props.selectedText,
-      selectionRange: props.selectionRange || undefined,
-      chartConfig: props.chartConfig,
-      completionSymbols: props.completionSymbols,
-      existingSession: props.existingSession,
-      onContentChange: (content, replaceSelection) => {
-        emit('content-change', content, replaceSelection)
-      },
-      onChartConfigChange: (config) => {
-        emit('chart-config-change', config)
-      },
-      onFinish: (message) => {
-        emit('accept', message)
-      },
-      onDiscard: () => {
-        emit('discard')
-      },
-      onSessionChange: (session) => {
-        emit('session-change', session)
-      },
-      onRunActiveEditorQuery: () => {
-        emit('run-editor-query')
-      },
-    })
-
-    // Expose composable state
-    const {
-      messages,
-      artifacts,
-      isLoading,
-      activeToolName,
-      currentContent,
-      currentChartConfig,
-      sendMessage,
-      accept,
-      discard,
-      stop,
-    } = refinement
-
     // Handle sending messages
     const handleSendMessage = async (message: string, _msgs: ChatMessage[]) => {
-      await sendMessage(message)
+      await editorStore.executeRefinementMessage(
+        props.editorId,
+        message,
+        {
+          llmConnectionStore,
+          connectionStore,
+          queryExecutionService,
+        },
+        {
+          onContentChange: (content, replaceSelection) => {
+            emit('content-change', content, replaceSelection)
+          },
+          onChartConfigChange: (config) => {
+            emit('chart-config-change', config)
+          },
+          onFinish: (msg) => {
+            emit('accept', msg)
+          },
+          onRunActiveEditorQuery: props.runEditorQuery,
+        },
+      )
     }
 
     // Handle messages update from LLMChat
     const handleMessagesUpdate = (_newMessages: ChatMessage[]) => {
-      // Messages are managed by the composable, so we don't need to sync back
+      // Messages are managed by the store, so we don't need to sync back
     }
 
     // Handle accept button
     const handleAccept = () => {
-      accept()
+      editorStore.acceptRefinement(props.editorId, {
+        onFinish: (msg) => {
+          emit('accept', msg)
+        },
+      })
     }
 
     // Handle discard button
     const handleDiscard = () => {
-      discard()
+      editorStore.discardRefinement(props.editorId, {
+        onContentChange: (content) => {
+          emit('content-change', content)
+        },
+        onChartConfigChange: (config) => {
+          emit('chart-config-change', config)
+        },
+        onDiscard: () => {
+          emit('discard')
+        },
+      })
     }
 
     // Handle stop button
     const handleStop = () => {
-      stop()
+      editorStore.stopRefinementExecution(props.editorId)
     }
 
     // Convert artifact data to Results for display
@@ -241,8 +212,6 @@ export default defineComponent({
       artifacts,
       isLoading,
       activeToolName,
-      currentContent,
-      currentChartConfig,
       connectionInfo,
       placeholders,
       handleSendMessage,

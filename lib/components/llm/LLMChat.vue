@@ -43,6 +43,22 @@
           </template>
           <!-- User messages rendered as plain text -->
           <pre v-else>{{ message.content }}</pre>
+
+          <!-- Tool calls display -->
+          <div v-if="message.toolCalls && message.toolCalls.length > 0" class="tool-calls">
+            <div
+              v-for="(toolCall, toolIndex) in message.toolCalls"
+              :key="toolIndex"
+              class="tool-call"
+              :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
+            >
+              <span class="tool-icon">
+                <i :class="toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"></i>
+              </span>
+              <span class="tool-name">{{ getToolDisplayName(toolCall.name) }}</span>
+              <span v-if="toolCall.result?.error" class="tool-error">{{ toolCall.result.error }}</span>
+            </div>
+          </div>
         </div>
         <div v-if="message.modelInfo" class="message-meta">
           {{ message.modelInfo.totalTokens }} tokens
@@ -120,11 +136,22 @@ export interface ChatArtifact {
   config?: any
 }
 
+export interface ChatToolCall {
+  name: string
+  input: Record<string, any>
+  result?: {
+    success: boolean
+    message?: string
+    error?: string
+  }
+}
+
 export interface ChatMessage extends LLMMessage {
   artifact?: ChatArtifact
   modelInfo?: {
     totalTokens: number
   }
+  toolCalls?: ChatToolCall[]
 }
 
 export default defineComponent({
@@ -333,7 +360,7 @@ export default defineComponent({
       }
     }
 
-    // Get display text for tool indicator
+    // Get display text for tool indicator (loading state)
     const getToolDisplayText = (toolName: string): string => {
       const toolLabels: Record<string, string> = {
         run_trilogy_query: 'Running query...',
@@ -344,6 +371,27 @@ export default defineComponent({
         connect_data_connection: 'Connecting...',
       }
       return toolLabels[toolName] || `Using ${toolName}...`
+    }
+
+    // Get display name for completed tool calls
+    const getToolDisplayName = (toolName: string): string => {
+      const toolLabels: Record<string, string> = {
+        validate_query: 'Validated query',
+        run_query: 'Ran query',
+        run_active_editor_query: 'Ran editor query',
+        format_query: 'Formatted query',
+        edit_chart_config: 'Updated chart',
+        edit_editor: 'Updated editor',
+        request_close: 'Requested close',
+        close_session: 'Closed session',
+        connect_data_connection: 'Connected',
+        run_trilogy_query: 'Ran query',
+        chart_trilogy_query: 'Ran chart query',
+        add_import: 'Added import',
+        remove_import: 'Removed import',
+        list_available_imports: 'Listed imports',
+      }
+      return toolLabels[toolName] || toolName.replace(/_/g, ' ')
     }
 
     const sendMessage = async () => {
@@ -452,6 +500,7 @@ export default defineComponent({
       handleStop,
       getMessageTextWithoutArtifact,
       getToolDisplayText,
+      getToolDisplayName,
       addMessage,
       addArtifact,
       clearMessages,
@@ -674,6 +723,62 @@ export default defineComponent({
 
 .message-text {
   margin-bottom: 8px;
+}
+
+/* Tool calls display */
+.tool-calls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tool-call {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: var(--small-font-size);
+}
+
+.tool-call.success {
+  background-color: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  color: var(--text-color);
+}
+
+.tool-call.error {
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: var(--text-color);
+}
+
+.tool-icon {
+  display: flex;
+  align-items: center;
+}
+
+.tool-call.success .tool-icon {
+  color: #28a745;
+}
+
+.tool-call.error .tool-icon {
+  color: #dc3545;
+}
+
+.tool-name {
+  font-weight: 500;
+}
+
+.tool-error {
+  color: #dc3545;
+  font-size: var(--small-font-size);
+  margin-left: auto;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media screen and (max-width: 768px) {

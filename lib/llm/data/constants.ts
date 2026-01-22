@@ -14,7 +14,7 @@ SELECT RULES:
 - Aliases cannot happen inside calculations or in the where/having/order clause. Never alias fields with existing names. 'sum(revenue) as total_revenue' is valid, but '(sum(births) as total_revenue) +1 as revenue_plus_one' is not.
 - Implicit grouping: NEVER include a group by clause. Grouping is by non-aggregated fields in the SELECT clause.
 - You can dynamically group inline to get groups at different grains - ex:  \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for grouping different from inferred by dimension fields. Aggregate by \`*\` to get the total regardless of select dimensions.
-- Count must specify a field (no \`count(*)\`) Counts are automatically deduplicated. Do not ever use DISTINCT.
+- Count must specify a field (no \`count(*)\`) Counts are automatically deduplicated. Do not ever use DISTINCT. COUNT/SUM(1) will always be 1 unless you group 1 by a field and then count/sum it.
 - Use a sum/count/avg/max/min over a field to get aggregates at different grains (e.g. \`sum(births) over state as state_births\`).
 - Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. \`sum(1) by x as count\`). 
 - Aggregates in SELECT must be filtered via HAVING. Use WHERE for pre-aggregation filters.
@@ -25,6 +25,7 @@ SELECT RULES:
 - For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
 - For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
+- Import the std.lib to access special rendering types; import std.display; at the top of a query will let you cast a field to ::percent which will render it properly.
 - Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`. date parts are: year, quarter, month, week, day, day_of_week, year_start, month_start, hour, minute, second.
 - date_parts can be accessed directly through dot notation, e.g., \`order_date.year\`.
 - Comments use \`#\` only, per line.

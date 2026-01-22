@@ -16,8 +16,22 @@ export interface ToolCallResult {
   query?: string
   generatedSql?: string
   formattedQuery?: string
-  terminatesLoop?: boolean // If true, the tool loop should stop
+  terminatesLoop?: boolean // If true, the tool loop should stop completely
+  awaitsUserInput?: boolean // If true, stop auto-continue and wait for user input
   availableSymbols?: CompletionItem[] // Symbols available after validation
+}
+
+export interface QueryExecutionResult {
+  success: boolean
+  results?: {
+    headers: string[]
+    data: any[][]
+  }
+  error?: string
+  executionTime?: number
+  resultSize?: number
+  columnCount?: number
+  generatedSql?: string
 }
 
 export interface EditorContext {
@@ -31,7 +45,7 @@ export interface EditorContext {
   onEditorContentChange: (content: string, replaceSelection?: boolean) => void
   onChartConfigChange: (config: ChartConfig) => void
   onFinish: (message?: string) => void
-  onRunActiveEditorQuery?: () => void
+  onRunActiveEditorQuery?: () => Promise<QueryExecutionResult>
 }
 
 export class EditorRefinementToolExecutor {
@@ -63,7 +77,7 @@ export class EditorRefinementToolExecutor {
       case 'edit_chart_config':
         return this.editChartConfig(toolInput.chartConfig)
       case 'edit_editor':
-        return this.editEditor(toolInput.content, toolInput.replaceSelection)
+        return this.editEditor(toolInput.content, false)
       case 'run_active_editor_query':
         return this.runActiveEditorQuery()
       case 'request_close':
@@ -73,10 +87,12 @@ export class EditorRefinementToolExecutor {
       // Legacy support for 'finish' - treat as close_session
       case 'finish':
         return this.closeSession()
+      case 'connect_data_connection':
+        return this.connectDataConnection(toolInput.connection)
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: validate_query, run_query, run_active_editor_query, format_query, edit_chart_config, edit_editor, request_close, close_session`,
+          error: `Unknown tool: ${toolName}. Available tools: validate_query, run_query, run_active_editor_query, format_query, edit_chart_config, edit_editor, request_close, close_session, connect_data_connection`,
         }
     }
   }
@@ -329,7 +345,7 @@ export class EditorRefinementToolExecutor {
     }
   }
 
-  private runActiveEditorQuery(): ToolCallResult {
+  private async runActiveEditorQuery(): Promise<ToolCallResult> {
     if (!this.editorContext.onRunActiveEditorQuery) {
       return {
         success: false,
@@ -337,16 +353,64 @@ export class EditorRefinementToolExecutor {
       }
     }
 
+    const query = this.editorContext.editorContents
+    if (!query || query.trim() === '') {
+      return {
+        success: false,
+        error: 'Editor is empty - no query to run',
+      }
+    }
+
     try {
-      this.editorContext.onRunActiveEditorQuery()
+      // Call the parent to run the query and get results back
+      const queryResult = await this.editorContext.onRunActiveEditorQuery()
+
+      if (!queryResult.success) {
+        return {
+          success: false,
+          error: queryResult.error || 'Query execution failed',
+          executionTime: queryResult.executionTime,
+          query,
+          generatedSql: queryResult.generatedSql,
+        }
+      }
+
+      if (!queryResult.results) {
+        return {
+          success: false,
+          error: 'Query returned no results',
+          query,
+          generatedSql: queryResult.generatedSql,
+        }
+      }
+
+      // Build artifact with results
+      const artifact: ChatArtifact = {
+        type: 'results',
+        data: queryResult.results,
+        config: {
+          query,
+          connectionName: this.editorContext.connectionName,
+          generatedSql: queryResult.generatedSql,
+          executionTime: queryResult.executionTime,
+          resultSize: queryResult.resultSize,
+          columnCount: queryResult.columnCount,
+        },
+      }
+
       return {
         success: true,
-        message: 'Query execution triggered. Results will appear in the main results pane.',
+        artifact,
+        executionTime: queryResult.executionTime,
+        query,
+        generatedSql: queryResult.generatedSql,
+        message: `Query executed successfully. ${queryResult.resultSize} rows, ${queryResult.columnCount} columns.`,
       }
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to trigger query execution',
+        error: error instanceof Error ? error.message : 'Failed to execute query',
+        query,
       }
     }
   }
@@ -357,6 +421,7 @@ export class EditorRefinementToolExecutor {
     return {
       success: true,
       message: `${message}\n\nReady to close. Reply with any follow-up requests, or say "done" to close the session.`,
+      awaitsUserInput: true, // Stop auto-continue, wait for user
     }
   }
 
@@ -372,6 +437,45 @@ export class EditorRefinementToolExecutor {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to close session',
+      }
+    }
+  }
+
+  private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
+    if (!connectionName || typeof connectionName !== 'string') {
+      return {
+        success: false,
+        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
+      }
+    }
+
+    // Verify connection exists
+    const connection = this.connectionStore.connections[connectionName]
+    if (!connection) {
+      return {
+        success: false,
+        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
+      }
+    }
+
+    // Check if already connected
+    if (connection.connected) {
+      return {
+        success: true,
+        message: `Connection "${connectionName}" is already active.`,
+      }
+    }
+
+    try {
+      await this.connectionStore.connectConnection(connectionName)
+      return {
+        success: true,
+        message: `Successfully connected to "${connectionName}". You can now run queries against this connection.`,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
       }
     }
   }

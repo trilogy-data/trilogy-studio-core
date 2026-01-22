@@ -32,19 +32,12 @@
       </div>
       <div class="chat-pane" :style="{ width: chatPaneWidth }">
         <LLMEditorRefinement
-          :connectionName="editorData.connection"
-          :initialContent="editorData.contents"
-          :selectedText="editorData.refinementSession?.selectedText || ''"
-          :selectionRange="editorData.refinementSession?.selectionRange || null"
-          :chartConfig="editorData.chartConfig || undefined"
-          :completionSymbols="editorData.completionSymbols"
-          :existingSession="editorData.refinementSession"
+          :editorId="editorData.id"
+          :runEditorQuery="handleRunEditorQuery"
           @accept="handleAccept"
           @discard="handleDiscard"
           @content-change="handleContentChange"
           @chart-config-change="handleChartConfigChange"
-          @session-change="handleSessionChange"
-          @run-editor-query="handleRunEditorQuery"
         />
       </div>
     </div>
@@ -83,8 +76,8 @@ import HintComponent from '../HintComponent.vue'
 import LLMEditorRefinement from '../llm/LLMEditorRefinement.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorModel } from '../../main'
-import type { EditorRefinementSession } from '../../editors/editor'
 import type { ChartConfig } from '../../editors/results'
+import type { QueryExecutionResult } from '../../llm/editorRefinementToolExecutor'
 
 export default defineComponent({
   name: 'ResultsView',
@@ -107,6 +100,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    runEditorQuery: {
+      type: Function as PropType<() => Promise<QueryExecutionResult | undefined>>,
+      default: undefined,
+    },
   },
   emits: [
     'llm-query-accepted',
@@ -114,7 +111,6 @@ export default defineComponent({
     'refresh-click',
     'content-change',
     'open-chat',
-    'run-editor-query',
   ],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -155,25 +151,19 @@ export default defineComponent({
   },
   methods: {
     handleAccept(_message?: string) {
-      // Clear the refinement session
-      this.editorData.setRefinementSession(null)
+      // Session is cleared by the store
       this.$emit('llm-query-accepted')
     },
     handleDiscard() {
-      // Clear the refinement session (content is restored by the composable)
-      this.editorData.setRefinementSession(null)
+      // Session is cleared and content restored by the store
     },
     handleContentChange(content: string, _replaceSelection?: boolean) {
-      // Update editor content
+      // Update editor content (store also updates the session)
       this.editorData.setContent(content)
       this.$emit('content-change', content)
     },
     handleChartConfigChange(config: ChartConfig) {
       this.editorData.setChartConfig(config)
-    },
-    handleSessionChange(session: EditorRefinementSession) {
-      // Persist session to editor for tab-away support
-      this.editorData.setRefinementSession(session)
     },
     handleDrilldown(data: any) {
       this.$emit('drilldown-click', data)
@@ -181,8 +171,38 @@ export default defineComponent({
     handleOpenChat() {
       this.$emit('open-chat')
     },
-    handleRunEditorQuery() {
-      this.$emit('run-editor-query')
+    async handleRunEditorQuery(): Promise<QueryExecutionResult> {
+      if (!this.runEditorQuery) {
+        return {
+          success: false,
+          error: 'Run editor query is not available',
+        }
+      }
+
+      const result = await this.runEditorQuery()
+      if (!result) {
+        return {
+          success: false,
+          error: 'Query execution returned no result',
+        }
+      }
+
+      // Convert Results object to the expected format
+      const headers = result.results ? [...result.results.headers.keys()] : []
+      return {
+        success: result.success,
+        results: result.results
+          ? {
+              headers,
+              data: result.results.data as any[][],
+            }
+          : undefined,
+        error: result.error,
+        executionTime: result.executionTime,
+        resultSize: result.resultSize,
+        columnCount: result.columnCount,
+        generatedSql: result.generatedSql,
+      }
     },
     startDragging(e: MouseEvent) {
       e.preventDefault()

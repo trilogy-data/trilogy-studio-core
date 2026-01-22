@@ -14,11 +14,22 @@ export interface ChatArtifact {
   config?: any
 }
 
+export interface ChatToolCall {
+  name: string
+  input: Record<string, any>
+  result?: {
+    success: boolean
+    message?: string
+    error?: string
+  }
+}
+
 export interface ChatMessage extends LLMMessage {
   artifact?: ChatArtifact
   modelInfo?: {
     totalTokens: number
   }
+  toolCalls?: ChatToolCall[]
 }
 
 export interface ChatSessionData {

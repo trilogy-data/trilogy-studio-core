@@ -14,6 +14,11 @@
         :data-testid="`tab-${tab.address}`"
       >
         <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
+        <StatusIcon
+          v-if="getTabStatus(tab)"
+          :status="getTabStatus(tab)!"
+          class="tab-status"
+        />
         <span class="tab-title truncate-text">{{ tab.title }}</span>
         <button class="tab-close-btn" @click.stop="closeTab(tab.id, null)" v-if="tabs.length > 1">
           ×
@@ -56,15 +61,27 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
 import useScreenNavigation from '../../stores/useScreenNavigation'
-import { type ScreenType } from '../../stores/useScreenNavigation'
+import { type ScreenType, type Tab } from '../../stores/useScreenNavigation'
+import useEditorStore from '../../stores/editorStore'
+import useConnectionStore from '../../stores/connectionStore'
+import useChatStore from '../../stores/chatStore'
+import StatusIcon from '../StatusIcon.vue'
+import type { Status } from '../StatusIcon.vue'
 
 export default defineComponent({
   name: 'TabbedLayout',
+  components: {
+    StatusIcon,
+  },
   emits: ['new-tab', 'tab-added', 'tab-closed', 'tab-selected', 'tabs-reordered'],
   setup() {
     const navigationStore = useScreenNavigation()
+    const editorStore = useEditorStore()
+    const connectionStore = useConnectionStore()
+    const chatStore = useChatStore()
+
     const {
       activeTab,
       tabs,
@@ -75,6 +92,55 @@ export default defineComponent({
       closeOtherTabsExcept,
       closeTabsToRightOf,
     } = navigationStore
+
+    /**
+     * Get status for a tab based on its type and state.
+     * - Editors: running (blue flash) if query executing, connected (green) if connection active, idle (gray) otherwise
+     * - LLMs: running (blue flash) if query executing, waiting (orange) if LLM responding, connected (green) if idle
+     */
+    const getTabStatus = (tab: Tab): Status | null => {
+      if (tab.screen === 'editors') {
+        const editor = editorStore.editors[tab.address]
+        if (!editor) return null
+
+        // Check if query is running
+        if (editor.loading) {
+          return 'running'
+        }
+
+        // Check if the editor's connection is active
+        const connection = connectionStore.connections[editor.connection]
+        if (connection?.connected) {
+          return 'connected'
+        }
+
+        return 'idle'
+      }
+
+      if (tab.screen === 'llms') {
+        // Parse chatId from address (format: "connectionName::chatId" or just "connectionName")
+        const parts = tab.address.split('::')
+        const chatId = parts.length > 1 ? parts[1] : null
+
+        if (chatId) {
+          // Check if the chat is executing (LLM responding)
+          if (chatStore.isChatExecuting(chatId)) {
+            // Check if a tool is running (query executing)
+            const activeToolName = chatStore.getChatActiveToolName(chatId)
+            if (activeToolName === 'run_query') {
+              return 'running'
+            }
+            return 'waiting'
+          }
+        }
+
+        // Default to connected for LLM tabs
+        return 'connected'
+      }
+
+      return null
+    }
+
     return {
       activeTab,
       tabs,
@@ -83,6 +149,7 @@ export default defineComponent({
       closeTab,
       closeOtherTabsExcept,
       closeTabsToRightOf,
+      getTabStatus,
     }
   },
   data() {
@@ -319,9 +386,14 @@ export default defineComponent({
 
 .tab-icon {
   font-size: 16px;
-  margin-right: 6px;
+  margin-right: 4px;
   color: var(--text-color);
   flex-shrink: 0;
+}
+
+.tab-status {
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .tab-title {

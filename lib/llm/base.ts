@@ -1,3 +1,10 @@
+// Structured tool call from LLM response
+export interface LLMToolCall {
+  id: string
+  name: string
+  input: Record<string, any>
+}
+
 // Generic interface for LLM responses
 export interface LLMResponse {
   text: string
@@ -6,6 +13,8 @@ export interface LLMResponse {
     completionTokens: number
     totalTokens: number
   }
+  // Structured tool calls from the response (preferred over parsing from text)
+  toolCalls?: LLMToolCall[]
 }
 
 // Tool definition interface for LLM function calling

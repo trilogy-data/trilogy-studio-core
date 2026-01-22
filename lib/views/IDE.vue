@@ -95,9 +95,9 @@
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
                 :canOpenChat="canOpenChat"
+                :runEditorQuery="runQuery"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
-                @run-editor-query="runQuery"
                 @drilldown-click="drilldownClick"
                 @content-change="handleEditorContentChange"
                 @open-chat="handleOpenChat"
@@ -527,9 +527,9 @@ export default {
     saveModelsCall() {
       this.saveModels()
     },
-    runQuery() {
+    async runQuery() {
       if (this.editorRef) {
-        this.editorRef.runQuery()
+        return await this.editorRef.runQuery()
       }
     },
     drilldownClick(e: DrillDownEvent) {

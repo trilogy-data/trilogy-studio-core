@@ -423,10 +423,12 @@ export default {
     setActiveConnection(connectionName: string) {
       this.llmConnectionStore.activeConnection = connectionName
       this.llmConnectionStore.connections[connectionName].isDefault = true
+      this.llmConnectionStore.connections[connectionName].changed = true
       // for all other connections, set isDefault to false
       Object.keys(this.llmConnectionStore.connections).forEach((key) => {
-        if (key !== connectionName) {
+        if (key !== connectionName && this.llmConnectionStore.connections[key].isDefault) {
           this.llmConnectionStore.connections[key].isDefault = false
+          this.llmConnectionStore.connections[key].changed = true
         }
       })
       this.saveConnections()

@@ -1,5 +1,5 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
+import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolCall } from './base'
 import { fetchWithRetry, type RetryOptions } from './utils'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
@@ -125,13 +125,19 @@ export class AnthropicProvider extends LLMProvider {
 
       // Handle tool use responses - extract text and tool_use blocks
       let responseText = ''
+      const toolCalls: LLMToolCall[] = []
+
       if (Array.isArray(data.content)) {
         for (const block of data.content) {
           if (block.type === 'text') {
             responseText += block.text
           } else if (block.type === 'tool_use') {
-            // Format tool use as a parseable block
-            responseText += `\n<tool_use>{"name": "${block.name}", "input": ${JSON.stringify(block.input)}}</tool_use>\n`
+            // Add to structured tool calls array
+            toolCalls.push({
+              id: block.id,
+              name: block.name,
+              input: block.input,
+            })
           }
         }
       } else {
@@ -140,6 +146,7 @@ export class AnthropicProvider extends LLMProvider {
 
       return {
         text: responseText,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         usage: {
           promptTokens: data.usage.input_tokens,
           completionTokens: data.usage.output_tokens,

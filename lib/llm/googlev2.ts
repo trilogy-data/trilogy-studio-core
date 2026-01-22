@@ -1,5 +1,11 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolDefinition } from './base'
+import type {
+  LLMRequestOptions,
+  LLMResponse,
+  LLMMessage,
+  LLMToolDefinition,
+  LLMToolCall,
+} from './base'
 import {
   GoogleGenAI,
   Type,
@@ -159,9 +165,11 @@ export class GoogleProvider extends LLMProvider {
         // Get token usage if available
         const promptTokens = result.usageMetadata?.promptTokenCount || 0
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+        const { text, toolCalls } = this.extractResponseData(result)
 
         return {
-          text: this.extractResponseText(result),
+          text,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           usage: {
             promptTokens,
             completionTokens,
@@ -189,9 +197,11 @@ export class GoogleProvider extends LLMProvider {
         // Get token usage if available
         const promptTokens = result.usageMetadata?.promptTokenCount || 0
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+        const { text, toolCalls } = this.extractResponseData(result)
 
         return {
-          text: this.extractResponseText(result),
+          text,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           usage: {
             promptTokens,
             completionTokens,
@@ -215,10 +225,12 @@ export class GoogleProvider extends LLMProvider {
     return [{ functionDeclarations }]
   }
 
-  private extractResponseText(result: any): string {
+  private extractResponseData(result: any): { text: string; toolCalls: LLMToolCall[] } {
     // Handle responses that may contain text and/or function calls
     let responseText = ''
+    const toolCalls: LLMToolCall[] = []
     const candidates = result.candidates || []
+    let toolCallIndex = 0
 
     for (const candidate of candidates) {
       const content = candidate.content
@@ -228,14 +240,21 @@ export class GoogleProvider extends LLMProvider {
         if (part.text) {
           responseText += part.text
         } else if (part.functionCall) {
-          // Format tool use similar to Anthropic format for consistency
-          responseText += `\n<tool_use>{"name": "${part.functionCall.name}", "input": ${JSON.stringify(part.functionCall.args)}}</tool_use>\n`
+          // Add to structured tool calls array
+          toolCalls.push({
+            id: `google_tool_${toolCallIndex++}`,
+            name: part.functionCall.name,
+            input: part.functionCall.args,
+          })
         }
       }
     }
 
     // Fall back to result.text if no content was extracted
-    return responseText || result.text || ''
+    return {
+      text: responseText || result.text || '',
+      toolCalls,
+    }
   }
 
   private convertToGeminiHistory(messages: LLMMessage[]): Content[] {

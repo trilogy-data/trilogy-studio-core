@@ -16,6 +16,8 @@ export interface EditorRefinementSession {
   currentChartConfig?: ChartConfig
   selectedText?: string
   selectionRange?: { start: number; end: number }
+  /** True if a request was in-progress when the session was saved (execution was interrupted) */
+  wasLoading?: boolean
 }
 // enum of tags
 export enum EditorTag {

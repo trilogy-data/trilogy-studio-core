@@ -466,10 +466,8 @@ describe('useToolLoop', () => {
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', { content: 'SELECT 1;' })
     })
 
-    it('should handle real Anthropic response with text + nested JSON tool calls', async () => {
-      // This test simulates the exact format returned by Anthropic API
-      // where content array has text block followed by multiple tool_use blocks
-      // with nested JSON objects in the input (like chartConfig)
+    it('should handle real Anthropic response with text + nested JSON tool calls (text parsing fallback)', async () => {
+      // This test simulates text-based parsing fallback when toolCalls is not provided
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: `Interesting data! There does appear to be a general trend that larger aircraft (more seats) tend to fly longer distances, though it's not perfectly linear. Let me write this query to the editor and set up a scatter plot visualization to show this relationship clearly:
 <tool_use>{"name": "edit_editor", "input": {"content": "import flight;\\n\\n# Do planes that fly longer distances tend to carry more passengers?\\nselect\\n    aircraft.aircraft_model.seats,\\n    avg(distance) as avg_distance,\\n    count(id2) as flight_count\\norder by\\n    aircraft.aircraft_model.seats asc\\nlimit 100;"}}</tool_use>
@@ -508,6 +506,64 @@ describe('useToolLoop', () => {
           xField: 'aircraft_aircraft_model_seats',
           yField: 'avg_distance',
           sizeField: 'flight_count',
+        },
+      })
+    })
+
+    it('should prefer structured toolCalls over text parsing', async () => {
+      // When response includes structured toolCalls, should use those instead of parsing text
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Let me update the editor and chart config.',
+        toolCalls: [
+          {
+            id: 'toolu_01abc',
+            name: 'edit_editor',
+            input: { content: 'SELECT * FROM users;' },
+          },
+          {
+            id: 'toolu_02def',
+            name: 'edit_chart_config',
+            input: {
+              chartConfig: {
+                chartType: 'bar',
+                xField: 'category',
+                yField: 'count',
+              },
+            },
+          },
+        ],
+      })
+
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Done!',
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Done.',
+      })
+
+      const { executeMessage } = useToolLoop()
+
+      await executeMessage(
+        'Update the query',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Both structured tool calls should have been executed
+      expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
+      expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', {
+        content: 'SELECT * FROM users;',
+      })
+      expect(executeToolCallSpy).toHaveBeenCalledWith('edit_chart_config', {
+        chartConfig: {
+          chartType: 'bar',
+          xField: 'category',
+          yField: 'count',
         },
       })
     })

@@ -11,6 +11,7 @@ import { useToolLoop } from './useToolLoop'
 import {
   EditorRefinementToolExecutor,
   type EditorContext,
+  type QueryExecutionResult,
 } from '../llm/editorRefinementToolExecutor'
 import {
   EDITOR_REFINEMENT_TOOLS,
@@ -25,6 +26,8 @@ export interface EditorRefinementSession {
   originalChartConfig?: ChartConfig
   currentContent: string
   currentChartConfig?: ChartConfig
+  /** True if a request was in-progress when the session was saved (execution was interrupted) */
+  wasLoading?: boolean
 }
 
 export interface UseEditorRefinementOptions {
@@ -50,7 +53,7 @@ export interface UseEditorRefinementOptions {
   onFinish?: (message?: string) => void
   onDiscard?: () => void
   onSessionChange?: (session: EditorRefinementSession) => void
-  onRunActiveEditorQuery?: () => void
+  onRunActiveEditorQuery?: () => Promise<QueryExecutionResult>
 }
 
 export interface UseEditorRefinementReturn {
@@ -118,6 +121,10 @@ export function useEditorRefinement(
   if (existingSession) {
     toolLoop.setMessages(existingSession.messages)
     toolLoop.setArtifacts(existingSession.artifacts)
+    // Restore the loading state if the session was interrupted mid-request
+    if (existingSession.wasLoading) {
+      toolLoop.setIsLoading(true)
+    }
   }
 
   // Track available symbols - starts with provided symbols, updated on validation
@@ -187,6 +194,7 @@ export function useEditorRefinement(
     originalChartConfig: originalChartConfig.value,
     currentContent: currentContent.value,
     currentChartConfig: currentChartConfig.value,
+    wasLoading: toolLoop.isLoading.value,
   }))
 
   // Watch for session changes and notify
@@ -224,9 +232,7 @@ export function useEditorRefinement(
       onFinish?.(message)
     },
     onRunActiveEditorQuery: onRunActiveEditorQuery
-      ? () => {
-          onRunActiveEditorQuery()
-        }
+      ? () => onRunActiveEditorQuery()
       : undefined,
   })
 

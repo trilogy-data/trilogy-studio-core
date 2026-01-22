@@ -583,8 +583,9 @@ export default defineComponent({
         editor.cancelCallback = null
       }
 
-      await resultPromise
+      const queryResult = await resultPromise
       this.$emit('query-finished')
+      return queryResult
     },
 
     async handleLLMTrigger(): Promise<void> {

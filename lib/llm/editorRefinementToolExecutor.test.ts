@@ -13,6 +13,7 @@ type MockQueryExecutionService = {
 type MockConnectionStore = {
   connections: Record<string, { connected: boolean }>
   getConnectionSources: ReturnType<typeof vi.fn>
+  connectConnection: ReturnType<typeof vi.fn>
 }
 
 describe('EditorRefinementToolExecutor', () => {
@@ -44,6 +45,7 @@ describe('EditorRefinementToolExecutor', () => {
         'test-connection': { connected: true },
       },
       getConnectionSources: vi.fn().mockReturnValue([]),
+      connectConnection: vi.fn().mockResolvedValue(undefined),
     }
 
     // Create mock editor context
@@ -74,19 +76,8 @@ describe('EditorRefinementToolExecutor', () => {
       expect(result.message).toContain('Updated editor contents')
       expect(onEditorContentChangeSpy).toHaveBeenCalledWith(
         'SELECT id, name FROM users;',
-        undefined,
+        false, // Always replace whole editor, not selection
       )
-    })
-
-    it('should support replace selection mode', async () => {
-      const result = await executor.executeToolCall('edit_editor', {
-        content: 'id, name',
-        replaceSelection: true,
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.message).toContain('Updated selected text')
-      expect(onEditorContentChangeSpy).toHaveBeenCalledWith('id, name', true)
     })
 
     it('should fail with empty content', async () => {
@@ -278,12 +269,43 @@ describe('EditorRefinementToolExecutor', () => {
   })
 
   describe('run_active_editor_query tool', () => {
-    it('should trigger editor query execution', async () => {
+    it('should execute editor contents and return results', async () => {
+      onRunActiveEditorQuerySpy.mockResolvedValue({
+        success: true,
+        results: {
+          headers: ['id', 'name'],
+          data: [
+            [1, 'Alice'],
+            [2, 'Bob'],
+          ],
+        },
+        executionTime: 100,
+        resultSize: 2,
+        columnCount: 2,
+        generatedSql: 'SELECT * FROM users',
+      })
+
       const result = await executor.executeToolCall('run_active_editor_query', {})
 
       expect(result.success).toBe(true)
       expect(onRunActiveEditorQuerySpy).toHaveBeenCalled()
-      expect(result.message).toContain('Query execution triggered')
+      expect(result.artifact).toBeDefined()
+      expect(result.artifact?.type).toBe('results')
+      expect(result.message).toContain('2 rows')
+    })
+
+    it('should fail when editor is empty', async () => {
+      mockEditorContext.editorContents = ''
+      executor = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+      )
+
+      const result = await executor.executeToolCall('run_active_editor_query', {})
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Editor is empty')
     })
 
     it('should fail when callback is not available', async () => {
@@ -298,6 +320,18 @@ describe('EditorRefinementToolExecutor', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('not available')
+    })
+
+    it('should return error when query execution fails', async () => {
+      onRunActiveEditorQuerySpy.mockResolvedValue({
+        success: false,
+        error: 'Connection timeout',
+      })
+
+      const result = await executor.executeToolCall('run_active_editor_query', {})
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Connection timeout')
     })
   })
 
@@ -321,6 +355,61 @@ describe('EditorRefinementToolExecutor', () => {
       expect(result.success).toBe(true)
       expect(result.terminatesLoop).toBe(true)
       expect(onFinishSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('connect_data_connection tool', () => {
+    it('should connect a disconnected connection', async () => {
+      // Set up a disconnected connection
+      mockConnectionStore.connections['test-connection'].connected = false
+      mockConnectionStore.connectConnection = vi.fn().mockResolvedValue(undefined)
+
+      const result = await executor.executeToolCall('connect_data_connection', {
+        connection: 'test-connection',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.message).toContain('Successfully connected')
+      expect(mockConnectionStore.connectConnection).toHaveBeenCalledWith('test-connection')
+    })
+
+    it('should report already connected for active connections', async () => {
+      const result = await executor.executeToolCall('connect_data_connection', {
+        connection: 'test-connection',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.message).toContain('already active')
+    })
+
+    it('should fail for non-existent connection', async () => {
+      const result = await executor.executeToolCall('connect_data_connection', {
+        connection: 'non-existent',
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('not found')
+      expect(result.error).toContain('Available connections')
+    })
+
+    it('should fail when connection name is not provided', async () => {
+      const result = await executor.executeToolCall('connect_data_connection', {})
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Connection name is required')
+    })
+
+    it('should handle connection errors', async () => {
+      mockConnectionStore.connections['test-connection'].connected = false
+      mockConnectionStore.connectConnection = vi.fn().mockRejectedValue(new Error('Auth failed'))
+
+      const result = await executor.executeToolCall('connect_data_connection', {
+        connection: 'test-connection',
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Failed to connect')
+      expect(result.error).toContain('Auth failed')
     })
   })
 

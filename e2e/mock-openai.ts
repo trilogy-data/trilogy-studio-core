@@ -121,20 +121,27 @@ export function createCompletionHandler(
     // Handle ToolCallResponse (with tool calls)
     if (typeof response === 'object' && 'text' in response) {
       const toolCallResponse = response as ToolCallResponse
-      let contentText = toolCallResponse.text
+      const contentText = toolCallResponse.text
 
-      // Format tool calls as XML in the content (matching parseToolCalls format)
-      if (toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0) {
-        for (const toolCall of toolCallResponse.toolCalls) {
-          contentText += `\n<tool_call name="${toolCall.name}">\n${JSON.stringify(toolCall.input, null, 2)}\n</tool_call>`
-        }
-      }
+      // Format tool calls in OpenAI native format
+      const openaiToolCalls =
+        toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0
+          ? toolCallResponse.toolCalls.map((tc, index) => ({
+              id: `call_mock_${index}`,
+              type: 'function' as const,
+              function: {
+                name: tc.name,
+                arguments: JSON.stringify(tc.input),
+              },
+            }))
+          : undefined
 
       return {
         choices: [
           {
             message: {
               content: contentText,
+              tool_calls: openaiToolCalls,
             },
           },
         ],

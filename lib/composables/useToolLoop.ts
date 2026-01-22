@@ -42,6 +42,7 @@ export interface UseToolLoopReturn {
   clearMessages: () => void
   setMessages: (msgs: ChatMessage[]) => void
   setArtifacts: (arts: ChatArtifact[]) => void
+  setIsLoading: (loading: boolean) => void
   stop: () => void
 }
 
@@ -81,6 +82,10 @@ export function useToolLoop(): UseToolLoopReturn {
 
   const setArtifacts = (arts: ChatArtifact[]) => {
     artifacts.value = [...arts]
+  }
+
+  const setIsLoading = (loading: boolean) => {
+    isLoading.value = loading
   }
 
   /**
@@ -158,7 +163,11 @@ export function useToolLoop(): UseToolLoopReturn {
 
         const responseText = response.text
         lastResponseText = responseText
-        const toolCalls = parseToolCalls(responseText)
+
+        // Prefer structured tool calls from response, fall back to text parsing
+        const toolCalls = response.toolCalls
+          ? response.toolCalls.map((tc) => ({ name: tc.name, input: tc.input }))
+          : parseToolCalls(responseText)
 
         // Check for abort after LLM response
         if (signal.aborted) {
@@ -340,6 +349,7 @@ export function useToolLoop(): UseToolLoopReturn {
     clearMessages,
     setMessages,
     setArtifacts,
+    setIsLoading,
     stop,
   }
 }

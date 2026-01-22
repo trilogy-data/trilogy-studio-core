@@ -331,6 +331,28 @@ export function parseToolCalls(response: string): ParsedToolCall[] {
   return calls
 }
 
+// Strip tool call blocks from response text for cleaner display
+export function stripToolCalls(response: string): string {
+  let cleaned = response
+
+  // Remove <tool_use> blocks
+  cleaned = cleaned.replace(/<tool_use>\s*\{[\s\S]*?\}\s*<\/tool_use>/g, '')
+
+  // Remove <function_call> blocks
+  cleaned = cleaned.replace(/<function_call>\s*\{[\s\S]*?\}\s*<\/function_call>/g, '')
+
+  // Remove JSON code blocks that contain tool calls
+  cleaned = cleaned.replace(/```json\s*\{[\s\S]*?"(tool|function|name)"\s*:[\s\S]*?\}\s*```/g, '')
+
+  // Remove standalone JSON objects that look like tool calls ({"name": "...", "input": ...})
+  cleaned = cleaned.replace(/\{"name"\s*:\s*"[^"]+"\s*,\s*"input"\s*:\s*\{[\s\S]*?\}\s*\}/g, '')
+
+  // Clean up extra whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+
+  return cleaned
+}
+
 // Helper to format tool result for feeding back to LLM
 export function formatToolResult(
   toolName: string,

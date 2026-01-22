@@ -47,7 +47,7 @@ export const EDITOR_REFINEMENT_TOOLS = [
   {
     name: 'run_query',
     description:
-      'Execute a Trilogy query and return results. Use this to test queries and see what data they return before writing to the editor.',
+      'Execute a Trilogy query and return results to you. Use this to test queries and see what data they return before writing to the editor.',
     input_schema: {
       type: 'object',
       properties: {
@@ -175,19 +175,14 @@ export const EDITOR_REFINEMENT_TOOLS = [
   {
     name: 'edit_editor',
     description:
-      'Write content to the editor. Use this to update the query the user is working on. You can continue to validate/format/run after writing.',
+      'Write content to the editor. Use this to update the query the user is working on. You can continue to validate/format/run after writing. Replaces the entire editor.',
     input_schema: {
       type: 'object',
       properties: {
         content: {
           type: 'string',
           description: 'The new content to write to the editor',
-        },
-        replaceSelection: {
-          type: 'boolean',
-          description:
-            'If true, only replace the selected text. If false, replace entire editor contents. Defaults to false.',
-        },
+        }
       },
       required: ['content'],
     },
@@ -195,7 +190,7 @@ export const EDITOR_REFINEMENT_TOOLS = [
   {
     name: 'run_active_editor_query',
     description:
-      'Run the current editor query and display results in the main results pane. Use this when the user asks to "see results", "run it", "show me", or after making changes to the chart configuration. This runs the query that is currently in the editor (not a test query).',
+      'Run the current editor query and display results in the main results pane as well as return them to you. Use this when the user asks to "see results", "run it", "show me", or after making changes to the chart configuration. This runs the query that is currently in the editor (not a test query).',
     input_schema: {
       type: 'object',
       properties: {},
@@ -225,6 +220,21 @@ export const EDITOR_REFINEMENT_TOOLS = [
       type: 'object',
       properties: {},
       required: [],
+    },
+  },
+  {
+    name: 'connect_data_connection',
+    description:
+      'Connect or reconnect a data connection that is not currently active. Use this when a query fails because the connection is not active, or when you need to establish a connection before running queries.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        connection: {
+          type: 'string',
+          description: 'The name of the data connection to connect',
+        },
+      },
+      required: ['connection'],
     },
   },
 ]

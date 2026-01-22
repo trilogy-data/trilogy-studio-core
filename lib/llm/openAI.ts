@@ -1,5 +1,5 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
+import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolCall } from './base'
 import { fetchWithRetry, type RetryOptions } from './utils'
 export class OpenAIProvider extends LLMProvider {
   private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
@@ -125,19 +125,26 @@ export class OpenAIProvider extends LLMProvider {
 
       // Handle tool calls in the response
       let responseText = data.choices[0].message.content || ''
-      const toolCalls = data.choices[0].message.tool_calls
+      const rawToolCalls = data.choices[0].message.tool_calls
+      const structuredToolCalls: LLMToolCall[] = []
 
-      if (toolCalls && toolCalls.length > 0) {
-        for (const toolCall of toolCalls) {
+      if (rawToolCalls && rawToolCalls.length > 0) {
+        for (const toolCall of rawToolCalls) {
           if (toolCall.type === 'function') {
             const input = JSON.parse(toolCall.function.arguments)
-            responseText += `\n<tool_use>{"name": "${toolCall.function.name}", "input": ${JSON.stringify(input)}}</tool_use>\n`
+            // Add to structured tool calls array
+            structuredToolCalls.push({
+              id: toolCall.id,
+              name: toolCall.function.name,
+              input,
+            })
           }
         }
       }
 
       return {
         text: responseText,
+        toolCalls: structuredToolCalls.length > 0 ? structuredToolCalls : undefined,
         usage: {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,
