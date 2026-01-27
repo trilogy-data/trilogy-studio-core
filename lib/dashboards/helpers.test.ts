@@ -6,6 +6,7 @@ import {
   isNumericColumn,
   isTemporalColumn,
   isCategoricalColumn,
+  isHexColumn,
   getColumnHasTrait,
   columHasTraitEnding,
   getGeoTraitType,
@@ -532,6 +533,132 @@ describe('Chart Utils', () => {
 
       // Test with undefined fieldName
       expect(getColumnHasTrait(undefined as any, testColumns, 'city')).toBe(false)
+    })
+  })
+
+  describe('Hex Column Detection', () => {
+    it('should correctly identify hex columns', () => {
+      const hexColumn: ResultColumn = {
+        name: 'color_hex',
+        type: ColumnType.STRING,
+        traits: ['hex'],
+      }
+      const regularColumn: ResultColumn = {
+        name: 'category',
+        type: ColumnType.STRING,
+        traits: [],
+      }
+
+      expect(isHexColumn(hexColumn)).toBe(true)
+      expect(isHexColumn(regularColumn)).toBe(false)
+    })
+
+    it('should not use hex column for colorField when categorical column exists', () => {
+      const columnsWithHex = new Map<string, ResultColumn>()
+      columnsWithHex.set('category', {
+        name: 'category',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('color_hex', {
+        name: 'color_hex',
+        type: ColumnType.STRING,
+        traits: ['hex'],
+      })
+      columnsWithHex.set('revenue', {
+        name: 'revenue',
+        type: ColumnType.FLOAT,
+        traits: [],
+      })
+
+      const dataWithHex: Row[] = [
+        { category: 'A', color_hex: '#FF0000', revenue: 100 },
+        { category: 'B', color_hex: '#00FF00', revenue: 200 },
+      ]
+
+      const defaults = determineDefaultConfig(dataWithHex, columnsWithHex, 'bar')
+      expect(defaults.xField).toBe('category')
+      expect(defaults.colorField).not.toBe('color_hex')
+    })
+
+    it('should not use hex column for trellisField or trellisRowField', () => {
+      const columnsWithHex = new Map<string, ResultColumn>()
+      columnsWithHex.set('category', {
+        name: 'category',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('region', {
+        name: 'region',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('color_hex', {
+        name: 'color_hex',
+        type: ColumnType.STRING,
+        traits: ['hex'],
+      })
+      columnsWithHex.set('revenue', {
+        name: 'revenue',
+        type: ColumnType.FLOAT,
+        traits: [],
+      })
+
+      const dataWithHex: Row[] = [
+        { category: 'A', region: 'North', color_hex: '#FF0000', revenue: 100 },
+        { category: 'B', region: 'South', color_hex: '#00FF00', revenue: 200 },
+      ]
+
+      const defaults = determineDefaultConfig(dataWithHex, columnsWithHex, 'bar')
+      expect(defaults.trellisField).not.toBe('color_hex')
+      expect(defaults.trellisRowField).not.toBe('color_hex')
+    })
+
+    it('should handle dataset with hex field and multiple categorical fields correctly', () => {
+      const columnsWithHex = new Map<string, ResultColumn>()
+      columnsWithHex.set('product', {
+        name: 'product',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('region', {
+        name: 'region',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('segment', {
+        name: 'segment',
+        type: ColumnType.STRING,
+        traits: [],
+      })
+      columnsWithHex.set('product_color', {
+        name: 'product_color',
+        type: ColumnType.STRING,
+        traits: ['hex'],
+      })
+      columnsWithHex.set('sales', {
+        name: 'sales',
+        type: ColumnType.FLOAT,
+        traits: [],
+      })
+
+      const dataWithHex: Row[] = [
+        { product: 'Widget', region: 'North', segment: 'Enterprise', product_color: '#FF0000', sales: 100 },
+        { product: 'Gadget', region: 'South', segment: 'SMB', product_color: '#00FF00', sales: 200 },
+      ]
+
+      const defaults = determineDefaultConfig(dataWithHex, columnsWithHex, 'bar')
+
+      // Hex column should not be assigned to any categorical field
+      expect(defaults.xField).not.toBe('product_color')
+      expect(defaults.yField).not.toBe('product_color')
+      expect(defaults.colorField).not.toBe('product_color')
+      expect(defaults.trellisField).not.toBe('product_color')
+      expect(defaults.trellisRowField).not.toBe('product_color')
+
+      // Regular categorical columns should be used instead
+      expect(defaults.xField).toBe('product')
+      expect(defaults.colorField).toBe('region')
     })
   })
 })

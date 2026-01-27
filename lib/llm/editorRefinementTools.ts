@@ -1,8 +1,13 @@
 import { rulesInput, aggFunctions, functions, datatypes } from './data/constants'
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
-import type { ChartConfig, chartTypes } from '../editors/results'
+import type { ChartConfig } from '../editors/results'
 import type { CompletionItem } from '../stores/resolver'
+import {
+  chartConfigSchema,
+  chartConfigGuidance,
+  connectDataConnectionTool,
+} from './sharedToolSchemas'
 
 /**
  * Convert CompletionItem[] to ModelConceptInput[] for use with conceptsToFieldPrompt.
@@ -76,98 +81,13 @@ export const EDITOR_REFINEMENT_TOOLS = [
   },
   {
     name: 'edit_chart_config',
-    description:
-      'Update the chart configuration for visualizing query results. Use this when the user wants to change how results are displayed.',
+    description: `Update the chart configuration for visualizing query results. Use this when the user wants to change how results are displayed.
+
+${chartConfigGuidance}`,
     input_schema: {
       type: 'object',
       properties: {
-        chartConfig: {
-          type: 'object',
-          description: 'Chart configuration object',
-          properties: {
-            chartType: {
-              type: 'string',
-              enum: [
-                'line',
-                'bar',
-                'barh',
-                'point',
-                'geo-map',
-                'tree',
-                'area',
-                'headline',
-                'donut',
-                'heatmap',
-                'boxplot',
-                'treemap',
-                'beeswarm',
-              ] as chartTypes[],
-              description: 'Type of chart to render',
-            },
-            xField: {
-              type: 'string',
-              description: 'Field name for x-axis',
-            },
-            yField: {
-              type: 'string',
-              description: 'Field name for y-axis',
-            },
-            yField2: {
-              type: 'string',
-              description: 'Secondary y-axis field (optional)',
-            },
-            colorField: {
-              type: 'string',
-              description: 'Field for color encoding (optional)',
-            },
-            sizeField: {
-              type: 'string',
-              description: 'Field for size encoding (optional)',
-            },
-            groupField: {
-              type: 'string',
-              description: 'Field for grouping data (optional)',
-            },
-            trellisField: {
-              type: 'string',
-              description: 'Field for small multiples/faceting columns (optional)',
-            },
-            trellisRowField: {
-              type: 'string',
-              description: 'Field for small multiples/faceting rows (optional)',
-            },
-            geoField: {
-              type: 'string',
-              description: 'Field for geographic data (optional)',
-            },
-            annotationField: {
-              type: 'string',
-              description: 'Field for data point annotations/labels (optional)',
-            },
-            hideLegend: {
-              type: 'boolean',
-              description: 'Whether to hide the legend (optional)',
-            },
-            showTitle: {
-              type: 'boolean',
-              description: 'Whether to show the chart title (optional)',
-            },
-            scaleX: {
-              type: 'string',
-              enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for x-axis (optional)',
-            },
-            scaleY: {
-              type: 'string',
-              enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for y-axis (optional)',
-            },
-            linkY2: {
-              type: 'boolean',
-              description: 'Whether to link the secondary y-axis scale to the primary (optional)',
-            },
-          },
-        },
+        chartConfig: chartConfigSchema,
       },
       required: ['chartConfig'],
     },
@@ -222,21 +142,7 @@ export const EDITOR_REFINEMENT_TOOLS = [
       required: [],
     },
   },
-  {
-    name: 'connect_data_connection',
-    description:
-      'Connect or reconnect a data connection that is not currently active. Use this when a query fails because the connection is not active, or when you need to establish a connection before running queries.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        connection: {
-          type: 'string',
-          description: 'The name of the data connection to connect',
-        },
-      },
-      required: ['connection'],
-    },
-  },
+  connectDataConnectionTool,
 ]
 
 export interface EditorRefinementContext {

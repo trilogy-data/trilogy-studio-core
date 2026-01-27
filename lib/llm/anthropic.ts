@@ -3,6 +3,77 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolCall } from './
 import { fetchWithRetry, type RetryOptions } from './utils'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
+/**
+ * Parse Anthropic model name into components.
+ * Examples: claude-3-opus-20240229 -> { version: '3', tier: 'opus', date: '20240229' }
+ *           claude-3-5-sonnet-20240620 -> { version: '3-5', tier: 'sonnet', date: '20240620' }
+ *           claude-sonnet-4-20250514 -> { version: '4', tier: 'sonnet', date: '20250514' }
+ */
+export function parseAnthropicModelVersion(
+  model: string,
+): { version: string; tier: string; date: string } | null {
+  // Match new format: claude-{tier}-{version}-{date} (e.g., claude-sonnet-4-20250514)
+  const newMatch = model.match(/^claude-(opus|sonnet|haiku)-(\d+(?:-\d+)?)-(\d{8})$/)
+  if (newMatch) {
+    return {
+      version: newMatch[2],
+      tier: newMatch[1],
+      date: newMatch[3],
+    }
+  }
+
+  // Match old format: claude-{version}-{tier}-{date} (e.g., claude-3-opus-20240229)
+  const oldMatch = model.match(/^claude-(\d+(?:-\d+)?)-(opus|sonnet|haiku)-(\d{8})$/)
+  if (oldMatch) {
+    return {
+      version: oldMatch[1],
+      tier: oldMatch[2],
+      date: oldMatch[3],
+    }
+  }
+
+  return null
+}
+
+/**
+ * Convert version string to comparable number (e.g., '3-5' -> 3.5, '4' -> 4.0)
+ */
+function versionToNumber(version: string): number {
+  const parts = version.split('-').map((p) => parseInt(p, 10))
+  return parts[0] + (parts[1] ?? 0) / 10
+}
+
+/**
+ * Compare two Anthropic models for sorting (descending - higher version first, opus preferred).
+ */
+export function compareAnthropicModels(a: string, b: string): number {
+  const versionA = parseAnthropicModelVersion(a)
+  const versionB = parseAnthropicModelVersion(b)
+
+  // Non-claude models go to the end
+  if (!versionA && !versionB) return a.localeCompare(b)
+  if (!versionA) return 1
+  if (!versionB) return -1
+
+  // Compare version number (higher first)
+  const vNumA = versionToNumber(versionA.version)
+  const vNumB = versionToNumber(versionB.version)
+  if (vNumA !== vNumB) {
+    return vNumB - vNumA
+  }
+
+  // Same version - prefer opus > sonnet > haiku
+  const tierOrder: Record<string, number> = { opus: 0, sonnet: 1, haiku: 2 }
+  const tierOrderA = tierOrder[versionA.tier] ?? 99
+  const tierOrderB = tierOrder[versionB.tier] ?? 99
+  if (tierOrderA !== tierOrderB) {
+    return tierOrderA - tierOrderB
+  }
+
+  // Same tier - prefer newer date
+  return versionB.date.localeCompare(versionA.date)
+}
+
 export class AnthropicProvider extends LLMProvider {
   private baseUrl: string = 'https://api.anthropic.com/v1/messages'
   private baseModelUrl: string = 'https://api.anthropic.com/v1/models'
@@ -47,7 +118,9 @@ export class AnthropicProvider extends LLMProvider {
       )
 
       const models = await response.json()
-      this.models = models.data.map((model: any) => model.id)
+      const allModels = models.data.map((model: any) => model.id)
+      // Apply filtering to only show recognized Claude models
+      this.models = AnthropicProvider.filterModels(allModels)
       this.connected = true
     } catch (e) {
       if (e instanceof Error) {
@@ -188,5 +261,33 @@ export class AnthropicProvider extends LLMProvider {
       }
       throw error
     }
+  }
+
+  /**
+   * Filter Anthropic models to only include recognized Claude models.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered and sorted array of model IDs (highest version/opus first)
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+      .filter((model) => parseAnthropicModelVersion(model) !== null)
+      .sort(compareAnthropicModels)
+  }
+
+  /**
+   * Get the default model to use for Anthropic.
+   * Returns the latest Opus model.
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    // Sort models and find the first opus model (highest version)
+    const sorted = [...models].sort(compareAnthropicModels)
+    const opusModel = sorted.find((model) => {
+      const version = parseAnthropicModelVersion(model)
+      return version !== null && version.tier === 'opus'
+    })
+    // Fall back to first model if no opus found
+    return opusModel || sorted[0] || ''
   }
 }

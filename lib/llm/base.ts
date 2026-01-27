@@ -166,6 +166,26 @@ export abstract class LLMProvider {
     return `trilogy-llm-${this.type}`
   }
 
+  /**
+   * Filter models to only include recommended/supported models for this provider.
+   * Override in subclasses to provide provider-specific filtering.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered array of model IDs
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+  }
+
+  /**
+   * Get the default model to use for this provider.
+   * Override in subclasses to provide provider-specific default selection.
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    return models[0] || ''
+  }
+
   // Create instance from JSON
   static async fromJSON<T extends LLMProvider>(
     this: new (name: string, apiKey: string, model: string, saveCredential: boolean) => T,

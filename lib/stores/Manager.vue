@@ -403,6 +403,7 @@ for (let source of props.storageSources) {
       const llmConnections = await source.loadLLMConnections()
       for (let llmConnection of Object.values(llmConnections)) {
         if (llmConnection.getApiKey() == 'saved') {
+          console.log('Restoring saved API key for LLM connection:', llmConnection.name)
           let apiKey = await getCredential(llmConnection.getCredentialName(), 'llm')
           llmConnection.setApiKey(apiKey ? apiKey.value : '')
           llmConnection.changed = false // this apiKey change shouldn't mark the connection as changed
@@ -514,18 +515,30 @@ const saveLLMConnections = async () => {
   }
 
   // Then save credentials for each connection if they have apiKey
-  const savePromises = Object.values(props.llmConnectionStore.connections).map(
-    async (connection) => {
-      if (connection.getApiKey()) {
-        // Store the API key in the credential manager
-        return await storeCredential(connection.getCredentialName(), 'llm', connection.getApiKey())
+  // Assemble all credentials first to avoid race conditions
+  const credentialsToSave = Object.values(props.llmConnectionStore.connections)
+    .map((connection) => {
+      const apiKey = connection.getApiKey()
+      if (apiKey) {
+        return {
+          label: connection.getCredentialName(),
+          type: 'llm' as CredentialType,
+          value: apiKey,
+        }
       }
-      return true
-    },
-  )
+      return null
+    })
+    .filter((credential) => credential !== null) as {
+    label: string
+    type: CredentialType
+    value: string
+  }[]
 
-  // Wait for all credential save operations to complete
-  await Promise.all(savePromises)
+  // Save all credentials at once
+  if (credentialsToSave.length > 0) {
+    await storeCredentials(credentialsToSave)
+    console.log('LLM connections saved')
+  }
 }
 
 const saveDashboards = async () => {

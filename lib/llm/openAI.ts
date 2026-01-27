@@ -1,6 +1,70 @@
 import { LLMProvider } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolCall } from './base'
 import { fetchWithRetry, type RetryOptions } from './utils'
+/**
+ * Parse OpenAI model name into version components.
+ * Examples: gpt-5.2-mini -> { major: 5, minor: 2, variant: 'mini' }
+ *           gpt-5.2 -> { major: 5, minor: 2, variant: null }
+ *           gpt-4o -> { major: 4, minor: null, variant: 'o' }
+ */
+export function parseOpenAIModelVersion(
+  model: string,
+): { major: number; minor: number | null; variant: string | null } | null {
+  // Match patterns like gpt-5.2-mini, gpt-5.2, gpt-4o, gpt-4o-mini
+  const match = model.match(/^gpt-(\d+)(?:\.(\d+))?(?:-(.+))?$/)
+  if (!match) {
+    // Also try matching gpt-4o style (letter suffix)
+    const letterMatch = model.match(/^gpt-(\d+)([a-z])(?:-(.+))?$/)
+    if (letterMatch) {
+      return {
+        major: parseInt(letterMatch[1], 10),
+        minor: null,
+        variant: letterMatch[2] + (letterMatch[3] ? `-${letterMatch[3]}` : ''),
+      }
+    }
+    return null
+  }
+  return {
+    major: parseInt(match[1], 10),
+    minor: match[2] ? parseInt(match[2], 10) : null,
+    variant: match[3] || null,
+  }
+}
+
+/**
+ * Compare two OpenAI models for sorting (descending - higher version first).
+ */
+export function compareOpenAIModels(a: string, b: string): number {
+  const versionA = parseOpenAIModelVersion(a)
+  const versionB = parseOpenAIModelVersion(b)
+
+  // Non-gpt models go to the end
+  if (!versionA && !versionB) return a.localeCompare(b)
+  if (!versionA) return 1
+  if (!versionB) return -1
+
+  // Compare major version
+  if (versionA.major !== versionB.major) {
+    return versionB.major - versionA.major
+  }
+
+  // Compare minor version (null treated as 0)
+  const minorA = versionA.minor ?? 0
+  const minorB = versionB.minor ?? 0
+  if (minorA !== minorB) {
+    return minorB - minorA
+  }
+
+  // Prefer non-variant models (gpt-5.2 over gpt-5.2-mini)
+  const hasVariantA = versionA.variant !== null
+  const hasVariantB = versionB.variant !== null
+  if (hasVariantA !== hasVariantB) {
+    return hasVariantA ? 1 : -1
+  }
+
+  return 0
+}
+
 export class OpenAIProvider extends LLMProvider {
   private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
   private baseModelUrl: string = 'https://api.openai.com/v1/models'
@@ -44,7 +108,9 @@ export class OpenAIProvider extends LLMProvider {
       )
 
       const modelData = await response.json()
-      this.models = modelData.data.map((model: any) => model.id).sort()
+      const allModels = modelData.data.map((model: any) => model.id)
+      // Apply filtering to only show GPT-5.x+ models
+      this.models = OpenAIProvider.filterModels(allModels)
       this.connected = true
     } catch (e) {
       if (e instanceof Error) {
@@ -187,5 +253,36 @@ export class OpenAIProvider extends LLMProvider {
       }
       throw error
     }
+  }
+
+  /**
+   * Filter OpenAI models to only include GPT-5.x+ models.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered and sorted array of model IDs (highest version first)
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+      .filter((model) => {
+        const version = parseOpenAIModelVersion(model)
+        return version !== null && version.major >= 5
+      })
+      .sort(compareOpenAIModels)
+  }
+
+  /**
+   * Get the default model to use for OpenAI.
+   * Returns the latest gpt-X.y model (not mini or other variants).
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    // Sort models and find the first one without a variant (not mini, etc.)
+    const sorted = [...models].sort(compareOpenAIModels)
+    const nonVariant = sorted.find((model) => {
+      const version = parseOpenAIModelVersion(model)
+      return version !== null && version.variant === null
+    })
+    // Fall back to first model if no non-variant found
+    return nonVariant || sorted[0] || ''
   }
 }

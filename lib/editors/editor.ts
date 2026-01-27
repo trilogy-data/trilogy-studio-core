@@ -39,6 +39,7 @@ export interface EditorInterface {
   status_code: number
   duration: number | null
   generated_sql: string | null
+  executed_contents: string | null
   storage: string
   tags: EditorTag[]
   startTime: number | null
@@ -63,6 +64,7 @@ export default class Editor implements EditorInterface {
   status_code: number
   duration: number | null
   generated_sql: string | null
+  executed_contents: string | null
   storage: string
   tags: EditorTag[]
   startTime: number | null
@@ -113,6 +115,7 @@ export default class Editor implements EditorInterface {
     this.duration = null
     this.status_code = 200
     this.generated_sql = null
+    this.executed_contents = null
     this.storage = storage
     this.tags = tags ? tags : []
     this.startTime = null
@@ -204,6 +207,7 @@ export default class Editor implements EditorInterface {
       status_code: this.status_code,
       duration: this.duration,
       generated_sql: this.generated_sql,
+      executed_contents: this.executed_contents,
       storage: this.storage,
       tags: this.tags,
       chartConfig: this.chartConfig,
@@ -231,6 +235,7 @@ export default class Editor implements EditorInterface {
 
     editor.duration = parsed.duration || null
     editor.generated_sql = parsed.generated_sql || null
+    editor.executed_contents = parsed.executed_contents || null
 
     editor.changed = false
     // rehydrate tags to EditorTag

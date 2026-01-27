@@ -191,6 +191,10 @@ export class Results implements ResultsInterface {
           name: value.name || key,
           type: value.type || ColumnType.UNKNOWN,
           description: value.description || '',
+          traits: value.traits || [],
+          scale: value.scale,
+          precision: value.precision,
+          purpose: value.purpose,
         },
       ]),
     )

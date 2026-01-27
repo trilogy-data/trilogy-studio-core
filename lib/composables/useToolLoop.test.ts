@@ -129,9 +129,12 @@ describe('useToolLoop', () => {
 
   describe('executeMessage with tool calls', () => {
     it('should execute tool calls from LLM response', async () => {
-      // First response has tool call (using supported <tool_use> format)
+      // First response has structured tool calls
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Let me edit the query.\n<tool_use>{"name": "edit_editor", "input": {"content": "SELECT * FROM users;"}}</tool_use>',
+        text: 'Let me edit the query.',
+        toolCalls: [
+          { id: 'toolu_01', name: 'edit_editor', input: { content: 'SELECT * FROM users;' } },
+        ],
       })
 
       // Second response after tool result
@@ -164,7 +167,8 @@ describe('useToolLoop', () => {
 
     it('should handle tool execution errors', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_use>{"name": "edit_editor", "input": {"content": ""}}</tool_use>',
+        text: 'Let me edit the editor.',
+        toolCalls: [{ id: 'toolu_01', name: 'edit_editor', input: { content: '' } }],
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -192,7 +196,8 @@ describe('useToolLoop', () => {
 
     it('should terminate loop when tool returns terminatesLoop', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_use>{"name": "close_session", "input": {}}</tool_use>',
+        text: 'Closing the session.',
+        toolCalls: [{ id: 'toolu_01', name: 'close_session', input: {} }],
       })
 
       executeToolCallSpy.mockResolvedValue({
@@ -234,7 +239,8 @@ describe('useToolLoop', () => {
       }
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_use>{"name": "run_query", "input": {"query": "SELECT * FROM users"}}</tool_use>',
+        text: 'Running the query.',
+        toolCalls: [{ id: 'toolu_01', name: 'run_query', input: { query: 'SELECT * FROM users' } }],
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -266,7 +272,8 @@ describe('useToolLoop', () => {
       const onToolResult = vi.fn()
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: '<tool_use>{"name": "validate_query", "input": {"query": "SELECT 1"}}</tool_use>',
+        text: 'Validating the query.',
+        toolCalls: [{ id: 'toolu_01', name: 'validate_query', input: { query: 'SELECT 1' } }],
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -299,7 +306,8 @@ describe('useToolLoop', () => {
     it('should stop after max iterations', async () => {
       // Always return tool calls to trigger iteration loop
       mockLLMStore.generateCompletion.mockResolvedValue({
-        text: '<tool_use>{"name": "edit_editor", "input": {"content": "test"}}</tool_use>',
+        text: 'Editing the editor.',
+        toolCalls: [{ id: 'toolu_01', name: 'edit_editor', input: { content: 'test' } }],
       })
 
       executeToolCallSpy.mockResolvedValue({
@@ -435,9 +443,11 @@ describe('useToolLoop', () => {
   describe('multiple tool calls in one response', () => {
     it('should execute multiple tool calls sequentially', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: `Let me do both things.
-<tool_use>{"name": "validate_query", "input": {"query": "SELECT 1"}}</tool_use>
-<tool_use>{"name": "edit_editor", "input": {"content": "SELECT 1;"}}</tool_use>`,
+        text: 'Let me do both things.',
+        toolCalls: [
+          { id: 'toolu_01', name: 'validate_query', input: { query: 'SELECT 1' } },
+          { id: 'toolu_02', name: 'edit_editor', input: { content: 'SELECT 1;' } },
+        ],
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
@@ -466,12 +476,32 @@ describe('useToolLoop', () => {
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', { content: 'SELECT 1;' })
     })
 
-    it('should handle real Anthropic response with text + nested JSON tool calls (text parsing fallback)', async () => {
-      // This test simulates text-based parsing fallback when toolCalls is not provided
+    it('should handle real Anthropic response with text + structured tool calls', async () => {
+      // This test simulates a structured tool call response
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: `Interesting data! There does appear to be a general trend that larger aircraft (more seats) tend to fly longer distances, though it's not perfectly linear. Let me write this query to the editor and set up a scatter plot visualization to show this relationship clearly:
-<tool_use>{"name": "edit_editor", "input": {"content": "import flight;\\n\\n# Do planes that fly longer distances tend to carry more passengers?\\nselect\\n    aircraft.aircraft_model.seats,\\n    avg(distance) as avg_distance,\\n    count(id2) as flight_count\\norder by\\n    aircraft.aircraft_model.seats asc\\nlimit 100;"}}</tool_use>
-<tool_use>{"name": "edit_chart_config", "input": {"chartConfig": {"chartType": "point", "xField": "aircraft_aircraft_model_seats", "yField": "avg_distance", "sizeField": "flight_count"}}}</tool_use>`,
+        text: "Interesting data! There does appear to be a general trend that larger aircraft (more seats) tend to fly longer distances, though it's not perfectly linear. Let me write this query to the editor and set up a scatter plot visualization to show this relationship clearly:",
+        toolCalls: [
+          {
+            id: 'toolu_01',
+            name: 'edit_editor',
+            input: {
+              content:
+                'import flight;\n\n# Do planes that fly longer distances tend to carry more passengers?\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance,\n    count(id2) as flight_count\norder by\n    aircraft.aircraft_model.seats asc\nlimit 100;',
+            },
+          },
+          {
+            id: 'toolu_02',
+            name: 'edit_chart_config',
+            input: {
+              chartConfig: {
+                chartType: 'point',
+                xField: 'aircraft_aircraft_model_seats',
+                yField: 'avg_distance',
+                sizeField: 'flight_count',
+              },
+            },
+          },
+        ],
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({

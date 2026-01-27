@@ -121,6 +121,10 @@ export const isGeographicColumn = (column: ResultColumn): boolean => {
   return false
 }
 
+export const isHexColumn = (column: ResultColumn): boolean => {
+  return column.traits?.includes('hex') ?? false
+}
+
 // Interface for selection configuration
 export interface SelectionConfig {
   enabled: boolean
@@ -207,7 +211,8 @@ export const determineDefaultConfig = (
   }
 
   const numericColumns = filteredColumns('numeric', columns)
-  const categoricalColumns = filteredColumns('categorical', columns)
+  // Filter out hex columns from categorical - hex columns are used for color mapping, not as categorical dimensions
+  const categoricalColumns = filteredColumns('categorical', columns).filter((col) => !isHexColumn(col))
   const temporalColumns = filteredColumns('temporal', columns)
   const latitudeColumns = filteredColumns('latitude', columns)
   const longitudeColumns = filteredColumns('longitude', columns)
@@ -808,6 +813,7 @@ export const createColorEncoding = (
       })
       // @ts-ignore
       scale = { domain: allCategories, range }
+      
     }
 
     const rval = {

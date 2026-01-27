@@ -1,7 +1,13 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
-import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMToolCall, LLMToolResult } from '../llm/base'
+import type {
+  LLMMessage,
+  LLMRequestOptions,
+  LLMResponse,
+  LLMToolCall,
+  LLMToolResult,
+} from '../llm/base'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
 import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
 

@@ -505,6 +505,7 @@ export default defineComponent({
 
         // Update component state based on result
         if (result.success) {
+          this.editor.executed_contents = text
           if (result.generatedSql) {
             this.editor.generated_sql = result.generatedSql
           }
@@ -513,6 +514,7 @@ export default defineComponent({
             this.editor.duration = result.executionTime
           }
         } else if (result.error) {
+          this.editor.executed_contents = text
           this.editor.setError(result.error)
         }
       } catch (error) {

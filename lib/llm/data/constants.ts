@@ -13,17 +13,23 @@ SELECT RULES:
 - Newly created fields at the output of the select must be aliased with as (e.g. \`sum(births) as all_births\`). 
 - Aliases cannot happen inside calculations or in the where/having/order clause. Never alias fields with existing names. 'sum(revenue) as total_revenue' is valid, but '(sum(births) as total_revenue) +1 as revenue_plus_one' is not.
 - Implicit grouping: NEVER include a group by clause. Grouping is by non-aggregated fields in the SELECT clause.
-- You can dynamically group inline to get groups at different grains - ex:  \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for grouping different from inferred by dimension fields. Aggregate by \`*\` to get the total regardless of select dimensions.
-- Count must specify a field (no \`count(*)\`) Counts are automatically deduplicated. Do not ever use DISTINCT. COUNT/SUM(1) will always be 1 unless you group 1 by a field and then count/sum it.
-- Use a sum/count/avg/max/min over a field to get aggregates at different grains (e.g. \`sum(births) over state as state_births\`).
-- Since there are no underlying tables, sum/count of a constant should always specify a grain field (e.g. \`sum(1) by x as count\`). 
+- You can dynamically group inline to get groups at different grains - ex: \`sum(metric) by dim1, dim2 as sum_by_dim1_dm2\` for grouping different from inferred by dimension fields. Aggregate by \`*\` to get the total regardless of select dimensions. Note: \`by\` changes the aggregation grain, while \`over\` creates a window function that doesn't collapse rows.
+- Count must specify a field (no \`count(*)\`). Counts are automatically deduplicated. Do not ever use DISTINCT. Use \`count_distinct(field)\` if you explicitly need distinct counting. COUNT/SUM(1) will always be 1 unless you group 1 by a field and then count/sum it.
+- Since there are no underlying tables, sum/count of a constant should always specify a key field. Never sum 1 to get a count, always count a key field explicitly: (e.g. \`count(some_key)\`, not \`sum(1)\`). Summing 1 by an explicit grouping will work, but should not be preferred.
 - Aggregates in SELECT must be filtered via HAVING. Use WHERE for pre-aggregation filters.
 - Use \`field ? condition\` for inline filters (e.g. \`sum(x ? x > 0)\`).
 - Always use a reasonable \`LIMIT\` for final queries unless the request is for a time series or line chart.
-- Window functions: \`rank entity [optional over group] by field desc\` (e.g. \`rank name over state by sum(births) desc as top_name\`) Do not use parentheses for over.
-- Functions. All function names have parenthese (e.g. \`sum(births)\`, \`date_part('year', dep_time)\`). For no arguments, use empty parentheses (e.g. \`current_date()\`).
-- For lag/lead, offset is first: lag/lead offset field order by expr asc/desc.
-- For lag/lead with a window clause: lag/lead offset field by window_clause order by expr asc/desc.
+- Window functions (row_number, rank, lag, lead): Prefer SQL-like syntax (both legacy and SQL-style input are accepted, but SQL-style is canonical):
+  - \`row_number(field) over (partition by group order by sort_field desc)\` 
+  - \`rank(field) over (partition by group order by sort_field desc)\`
+  - For lag/lead, offset goes inside parentheses: \`lag(field, 2) over (order by sort_field asc)\`
+  - partition by and order by are both optional: \`row_number(field) over (order by x)\` or even \`row_number(field) over ()\`
+  - Example: \`rank(name) over (partition by state order by sum(births) desc) as state_rank\`
+- Window aggregates (sum, avg, max, min, count as windows): Use legacy input syntax (renders as SQL-style):
+  - Input: \`sum field over partition_field order by sort_field asc\`
+  - Renders as: \`sum(field) over (partition by partition_field order by sort_field asc)\`
+  - Note: \`sum(field)\` without over/by is a regular aggregate, not a window
+- Functions. All function names have parentheses (e.g. \`sum(births)\`, \`date_part(dep_time, year)\`). For no arguments, use empty parentheses (e.g. \`current_date()\`).
 - Use \`::type\` casting, e.g., \`"2020-01-01"::date\`.
 - Import the std.lib to access special rendering types; import std.display; at the top of a query will let you cast a field to ::percent which will render it properly.
 - Date_parts have no quotes; use \`date_part(order_date, year)\` instead of \`date_part(order_date, 'year')\`. date parts are: year, quarter, month, week, day, day_of_week, year_start, month_start, hour, minute, second.
@@ -37,8 +43,11 @@ SELECT RULES:
       sum(births) by * as all_births_no_dims,
       sum(births) AS births_by_name_state,
       sum(births ? state = 'VT') AS vermont_births,
-      rank name over state by all_births desc AS state_rank,
-      rank name by sum(births) by name desc AS all_rank,
+      sum(births) over (partition by name) as window_births_name,
+      sum(births) over (partition by name order by state asc) as window_births_name_asc_order,
+      rank(name) over (partition by state order by all_births desc) AS state_rank,
+      rank(name) over (order by sum(births) by name desc) AS all_rank,
+      lag(births, 1) over (partition by state order by year asc) as prev_year_births,
       -- sum(births ? state = 'MA') as hidden_mass_births
   having 
       all_rank<11
@@ -125,6 +134,8 @@ export const functions = [
   'struct',
   'substring (1-indexed)',
   'trim',
+  'ltrim',
+  'rtrim',
   'timestamp',
   'trim',
   'unix_to_timestamp',

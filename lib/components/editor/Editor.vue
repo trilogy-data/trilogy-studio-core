@@ -524,6 +524,7 @@ export default defineComponent({
       const onSuccess = (result: QueryResult) => {
         let editor = this.editorStore.editors[id]
         if (result.success) {
+          editor.executed_contents = text
           if (result.generatedSql) {
             editor.generated_sql = result.generatedSql
           }
@@ -554,6 +555,7 @@ export default defineComponent({
         console.error('Query execution error:', error.message)
         let editor = this.editorStore.editors[id]
         editor.setError(error.message || 'An error occurred during query execution')
+        editor.executed_contents = text
         editor.generated_sql = error.generatedSql || null
         editor.loading = false
         editor.cancelCallback = null

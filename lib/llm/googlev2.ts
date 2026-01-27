@@ -17,6 +17,64 @@ import {
 } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
+/**
+ * Parse Google model name into components.
+ * Examples: models/gemini-2.5-flash -> { major: 2, minor: 5, variant: 'flash' }
+ *           gemini-2.0-pro -> { major: 2, minor: 0, variant: 'pro' }
+ *           models/gemini-1.5-pro-latest -> { major: 1, minor: 5, variant: 'pro-latest' }
+ */
+export function parseGoogleModelVersion(
+  model: string,
+): { major: number; minor: number; variant: string | null } | null {
+  // Remove models/ prefix if present
+  const modelName = model.replace(/^models\//, '')
+
+  // Match patterns like gemini-2.5-flash, gemini-2.0-pro, gemini-1.5-pro-latest
+  const match = modelName.match(/^gemini-(\d+)\.(\d+)(?:-(.+))?$/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    variant: match[3] || null,
+  }
+}
+
+/**
+ * Compare two Google models for sorting (descending - higher version first, pro preferred over flash).
+ */
+export function compareGoogleModels(a: string, b: string): number {
+  const versionA = parseGoogleModelVersion(a)
+  const versionB = parseGoogleModelVersion(b)
+
+  // Non-gemini models go to the end
+  if (!versionA && !versionB) return a.localeCompare(b)
+  if (!versionA) return 1
+  if (!versionB) return -1
+
+  // Compare major version
+  if (versionA.major !== versionB.major) {
+    return versionB.major - versionA.major
+  }
+
+  // Compare minor version
+  if (versionA.minor !== versionB.minor) {
+    return versionB.minor - versionA.minor
+  }
+
+  // Same version - prefer pro over flash
+  const variantOrder = (variant: string | null): number => {
+    if (!variant) return 0
+    if (variant.startsWith('pro')) return 1
+    if (variant.startsWith('flash')) return 2
+    return 3
+  }
+
+  return variantOrder(versionA.variant) - variantOrder(versionB.variant)
+}
+
 const MAX_RETRIES = 3
 // retry delay by default for 429 is 30s
 const INITIAL_RETRY_DELAY_MS = 30_000
@@ -69,7 +127,9 @@ export class GoogleProvider extends LLMProvider {
         }
 
         const data = await response.json()
-        this.models = data.models.map((model: { name: string }) => model.name).sort()
+        const allModels = data.models.map((model: { name: string }) => model.name)
+        // Apply filtering to only show recognized Gemini models
+        this.models = GoogleProvider.filterModels(allModels)
         this.connected = true
         success = true
       } catch (e) {
@@ -312,5 +372,28 @@ export class GoogleProvider extends LLMProvider {
     }
 
     return result
+  }
+
+  /**
+   * Filter Google models to only include recognized Gemini models.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered and sorted array of model IDs (highest version first)
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+      .filter((model) => parseGoogleModelVersion(model) !== null)
+      .sort(compareGoogleModels)
+  }
+
+  /**
+   * Get the default model to use for Google.
+   * Returns the latest Gemini model (preferring pro over flash).
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    // Sort models and return the first one (highest version, pro preferred)
+    const sorted = [...models].sort(compareGoogleModels)
+    return sorted[0] || ''
   }
 }

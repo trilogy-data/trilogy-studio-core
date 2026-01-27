@@ -331,6 +331,8 @@ const useEditorStore = defineStore('editors', {
           role: 'user' | 'assistant' | 'system'
           content: string
           hidden?: boolean
+          toolCalls?: LLMToolCall[]
+          toolResults?: LLMToolResult[]
         }> = [...session.messages]
         let currentPrompt = message
         let autoContinueCount = 0

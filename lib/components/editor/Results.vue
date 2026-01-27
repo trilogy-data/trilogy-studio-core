@@ -22,6 +22,14 @@
         </button>
         <button
           class="tab-button"
+          v-if="!(type === 'sql') && trilogySource"
+          :class="{ active: activeTab === 'trilogy' }"
+          @click="setTab('trilogy')"
+        >
+          Trilogy
+        </button>
+        <button
+          class="tab-button"
           v-if="!(type === 'sql')"
           :class="{ active: activeTab === 'sql' }"
           @click="setTab('sql')"
@@ -60,6 +68,9 @@
           @refresh-click="handleLocalRefresh"
           @drilldown-click="activateDrilldown"
         />
+      </div>
+      <div v-else-if="displayTab === 'trilogy'" class="sql-view">
+        <code-block :language="'trilogy'" :content="trilogySource || ''" />
       </div>
       <div v-else-if="displayTab === 'sql'" class="sql-view">
         <code-block :language="'sql'" :content="generatedSql || ''" />
@@ -146,6 +157,7 @@ export default {
     },
     containerHeight: Number,
     generatedSql: String,
+    trilogySource: String,
     defaultTab: {
       type: String,
       required: false,
@@ -213,6 +225,9 @@ export default {
       if (this.type !== 'sql') {
         if (!this.error) {
           tabs.push('visualize')
+        }
+        if (this.trilogySource) {
+          tabs.push('trilogy')
         }
         tabs.push('sql')
       }

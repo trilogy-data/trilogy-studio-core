@@ -45,7 +45,10 @@
           <pre v-else>{{ message.content }}</pre>
 
           <!-- Tool calls display (uses executedToolCalls which has result info for UI) -->
-          <div v-if="message.executedToolCalls && message.executedToolCalls.length > 0" class="tool-calls">
+          <div
+            v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
+            class="tool-calls"
+          >
             <div
               v-for="(toolCall, toolIndex) in message.executedToolCalls"
               :key="toolIndex"
@@ -132,7 +135,6 @@ import {
   computed,
 } from 'vue'
 import { type LLMConnectionStoreType } from '../../stores/llmStore'
-import { type LLMMessage } from '../../llm'
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'

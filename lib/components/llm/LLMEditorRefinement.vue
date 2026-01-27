@@ -52,6 +52,7 @@
             :results="getArtifactResults(artifact)!"
             :chartConfig="artifact.config?.chartConfig"
             :generatedSql="artifact.config?.generatedSql"
+            :trilogySource="artifact.config?.query"
             :containerHeight="300"
             :defaultTab="artifact.type === 'chart' ? 'visualize' : 'results'"
           />
