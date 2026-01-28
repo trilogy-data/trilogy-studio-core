@@ -1,6 +1,10 @@
 // mock-openai.ts
 import { Page } from '@playwright/test'
 
+export const CONST_GPT_MODELS = [
+  { id: 'gpt-5.2' },
+  { id: 'gpt-5.2-mini' },
+]
 /**
  * Interface for OpenAI Model
  */
@@ -42,7 +46,7 @@ export interface ToolCallResponse {
  */
 export async function setupOpenAIMocks(page: Page, options: OpenAIMockOptions = {}): Promise<void> {
   const {
-    models = [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+    models = CONST_GPT_MODELS,
     completionHandler = defaultCompletionHandler,
   } = options
 
@@ -127,13 +131,13 @@ export function createCompletionHandler(
       const openaiToolCalls =
         toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0
           ? toolCallResponse.toolCalls.map((tc, index) => ({
-              id: `call_mock_${index}`,
-              type: 'function' as const,
-              function: {
-                name: tc.name,
-                arguments: JSON.stringify(tc.input),
-              },
-            }))
+            id: `call_mock_${index}`,
+            type: 'function' as const,
+            function: {
+              name: tc.name,
+              arguments: JSON.stringify(tc.input),
+            },
+          }))
           : undefined
 
       return {

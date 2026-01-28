@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test'
-import { setupOpenAIMocks, createCompletionHandler, createToolCallResponse } from './mock-openai'
+import { CONST_GPT_MODELS, setupOpenAIMocks, createCompletionHandler, createToolCallResponse } from './mock-openai'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Set up our mocks before each test
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
@@ -16,7 +16,7 @@ test.describe('LLM Connection Tests', () => {
 
   test('should create and verify OpenAI connection', async ({ page, isMobile, browserName }) => {
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
@@ -55,11 +55,11 @@ test.describe('LLM Connection Tests', () => {
     const initialModel = await page.getByTestId('model-select-trilogy-llm-openai').inputValue()
     console.log('Initial model:', initialModel)
 
-    // Select a different model (assuming gpt-4 is not the default)
-    await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-4')
+    // Select a different model (assuming gpt-5.2-mini is not the default)
+    await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-5.2-mini')
 
     // Verify the model has been selected in the dropdown
-    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
+    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
     // Click the update button
     // this will trigger a save
@@ -97,7 +97,7 @@ test.describe('LLM Connection Tests', () => {
 
     await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
-    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
+    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
     // Assert api key value
     const apiKey = await page.getByTestId('api-key-input-trilogy-llm-openai').inputValue()
@@ -179,7 +179,7 @@ test.describe('LLM Connection Tests', () => {
 
     // Set up mocks with tool call responses for the new interactive chat experience
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
@@ -314,7 +314,7 @@ limit 10;`,
 
     // Set up mocks with a sequence of tool call responses
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         // Initial query generation request
         'write a simple query': createToolCallResponse(
