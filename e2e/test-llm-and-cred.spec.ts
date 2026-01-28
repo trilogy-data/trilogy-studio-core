@@ -53,7 +53,6 @@ test.describe('LLM Connection Tests', () => {
 
     // Get the current selected model (should be the default one)
     const initialModel = await page.getByTestId('model-select-trilogy-llm-openai').inputValue()
-    console.log('Initial model:', initialModel)
 
     // Select a different model (assuming gpt-5.2-mini is not the default)
     await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-5.2-mini')
@@ -78,9 +77,11 @@ test.describe('LLM Connection Tests', () => {
     await page.waitForTimeout(2000)
 
     // Refresh and setup mocks again
+    // Set up mocks before reload to ensure they're ready when page loads
+    await setupOpenAIMocks(page)
     await page.reload()
 
-    // Re-setup our mocks after reload
+    // Re-setup our mocks after reload (routes should persist but just in case)
     await setupOpenAIMocks(page)
 
     if (usesLocalStorage) {
