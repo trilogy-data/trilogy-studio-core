@@ -49,13 +49,11 @@ export const chartConfigSchema = {
     },
     xField: {
       type: 'string',
-      description:
-        'Field name for x-axis. Longitude for geo-map charts if geofield not provided.',
+      description: 'Field name for x-axis. Longitude for geo-map charts if geofield not provided.',
     },
     yField: {
       type: 'string',
-      description:
-        'Field name for y-axis. Latitude for geo-map charts if geofield not provided.',
+      description: 'Field name for y-axis. Latitude for geo-map charts if geofield not provided.',
     },
     yField2: {
       type: 'string',
@@ -109,8 +107,7 @@ export const chartConfigSchema = {
     },
     linkY2: {
       type: 'boolean',
-      description:
-        'Whether to link the secondary y-axis scale to the primary y-axis (optional)',
+      description: 'Whether to link the secondary y-axis scale to the primary y-axis (optional)',
     },
   },
 } as const

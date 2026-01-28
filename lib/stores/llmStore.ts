@@ -120,7 +120,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       if (this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" already exists.`)
       }
-      let connection: LLMProvider | null = null
+      let connection: LLMProvider
       if (type === 'anthropic') {
         connection = new AnthropicProvider(
           name,
@@ -142,7 +142,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
     // Fetch available models for a provider type without persisting a connection
     async fetchModelsForProvider(type: string, apiKey: string): Promise<string[]> {
-      let provider: LLMProvider | null = null
+      let provider: LLMProvider
       const tempName = `__temp_${type}_${Date.now()}`
 
       if (type === 'anthropic') {

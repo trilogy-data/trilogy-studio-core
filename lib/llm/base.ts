@@ -31,7 +31,7 @@ export interface LLMToolDefinition {
   input_schema: {
     type: string
     properties: Record<string, any>
-    required?: string[]
+    required?: readonly string[]
   }
 }
 

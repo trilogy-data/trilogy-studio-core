@@ -212,7 +212,9 @@ export const determineDefaultConfig = (
 
   const numericColumns = filteredColumns('numeric', columns)
   // Filter out hex columns from categorical - hex columns are used for color mapping, not as categorical dimensions
-  const categoricalColumns = filteredColumns('categorical', columns).filter((col) => !isHexColumn(col))
+  const categoricalColumns = filteredColumns('categorical', columns).filter(
+    (col) => !isHexColumn(col),
+  )
   const temporalColumns = filteredColumns('temporal', columns)
   const latitudeColumns = filteredColumns('latitude', columns)
   const longitudeColumns = filteredColumns('longitude', columns)
@@ -813,7 +815,6 @@ export const createColorEncoding = (
       })
       // @ts-ignore
       scale = { domain: allCategories, range }
-      
     }
 
     const rval = {

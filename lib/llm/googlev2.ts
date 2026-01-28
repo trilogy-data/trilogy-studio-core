@@ -279,7 +279,7 @@ export class GoogleProvider extends LLMProvider {
       parameters: {
         type: Type.OBJECT,
         properties: tool.input_schema.properties,
-        required: tool.input_schema.required,
+        required: tool.input_schema.required ? [...tool.input_schema.required] : undefined,
       },
     }))
     return [{ functionDeclarations }]

@@ -1,19 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import {
-  OpenAIProvider,
-  parseOpenAIModelVersion,
-  compareOpenAIModels,
-} from './openai'
-import {
-  AnthropicProvider,
-  parseAnthropicModelVersion,
-  compareAnthropicModels,
-} from './anthropic'
-import {
-  GoogleProvider,
-  parseGoogleModelVersion,
-  compareGoogleModels,
-} from './googlev2'
+import { OpenAIProvider, parseOpenAIModelVersion, compareOpenAIModels } from './openai'
+import { AnthropicProvider, parseAnthropicModelVersion, compareAnthropicModels } from './anthropic'
+import { GoogleProvider, parseGoogleModelVersion, compareGoogleModels } from './googlev2'
 
 /**
  * Tests for model filtering and default selection logic across all providers.
@@ -322,11 +310,7 @@ describe('Google Model Filtering', () => {
     })
 
     it('should return flash if no pro available at highest version', () => {
-      const models = [
-        'models/gemini-2.5-flash',
-        'models/gemini-2.0-pro',
-        'models/gemini-1.5-pro',
-      ]
+      const models = ['models/gemini-2.5-flash', 'models/gemini-2.0-pro', 'models/gemini-1.5-pro']
       const defaultModel = GoogleProvider.getDefaultModel(models)
       expect(defaultModel).toBe('models/gemini-2.5-flash')
     })

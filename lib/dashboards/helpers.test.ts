@@ -643,8 +643,20 @@ describe('Chart Utils', () => {
       })
 
       const dataWithHex: Row[] = [
-        { product: 'Widget', region: 'North', segment: 'Enterprise', product_color: '#FF0000', sales: 100 },
-        { product: 'Gadget', region: 'South', segment: 'SMB', product_color: '#00FF00', sales: 200 },
+        {
+          product: 'Widget',
+          region: 'North',
+          segment: 'Enterprise',
+          product_color: '#FF0000',
+          sales: 100,
+        },
+        {
+          product: 'Gadget',
+          region: 'South',
+          segment: 'SMB',
+          product_color: '#00FF00',
+          sales: 200,
+        },
       ]
 
       const defaults = determineDefaultConfig(dataWithHex, columnsWithHex, 'bar')
