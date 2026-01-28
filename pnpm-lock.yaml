@@ -75,6 +75,9 @@ importers:
       '@playwright/test':
         specifier: ^1.56.1
         version: 1.56.1
+      '@trilogy-data/trilogy-studio-components':
+        specifier: link:lib
+        version: link:lib
       '@types/gapi':
         specifier: ^0.0.47
         version: 0.0.47

@@ -210,7 +210,7 @@
 <script lang="ts">
 import { ref, computed, defineComponent, onMounted, watch } from 'vue'
 import type { PropType } from 'vue'
-import { AnthropicProvider, OpenAIProvider, MistralProvider, GoogleProvider } from '../../llm'
+import { AnthropicProvider, OpenAIProvider, GoogleProvider } from '../../llm'
 import SidebarItem from './GenericSidebarItem.vue'
 import LLMProviderIcon from './LLMProviderIcon.vue'
 import ConnectionRefresh from './ConnectionRefresh.vue'
@@ -432,8 +432,6 @@ export default defineComponent({
         return 'anthropic'
       } else if (connection instanceof OpenAIProvider) {
         return 'openai'
-      } else if (connection instanceof MistralProvider) {
-        return 'mistral'
       } else if (connection instanceof GoogleProvider) {
         return 'google'
       }

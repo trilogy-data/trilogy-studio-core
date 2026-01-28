@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import Tooltip from './Tooltip.vue'
 
-export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled'
+export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled' | 'waiting'
 
 const props = defineProps<{ status: Status; message?: string; testName?: string }>()
 
@@ -14,6 +14,7 @@ const statusClasses = computed(() => {
       failed: 'failed',
       idle: 'idle',
       disabled: 'disabled',
+      waiting: 'waiting',
     }[props.status] || 'idle'
   )
 })
@@ -76,6 +77,11 @@ const statusClasses = computed(() => {
 .disabled {
   background-color: lightgray;
   color: lightgray;
+}
+
+.waiting {
+  background-color: orange;
+  color: orange;
 }
 
 @keyframes pulse {

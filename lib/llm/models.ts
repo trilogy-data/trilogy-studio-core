@@ -1,8 +1,3 @@
-import { type LLMMessage } from './base'
-
-export interface ChatInteraction {
-  messages: LLMMessage[]
-  extractionFn: (message: string) => string
-  validationFn: (input: string) => Promise<boolean>
-  mutationFn: (input: string) => boolean
-}
+// This file previously contained ChatInteraction interface
+// which has been replaced by EditorRefinementSession in lib/editors/editor.ts
+// and the tool-based approach in lib/llm/editorRefinementTools.ts

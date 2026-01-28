@@ -1,10 +1,14 @@
 export { LLMProvider } from './base'
 export type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
-export { OpenAIProvider } from './openAI'
+export { OpenAIProvider } from './openai'
 export { AnthropicProvider } from './anthropic'
-export { MistralProvider } from './mistral'
 export { GoogleProvider } from './googlev2'
 export { createPrompt, createFilterPrompt, createDashboardPrompt } from './data/prompts'
 export { createChatNamePrompt, extractChatName } from './chatHelpers'
 export type { ModelConceptInput } from './data/models'
-export type { ChatInteraction } from './models'
+
+// Editor refinement tools
+export { EDITOR_REFINEMENT_TOOLS, buildEditorRefinementPrompt } from './editorRefinementTools'
+export type { EditorRefinementContext } from './editorRefinementTools'
+export { EditorRefinementToolExecutor } from './editorRefinementToolExecutor'
+export type { EditorContext, ToolCallResult } from './editorRefinementToolExecutor'

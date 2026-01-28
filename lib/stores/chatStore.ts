@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia'
 import { Chat } from '../chats/chat'
-import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
+import type { ChatMessage, ChatArtifact, ChatImport, ChatToolCall } from '../chats/chat'
 import type { LLMRequestOptions, LLMResponse } from '../llm'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
-import { buildChatAgentSystemPrompt, parseToolCalls, CHAT_TOOLS } from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
+import type { LLMToolCall, LLMToolResult } from '../llm/base'
 import type { CompletionItem } from './resolver'
 
 /** Rate limit backoff state */
@@ -345,7 +346,8 @@ export const useChatStore = defineStore('chats', {
           this.clearRateLimitBackoff(chatId)
 
           const responseText = response.text
-          const toolCalls = parseToolCalls(responseText)
+          // Use structured tool calls from response (preserve full LLMToolCall objects)
+          const toolCalls: LLMToolCall[] = response.toolCalls ?? []
 
           // If no tool calls, check if we should auto-continue
           if (toolCalls.length === 0) {
@@ -394,12 +396,26 @@ export const useChatStore = defineStore('chats', {
           }
 
           // Execute tool calls and build tool results
-          const toolResults: string[] = []
+          const toolResults: LLMToolResult[] = []
+          const executedToolCalls: ChatToolCall[] = []
 
           for (const toolCall of toolCalls) {
             this.setActiveToolName(chatId, toolCall.name)
             const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
 
+            // Track executed tool call for UI display
+            executedToolCalls.push({
+              id: toolCall.id,
+              name: toolCall.name,
+              input: toolCall.input,
+              result: {
+                success: result.success,
+                message: result.message,
+                error: result.error,
+              },
+            })
+
+            let resultText = ''
             if (result.success) {
               // Check if this tool triggers a symbol refresh (e.g., add_import, remove_import)
               let symbolInfo = ''
@@ -448,28 +464,53 @@ export const useChatStore = defineStore('chats', {
                 const artifactInfo = config
                   ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
                   : ''
-                toolResults.push(
-                  `<tool_result name="${toolCall.name}">\nSuccess. ${result.message || artifactInfo}${dataPreview}${symbolInfo}\n</tool_result>`,
-                )
+                resultText = `Success. ${result.message || artifactInfo}${dataPreview}${symbolInfo}`
               } else if (result.message) {
-                toolResults.push(
-                  `<tool_result name="${toolCall.name}">\n${result.message}${symbolInfo}\n</tool_result>`,
-                )
+                resultText = `${result.message}${symbolInfo}`
+              } else {
+                resultText = 'Success.'
               }
             } else {
-              toolResults.push(
-                `<tool_result name="${toolCall.name}">\nError: ${result.error}\n</tool_result>`,
-              )
+              resultText = `Error: ${result.error}`
             }
+
+            toolResults.push({
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              result: resultText,
+            })
           }
+
+          this.setActiveToolName(chatId, '')
+
+          // Add assistant message with tool calls to the chat (for persistence and UI)
+          this.addMessageToChat(chatId, {
+            role: 'assistant',
+            content: responseText,
+            toolCalls: toolCalls, // For LLM history
+            executedToolCalls: executedToolCalls, // For UI display
+          })
+
+          // Add tool results as a hidden user message (for LLM history)
+          this.addMessageToChat(chatId, {
+            role: 'user',
+            content: '', // Content handled by toolResults
+            toolResults: toolResults,
+            hidden: true,
+          })
 
           // Add assistant response and tool results to conversation for next iteration
           currentMessages = [
             ...currentMessages,
-            { role: 'assistant' as const, content: responseText },
+            {
+              role: 'assistant' as const,
+              content: responseText,
+              toolCalls: toolCalls,
+            },
             {
               role: 'user' as const,
-              content: toolResults.join('\n\n'),
+              content: '', // Content handled by toolResults
+              toolResults: toolResults,
               hidden: true,
             },
           ]

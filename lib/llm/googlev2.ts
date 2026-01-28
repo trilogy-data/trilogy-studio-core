@@ -1,5 +1,11 @@
 import { LLMProvider } from './base'
-import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolDefinition } from './base'
+import type {
+  LLMRequestOptions,
+  LLMResponse,
+  LLMMessage,
+  LLMToolDefinition,
+  LLMToolCall,
+} from './base'
 import {
   GoogleGenAI,
   Type,
@@ -10,6 +16,64 @@ import {
   type GenerateContentParameters,
 } from '@google/genai'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
+
+/**
+ * Parse Google model name into components.
+ * Examples: models/gemini-2.5-flash -> { major: 2, minor: 5, variant: 'flash' }
+ *           gemini-2.0-pro -> { major: 2, minor: 0, variant: 'pro' }
+ *           models/gemini-1.5-pro-latest -> { major: 1, minor: 5, variant: 'pro-latest' }
+ */
+export function parseGoogleModelVersion(
+  model: string,
+): { major: number; minor: number; variant: string | null } | null {
+  // Remove models/ prefix if present
+  const modelName = model.replace(/^models\//, '')
+
+  // Match patterns like gemini-2.5-flash, gemini-2.0-pro, gemini-1.5-pro-latest
+  const match = modelName.match(/^gemini-(\d+)\.(\d+)(?:-(.+))?$/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    variant: match[3] || null,
+  }
+}
+
+/**
+ * Compare two Google models for sorting (descending - higher version first, pro preferred over flash).
+ */
+export function compareGoogleModels(a: string, b: string): number {
+  const versionA = parseGoogleModelVersion(a)
+  const versionB = parseGoogleModelVersion(b)
+
+  // Non-gemini models go to the end
+  if (!versionA && !versionB) return a.localeCompare(b)
+  if (!versionA) return 1
+  if (!versionB) return -1
+
+  // Compare major version
+  if (versionA.major !== versionB.major) {
+    return versionB.major - versionA.major
+  }
+
+  // Compare minor version
+  if (versionA.minor !== versionB.minor) {
+    return versionB.minor - versionA.minor
+  }
+
+  // Same version - prefer pro over flash
+  const variantOrder = (variant: string | null): number => {
+    if (!variant) return 0
+    if (variant.startsWith('pro')) return 1
+    if (variant.startsWith('flash')) return 2
+    return 3
+  }
+
+  return variantOrder(versionA.variant) - variantOrder(versionB.variant)
+}
 
 const MAX_RETRIES = 3
 // retry delay by default for 429 is 30s
@@ -63,7 +127,9 @@ export class GoogleProvider extends LLMProvider {
         }
 
         const data = await response.json()
-        this.models = data.models.map((model: { name: string }) => model.name).sort()
+        const allModels = data.models.map((model: { name: string }) => model.name)
+        // Apply filtering to only show recognized Gemini models
+        this.models = GoogleProvider.filterModels(allModels)
         this.connected = true
         success = true
       } catch (e) {
@@ -159,9 +225,11 @@ export class GoogleProvider extends LLMProvider {
         // Get token usage if available
         const promptTokens = result.usageMetadata?.promptTokenCount || 0
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+        const { text, toolCalls } = this.extractResponseData(result)
 
         return {
-          text: this.extractResponseText(result),
+          text,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           usage: {
             promptTokens,
             completionTokens,
@@ -189,9 +257,11 @@ export class GoogleProvider extends LLMProvider {
         // Get token usage if available
         const promptTokens = result.usageMetadata?.promptTokenCount || 0
         const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+        const { text, toolCalls } = this.extractResponseData(result)
 
         return {
-          text: this.extractResponseText(result),
+          text,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           usage: {
             promptTokens,
             completionTokens,
@@ -209,16 +279,18 @@ export class GoogleProvider extends LLMProvider {
       parameters: {
         type: Type.OBJECT,
         properties: tool.input_schema.properties,
-        required: tool.input_schema.required,
+        required: tool.input_schema.required ? [...tool.input_schema.required] : undefined,
       },
     }))
     return [{ functionDeclarations }]
   }
 
-  private extractResponseText(result: any): string {
+  private extractResponseData(result: any): { text: string; toolCalls: LLMToolCall[] } {
     // Handle responses that may contain text and/or function calls
     let responseText = ''
+    const toolCalls: LLMToolCall[] = []
     const candidates = result.candidates || []
+    let toolCallIndex = 0
 
     for (const candidate of candidates) {
       const content = candidate.content
@@ -228,14 +300,21 @@ export class GoogleProvider extends LLMProvider {
         if (part.text) {
           responseText += part.text
         } else if (part.functionCall) {
-          // Format tool use similar to Anthropic format for consistency
-          responseText += `\n<tool_use>{"name": "${part.functionCall.name}", "input": ${JSON.stringify(part.functionCall.args)}}</tool_use>\n`
+          // Add to structured tool calls array
+          toolCalls.push({
+            id: `google_tool_${toolCallIndex++}`,
+            name: part.functionCall.name,
+            input: part.functionCall.args,
+          })
         }
       }
     }
 
     // Fall back to result.text if no content was extracted
-    return responseText || result.text || ''
+    return {
+      text: responseText || result.text || '',
+      toolCalls,
+    }
   }
 
   private convertToGeminiHistory(messages: LLMMessage[]): Content[] {
@@ -245,10 +324,37 @@ export class GoogleProvider extends LLMProvider {
       const message = messages[i]
       const role = message.role === 'assistant' ? 'model' : 'user'
 
-      result.push({
-        parts: [{ text: message.content }],
-        role,
-      })
+      if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
+        // Assistant message with tool calls - include functionCall parts
+        const parts: any[] = []
+        if (message.content) {
+          parts.push({ text: message.content })
+        }
+        for (const tc of message.toolCalls) {
+          parts.push({
+            functionCall: {
+              name: tc.name,
+              args: tc.input,
+            },
+          })
+        }
+        result.push({ parts, role: 'model' })
+      } else if (message.role === 'user' && message.toolResults && message.toolResults.length > 0) {
+        // User message with tool results - include functionResponse parts
+        const parts: any[] = message.toolResults.map((tr) => ({
+          functionResponse: {
+            name: tr.toolName,
+            response: { result: tr.result },
+          },
+        }))
+        result.push({ parts, role: 'user' })
+      } else {
+        // Regular text message
+        result.push({
+          parts: [{ text: message.content }],
+          role,
+        })
+      }
 
       // If this is a user message and the next message is also a user message (or doesn't exist and we need model response)
       // OR if this is the last message and it's from the user (shouldn't happen but safety check)
@@ -266,5 +372,28 @@ export class GoogleProvider extends LLMProvider {
     }
 
     return result
+  }
+
+  /**
+   * Filter Google models to only include recognized Gemini models.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered and sorted array of model IDs (highest version first)
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+      .filter((model) => parseGoogleModelVersion(model) !== null)
+      .sort(compareGoogleModels)
+  }
+
+  /**
+   * Get the default model to use for Google.
+   * Returns the latest Gemini model (preferring pro over flash).
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    // Sort models and return the first one (highest version, pro preferred)
+    const sorted = [...models].sort(compareGoogleModels)
+    return sorted[0] || ''
   }
 }

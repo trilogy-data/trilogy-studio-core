@@ -43,6 +43,31 @@
           </template>
           <!-- User messages rendered as plain text -->
           <pre v-else>{{ message.content }}</pre>
+
+          <!-- Tool calls display (uses executedToolCalls which has result info for UI) -->
+          <div
+            v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
+            class="tool-calls"
+          >
+            <div
+              v-for="(toolCall, toolIndex) in message.executedToolCalls"
+              :key="toolIndex"
+              class="tool-call"
+              :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
+            >
+              <span class="tool-icon">
+                <i
+                  :class="
+                    toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'
+                  "
+                ></i>
+              </span>
+              <span class="tool-name">{{ getToolDisplayName(toolCall.name) }}</span>
+              <span v-if="toolCall.result?.error" class="tool-error">{{
+                toolCall.result.error
+              }}</span>
+            </div>
+          </div>
         </div>
         <div v-if="message.modelInfo" class="message-meta">
           {{ message.modelInfo.totalTokens }} tokens
@@ -58,30 +83,41 @@
     </div>
 
     <div class="input-container">
-      <div class="textarea-wrapper">
-        <textarea
-          v-model="userInput"
-          @keydown="handleKeyDown"
-          :disabled="isLoading || disabled"
-          ref="inputTextarea"
-          data-testid="input-textarea"
-        ></textarea>
-        <span
-          v-if="!userInput"
-          class="animated-placeholder"
-          :class="{ 'fade-transition': isPlaceholderTransitioning }"
+      <div class="input-wrapper">
+        <div class="textarea-wrapper">
+          <textarea
+            v-model="userInput"
+            @keydown="handleKeyDown"
+            :disabled="isLoading || disabled"
+            ref="inputTextarea"
+            data-testid="input-textarea"
+          ></textarea>
+          <span
+            v-if="!userInput"
+            class="animated-placeholder"
+            :class="{ 'fade-transition': isPlaceholderTransitioning }"
+          >
+            {{ currentPlaceholder }}
+          </span>
+        </div>
+        <button
+          v-if="isLoading && customStopHandler"
+          @click="handleStop"
+          data-testid="stop-button"
+          class="send-button stop-button"
         >
-          {{ currentPlaceholder }}
-        </span>
+          {{ stopButtonText }}
+        </button>
+        <button
+          v-else
+          @click="sendMessage"
+          :disabled="isLoading || disabled || !userInput.trim()"
+          data-testid="send-button"
+          class="send-button"
+        >
+          {{ sendButtonText }}
+        </button>
       </div>
-      <button
-        @click="sendMessage"
-        :disabled="isLoading || disabled || !userInput.trim()"
-        data-testid="send-button"
-        class="send-button"
-      >
-        {{ sendButtonText }}
-      </button>
     </div>
   </div>
 </template>
@@ -99,22 +135,12 @@ import {
   computed,
 } from 'vue'
 import { type LLMConnectionStoreType } from '../../stores/llmStore'
-import { type LLMMessage } from '../../llm'
+import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 
-export interface ChatArtifact {
-  type: 'results' | 'chart' | 'code' | 'custom'
-  data: any
-  config?: any
-}
-
-export interface ChatMessage extends LLMMessage {
-  artifact?: ChatArtifact
-  modelInfo?: {
-    totalTokens: number
-  }
-}
+// Re-export for backwards compatibility
+export type { ChatMessage, ChatArtifact, ChatToolCall }
 
 export default defineComponent({
   name: 'LLMChatComponent',
@@ -180,6 +206,16 @@ export default defineComponent({
       >,
       default: undefined,
     },
+    // Custom stop handler - called when user clicks stop during loading
+    customStopHandler: {
+      type: [Function, null] as PropType<(() => void) | null>,
+      default: undefined,
+    },
+    // Text to show on stop button
+    stopButtonText: {
+      type: String,
+      default: 'Stop',
+    },
   },
 
   emits: [
@@ -216,7 +252,8 @@ export default defineComponent({
           isPlaceholderTransitioning.value = true
           // After fade out, change text and fade in
           setTimeout(() => {
-            placeholderIndex.value = (placeholderIndex.value + 1) % (props.placeholder as string[]).length
+            placeholderIndex.value =
+              (placeholderIndex.value + 1) % (props.placeholder as string[]).length
             isPlaceholderTransitioning.value = false
           }, 300)
         }, 3500)
@@ -304,7 +341,14 @@ export default defineComponent({
       return message.content
     }
 
-    // Get display text for tool indicator
+    // Handle stop button click
+    const handleStop = () => {
+      if (props.customStopHandler) {
+        props.customStopHandler()
+      }
+    }
+
+    // Get display text for tool indicator (loading state)
     const getToolDisplayText = (toolName: string): string => {
       const toolLabels: Record<string, string> = {
         run_trilogy_query: 'Running query...',
@@ -315,6 +359,27 @@ export default defineComponent({
         connect_data_connection: 'Connecting...',
       }
       return toolLabels[toolName] || `Using ${toolName}...`
+    }
+
+    // Get display name for completed tool calls
+    const getToolDisplayName = (toolName: string): string => {
+      const toolLabels: Record<string, string> = {
+        validate_query: 'Validated query',
+        run_query: 'Ran query',
+        run_active_editor_query: 'Ran editor query',
+        format_query: 'Formatted query',
+        edit_chart_config: 'Updated chart',
+        edit_editor: 'Updated editor',
+        request_close: 'Requested close',
+        close_session: 'Closed session',
+        connect_data_connection: 'Connected',
+        run_trilogy_query: 'Ran query',
+        chart_trilogy_query: 'Ran chart query',
+        add_import: 'Added import',
+        remove_import: 'Removed import',
+        list_available_imports: 'Listed imports',
+      }
+      return toolLabels[toolName] || toolName.replace(/_/g, ' ')
     }
 
     const sendMessage = async () => {
@@ -420,8 +485,10 @@ export default defineComponent({
       isPlaceholderTransitioning,
       handleKeyDown,
       sendMessage,
+      handleStop,
       getMessageTextWithoutArtifact,
       getToolDisplayText,
+      getToolDisplayName,
       addMessage,
       addArtifact,
       clearMessages,
@@ -448,7 +515,9 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 30px;
+  min-height: 30px;
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
 }
@@ -471,12 +540,12 @@ export default defineComponent({
   padding: 15px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background-color: var(--result-window-bg);
 }
 
 .message {
-  padding: 10px 12px;
+  padding: 8px;
   max-width: 85%;
   word-break: break-word;
 }
@@ -504,6 +573,12 @@ export default defineComponent({
   width: 100%;
   background-color: transparent;
   padding: 0;
+}
+
+/* Messages with only tool calls should be minimal (no bg, less padding) */
+.message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
+  background-color: transparent;
+  padding: 2px 0;
 }
 
 .message-content pre {
@@ -555,10 +630,19 @@ export default defineComponent({
 
 .input-container {
   display: flex;
-  padding: 10px;
+  padding: 5px;
   border-top: 1px solid var(--border-light);
   background-color: var(--sidebar-bg);
-  gap: 10px;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  border: 1px solid var(--border);
+  background-color: var(--query-window-bg);
+  padding: 6px;
+  gap: 8px;
 }
 
 .textarea-wrapper {
@@ -568,15 +652,16 @@ export default defineComponent({
 
 .textarea-wrapper textarea {
   width: 100%;
-  min-height: 50px;
+  min-height: 36px;
   max-height: 150px;
   padding: 8px;
-  border: 1px solid var(--border);
-  resize: vertical;
+  border: none;
+  resize: none;
   font-family: inherit;
-  background-color: var(--query-window-bg);
+  background-color: transparent;
   color: var(--query-window-font);
   font-size: var(--font-size);
+  outline: none;
 }
 
 .animated-placeholder {
@@ -597,20 +682,29 @@ export default defineComponent({
 .send-button {
   padding: 0 15px;
   cursor: pointer;
-  align-self: flex-end;
-  height: 36px;
-  border: 1px solid var(--border);
-  background-color: var(--button-bg);
-  color: var(--button-text);
+  height: 28px;
+  border: none;
+  background-color: var(--special-text);
+  color: white;
+  font-weight: 300;
+  font-size: 12px;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: var(--button-mouseover);
+  opacity: 0.9;
 }
 
 .send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.send-button.stop-button {
+  background-color: var(--delete-color, #dc3545);
 }
 
 .artifact-placeholder {
@@ -623,6 +717,59 @@ export default defineComponent({
 
 .message-text {
   margin-bottom: 8px;
+}
+
+/* Tool calls display */
+.tool-calls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tool-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.tool-call.success {
+  background-color: rgba(40, 167, 69, 0.08);
+  color: var(--text-faint);
+}
+
+.tool-call.error {
+  background-color: rgba(220, 53, 69, 0.08);
+  color: var(--text-faint);
+}
+
+.tool-icon {
+  display: flex;
+  align-items: center;
+}
+
+.tool-call.success .tool-icon {
+  color: #28a745;
+}
+
+.tool-call.error .tool-icon {
+  color: #dc3545;
+}
+
+.tool-name {
+  font-weight: 500;
+}
+
+.tool-error {
+  color: #dc3545;
+  font-size: var(--small-font-size);
+  margin-left: auto;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media screen and (max-width: 768px) {

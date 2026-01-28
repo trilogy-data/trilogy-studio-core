@@ -117,7 +117,7 @@ const pendingCredentialOperations = ref<
   Array<{
     resolve: (value: any) => void
     reject: (reason?: any) => void
-    operation: 'save' | 'get'
+    operation: 'save' | 'saveBulk' | 'get'
     params: any
   }>
 >([])
@@ -184,6 +184,10 @@ const handleKeyphraseSubmit = async (keyphrase: string) => {
           const { label, type, value } = params
           const result = await credentialService.storeCredential(label, type, value, keyphrase)
           resolve(!!result)
+        } else if (operation === 'saveBulk') {
+          const { credentials } = params
+          const result = await credentialService.storeCredentials(credentials, keyphrase)
+          resolve(!!result)
         } else if (operation === 'get') {
           const { label, type } = params
           const result = await credentialService.getCredential(label, type, keyphrase)
@@ -245,22 +249,37 @@ const cancelBypass = () => {
 
 const storeCredentials = async (
   credentials: Array<{ label: string; type: CredentialType; value: string }>,
-) => {
-  if (!activeKeyphrase.value && !skipKeyPhrase.value) {
-    throw new Error('No keyphrase set for storing credentials')
+): Promise<boolean> => {
+  // If keyphrase already set, use it directly
+  if (activeKeyphrase.value || skipKeyPhrase.value) {
+    try {
+      const result = await credentialService.storeCredentials(
+        credentials,
+        activeKeyphrase.value || '',
+      )
+      await checkForCredentials() // Refresh the list
+      return !!result
+    } catch (error) {
+      console.error('Error saving credentials:', error)
+      return false
+    }
   }
 
-  try {
-    const result = await credentialService.storeCredentials(
-      credentials,
-      activeKeyphrase.value || '',
-    )
-    await checkForCredentials() // Refresh the list
-    return !!result
-  } catch (error) {
-    console.error('Error saving credentials:', error)
-    return false
-  }
+  // Otherwise, show prompt and return a promise
+  return new Promise((resolve, reject) => {
+    // Add this operation to the array
+    pendingCredentialOperations.value.push({
+      resolve,
+      reject,
+      operation: 'saveBulk',
+      params: { credentials },
+    })
+
+    // Only show the prompt if it's not already visible
+    if (!showCredentialPrompt.value) {
+      showCredentialPrompt.value = true
+    }
+  })
 }
 
 const storeCredential = async (
@@ -502,8 +521,6 @@ const saveModels = async () => {
 
 // Modified to handle credentials
 const saveLLMConnections = async () => {
-  console.log('saving llm connections')
-
   // First save connections to storage
   for (let source of props.storageSources) {
     await source.saveLLMConnections(
@@ -514,18 +531,30 @@ const saveLLMConnections = async () => {
   }
 
   // Then save credentials for each connection if they have apiKey
-  const savePromises = Object.values(props.llmConnectionStore.connections).map(
-    async (connection) => {
-      if (connection.getApiKey()) {
-        // Store the API key in the credential manager
-        return await storeCredential(connection.getCredentialName(), 'llm', connection.getApiKey())
+  // Assemble all credentials first to avoid race conditions
+  const credentialsToSave = Object.values(props.llmConnectionStore.connections)
+    .map((connection) => {
+      const apiKey = connection.getApiKey()
+      if (apiKey) {
+        return {
+          label: connection.getCredentialName(),
+          type: 'llm' as CredentialType,
+          value: apiKey,
+        }
       }
-      return true
-    },
-  )
+      return null
+    })
+    .filter((credential) => credential !== null) as {
+    label: string
+    type: CredentialType
+    value: string
+  }[]
 
-  // Wait for all credential save operations to complete
-  await Promise.all(savePromises)
+  // Save all credentials at once
+  if (credentialsToSave.length > 0) {
+    await storeCredentials(credentialsToSave)
+    console.log('LLM connections saved')
+  }
 }
 
 const saveDashboards = async () => {

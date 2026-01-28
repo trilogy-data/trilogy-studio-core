@@ -1,3 +1,17 @@
+// Structured tool call from LLM response
+export interface LLMToolCall {
+  id: string
+  name: string
+  input: Record<string, any>
+}
+
+// Tool result to be sent back to the LLM
+export interface LLMToolResult {
+  toolCallId: string
+  toolName: string
+  result: string
+}
+
 // Generic interface for LLM responses
 export interface LLMResponse {
   text: string
@@ -6,6 +20,8 @@ export interface LLMResponse {
     completionTokens: number
     totalTokens: number
   }
+  // Structured tool calls from the response (preferred over parsing from text)
+  toolCalls?: LLMToolCall[]
 }
 
 // Tool definition interface for LLM function calling
@@ -15,7 +31,7 @@ export interface LLMToolDefinition {
   input_schema: {
     type: string
     properties: Record<string, any>
-    required?: string[]
+    required?: readonly string[]
   }
 }
 
@@ -41,6 +57,10 @@ export interface LLMMessage {
     totalTokens: number
   }
   hidden?: boolean // Used to hide messages in the UI
+  // Tool calls made by the assistant (for assistant messages)
+  toolCalls?: LLMToolCall[]
+  // Tool results from execution (for user messages responding to tool calls)
+  toolResults?: LLMToolResult[]
 }
 
 export abstract class LLMProvider {
@@ -144,6 +164,26 @@ export abstract class LLMProvider {
 
   getCredentialName(): string {
     return `trilogy-llm-${this.type}`
+  }
+
+  /**
+   * Filter models to only include recommended/supported models for this provider.
+   * Override in subclasses to provide provider-specific filtering.
+   * @param models - Array of model IDs from the API
+   * @returns Filtered array of model IDs
+   */
+  static filterModels(models: string[]): string[] {
+    return models
+  }
+
+  /**
+   * Get the default model to use for this provider.
+   * Override in subclasses to provide provider-specific default selection.
+   * @param models - Array of model IDs (already filtered)
+   * @returns The default model ID to use
+   */
+  static getDefaultModel(models: string[]): string {
+    return models[0] || ''
   }
 
   // Create instance from JSON

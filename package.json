@@ -16,6 +16,7 @@
     "build:lib": "pnpm -C lib build",
     "preview": "vite preview",
     "test": "vitest",
+    "typecheck": "vue-tsc --noEmit",
     "test-playwright": "playwright test",
     "test-playwright:ui": "playwright test --ui",
     "format": "prettier --write \"./**/*.{js,ts,vue}\"",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@motherduck/wasm-client": "^0.6.6",
     "@playwright/test": "^1.56.1",
+    "@trilogy-data/trilogy-studio-components": "link:lib",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.19.0",

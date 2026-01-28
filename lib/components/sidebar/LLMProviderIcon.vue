@@ -2,7 +2,6 @@
   <div class="provider-icon-container">
     <i v-if="providerType === 'anthropic'" class="mdi mdi-alpha-c-circle" title="Anthropic"></i>
     <i v-else-if="providerType === 'openai'" class="mdi mdi-flash" title="OpenAI"></i>
-    <i v-else-if="providerType === 'mistral'" class="mdi mdi-weather-windy" title="Mistral AI"></i>
     <i v-else-if="providerType === 'google'" class="mdi mdi-google" title="Google"></i>
     <i v-else class="mdi mdi-robot" title="LLM Provider"></i>
   </div>
@@ -32,9 +31,6 @@ export default defineComponent({
 }
 .mdi-flash {
   color: #10a37f;
-}
-.mdi-weather-windy {
-  color: #3e75c3;
 }
 .mdi-google {
   color: #4285f4;

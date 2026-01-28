@@ -6,13 +6,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import {
-  LLMProvider,
-  OpenAIProvider,
-  MistralProvider,
-  AnthropicProvider,
-  GoogleProvider,
-} from '../llm'
+import { LLMProvider, OpenAIProvider, AnthropicProvider, GoogleProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards/base'
@@ -229,10 +223,6 @@ export default class LocalStorage extends AbstractStorage {
         case 'openai':
           // @ts-ignore
           connections[connection.name] = reactive(await OpenAIProvider.fromJSON(connection))
-          break
-        case 'mistral':
-          // @ts-ignore
-          connections[connection.name] = reactive(await MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // Handle the async operation properly

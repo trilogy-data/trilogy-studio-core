@@ -26,8 +26,6 @@
             Anthropic
           </option>
           <option value="google" data-testid="llm-connection-creator-google">Google</option>
-          <!-- <option value="cohere">Cohere</option> -->
-          <!-- <option value="mistral">Mistral AI</option> -->
         </select>
       </div>
 
@@ -111,7 +109,16 @@ option {
 import { defineComponent, ref, inject } from 'vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import LoadingButton from '../LoadingButton.vue'
-// Define the expected store type
+import { OpenAIProvider } from '../../llm/openai'
+import { AnthropicProvider } from '../../llm/anthropic'
+import { GoogleProvider } from '../../llm/googlev2'
+
+// Hardcoded fallback models for when the API hasn't been validated yet
+const FALLBACK_MODELS = {
+  openai: ['gpt-5.2', 'gpt-5.2-mini', 'gpt-5.1'],
+  anthropic: ['claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20240620'],
+  google: ['models/gemini-2.5-pro', 'models/gemini-2.5-flash'],
+}
 
 export default defineComponent({
   name: 'LLMConnectionCreator',
@@ -140,7 +147,7 @@ export default defineComponent({
       type: 'openai',
       options: {
         apiKey: '',
-        model: 'gpt-4o',
+        model: OpenAIProvider.getDefaultModel(FALLBACK_MODELS.openai),
         saveCredential: false,
       },
     })
@@ -168,21 +175,22 @@ export default defineComponent({
     }
 
     const updateDefaultModel = (providerType: string) => {
+      // Use provider static methods to get the default model from fallback lists
       switch (providerType) {
         case 'openai':
-          connectionDetails.value.options.model = 'gpt-5.2-mini'
+          connectionDetails.value.options.model = OpenAIProvider.getDefaultModel(
+            FALLBACK_MODELS.openai,
+          )
           break
         case 'anthropic':
-          connectionDetails.value.options.model = 'claude-3-sonnet-20240229'
-          break
-        case 'cohere':
-          connectionDetails.value.options.model = 'command'
-          break
-        case 'mistral':
-          connectionDetails.value.options.model = 'mistral-large-latest'
+          connectionDetails.value.options.model = AnthropicProvider.getDefaultModel(
+            FALLBACK_MODELS.anthropic,
+          )
           break
         case 'google':
-          connectionDetails.value.options.model = 'models/gemini-2.5-flash'
+          connectionDetails.value.options.model = GoogleProvider.getDefaultModel(
+            FALLBACK_MODELS.google,
+          )
           break
         default:
           connectionDetails.value.options.model = ''

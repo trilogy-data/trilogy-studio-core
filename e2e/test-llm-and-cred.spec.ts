@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test'
-import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
+import { CONST_GPT_MODELS, setupOpenAIMocks, createCompletionHandler, createToolCallResponse } from './mock-openai'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Set up our mocks before each test
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
@@ -16,7 +16,7 @@ test.describe('LLM Connection Tests', () => {
 
   test('should create and verify OpenAI connection', async ({ page, isMobile, browserName }) => {
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
@@ -53,13 +53,12 @@ test.describe('LLM Connection Tests', () => {
 
     // Get the current selected model (should be the default one)
     const initialModel = await page.getByTestId('model-select-trilogy-llm-openai').inputValue()
-    console.log('Initial model:', initialModel)
 
-    // Select a different model (assuming gpt-4 is not the default)
-    await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-4')
+    // Select a different model (assuming gpt-5.2-mini is not the default)
+    await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-5.2-mini')
 
     // Verify the model has been selected in the dropdown
-    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
+    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
     // Click the update button
     // this will trigger a save
@@ -78,9 +77,11 @@ test.describe('LLM Connection Tests', () => {
     await page.waitForTimeout(2000)
 
     // Refresh and setup mocks again
+    // Set up mocks before reload to ensure they're ready when page loads
+    await setupOpenAIMocks(page)
     await page.reload()
 
-    // Re-setup our mocks after reload
+    // Re-setup our mocks after reload (routes should persist but just in case)
     await setupOpenAIMocks(page)
 
     if (usesLocalStorage) {
@@ -97,7 +98,7 @@ test.describe('LLM Connection Tests', () => {
 
     await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
-    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-4')
+    await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
     // Assert api key value
     const apiKey = await page.getByTestId('api-key-input-trilogy-llm-openai').inputValue()
@@ -171,28 +172,61 @@ test.describe('LLM Connection Tests', () => {
     })
   })
 
-  test('can use prompt refinement', async ({ page, isMobile }) => {
-    //skip if mobile
+  test('can use prompt refinement with interactive chat', async ({ page, isMobile }) => {
+    // Skip if mobile - refinement UI not optimized for mobile
     if (isMobile) {
       test.skip()
     }
+
+    // Set up mocks with tool call responses for the new interactive chat experience
     await setupOpenAIMocks(page, {
-      models: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+      models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
         'generate query': 'This is a mocked query generation response',
         'filter query': 'This is a mocked filter response',
-        'use order.id.count as the count': `select
-        part.name,
-        part.manufacturer,
-        order.id.count as order_count
-    order by order_count desc
-    limit 10;`,
-        'top 10 products by orders': `select
+        // Initial request - LLM writes to editor using edit_editor tool
+        'top 10 products by orders': createToolCallResponse(
+          "I'll create a query for the top 10 products by orders.",
+          [
+            {
+              name: 'edit_editor',
+              input: {
+                content: `import lineitem;
+
+select
     part.name,
     part.manufacturer,
     count(order.id) as order_count
 order by order_count desc
 limit 10;`,
+              },
+            },
+          ],
+        ),
+        // Follow-up refinement request
+        'use order.id.count as the count': createToolCallResponse(
+          "I'll update the query to use order.id.count instead.",
+          [
+            {
+              name: 'edit_editor',
+              input: {
+                content: `import lineitem;
+
+select
+    part.name,
+    part.manufacturer,
+    order.id.count as order_count
+order by order_count desc
+limit 10;`,
+              },
+            },
+          ],
+        ),
+        // Tool result continuation - request close
+        'Continue based on the tool results': createToolCallResponse(
+          "I've updated the query. The changes look good.",
+          [{ name: 'request_close', input: { message: 'Query updated successfully.' } }],
+        ),
       }),
     })
 
@@ -205,6 +239,7 @@ limit 10;`,
     const usesLocalStorage = ['firefox', 'webkit'].includes(
       page.context()?.browser()?.browserType()?.name() || '',
     )
+
     // Set up LLM connection
     await page.getByTestId('sidebar-link-llms').click()
     await page.getByTestId('llm-connection-creator-add').click()
@@ -216,6 +251,8 @@ limit 10;`,
     await page.getByTestId('llm-connection-creator-api-key').fill('bc123')
     await page.getByTestId('llm-connection-creator-save-credential').check()
     await page.getByTestId('llm-connection-creator-submit').click()
+
+    // Import demo model
     await page.getByTestId('sidebar-link-editors').click()
     await page.getByTestId('sidebar-link-community-models').click()
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
@@ -223,16 +260,18 @@ limit 10;`,
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
     await page.getByTestId('model-creation-submit').click()
+
     if (usesLocalStorage) {
       await page.getByTestId('keyphrase-input').click()
       await page.getByTestId('keyphrase-input').fill('test')
       await page.getByTestId('submit-keyphrase').click()
     }
+
+    // Create new editor
     await page.getByTestId('sidebar-link-editors').click()
-    await page
-      // .getByTestId('editor-c-local-demo-model-connection')
-      .getByTestId('quick-new-editor-demo-model-connection-trilogy')
-      .click()
+    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+
+    // Enter initial content in editor
     await page
       .getByRole('code')
       .locator('div')
@@ -244,10 +283,141 @@ limit 10;`,
       'import lineitem;\n\n\n# get top 10 products by orders and who made them',
     )
     await page.getByTestId('editor').click({ clickCount: 3 })
+
+    // Open refinement chat
     await page.getByTestId('editor-generate-button').click()
+
+    // Verify refinement container is visible
+    await expect(page.getByTestId('editor-refinement-container')).toBeVisible()
+
+    // Send refinement request via chat
     await page.getByTestId('input-textarea').fill('use order.id.count as the count')
     await page.getByTestId('send-button').click()
-    await page.getByTestId('accept-button').click()
-    await page.getByRole('gridcell', { name: 'CHOCOLATE CORNSILK GOLDENROD VIOLET PUFF' }).click()
+
+    // Wait for response and verify message appears
+    await expect(page.getByTestId('messages-container')).toContainText('order.id.count')
+
+    // Close the refinement session
+    await page.getByTestId('discard-button').click()
+
+    // Verify refinement container is closed
+    await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+  })
+
+  test('interactive chat with full tool use loop', async ({ page, isMobile }) => {
+    // Skip if mobile - refinement UI not optimized for mobile
+    if (isMobile) {
+      test.skip()
+    }
+
+    // Track tool call sequence for verification
+    let toolCallCount = 0
+
+    // Set up mocks with a sequence of tool call responses
+    await setupOpenAIMocks(page, {
+      models: CONST_GPT_MODELS,
+      completionHandler: createCompletionHandler({
+        // Initial query generation request
+        'write a simple query': createToolCallResponse(
+          "I'll create a simple query to count parts.",
+          [
+            {
+              name: 'edit_editor',
+              input: {
+                content: `import lineitem;
+
+select
+    count(part.id) as part_count;`,
+              },
+            },
+          ],
+        ),
+        // After edit_editor tool result - validate the query
+        'Continue based on the tool results': createToolCallResponse(
+          'Query written. Let me validate it.',
+          [
+            {
+              name: 'validate_query',
+              input: {
+                query: `import lineitem;
+
+select
+    count(part.id) as part_count;`,
+              },
+            },
+          ],
+        ),
+        // After validate tool result - close session
+        Success: createToolCallResponse('The query is valid and ready.', [
+          {
+            name: 'request_close',
+            input: { message: 'Query created and validated successfully.' },
+          },
+        ]),
+        // Default response for any other continuation
+        default: 'I have completed the requested changes.',
+      }),
+    })
+
+    await page.goto('#skipTips=true')
+
+    const usesLocalStorage = ['firefox', 'webkit'].includes(
+      page.context()?.browser()?.browserType()?.name() || '',
+    )
+
+    // Set up LLM connection
+    await page.getByTestId('sidebar-link-llms').click()
+    await page.getByTestId('llm-connection-creator-add').click()
+    await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
+    await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })
+    await page.getByTestId('llm-connection-creator-api-key').fill('bc123')
+    await page.getByTestId('llm-connection-creator-save-credential').check()
+    await page.getByTestId('llm-connection-creator-submit').click()
+
+    // Import demo model
+    await page.getByTestId('sidebar-link-editors').click()
+    await page.getByTestId('sidebar-link-community-models').click()
+    await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
+    await page.getByTestId('community-model-search').fill('demo')
+    await page.getByTestId('import-demo-model').click()
+    await page.getByTestId('model-creation-submit').click()
+
+    if (usesLocalStorage) {
+      await page.getByTestId('keyphrase-input').fill('test')
+      await page.getByTestId('submit-keyphrase').click()
+    }
+
+    // Create new editor
+    await page.getByTestId('sidebar-link-editors').click()
+    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+
+    // Clear editor and enter minimal content
+    await page.getByTestId('editor').click({ clickCount: 3 })
+    await page.keyboard.type('import lineitem;\n\n# write a simple query')
+    await page.getByTestId('editor').click({ clickCount: 3 })
+
+    // Open refinement chat
+    await page.getByTestId('editor-generate-button').click()
+
+    // Verify chat container is visible
+    await expect(page.getByTestId('editor-refinement-container')).toBeVisible()
+    await expect(page.getByTestId('llm-chat-container')).toBeVisible()
+
+    // Send initial request
+    await page.getByTestId('input-textarea').fill('write a simple query')
+    await page.getByTestId('send-button').click()
+
+    // Wait for tool loop to complete (loading indicator should appear then disappear)
+    await expect(page.getByTestId('loading-indicator')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('loading-indicator')).not.toBeVisible({ timeout: 15000 })
+
+    // Verify the chat shows assistant messages
+    await expect(page.getByTestId('messages-container')).toContainText('query', { timeout: 5000 })
+
+    // Close the session
+    await page.getByTestId('discard-button').click()
+
+    // Verify refinement is closed
+    await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
   })
 })

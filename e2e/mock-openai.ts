@@ -1,6 +1,10 @@
 // mock-openai.ts
 import { Page } from '@playwright/test'
 
+export const CONST_GPT_MODELS = [
+  { id: 'gpt-5.2' },
+  { id: 'gpt-5.2-mini' },
+]
 /**
  * Interface for OpenAI Model
  */
@@ -21,7 +25,18 @@ interface OpenAIMockOptions {
  * Interface for response map in custom completion handler
  */
 interface ResponseMap {
-  [key: string]: string
+  [key: string]: string | ToolCallResponse
+}
+
+/**
+ * Interface for tool call response
+ */
+export interface ToolCallResponse {
+  text: string
+  toolCalls?: {
+    name: string
+    input: Record<string, any>
+  }[]
 }
 
 /**
@@ -31,7 +46,7 @@ interface ResponseMap {
  */
 export async function setupOpenAIMocks(page: Page, options: OpenAIMockOptions = {}): Promise<void> {
   const {
-    models = [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
+    models = CONST_GPT_MODELS,
     completionHandler = defaultCompletionHandler,
   } = options
 
@@ -86,7 +101,7 @@ async function defaultCompletionHandler(requestBody: any): Promise<any> {
 
 /**
  * Creates a custom completion handler that returns specific responses based on prompt content
- * @param responseMap - Map of prompt substrings to response content
+ * @param responseMap - Map of prompt substrings to response content (string or ToolCallResponse)
  * @returns Handler function for completion requests
  */
 export function createCompletionHandler(
@@ -98,15 +113,52 @@ export function createCompletionHandler(
     const prompt = lastMessage.content || ''
 
     // Find matching response based on prompt content
-    let responseContent = 'Default mocked response'
+    let response: string | ToolCallResponse = 'Default mocked response'
 
     for (const [key, value] of Object.entries(responseMap)) {
       if (prompt.includes(key)) {
-        responseContent = value
+        response = value
         break
       }
     }
 
+    // Handle ToolCallResponse (with tool calls)
+    if (typeof response === 'object' && 'text' in response) {
+      const toolCallResponse = response as ToolCallResponse
+      const contentText = toolCallResponse.text
+
+      // Format tool calls in OpenAI native format
+      const openaiToolCalls =
+        toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0
+          ? toolCallResponse.toolCalls.map((tc, index) => ({
+            id: `call_mock_${index}`,
+            type: 'function' as const,
+            function: {
+              name: tc.name,
+              arguments: JSON.stringify(tc.input),
+            },
+          }))
+          : undefined
+
+      return {
+        choices: [
+          {
+            message: {
+              content: contentText,
+              tool_calls: openaiToolCalls,
+            },
+          },
+        ],
+        usage: {
+          prompt_tokens: Math.floor(prompt.length / 4),
+          completion_tokens: Math.floor(contentText.length / 4),
+          total_tokens: Math.floor((prompt.length + contentText.length) / 4),
+        },
+      }
+    }
+
+    // Handle simple string response
+    const responseContent = response as string
     return {
       choices: [
         {
@@ -116,10 +168,20 @@ export function createCompletionHandler(
         },
       ],
       usage: {
-        prompt_tokens: Math.floor(prompt.length / 4), // Rough approximation
+        prompt_tokens: Math.floor(prompt.length / 4),
         completion_tokens: Math.floor(responseContent.length / 4),
         total_tokens: Math.floor((prompt.length + responseContent.length) / 4),
       },
     }
   }
+}
+
+/**
+ * Helper to create a tool call response with proper formatting
+ */
+export function createToolCallResponse(
+  text: string,
+  toolCalls: { name: string; input: Record<string, any> }[],
+): ToolCallResponse {
+  return { text, toolCalls }
 }

@@ -249,7 +249,7 @@ onUnmounted(() => {
 }
 
 .import-summary {
-  padding: 6px 12px 6px 36px;
+  padding: 5px 12px 5px 36px;
   border: 1px solid var(--border);
   color: var(--sidebar-selector-font);
   font-size: var(--font-size);

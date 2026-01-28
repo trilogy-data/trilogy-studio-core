@@ -6,7 +6,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { LLMProvider, OpenAIProvider, MistralProvider, AnthropicProvider } from '../llm'
+import { LLMProvider, OpenAIProvider, AnthropicProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards'
@@ -269,10 +269,6 @@ export default class GitHubStorage extends AbstractStorage {
         case 'openai':
           // @ts-ignore
           connections[connection.name] = reactive(OpenAIProvider.fromJSON(connection))
-          break
-        case 'mistral':
-          // @ts-ignore
-          connections[connection.name] = reactive(MistralProvider.fromJSON(connection))
           break
         case 'anthropic':
           // @ts-ignore

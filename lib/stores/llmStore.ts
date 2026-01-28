@@ -4,7 +4,6 @@ import type { LLMRequestOptions, LLMMessage, ModelConceptInput, LLMResponse } fr
 import {
   AnthropicProvider,
   OpenAIProvider,
-  MistralProvider,
   GoogleProvider,
   createPrompt,
   createDashboardPrompt,
@@ -121,7 +120,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       if (this.connections[name]) {
         throw new Error(`LLM connection with name "${name}" already exists.`)
       }
-      let connection: LLMProvider | null = null
+      let connection: LLMProvider
       if (type === 'anthropic') {
         connection = new AnthropicProvider(
           name,
@@ -131,13 +130,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         )
       } else if (type === 'openai') {
         connection = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
-      } else if (type === 'mistral') {
-        connection = new MistralProvider(
-          name,
-          options.apiKey,
-          options.model,
-          options.saveCredential,
-        )
       } else if (type === 'google') {
         connection = new GoogleProvider(name, options.apiKey, options.model, options.saveCredential)
       } else {
@@ -150,15 +142,13 @@ const useLLMConnectionStore = defineStore('llmConnections', {
 
     // Fetch available models for a provider type without persisting a connection
     async fetchModelsForProvider(type: string, apiKey: string): Promise<string[]> {
-      let provider: LLMProvider | null = null
+      let provider: LLMProvider
       const tempName = `__temp_${type}_${Date.now()}`
 
       if (type === 'anthropic') {
         provider = new AnthropicProvider(tempName, apiKey, '', false)
       } else if (type === 'openai') {
         provider = new OpenAIProvider(tempName, apiKey, '', false)
-      } else if (type === 'mistral') {
-        provider = new MistralProvider(tempName, apiKey, '', false)
       } else if (type === 'google') {
         provider = new GoogleProvider(tempName, apiKey, '', false)
       } else {
@@ -205,10 +195,11 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         })
       }
 
-      // Add the response message to the history
+      // Add the response message to the history (preserve toolCalls if any)
       history.push({
         role: 'assistant',
         content: raw.text,
+        toolCalls: raw.toolCalls,
       })
 
       // Extract the response
@@ -262,6 +253,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
             history.push({
               role: 'assistant',
               content: raw.text,
+              toolCalls: raw.toolCalls,
             })
 
             // Extract the new response

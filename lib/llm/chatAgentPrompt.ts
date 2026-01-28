@@ -1,28 +1,12 @@
 import { rulesInput, functions, aggFunctions, datatypes } from './data/constants'
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
-import type { ChartConfig, chartTypes } from '../editors/results'
 import type { ChatImport } from '../chats/chat'
-
-// Example ChartConfig for LLM reference
-const CHART_CONFIG_EXAMPLE: ChartConfig = {
-  chartType: 'bar' as chartTypes,
-  xField: 'category',
-  yField: 'revenue',
-  yField2: 'cost',
-  colorField: 'region',
-  sizeField: 'quantity',
-  groupField: 'year',
-  trellisField: 'department',
-  trellisRowField: 'quarter',
-  geoField: 'state_code',
-  annotationField: 'notes',
-  hideLegend: false,
-  showTitle: true,
-  scaleX: 'linear',
-  scaleY: 'linear',
-  linkY2: false,
-}
+import {
+  chartConfigSchema,
+  chartConfigGuidance,
+  connectDataConnectionTool,
+} from './sharedToolSchemas'
 
 // Tool definitions in JSON Schema format (Anthropic/OpenAI compatible)
 export const CHAT_TOOLS = [
@@ -47,11 +31,7 @@ export const CHAT_TOOLS = [
   },
   {
     name: 'chart_trilogy_query',
-    description: `Execute a Trilogy query and display results as a chart. The chart type is auto-detected based on data shape unless you specify a chartConfig. Only provide chartConfig if the user specifically requests a chart type or configuration; otherwise let auto-detection handle it. Hiding fields used only for filtering/query structure from output with -- syntax may be useful to get the right auto-formatting.
-
-Example chartConfig: ${JSON.stringify(CHART_CONFIG_EXAMPLE)}
-
-Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap', 'treemap', 'boxplot', 'beeswarm', 'headline', 'geo-map', 'tree'`,
+    description: `Execute a Trilogy query and display results as a chart. ${chartConfigGuidance}`,
     input_schema: {
       type: 'object',
       properties: {
@@ -64,92 +44,9 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
           description: 'Data connection name to run the query against',
         },
         chartConfig: {
-          type: 'object',
+          ...chartConfigSchema,
           description:
             'Optional chart configuration. Only provide if user specifically requests a chart type or configuration.',
-          properties: {
-            chartType: {
-              type: 'string',
-              enum: [
-                'line',
-                'bar',
-                'barh',
-                'point',
-                'geo-map',
-                'tree',
-                'area',
-                'headline',
-                'donut',
-                'heatmap',
-                'boxplot',
-                'treemap',
-                'beeswarm',
-              ],
-              description: 'Type of chart to render',
-            },
-            xField: {
-              type: 'string',
-              description: 'Field name for x-axis. Longitude for geo-map charts if geofield not provided.',
-            },
-            yField: {
-              type: 'string',
-              description: 'Field name for y-axis. Latitude for geo-map charts if geofield not provided.',
-            },
-            yField2: {
-              type: 'string',
-              description: 'Secondary y-axis field (optional)',
-            },
-            colorField: {
-              type: 'string',
-              description: 'Field for color encoding (optional)',
-            },
-            sizeField: {
-              type: 'string',
-              description: 'Field for size encoding (optional)',
-            },
-            groupField: {
-              type: 'string',
-              description: 'Field for grouping data (optional)',
-            },
-            trellisField: {
-              type: 'string',
-              description: 'Field for small multiples/faceting columns (optional)',
-            },
-            trellisRowField: {
-              type: 'string',
-              description: 'Field for small multiples/faceting rows (optional)',
-            },
-            geoField: {
-              type: 'string',
-              description: 'Field for geographic data (optional)',
-            },
-            annotationField: {
-              type: 'string',
-              description: 'Field for data point annotations/labels (optional)',
-            },
-            hideLegend: {
-              type: 'boolean',
-              description: 'Whether to hide the legend (optional)',
-            },
-            showTitle: {
-              type: 'boolean',
-              description: 'Whether to show the chart title (optional)',
-            },
-            scaleX: {
-              type: 'string',
-              enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for x-axis (optional)',
-            },
-            scaleY: {
-              type: 'string',
-              enum: ['linear', 'log', 'sqrt'],
-              description: 'Scale type for y-axis (optional)',
-            },
-            linkY2: {
-              type: 'boolean',
-              description: 'Whether to link the secondary y-axis scale to the primary y-axis (optional)',
-            },
-          },
         },
       },
       required: ['query', 'connection'],
@@ -181,21 +78,7 @@ Available chartTypes: 'line', 'bar', 'barh', 'point', 'area', 'donut', 'heatmap'
       required: [],
     },
   },
-  {
-    name: 'connect_data_connection',
-    description:
-      'Connect or reconnect a data connection that is not currently active. Use this when a query fails because the connection is not active, or when you need to establish a connection before running queries.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        connection: {
-          type: 'string',
-          description: 'The name of the data connection to connect',
-        },
-      },
-      required: ['connection'],
-    },
-  },
+  connectDataConnectionTool,
 ]
 
 export interface ChatAgentPromptOptions {
@@ -270,73 +153,4 @@ IMPORTANT GUIDELINES:
 7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
 8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
 `
-}
-
-// Type for parsed tool call from LLM response
-export interface ParsedToolCall {
-  name: string
-  input: Record<string, any>
-}
-
-// Parse tool use blocks from LLM response
-// Supports multiple formats for flexibility
-export function parseToolCalls(response: string): ParsedToolCall[] {
-  const calls: ParsedToolCall[] = []
-
-  // Pattern 1: <tool_use> blocks (Anthropic style in text)
-  const toolUseRegex =
-    /<tool_use>\s*\{[\s\S]*?"name"\s*:\s*"([^"]+)"[\s\S]*?"input"\s*:\s*(\{[\s\S]*?\})\s*\}\s*<\/tool_use>/g
-  let match
-  while ((match = toolUseRegex.exec(response)) !== null) {
-    try {
-      const input = JSON.parse(match[2])
-      calls.push({ name: match[1], input })
-    } catch (e) {
-      console.error('Failed to parse tool_use block:', e)
-    }
-  }
-
-  // Pattern 2: <function_call> blocks (alternative format)
-  const functionCallRegex =
-    /<function_call>\s*\{[\s\S]*?"name"\s*:\s*"([^"]+)"[\s\S]*?"arguments"\s*:\s*(\{[\s\S]*?\})\s*\}\s*<\/function_call>/g
-  while ((match = functionCallRegex.exec(response)) !== null) {
-    try {
-      const input = JSON.parse(match[2])
-      calls.push({ name: match[1], input })
-    } catch (e) {
-      console.error('Failed to parse function_call block:', e)
-    }
-  }
-
-  // Pattern 3: JSON code block with tool call structure
-  const jsonBlockRegex = /```json\s*(\{[\s\S]*?"(tool|function)"\s*:[\s\S]*?\})\s*```/g
-  while ((match = jsonBlockRegex.exec(response)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1])
-      if (parsed.tool && parsed.args) {
-        calls.push({ name: parsed.tool, input: parsed.args })
-      } else if (parsed.function && parsed.arguments) {
-        calls.push({ name: parsed.function, input: parsed.arguments })
-      } else if (parsed.name && parsed.input) {
-        calls.push({ name: parsed.name, input: parsed.input })
-      }
-    } catch (e) {
-      console.error('Failed to parse JSON block tool call:', e)
-    }
-  }
-
-  return calls
-}
-
-// Helper to format tool result for feeding back to LLM
-export function formatToolResult(
-  toolName: string,
-  success: boolean,
-  result?: { rowCount?: number; columnCount?: number; error?: string },
-): string {
-  if (success) {
-    return `Tool "${toolName}" executed successfully. Results: ${result?.rowCount || 0} rows, ${result?.columnCount || 0} columns. The data is now displayed as an artifact.`
-  } else {
-    return `Tool "${toolName}" failed: ${result?.error || 'Unknown error'}`
-  }
 }
