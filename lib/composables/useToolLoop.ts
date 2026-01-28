@@ -251,13 +251,59 @@ export function useToolLoop(): UseToolLoopReturn {
           options.onToolResult?.(toolCall.name, result)
 
           if (result.terminatesLoop) {
-            // Add final message before terminating
-            if (result.message) {
-              addMessage({
-                role: 'assistant',
-                content: result.message,
-              })
+            // Build result text for the terminating tool (same as non-terminating path)
+            let terminatingResultText = ''
+            if (result.success) {
+              if (result.artifact) {
+                artifacts.value = [...artifacts.value, result.artifact]
+                const config = result.artifact.config
+                const artifactData = result.artifact.data
+                let dataPreview = ''
+                if (artifactData) {
+                  const jsonData =
+                    typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
+                  const limitedData = {
+                    ...jsonData,
+                    data: jsonData.data?.slice(0, 50),
+                  }
+                  dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 50):\n${JSON.stringify(limitedData, null, 2)}`
+                }
+                const artifactInfo = config
+                  ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
+                  : ''
+                terminatingResultText = `Success. ${result.message || artifactInfo}${dataPreview}`
+              } else if (result.message) {
+                terminatingResultText = result.message
+              } else {
+                terminatingResultText = 'Success.'
+              }
+            } else {
+              terminatingResultText = `Error: ${result.error}`
             }
+
+            // Add the terminating tool's result to toolResults
+            toolResults.push({
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              result: terminatingResultText,
+            })
+
+            // IMPORTANT: Add assistant message with tool calls to message history
+            // This ensures the OpenAI API sees the tool_calls followed by tool results
+            addMessage({
+              role: 'assistant',
+              content: responseText,
+              toolCalls: toolCalls,
+            })
+
+            // Add tool results as hidden user message (required for OpenAI API compatibility)
+            addMessage({
+              role: 'user',
+              content: '',
+              toolResults: toolResults,
+              hidden: true,
+            })
+
             return { terminated: true, finalMessage: result.message }
           }
 
