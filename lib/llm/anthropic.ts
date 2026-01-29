@@ -197,9 +197,10 @@ export class AnthropicProvider extends LLMProvider {
         requestBody.tools = options.tools
       }
 
-      // Merge retry options with request-specific backoff callback
+      // Merge retry options with request-specific backoff callback and abort signal
       const effectiveRetryOptions = {
         ...this.retryOptions,
+        signal: options.signal,
         onRetry: (attempt: number, delayMs: number, error: Error) => {
           // Call the default retry handler
           this.retryOptions.onRetry?.(attempt, delayMs, error)
@@ -219,6 +220,7 @@ export class AnthropicProvider extends LLMProvider {
               'anthropic-dangerous-direct-browser-access': 'true',
             },
             body: JSON.stringify(requestBody),
+            signal: options.signal,
           }),
         effectiveRetryOptions,
       )

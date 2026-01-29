@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { CONST_GPT_MODELS, setupOpenAIMocks, createCompletionHandler, createToolCallResponse } from './mock-openai'
+import {
+  CONST_GPT_MODELS,
+  setupOpenAIMocks,
+  createCompletionHandler,
+  createToolCallResponse,
+} from './mock-openai'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {

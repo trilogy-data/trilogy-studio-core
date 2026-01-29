@@ -169,6 +169,7 @@ export class OpenAIProvider extends LLMProvider {
       messages.push({ role: 'system', content: options.systemPrompt })
     }
 
+    // history contains previous messages, options.prompt is the current user message
     messages = [...messages, ...cleanHistory, { role: 'user', content: options.prompt }]
 
     // Build request body
@@ -193,9 +194,10 @@ export class OpenAIProvider extends LLMProvider {
     }
 
     try {
-      // Merge retry options with request-specific backoff callback
+      // Merge retry options with request-specific backoff callback and abort signal
       const effectiveRetryOptions = {
         ...this.retryOptions,
+        signal: options.signal,
         onRetry: (attempt: number, delayMs: number, error: Error) => {
           // Call the default retry handler
           this.retryOptions.onRetry?.(attempt, delayMs, error)
@@ -213,6 +215,7 @@ export class OpenAIProvider extends LLMProvider {
               Authorization: `Bearer ${this.apiKey}`,
             },
             body: JSON.stringify(requestBody),
+            signal: options.signal,
           }),
         effectiveRetryOptions,
       )

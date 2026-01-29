@@ -221,6 +221,130 @@ describe('useToolLoop', () => {
       expect(result.finalMessage).toBe('Session closed.')
     })
 
+    it('should include tool call and tool result messages when terminatesLoop is true', async () => {
+      // This test verifies the fix for OpenAI API error:
+      // "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'"
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Closing the session now.',
+        toolCalls: [{ id: 'call_abc123', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Session closed successfully.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Please close',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have: user message, assistant with tool calls, tool results (hidden user message)
+      expect(messages.value.length).toBe(3)
+
+      // First message should be the user message
+      expect(messages.value[0].role).toBe('user')
+      expect(messages.value[0].content).toBe('Please close')
+
+      // Second message should be assistant with tool calls
+      expect(messages.value[1].role).toBe('assistant')
+      expect(messages.value[1].content).toBe('Closing the session now.')
+      expect(messages.value[1].toolCalls).toBeDefined()
+      expect(messages.value[1].toolCalls).toHaveLength(1)
+      expect(messages.value[1].toolCalls![0].id).toBe('call_abc123')
+      expect(messages.value[1].toolCalls![0].name).toBe('close_session')
+
+      // Third message should be tool results (hidden user message)
+      expect(messages.value[2].role).toBe('user')
+      expect(messages.value[2].hidden).toBe(true)
+      expect(messages.value[2].toolResults).toBeDefined()
+      expect(messages.value[2].toolResults).toHaveLength(1)
+      expect(messages.value[2].toolResults![0].toolCallId).toBe('call_abc123')
+      expect(messages.value[2].toolResults![0].result).toBe('Session closed successfully.')
+    })
+
+    it('should include all tool results when terminatesLoop happens after multiple tools', async () => {
+      // When multiple tool calls are made and the last one terminates,
+      // all tool results should be included
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Let me validate and then close.',
+        toolCalls: [
+          { id: 'call_validate', name: 'validate_query', input: { query: 'SELECT 1' } },
+          { id: 'call_close', name: 'close_session', input: {} },
+        ],
+      })
+
+      // First tool succeeds normally
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Query is valid.',
+      })
+
+      // Second tool terminates the loop
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Validate and close',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have proper message structure
+      expect(messages.value.length).toBe(3)
+
+      // Check that tool results include both tool calls
+      const toolResultsMessage = messages.value[2]
+      expect(toolResultsMessage.toolResults).toHaveLength(2)
+      expect(toolResultsMessage.toolResults![0].toolCallId).toBe('call_validate')
+      expect(toolResultsMessage.toolResults![0].result).toBe('Query is valid.')
+      expect(toolResultsMessage.toolResults![1].toolCallId).toBe('call_close')
+      expect(toolResultsMessage.toolResults![1].result).toBe('Session closed.')
+    })
+
+    it('should handle failed terminating tool calls correctly', async () => {
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Attempting to close.',
+        toolCalls: [{ id: 'call_close_fail', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: false,
+        error: 'Failed to close session',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Close now',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Tool results should contain the error
+      const toolResultsMessage = messages.value[2]
+      expect(toolResultsMessage.toolResults![0].result).toBe('Error: Failed to close session')
+    })
+
     it('should add artifacts from tool results', async () => {
       const mockArtifact = {
         type: 'results' as const,
@@ -596,6 +720,144 @@ describe('useToolLoop', () => {
           yField: 'count',
         },
       })
+    })
+  })
+
+  describe('multi-iteration persistence', () => {
+    it('should persist intermediate tool messages across multiple iterations', async () => {
+      // This test verifies the fix for:
+      // "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'"
+      // When multiple iterations occur, ALL intermediate messages should be in messages.value
+
+      // Iteration 1: LLM calls edit_editor (non-terminating)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: '',
+        toolCalls: [{ id: 'call_edit', name: 'edit_editor', input: { content: 'SELECT 1' } }],
+      })
+
+      // Iteration 2: LLM responds with text and calls request_close (terminating)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Updated the editor successfully.',
+        toolCalls: [{ id: 'call_close', name: 'request_close', input: { message: 'Done' } }],
+      })
+
+      // edit_editor doesn't terminate
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Editor updated.',
+      })
+
+      // request_close terminates
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Write a query',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have ALL messages persisted:
+      // 1. user: "Write a query"
+      // 2. assistant: edit_editor tool call (iteration 1)
+      // 3. user (hidden): edit_editor tool result
+      // 4. assistant: request_close tool call (iteration 2)
+      // 5. user (hidden): request_close tool result
+      expect(messages.value.length).toBe(5)
+
+      // Check iteration 1 messages are persisted
+      expect(messages.value[0].role).toBe('user')
+      expect(messages.value[0].content).toBe('Write a query')
+
+      expect(messages.value[1].role).toBe('assistant')
+      expect(messages.value[1].toolCalls).toBeDefined()
+      expect(messages.value[1].toolCalls![0].id).toBe('call_edit')
+
+      expect(messages.value[2].role).toBe('user')
+      expect(messages.value[2].hidden).toBe(true)
+      expect(messages.value[2].toolResults).toBeDefined()
+      expect(messages.value[2].toolResults![0].toolCallId).toBe('call_edit')
+
+      // Check iteration 2 messages are also persisted
+      expect(messages.value[3].role).toBe('assistant')
+      expect(messages.value[3].toolCalls).toBeDefined()
+      expect(messages.value[3].toolCalls![0].id).toBe('call_close')
+
+      expect(messages.value[4].role).toBe('user')
+      expect(messages.value[4].hidden).toBe(true)
+      expect(messages.value[4].toolResults).toBeDefined()
+      expect(messages.value[4].toolResults![0].toolCallId).toBe('call_close')
+    })
+
+    it('should persist messages correctly for follow-up conversations', async () => {
+      // Simulates: user sends message -> tool iterations -> terminates -> user sends follow-up
+      // The follow-up should have access to all previous messages
+
+      // First executeMessage call
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Editing the editor.',
+        toolCalls: [{ id: 'call_edit_1', name: 'edit_editor', input: { content: 'SELECT 1' } }],
+      })
+
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Done editing.',
+        toolCalls: [{ id: 'call_close_1', name: 'request_close', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Edited.' })
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'First request',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Now simulate follow-up - messages.value should have full history
+      const messageCountAfterFirst = messages.value.length
+      expect(messageCountAfterFirst).toBe(5) // user, assistant+tool, tool_result, assistant+tool, tool_result
+
+      // Second executeMessage call (follow-up)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Here is your follow-up answer.',
+      })
+
+      await executeMessage(
+        'Follow-up request',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have added 2 more messages: user follow-up + assistant response
+      expect(messages.value.length).toBe(messageCountAfterFirst + 2)
+
+      // The new user message
+      expect(messages.value[5].role).toBe('user')
+      expect(messages.value[5].content).toBe('Follow-up request')
+
+      // The assistant's response to follow-up
+      expect(messages.value[6].role).toBe('assistant')
+      expect(messages.value[6].content).toBe('Here is your follow-up answer.')
     })
   })
 })

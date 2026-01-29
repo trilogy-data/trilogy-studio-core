@@ -154,13 +154,24 @@ export class GoogleProvider extends LLMProvider {
   private async withRetry<T>(
     apiCall: () => Promise<T>,
     onBackoff?: (attempt: number, delayMs: number, error: Error) => void,
+    signal?: AbortSignal,
   ): Promise<T> {
     let retries = 0
 
     while (true) {
+      // Check if aborted before each attempt
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       try {
         return await apiCall()
       } catch (error) {
+        // Re-throw abort errors immediately without retry
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw error
+        }
+
         // Check if it's a 429 error or contains 429 error message
         const isRateLimitError =
           (error instanceof Error &&
@@ -181,7 +192,20 @@ export class GoogleProvider extends LLMProvider {
           onBackoff(retries, delayMs, error)
         }
 
-        await new Promise((resolve) => setTimeout(resolve, delayMs))
+        // Wait for the calculated delay, but allow abort to interrupt
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = setTimeout(resolve, delayMs)
+          if (signal) {
+            signal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(timeoutId)
+                reject(new DOMException('Aborted', 'AbortError'))
+              },
+              { once: true },
+            )
+          }
+        })
       }
     }
   }
@@ -199,77 +223,81 @@ export class GoogleProvider extends LLMProvider {
     }
 
     // Using the retry wrapper for API calls
-    return await this.withRetry(async () => {
-      if (history && history.length > 0) {
-        // Create a chat with history
-        console.log(this.convertToGeminiHistory(history))
-        const args: CreateChatParameters = {
-          // if the model has models/ prefixed, split it
-          model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
-          history: this.convertToGeminiHistory(history),
-          config: {
-            maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-            temperature: options.temperature || DEFAULT_TEMPERATURE,
-            tools:
-              options.tools && options.tools.length > 0
-                ? this.convertToGeminiTools(options.tools)
-                : undefined,
-          },
+    return await this.withRetry(
+      async () => {
+        if (history && history.length > 0) {
+          // Create a chat with history
+          console.log(this.convertToGeminiHistory(history))
+          const args: CreateChatParameters = {
+            // if the model has models/ prefixed, split it
+            model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
+            history: this.convertToGeminiHistory(history),
+            config: {
+              maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+              temperature: options.temperature || DEFAULT_TEMPERATURE,
+              tools:
+                options.tools && options.tools.length > 0
+                  ? this.convertToGeminiTools(options.tools)
+                  : undefined,
+            },
+          }
+
+          const chat = this.genAIClient!.chats.create(args)
+
+          // Send the message
+          const result = await chat.sendMessage({ message: options.prompt })
+
+          // Get token usage if available
+          const promptTokens = result.usageMetadata?.promptTokenCount || 0
+          const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+          const { text, toolCalls } = this.extractResponseData(result)
+
+          return {
+            text,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens: promptTokens + completionTokens,
+            },
+          }
+        } else {
+          console.log('using simple completion without history')
+          // Simple completion without history
+          const requestArgs: GenerateContentParameters = {
+            model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
+            contents: options.prompt,
+            config: {
+              maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+              temperature: options.temperature || DEFAULT_TEMPERATURE,
+              tools:
+                options.tools && options.tools.length > 0
+                  ? this.convertToGeminiTools(options.tools)
+                  : undefined,
+            },
+          }
+
+          const result = await this.genAIClient!.models.generateContent(requestArgs)
+
+          // Get token usage if available
+          const promptTokens = result.usageMetadata?.promptTokenCount || 0
+          const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
+          const { text, toolCalls } = this.extractResponseData(result)
+
+          return {
+            text,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens: promptTokens + completionTokens,
+            },
+          }
         }
-
-        const chat = this.genAIClient!.chats.create(args)
-
-        // Send the message
-        const result = await chat.sendMessage({ message: options.prompt })
-
-        // Get token usage if available
-        const promptTokens = result.usageMetadata?.promptTokenCount || 0
-        const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
-        const { text, toolCalls } = this.extractResponseData(result)
-
-        return {
-          text,
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-          usage: {
-            promptTokens,
-            completionTokens,
-            totalTokens: promptTokens + completionTokens,
-          },
-        }
-      } else {
-        console.log('using simple completion without history')
-        // Simple completion without history
-        const requestArgs: GenerateContentParameters = {
-          model: this.model.includes('/') ? this.model.split('/')[1] : this.model,
-          contents: options.prompt,
-          config: {
-            maxOutputTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-            temperature: options.temperature || DEFAULT_TEMPERATURE,
-            tools:
-              options.tools && options.tools.length > 0
-                ? this.convertToGeminiTools(options.tools)
-                : undefined,
-          },
-        }
-
-        const result = await this.genAIClient!.models.generateContent(requestArgs)
-
-        // Get token usage if available
-        const promptTokens = result.usageMetadata?.promptTokenCount || 0
-        const completionTokens = result.usageMetadata?.candidatesTokenCount || 0
-        const { text, toolCalls } = this.extractResponseData(result)
-
-        return {
-          text,
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-          usage: {
-            promptTokens,
-            completionTokens,
-            totalTokens: promptTokens + completionTokens,
-          },
-        }
-      }
-    }, options.onRateLimitBackoff)
+      },
+      options.onRateLimitBackoff,
+      options.signal,
+    )
   }
 
   private convertToGeminiTools(tools: LLMToolDefinition[]): Tool[] {
