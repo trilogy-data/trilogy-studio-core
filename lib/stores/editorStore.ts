@@ -4,8 +4,7 @@ import type { EditorRefinementSession } from '../editors/editor'
 import { Results } from '../editors/results'
 import type { ChartConfig } from '../editors/results'
 import { EditorTag } from '../editors'
-import type { ChatMessage, ChatArtifact, ChatToolCall } from '../chats/chat'
-import type { LLMRequestOptions, LLMResponse } from '../llm'
+import type { ChatMessage, ChatArtifact } from '../chats/chat'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
@@ -20,7 +19,13 @@ import {
   buildEditorRefinementPrompt,
   type EditorRefinementContext,
 } from '../llm/editorRefinementTools'
-import type { LLMToolCall, LLMToolResult } from '../llm/base'
+import {
+  runToolLoop,
+  type LLMAdapter,
+  type MessagePersistence,
+  type ToolExecutorFactory,
+  type ExecutionStateUpdater,
+} from '../llm/toolLoopCore'
 
 /** Per-editor refinement execution state */
 export interface RefinementExecution {
@@ -285,6 +290,7 @@ const useEditorStore = defineStore('editors', {
      * Execute a refinement message with tool support.
      * This runs the full LLM conversation loop including tool calls.
      * The execution persists even if the component unmounts.
+     * Uses the shared runToolLoop core function for consistency with useToolLoop.
      */
     async executeRefinementMessage(
       editorId: string,
@@ -297,9 +303,6 @@ const useEditorStore = defineStore('editors', {
         onRunActiveEditorQuery?: () => Promise<QueryExecutionResult>
       } = {},
     ): Promise<{ terminated: boolean; finalMessage?: string; stopped?: boolean }> {
-      const MAX_ITERATIONS = 20
-      const MAX_AUTO_CONTINUE = 3
-
       const editor = this.editors[editorId]
       if (!editor || !editor.refinementSession) {
         return { terminated: false, finalMessage: 'Editor or session not found.' }
@@ -326,53 +329,57 @@ const useEditorStore = defineStore('editors', {
       })
 
       try {
-        const session = editor.refinementSession
-        // currentMessages is the history to send to the LLM, excluding the message we just added
-        // (the current user message is sent separately via options.prompt)
-        let currentMessages: Array<{
-          role: 'user' | 'assistant' | 'system'
-          content: string
-          hidden?: boolean
-          toolCalls?: LLMToolCall[]
-          toolResults?: LLMToolResult[]
-        }> = session.messages.slice(0, -1)
-        let currentPrompt = message
-        let autoContinueCount = 0
-        let lastResponseText = ''
-
         // Track available symbols for system prompt updates
         let availableSymbols: CompletionItem[] = editor.completionSymbols || []
 
-        // Build editor context for tool executor
-        const buildEditorContext = (): EditorContext => ({
-          connectionName: editor.connection,
-          editorContents: session.currentContent,
-          selectedText: session.selectedText,
-          selectionRange: session.selectionRange,
-          chartConfig: session.currentChartConfig,
-          onEditorContentChange: (content: string, replaceSelection?: boolean) => {
-            let newContent = content
-            if (replaceSelection && session.selectionRange) {
-              const before = session.currentContent.slice(0, session.selectionRange.start)
-              const after = session.currentContent.slice(session.selectionRange.end)
-              newContent = before + content + after
+        // Build editor context for tool executor (called fresh each iteration)
+        const buildEditorContext = (): EditorContext => {
+          const currentSession = this.editors[editorId]?.refinementSession
+          if (!currentSession) {
+            return {
+              connectionName: editor.connection,
+              editorContents: '',
+              selectedText: undefined,
+              selectionRange: undefined,
+              chartConfig: undefined,
+              onEditorContentChange: () => {},
+              onChartConfigChange: () => {},
+              onFinish: () => {},
             }
-            this.updateRefinementSession(editorId, { currentContent: newContent })
-            options.onContentChange?.(newContent, replaceSelection)
-          },
-          onChartConfigChange: (config: ChartConfig) => {
-            this.updateRefinementSession(editorId, { currentChartConfig: config })
-            options.onChartConfigChange?.(config)
-          },
-          onFinish: (msg?: string) => {
-            options.onFinish?.(msg)
-          },
-          onRunActiveEditorQuery: options.onRunActiveEditorQuery
-            ? () => options.onRunActiveEditorQuery!()
-            : undefined,
-        })
+          }
+          return {
+            connectionName: editor.connection,
+            editorContents: currentSession.currentContent,
+            selectedText: currentSession.selectedText,
+            selectionRange: currentSession.selectionRange,
+            chartConfig: currentSession.currentChartConfig,
+            onEditorContentChange: (content: string, replaceSelection?: boolean) => {
+              let newContent = content
+              if (replaceSelection && currentSession.selectionRange) {
+                const before = currentSession.currentContent.slice(
+                  0,
+                  currentSession.selectionRange.start,
+                )
+                const after = currentSession.currentContent.slice(currentSession.selectionRange.end)
+                newContent = before + content + after
+              }
+              this.updateRefinementSession(editorId, { currentContent: newContent })
+              options.onContentChange?.(newContent, replaceSelection)
+            },
+            onChartConfigChange: (config: ChartConfig) => {
+              this.updateRefinementSession(editorId, { currentChartConfig: config })
+              options.onChartConfigChange?.(config)
+            },
+            onFinish: (msg?: string) => {
+              options.onFinish?.(msg)
+            },
+            onRunActiveEditorQuery: options.onRunActiveEditorQuery
+              ? () => options.onRunActiveEditorQuery!()
+              : undefined,
+          }
+        }
 
-        // Build system prompt
+        // Build system prompt (called each iteration to reflect current state)
         const buildSystemPrompt = (): string => {
           const currentSession = this.editors[editorId]?.refinementSession
           if (!currentSession) return ''
@@ -388,291 +395,48 @@ const useEditorStore = defineStore('editors', {
           return buildEditorRefinementPrompt(context)
         }
 
-        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-          // Check for abort before starting iteration
-          if (signal?.aborted) {
-            this.addRefinementMessage(editorId, {
-              role: 'assistant',
-              content: lastResponseText || '(Response in progress when stopped)',
-            })
-            this.addRefinementMessage(editorId, {
-              role: 'user',
-              content: '[User requested pause - conversation can be continued]',
-              hidden: true,
-            })
-            return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
-          }
-
-          // Create tool executor with current context
-          const toolExecutor = new EditorRefinementToolExecutor(
-            queryExecutionService,
-            connectionStore,
-            buildEditorContext(),
-            this,
-          )
-
-          const llmOptions: LLMRequestOptions = {
-            prompt: currentPrompt,
-            systemPrompt: buildSystemPrompt(),
-            tools: EDITOR_REFINEMENT_TOOLS,
-          }
-
-          // Generate LLM response
-          const response: LLMResponse = await llmConnectionStore.generateCompletion(
-            llmConnectionName,
-            llmOptions,
-            currentMessages,
-          )
-
-          const responseText = response.text
-          lastResponseText = responseText
-
-          // Use structured tool calls from response (preserve full LLMToolCall objects)
-          const toolCalls: LLMToolCall[] = response.toolCalls ?? []
-
-          // Check for abort after LLM response
-          if (signal?.aborted) {
-            this.addRefinementMessage(editorId, {
-              role: 'assistant',
-              content: responseText,
-            })
-            this.addRefinementMessage(editorId, {
-              role: 'user',
-              content: '[User requested pause - conversation can be continued]',
-              hidden: true,
-            })
-            return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
-          }
-
-          // If no tool calls, we're done (or check for auto-continue)
-          if (toolCalls.length === 0) {
-            this.addRefinementMessage(editorId, {
-              role: 'assistant',
-              content: responseText,
-            })
-
-            // Check if we should auto-continue (skip if aborted)
-            if (autoContinueCount < MAX_AUTO_CONTINUE && !signal?.aborted) {
-              try {
-                const shouldContinue = await llmConnectionStore.shouldAutoContinue(
-                  llmConnectionName,
-                  responseText,
-                )
-
-                if (shouldContinue && !signal?.aborted) {
-                  autoContinueCount++
-                  console.log(
-                    `[executeRefinementMessage] Auto-continue ${autoContinueCount}/${MAX_AUTO_CONTINUE}`,
-                  )
-
-                  currentMessages = [
-                    ...currentMessages,
-                    { role: 'assistant' as const, content: responseText },
-                    {
-                      role: 'user' as const,
-                      content: 'Continue with the action you described.',
-                      hidden: true,
-                    },
-                  ]
-                  currentPrompt = 'Continue with the action you described.'
-                  continue
-                }
-              } catch (err) {
-                console.error('[executeRefinementMessage] Auto-continue check error:', err)
-              }
-            }
-
-            return { terminated: false, finalMessage: responseText }
-          }
-
-          // Execute tool calls
-          const toolResults: LLMToolResult[] = []
-          const executedToolCalls: ChatToolCall[] = []
-
-          for (const toolCall of toolCalls) {
-            // Check for abort before each tool call
-            if (signal?.aborted) {
-              this.addRefinementMessage(editorId, {
-                role: 'assistant',
-                content: responseText,
-                toolCalls: toolCalls.slice(0, executedToolCalls.length), // Only include executed ones
-                executedToolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
-              })
-              this.addRefinementMessage(editorId, {
-                role: 'user',
-                content: '[User requested pause - conversation can be continued]',
-                hidden: true,
-              })
-              return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
-            }
-
-            this.setRefinementActiveToolName(editorId, toolCall.name)
-            const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
-
-            // Track executed tool call for UI display
-            const chatToolCall: ChatToolCall = {
-              id: toolCall.id,
-              name: toolCall.name,
-              input: toolCall.input,
-              result: {
-                success: result.success,
-                message: result.message,
-                error: result.error,
-              },
-            }
-            executedToolCalls.push(chatToolCall)
-
-            // Update available symbols when validation returns them
-            if (toolCall.name === 'validate_query' && result.availableSymbols) {
-              availableSymbols = result.availableSymbols
-            }
-
-            if (result.terminatesLoop) {
-              // Build tool result for the terminating call
-              const terminatingResultText = result.success
-                ? result.message || 'Success.'
-                : `Error: ${result.error}`
-              toolResults.push({
-                toolCallId: toolCall.id,
-                toolName: toolCall.name,
-                result: terminatingResultText,
-              })
-
-              // Persist assistant message with tool calls
-              this.addRefinementMessage(editorId, {
-                role: 'assistant',
-                content: responseText,
-                toolCalls: toolCalls.slice(0, executedToolCalls.length),
-                executedToolCalls: executedToolCalls,
-              })
-
-              // Persist tool results (required for OpenAI API on follow-ups)
-              this.addRefinementMessage(editorId, {
-                role: 'user',
-                content: '',
-                toolResults: toolResults,
-                hidden: true,
-              })
-
-              return { terminated: true, finalMessage: result.message }
-            }
-
-            // If tool requests user input, add message and stop the loop
-            if (result.awaitsUserInput) {
-              // Build tool result
-              const awaitingResultText = result.message || 'Awaiting user input.'
-              toolResults.push({
-                toolCallId: toolCall.id,
-                toolName: toolCall.name,
-                result: awaitingResultText,
-              })
-
-              // Persist assistant message
-              this.addRefinementMessage(editorId, {
-                role: 'assistant',
-                content: result.message || '',
-                toolCalls: toolCalls.slice(0, executedToolCalls.length),
-                executedToolCalls: executedToolCalls,
-              })
-
-              // Persist tool results
-              this.addRefinementMessage(editorId, {
-                role: 'user',
-                content: '',
-                toolResults: toolResults,
-                hidden: true,
-              })
-              return { terminated: false, finalMessage: result.message }
-            }
-
-            // Build result text for LLM
-            let resultText = ''
-            if (result.success) {
-              if (result.artifact) {
-                this.addRefinementArtifact(editorId, result.artifact)
-
-                const config = result.artifact.config
-                const artifactData = result.artifact.data
-                let dataPreview = ''
-                if (artifactData) {
-                  const jsonData =
-                    typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-                  const limitedData = {
-                    ...jsonData,
-                    data: jsonData.data?.slice(0, 50),
-                  }
-                  dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 50):\n${JSON.stringify(limitedData, null, 2)}`
-                }
-                const artifactInfo = config
-                  ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
-                  : ''
-                resultText = `Success. ${result.message || artifactInfo}${dataPreview}`
-              } else if (result.message) {
-                resultText = result.message
-              } else {
-                resultText = 'Success.'
-              }
-            } else {
-              resultText = `Error: ${result.error}`
-            }
-
-            toolResults.push({
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              result: resultText,
-            })
-          }
-
-          this.setRefinementActiveToolName(editorId, '')
-
-          // Persist assistant message with tool calls to session
-          this.addRefinementMessage(editorId, {
-            role: 'assistant',
-            content: responseText,
-            toolCalls: toolCalls, // For LLM history (OpenAI expects tool_calls)
-            executedToolCalls: executedToolCalls, // For UI display
-          })
-
-          // Persist tool results as separate user message (OpenAI expects role: 'tool' for each result)
-          // This is generated from user messages with toolResults in the openai.ts converter
-          this.addRefinementMessage(editorId, {
-            role: 'user',
-            content: '',
-            toolResults: toolResults,
-            hidden: true,
-          })
-
-          // Also update currentMessages for the next iteration
-          currentMessages = [
-            ...currentMessages,
-            {
-              role: 'assistant' as const,
-              content: responseText,
-              toolCalls: toolCalls,
-            },
-            {
-              role: 'user' as const,
-              content: '', // Content handled by toolResults
-              toolResults: toolResults,
-              hidden: true,
-            },
-          ]
-
-          currentPrompt = 'Continue based on the tool results.'
-          autoContinueCount = 0 // Reset after successful tool execution
-
-          // Safety check for last iteration
-          if (iteration === MAX_ITERATIONS - 1) {
-            const warningMessage = responseText + '\n\n(Max tool iterations reached)'
-            this.addRefinementMessage(editorId, {
-              role: 'assistant',
-              content: warningMessage,
-            })
-            return { terminated: false, finalMessage: warningMessage }
-          }
+        // Create adapters for the core tool loop
+        const llmAdapter: LLMAdapter = {
+          generateCompletion: (connectionName, llmOptions, msgs) =>
+            llmConnectionStore.generateCompletion(connectionName, llmOptions, msgs),
+          shouldAutoContinue: (connectionName, responseText) =>
+            llmConnectionStore.shouldAutoContinue(connectionName, responseText),
         }
 
-        return { terminated: false }
+        const messagePersistence: MessagePersistence = {
+          addMessage: (msg) => this.addRefinementMessage(editorId, msg),
+          addArtifact: (artifact) => this.addRefinementArtifact(editorId, artifact),
+          getMessages: () => this.editors[editorId]?.refinementSession?.messages ?? [],
+        }
+
+        const toolExecutorFactory: ToolExecutorFactory = {
+          // Create fresh executor each iteration with current context
+          getToolExecutor: () =>
+            new EditorRefinementToolExecutor(
+              queryExecutionService,
+              connectionStore,
+              buildEditorContext(),
+              this,
+            ),
+        }
+
+        const stateUpdater: ExecutionStateUpdater = {
+          setActiveToolName: (name) => this.setRefinementActiveToolName(editorId, name),
+          checkAborted: () => signal?.aborted ?? false,
+        }
+
+        return await runToolLoop(message, llmConnectionName, llmAdapter, messagePersistence, toolExecutorFactory, stateUpdater, {
+          tools: EDITOR_REFINEMENT_TOOLS,
+          maxIterations: 20,
+          maxAutoContinue: 3,
+          buildSystemPrompt,
+          onToolResult: (toolName, result) => {
+            // Update available symbols when validation returns them
+            if (toolName === 'validate_query' && result.availableSymbols) {
+              availableSymbols = result.availableSymbols
+            }
+          },
+        })
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
         this.addRefinementMessage(editorId, {
