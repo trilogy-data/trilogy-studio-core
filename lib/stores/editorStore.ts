@@ -327,13 +327,15 @@ const useEditorStore = defineStore('editors', {
 
       try {
         const session = editor.refinementSession
+        // currentMessages is the history to send to the LLM, excluding the message we just added
+        // (the current user message is sent separately via options.prompt)
         let currentMessages: Array<{
           role: 'user' | 'assistant' | 'system'
           content: string
           hidden?: boolean
           toolCalls?: LLMToolCall[]
           toolResults?: LLMToolResult[]
-        }> = [...session.messages]
+        }> = session.messages.slice(0, -1)
         let currentPrompt = message
         let autoContinueCount = 0
         let lastResponseText = ''
@@ -526,24 +528,59 @@ const useEditorStore = defineStore('editors', {
             }
 
             if (result.terminatesLoop) {
-              if (result.message) {
-                this.addRefinementMessage(editorId, {
-                  role: 'assistant',
-                  content: result.message,
-                  toolCalls: toolCalls.slice(0, executedToolCalls.length),
-                  executedToolCalls: executedToolCalls,
-                })
-              }
+              // Build tool result for the terminating call
+              const terminatingResultText = result.success
+                ? result.message || 'Success.'
+                : `Error: ${result.error}`
+              toolResults.push({
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                result: terminatingResultText,
+              })
+
+              // Persist assistant message with tool calls
+              this.addRefinementMessage(editorId, {
+                role: 'assistant',
+                content: responseText,
+                toolCalls: toolCalls.slice(0, executedToolCalls.length),
+                executedToolCalls: executedToolCalls,
+              })
+
+              // Persist tool results (required for OpenAI API on follow-ups)
+              this.addRefinementMessage(editorId, {
+                role: 'user',
+                content: '',
+                toolResults: toolResults,
+                hidden: true,
+              })
+
               return { terminated: true, finalMessage: result.message }
             }
 
             // If tool requests user input, add message and stop the loop
             if (result.awaitsUserInput) {
+              // Build tool result
+              const awaitingResultText = result.message || 'Awaiting user input.'
+              toolResults.push({
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                result: awaitingResultText,
+              })
+
+              // Persist assistant message
               this.addRefinementMessage(editorId, {
                 role: 'assistant',
                 content: result.message || '',
                 toolCalls: toolCalls.slice(0, executedToolCalls.length),
                 executedToolCalls: executedToolCalls,
+              })
+
+              // Persist tool results
+              this.addRefinementMessage(editorId, {
+                role: 'user',
+                content: '',
+                toolResults: toolResults,
+                hidden: true,
               })
               return { terminated: false, finalMessage: result.message }
             }
@@ -588,18 +625,24 @@ const useEditorStore = defineStore('editors', {
 
           this.setRefinementActiveToolName(editorId, '')
 
-          // Add assistant message with tool calls for display and LLM history
-          if (responseText || executedToolCalls.length > 0) {
-            this.addRefinementMessage(editorId, {
-              role: 'assistant',
-              content: responseText,
-              toolCalls: toolCalls, // For LLM history
-              toolResults: toolResults, // Store tool results with message for history reconstruction
-              executedToolCalls: executedToolCalls, // For UI display
-            })
-          }
+          // Persist assistant message with tool calls to session
+          this.addRefinementMessage(editorId, {
+            role: 'assistant',
+            content: responseText,
+            toolCalls: toolCalls, // For LLM history (OpenAI expects tool_calls)
+            executedToolCalls: executedToolCalls, // For UI display
+          })
 
-          // Add tool results to message history for next iteration
+          // Persist tool results as separate user message (OpenAI expects role: 'tool' for each result)
+          // This is generated from user messages with toolResults in the openai.ts converter
+          this.addRefinementMessage(editorId, {
+            role: 'user',
+            content: '',
+            toolResults: toolResults,
+            hidden: true,
+          })
+
+          // Also update currentMessages for the next iteration
           currentMessages = [
             ...currentMessages,
             {

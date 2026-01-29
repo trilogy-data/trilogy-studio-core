@@ -722,4 +722,142 @@ describe('useToolLoop', () => {
       })
     })
   })
+
+  describe('multi-iteration persistence', () => {
+    it('should persist intermediate tool messages across multiple iterations', async () => {
+      // This test verifies the fix for:
+      // "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'"
+      // When multiple iterations occur, ALL intermediate messages should be in messages.value
+
+      // Iteration 1: LLM calls edit_editor (non-terminating)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: '',
+        toolCalls: [{ id: 'call_edit', name: 'edit_editor', input: { content: 'SELECT 1' } }],
+      })
+
+      // Iteration 2: LLM responds with text and calls request_close (terminating)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Updated the editor successfully.',
+        toolCalls: [{ id: 'call_close', name: 'request_close', input: { message: 'Done' } }],
+      })
+
+      // edit_editor doesn't terminate
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Editor updated.',
+      })
+
+      // request_close terminates
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Write a query',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have ALL messages persisted:
+      // 1. user: "Write a query"
+      // 2. assistant: edit_editor tool call (iteration 1)
+      // 3. user (hidden): edit_editor tool result
+      // 4. assistant: request_close tool call (iteration 2)
+      // 5. user (hidden): request_close tool result
+      expect(messages.value.length).toBe(5)
+
+      // Check iteration 1 messages are persisted
+      expect(messages.value[0].role).toBe('user')
+      expect(messages.value[0].content).toBe('Write a query')
+
+      expect(messages.value[1].role).toBe('assistant')
+      expect(messages.value[1].toolCalls).toBeDefined()
+      expect(messages.value[1].toolCalls![0].id).toBe('call_edit')
+
+      expect(messages.value[2].role).toBe('user')
+      expect(messages.value[2].hidden).toBe(true)
+      expect(messages.value[2].toolResults).toBeDefined()
+      expect(messages.value[2].toolResults![0].toolCallId).toBe('call_edit')
+
+      // Check iteration 2 messages are also persisted
+      expect(messages.value[3].role).toBe('assistant')
+      expect(messages.value[3].toolCalls).toBeDefined()
+      expect(messages.value[3].toolCalls![0].id).toBe('call_close')
+
+      expect(messages.value[4].role).toBe('user')
+      expect(messages.value[4].hidden).toBe(true)
+      expect(messages.value[4].toolResults).toBeDefined()
+      expect(messages.value[4].toolResults![0].toolCallId).toBe('call_close')
+    })
+
+    it('should persist messages correctly for follow-up conversations', async () => {
+      // Simulates: user sends message -> tool iterations -> terminates -> user sends follow-up
+      // The follow-up should have access to all previous messages
+
+      // First executeMessage call
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Editing the editor.',
+        toolCalls: [{ id: 'call_edit_1', name: 'edit_editor', input: { content: 'SELECT 1' } }],
+      })
+
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Done editing.',
+        toolCalls: [{ id: 'call_close_1', name: 'request_close', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Edited.' })
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'First request',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Now simulate follow-up - messages.value should have full history
+      const messageCountAfterFirst = messages.value.length
+      expect(messageCountAfterFirst).toBe(5) // user, assistant+tool, tool_result, assistant+tool, tool_result
+
+      // Second executeMessage call (follow-up)
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Here is your follow-up answer.',
+      })
+
+      await executeMessage(
+        'Follow-up request',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have added 2 more messages: user follow-up + assistant response
+      expect(messages.value.length).toBe(messageCountAfterFirst + 2)
+
+      // The new user message
+      expect(messages.value[5].role).toBe('user')
+      expect(messages.value[5].content).toBe('Follow-up request')
+
+      // The assistant's response to follow-up
+      expect(messages.value[6].role).toBe('assistant')
+      expect(messages.value[6].content).toBe('Here is your follow-up answer.')
+    })
+  })
 })

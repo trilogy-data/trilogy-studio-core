@@ -125,14 +125,16 @@ export function useToolLoop(): UseToolLoopReturn {
     abortController = new AbortController()
     const signal = abortController.signal
 
-    // Add user message
+    // Add user message to messages.value for UI display
     addMessage({
       role: 'user',
       content: userMessage,
     })
 
     try {
-      let currentMessages: LLMMessage[] = [...messages.value]
+      // currentMessages is the history to send to the LLM, excluding the message we just added
+      // (the current user message is sent separately via options.prompt)
+      let currentMessages: LLMMessage[] = messages.value.slice(0, -1)
       let currentPrompt = userMessage
       let autoContinueCount = 0
       let lastResponseText = ''
@@ -348,7 +350,22 @@ export function useToolLoop(): UseToolLoopReturn {
 
         activeToolName.value = ''
 
-        // Add tool results to message history for next iteration
+        // Persist intermediate tool messages to messages.value so they survive follow-up conversations
+        // Without this, only the final iteration's messages get persisted, causing OpenAI API errors
+        // ("assistant message with tool_calls must be followed by tool messages")
+        addMessage({
+          role: 'assistant',
+          content: responseText,
+          toolCalls: toolCalls,
+        })
+        addMessage({
+          role: 'user',
+          content: '',
+          toolResults: toolResults,
+          hidden: true,
+        })
+
+        // Also update currentMessages for the next iteration
         currentMessages = [
           ...currentMessages,
           {

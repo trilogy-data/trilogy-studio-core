@@ -48,6 +48,8 @@ export interface LLMRequestOptions {
   tools?: LLMToolDefinition[]
   /** Optional callback invoked when rate-limited and backing off */
   onRateLimitBackoff?: RateLimitBackoffCallback
+  /** Optional AbortSignal for cancellation */
+  signal?: AbortSignal
 }
 
 export interface LLMMessage {

@@ -154,13 +154,24 @@ export class GoogleProvider extends LLMProvider {
   private async withRetry<T>(
     apiCall: () => Promise<T>,
     onBackoff?: (attempt: number, delayMs: number, error: Error) => void,
+    signal?: AbortSignal,
   ): Promise<T> {
     let retries = 0
 
     while (true) {
+      // Check if aborted before each attempt
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       try {
         return await apiCall()
       } catch (error) {
+        // Re-throw abort errors immediately without retry
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw error
+        }
+
         // Check if it's a 429 error or contains 429 error message
         const isRateLimitError =
           (error instanceof Error &&
@@ -181,7 +192,16 @@ export class GoogleProvider extends LLMProvider {
           onBackoff(retries, delayMs, error)
         }
 
-        await new Promise((resolve) => setTimeout(resolve, delayMs))
+        // Wait for the calculated delay, but allow abort to interrupt
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = setTimeout(resolve, delayMs)
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId)
+              reject(new DOMException('Aborted', 'AbortError'))
+            }, { once: true })
+          }
+        })
       }
     }
   }
@@ -269,7 +289,7 @@ export class GoogleProvider extends LLMProvider {
           },
         }
       }
-    }, options.onRateLimitBackoff)
+    }, options.onRateLimitBackoff, options.signal)
   }
 
   private convertToGeminiTools(tools: LLMToolDefinition[]): Tool[] {

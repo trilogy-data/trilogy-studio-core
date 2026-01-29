@@ -25,6 +25,7 @@ export interface ChatExecution {
   activeToolName: string
   error: string | null
   rateLimitBackoff: RateLimitBackoff | null
+  abortController: AbortController | null
 }
 
 /** Dependencies needed to execute a chat message */
@@ -220,12 +221,27 @@ export const useChatStore = defineStore('chats', {
 
     /** Initialize or reset execution state for a chat */
     startExecution(chatId: string): void {
+      // Abort any existing execution first
+      if (this.chatExecutions[chatId]?.abortController) {
+        this.chatExecutions[chatId].abortController.abort()
+      }
       this.chatExecutions[chatId] = {
         isLoading: true,
         activeToolName: '',
         error: null,
         rateLimitBackoff: null,
+        abortController: new AbortController(),
       }
+    },
+
+    /** Stop an in-progress execution for a chat */
+    stopExecution(chatId: string): void {
+      const execution = this.chatExecutions[chatId]
+      if (execution?.abortController) {
+        execution.abortController.abort()
+      }
+      // Mark as complete without error - user initiated stop
+      this.completeExecution(chatId)
     },
 
     /** Update rate limit backoff state during execution */
@@ -305,6 +321,9 @@ export const useChatStore = defineStore('chats', {
       // Initialize execution state
       this.startExecution(chatId)
 
+      // Get abort signal for this execution
+      const signal = this.chatExecutions[chatId]?.abortController?.signal
+
       try {
         const allArtifacts: ChatArtifact[] = []
         let currentMessages = [...chat.messages]
@@ -325,10 +344,16 @@ export const useChatStore = defineStore('chats', {
 
         // Tool use loop - keep going until LLM stops calling tools or we hit max iterations
         for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+          // Check if execution was stopped
+          if (signal?.aborted) {
+            break
+          }
+
           const llmOptions: LLMRequestOptions = {
             prompt: currentPrompt,
             systemPrompt,
             tools: CHAT_TOOLS,
+            signal,
             // Notify the store when rate-limited so UI can show feedback
             onRateLimitBackoff: (attempt, delayMs) => {
               this.setRateLimitBackoff(chatId, attempt, delayMs)
@@ -400,6 +425,11 @@ export const useChatStore = defineStore('chats', {
           const executedToolCalls: ChatToolCall[] = []
 
           for (const toolCall of toolCalls) {
+            // Check if execution was stopped before each tool call
+            if (signal?.aborted) {
+              break
+            }
+
             this.setActiveToolName(chatId, toolCall.name)
             const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
 
@@ -536,6 +566,12 @@ export const useChatStore = defineStore('chats', {
         // The artifacts are also already added during execution
         return
       } catch (err) {
+        // Handle abort errors gracefully - don't add error message to chat
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          // User stopped the execution - no error message needed
+          return
+        }
+
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
         // Add error message directly to the correct chat
         this.addMessageToChat(chatId, {

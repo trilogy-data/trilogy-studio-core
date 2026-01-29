@@ -16,18 +16,21 @@ export interface RetryOptions {
   retryStatusCodes?: number[]
   /** Optional callback function to execute before each retry */
   onRetry?: (attempt: number, delayMs: number, error: Error) => void
+  /** Optional AbortSignal for cancellation */
+  signal?: AbortSignal
 }
 
 /**
  * Default retry configuration
  */
-export const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
+export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal'> & { signal?: AbortSignal } = {
   maxRetries: 5,
   initialDelayMs: 1000, // 1 second
   backoffMultiplier: 2,
   maxDelayMs: 60000, // 1 minute
   retryStatusCodes: [429, 503, 504], // Rate limit and service unavailable errors
   onRetry: () => {}, // No-op by default
+  signal: undefined,
 }
 
 /**
@@ -52,7 +55,7 @@ export async function withExponentialBackoff<T>(
   options: RetryOptions = {},
 ): Promise<T> {
   // Merge provided options with defaults
-  const config: Required<RetryOptions> = {
+  const config = {
     ...DEFAULT_RETRY_OPTIONS,
     ...options,
   }
@@ -60,9 +63,19 @@ export async function withExponentialBackoff<T>(
   let attempt = 0
 
   while (attempt <= config.maxRetries) {
+    // Check if aborted before each attempt
+    if (config.signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+
     try {
       return await fn()
     } catch (error) {
+      // Re-throw abort errors immediately without retry
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error
+      }
+
       if (!(error instanceof Error)) {
         throw error // Rethrow if not an Error object
       }
@@ -89,8 +102,16 @@ export async function withExponentialBackoff<T>(
       // Execute onRetry callback if provided
       config.onRetry(attempt + 1, delayMs, error)
 
-      // Wait for the calculated delay
-      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      // Wait for the calculated delay, but allow abort to interrupt
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(resolve, delayMs)
+        if (config.signal) {
+          config.signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId)
+            reject(new DOMException('Aborted', 'AbortError'))
+          }, { once: true })
+        }
+      })
 
       // Increment attempt counter
       attempt++
