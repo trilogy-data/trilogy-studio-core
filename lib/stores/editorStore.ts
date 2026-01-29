@@ -425,18 +425,26 @@ const useEditorStore = defineStore('editors', {
           checkAborted: () => signal?.aborted ?? false,
         }
 
-        return await runToolLoop(message, llmConnectionName, llmAdapter, messagePersistence, toolExecutorFactory, stateUpdater, {
-          tools: EDITOR_REFINEMENT_TOOLS,
-          maxIterations: 20,
-          maxAutoContinue: 3,
-          buildSystemPrompt,
-          onToolResult: (toolName, result) => {
-            // Update available symbols when validation returns them
-            if (toolName === 'validate_query' && result.availableSymbols) {
-              availableSymbols = result.availableSymbols
-            }
+        return await runToolLoop(
+          message,
+          llmConnectionName,
+          llmAdapter,
+          messagePersistence,
+          toolExecutorFactory,
+          stateUpdater,
+          {
+            tools: EDITOR_REFINEMENT_TOOLS,
+            maxIterations: 20,
+            maxAutoContinue: 3,
+            buildSystemPrompt,
+            onToolResult: (toolName, result) => {
+              // Update available symbols when validation returns them
+              if (toolName === 'validate_query' && result.availableSymbols) {
+                availableSymbols = result.availableSymbols
+              }
+            },
           },
-        })
+        )
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
         this.addRefinementMessage(editorId, {

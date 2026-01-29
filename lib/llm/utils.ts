@@ -23,7 +23,9 @@ export interface RetryOptions {
 /**
  * Default retry configuration
  */
-export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal'> & { signal?: AbortSignal } = {
+export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal'> & {
+  signal?: AbortSignal
+} = {
   maxRetries: 5,
   initialDelayMs: 1000, // 1 second
   backoffMultiplier: 2,
@@ -106,10 +108,14 @@ export async function withExponentialBackoff<T>(
       await new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(resolve, delayMs)
         if (config.signal) {
-          config.signal.addEventListener('abort', () => {
-            clearTimeout(timeoutId)
-            reject(new DOMException('Aborted', 'AbortError'))
-          }, { once: true })
+          config.signal.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timeoutId)
+              reject(new DOMException('Aborted', 'AbortError'))
+            },
+            { once: true },
+          )
         }
       })
 

@@ -187,7 +187,10 @@ export async function runToolLoop(
       // Check if we should auto-continue (skip if aborted)
       if (autoContinueCount < MAX_AUTO_CONTINUE && !stateUpdater.checkAborted()) {
         try {
-          const shouldContinue = await llmAdapter.shouldAutoContinue(llmConnectionName, responseText)
+          const shouldContinue = await llmAdapter.shouldAutoContinue(
+            llmConnectionName,
+            responseText,
+          )
 
           if (shouldContinue && !stateUpdater.checkAborted()) {
             autoContinueCount++

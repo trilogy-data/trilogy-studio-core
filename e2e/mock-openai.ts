@@ -1,10 +1,7 @@
 // mock-openai.ts
 import { Page } from '@playwright/test'
 
-export const CONST_GPT_MODELS = [
-  { id: 'gpt-5.2' },
-  { id: 'gpt-5.2-mini' },
-]
+export const CONST_GPT_MODELS = [{ id: 'gpt-5.2' }, { id: 'gpt-5.2-mini' }]
 /**
  * Interface for OpenAI Model
  */
@@ -45,10 +42,7 @@ export interface ToolCallResponse {
  * @param options - Mocking options
  */
 export async function setupOpenAIMocks(page: Page, options: OpenAIMockOptions = {}): Promise<void> {
-  const {
-    models = CONST_GPT_MODELS,
-    completionHandler = defaultCompletionHandler,
-  } = options
+  const { models = CONST_GPT_MODELS, completionHandler = defaultCompletionHandler } = options
 
   // Mock the models endpoint
   await page.route('https://api.openai.com/v1/models', async (route) => {
@@ -131,13 +125,13 @@ export function createCompletionHandler(
       const openaiToolCalls =
         toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0
           ? toolCallResponse.toolCalls.map((tc, index) => ({
-            id: `call_mock_${index}`,
-            type: 'function' as const,
-            function: {
-              name: tc.name,
-              arguments: JSON.stringify(tc.input),
-            },
-          }))
+              id: `call_mock_${index}`,
+              type: 'function' as const,
+              function: {
+                name: tc.name,
+                arguments: JSON.stringify(tc.input),
+              },
+            }))
           : undefined
 
       return {
