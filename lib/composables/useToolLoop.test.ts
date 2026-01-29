@@ -221,6 +221,130 @@ describe('useToolLoop', () => {
       expect(result.finalMessage).toBe('Session closed.')
     })
 
+    it('should include tool call and tool result messages when terminatesLoop is true', async () => {
+      // This test verifies the fix for OpenAI API error:
+      // "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'"
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Closing the session now.',
+        toolCalls: [{ id: 'call_abc123', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Session closed successfully.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Please close',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have: user message, assistant with tool calls, tool results (hidden user message)
+      expect(messages.value.length).toBe(3)
+
+      // First message should be the user message
+      expect(messages.value[0].role).toBe('user')
+      expect(messages.value[0].content).toBe('Please close')
+
+      // Second message should be assistant with tool calls
+      expect(messages.value[1].role).toBe('assistant')
+      expect(messages.value[1].content).toBe('Closing the session now.')
+      expect(messages.value[1].toolCalls).toBeDefined()
+      expect(messages.value[1].toolCalls).toHaveLength(1)
+      expect(messages.value[1].toolCalls![0].id).toBe('call_abc123')
+      expect(messages.value[1].toolCalls![0].name).toBe('close_session')
+
+      // Third message should be tool results (hidden user message)
+      expect(messages.value[2].role).toBe('user')
+      expect(messages.value[2].hidden).toBe(true)
+      expect(messages.value[2].toolResults).toBeDefined()
+      expect(messages.value[2].toolResults).toHaveLength(1)
+      expect(messages.value[2].toolResults![0].toolCallId).toBe('call_abc123')
+      expect(messages.value[2].toolResults![0].result).toBe('Session closed successfully.')
+    })
+
+    it('should include all tool results when terminatesLoop happens after multiple tools', async () => {
+      // When multiple tool calls are made and the last one terminates,
+      // all tool results should be included
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Let me validate and then close.',
+        toolCalls: [
+          { id: 'call_validate', name: 'validate_query', input: { query: 'SELECT 1' } },
+          { id: 'call_close', name: 'close_session', input: {} },
+        ],
+      })
+
+      // First tool succeeds normally
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Query is valid.',
+      })
+
+      // Second tool terminates the loop
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Validate and close',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have proper message structure
+      expect(messages.value.length).toBe(3)
+
+      // Check that tool results include both tool calls
+      const toolResultsMessage = messages.value[2]
+      expect(toolResultsMessage.toolResults).toHaveLength(2)
+      expect(toolResultsMessage.toolResults![0].toolCallId).toBe('call_validate')
+      expect(toolResultsMessage.toolResults![0].result).toBe('Query is valid.')
+      expect(toolResultsMessage.toolResults![1].toolCallId).toBe('call_close')
+      expect(toolResultsMessage.toolResults![1].result).toBe('Session closed.')
+    })
+
+    it('should handle failed terminating tool calls correctly', async () => {
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Attempting to close.',
+        toolCalls: [{ id: 'call_close_fail', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: false,
+        error: 'Failed to close session',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Close now',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Tool results should contain the error
+      const toolResultsMessage = messages.value[2]
+      expect(toolResultsMessage.toolResults![0].result).toBe('Error: Failed to close session')
+    })
+
     it('should add artifacts from tool results', async () => {
       const mockArtifact = {
         type: 'results' as const,
