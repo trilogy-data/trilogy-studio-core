@@ -144,10 +144,9 @@ export abstract class LLMProvider {
     history: LLMMessage[] | null,
   ): Promise<LLMResponse>
 
-  protected validateRequestOptions(options: LLMRequestOptions): void {
-    if (!options.prompt) {
-      throw new Error('Prompt is required')
-    }
+  protected validateRequestOptions(_options: LLMRequestOptions): void {
+    // Empty prompt is valid when continuing after tool calls
+    // (the tool results in history are the implicit prompt)
   }
 
   // Convert instance to JSON

@@ -77,11 +77,8 @@ export function formatToolResultText(result: ToolCallResult): string {
       if (artifactData) {
         const jsonData =
           typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-        const limitedData = {
-          ...jsonData,
-          data: jsonData.data?.slice(0, 50),
-        }
-        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 50):\n${JSON.stringify(limitedData, null, 2)}`
+        // Send full data to the LLM - no truncation
+        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows):\n${JSON.stringify(jsonData, null, 2)}`
       }
       const artifactInfo = config
         ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
@@ -358,7 +355,7 @@ export async function runToolLoop(
       },
     ]
 
-    currentPrompt = 'Continue based on the tool results.'
+    currentPrompt = '' // No extra prompt needed - tool results speak for themselves
     autoContinueCount = 0 // Reset after successful tool execution
 
     // Safety check for last iteration

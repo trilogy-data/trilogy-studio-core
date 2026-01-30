@@ -178,10 +178,15 @@ export class AnthropicProvider extends LLMProvider {
         }
       }
 
+      // Build messages - skip adding user message if prompt is empty (e.g., after tool calls)
+      const finalMessages = options.prompt
+        ? cleanedHistory.concat([{ role: 'user', content: options.prompt }])
+        : cleanedHistory
+
       // Build request body
       const requestBody: Record<string, any> = {
         model: this.model,
-        messages: cleanedHistory.concat([{ role: 'user', content: options.prompt }]),
+        messages: finalMessages,
         max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
         temperature: options.temperature || DEFAULT_TEMPERATURE,
       }

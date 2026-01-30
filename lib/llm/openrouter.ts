@@ -377,7 +377,11 @@ export class OpenRouterProvider extends LLMProvider {
     }
 
     // history contains previous messages, options.prompt is the current user message
-    messages = [...messages, ...cleanHistory, { role: 'user', content: options.prompt }]
+    // Skip adding user message if prompt is empty (e.g., after tool calls, tool results are the implicit prompt)
+    messages = [...messages, ...cleanHistory]
+    if (options.prompt) {
+      messages.push({ role: 'user', content: options.prompt })
+    }
 
     // Build request body
     const requestBody: Record<string, any> = {
