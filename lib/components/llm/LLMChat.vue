@@ -386,8 +386,17 @@ export default defineComponent({
       if (isLoading.value || !userInput.value.trim()) return
 
       const content = userInput.value.trim()
+      userInput.value = ''
 
-      // Add user message
+      // When customSendHandler is provided, it manages messages (via store/runToolLoop)
+      // Don't add the message here - the handler will add it and sync back via props.messages
+      if (props.customSendHandler) {
+        scrollToBottom()
+        await props.customSendHandler(content, internalMessages.value)
+        return
+      }
+
+      // Default flow: add user message locally
       const userMessage: ChatMessage = {
         role: 'user',
         content: content,
@@ -395,16 +404,7 @@ export default defineComponent({
       internalMessages.value.push(userMessage)
       emit('update:messages', internalMessages.value)
       emit('message-sent', userMessage)
-
-      const messageContent = content
-      userInput.value = ''
       scrollToBottom()
-
-      // Use custom handler if provided
-      if (props.customSendHandler) {
-        await props.customSendHandler(messageContent, internalMessages.value)
-        return
-      }
 
       // Otherwise use the llmStore
       if (!llmStore) {
@@ -420,7 +420,7 @@ export default defineComponent({
 
       try {
         await llmStore.generateValidatedCompletion(
-          messageContent,
+          content,
           () => true, // No validation
           3,
           llmStore.activeConnection,

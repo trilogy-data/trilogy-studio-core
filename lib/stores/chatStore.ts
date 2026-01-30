@@ -1,15 +1,20 @@
 import { defineStore } from 'pinia'
 import { Chat } from '../chats/chat'
-import type { ChatMessage, ChatArtifact, ChatImport, ChatToolCall } from '../chats/chat'
-import type { LLMRequestOptions, LLMResponse } from '../llm'
+import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
-import { ChatToolExecutor } from '../llm/chatToolExecutor'
+import { ChatToolExecutor, type ToolCallResult } from '../llm/chatToolExecutor'
 import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
-import type { LLMToolCall, LLMToolResult } from '../llm/base'
 import type { CompletionItem } from './resolver'
+import {
+  runToolLoop,
+  type LLMAdapter,
+  type MessagePersistence,
+  type ToolExecutorFactory,
+  type ExecutionStateUpdater,
+} from '../llm/toolLoopCore'
 
 /** Rate limit backoff state */
 export interface RateLimitBackoff {
@@ -290,6 +295,7 @@ export const useChatStore = defineStore('chats', {
      * Execute a chat message with tool support.
      * This runs the full LLM conversation loop including tool calls.
      * The execution persists even if the component unmounts.
+     * Uses the shared runToolLoop core function for consistency.
      */
     async executeMessage(
       chatId: string,
@@ -300,9 +306,6 @@ export const useChatStore = defineStore('chats', {
         onSymbolsRefresh?: () => Promise<CompletionItem[]>
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
-      const MAX_TOOL_ITERATIONS = 50
-      const MAX_AUTO_CONTINUE = 3 // Limit auto-continuation to prevent infinite loops
-
       const chat = this.chats[chatId]
       if (!chat) {
         return { response: 'Chat not found.' }
@@ -324,12 +327,57 @@ export const useChatStore = defineStore('chats', {
       // Get abort signal for this execution
       const signal = this.chatExecutions[chatId]?.abortController?.signal
 
+      // Add user message to chat (runToolLoop expects it in getMessages() and will slice it off)
+      this.addMessageToChat(chatId, {
+        role: 'user',
+        content: message,
+      })
+
       try {
-        const allArtifacts: ChatArtifact[] = []
-        let currentMessages = [...chat.messages]
-        let currentPrompt = message
-        let finalResponseText = ''
-        let autoContinueCount = 0
+        // Create adapters for the shared runToolLoop
+
+        const llmAdapter: LLMAdapter = {
+          generateCompletion: async (connectionName, llmOptions, msgs) => {
+            // Add rate limit callback to options
+            const optionsWithCallback = {
+              ...llmOptions,
+              signal,
+              onRateLimitBackoff: (attempt: number, delayMs: number) => {
+                this.setRateLimitBackoff(chatId, attempt, delayMs)
+              },
+            }
+            const result = await llmConnectionStore.generateCompletion(
+              connectionName,
+              optionsWithCallback,
+              msgs,
+            )
+            // Clear backoff state after successful completion
+            this.clearRateLimitBackoff(chatId)
+            return result
+          },
+          shouldAutoContinue: (connectionName, responseText) =>
+            llmConnectionStore.shouldAutoContinue(connectionName, responseText),
+        }
+
+        const messagePersistence: MessagePersistence = {
+          addMessage: (msg) => {
+            this.addMessageToChat(chatId, msg)
+          },
+          addArtifact: (artifact) => {
+            this.addArtifactToChat(chatId, artifact)
+            // For chart artifacts, inject the chart into the chat as a message
+            // so the user sees it inline in the conversation
+            if (artifact.type === 'chart') {
+              this.addMessageToChat(chatId, {
+                role: 'assistant',
+                content: '',
+                artifact: artifact,
+                hidden: false,
+              })
+            }
+          },
+          getMessages: () => chat.messages,
+        }
 
         // Create tool executor for this execution
         const toolExecutor = new ChatToolExecutor(
@@ -339,232 +387,40 @@ export const useChatStore = defineStore('chats', {
           editorStore,
         )
 
-        // Build system prompt
-        const systemPrompt = this.buildSystemPrompt(chatId, deps)
+        const toolExecutorFactory: ToolExecutorFactory = {
+          getToolExecutor: () => toolExecutor,
+        }
 
-        // Tool use loop - keep going until LLM stops calling tools or we hit max iterations
-        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-          // Check if execution was stopped
-          if (signal?.aborted) {
-            break
-          }
+        const stateUpdater: ExecutionStateUpdater = {
+          setActiveToolName: (name) => this.setActiveToolName(chatId, name),
+          checkAborted: () => signal?.aborted ?? false,
+        }
 
-          const llmOptions: LLMRequestOptions = {
-            prompt: currentPrompt,
-            systemPrompt,
-            tools: CHAT_TOOLS,
-            signal,
-            // Notify the store when rate-limited so UI can show feedback
-            onRateLimitBackoff: (attempt, delayMs) => {
-              this.setRateLimitBackoff(chatId, attempt, delayMs)
-            },
-          }
+        // Build system prompt function (called each iteration for freshness)
+        const buildSystemPrompt = () => this.buildSystemPrompt(chatId, deps)
 
-          // Generate completion from LLM
-          const response: LLMResponse = await llmConnectionStore.generateCompletion(
-            llmConnectionName,
-            llmOptions,
-            currentMessages,
-          )
-
-          // Clear backoff state after successful completion
-          this.clearRateLimitBackoff(chatId)
-
-          const responseText = response.text
-          // Use structured tool calls from response (preserve full LLMToolCall objects)
-          const toolCalls: LLMToolCall[] = response.toolCalls ?? []
-
-          // If no tool calls, check if we should auto-continue
-          if (toolCalls.length === 0) {
-            finalResponseText = responseText
-            // Add the final assistant response directly to the correct chat
-            this.addMessageToChat(chatId, {
-              role: 'assistant',
-              content: responseText,
-            })
-
-            // Check if we should auto-continue (LLM stated intention but didn't act)
-            if (autoContinueCount < MAX_AUTO_CONTINUE) {
-              try {
-                const shouldContinue = await llmConnectionStore.shouldAutoContinue(
-                  llmConnectionName,
-                  responseText,
-                )
-
-                if (shouldContinue) {
-                  autoContinueCount++
-                  console.log(
-                    `[Auto-continue] Triggering continuation ${autoContinueCount}/${MAX_AUTO_CONTINUE}`,
-                  )
-
-                  // Update messages to include the response we just added
-                  currentMessages = [
-                    ...currentMessages,
-                    { role: 'assistant' as const, content: responseText },
-                    {
-                      role: 'user' as const,
-                      content: 'Continue with the action you described.',
-                      hidden: true,
-                    },
-                  ]
-                  currentPrompt = 'Continue with the action you described.'
-                  // Continue the loop instead of breaking
-                  continue
-                }
-              } catch (error) {
-                console.error('[Auto-continue] Error checking auto-continue:', error)
-                // On error, just proceed normally (don't auto-continue)
-              }
-            }
-
-            break
-          }
-
-          // Execute tool calls and build tool results
-          const toolResults: LLMToolResult[] = []
-          const executedToolCalls: ChatToolCall[] = []
-
-          for (const toolCall of toolCalls) {
-            // Check if execution was stopped before each tool call
-            if (signal?.aborted) {
-              break
-            }
-
-            this.setActiveToolName(chatId, toolCall.name)
-            const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
-
-            // Track executed tool call for UI display
-            executedToolCalls.push({
-              id: toolCall.id,
-              name: toolCall.name,
-              input: toolCall.input,
-              result: {
-                success: result.success,
-                message: result.message,
-                error: result.error,
-              },
-            })
-
-            let resultText = ''
-            if (result.success) {
-              // Check if this tool triggers a symbol refresh (e.g., add_import, remove_import)
-              let symbolInfo = ''
-              if (result.triggersSymbolRefresh && options.onSymbolsRefresh) {
-                const updatedSymbols = await options.onSymbolsRefresh()
-                if (updatedSymbols.length > 0) {
-                  const symbolNames = updatedSymbols
-                    .slice(0, 50)
-                    .map((s) => s.label)
-                    .join(', ')
-                  symbolInfo = `\n\nUpdated available fields (${updatedSymbols.length} total): ${symbolNames}${updatedSymbols.length > 50 ? '...' : ''}`
-                } else {
-                  symbolInfo = '\n\nNo fields available after import change.'
-                }
-              }
-
-              if (result.artifact) {
-                allArtifacts.push(result.artifact)
-                // Add artifact to chat immediately so it persists
-                this.addArtifactToChat(chatId, result.artifact)
-
-                // For chart artifacts, inject the chart into the chat as a message
-                // so the user sees it inline in the conversation
-                if (result.artifact.type === 'chart') {
-                  this.addMessageToChat(chatId, {
-                    role: 'assistant',
-                    content: '',
-                    artifact: result.artifact,
-                    hidden: false,
-                  })
-                }
-
-                // Format result for LLM - include actual data so agent can analyze it
-                const config = result.artifact.config
-                const artifactData = result.artifact.data
-                let dataPreview = ''
-                if (artifactData) {
-                  const jsonData =
-                    typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-                  const limitedData = {
-                    ...jsonData,
-                    data: jsonData.data?.slice(0, 100),
-                  }
-                  dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 100):\n${JSON.stringify(limitedData, null, 2)}`
-                }
-                const artifactInfo = config
-                  ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
-                  : ''
-                resultText = `Success. ${result.message || artifactInfo}${dataPreview}${symbolInfo}`
-              } else if (result.message) {
-                resultText = `${result.message}${symbolInfo}`
-              } else {
-                resultText = 'Success.'
-              }
-            } else {
-              resultText = `Error: ${result.error}`
-            }
-
-            toolResults.push({
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              result: resultText,
-            })
-          }
-
-          this.setActiveToolName(chatId, '')
-
-          // Add assistant message with tool calls to the chat (for persistence and UI)
-          this.addMessageToChat(chatId, {
-            role: 'assistant',
-            content: responseText,
-            toolCalls: toolCalls, // For LLM history
-            executedToolCalls: executedToolCalls, // For UI display
-          })
-
-          // Add tool results as a hidden user message (for LLM history)
-          this.addMessageToChat(chatId, {
-            role: 'user',
-            content: '', // Content handled by toolResults
-            toolResults: toolResults,
-            hidden: true,
-          })
-
-          // Add assistant response and tool results to conversation for next iteration
-          currentMessages = [
-            ...currentMessages,
-            {
-              role: 'assistant' as const,
-              content: responseText,
-              toolCalls: toolCalls,
-            },
-            {
-              role: 'user' as const,
-              content: '', // Content handled by toolResults
-              toolResults: toolResults,
-              hidden: true,
-            },
-          ]
-
-          // Clear prompt for continuation (context is in messages)
-          currentPrompt = 'Continue based on the tool results.'
-
-          // Reset auto-continue count after successful tool execution
-          // This allows a fresh set of auto-continues after each tool action
-          autoContinueCount = 0
-
-          // If this is the last iteration, add response with warning to chat
-          if (iteration === MAX_TOOL_ITERATIONS - 1) {
-            finalResponseText = responseText + '\n\n(Max tool iterations reached)'
-            this.addMessageToChat(chatId, {
-              role: 'assistant',
-              content: finalResponseText,
-            })
+        // Handle symbol refresh on tool results
+        const onToolResult = async (toolName: string, result: ToolCallResult) => {
+          if (result.triggersSymbolRefresh && options.onSymbolsRefresh) {
+            await options.onSymbolsRefresh()
           }
         }
 
-        // Return void for persistent chats - messages are added directly to the store
-        // The artifacts are also already added during execution
-        return
+        return await runToolLoop(
+          message,
+          llmConnectionName,
+          llmAdapter,
+          messagePersistence,
+          toolExecutorFactory,
+          stateUpdater,
+          {
+            tools: CHAT_TOOLS,
+            maxIterations: 50,
+            maxAutoContinue: 3,
+            buildSystemPrompt,
+            onToolResult,
+          },
+        )
       } catch (err) {
         // Handle abort errors gracefully - don't add error message to chat
         if (err instanceof DOMException && err.name === 'AbortError') {
