@@ -13,7 +13,7 @@
         :disabled="disabled"
         :externalLoading="isLoading"
         :activeToolName="activeToolName"
-        :customSendHandler="handleSendMessage"
+        :sendHandler="handleSendMessage"
         @update:messages="handleMessagesUpdate"
         @message-sent="$emit('message-sent', $event)"
         @response-received="handleResponseReceived"
