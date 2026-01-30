@@ -1,5 +1,12 @@
 <template>
   <div class="main">
+    <ChatCreatorModal
+      :visible="showChatCreatorModal"
+      :preselectedConnection="chatCreatorPreselectedConnection"
+      :activeDataConnection="activeConnectionKey"
+      @close="showChatCreatorModal = false"
+      @chat-created="handleChatCreated"
+    />
     <mobile-sidebar-layout
       @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
       @tab-selected="tabSelected"
@@ -22,6 +29,7 @@
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
           @llm-open-view="handleLLMOpenView"
+          @create-new-chat="handleCreateNewChat"
           :active="activeSidebarScreen"
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
@@ -199,6 +207,9 @@ const MobileDashboard = defineAsyncComponent(
 )
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
+const ChatCreatorModal = defineAsyncComponent(
+  () => import('../components/llm/ChatCreatorModal.vue'),
+)
 
 export interface MobileIDEProps {}
 
@@ -227,6 +238,7 @@ export default {
     ConnectionView,
     ResultsView,
     LLMView,
+    ChatCreatorModal,
   },
   setup() {
     type ResolverType = typeof TrilogyResolver
@@ -301,6 +313,33 @@ export default {
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
 
+    // Chat creator modal management
+    const showChatCreatorModal = ref(false)
+    const chatCreatorPreselectedConnection = ref('')
+
+    const handleCreateNewChat = (connectionName: string) => {
+      chatCreatorPreselectedConnection.value = connectionName
+      showChatCreatorModal.value = true
+    }
+
+    const handleChatCreated = (chat: any) => {
+      // Navigate to the LLMs screen to show the new chat with chat ID in URL
+      const address = `${chat.llmConnectionName}${KeySeparator}${chat.id}`
+      setActiveLLMConnectionKey(address)
+      llmInitialTab.value = 'chat'
+      setActiveScreen('llms')
+      // Close the mobile menu if open
+      if (mobileMenuOpen.value) {
+        toggleMobileMenu()
+      }
+      // Reset the tab after a short delay
+      setTimeout(() => {
+        llmInitialTab.value = ''
+      }, 100)
+      // Close the modal
+      showChatCreatorModal.value = false
+    }
+
     const handleLLMOpenView = (
       connectionName: string,
       tab: 'chat' | 'validation',
@@ -361,6 +400,10 @@ export default {
       tabSelected,
       llmInitialTab,
       handleLLMOpenView,
+      showChatCreatorModal,
+      chatCreatorPreselectedConnection,
+      handleCreateNewChat,
+      handleChatCreated,
     }
   },
   methods: {

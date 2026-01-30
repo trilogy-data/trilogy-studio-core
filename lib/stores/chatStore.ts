@@ -406,7 +406,7 @@ export const useChatStore = defineStore('chats', {
           }
         }
 
-        const loopResult = await runToolLoop(
+        await runToolLoop(
           message,
           llmConnectionName,
           llmAdapter,
@@ -422,8 +422,9 @@ export const useChatStore = defineStore('chats', {
           },
         )
 
-        // Convert ToolLoopResult to expected return type
-        return loopResult.finalMessage ? { response: loopResult.finalMessage } : undefined
+        // Don't return response - messages are synced to UI via watchers in useChatWithTools
+        // Returning a response here would cause duplicate messages in the UI
+        return undefined
       } catch (err) {
         // Handle abort errors gracefully - don't add error message to chat
         if (err instanceof DOMException && err.name === 'AbortError') {

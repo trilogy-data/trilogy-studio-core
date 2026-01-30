@@ -24,34 +24,19 @@ async function setupLLMConnection(page: any, isMobile: boolean, connectionName =
 
 /**
  * Helper to navigate to chat view by creating a new chat
- * Note: On mobile, the chat creator modal is not available, so we use the validation
- * view workaround (open validation then switch to chat tab)
  */
 async function navigateToChatView(page: any, connectionName = 'test-openai', isMobile = false) {
   await page.getByTestId(`llm-connection-${connectionName}`).click()
 
-  if (isMobile) {
-    // On mobile, chat creator modal isn't available, so navigate via validation tests
-    // then switch to chat tab
-    await expect(page.getByTestId(`llm-connection-${connectionName}-open-validation`)).toBeVisible({
-      timeout: 5000,
-    })
-    await page.getByTestId(`llm-connection-${connectionName}-open-validation`).click()
+  // Both mobile and desktop use the chat creator modal
+  await expect(page.getByTestId(`llm-connection-${connectionName}-new-chat`)).toBeVisible({
+    timeout: 5000,
+  })
+  await page.getByTestId(`llm-connection-${connectionName}-new-chat`).click()
 
-    // Wait for view tabs to be visible and switch to Chat
-    await expect(page.getByTestId('llm-view-tab-chat')).toBeVisible({ timeout: 10000 })
-    await page.getByTestId('llm-view-tab-chat').click()
-  } else {
-    // On desktop, use the chat creator modal
-    await expect(page.getByTestId(`llm-connection-${connectionName}-new-chat`)).toBeVisible({
-      timeout: 5000,
-    })
-    await page.getByTestId(`llm-connection-${connectionName}-new-chat`).click()
-
-    // Chat creator modal should appear - create the chat
-    await expect(page.getByTestId('chat-creator-modal')).toBeVisible({ timeout: 5000 })
-    await page.getByTestId('create-chat-btn').click()
-  }
+  // Chat creator modal should appear - create the chat
+  await expect(page.getByTestId('chat-creator-modal')).toBeVisible({ timeout: 5000 })
+  await page.getByTestId('create-chat-btn').click()
 
   await expect(page.getByTestId('llm-chat-container')).toBeVisible({ timeout: 10000 })
 }
@@ -192,9 +177,7 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-sidebar-tab-fields')).toHaveClass(/active/)
   })
 
-  // Skip this test on mobile since chat creator modal is not implemented for mobile
   test('should create new chat from sidebar', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'Chat creator modal is not available on mobile')
 
     await page.goto('#skipTips=true')
     await setupLLMConnection(page, isMobile)
