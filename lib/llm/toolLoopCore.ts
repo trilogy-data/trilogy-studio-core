@@ -77,11 +77,8 @@ export function formatToolResultText(result: ToolCallResult): string {
       if (artifactData) {
         const jsonData =
           typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-        const limitedData = {
-          ...jsonData,
-          data: jsonData.data?.slice(0, 50),
-        }
-        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows, showing up to 50):\n${JSON.stringify(limitedData, null, 2)}`
+        // Send full data to the LLM - no truncation
+        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows):\n${JSON.stringify(jsonData, null, 2)}`
       }
       const artifactInfo = config
         ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
@@ -120,11 +117,13 @@ export async function runToolLoop(
   const MAX_AUTO_CONTINUE = config.maxAutoContinue ?? 3
 
   // currentMessages is the history to send to the LLM, excluding the message we just added
-  // (the current user message is sent separately via options.prompt)
+  // (the current user message is sent separately via options.prompt on first iteration)
   let currentMessages: LLMMessage[] = messagePersistence.getMessages().slice(0, -1)
   let currentPrompt = userMessage
   let autoContinueCount = 0
   let lastResponseText = ''
+  // Track whether we've added the user message to currentMessages (happens after first tool call)
+  let userMessageAddedToHistory = false
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     // Check for abort before starting iteration
@@ -196,8 +195,12 @@ export async function runToolLoop(
             autoContinueCount++
             console.log(`[toolLoopCore] Auto-continue ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
 
+            // On first continuation, add the user message that was excluded from initial currentMessages
             currentMessages = [
               ...currentMessages,
+              ...(!userMessageAddedToHistory
+                ? [{ role: 'user' as const, content: userMessage }]
+                : []),
               { role: 'assistant' as const, content: responseText },
               {
                 role: 'user' as const,
@@ -205,6 +208,7 @@ export async function runToolLoop(
                 hidden: true,
               },
             ]
+            userMessageAddedToHistory = true
             currentPrompt = 'Continue with the action you described.'
             continue
           }
@@ -343,8 +347,10 @@ export async function runToolLoop(
     })
 
     // Also update currentMessages for the next iteration
+    // On first tool call cycle, add the user message that was excluded from initial currentMessages
     currentMessages = [
       ...currentMessages,
+      ...(!userMessageAddedToHistory ? [{ role: 'user' as const, content: userMessage }] : []),
       {
         role: 'assistant' as const,
         content: responseText,
@@ -357,8 +363,9 @@ export async function runToolLoop(
         hidden: true,
       },
     ]
+    userMessageAddedToHistory = true
 
-    currentPrompt = 'Continue based on the tool results.'
+    currentPrompt = '' // No extra prompt needed - tool results speak for themselves
     autoContinueCount = 0 // Reset after successful tool execution
 
     // Safety check for last iteration

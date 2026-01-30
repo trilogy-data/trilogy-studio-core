@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { OpenAIProvider, parseOpenAIModelVersion, compareOpenAIModels } from './openai'
 import { AnthropicProvider, parseAnthropicModelVersion, compareAnthropicModels } from './anthropic'
 import { GoogleProvider, parseGoogleModelVersion, compareGoogleModels } from './googlev2'
+import {
+  OpenRouterProvider,
+  parseOpenRouterModelId,
+  getModelTier,
+  extractModelVersion,
+  compareOpenRouterModels,
+} from './openrouter'
 
 /**
  * Tests for model filtering and default selection logic across all providers.
@@ -317,6 +324,184 @@ describe('Google Model Filtering', () => {
 
     it('should return empty string for empty array', () => {
       const defaultModel = GoogleProvider.getDefaultModel([])
+      expect(defaultModel).toBe('')
+    })
+  })
+})
+
+describe('OpenRouter Model Filtering', () => {
+  describe('parseOpenRouterModelId', () => {
+    it('should parse anthropic/claude-3-opus correctly', () => {
+      const result = parseOpenRouterModelId('anthropic/claude-3-opus')
+      expect(result).toEqual({ provider: 'anthropic', modelName: 'claude-3-opus' })
+    })
+
+    it('should parse openai/gpt-4o correctly', () => {
+      const result = parseOpenRouterModelId('openai/gpt-4o')
+      expect(result).toEqual({ provider: 'openai', modelName: 'gpt-4o' })
+    })
+
+    it('should parse meta-llama/llama-3.1-405b-instruct correctly', () => {
+      const result = parseOpenRouterModelId('meta-llama/llama-3.1-405b-instruct')
+      expect(result).toEqual({ provider: 'meta-llama', modelName: 'llama-3.1-405b-instruct' })
+    })
+
+    it('should handle models without provider prefix', () => {
+      const result = parseOpenRouterModelId('some-model')
+      expect(result).toEqual({ provider: '', modelName: 'some-model' })
+    })
+  })
+
+  describe('getModelTier', () => {
+    it('should identify flagship models', () => {
+      expect(getModelTier('anthropic/claude-opus-4')).toBe('flagship')
+      expect(getModelTier('openai/gpt-5')).toBe('flagship')
+      expect(getModelTier('mistral/mistral-large')).toBe('flagship')
+      expect(getModelTier('google/gemini-ultra')).toBe('flagship')
+    })
+
+    it('should identify standard models', () => {
+      expect(getModelTier('anthropic/claude-sonnet-4')).toBe('standard')
+      expect(getModelTier('openai/gpt-4o')).toBe('standard')
+      expect(getModelTier('mistral/mistral-medium')).toBe('standard')
+      expect(getModelTier('google/gemini-pro')).toBe('standard')
+    })
+
+    it('should identify mini/fast models', () => {
+      expect(getModelTier('anthropic/claude-haiku-4')).toBe('mini')
+      expect(getModelTier('openai/gpt-4o-mini')).toBe('mini')
+      expect(getModelTier('google/gemini-flash')).toBe('mini')
+      expect(getModelTier('mistral/mistral-small')).toBe('mini')
+    })
+  })
+
+  describe('extractModelVersion', () => {
+    it('should extract version from claude models', () => {
+      expect(extractModelVersion('anthropic/claude-3-opus')).toEqual({
+        major: 3,
+        minor: 0,
+        patch: 0,
+      })
+      expect(extractModelVersion('anthropic/claude-3.5-sonnet')).toEqual({
+        major: 3,
+        minor: 5,
+        patch: 0,
+      })
+    })
+
+    it('should extract version from gpt models', () => {
+      expect(extractModelVersion('openai/gpt-4o')).toEqual({ major: 4, minor: 0, patch: 0 })
+      expect(extractModelVersion('openai/gpt-4-turbo')).toEqual({ major: 4, minor: 0, patch: 0 })
+    })
+
+    it('should extract version from llama models', () => {
+      expect(extractModelVersion('meta-llama/llama-3.1-70b')).toEqual({
+        major: 3,
+        minor: 1,
+        patch: 0,
+      })
+    })
+  })
+
+  describe('compareOpenRouterModels', () => {
+    it('should sort by provider priority', () => {
+      const result = compareOpenRouterModels('openai/gpt-4o', 'anthropic/claude-3-opus')
+      expect(result).toBeGreaterThan(0) // anthropic should come first
+    })
+
+    it('should sort by model tier within same provider', () => {
+      const result = compareOpenRouterModels('anthropic/claude-sonnet-4', 'anthropic/claude-opus-4')
+      expect(result).toBeGreaterThan(0) // opus should come first
+    })
+
+    it('should sort by version within same tier', () => {
+      const result = compareOpenRouterModels(
+        'anthropic/claude-3-sonnet',
+        'anthropic/claude-4-sonnet',
+      )
+      expect(result).toBeGreaterThan(0) // version 4 should come first
+    })
+  })
+
+  describe('OpenRouterProvider.filterModels', () => {
+    it('should filter to only modern models', () => {
+      const models = [
+        'anthropic/claude-3-opus',
+        'anthropic/claude-3-sonnet',
+        'openai/gpt-4o',
+        'openai/gpt-4o-mini',
+        'meta-llama/llama-3.1-70b',
+        'some-unknown/random-model',
+        'old-provider/legacy-model',
+      ]
+      const filtered = OpenRouterProvider.filterModels(models)
+
+      expect(filtered).toContain('anthropic/claude-3-opus')
+      expect(filtered).toContain('anthropic/claude-3-sonnet')
+      expect(filtered).toContain('openai/gpt-4o')
+      expect(filtered).toContain('openai/gpt-4o-mini')
+      expect(filtered).toContain('meta-llama/llama-3.1-70b')
+      expect(filtered).not.toContain('some-unknown/random-model')
+      expect(filtered).not.toContain('old-provider/legacy-model')
+    })
+
+    it('should include various modern providers', () => {
+      const models = [
+        'anthropic/claude-opus-4',
+        'openai/gpt-5',
+        'google/gemini-2.0-flash',
+        'mistralai/mistral-large',
+        'deepseek/deepseek-chat',
+        'qwen/qwen-2-72b',
+        'cohere/command-r-plus',
+        'x-ai/grok-2',
+      ]
+      const filtered = OpenRouterProvider.filterModels(models)
+
+      expect(filtered.length).toBe(8) // All should be included
+    })
+
+    it('should sort filtered models correctly', () => {
+      const models = [
+        'openai/gpt-4o',
+        'anthropic/claude-sonnet-4',
+        'anthropic/claude-opus-4',
+        'google/gemini-2.0-flash',
+      ]
+      const filtered = OpenRouterProvider.filterModels(models)
+
+      // Anthropic opus should be first, then sonnet, then OpenAI, then Google
+      expect(filtered[0]).toBe('anthropic/claude-opus-4')
+      expect(filtered[1]).toBe('anthropic/claude-sonnet-4')
+    })
+  })
+
+  describe('OpenRouterProvider.getDefaultModel', () => {
+    it('should prefer claude-sonnet-4 as default', () => {
+      const models = [
+        'anthropic/claude-opus-4',
+        'anthropic/claude-sonnet-4',
+        'openai/gpt-4o',
+        'google/gemini-2.0-flash',
+      ]
+      const defaultModel = OpenRouterProvider.getDefaultModel(models)
+      expect(defaultModel).toBe('anthropic/claude-sonnet-4')
+    })
+
+    it('should fall back to gpt-4o if no claude-sonnet', () => {
+      const models = ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash']
+      const defaultModel = OpenRouterProvider.getDefaultModel(models)
+      expect(defaultModel).toBe('openai/gpt-4o')
+    })
+
+    it('should return first model if no preferred defaults', () => {
+      const models = ['meta-llama/llama-3.1-70b', 'mistralai/mistral-large']
+      const defaultModel = OpenRouterProvider.getDefaultModel(models)
+      expect(defaultModel).toBe('meta-llama/llama-3.1-70b')
+    })
+
+    it('should return empty string for empty array', () => {
+      const defaultModel = OpenRouterProvider.getDefaultModel([])
       expect(defaultModel).toBe('')
     })
   })

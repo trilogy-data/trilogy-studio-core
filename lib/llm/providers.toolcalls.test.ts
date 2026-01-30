@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { OpenAIProvider } from './openai'
 import { AnthropicProvider } from './anthropic'
 import { GoogleProvider } from './googlev2'
+import { OpenRouterProvider } from './openrouter'
 import type { LLMMessage, LLMToolDefinition, LLMToolCall, LLMToolResult } from './base'
 
 /**
@@ -401,6 +402,158 @@ describe('Google Provider - Tool Call Preservation', () => {
     expect(functionResponsePart).toBeDefined()
     expect(functionResponsePart.functionResponse.name).toBe('run_query')
     expect(functionResponsePart.functionResponse.response.result).toBe('10 users found')
+  })
+})
+
+describe('OpenRouter Provider - Tool Call Preservation', () => {
+  let provider: OpenRouterProvider
+  let capturedRequestBody: any
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch)
+    provider = new OpenRouterProvider(
+      'test-openrouter',
+      'test-api-key',
+      'anthropic/claude-3-sonnet',
+      false,
+      {
+        maxRetries: 0,
+        initialDelayMs: 0,
+        retryStatusCodes: [],
+      },
+    )
+    capturedRequestBody = null
+    mockFetch.mockReset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('should preserve tool_calls in assistant messages when sending history', async () => {
+    const toolCall: LLMToolCall = {
+      id: 'call_or_123',
+      name: 'run_query',
+      input: { query: 'SELECT * FROM users' },
+    }
+
+    const toolResult: LLMToolResult = {
+      toolCallId: 'call_or_123',
+      toolName: 'run_query',
+      result: 'Success. 10 rows returned.',
+    }
+
+    const history: LLMMessage[] = [
+      { role: 'user', content: 'Run a query to get all users' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [toolCall],
+      },
+      {
+        role: 'user',
+        content: '',
+        toolResults: [toolResult],
+      },
+    ]
+
+    mockFetch.mockImplementation(async (_url, options) => {
+      capturedRequestBody = JSON.parse(options.body)
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'Query completed successfully!' } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      }
+    })
+
+    await provider.generateCompletion(
+      { prompt: 'What were the results?', tools: [testTool] },
+      history,
+    )
+
+    expect(capturedRequestBody).toBeDefined()
+    expect(capturedRequestBody.messages).toBeDefined()
+
+    // Find the assistant message with tool_calls
+    const assistantWithToolCalls = capturedRequestBody.messages.find(
+      (m: any) => m.role === 'assistant' && m.tool_calls,
+    )
+    expect(assistantWithToolCalls).toBeDefined()
+    expect(assistantWithToolCalls.tool_calls).toHaveLength(1)
+    expect(assistantWithToolCalls.tool_calls[0].id).toBe('call_or_123')
+    expect(assistantWithToolCalls.tool_calls[0].type).toBe('function')
+    expect(assistantWithToolCalls.tool_calls[0].function.name).toBe('run_query')
+
+    // Find the tool result message
+    const toolResultMessage = capturedRequestBody.messages.find((m: any) => m.role === 'tool')
+    expect(toolResultMessage).toBeDefined()
+    expect(toolResultMessage.tool_call_id).toBe('call_or_123')
+    expect(toolResultMessage.content).toBe('Success. 10 rows returned.')
+  })
+
+  it('should correctly parse structured tool_calls from response', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_or_456',
+                  type: 'function',
+                  function: {
+                    name: 'run_query',
+                    arguments: '{"query": "SELECT * FROM products"}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+      }),
+    })
+
+    const response = await provider.generateCompletion({
+      prompt: 'List all products',
+      tools: [testTool],
+    })
+
+    expect(response.toolCalls).toBeDefined()
+    expect(response.toolCalls).toHaveLength(1)
+    expect(response.toolCalls![0].id).toBe('call_or_456')
+    expect(response.toolCalls![0].name).toBe('run_query')
+    expect(response.toolCalls![0].input).toEqual({ query: 'SELECT * FROM products' })
+  })
+
+  it('should format tools correctly for OpenRouter (OpenAI-compatible format)', async () => {
+    mockFetch.mockImplementation(async (_url, options) => {
+      capturedRequestBody = JSON.parse(options.body)
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'I will run the query.' } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      }
+    })
+
+    await provider.generateCompletion({
+      prompt: 'Run a query',
+      tools: [testTool],
+    })
+
+    // Verify tools are formatted in OpenAI format
+    expect(capturedRequestBody.tools).toBeDefined()
+    expect(capturedRequestBody.tools).toHaveLength(1)
+    expect(capturedRequestBody.tools[0].type).toBe('function')
+    expect(capturedRequestBody.tools[0].function.name).toBe('run_query')
+    expect(capturedRequestBody.tools[0].function.description).toBe('Execute a database query')
+    expect(capturedRequestBody.tools[0].function.parameters).toEqual(testTool.input_schema)
   })
 })
 

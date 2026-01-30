@@ -101,7 +101,7 @@
           </span>
         </div>
         <button
-          v-if="isLoading && customStopHandler"
+          v-if="isLoading && stopHandler"
           @click="handleStop"
           data-testid="stop-button"
           class="send-button stop-button"
@@ -130,11 +130,9 @@ import {
   watch,
   onMounted,
   onUnmounted,
-  inject,
   type PropType,
   computed,
 } from 'vue'
-import { type LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
@@ -199,17 +197,15 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    // Custom send handler - if provided, component won't use llmStore
-    customSendHandler: {
-      type: [Function, null] as PropType<
-        ((message: string, messages: ChatMessage[]) => Promise<void>) | null
-      >,
-      default: undefined,
+    // Handler for sending messages - called with message content and current messages
+    sendHandler: {
+      type: Function as PropType<(message: string, messages: ChatMessage[]) => Promise<void>>,
+      required: true,
     },
-    // Custom stop handler - called when user clicks stop during loading
-    customStopHandler: {
+    // Stop handler - called when user clicks stop during loading
+    stopHandler: {
       type: [Function, null] as PropType<(() => void) | null>,
-      default: undefined,
+      default: null,
     },
     // Text to show on stop button
     stopButtonText: {
@@ -229,7 +225,6 @@ export default defineComponent({
   setup(props, { emit }) {
     const internalMessages = ref<ChatMessage[]>([...props.messages])
     const userInput = ref('')
-    const internalLoading = ref(false)
     const messagesContainer = ref<HTMLElement | null>(null)
     const inputTextarea = ref<HTMLTextAreaElement | null>(null)
 
@@ -267,10 +262,7 @@ export default defineComponent({
       }
     }
 
-    // Try to inject llmStore, but don't require it
-    const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore', null as any)
-
-    const isLoading = computed(() => props.externalLoading || internalLoading.value)
+    const isLoading = computed(() => props.externalLoading)
 
     const visibleMessages = computed(() => {
       return internalMessages.value.filter((m) => !m.hidden)
@@ -343,8 +335,8 @@ export default defineComponent({
 
     // Handle stop button click
     const handleStop = () => {
-      if (props.customStopHandler) {
-        props.customStopHandler()
+      if (props.stopHandler) {
+        props.stopHandler()
       }
     }
 
@@ -386,62 +378,12 @@ export default defineComponent({
       if (isLoading.value || !userInput.value.trim()) return
 
       const content = userInput.value.trim()
-
-      // Add user message
-      const userMessage: ChatMessage = {
-        role: 'user',
-        content: content,
-      }
-      internalMessages.value.push(userMessage)
-      emit('update:messages', internalMessages.value)
-      emit('message-sent', userMessage)
-
-      const messageContent = content
       userInput.value = ''
+
+      // The sendHandler manages messages (via store/runToolLoop)
+      // Don't add the message here - the handler will add it and sync back via props.messages
       scrollToBottom()
-
-      // Use custom handler if provided
-      if (props.customSendHandler) {
-        await props.customSendHandler(messageContent, internalMessages.value)
-        return
-      }
-
-      // Otherwise use the llmStore
-      if (!llmStore) {
-        internalMessages.value.push({
-          role: 'assistant',
-          content: 'Error: No LLM connection available. Please configure an LLM provider.',
-        })
-        emit('update:messages', internalMessages.value)
-        return
-      }
-
-      internalLoading.value = true
-
-      try {
-        await llmStore.generateValidatedCompletion(
-          messageContent,
-          () => true, // No validation
-          3,
-          llmStore.activeConnection,
-          internalMessages.value,
-          false,
-        )
-
-        const lastMessage = internalMessages.value[internalMessages.value.length - 1]
-        emit('update:messages', internalMessages.value)
-        emit('response-received', lastMessage)
-      } catch (error) {
-        internalMessages.value.push({
-          role: 'assistant',
-          content: 'Sorry, there was an error processing your request.',
-        })
-        emit('update:messages', internalMessages.value)
-      } finally {
-        internalLoading.value = false
-        focusInput()
-        scrollToBottom()
-      }
+      await props.sendHandler(content, internalMessages.value)
     }
 
     const addMessage = (message: ChatMessage) => {

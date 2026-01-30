@@ -7,8 +7,8 @@
       :showHeader="true"
       :externalLoading="isLoading"
       :activeToolName="activeToolName"
-      :customSendHandler="handleSendMessage"
-      :customStopHandler="handleStop"
+      :sendHandler="handleSendMessage"
+      :stopHandler="handleStop"
       :placeholder="placeholders"
       @update:messages="handleMessagesUpdate"
     >

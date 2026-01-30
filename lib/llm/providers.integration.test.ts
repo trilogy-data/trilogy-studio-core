@@ -2,12 +2,14 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { AnthropicProvider } from './anthropic'
 import { OpenAIProvider } from './openai'
 import { GoogleProvider } from './googlev2'
+import { OpenRouterProvider } from './openrouter'
 import type { LLMToolDefinition, LLMMessage } from './base'
 
 // Skip tests if API keys are not available
 const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY
 const OPENAI_KEY = process.env.OPENAI_KEY
 const GOOGLE_KEY = process.env.GOOGLE_KEY
+const OPENROUTER_KEY = process.env.OPENROUTER_KEY
 
 const testTool: LLMToolDefinition = {
   name: 'get_weather',
@@ -245,4 +247,91 @@ describe.skipIf(!GOOGLE_KEY)('Google Provider Integration', () => {
     },
     { timeout: 120000 },
   )
+})
+
+describe.skipIf(!OPENROUTER_KEY)('OpenRouter Provider Integration', () => {
+  let provider: OpenRouterProvider
+
+  beforeAll(() => {
+    provider = new OpenRouterProvider(
+      'test-openrouter',
+      OPENROUTER_KEY!,
+      'anthropic/claude-3-5-sonnet',
+    )
+  })
+
+  it('should connect and fetch models', async () => {
+    await provider.reset()
+    expect(provider.connected).toBe(true)
+    expect(provider.models.length).toBeGreaterThan(0)
+    // Should have filtered to modern models only
+    expect(
+      provider.models.some(
+        (m) => m.startsWith('anthropic/') || m.startsWith('openai/') || m.startsWith('meta-llama/'),
+      ),
+    ).toBe(true)
+  })
+
+  it('should store model metadata', async () => {
+    await provider.reset()
+    // Should have metadata for at least some models
+    expect(provider.modelMetadata.size).toBeGreaterThan(0)
+
+    // Check that metadata has expected properties
+    const firstModelId = provider.models[0]
+    const metadata = provider.getModelMetadata(firstModelId)
+    expect(metadata).toBeDefined()
+    expect(metadata?.id).toBe(firstModelId)
+  })
+
+  it('should generate a simple completion', async () => {
+    const response = await provider.generateCompletion({
+      prompt: 'Say "hello" and nothing else.',
+      maxTokens: 50,
+    })
+
+    expect(response.text.toLowerCase()).toContain('hello')
+    expect(response.usage.totalTokens).toBeGreaterThan(0)
+  })
+
+  it('should handle system prompts', async () => {
+    const response = await provider.generateCompletion({
+      prompt: 'What is your name?',
+      systemPrompt: 'You are a helpful assistant named Charlie. Always respond briefly.',
+      maxTokens: 50,
+    })
+
+    expect(response.text.toLowerCase()).toContain('charlie')
+  })
+
+  it('should handle message history', async () => {
+    const history: LLMMessage[] = [
+      { role: 'user', content: 'My favorite food is pizza.' },
+      { role: 'assistant', content: 'Pizza is delicious!' },
+    ]
+
+    const response = await provider.generateCompletion(
+      {
+        prompt: 'What is my favorite food?',
+        maxTokens: 50,
+      },
+      history,
+    )
+
+    expect(response.text.toLowerCase()).toContain('pizza')
+  })
+
+  it('should handle tool calling', async () => {
+    const response = await provider.generateCompletion({
+      prompt: 'What is the weather in London?',
+      tools: [testTool],
+      maxTokens: 200,
+    })
+
+    // OpenRouter returns tool calls as structured data
+    expect(response.toolCalls).toBeDefined()
+    expect(response.toolCalls!.length).toBeGreaterThan(0)
+    expect(response.toolCalls![0].name).toBe('get_weather')
+    expect(response.toolCalls![0].input).toHaveProperty('location')
+  })
 })
