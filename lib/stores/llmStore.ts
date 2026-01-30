@@ -5,6 +5,7 @@ import {
   AnthropicProvider,
   OpenAIProvider,
   GoogleProvider,
+  OpenRouterProvider,
   createPrompt,
   createDashboardPrompt,
   createFilterPrompt,
@@ -132,6 +133,18 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         connection = new OpenAIProvider(name, options.apiKey, options.model, options.saveCredential)
       } else if (type === 'google') {
         connection = new GoogleProvider(name, options.apiKey, options.model, options.saveCredential)
+      } else if (type === 'openrouter') {
+        connection = new OpenRouterProvider(
+          name,
+          options.apiKey,
+          options.model,
+          options.saveCredential,
+          undefined,
+          {
+            httpReferer: options.httpReferer,
+            appTitle: options.appTitle,
+          },
+        )
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
@@ -151,6 +164,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         provider = new OpenAIProvider(tempName, apiKey, '', false)
       } else if (type === 'google') {
         provider = new GoogleProvider(tempName, apiKey, '', false)
+      } else if (type === 'openrouter') {
+        provider = new OpenRouterProvider(tempName, apiKey, '', false)
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
