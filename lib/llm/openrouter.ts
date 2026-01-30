@@ -573,7 +573,9 @@ export class OpenRouterProvider extends LLMProvider {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }))
-      throw new Error(`Failed to exchange code for API key: ${error.message || response.statusText}`)
+      throw new Error(
+        `Failed to exchange code for API key: ${error.message || response.statusText}`,
+      )
     }
 
     const data = await response.json()

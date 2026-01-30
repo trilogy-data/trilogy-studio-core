@@ -350,9 +350,7 @@ export async function runToolLoop(
     // On first tool call cycle, add the user message that was excluded from initial currentMessages
     currentMessages = [
       ...currentMessages,
-      ...(!userMessageAddedToHistory
-        ? [{ role: 'user' as const, content: userMessage }]
-        : []),
+      ...(!userMessageAddedToHistory ? [{ role: 'user' as const, content: userMessage }] : []),
       {
         role: 'assistant' as const,
         content: responseText,

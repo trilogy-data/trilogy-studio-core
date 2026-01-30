@@ -410,10 +410,7 @@ describe('OpenRouter Model Filtering', () => {
     })
 
     it('should sort by model tier within same provider', () => {
-      const result = compareOpenRouterModels(
-        'anthropic/claude-sonnet-4',
-        'anthropic/claude-opus-4',
-      )
+      const result = compareOpenRouterModels('anthropic/claude-sonnet-4', 'anthropic/claude-opus-4')
       expect(result).toBeGreaterThan(0) // opus should come first
     })
 

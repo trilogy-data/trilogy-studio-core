@@ -400,13 +400,13 @@ export const useChatStore = defineStore('chats', {
         const buildSystemPrompt = () => this.buildSystemPrompt(chatId, deps)
 
         // Handle symbol refresh on tool results
-        const onToolResult = async (toolName: string, result: ToolCallResult) => {
+        const onToolResult = async (_toolName: string, result: ToolCallResult) => {
           if (result.triggersSymbolRefresh && options.onSymbolsRefresh) {
             await options.onSymbolsRefresh()
           }
         }
 
-        return await runToolLoop(
+        const loopResult = await runToolLoop(
           message,
           llmConnectionName,
           llmAdapter,
@@ -421,6 +421,9 @@ export const useChatStore = defineStore('chats', {
             onToolResult,
           },
         )
+
+        // Convert ToolLoopResult to expected return type
+        return loopResult.finalMessage ? { response: loopResult.finalMessage } : undefined
       } catch (err) {
         // Handle abort errors gracefully - don't add error message to chat
         if (err instanceof DOMException && err.name === 'AbortError') {

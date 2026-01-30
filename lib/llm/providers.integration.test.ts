@@ -267,8 +267,7 @@ describe.skipIf(!OPENROUTER_KEY)('OpenRouter Provider Integration', () => {
     // Should have filtered to modern models only
     expect(
       provider.models.some(
-        (m) =>
-          m.startsWith('anthropic/') || m.startsWith('openai/') || m.startsWith('meta-llama/'),
+        (m) => m.startsWith('anthropic/') || m.startsWith('openai/') || m.startsWith('meta-llama/'),
       ),
     ).toBe(true)
   })
