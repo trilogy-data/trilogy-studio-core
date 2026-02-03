@@ -137,3 +137,133 @@ select
 
 ---
 
+## Test Run - 2026-02-03 14:22:52
+
+### Summary
+
+| Provider | Model | Pass Rate | Average Latency (ms) | Total Tests |
+|----------|-------|-----------|---------------------|-------------|
+| OPENAI | gpt-4o | 70.00% | 9764.85 | 20 |
+| ANTHROPIC | claude-sonnet-4-20250514 | 5.00% | 59469.20 | 20 |
+| GOOGLE | gemini-2.0-flash | 0.00% | 45.35 | 20 |
+
+### OPENAI - gpt-4o
+
+**Pass Rate:** 70.00%  
+**Average Latency:** 9764.85ms  
+**Total Tests:** 20
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query | where year >= 1980 and year <= 1989 and state in ['AL', 'AR'... | ❌ Fail | 15685.00 | Validation failed after maximum attempts... |
+| test-basic-query | where names.year.count >= 1980 and names.year.count <= 1989 ... | ✅ Pass | 16458.00 |  |
+| test-basic-query | where names.year.count >= 1980 and names.year.count <= 1989 ... | ✅ Pass | 5353.00 |  |
+| test-basic-query | where names.year.count >= 1980 and names.year.count <= 1989 ... | ✅ Pass | 6040.00 |  |
+| test-basic-query | where names.year.count >= 1980 and names.year.count <= 1989 ... | ✅ Pass | 6819.00 |  |
+| test-star-wars | 
+where (names.year.count between 1970 and 1985) and (names.n... | ✅ Pass | 12713.00 |  |
+| test-star-wars | 
+where (names.year.count between 1970 and 1985) and (names.n... | ✅ Pass | 5556.00 |  |
+| test-star-wars | 
+where (names.year.count between 1970 and 1985) and (names.n... | ✅ Pass | 4071.00 |  |
+| test-star-wars | 
+where (names.year.count between 1970 and 1985) and (names.n... | ✅ Pass | 4192.00 |  |
+| test-star-wars | 
+where (names.year.count between 1970 and 1990) and (names.n... | ✅ Pass | 4408.00 |  |
+| test-abstract-question | select
+    game_tall.team.color,
+    sum(game_tall.win) as t... | ✅ Pass | 5495.00 |  |
+| test-abstract-question | select
+    game_tall.team.color,
+    sum(game_tall.win ? gam... | ✅ Pass | 7419.00 |  |
+| test-abstract-question | select
+    game_tall.team.color,
+    sum(game_tall.win) as t... | ✅ Pass | 2544.00 |  |
+| test-abstract-question | select
+    game_tall.team.color,
+    sum(game_tall.win) as t... | ✅ Pass | 2879.00 |  |
+| test-abstract-question | select
+    game_tall.team.color,
+    sum(game_tall.win) as t... | ✅ Pass | 4907.00 |  |
+| test-home-vs-away | select
+    game_tall.team_name,
+    sum(win ? is_home)::floa... | ❌ Fail | 18605.00 | Validation failed after maximum attempts... |
+| test-home-vs-away | select
+    game_tall.team_name,
+    (sum(game_tall.win ? gam... | ❌ Fail | 19077.00 | Validation failed after maximum attempts... |
+| test-home-vs-away | select
+    game_tall.team_name,
+    (sum(game_tall.win ? gam... | ❌ Fail | 21214.00 | Validation failed after maximum attempts... |
+| test-home-vs-away | select
+    game_tall.team_name,
+    (sum(game_tall.win ? gam... | ❌ Fail | 16591.00 | Validation failed after maximum attempts... |
+| test-home-vs-away | select
+    game_tall.team_name,
+    (sum(game_tall.win * (ga... | ❌ Fail | 15271.00 | Validation failed after maximum attempts... |
+
+### ANTHROPIC - claude-sonnet-4-20250514
+
+**Pass Rate:** 5.00%  
+**Average Latency:** 59469.20ms  
+**Total Tests:** 20
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query | where names.state in ('TX', 'FL', 'GA', 'NC', 'SC', 'VA', 'T... | ✅ Pass | 12173.00 |  |
+| test-basic-query |  | ❌ Fail | 1176189.00 | Anthropic API error: fetch failed... |
+| test-basic-query |  | ❌ Fail | 710.00 | Anthropic API error: fetch failed... |
+| test-basic-query |  | ❌ Fail | 6.00 | Anthropic API error: fetch failed... |
+| test-basic-query |  | ❌ Fail | 7.00 | Anthropic API error: fetch failed... |
+| test-star-wars |  | ❌ Fail | 8.00 | Anthropic API error: fetch failed... |
+| test-star-wars |  | ❌ Fail | 8.00 | Anthropic API error: fetch failed... |
+| test-star-wars |  | ❌ Fail | 30.00 | Anthropic API error: fetch failed... |
+| test-star-wars |  | ❌ Fail | 37.00 | Anthropic API error: fetch failed... |
+| test-star-wars |  | ❌ Fail | 12.00 | Anthropic API error: fetch failed... |
+| test-abstract-question |  | ❌ Fail | 42.00 | Anthropic API error: fetch failed... |
+| test-abstract-question |  | ❌ Fail | 8.00 | Anthropic API error: fetch failed... |
+| test-abstract-question |  | ❌ Fail | 6.00 | Anthropic API error: fetch failed... |
+| test-abstract-question |  | ❌ Fail | 7.00 | Anthropic API error: fetch failed... |
+| test-abstract-question |  | ❌ Fail | 32.00 | Anthropic API error: fetch failed... |
+| test-home-vs-away |  | ❌ Fail | 21.00 | Anthropic API error: fetch failed... |
+| test-home-vs-away |  | ❌ Fail | 10.00 | Anthropic API error: fetch failed... |
+| test-home-vs-away |  | ❌ Fail | 52.00 | Anthropic API error: fetch failed... |
+| test-home-vs-away |  | ❌ Fail | 10.00 | Anthropic API error: fetch failed... |
+| test-home-vs-away |  | ❌ Fail | 16.00 | Anthropic API error: fetch failed... |
+
+### GOOGLE - gemini-2.0-flash
+
+**Pass Rate:** 0.00%  
+**Average Latency:** 45.35ms  
+**Total Tests:** 20
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query |  | ❌ Fail | 177.00 | exception TypeError: fetch failed sending request... |
+| test-basic-query |  | ❌ Fail | 9.00 | exception TypeError: fetch failed sending request... |
+| test-basic-query |  | ❌ Fail | 10.00 | exception TypeError: fetch failed sending request... |
+| test-basic-query |  | ❌ Fail | 10.00 | exception TypeError: fetch failed sending request... |
+| test-basic-query |  | ❌ Fail | 38.00 | exception TypeError: fetch failed sending request... |
+| test-star-wars |  | ❌ Fail | 11.00 | exception TypeError: fetch failed sending request... |
+| test-star-wars |  | ❌ Fail | 583.00 | exception TypeError: fetch failed sending request... |
+| test-star-wars |  | ❌ Fail | 6.00 | exception TypeError: fetch failed sending request... |
+| test-star-wars |  | ❌ Fail | 6.00 | exception TypeError: fetch failed sending request... |
+| test-star-wars |  | ❌ Fail | 6.00 | exception TypeError: fetch failed sending request... |
+| test-abstract-question |  | ❌ Fail | 6.00 | exception TypeError: fetch failed sending request... |
+| test-abstract-question |  | ❌ Fail | 7.00 | exception TypeError: fetch failed sending request... |
+| test-abstract-question |  | ❌ Fail | 4.00 | exception TypeError: fetch failed sending request... |
+| test-abstract-question |  | ❌ Fail | 7.00 | exception TypeError: fetch failed sending request... |
+| test-abstract-question |  | ❌ Fail | 4.00 | exception TypeError: fetch failed sending request... |
+| test-home-vs-away |  | ❌ Fail | 4.00 | exception TypeError: fetch failed sending request... |
+| test-home-vs-away |  | ❌ Fail | 4.00 | exception TypeError: fetch failed sending request... |
+| test-home-vs-away |  | ❌ Fail | 6.00 | exception TypeError: fetch failed sending request... |
+| test-home-vs-away |  | ❌ Fail | 4.00 | exception TypeError: fetch failed sending request... |
+| test-home-vs-away |  | ❌ Fail | 5.00 | exception TypeError: fetch failed sending request... |
+
+---
+

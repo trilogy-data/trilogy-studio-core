@@ -17,15 +17,15 @@ const { useLLMConnectionStore, useConnectionStore } = await import(
 // Load environment variables from .env file
 dotenv.config()
 
-// Define all available provider test cases
+// Define all available provider test cases with latest default models
 const ALL_PROVIDERS: ProviderConfig[] = [
   {
     name: 'OPENAI',
-    models: ['gpt-4.1-nano'],
+    models: ['gpt-5.2'],
   },
   {
     name: 'ANTHROPIC',
-    models: ['claude-3-7-sonnet-20250219'],
+    models: ['claude-opus-4-20250514'],
   },
   {
     name: 'GOOGLE',
