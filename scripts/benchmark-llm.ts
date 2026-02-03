@@ -14,6 +14,7 @@ const { useLLMConnectionStore, useConnectionStore } = await import(
   'trilogy-studio-components/stores'
 )
 
+
 // Load environment variables from .env file
 dotenv.config()
 
@@ -25,11 +26,11 @@ const ALL_PROVIDERS: ProviderConfig[] = [
   },
   {
     name: 'ANTHROPIC',
-    models: ['claude-opus-4-20250514'],
+    models: ['claude-opus-4-5-20251101'],
   },
   {
     name: 'GOOGLE',
-    models: ['gemini-2.0-flash'],
+    models: ['gemini-2.5-flash'],
   },
 ]
 
