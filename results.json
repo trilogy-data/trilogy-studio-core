@@ -258,264 +258,6 @@
     "averageLatency": 5531.6
   },
   {
-    "provider": "ANTHROPIC",
-    "model": "claude-opus-4-2025-0514",
-    "results": [
-      {
-        "testId": "test-basic-query",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 518,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-basic-query",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 507,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-basic-query",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 512,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-basic-query",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 411,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-basic-query",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 396,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-star-wars",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 522,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-star-wars",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 309,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-star-wars",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 402,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-star-wars",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 363,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-star-wars",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 423,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-abstract-question",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 449,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-abstract-question",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 435,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-abstract-question",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 431,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-abstract-question",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 771,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-abstract-question",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 371,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-home-vs-away",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 363,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-home-vs-away",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 447,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-home-vs-away",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 467,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-home-vs-away",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 445,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-home-vs-away",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 574,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-window-over-aggregate",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 407,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-window-over-aggregate",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 420,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-window-over-aggregate",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 401,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-window-over-aggregate",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 316,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      },
-      {
-        "testId": "test-window-over-aggregate",
-        "passed": false,
-        "containedKeywords": [],
-        "missingKeywords": [],
-        "response": "Error: Anthropic API error: HTTP error 404: Not Found",
-        "latency": 499,
-        "error": "Anthropic API error: HTTP error 404: Not Found",
-        "query": null
-      }
-    ],
-    "passRate": 0,
-    "averageLatency": 446.36
-  },
-  {
     "provider": "GOOGLE",
     "model": "gemini-2.5-flash",
     "results": [
@@ -772,5 +514,263 @@
     ],
     "passRate": 0.92,
     "averageLatency": 10338.32
+  },
+  {
+    "provider": "ANTHROPIC",
+    "model": "claude-opus-4-5-20251101",
+    "results": [
+      {
+        "testId": "test-basic-query",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK', 'MD', 'DE')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when count(names.state) <= 3 then 'Unique'\n        when count(names.state) >= 10 then 'Common'\n        else 'Moderate'\n    end as popularity_category\norder by \n    total_births desc\nlimit 200;\n",
+        "latency": 14296,
+        "error": null,
+        "query": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK', 'MD', 'DE')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when count(names.state) <= 3 then 'Unique'\n        when count(names.state) >= 10 then 'Common'\n        else 'Moderate'\n    end as popularity_category\norder by \n    total_births desc\nlimit 200;\n"
+      },
+      {
+        "testId": "test-basic-query",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 50000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 10000 then 'Common'\n        when count(names.state) <= 3 and sum(names.births) <= 500 then 'Unique'\n        else 'Moderate'\n    end as popularity_category\norder by \n    total_births desc\nlimit 200;\n",
+        "latency": 5736,
+        "error": null,
+        "query": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 50000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 10000 then 'Common'\n        when count(names.state) <= 3 and sum(names.births) <= 500 then 'Unique'\n        else 'Moderate'\n    end as popularity_category\norder by \n    total_births desc\nlimit 200;\n"
+      },
+      {
+        "testId": "test-basic-query",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 20000 and count(names.state) >= 10 then 'Very Common'\n        when sum(names.births) >= 5000 then 'Common'\n        when count(names.state) <= 3 and sum(names.births) <= 300 then 'Unique'\n        else 'Moderate'\n    end as popularity_category\norder by \n    popularity_category asc,\n    total_births desc\nlimit 150;\n",
+        "latency": 5587,
+        "error": null,
+        "query": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 20000 and count(names.state) >= 10 then 'Very Common'\n        when sum(names.births) >= 5000 then 'Common'\n        when count(names.state) <= 3 and sum(names.births) <= 300 then 'Unique'\n        else 'Moderate'\n    end as popularity_category\norder by \n    popularity_category asc,\n    total_births desc\nlimit 150;\n"
+      },
+      {
+        "testId": "test-basic-query",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 25000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 8000 then 'Common'\n        when count(names.state) <= 2 and sum(names.births) <= 200 then 'Unique'\n        else 'Moderate'\n    end as popularity_type\norder by \n    popularity_type asc,\n    total_births desc\nlimit 150;\n",
+        "latency": 5784,
+        "error": null,
+        "query": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as states_appeared_in,\n    case \n        when sum(names.births) >= 25000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 8000 then 'Common'\n        when count(names.state) <= 2 and sum(names.births) <= 200 then 'Unique'\n        else 'Moderate'\n    end as popularity_type\norder by \n    popularity_type asc,\n    total_births desc\nlimit 150;\n"
+      },
+      {
+        "testId": "test-basic-query",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as num_states,\n    case \n        when sum(names.births) >= 30000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 10000 then 'Common'\n        when count(names.state) <= 2 and sum(names.births) <= 250 then 'Unique'\n        else 'Moderate'\n    end as name_category\norder by \n    name_category asc,\n    total_births desc\nlimit 150;\n",
+        "latency": 5338,
+        "error": null,
+        "query": "\nwhere \n    names.year >= 1980 and names.year <= 1989\n    and names.state in ('AL', 'AR', 'FL', 'GA', 'KY', 'LA', 'MS', 'NC', 'SC', 'TN', 'TX', 'VA', 'WV', 'OK')\nselect\n    names.name,\n    names.gender,\n    sum(names.births) as total_births,\n    count(names.state) as num_states,\n    case \n        when sum(names.births) >= 30000 and count(names.state) >= 12 then 'Very Common'\n        when sum(names.births) >= 10000 then 'Common'\n        when count(names.state) <= 2 and sum(names.births) <= 250 then 'Unique'\n        else 'Moderate'\n    end as name_category\norder by \n    name_category asc,\n    total_births desc\nlimit 150;\n"
+      },
+      {
+        "testId": "test-star-wars",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n",
+        "latency": 12109,
+        "error": null,
+        "query": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n"
+      },
+      {
+        "testId": "test-star-wars",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n",
+        "latency": 3566,
+        "error": null,
+        "query": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n"
+      },
+      {
+        "testId": "test-star-wars",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n",
+        "latency": 3887,
+        "error": null,
+        "query": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n"
+      },
+      {
+        "testId": "test-star-wars",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n",
+        "latency": 3587,
+        "error": null,
+        "query": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n"
+      },
+      {
+        "testId": "test-star-wars",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n",
+        "latency": 3383,
+        "error": null,
+        "query": "where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo', 'Rey', 'Padme')\nselect\n    names.name,\n    names.year,\n    sum(names.births) as total_births\norder by \n    names.year asc,\n    names.name asc;\n"
+      },
+      {
+        "testId": "test-abstract-question",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    case \n        when game_tall.team.color like '#FF%' or game_tall.team.color like '#ff%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#CC0%' or game_tall.team.color like '#cc0%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#8B0%' or game_tall.team.color like '#8b0%' then 'Aggressive (Dark Red)'\n        when game_tall.team.color like '#00%' or game_tall.team.color like '#000%' then 'Aggressive (Black)'\n        when game_tall.team.color like '#FFA%' or game_tall.team.color like '#ffa%' then 'Aggressive (Orange)'\n        when game_tall.team.color like '#FF4%' or game_tall.team.color like '#ff4%' then 'Aggressive (Orange-Red)'\n        when game_tall.team.color like '#C00%' or game_tall.team.color like '#c00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#B00%' or game_tall.team.color like '#b00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#A00%' or game_tall.team.color like '#a00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#900%' or game_tall.team.color like '#900%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#E00%' or game_tall.team.color like '#e00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#D00%' or game_tall.team.color like '#d00%' then 'Aggressive (Red)'\n        else 'Non-Aggressive'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100 as win_percentage\norder by \n    win_percentage desc\nlimit 20\n",
+        "latency": 9890,
+        "error": null,
+        "query": "select\n    case \n        when game_tall.team.color like '#FF%' or game_tall.team.color like '#ff%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#CC0%' or game_tall.team.color like '#cc0%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#8B0%' or game_tall.team.color like '#8b0%' then 'Aggressive (Dark Red)'\n        when game_tall.team.color like '#00%' or game_tall.team.color like '#000%' then 'Aggressive (Black)'\n        when game_tall.team.color like '#FFA%' or game_tall.team.color like '#ffa%' then 'Aggressive (Orange)'\n        when game_tall.team.color like '#FF4%' or game_tall.team.color like '#ff4%' then 'Aggressive (Orange-Red)'\n        when game_tall.team.color like '#C00%' or game_tall.team.color like '#c00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#B00%' or game_tall.team.color like '#b00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#A00%' or game_tall.team.color like '#a00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#900%' or game_tall.team.color like '#900%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#E00%' or game_tall.team.color like '#e00%' then 'Aggressive (Red)'\n        when game_tall.team.color like '#D00%' or game_tall.team.color like '#d00%' then 'Aggressive (Red)'\n        else 'Non-Aggressive'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100 as win_percentage\norder by \n    win_percentage desc\nlimit 20\n"
+      },
+      {
+        "testId": "test-abstract-question",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    case \n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#990%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#880%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#900%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#800%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#e00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#d00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#000%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#111%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#222%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff4%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff5%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(100.0 * sum(game_tall.win) / count(game_tall.id), 2) as win_rate_pct\norder by \n    color_type asc\n",
+        "latency": 12899,
+        "error": null,
+        "query": "select\n    case \n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#990%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#880%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#900%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#800%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#e00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#d00%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#000%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#111%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#222%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff4%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff5%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(100.0 * sum(game_tall.win) / count(game_tall.id), 2) as win_rate_pct\norder by \n    color_type asc\n"
+      },
+      {
+        "testId": "test-abstract-question",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    case \n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#e%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#d%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#9%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#00%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#11%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#22%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff9%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    round(100.0 * sum(game_tall.win) / count(game_tall.id), 2) as win_percentage\norder by \n    win_percentage desc\n",
+        "latency": 8740,
+        "error": null,
+        "query": "select\n    case \n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#e%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#d%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#9%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8%0%0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#00%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#11%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#22%' then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff9%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_category,\n    count(game_tall.id) as total_games,\n    sum(game_tall.win) as total_wins,\n    round(100.0 * sum(game_tall.win) / count(game_tall.id), 2) as win_percentage\norder by \n    win_percentage desc\n"
+      },
+      {
+        "testId": "test-abstract-question",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    case \n        when game_tall.team.color is null then 'Unknown'\n        when lower(game_tall.team.color) in ('#000000', '#111111', '#222222', '#1a1a1a', '#0a0a0a') then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8b0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100, 2) as win_rate_percent\norder by \n    win_rate_percent desc\n",
+        "latency": 15226,
+        "error": null,
+        "query": "select\n    case \n        when game_tall.team.color is null then 'Unknown'\n        when lower(game_tall.team.color) in ('#000000', '#111111', '#222222', '#1a1a1a', '#0a0a0a') then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8b0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100, 2) as win_rate_percent\norder by \n    win_rate_percent desc\n"
+      },
+      {
+        "testId": "test-abstract-question",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    case \n        when game_tall.team.color is null then 'Unknown'\n        when lower(game_tall.team.color) in ('#000000', '#111111', '#222222', '#1a1a1a', '#0a0a0a') then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8b0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100, 2) as win_rate_percent\norder by \n    win_rate_percent desc\n",
+        "latency": 5878,
+        "error": null,
+        "query": "select\n    case \n        when game_tall.team.color is null then 'Unknown'\n        when lower(game_tall.team.color) in ('#000000', '#111111', '#222222', '#1a1a1a', '#0a0a0a') then 'Aggressive (Black)'\n        when lower(game_tall.team.color) like '#ff0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#cc0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#bb0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#aa0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#8b0%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#c00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#b00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#a00%' then 'Aggressive (Red)'\n        when lower(game_tall.team.color) like '#ff6%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ff8%' then 'Aggressive (Orange)'\n        when lower(game_tall.team.color) like '#ffa%' then 'Aggressive (Orange)'\n        else 'Non-Aggressive'\n    end as color_type,\n    count(game_tall.id) as games_played,\n    sum(game_tall.win) as wins,\n    round(cast(sum(game_tall.win) as float) / cast(count(game_tall.id) as float) * 100, 2) as win_rate_percent\norder by \n    win_rate_percent desc\n"
+      },
+      {
+        "testId": "test-home-vs-away",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    home_win_rate - away_win_rate as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 20;\n",
+        "latency": 10706,
+        "error": null,
+        "query": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    home_win_rate - away_win_rate as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 20;\n"
+      },
+      {
+        "testId": "test-home-vs-away",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    home_win_rate - away_win_rate as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n",
+        "latency": 10867,
+        "error": null,
+        "query": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    home_win_rate - away_win_rate as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n"
+      },
+      {
+        "testId": "test-home-vs-away",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n",
+        "latency": 9620,
+        "error": null,
+        "query": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n"
+      },
+      {
+        "testId": "test-home-vs-away",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) * 1.0 / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) * 1.0 / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n",
+        "latency": 21309,
+        "error": null,
+        "query": "select\n    game_tall.team.name,\n    sum(game_tall.win ? game_tall.is_home = true) * 1.0 / count(game_tall.id ? game_tall.is_home = true) as home_win_rate,\n    sum(game_tall.win ? game_tall.is_home = false) * 1.0 / count(game_tall.id ? game_tall.is_home = false) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n"
+      },
+      {
+        "testId": "test-home-vs-away",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.team.name,\n    cast(sum(game_tall.win ? game_tall.is_home = true) as float) / cast(count(game_tall.id ? game_tall.is_home = true) as float) as home_win_rate,\n    cast(sum(game_tall.win ? game_tall.is_home = false) as float) / cast(count(game_tall.id ? game_tall.is_home = false) as float) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n",
+        "latency": 4560,
+        "error": null,
+        "query": "select\n    game_tall.team.name,\n    cast(sum(game_tall.win ? game_tall.is_home = true) as float) / cast(count(game_tall.id ? game_tall.is_home = true) as float) as home_win_rate,\n    cast(sum(game_tall.win ? game_tall.is_home = false) as float) / cast(count(game_tall.id ? game_tall.is_home = false) as float) as away_win_rate,\n    abs(home_win_rate - away_win_rate) as win_rate_difference\norder by\n    win_rate_difference desc\nlimit 1;\n"
+      },
+      {
+        "testId": "test-window-over-aggregate",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    game_tall.team.id,\n    sum(game_tall.points) by game_tall.team.id as team_total_points,\n    rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n",
+        "latency": 27330,
+        "error": null,
+        "query": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    game_tall.team.id,\n    sum(game_tall.points) by game_tall.team.id as team_total_points,\n    rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n"
+      },
+      {
+        "testId": "test-window-over-aggregate",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n",
+        "latency": 21197,
+        "error": null,
+        "query": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n"
+      },
+      {
+        "testId": "test-window-over-aggregate",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by team_total_points desc) as team_rank,\n    game_tall.season,\n    game_tall.team_conf_name,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n",
+        "latency": 20995,
+        "error": null,
+        "query": "select\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by team_total_points desc) as team_rank,\n    game_tall.season,\n    game_tall.team_conf_name,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n"
+      },
+      {
+        "testId": "test-window-over-aggregate",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    game_tall.season,\n    game_tall.team_conf_name,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n",
+        "latency": 10766,
+        "error": null,
+        "query": "select\n    --game_tall.team.id,\n    --sum(game_tall.points) by game_tall.team.id as team_total_points,\n    --rank(game_tall.team.id) over (order by sum(game_tall.points) by game_tall.team.id desc) as team_rank,\n    game_tall.season,\n    game_tall.team_conf_name,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n"
+      },
+      {
+        "testId": "test-window-over-aggregate",
+        "passed": true,
+        "containedKeywords": [],
+        "missingKeywords": [],
+        "response": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    game_tall.team.id,\n    sum(game_tall.points) by game_tall.team.id as team_total_points,\n    rank(game_tall.team.id) over (order by team_total_points desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n",
+        "latency": 33158,
+        "error": null,
+        "query": "select\n    game_tall.season,\n    game_tall.team_conf_name,\n    game_tall.team.id,\n    sum(game_tall.points) by game_tall.team.id as team_total_points,\n    rank(game_tall.team.id) over (order by team_total_points desc) as team_rank,\n    avg(game_tall.field_goals_pct) as avg_field_goal_pct\nhaving\n    team_rank <= 10\norder by\n    game_tall.season asc,\n    game_tall.team_conf_name asc\nlimit 500;\n"
+      }
+    ],
+    "passRate": 1,
+    "averageLatency": 11456.56
   }
 ]

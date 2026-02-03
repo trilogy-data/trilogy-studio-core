@@ -520,3 +520,304 @@ SELECT
 
 ---
 
+## Test Run - 2026-02-03 22:52:41
+
+### Summary
+
+| Provider | Model | Pass Rate | Average Latency (ms) | Total Tests |
+|----------|-------|-----------|---------------------|-------------|
+| OPENAI | gpt-5.2 | 100.00% | 5531.60 | 25 |
+| GOOGLE | gemini-2.5-flash | 92.00% | 10338.32 | 25 |
+| ANTHROPIC | claude-opus-4-5-20251101 | 100.00% | 11456.56 | 25 |
+
+### OPENAI - gpt-5.2
+
+**Pass Rate:** 100.00%  
+**Average Latency:** 5531.60ms  
+**Total Tests:** 25
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query | 
+# Southern USA (Census-style) names in the 1980s: common + ... | ✅ Pass | 7916.00 |  |
+| test-basic-query | 
+# Southern USA (Census-style) in the 1980s: common vs disti... | ✅ Pass | 5849.00 |  |
+| test-basic-query | 
+where
+  names.year between 1980 and 1989
+  and names.state ... | ✅ Pass | 4513.00 |  |
+| test-basic-query | 
+where
+  names.year between 1980 and 1989
+  and names.state ... | ✅ Pass | 4649.00 |  |
+| test-basic-query | 
+where
+  names.year between 1980 and 1989
+  and names.state ... | ✅ Pass | 3819.00 |  |
+| test-star-wars | 
+# Star Wars impact on baby names (SSA): baseline vs post-19... | ✅ Pass | 10594.00 |  |
+| test-star-wars | 
+where names.year between 1960 and 2023
+select
+  names.name,... | ✅ Pass | 8796.00 |  |
+| test-star-wars | 
+where names.year between 1960 and 2023
+select
+  names.name,... | ✅ Pass | 5898.00 |  |
+| test-star-wars | 
+# Star Wars impact report: baseline vs post-1977 uplift + t... | ✅ Pass | 6387.00 |  |
+| test-star-wars | 
+where names.year between 1960 and 2023
+select
+  names.name,... | ✅ Pass | 5512.00 |  |
+| test-abstract-question | 
+select
+  case
+    when game_tall.team.color in (
+      '#FF... | ✅ Pass | 9017.00 |  |
+| test-abstract-question | 
+select
+  case
+    when game_tall.team.color in (
+      '#FF... | ✅ Pass | 10390.00 |  |
+| test-abstract-question | 
+select
+  case
+    when game_tall.team.color in (
+      '#FF... | ✅ Pass | 4899.00 |  |
+| test-abstract-question | 
+select
+  case
+    when game_tall.team.color in (
+      '#FF... | ✅ Pass | 3363.00 |  |
+| test-abstract-question | 
+select
+  case
+    when game_tall.team.color in (
+      '#FF... | ✅ Pass | 3070.00 |  |
+| test-home-vs-away | 
+select
+  game_tall.team_alias,
+  avg(game_tall.win ? game_t... | ✅ Pass | 8622.00 |  |
+| test-home-vs-away | 
+select
+  game_tall.team_alias,
+  avg(game_tall.win ? game_t... | ✅ Pass | 2336.00 |  |
+| test-home-vs-away | 
+select
+  game_tall.team_alias,
+  avg(game_tall.win ? game_t... | ✅ Pass | 2458.00 |  |
+| test-home-vs-away | 
+select
+  game_tall.team_alias,
+  avg(game_tall.win ? game_t... | ✅ Pass | 2045.00 |  |
+| test-home-vs-away | 
+select
+  game_tall.team_alias,
+  avg(game_tall.win ? game_t... | ✅ Pass | 2358.00 |  |
+| test-window-over-aggregate | 
+select
+  game_tall.team_name,
+  game_tall.team_conf_name,
+ ... | ✅ Pass | 12149.00 |  |
+| test-window-over-aggregate | 
+select
+  game_tall.team_name,
+  game_tall.team_conf_name,
+ ... | ✅ Pass | 3783.00 |  |
+| test-window-over-aggregate | 
+select
+  game_tall.team_name,
+  game_tall.team_conf_name,
+ ... | ✅ Pass | 3308.00 |  |
+| test-window-over-aggregate | 
+select
+  game_tall.team_name,
+  game_tall.team_conf_name,
+ ... | ✅ Pass | 3182.00 |  |
+| test-window-over-aggregate | 
+select
+  game_tall.team_name,
+  game_tall.team_conf_name,
+ ... | ✅ Pass | 3377.00 |  |
+
+### GOOGLE - gemini-2.5-flash
+
+**Pass Rate:** 92.00%  
+**Average Latency:** 10338.32ms  
+**Total Tests:** 25
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query | 
+WHERE
+    names.year BETWEEN 1980 AND 1989
+    AND names.st... | ✅ Pass | 17190.00 |  |
+| test-basic-query | 
+WHERE
+    names.year BETWEEN 1980 AND 1989
+    AND names.st... | ✅ Pass | 3293.00 |  |
+| test-basic-query | 
+WHERE
+    names.year BETWEEN 1980 AND 1989
+    AND names.st... | ✅ Pass | 3179.00 |  |
+| test-basic-query | 
+WHERE
+    names.year BETWEEN 1980 AND 1989
+    AND names.st... | ✅ Pass | 2197.00 |  |
+| test-basic-query | 
+WHERE
+    names.year BETWEEN 1980 AND 1989
+    AND names.st... | ✅ Pass | 2199.00 |  |
+| test-star-wars | where names.name in ('Leia', 'Luke', 'Anakin', 'Rey', 'Kylo'... | ✅ Pass | 13073.00 |  |
+| test-star-wars | where names.name in ('Leia', 'Luke', 'Anakin', 'Rey', 'Kylo'... | ✅ Pass | 3566.00 |  |
+| test-star-wars | where names.name in ('Leia', 'Luke', 'Anakin', 'Rey', 'Kylo'... | ✅ Pass | 3122.00 |  |
+| test-star-wars | where names.name in ('Leia', 'Luke', 'Anakin', 'Rey', 'Kylo'... | ✅ Pass | 2812.00 |  |
+| test-star-wars | where names.name in ('Leia', 'Luke', 'Anakin', 'Rey', 'Kylo'... | ✅ Pass | 3988.00 |  |
+| test-abstract-question | 
+SELECT
+    CASE
+        WHEN game_tall.team.color IN ('#FF0... | ✅ Pass | 23956.00 |  |
+| test-abstract-question | 
+SELECT
+    CASE
+        WHEN game_tall.team.color IN ('#FF0... | ✅ Pass | 3916.00 |  |
+| test-abstract-question | 
+SELECT
+    CASE
+        WHEN game_tall.team.color IN ('#FF0... | ✅ Pass | 2313.00 |  |
+| test-abstract-question | 
+SELECT
+    CASE
+        WHEN game_tall.team.color IN ('#FF0... | ✅ Pass | 2257.00 |  |
+| test-abstract-question | 
+SELECT
+    CASE
+        WHEN game_tall.team.color IN ('#FF0... | ✅ Pass | 2237.00 |  |
+| test-home-vs-away | 
+SELECT
+    game_tall.team_name,
+    ABS(
+        (sum(game_... | ❌ Fail | 27345.00 | Validation failed after maximum attempts... |
+| test-home-vs-away | 
+SELECT
+    game_tall.team_name,
+    sum(game_tall.win ? gam... | ✅ Pass | 12753.00 |  |
+| test-home-vs-away | 
+SELECT
+    game_tall.team_name,
+    sum(game_tall.win ? gam... | ✅ Pass | 6493.00 |  |
+| test-home-vs-away | 
+SELECT
+    game_tall.team_name,
+    sum(game_tall.win ? gam... | ✅ Pass | 3785.00 |  |
+| test-home-vs-away | 
+SELECT
+    game_tall.team_name,
+    sum(game_tall.win ? gam... | ✅ Pass | 3027.00 |  |
+| test-window-over-aggregate | SELECT
+    game_tall.season,
+    game_tall.team_conf_name AS... | ❌ Fail | 47956.00 | Validation failed after maximum attempts... |
+| test-window-over-aggregate | SELECT
+    game_tall.season,
+    game_tall.team_conf_name AS... | ✅ Pass | 32537.00 |  |
+| test-window-over-aggregate | SELECT
+    game_tall.season,
+    game_tall.team_conf_name AS... | ✅ Pass | 9363.00 |  |
+| test-window-over-aggregate | SELECT
+    game_tall.season,
+    game_tall.team_conf_name AS... | ✅ Pass | 19355.00 |  |
+| test-window-over-aggregate | SELECT
+    game_tall.season,
+    game_tall.team_conf_name AS... | ✅ Pass | 6546.00 |  |
+
+### ANTHROPIC - claude-opus-4-5-20251101
+
+**Pass Rate:** 100.00%  
+**Average Latency:** 11456.56ms  
+**Total Tests:** 25
+
+#### Test Results
+
+| Test ID | Query | Status | Latency (ms) | Error |
+|---------|-------|--------|-------------|-------|
+| test-basic-query | 
+where 
+    names.year >= 1980 and names.year <= 1989
+    an... | ✅ Pass | 14296.00 |  |
+| test-basic-query | 
+where 
+    names.year >= 1980 and names.year <= 1989
+    an... | ✅ Pass | 5736.00 |  |
+| test-basic-query | 
+where 
+    names.year >= 1980 and names.year <= 1989
+    an... | ✅ Pass | 5587.00 |  |
+| test-basic-query | 
+where 
+    names.year >= 1980 and names.year <= 1989
+    an... | ✅ Pass | 5784.00 |  |
+| test-basic-query | 
+where 
+    names.year >= 1980 and names.year <= 1989
+    an... | ✅ Pass | 5338.00 |  |
+| test-star-wars | where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo'... | ✅ Pass | 12109.00 |  |
+| test-star-wars | where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo'... | ✅ Pass | 3566.00 |  |
+| test-star-wars | where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo'... | ✅ Pass | 3887.00 |  |
+| test-star-wars | where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo'... | ✅ Pass | 3587.00 |  |
+| test-star-wars | where names.name in ('Luke', 'Leia', 'Han', 'Anakin', 'Kylo'... | ✅ Pass | 3383.00 |  |
+| test-abstract-question | select
+    case 
+        when game_tall.team.color like '#FF... | ✅ Pass | 9890.00 |  |
+| test-abstract-question | select
+    case 
+        when lower(game_tall.team.color) li... | ✅ Pass | 12899.00 |  |
+| test-abstract-question | select
+    case 
+        when lower(game_tall.team.color) li... | ✅ Pass | 8740.00 |  |
+| test-abstract-question | select
+    case 
+        when game_tall.team.color is null t... | ✅ Pass | 15226.00 |  |
+| test-abstract-question | select
+    case 
+        when game_tall.team.color is null t... | ✅ Pass | 5878.00 |  |
+| test-home-vs-away | select
+    game_tall.team.name,
+    sum(game_tall.win ? game... | ✅ Pass | 10706.00 |  |
+| test-home-vs-away | select
+    game_tall.team.name,
+    sum(game_tall.win ? game... | ✅ Pass | 10867.00 |  |
+| test-home-vs-away | select
+    game_tall.team.name,
+    sum(game_tall.win ? game... | ✅ Pass | 9620.00 |  |
+| test-home-vs-away | select
+    game_tall.team.name,
+    sum(game_tall.win ? game... | ✅ Pass | 21309.00 |  |
+| test-home-vs-away | select
+    game_tall.team.name,
+    cast(sum(game_tall.win ?... | ✅ Pass | 4560.00 |  |
+| test-window-over-aggregate | select
+    game_tall.season,
+    game_tall.team_conf_name,
+ ... | ✅ Pass | 27330.00 |  |
+| test-window-over-aggregate | select
+    game_tall.season,
+    game_tall.team_conf_name,
+ ... | ✅ Pass | 21197.00 |  |
+| test-window-over-aggregate | select
+    --game_tall.team.id,
+    --sum(game_tall.points) ... | ✅ Pass | 20995.00 |  |
+| test-window-over-aggregate | select
+    --game_tall.team.id,
+    --sum(game_tall.points) ... | ✅ Pass | 10766.00 |  |
+| test-window-over-aggregate | select
+    game_tall.season,
+    game_tall.team_conf_name,
+ ... | ✅ Pass | 33158.00 |  |
+
+---
+
