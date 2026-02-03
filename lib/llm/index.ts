@@ -7,6 +7,8 @@ export { OpenRouterProvider } from './openrouter'
 export type { OpenRouterModel, OpenRouterOAuthConfig } from './openrouter'
 export { createPrompt, createFilterPrompt, createDashboardPrompt } from './data/prompts'
 export { createChatNamePrompt, extractChatName } from './chatHelpers'
+export { buildChatAgentSystemPrompt, CHAT_TOOLS } from './chatAgentPrompt'
+export type { ChatAgentPromptOptions } from './chatAgentPrompt'
 export type { ModelConceptInput } from './data/models'
 
 // Editor refinement tools
