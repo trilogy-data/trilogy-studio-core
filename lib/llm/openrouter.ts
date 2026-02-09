@@ -46,20 +46,22 @@ export interface OpenRouterOAuthConfig {
 /**
  * List of model ID prefixes/patterns for modern, high-quality models.
  * These are the leading models from major providers + top open-source models.
+ * Patterns use open-ended version ranges (e.g., [3-9] instead of 3|4) so that
+ * next-generation models are automatically included without code changes.
  */
 const MODERN_MODEL_PATTERNS: RegExp[] = [
-  // Anthropic Claude models (Claude 3+, Claude 4)
-  /^anthropic\/claude-(?:3|4|opus|sonnet|haiku)/,
+  // Anthropic Claude models (all Claude models are modern)
+  /^anthropic\/claude-/,
 
-  // OpenAI GPT models (GPT-4+)
-  /^openai\/gpt-(?:4|5)/,
-  /^openai\/o[1-9]/, // o1, o3, etc.
+  // OpenAI GPT models (GPT-4+) and reasoning models (o1, o3, etc.)
+  /^openai\/gpt-[4-9]/,
+  /^openai\/o[1-9]/,
 
-  // Google Gemini models (1.5+, 2.0+)
-  /^google\/gemini-(?:1\.5|2\.|pro|flash|ultra)/,
+  // Google Gemini models (all Gemini versions)
+  /^google\/gemini-/,
 
   // Meta Llama models (3+)
-  /^meta-llama\/llama-(?:3|4)/,
+  /^meta-llama\/llama-[3-9]/,
   /^meta-llama\/llama-guard/,
 
   // Mistral models (mistral-large, mistral-medium, mixtral)
@@ -73,7 +75,7 @@ const MODERN_MODEL_PATTERNS: RegExp[] = [
   /^deepseek\//,
 
   // Qwen models (2+)
-  /^qwen\/qwen-(?:2|3)/,
+  /^qwen\/qwen-[2-9]/,
   /^qwen\/qwq/,
 
   // Cohere Command models
@@ -86,10 +88,10 @@ const MODERN_MODEL_PATTERNS: RegExp[] = [
   /^perplexity\//,
 
   // Nous Research models
-  /^nousresearch\/hermes-3/,
+  /^nousresearch\/hermes-[3-9]/,
 
   // Microsoft models
-  /^microsoft\/phi-(?:3|4)/,
+  /^microsoft\/phi-[3-9]/,
   /^microsoft\/wizardlm/,
 ]
 
@@ -119,13 +121,14 @@ export function getModelTier(modelId: string): ModelTier {
   const lowerModelId = modelId.toLowerCase()
 
   // Flagship/top-tier models
+  // Use regex for GPT version matching so gpt-6, gpt-7, etc. are automatically flagship
   if (
     lowerModelId.includes('opus') ||
     lowerModelId.includes('ultra') ||
     lowerModelId.includes('-large') ||
-    lowerModelId.includes('gpt-5') ||
+    /gpt-[5-9]/.test(lowerModelId) ||
     lowerModelId.includes('o1-pro') ||
-    lowerModelId.includes('o3')
+    /\/o[3-9]/.test(lowerModelId)
   ) {
     return 'flagship'
   }
