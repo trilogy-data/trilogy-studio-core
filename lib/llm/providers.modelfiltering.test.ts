@@ -21,6 +21,11 @@ describe('OpenAI Model Filtering', () => {
       expect(result).toEqual({ major: 5, minor: 2, variant: null })
     })
 
+    it('should parse gpt-5.3 correctly', () => {
+      const result = parseOpenAIModelVersion('gpt-5.3')
+      expect(result).toEqual({ major: 5, minor: 3, variant: null })
+    })
+
     it('should parse gpt-5.2-mini correctly', () => {
       const result = parseOpenAIModelVersion('gpt-5.2-mini')
       expect(result).toEqual({ major: 5, minor: 2, variant: 'mini' })
@@ -34,6 +39,11 @@ describe('OpenAI Model Filtering', () => {
     it('should parse gpt-4o-mini correctly', () => {
       const result = parseOpenAIModelVersion('gpt-4o-mini')
       expect(result).toEqual({ major: 4, minor: null, variant: 'o-mini' })
+    })
+
+    it('should parse future gpt-6.0 correctly', () => {
+      const result = parseOpenAIModelVersion('gpt-6.0')
+      expect(result).toEqual({ major: 6, minor: 0, variant: null })
     })
 
     it('should return null for non-gpt models', () => {
@@ -79,6 +89,16 @@ describe('OpenAI Model Filtering', () => {
       expect(filtered).not.toContain('gpt-4o-mini')
       expect(filtered).not.toContain('davinci-002')
       expect(filtered).not.toContain('text-embedding-3-large')
+    })
+
+    it('should include gpt-5.3 and future models automatically', () => {
+      const models = ['gpt-5.2', 'gpt-5.3', 'gpt-5.3-mini', 'gpt-6.0', 'gpt-4o']
+      const filtered = OpenAIProvider.filterModels(models)
+
+      expect(filtered).toContain('gpt-5.3')
+      expect(filtered).toContain('gpt-5.3-mini')
+      expect(filtered).toContain('gpt-6.0')
+      expect(filtered).not.toContain('gpt-4o')
     })
 
     it('should sort filtered models by version (descending)', () => {
@@ -141,6 +161,16 @@ describe('Anthropic Model Filtering', () => {
       expect(result).toEqual({ version: '4', tier: 'opus', date: '20250514' })
     })
 
+    it('should parse claude-opus-4-6-20260514 (opus 4.6) correctly', () => {
+      const result = parseAnthropicModelVersion('claude-opus-4-6-20260514')
+      expect(result).toEqual({ version: '4-6', tier: 'opus', date: '20260514' })
+    })
+
+    it('should parse future claude-sonnet-5-20270101 correctly', () => {
+      const result = parseAnthropicModelVersion('claude-sonnet-5-20270101')
+      expect(result).toEqual({ version: '5', tier: 'sonnet', date: '20270101' })
+    })
+
     it('should return null for non-claude models', () => {
       expect(parseAnthropicModelVersion('gpt-4o')).toBeNull()
       expect(parseAnthropicModelVersion('some-random-model')).toBeNull()
@@ -187,6 +217,20 @@ describe('Anthropic Model Filtering', () => {
       expect(filtered).not.toContain('text-embedding')
     })
 
+    it('should include opus 4.6 and sort it above opus 4', () => {
+      const models = [
+        'claude-opus-4-20250514',
+        'claude-opus-4-6-20260514',
+        'claude-sonnet-4-20250514',
+      ]
+      const filtered = AnthropicProvider.filterModels(models)
+
+      expect(filtered).toContain('claude-opus-4-6-20260514')
+      // Opus 4.6 should sort before opus 4
+      expect(filtered[0]).toBe('claude-opus-4-6-20260514')
+      expect(filtered[1]).toBe('claude-opus-4-20250514')
+    })
+
     it('should sort filtered models correctly', () => {
       const models = [
         'claude-3-sonnet-20240229',
@@ -212,6 +256,16 @@ describe('Anthropic Model Filtering', () => {
       ]
       const defaultModel = AnthropicProvider.getDefaultModel(models)
       expect(defaultModel).toBe('claude-opus-4-20250514')
+    })
+
+    it('should return opus 4.6 as default when available', () => {
+      const models = [
+        'claude-opus-4-6-20260514',
+        'claude-opus-4-20250514',
+        'claude-sonnet-4-20250514',
+      ]
+      const defaultModel = AnthropicProvider.getDefaultModel(models)
+      expect(defaultModel).toBe('claude-opus-4-6-20260514')
     })
 
     it('should fall back to first model if no opus found', () => {
@@ -356,6 +410,9 @@ describe('OpenRouter Model Filtering', () => {
     it('should identify flagship models', () => {
       expect(getModelTier('anthropic/claude-opus-4')).toBe('flagship')
       expect(getModelTier('openai/gpt-5')).toBe('flagship')
+      expect(getModelTier('openai/gpt-5.3')).toBe('flagship')
+      expect(getModelTier('openai/gpt-6')).toBe('flagship')
+      expect(getModelTier('openai/gpt-7.0')).toBe('flagship')
       expect(getModelTier('mistral/mistral-large')).toBe('flagship')
       expect(getModelTier('google/gemini-ultra')).toBe('flagship')
     })
@@ -459,6 +516,27 @@ describe('OpenRouter Model Filtering', () => {
       const filtered = OpenRouterProvider.filterModels(models)
 
       expect(filtered.length).toBe(8) // All should be included
+    })
+
+    it('should automatically include next-generation models', () => {
+      const futureModels = [
+        'anthropic/claude-opus-4-6',
+        'anthropic/claude-5-sonnet',
+        'openai/gpt-5.3',
+        'openai/gpt-6',
+        'google/gemini-3.0-pro',
+        'google/gemini-4.0-flash',
+        'meta-llama/llama-5-70b',
+      ]
+      const filtered = OpenRouterProvider.filterModels(futureModels)
+
+      expect(filtered).toContain('anthropic/claude-opus-4-6')
+      expect(filtered).toContain('anthropic/claude-5-sonnet')
+      expect(filtered).toContain('openai/gpt-5.3')
+      expect(filtered).toContain('openai/gpt-6')
+      expect(filtered).toContain('google/gemini-3.0-pro')
+      expect(filtered).toContain('google/gemini-4.0-flash')
+      expect(filtered).toContain('meta-llama/llama-5-70b')
     })
 
     it('should sort filtered models correctly', () => {
