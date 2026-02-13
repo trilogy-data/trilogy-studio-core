@@ -26,6 +26,14 @@ const TEST_CASES: BenchMarkQuery[] = [
     data: ['team'],
     expected_keywords: [],
   },
+  {
+    id: 'test-window-over-aggregate',
+    prompt:
+      'For the top 10 teams by total points scored, what was the average field goal percentage by season and conference?',
+    imports: ['game_tall'],
+    data: ['team'],
+    expected_keywords: [],
+  },
 ]
 
 export default TEST_CASES
