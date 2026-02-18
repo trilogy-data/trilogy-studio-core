@@ -52,7 +52,7 @@ describe('useChatWithTools – standalone mode with customTools', () => {
   it('passes customTools to generateCompletion when provided', async () => {
     const onCustomToolCall = vi.fn().mockResolvedValue('{"temp": 72}')
 
-    const { handleChatMessageWithTools, activeChatMessages } = useChatWithTools({
+    const { handleChatMessageWithTools } = useChatWithTools({
       llmConnectionStore: llmStore,
       connectionStore: null,
       queryExecutionService: null,
