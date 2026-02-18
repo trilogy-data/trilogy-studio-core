@@ -28,6 +28,10 @@ export type {
   UseChatWithToolsReturn,
 } from './composables/useChatWithTools'
 
+// LLM prompt builders
+export { buildCustomTrilogyPrompt, buildChatAgentSystemPrompt, CHAT_TOOLS } from './llm/chatAgentPrompt'
+export type { TrilogyPromptContext, ChatAgentPromptOptions } from './llm/chatAgentPrompt'
+
 // Trilogy composables - simplified entry points
 export { useTrilogyCore } from './composables/useTrilogyCore'
 export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTrilogyCore'
