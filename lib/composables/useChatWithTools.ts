@@ -12,6 +12,15 @@ import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
 import { completionItemsToConcepts } from '../llm/editorRefinementTools'
 import type { ModelConceptInput } from '../llm/data/models'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
+import type { LLMToolDefinition } from '../llm/base'
+import {
+  runToolLoop,
+  type LLMAdapter,
+  type MessagePersistence,
+  type ToolExecutorFactory,
+  type ExecutionStateUpdater,
+} from '../llm/toolLoopCore'
+
 
 export interface UseChatWithToolsOptions {
   llmConnectionStore: LLMConnectionStoreType
@@ -41,6 +50,17 @@ export interface UseChatWithToolsOptions {
 
   /** Optional callback when title is updated (alternative to navigationStore) */
   onTitleUpdate?: (newTitle: string, chatId: string) => void
+
+  /**
+   * Custom tool definitions to pass to the LLM (standalone mode only).
+   */
+  customTools?: LLMToolDefinition[]
+
+  /**
+   * Handler called when the LLM invokes one of the `customTools`.
+   * Return a string result to feed back to the LLM.
+   */
+  onCustomToolCall?: (toolName: string, toolInput: Record<string, unknown>) => Promise<string>
 }
 
 export interface UseChatWithToolsReturn {
@@ -87,6 +107,8 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     onTitleUpdate: onTitleUpdateCallback,
     dataConnectionName: initialDataConnectionName,
     initialTitle = 'Chat',
+    customTools,
+    onCustomToolCall,
   } = options
 
   // Standalone mode: track state locally when no chatStore
@@ -441,6 +463,73 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     // but it won't persist if the component unmounts
     standaloneLoading.value = true
     try {
+      // If custom tools are provided, run a full tool loop
+      if (customTools && customTools.length > 0) {
+        // Add user message to local history so runToolLoop can slice it for prior context
+        activeChatMessages.value = [...activeChatMessages.value, { role: 'user', content: message }]
+
+        const llmAdapter: LLMAdapter = {
+          generateCompletion: (connName, opts, msgs) =>
+            llmConnectionStore.generateCompletion(connName, opts, msgs),
+          shouldAutoContinue: (connName, text) =>
+            llmConnectionStore.shouldAutoContinue(connName, text),
+        }
+
+        const messagePersistence: MessagePersistence = {
+          addMessage: (msg) => {
+            activeChatMessages.value = [...activeChatMessages.value, msg]
+          },
+          addArtifact: (artifact) => {
+            activeChatArtifacts.value = [...activeChatArtifacts.value, artifact]
+          },
+          getMessages: () => activeChatMessages.value,
+        }
+
+        const toolExecutorFactory: ToolExecutorFactory = {
+          getToolExecutor: () => ({
+            executeToolCall: async (toolName, toolInput) => {
+              if (onCustomToolCall) {
+                try {
+                  const result = await onCustomToolCall(
+                    toolName,
+                    toolInput as Record<string, unknown>,
+                  )
+                  return { success: true, message: result }
+                } catch (err) {
+                  return {
+                    success: false,
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                }
+              }
+              return { success: false, error: `No handler configured for tool: ${toolName}` }
+            },
+          }),
+        }
+
+        const stateUpdater: ExecutionStateUpdater = {
+          setActiveToolName: (name) => {
+            standaloneActiveToolName.value = name
+          },
+          checkAborted: () => false,
+        }
+
+        await runToolLoop(
+          message,
+          llmConnectionStore.activeConnection,
+          llmAdapter,
+          messagePersistence,
+          toolExecutorFactory,
+          stateUpdater,
+          {
+            tools: customTools,
+            buildSystemPrompt: () => chatSystemPrompt.value,
+          },
+        )
+        return undefined
+      }
+
+      // No custom tools: simple single-shot completion
       const response = await llmConnectionStore.generateCompletion(
         llmConnectionStore.activeConnection,
         {
