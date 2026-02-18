@@ -8,6 +8,48 @@ import {
   connectDataConnectionTool,
 } from './sharedToolSchemas'
 
+// Context object passed to custom prompt builders
+export interface TrilogyPromptContext {
+  /** Trilogy SELECT rules and syntax reference */
+  rulesInput: string
+  /** Available aggregate functions (e.g. sum, count, avg) */
+  aggFunctions: string[]
+  /** Available scalar/common functions */
+  functions: string[]
+  /** Valid Trilogy data types */
+  datatypes: string[]
+}
+
+/**
+ * Build a fully custom system prompt for a Trilogy-powered agent.
+ *
+ * The template function receives the Trilogy language constants so you can
+ * embed them wherever makes sense for your application. This is useful when
+ * you need a domain-specific persona (e.g. a map explorer, a support bot)
+ * but still want correct Trilogy syntax guidance injected automatically.
+ *
+ * @example
+ * ```ts
+ * const SYSTEM_PROMPT = buildCustomTrilogyPrompt(
+ *   ({ rulesInput, aggFunctions, functions, datatypes }) => `
+ * You are an assistant for the SF Trees map application.
+ *
+ * TRILOGY SYNTAX RULES:
+ * ${rulesInput}
+ *
+ * AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
+ * COMMON FUNCTIONS: ${functions.join(', ')}
+ * VALID DATA TYPES: ${datatypes.join(', ')}
+ * `
+ * )
+ * ```
+ */
+export function buildCustomTrilogyPrompt(
+  templateFn: (ctx: TrilogyPromptContext) => string,
+): string {
+  return templateFn({ rulesInput, aggFunctions, functions, datatypes })
+}
+
 // Tool definitions in JSON Schema format (Anthropic/OpenAI compatible)
 export const CHAT_TOOLS = [
   {
@@ -138,7 +180,7 @@ ${rulesInput}
 
 AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
 
-COMMON FUNCTIONS: ${functions.slice(0, 35).join(', ')}
+COMMON FUNCTIONS: ${functions.join(', ')}
 
 VALID DATA TYPES: ${datatypes.join(', ')}
 ${conceptsSection}
