@@ -1,4 +1,5 @@
 export { default as DataTable } from './components/DataTable.vue'
+export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
 export { default as Editor } from './components/editor/Editor.vue'
 export { default as SidebarLayout } from './components/layout/SidebarLayout.vue'
 export { default as VerticalSplitLayout } from './components/layout/VerticalSplitLayout.vue'
