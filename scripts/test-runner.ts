@@ -1,5 +1,6 @@
 import { Pinia } from 'pinia'
-const { createPrompt } = await import('trilogy-studio-components/llm')
+const { buildChatAgentSystemPrompt } = await import('trilogy-studio-components/llm')
+import type { LLMMessage } from 'trilogy-studio-components/llm'
 const {
   TrilogyResolver,
   useLLMConnectionStore,
@@ -83,6 +84,35 @@ export class TestRunner {
     // Get model concepts
     const modelConceptInput = await this.getModelConcepts(contentInputs, importArray)
 
+    // Build system prompt using the chat agent format (same as LLMChat view)
+    const activeImports = importArray.map((imp) => ({
+      id: imp.name,
+      name: imp.name,
+      alias: imp.alias || '',
+    }))
+
+    const systemPrompt = buildChatAgentSystemPrompt({
+      dataConnectionName: connectionName,
+      availableConnections: [connectionName],
+      availableConcepts: modelConceptInput,
+      activeImports,
+      availableImportsForConnection: activeImports,
+      isDataConnectionActive: true,
+    })
+
+    // Create message history with system prompt
+    const messageHistory: LLMMessage[] = [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+    ]
+
+    // Build user prompt requesting a Trilogy query with output format
+    const userPrompt = `${testCase.prompt}
+
+Return your answer with a short reasoning and a valid Trilogy query in triple double quotes. Format: Reasoning: {{reasoning}} """{{ trilogy }}"""`
+
     // Run the test multiple times
     for (let i = 0; i < this.numRepeats; i++) {
       const startTime = Date.now()
@@ -91,12 +121,13 @@ export class TestRunner {
         // Create validator function
         const validator = this.createValidator(connectionName, importArray, contentInputs)
 
-        // Generate completion
+        // Generate completion using chat agent system prompt
         const response = await this.llmStore.generateValidatedCompletion(
-          createPrompt(testCase.prompt, modelConceptInput),
+          userPrompt,
           validator,
           3, // maxAttempts
           provider.model, // modelOverride
+          messageHistory, // pass system prompt via message history
         )
 
         const endTime = Date.now()
