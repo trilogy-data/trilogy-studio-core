@@ -162,6 +162,21 @@ export const CHAT_TOOLS = [
     },
   },
   {
+    name: 'get_artifact',
+    description:
+      'Get the full contents and metadata of an artifact by ID. Returns the artifact type, configuration, and data. Use this to inspect artifact details before updating or when you need to reference artifact data.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The ID of the artifact to retrieve',
+        },
+      },
+      required: ['artifact_id'],
+    },
+  },
+  {
     name: 'update_artifact',
     description:
       'Update an existing artifact by ID. Can update markdown content, title, or chart configuration. Use list_artifacts first to find artifact IDs.',
@@ -282,8 +297,16 @@ ARTIFACT MANAGEMENT:
 - Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
   - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}
 - Use list_artifacts to see all artifacts with their IDs, types, and metadata.
+- Use get_artifact to inspect the full contents and configuration of a specific artifact.
 - Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
 - Use remove_artifact to clean up artifacts that are no longer needed.
 - When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
+
+ARTIFACT CURATION:
+Before you finish responding to a multi-step request, review and curate your artifacts:
+1. Use list_artifacts to see what artifacts currently exist.
+2. Remove any intermediate/exploratory artifacts that are not part of the final answer (e.g., failed queries, test runs, superseded results).
+3. Give remaining artifacts clear, descriptive titles via update_artifact.
+4. The user can publish the artifact list as a dashboard, so ensure the final set is clean and presentable.
 `
 }

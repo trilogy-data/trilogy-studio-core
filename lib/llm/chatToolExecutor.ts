@@ -69,6 +69,8 @@ export class ChatToolExecutor {
         )
       case 'list_artifacts':
         return this.listArtifacts()
+      case 'get_artifact':
+        return this.getArtifact(toolInput.artifact_id)
       case 'update_artifact':
         return this.updateArtifact(
           toolInput.artifact_id,
@@ -81,7 +83,7 @@ export class ChatToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, update_artifact, remove_artifact`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact`,
         }
     }
   }
@@ -697,6 +699,49 @@ export class ChatToolExecutor {
     return {
       success: true,
       message: `Artifacts in current chat (${chat.artifacts.length} total):\n${artifactList}`,
+    }
+  }
+
+  // Get the full contents and metadata of an artifact by ID
+  private getArtifact(artifactId: string): ToolCallResult {
+    const chat = this.chatStore?.activeChat
+    if (!chat) {
+      return {
+        success: false,
+        error: 'No active chat session.',
+      }
+    }
+
+    const artifact = chat.getArtifactById(artifactId)
+    if (!artifact) {
+      return {
+        success: false,
+        error: `Artifact "${artifactId}" not found. Use list_artifacts to see available artifacts.`,
+      }
+    }
+
+    const details: Record<string, any> = {
+      id: artifact.id,
+      type: artifact.type,
+    }
+
+    if (artifact.config) {
+      details.config = { ...artifact.config }
+    }
+
+    if (artifact.type === 'markdown') {
+      details.markdown = artifact.data?.markdown || ''
+      details.query = artifact.data?.query || ''
+      details.hasQueryResults = !!artifact.data?.queryResults
+    } else if (artifact.data) {
+      const jsonData =
+        typeof artifact.data.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
+      details.data = jsonData
+    }
+
+    return {
+      success: true,
+      message: `Artifact "${artifactId}" (${artifact.type}):\n${JSON.stringify(details, null, 2)}`,
     }
   }
 

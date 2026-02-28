@@ -101,6 +101,19 @@
 
       <!-- Artifacts Pane -->
       <div v-else-if="sidebarTab === 'artifacts'" class="sidebar-content artifacts-content">
+        <!-- Publish button -->
+        <div class="artifacts-actions" v-if="artifacts.length > 0">
+          <button
+            class="publish-btn"
+            @click="$emit('publish-artifacts')"
+            title="Publish artifacts as a dashboard"
+            data-testid="publish-artifacts-btn"
+          >
+            <i class="mdi mdi-view-dashboard-outline"></i>
+            Publish as Dashboard
+          </button>
+        </div>
+
         <!-- Artifact List -->
         <div class="artifacts-list" v-if="artifacts.length > 0">
           <div
@@ -281,6 +294,7 @@ export default defineComponent({
     'import-change',
     'select-symbol',
     'title-update',
+    'publish-artifacts',
   ],
   setup(props, { emit }) {
     const chatRef = ref<InstanceType<typeof LLMChat> | null>(null)
@@ -759,6 +773,37 @@ export default defineComponent({
 
 .sidebar-content.artifacts-content {
   overflow: hidden;
+}
+
+/* Publish button */
+.artifacts-actions {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.publish-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
+  font-size: var(--font-size);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.publish-btn:hover {
+  background-color: var(--special-text);
+  color: white;
+  border-color: var(--special-text);
+}
+
+.publish-btn i {
+  font-size: 16px;
 }
 
 /* Artifact List */

@@ -351,6 +351,7 @@ export default defineComponent({
         connect_data_connection: 'Connecting...',
         create_markdown: 'Creating markdown...',
         list_artifacts: 'Listing artifacts...',
+        get_artifact: 'Getting artifact...',
         update_artifact: 'Updating artifact...',
         remove_artifact: 'Removing artifact...',
       }
@@ -376,6 +377,7 @@ export default defineComponent({
         list_available_imports: 'Listed imports',
         create_markdown: 'Created markdown',
         list_artifacts: 'Listed artifacts',
+        get_artifact: 'Got artifact',
         update_artifact: 'Updated artifact',
         remove_artifact: 'Removed artifact',
       }
