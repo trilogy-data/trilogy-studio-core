@@ -77,6 +77,17 @@
         </div>
       </template>
 
+      <!-- Markdown Display -->
+      <template v-else-if="artifact.type === 'markdown'">
+        <div class="artifact-markdown">
+          <markdown-renderer
+            :markdown="artifact.data?.markdown || ''"
+            :results="markdownResults"
+            :loading="false"
+          />
+        </div>
+      </template>
+
       <!-- Code Display -->
       <template v-else-if="artifact.type === 'code'">
         <code-block :language="artifact.config?.language || 'sql'" :content="artifact.data || ''" />
@@ -99,6 +110,7 @@ import { defineComponent, ref, computed, type PropType } from 'vue'
 import DataTable from '../DataTable.vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import CodeBlock from '../CodeBlock.vue'
+import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { Results, type ChartConfig } from '../../editors/results'
 import type { ChatArtifact } from './LLMChat.vue'
 
@@ -108,6 +120,7 @@ export default defineComponent({
     DataTable,
     VegaLiteChart,
     CodeBlock,
+    MarkdownRenderer,
   },
   props: {
     artifact: {
@@ -143,6 +156,8 @@ export default defineComponent({
           return 'Chart'
         case 'code':
           return 'Code'
+        case 'markdown':
+          return 'Markdown'
         default:
           return 'Artifact'
       }
@@ -156,6 +171,8 @@ export default defineComponent({
           return 'mdi mdi-chart-bar'
         case 'code':
           return 'mdi mdi-code-braces'
+        case 'markdown':
+          return 'mdi mdi-language-markdown'
         default:
           return 'mdi mdi-file-document-outline'
       }
@@ -181,6 +198,17 @@ export default defineComponent({
       return props.artifact.config?.chartConfig
     })
 
+    const markdownResults = computed(() => {
+      if (props.artifact.type !== 'markdown') return null
+      const queryResults = props.artifact.data?.queryResults
+      if (!queryResults) return null
+      if (queryResults instanceof Results) return queryResults
+      if (queryResults?.headers && queryResults?.data) {
+        return Results.fromJSON(queryResults)
+      }
+      return null
+    })
+
     const displayHeight = computed(() => {
       return props.height - 40 // Account for header and tabs
     })
@@ -200,6 +228,7 @@ export default defineComponent({
       typeIcon,
       results,
       chartConfig,
+      markdownResults,
       displayHeight,
       toggleExpanded,
       handleChartConfigChange,
@@ -294,6 +323,11 @@ export default defineComponent({
 }
 
 .artifact-display {
+  overflow: auto;
+}
+
+.artifact-markdown {
+  padding: 10px;
   overflow: auto;
 }
 

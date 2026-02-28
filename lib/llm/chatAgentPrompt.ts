@@ -121,6 +121,88 @@ export const CHAT_TOOLS = [
     },
   },
   connectDataConnectionTool,
+  {
+    name: 'create_markdown',
+    description:
+      'Create a rich markdown artifact to display formatted text, summaries, reports, or data-driven content. Supports standard markdown syntax (headers, lists, bold, italic, links, tables, code blocks). When a query is provided, data from the query results can be referenced in the markdown template using {field_name} for simple substitutions, {data[0].field} for indexed access, and {{#each data limit=N}} {field} {{/each}} for loops. Use this for narrative reports, executive summaries, annotated insights, or any rich text content.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        markdown: {
+          type: 'string',
+          description:
+            'Markdown content to display. Supports standard markdown syntax. If a query is also provided, you can use template expressions like {field_name}, {data.length}, or {{#each data limit=5}} - {field}: {value} {{/each}} to inject query results.',
+        },
+        title: {
+          type: 'string',
+          description: 'Optional title for the artifact',
+        },
+        query: {
+          type: 'string',
+          description:
+            'Optional Trilogy query to execute. Results will be available for template substitution in the markdown.',
+        },
+        connection: {
+          type: 'string',
+          description:
+            'Data connection name for executing the query (required if query is provided)',
+        },
+      },
+      required: ['markdown'],
+    },
+  },
+  {
+    name: 'list_artifacts',
+    description:
+      'List all artifacts in the current chat session with their IDs, types, and summaries. Use this to see what artifacts exist before updating or removing them.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'update_artifact',
+    description:
+      'Update an existing artifact by ID. Can update markdown content, title, or chart configuration. Use list_artifacts first to find artifact IDs.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The ID of the artifact to update (from list_artifacts or tool results)',
+        },
+        markdown: {
+          type: 'string',
+          description: 'New markdown content (for markdown artifacts)',
+        },
+        title: {
+          type: 'string',
+          description: 'New title for the artifact',
+        },
+        chartConfig: {
+          ...chartConfigSchema,
+          description: 'New chart configuration (for chart/results artifacts)',
+        },
+      },
+      required: ['artifact_id'],
+    },
+  },
+  {
+    name: 'remove_artifact',
+    description:
+      'Remove an artifact from the chat session by ID. Use list_artifacts first to find artifact IDs.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The ID of the artifact to remove',
+        },
+      },
+      required: ['artifact_id'],
+    },
+  },
 ]
 
 export interface ChatAgentPromptOptions {
@@ -194,5 +276,14 @@ IMPORTANT GUIDELINES:
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
 7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
 8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
+
+ARTIFACT MANAGEMENT:
+- Every query and chart tool call returns an artifact ID. Use these IDs to reference, update, or remove artifacts later.
+- Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
+  - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}
+- Use list_artifacts to see all artifacts with their IDs, types, and metadata.
+- Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
+- Use remove_artifact to clean up artifacts that are no longer needed.
+- When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
 `
 }

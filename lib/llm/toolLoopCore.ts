@@ -67,12 +67,14 @@ export interface ToolLoopResult {
 /**
  * Format a tool result for sending to the LLM.
  * Handles artifacts, messages, and errors consistently.
+ * Includes artifact IDs so the LLM can reference them in follow-up tool calls.
  */
 export function formatToolResultText(result: ToolCallResult): string {
   if (result.success) {
     if (result.artifact) {
       const config = result.artifact.config
       const artifactData = result.artifact.data
+      const artifactId = result.artifact.id
       let dataPreview = ''
       if (artifactData) {
         const jsonData =
@@ -83,7 +85,8 @@ export function formatToolResultText(result: ToolCallResult): string {
       const artifactInfo = config
         ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
         : ''
-      return `Success. ${result.message || artifactInfo}${dataPreview}`
+      const idInfo = artifactId ? `Artifact ID: ${artifactId}. ` : ''
+      return `Success. ${idInfo}${result.message || artifactInfo}${dataPreview}`
     } else if (result.message) {
       return result.message
     } else {

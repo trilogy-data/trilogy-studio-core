@@ -10,6 +10,7 @@ import { symbolsToFieldPrompt } from './editorRefinementTools'
 export interface ToolCallResult {
   success: boolean
   artifact?: ChatArtifact
+  artifactId?: string // ID of the artifact created by this tool call
   error?: string
   message?: string
   executionTime?: number

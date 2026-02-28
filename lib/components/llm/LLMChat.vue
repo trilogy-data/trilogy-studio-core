@@ -349,6 +349,10 @@ export default defineComponent({
         remove_import: 'Removing import...',
         list_available_imports: 'Listing imports...',
         connect_data_connection: 'Connecting...',
+        create_markdown: 'Creating markdown...',
+        list_artifacts: 'Listing artifacts...',
+        update_artifact: 'Updating artifact...',
+        remove_artifact: 'Removing artifact...',
       }
       return toolLabels[toolName] || `Using ${toolName}...`
     }
@@ -370,6 +374,10 @@ export default defineComponent({
         add_import: 'Added import',
         remove_import: 'Removed import',
         list_available_imports: 'Listed imports',
+        create_markdown: 'Created markdown',
+        list_artifacts: 'Listed artifacts',
+        update_artifact: 'Updated artifact',
+        remove_artifact: 'Removed artifact',
       }
       return toolLabels[toolName] || toolName.replace(/_/g, ' ')
     }

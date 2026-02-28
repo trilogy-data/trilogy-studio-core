@@ -9,9 +9,15 @@ export interface ChatImport {
 
 // Re-export types that match LLMChat.vue interface
 export interface ChatArtifact {
-  type: 'results' | 'chart' | 'code' | 'custom'
+  id: string
+  type: 'results' | 'chart' | 'code' | 'markdown' | 'custom'
   data: any
   config?: any
+}
+
+/** Generate a short unique artifact ID */
+export function generateArtifactId(): string {
+  return `art-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 6)}`
 }
 
 // Tool call with execution result - used for UI display
@@ -105,11 +111,42 @@ export class Chat implements ChatSessionData {
   }
 
   addArtifact(artifact: ChatArtifact): number {
+    // Ensure artifact has an ID
+    if (!artifact.id) {
+      artifact.id = generateArtifactId()
+    }
     this.artifacts.push(artifact)
     this.activeArtifactIndex = this.artifacts.length - 1 // Auto-expand new artifact
     this.updatedAt = new Date()
     this.changed = true
     return this.activeArtifactIndex
+  }
+
+  getArtifactById(id: string): ChatArtifact | null {
+    return this.artifacts.find((a) => a.id === id) || null
+  }
+
+  updateArtifact(id: string, updates: Partial<Pick<ChatArtifact, 'data' | 'config'>>): boolean {
+    const artifact = this.artifacts.find((a) => a.id === id)
+    if (!artifact) return false
+    if (updates.data !== undefined) artifact.data = updates.data
+    if (updates.config !== undefined) artifact.config = { ...artifact.config, ...updates.config }
+    this.updatedAt = new Date()
+    this.changed = true
+    return true
+  }
+
+  removeArtifact(id: string): boolean {
+    const index = this.artifacts.findIndex((a) => a.id === id)
+    if (index === -1) return false
+    this.artifacts.splice(index, 1)
+    // Adjust active index
+    if (this.activeArtifactIndex >= this.artifacts.length) {
+      this.activeArtifactIndex = this.artifacts.length - 1
+    }
+    this.updatedAt = new Date()
+    this.changed = true
+    return true
   }
 
   setActiveArtifact(index: number): void {

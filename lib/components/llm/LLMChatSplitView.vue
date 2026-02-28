@@ -37,7 +37,7 @@
             </div>
           </slot>
         </template>
-        <!-- Render inline artifacts (charts) in messages -->
+        <!-- Render inline artifacts (charts, markdown) in messages -->
         <template #artifact="{ artifact }">
           <div
             class="inline-artifact"
@@ -54,6 +54,13 @@
               @config-change="
                 (config: ChartConfig) => handleInlineChartConfigChange(artifact, config)
               "
+            />
+          </div>
+          <div class="inline-artifact inline-markdown" v-else-if="artifact.type === 'markdown'">
+            <markdown-renderer
+              :markdown="artifact.data?.markdown || ''"
+              :results="getMarkdownResults(artifact)"
+              :loading="false"
             />
           </div>
           <div v-else class="artifact-placeholder">[Artifact: {{ artifact.type }}]</div>
@@ -126,6 +133,15 @@
                 @config-change="handleChartConfigChange"
               />
             </template>
+            <template v-else-if="activeArtifact.type === 'markdown'">
+              <div class="markdown-artifact-view">
+                <markdown-renderer
+                  :markdown="activeArtifact.data?.markdown || ''"
+                  :results="getMarkdownResults(activeArtifact)"
+                  :loading="false"
+                />
+              </div>
+            </template>
             <template v-else-if="activeArtifact.type === 'code'">
               <code-block
                 :language="activeArtifact.config?.language || 'sql'"
@@ -157,6 +173,7 @@ import LLMChat from './LLMChat.vue'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../../chats/chat'
 import ResultsComponent from '../editor/Results.vue'
 import CodeBlock from '../CodeBlock.vue'
+import MarkdownRenderer from '../MarkdownRenderer.vue'
 import DashboardImportSelector from '../dashboard/DashboardImportSelector.vue'
 import SymbolsPane from '../SymbolsPane.vue'
 import { Results, type ChartConfig } from '../../editors/results'
@@ -168,6 +185,7 @@ export default defineComponent({
     LLMChat,
     ResultsComponent,
     CodeBlock,
+    MarkdownRenderer,
     DashboardImportSelector,
     SymbolsPane,
   },
@@ -496,6 +514,19 @@ export default defineComponent({
       emit('update:messages', messages.value)
     }
 
+    // Convert markdown artifact data to Results for template rendering
+    const getMarkdownResults = (artifact: ChatArtifact): Results | null => {
+      if (artifact.type !== 'markdown') return null
+      const queryResults = artifact.data?.queryResults
+      if (!queryResults) return null
+
+      if (queryResults instanceof Results) return queryResults
+      if (queryResults?.headers && queryResults?.data) {
+        return Results.fromJSON(queryResults)
+      }
+      return null
+    }
+
     // Helper functions for artifact display
     const getArtifactIcon = (artifact: ChatArtifact): string => {
       switch (artifact.type) {
@@ -505,6 +536,8 @@ export default defineComponent({
           return 'mdi mdi-chart-bar'
         case 'code':
           return 'mdi mdi-code-braces'
+        case 'markdown':
+          return 'mdi mdi-language-markdown'
         default:
           return 'mdi mdi-file-document'
       }
@@ -519,7 +552,9 @@ export default defineComponent({
           ? 'Query Result'
           : artifact.type === 'chart'
             ? 'Chart'
-            : artifact.type
+            : artifact.type === 'markdown'
+              ? 'Markdown'
+              : artifact.type
       return `${typeLabel} #${index + 1}`
     }
 
@@ -577,6 +612,7 @@ export default defineComponent({
       addArtifact,
       handleChartConfigChange,
       getArtifactResults,
+      getMarkdownResults,
       handleInlineChartConfigChange,
       getArtifactIcon,
       getArtifactLabel,
@@ -799,6 +835,18 @@ export default defineComponent({
   flex: 1;
   overflow: auto;
   min-height: 200px;
+}
+
+.markdown-artifact-view {
+  padding: 10px;
+  overflow: auto;
+  height: 100%;
+}
+
+.inline-markdown {
+  min-height: auto;
+  height: auto;
+  padding: 12px;
 }
 
 .custom-artifact-view {
