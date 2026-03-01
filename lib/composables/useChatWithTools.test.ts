@@ -219,7 +219,9 @@ describe('useChatWithTools – standalone mode with customTools', () => {
     ;(llmStore.generateCompletion as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         text: 'Flying to Paris.',
-        toolCalls: [{ id: 'tc_01', name: 'navigate', input: { latitude: 48.8566, longitude: 2.3522 } }],
+        toolCalls: [
+          { id: 'tc_01', name: 'navigate', input: { latitude: 48.8566, longitude: 2.3522 } },
+        ],
         usage: {},
       })
       // Iteration 2: LLM calls get_weather

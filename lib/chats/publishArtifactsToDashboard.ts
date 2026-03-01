@@ -9,12 +9,7 @@
  *   - 'custom'   → skipped
  */
 import type { ChatArtifact } from './chat'
-import {
-  DashboardModel,
-  CELL_TYPES,
-  type CellType,
-  type MarkdownData,
-} from '../dashboards/base'
+import { DashboardModel, CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
 
 export interface PublishOptions {
   /** Dashboard name. Falls back to "Chat Artifacts". */

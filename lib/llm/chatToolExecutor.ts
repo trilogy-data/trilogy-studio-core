@@ -635,7 +635,12 @@ export class ChatToolExecutor {
       }
 
       // Execute the query to get results
-      const queryResult = await this.executeTrilogyQuery(query, connectionName, 'results', undefined)
+      const queryResult = await this.executeTrilogyQuery(
+        query,
+        connectionName,
+        'results',
+        undefined,
+      )
       if (!queryResult.success) {
         return {
           success: false,
@@ -876,9 +881,10 @@ export class ChatToolExecutor {
       }
     }
 
-    const message = notFound.length > 0
-      ? `Removed ${removed.length} artifact(s). Not found: ${notFound.join(', ')}.`
-      : `Removed ${removed.length} artifact(s).`
+    const message =
+      notFound.length > 0
+        ? `Removed ${removed.length} artifact(s). Not found: ${notFound.join(', ')}.`
+        : `Removed ${removed.length} artifact(s).`
 
     return { success: true, message }
   }

@@ -21,7 +21,6 @@ import {
   type ExecutionStateUpdater,
 } from '../llm/toolLoopCore'
 
-
 export interface UseChatWithToolsOptions {
   llmConnectionStore: LLMConnectionStoreType
   connectionStore: ConnectionStoreType | null

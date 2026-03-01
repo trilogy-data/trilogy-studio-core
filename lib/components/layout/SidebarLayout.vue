@@ -36,7 +36,11 @@
   width: 100%;
   z-index: 51;
   overflow-y: visible;
-  transition: flex-basis 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, width 0.2s ease;
+  transition:
+    flex-basis 0.2s ease,
+    min-width 0.2s ease,
+    max-width 0.2s ease,
+    width 0.2s ease;
 }
 .sidebar.sidebar-icon-only {
   flex-basis: var(--sidebar-icon-width, 40px) !important;

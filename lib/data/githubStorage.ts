@@ -6,7 +6,13 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { LLMProvider, OpenAIProvider, AnthropicProvider, GoogleProvider, OpenRouterProvider } from '../llm'
+import {
+  LLMProvider,
+  OpenAIProvider,
+  AnthropicProvider,
+  GoogleProvider,
+  OpenRouterProvider,
+} from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards'

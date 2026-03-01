@@ -365,8 +365,7 @@ function evaluateFormatExpression(
     // Simple field name: total_flights
     const val = data[0][exprPart]
     const num = Number(val)
-    numericValue =
-      val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+    numericValue = val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
   }
 
   if (numericValue === undefined) return undefined

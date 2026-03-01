@@ -178,7 +178,6 @@ test.describe('LLM Chat with Artifacts Tests', () => {
   })
 
   test('should create new chat from sidebar', async ({ page, isMobile }) => {
-
     await page.goto('#skipTips=true')
     await setupLLMConnection(page, isMobile)
 
