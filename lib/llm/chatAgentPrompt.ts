@@ -124,14 +124,32 @@ export const CHAT_TOOLS = [
   {
     name: 'create_markdown',
     description:
-      'Create a rich markdown artifact to display formatted text, summaries, reports, or data-driven content. Supports standard markdown syntax (headers, lists, bold, italic, links, tables, code blocks). When a query is provided, data from the query results can be referenced in the markdown template using {field_name} for simple substitutions, {data[0].field} for indexed access, and {{#each data limit=N}} {field} {{/each}} for loops. Use this for narrative reports, executive summaries, annotated insights, or any rich text content.',
+      'Create a rich markdown artifact to display formatted text, summaries, reports, or data-driven content. Supports standard markdown syntax (headers, lists, bold, italic, links, tables, code blocks). When a query is provided, data from the query results can be referenced in the markdown template. Use this for narrative reports, executive summaries, annotated insights, or any rich text content.',
     input_schema: {
       type: 'object',
       properties: {
         markdown: {
           type: 'string',
-          description:
-            'Markdown content to display. Supports standard markdown syntax. If a query is also provided, you can use template expressions like {field_name}, {data.length}, or {{#each data limit=5}} - {field}: {value} {{/each}} to inject query results.',
+          description: `Markdown content to display. Supports standard markdown syntax.
+
+If a query is also provided, inject query results using these template expressions:
+
+BASIC SUBSTITUTION:
+- {field_name} — value from the first result row (e.g. {total_flights})
+- {data[N].field_name} — value from row N (e.g. {data[0].airline})
+- {data.length} — total number of result rows
+- {field_name || "fallback"} — value with a fallback if null/missing
+- {{#each data limit=N}} ...{field}... {{/each}} — loop over rows
+
+FORMAT SPECIFIERS (numeric fields only):
+- {field_name:,} — thousands separator (e.g. {total_flights:,} → "5,797")
+- {field_name:.2f} — fixed decimal places (e.g. {rate:.2f} → "1.43")
+- {field_name:,.2f} — both (e.g. {revenue:,.2f} → "1,234.56")
+- {field_name:.1%} — multiply by 100 and show as percentage (e.g. {rate:.1%} where rate=0.014 → "1.4%")
+
+ARITHMETIC WITH FORMAT:
+- {(expr):format} — evaluate arithmetic then format; only field names and + - * / are allowed
+- Example: {(cancelled/total*100):.1f} computes the ratio and shows 1 decimal place`,
         },
         title: {
           type: 'string',
@@ -206,16 +224,34 @@ export const CHAT_TOOLS = [
   {
     name: 'remove_artifact',
     description:
-      'Remove an artifact from the chat session by ID. Use list_artifacts first to find artifact IDs.',
+      'Remove one or more artifacts from the chat session by ID. Use list_artifacts first to find artifact IDs.',
     input_schema: {
       type: 'object',
       properties: {
-        artifact_id: {
-          type: 'string',
-          description: 'The ID of the artifact to remove',
+        artifact_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'One or more artifact IDs to remove.',
         },
       },
-      required: ['artifact_id'],
+      required: ['artifact_ids'],
+    },
+  },
+  {
+    name: 'reorder_artifacts',
+    description:
+      'Reorder artifacts in the chat session by providing the desired order of artifact IDs. The artifacts panel displays artifacts in order, so arrange them for maximum clarity and impact (e.g., summary/overview first, supporting details after). Any artifact IDs not included will be appended at the end in their original order.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Ordered list of artifact IDs representing the desired display order. Use list_artifacts to find IDs.',
+        },
+      },
+      required: ['artifact_ids'],
     },
   },
 ]
@@ -307,6 +343,7 @@ Before you finish responding to a multi-step request, review and curate your art
 1. Use list_artifacts to see what artifacts currently exist.
 2. Remove any intermediate/exploratory artifacts that are not part of the final answer (e.g., failed queries, test runs, superseded results).
 3. Give remaining artifacts clear, descriptive titles via update_artifact.
-4. The user can publish the artifact list as a dashboard, so ensure the final set is clean and presentable.
+4. Use reorder_artifacts to arrange the final artifacts for maximum clarity and impact — put the most important or overview artifact first (e.g., a summary markdown or key chart), followed by supporting detail artifacts. The artifacts panel is the primary view, so order matters.
+5. The user can publish the artifact list as a dashboard, so ensure the final set is clean, well-ordered, and presentable.
 `
 }

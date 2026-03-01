@@ -265,6 +265,114 @@ export function evaluateExpression(
   return undefined
 }
 
+// ============================================================================
+// FORMAT EXPRESSION EVALUATION (Python f-string style)
+// ============================================================================
+
+/**
+ * Find the index of the format-spec separator ':' at paren depth 0.
+ * e.g. "(a/b*100):.1f" → 9,  "field:,"  → 5
+ */
+function findFormatSeparator(expression: string): number {
+  let depth = 0
+  for (let i = 0; i < expression.length; i++) {
+    const ch = expression[i]
+    if (ch === '(') depth++
+    else if (ch === ')') depth--
+    else if (ch === ':' && depth === 0) return i
+  }
+  return -1
+}
+
+/**
+ * Substitute field names in an arithmetic expression with their numeric values
+ * from the first data row, then safely evaluate the result.
+ * Only digits, whitespace, and +  -  *  /  (  )  .  are allowed post-substitution.
+ */
+function evaluateArithmeticExpr(expr: string, data: Row[]): number | undefined {
+  if (!data || !data.length) return undefined
+  const firstRow = data[0]
+
+  const substituted = expr.replace(/\b([a-zA-Z_]\w*)\b/g, (_: string, fieldName: string) => {
+    const val = firstRow[fieldName]
+    const num = Number(val)
+    return val !== null && val !== undefined && val !== '' && !isNaN(num) ? String(num) : 'NaN'
+  })
+
+  if (!/^[\d\s+\-*/().]+$/.test(substituted)) return undefined
+
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = new Function('"use strict"; return (' + substituted + ')')()
+    return typeof result === 'number' && isFinite(result) ? result : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Apply a Python-style numeric format spec to a number.
+ * Supported specs: , | .Nf | ,.Nf | .N% (Python % multiplies by 100)
+ */
+function applyNumericFormat(value: number, formatSpec: string): string {
+  if (formatSpec === ',') {
+    return value.toLocaleString('en-US')
+  }
+  const fixedMatch = formatSpec.match(/^\.(\d+)f$/)
+  if (fixedMatch) {
+    return value.toFixed(parseInt(fixedMatch[1]))
+  }
+  const commaFixedMatch = formatSpec.match(/^,\.(\d+)f$/)
+  if (commaFixedMatch) {
+    const decimals = parseInt(commaFixedMatch[1])
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })
+  }
+  const percentMatch = formatSpec.match(/^\.(\d+)%$/)
+  if (percentMatch) {
+    return (value * 100).toFixed(parseInt(percentMatch[1])) + '%'
+  }
+  return String(value)
+}
+
+/**
+ * Try to evaluate a Python f-string style format expression.
+ * Handles {field:format} and {(arithmetic_expr):format} patterns.
+ * Returns undefined when the expression doesn't match either pattern.
+ */
+function evaluateFormatExpression(
+  expression: string,
+  data: Row[],
+  loading: boolean,
+): string | undefined {
+  if (loading || !data || !data.length) return undefined
+
+  const sepIdx = findFormatSeparator(expression)
+  if (sepIdx === -1) return undefined
+
+  const exprPart = expression.substring(0, sepIdx).trim()
+  const formatSpec = expression.substring(sepIdx + 1).trim()
+  if (!formatSpec) return undefined
+
+  let numericValue: number | undefined
+
+  if (/^\(.*\)$/.test(exprPart)) {
+    // Parenthesised arithmetic: (a/b*100)
+    numericValue = evaluateArithmeticExpr(exprPart.slice(1, -1), data)
+  } else if (/^\w+$/.test(exprPart)) {
+    // Simple field name: total_flights
+    const val = data[0][exprPart]
+    const num = Number(val)
+    numericValue =
+      val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+  }
+
+  if (numericValue === undefined) return undefined
+  return applyNumericFormat(numericValue, formatSpec)
+}
+
 /**
  * Evaluate fallback expressions with security
  */
@@ -301,6 +409,8 @@ export function evaluateFallback(
       if (loading) {
         return createLoadingPill(expression)
       }
+      const formatResult = evaluateFormatExpression(expression, data, loading)
+      if (formatResult !== undefined) return formatResult
       const value = evaluateExpression(expression, data, loading)
       return value !== undefined ? String(value) : `{${expression}}`
     }
@@ -823,14 +933,29 @@ export function convertMarkdownToHtml(text: string): string {
   // Extract code blocks first to protect them from other processing
   const { html: htmlWithoutCode, placeholders } = extractCodeBlocks(text)
 
-  // Process other markdown elements
-  let html = htmlWithoutCode
+  // Extract {template} expressions before emphasis processing. Without this, * chars inside
+  // expressions (e.g. {(a/b*100):.1f}) can pair up across merged list items and get consumed
+  // by processEmphasis, mangling the literal text of unresolved expressions.
+  const templatePlaceholders: CodeBlockPlaceholder = {}
+  let templateCounter = 0
+  let html = htmlWithoutCode.replace(/\{([^{}]+)\}/g, (match: string) => {
+    const placeholder = `__TEMPLATEEXPR_${templateCounter}__`
+    templatePlaceholders[placeholder] = match
+    templateCounter++
+    return placeholder
+  })
+
   html = processHeaders(html)
   html = processTables(html) // Process tables before lists to avoid conflicts
   html = processLists(html)
   html = processEmphasis(html)
   html = processLinks(html)
   html = processParagraphs(html)
+
+  // Restore template expressions so they can be substituted after markdown conversion
+  Object.keys(templatePlaceholders).forEach((placeholder) => {
+    html = html.replace(placeholder, templatePlaceholders[placeholder])
+  })
 
   // Restore code blocks
   html = restoreCodeBlocks(html, placeholders)

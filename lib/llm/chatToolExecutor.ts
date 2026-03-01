@@ -79,11 +79,13 @@ export class ChatToolExecutor {
           toolInput.chartConfig,
         )
       case 'remove_artifact':
-        return this.removeArtifact(toolInput.artifact_id)
+        return this.removeArtifacts(toolInput.artifact_ids)
+      case 'reorder_artifacts':
+        return this.reorderArtifacts(toolInput.artifact_ids)
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact (accepts array), reorder_artifacts`,
         }
     }
   }
@@ -801,27 +803,83 @@ export class ChatToolExecutor {
     }
   }
 
-  // Remove an artifact by ID
-  private removeArtifact(artifactId: string): ToolCallResult {
+  // Reorder artifacts by providing desired order of IDs
+  private reorderArtifacts(artifactIds: string[]): ToolCallResult {
     const chat = this.chatStore?.activeChat
     if (!chat) {
+      return { success: false, error: 'No active chat session.' }
+    }
+
+    if (!Array.isArray(artifactIds) || artifactIds.length === 0) {
       return {
         success: false,
-        error: 'No active chat session.',
+        error: 'artifact_ids must be a non-empty array of artifact IDs.',
       }
     }
 
-    const removed = chat.removeArtifact(artifactId)
-    if (!removed) {
+    const missing = artifactIds.filter((id) => !chat.artifacts.find((a) => a.id === id))
+    if (missing.length > 0) {
       return {
         success: false,
-        error: `Artifact "${artifactId}" not found. Use list_artifacts to see available artifacts.`,
+        error: `Artifact IDs not found: ${missing.join(', ')}. Use list_artifacts to see available artifacts.`,
       }
     }
+
+    const idSet = new Set(artifactIds)
+    const activeArtifact = chat.getActiveArtifact()
+
+    const specifiedArtifacts = artifactIds.map((id) => chat.artifacts.find((a) => a.id === id)!)
+    const unspecified = chat.artifacts.filter((a) => !idSet.has(a.id))
+    chat.artifacts = [...specifiedArtifacts, ...unspecified]
+
+    // Maintain active artifact index after reorder
+    if (activeArtifact) {
+      chat.activeArtifactIndex = chat.artifacts.findIndex((a) => a.id === activeArtifact.id)
+    }
+
+    chat.updatedAt = new Date()
+    chat.changed = true
 
     return {
       success: true,
-      message: `Removed artifact "${artifactId}".`,
+      message: `Reordered ${chat.artifacts.length} artifacts. New order: ${chat.artifacts.map((a) => `"${a.config?.title || a.type}" (${a.id})`).join(', ')}.`,
     }
+  }
+
+  // Remove one or more artifacts by ID
+  private removeArtifacts(artifactIds: string | string[]): ToolCallResult {
+    const chat = this.chatStore?.activeChat
+    if (!chat) {
+      return { success: false, error: 'No active chat session.' }
+    }
+
+    const ids = Array.isArray(artifactIds) ? artifactIds : [artifactIds]
+    if (ids.length === 0) {
+      return { success: false, error: 'artifact_ids must be a non-empty array of artifact IDs.' }
+    }
+
+    const notFound: string[] = []
+    const removed: string[] = []
+
+    for (const id of ids) {
+      if (chat.removeArtifact(id)) {
+        removed.push(id)
+      } else {
+        notFound.push(id)
+      }
+    }
+
+    if (removed.length === 0) {
+      return {
+        success: false,
+        error: `No artifacts found with IDs: ${notFound.join(', ')}. Use list_artifacts to see available artifacts.`,
+      }
+    }
+
+    const message = notFound.length > 0
+      ? `Removed ${removed.length} artifact(s). Not found: ${notFound.join(', ')}.`
+      : `Removed ${removed.length} artifact(s).`
+
+    return { success: true, message }
   }
 }

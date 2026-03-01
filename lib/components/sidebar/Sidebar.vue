@@ -28,6 +28,14 @@
         </div>
       </div>
       <div class="trilogy-icon-padding"></div>
+      <div
+        v-if="!isMobile"
+        class="sidebar-collapse-btn"
+        @click="toggleCollapse"
+        :title="contentCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <i :class="contentCollapsed ? 'mdi mdi-chevron-right' : 'mdi mdi-chevron-left'"></i>
+      </div>
       <div class="sidebar-divider" v-if="!isMobile"></div>
       <div
         v-for="(item, _) in sidebarItems"
@@ -40,7 +48,7 @@
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip">
             <a
-              @click.prevent="selectItem(item.screen)"
+              @click.prevent.stop="selectItem(item.screen)"
               :href="getUrl(item.screen)"
               target="_blank"
               :data-testid="`sidebar-link-${item.screen}`"
@@ -66,7 +74,7 @@
         <template v-if="!isMobile">
           <tooltip :content="item.tooltip">
             <a
-              @click.prevent="selectItem(item.screen)"
+              @click.prevent.stop="selectItem(item.screen)"
               :href="getUrl(item.screen)"
               target="_blank"
               :data-testid="`sidebar-link-${item.screen}`"
@@ -112,7 +120,11 @@
       </div>
     </div>
 
-    <div class="sidebar-content" :style="{ width: containerWidth - 40 + 'px' }">
+    <div
+      class="sidebar-content"
+      :class="{ 'sidebar-content-collapsed': contentCollapsed }"
+      :style="contentCollapsed ? {} : { width: containerWidth - 40 + 'px' }"
+    >
       <EditorList
         :activeEditor="activeEditor"
         v-show="active === 'editors'"
@@ -293,6 +305,7 @@ export default defineComponent({
       unSaved,
       saveAll,
       notMobile,
+      contentCollapsed: false,
     }
   },
   components: {
@@ -307,6 +320,9 @@ export default defineComponent({
   },
 
   watch: {
+    contentCollapsed(val: boolean) {
+      this.$emit('content-collapsed', val)
+    },
     unSaved: {
       handler(newValue, oldValue) {
         // If unSaved count goes to 0 from a positive number, trigger spin animation
@@ -339,7 +355,15 @@ export default defineComponent({
       }, 500)
     },
     selectItem(index: string) {
-      this.$emit('screen-selected', index)
+      if (index === this.active) {
+        this.contentCollapsed = !this.contentCollapsed
+      } else {
+        this.contentCollapsed = false
+        this.$emit('screen-selected', index)
+      }
+    },
+    toggleCollapse() {
+      this.contentCollapsed = !this.contentCollapsed
     },
     editorSelected(editor: string) {
       this.$emit('editor-selected', editor)
@@ -503,6 +527,27 @@ export default defineComponent({
   /* background-color: white; */
   padding: 5px;
   overflow-y: auto;
+}
+
+.sidebar-content-collapsed {
+  width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  flex-grow: 0 !important;
+}
+
+.sidebar-collapse-btn {
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  padding: 4px 0;
+  opacity: 0.5;
+  font-size: 14px;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  opacity: 1;
 }
 
 .sidebar-divider {

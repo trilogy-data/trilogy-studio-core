@@ -6,7 +6,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { LLMProvider, OpenAIProvider, AnthropicProvider, GoogleProvider } from '../llm'
+import { LLMProvider, OpenAIProvider, AnthropicProvider, GoogleProvider, OpenRouterProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards/base'
@@ -233,6 +233,10 @@ export default class LocalStorage extends AbstractStorage {
           // Handle the async operation properly
           // @ts-ignore
           connections[connection.name] = reactive(await GoogleProvider.fromJSON(connection))
+          break
+        case 'openrouter':
+          // @ts-ignore
+          connections[connection.name] = reactive(await OpenRouterProvider.fromJSON(connection))
           break
         default:
           console.warn(`Unknown LLM connection type: ${connection.type}`)

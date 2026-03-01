@@ -43,11 +43,12 @@
     </div>
 
     <!-- Normal mode with sidebar -->
-    <sidebar-layout v-else>
+    <sidebar-layout v-else :sidebar-collapsed="sidebarCollapsed">
       <template #sidebar="{ containerWidth }">
         <sidebar
           @editor-selected="setActiveEditor"
           @screen-selected="setActiveSidebarScreen"
+          @content-collapsed="sidebarCollapsed = $event"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
           @documentation-key-selected="setActiveDocumentationKey"
@@ -518,6 +519,7 @@ export default {
       chatCreatorPreselectedConnection,
       handleCreateNewChat,
       handleChatCreated,
+      sidebarCollapsed: ref(false),
     }
   },
   methods: {

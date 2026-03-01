@@ -6,7 +6,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
 } from '../connections'
-import { LLMProvider, OpenAIProvider, AnthropicProvider } from '../llm'
+import { LLMProvider, OpenAIProvider, AnthropicProvider, GoogleProvider, OpenRouterProvider } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards'
@@ -273,6 +273,14 @@ export default class GitHubStorage extends AbstractStorage {
         case 'anthropic':
           // @ts-ignore
           connections[connection.name] = reactive(AnthropicProvider.fromJSON(connection))
+          break
+        case 'google':
+          // @ts-ignore
+          connections[connection.name] = reactive(GoogleProvider.fromJSON(connection))
+          break
+        case 'openrouter':
+          // @ts-ignore
+          connections[connection.name] = reactive(OpenRouterProvider.fromJSON(connection))
           break
         default:
           console.log(`Unknown LLM provider type: ${connection.type}`)

@@ -1,7 +1,7 @@
 <template>
   <div id="interface" class="interface" ref="wrapper">
     <div class="interface-wrap">
-      <div ref="sidebar" class="sidebar">
+      <div ref="sidebar" class="sidebar" :class="{ 'sidebar-icon-only': sidebarCollapsed }">
         <slot name="sidebar" :containerWidth="sidebarWidth"></slot>
       </div>
       <div ref="content" class="nested-page-content" id="page-content">
@@ -36,6 +36,13 @@
   width: 100%;
   z-index: 51;
   overflow-y: visible;
+  transition: flex-basis 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, width 0.2s ease;
+}
+.sidebar.sidebar-icon-only {
+  flex-basis: var(--sidebar-icon-width, 40px) !important;
+  min-width: var(--sidebar-icon-width, 40px) !important;
+  max-width: var(--sidebar-icon-width, 40px) !important;
+  width: var(--sidebar-icon-width, 40px) !important;
 }
 .nested-page-content {
   flex: 1 1 auto;
@@ -50,6 +57,12 @@
 import Split from 'split.js'
 export default {
   name: 'StudioView',
+  props: {
+    sidebarCollapsed: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       split: null as Split.SplitInstance | null,
