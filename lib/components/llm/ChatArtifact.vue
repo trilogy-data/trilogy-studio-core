@@ -111,7 +111,7 @@ import DataTable from '../DataTable.vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import CodeBlock from '../CodeBlock.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
-import { Results, type ChartConfig } from '../../editors/results'
+import { Results, type ChartConfig, ColumnType } from '../../editors/results'
 import type { ChatArtifact } from './LLMChat.vue'
 
 export default defineComponent({
@@ -209,8 +209,32 @@ export default defineComponent({
       return null
     })
 
+    // DataTable (Tabulator) renders rows at 25px by default; header is ~38px.
+    // ARRAY/STRUCT columns disable fixed row height so we can't estimate — fall back to max.
+    const TABLE_ROW_HEIGHT = 25
+    const TABLE_HEADER_HEIGHT = 38
+    const MIN_TABLE_HEIGHT = 100
+
+    const hasComplexColumns = computed(() => {
+      if (!results.value) return false
+      for (const col of results.value.headers.values()) {
+        if (col.type === ColumnType.ARRAY || col.type === ColumnType.STRUCT) return true
+      }
+      return false
+    })
+
     const displayHeight = computed(() => {
-      return props.height - 40 // Account for header and tabs
+      const maxHeight = props.height - 40 // subtract artifact header bar
+
+      if (props.artifact.type === 'results' && results.value) {
+        // Can't predict row height for complex column types
+        if (hasComplexColumns.value) return maxHeight
+        const rowCount = results.value.data.length
+        const calculated = TABLE_HEADER_HEIGHT + TABLE_ROW_HEIGHT * rowCount + 8
+        return Math.max(MIN_TABLE_HEIGHT, Math.min(calculated, maxHeight))
+      }
+
+      return maxHeight
     })
 
     const toggleExpanded = () => {

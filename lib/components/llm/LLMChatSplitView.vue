@@ -50,14 +50,6 @@
       <div class="sidebar-tabs">
         <button
           class="sidebar-tab"
-          :class="{ active: sidebarTab === 'symbols' }"
-          @click="sidebarTab = 'symbols'"
-          data-testid="llm-sidebar-tab-fields"
-        >
-          Fields
-        </button>
-        <button
-          class="sidebar-tab"
           :class="{ active: sidebarTab === 'artifacts' }"
           @click="sidebarTab = 'artifacts'"
           data-testid="llm-sidebar-tab-artifacts"
@@ -65,15 +57,18 @@
           Artifacts
           <span v-if="artifacts.length > 0" class="artifact-count">{{ artifacts.length }}</span>
         </button>
-      </div>
-
-      <!-- Symbols Pane -->
-      <div v-if="sidebarTab === 'symbols'" class="sidebar-content">
-        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
+        <button
+          class="sidebar-tab"
+          :class="{ active: sidebarTab === 'symbols' }"
+          @click="sidebarTab = 'symbols'"
+          data-testid="llm-sidebar-tab-fields"
+        >
+          Fields
+        </button>
       </div>
 
       <!-- Artifacts Pane -->
-      <div v-else-if="sidebarTab === 'artifacts'" class="sidebar-content artifacts-content">
+      <div v-if="sidebarTab === 'artifacts'" class="sidebar-content artifacts-content">
         <!-- Publish button -->
         <div class="artifacts-actions" v-if="artifacts.length > 0">
           <button
@@ -94,14 +89,17 @@
             :key="artifact.id || index"
             class="artifact-card"
             :class="{ active: activeArtifactIndex === index }"
-            @click="setActiveArtifact(index)"
           >
-            <div class="artifact-card-header">
+            <div
+              class="artifact-card-header"
+              @click="toggleArtifactCollapsed(artifact, index)"
+            >
               <i :class="getArtifactIcon(artifact)"></i>
               <span class="artifact-label">{{ getArtifactLabel(artifact, index) }}</span>
               <span class="artifact-meta">{{ getArtifactMeta(artifact) }}</span>
+              <i :class="isArtifactCollapsed(artifact, index) ? 'mdi mdi-chevron-down' : 'mdi mdi-chevron-up'" class="collapse-chevron"></i>
             </div>
-            <div class="artifact-card-body">
+            <div v-show="!isArtifactCollapsed(artifact, index)" class="artifact-card-body" :style="getArtifactCardStyle(artifact)">
               <template v-if="getArtifactResults(artifact)">
                 <results-component
                   :type="'trilogy'"
@@ -109,7 +107,7 @@
                   :chartConfig="artifact.config?.chartConfig"
                   :generatedSql="artifact.config?.generatedSql"
                   :trilogySource="artifact.config?.query"
-                  :containerHeight="450"
+                  :containerHeight="getArtifactContainerHeight(artifact)"
                   :defaultTab="artifact.type === 'chart' ? 'visualize' : 'results'"
                   @config-change="(config: ChartConfig) => handleArtifactChartConfigChange(artifact, config)"
                 />
@@ -145,6 +143,11 @@
           <span>No artifacts yet. Run a query to see results here.</span>
         </div>
       </div>
+
+      <!-- Symbols Pane -->
+      <div v-else-if="sidebarTab === 'symbols'" class="sidebar-content">
+        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
+      </div>
     </div>
   </div>
 </template>
@@ -158,7 +161,7 @@ import CodeBlock from '../CodeBlock.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 import DashboardImportSelector from '../dashboard/DashboardImportSelector.vue'
 import SymbolsPane from '../SymbolsPane.vue'
-import { Results, type ChartConfig } from '../../editors/results'
+import { Results, type ChartConfig, ColumnType } from '../../editors/results'
 import type { CompletionItem } from '../../stores/resolver'
 
 export default defineComponent({
@@ -278,6 +281,7 @@ export default defineComponent({
     const artifacts = ref<ChatArtifact[]>([...props.initialArtifacts])
     const activeArtifactIndex = ref(props.initialActiveArtifactIndex)
     const sidebarTab = ref<'symbols' | 'artifacts'>('artifacts')
+    const collapsedArtifacts = ref<Set<string>>(new Set())
     const internalLoading = ref(false)
 
     // Resizer state - controls chat panel width (artifacts panel takes remaining flex space)
@@ -499,6 +503,102 @@ export default defineComponent({
       return parts.join(' | ')
     }
 
+    // Artifact card collapse
+    const artifactKey = (artifact: ChatArtifact, index: number): string =>
+      artifact.id || String(index)
+
+    const isArtifactCollapsed = (artifact: ChatArtifact, index: number): boolean =>
+      collapsedArtifacts.value.has(artifactKey(artifact, index))
+
+    const toggleArtifactCollapsed = (artifact: ChatArtifact, index: number): void => {
+      const key = artifactKey(artifact, index)
+      const next = new Set(collapsedArtifacts.value)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+        setActiveArtifact(index)
+      }
+      collapsedArtifacts.value = next
+    }
+
+    // Artifact card height sizing
+    // Results.vue subtracts TABS_HEIGHT (30px) before passing height to DataTable.
+    // DataTable (Tabulator) renders rows at 25px; column header is ~38px.
+    // ARRAY/STRUCT columns disable fixed row height — fall back to max for those.
+    const CHART_HEIGHT = 450
+    const RESULTS_TABS_OVERHEAD = 30 // Results.vue internal tab bar
+    const TABLE_HEADER_HEIGHT = 38
+    const TABLE_ROW_HEIGHT = 25
+    const MIN_RESULTS_HEIGHT = 120
+    const MAX_RESULTS_HEIGHT = 450
+    const CODE_LINE_HEIGHT = 20
+    const CODE_MIN_HEIGHT = 80
+    const CODE_MAX_HEIGHT = 350
+    const MARKDOWN_MAX_HEIGHT = 800
+
+    const hasComplexColumns = (results: Results): boolean => {
+      for (const col of results.headers.values()) {
+        if (col.type === ColumnType.ARRAY || col.type === ColumnType.STRUCT) return true
+      }
+      return false
+    }
+
+    // Returns a style object for the artifact-card-body div.
+    // charts/results use a fixed height so their inner components fill correctly;
+    // markdown/code use max-height so short content doesn't leave a wasteland of empty space.
+    const getArtifactCardStyle = (artifact: ChatArtifact): Record<string, string> => {
+      if (artifact.type === 'chart') {
+        return { height: `${CHART_HEIGHT}px` }
+      }
+
+      if (artifact.type === 'results') {
+        const results = getArtifactResults(artifact)
+        if (!results || hasComplexColumns(results)) {
+          return { height: `${MAX_RESULTS_HEIGHT}px` }
+        }
+        const rowCount = results.data.length
+        const height = Math.max(
+          MIN_RESULTS_HEIGHT,
+          Math.min(
+            MAX_RESULTS_HEIGHT,
+            RESULTS_TABS_OVERHEAD + TABLE_HEADER_HEIGHT + TABLE_ROW_HEIGHT * rowCount + 8,
+          ),
+        )
+        return { height: `${height}px` }
+      }
+
+      if (artifact.type === 'code') {
+        const lineCount = (artifact.data as string | undefined)?.split('\n').length ?? 1
+        const height = Math.max(
+          CODE_MIN_HEIGHT,
+          Math.min(CODE_MAX_HEIGHT, lineCount * CODE_LINE_HEIGHT + 24),
+        )
+        return { maxHeight: `${height}px`, overflowY: 'auto' }
+      }
+
+      // markdown and custom: natural height capped at MARKDOWN_MAX_HEIGHT
+      return { maxHeight: `${MARKDOWN_MAX_HEIGHT}px`, overflowY: 'auto' }
+    }
+
+    // containerHeight prop for results-component — must match the card body height.
+    const getArtifactContainerHeight = (artifact: ChatArtifact): number => {
+      if (artifact.type === 'chart') return CHART_HEIGHT
+      if (artifact.type === 'results') {
+        const results = getArtifactResults(artifact)
+        if (!results || hasComplexColumns(results)) return MAX_RESULTS_HEIGHT
+        const rowCount = results.data.length
+        return Math.max(
+          MIN_RESULTS_HEIGHT,
+          Math.min(
+            MAX_RESULTS_HEIGHT,
+            RESULTS_TABS_OVERHEAD + TABLE_HEADER_HEIGHT + TABLE_ROW_HEIGHT * rowCount + 8,
+          ),
+        )
+      }
+      return MAX_RESULTS_HEIGHT
+    }
+
     // Public methods
     const addMessage = (message: ChatMessage) => {
       messages.value.push(message)
@@ -542,6 +642,10 @@ export default defineComponent({
       getArtifactIcon,
       getArtifactLabel,
       getArtifactMeta,
+      isArtifactCollapsed,
+      toggleArtifactCollapsed,
+      getArtifactCardStyle,
+      getArtifactContainerHeight,
       addMessage,
       clearChat,
       getMessages,
@@ -741,11 +845,23 @@ export default defineComponent({
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
   min-height: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.artifact-card-header:hover {
+  background-color: var(--button-mouseover);
 }
 
 .artifact-card-header i {
   font-size: 14px;
   opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.collapse-chevron {
+  margin-left: auto;
+  opacity: 0.5;
   flex-shrink: 0;
 }
 
@@ -766,14 +882,12 @@ export default defineComponent({
 }
 
 .artifact-card-body {
-  height: 450px;
   overflow: hidden;
 }
 
 .markdown-artifact-view {
   padding: 10px;
   overflow: auto;
-  height: 100%;
 }
 
 .custom-artifact-view {
