@@ -100,8 +100,6 @@ test.describe('LLM Connection Tests', () => {
       await page.getByTestId('sidebar-link-llms').click()
     }
 
-    
-
     await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')

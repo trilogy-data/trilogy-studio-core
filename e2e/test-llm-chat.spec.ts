@@ -166,7 +166,6 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     // Should show no artifacts message
     await expect(page.locator('.no-artifacts')).toBeVisible({ timeout: 5000 })
 
-
     // Click on Fields tab
     await page.getByTestId('llm-sidebar-tab-fields').click()
 

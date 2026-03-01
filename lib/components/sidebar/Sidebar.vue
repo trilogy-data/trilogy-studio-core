@@ -122,8 +122,8 @@
 
     <div
       class="sidebar-content"
-      :class="{ 'sidebar-content-collapsed': contentCollapsed }"
-      :style="contentCollapsed ? {} : { width: containerWidth - 40 + 'px' }"
+      :class="{ 'sidebar-content-collapsed': contentCollapsed && !isMobile() }"
+      :style="contentCollapsed && !isMobile() ? {} : { width: containerWidth - 40 + 'px' }"
     >
       <EditorList
         :activeEditor="activeEditor"
@@ -355,6 +355,10 @@ export default defineComponent({
       }, 500)
     },
     selectItem(index: string) {
+      if (this.isMobile()) {
+        this.$emit('screen-selected', index)
+        return
+      }
       if (index === this.active) {
         this.contentCollapsed = !this.contentCollapsed
       } else {
