@@ -79,7 +79,7 @@ describe('useToolLoop', () => {
     it('should set artifacts', () => {
       const { setArtifacts, artifacts } = useToolLoop()
 
-      setArtifacts([{ type: 'results', data: { headers: [], data: [] } }])
+      setArtifacts([{ id: 'art-test-1', type: 'results', data: { headers: [], data: [] } }])
 
       expect(artifacts.value).toHaveLength(1)
       expect(artifacts.value[0].type).toBe('results')

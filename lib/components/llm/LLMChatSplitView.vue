@@ -1,7 +1,7 @@
 <template>
   <div class="chat-split-container" :class="{ 'is-resizing': isResizing }">
     <!-- Left: Chat Panel -->
-    <div class="chat-panel">
+    <div class="chat-panel" :style="{ width: chatWidth + 'px' }">
       <l-l-m-chat
         ref="chatRef"
         :messages="messages"
@@ -13,6 +13,7 @@
         :disabled="disabled"
         :externalLoading="isLoading"
         :activeToolName="activeToolName"
+        :renderArtifacts="showInlineArtifacts"
         :sendHandler="handleSendMessage"
         @update:messages="handleMessagesUpdate"
         @message-sent="$emit('message-sent', $event)"
@@ -37,45 +38,16 @@
             </div>
           </slot>
         </template>
-        <!-- Render inline artifacts (charts) in messages -->
-        <template #artifact="{ artifact }">
-          <div
-            class="inline-artifact"
-            v-if="artifact.type === 'chart' && getArtifactResults(artifact)"
-          >
-            <results-component
-              :type="'trilogy'"
-              :results="getArtifactResults(artifact)!"
-              :chartConfig="artifact.config?.chartConfig"
-              :generatedSql="artifact.config?.generatedSql"
-              :trilogySource="artifact.config?.query"
-              :containerHeight="400"
-              :defaultTab="'visualize'"
-              @config-change="
-                (config: ChartConfig) => handleInlineChartConfigChange(artifact, config)
-              "
-            />
-          </div>
-          <div v-else class="artifact-placeholder">[Artifact: {{ artifact.type }}]</div>
-        </template>
       </l-l-m-chat>
     </div>
 
     <!-- Resizer -->
     <div class="panel-resizer" @mousedown="startResize"></div>
 
-    <!-- Right: Sidebar with Symbols/Artifacts tabs -->
-    <div class="sidebar-panel" :style="{ width: sidebarWidth + 'px' }">
+    <!-- Right: Artifacts/Symbols panel (primary view) -->
+    <div class="sidebar-panel">
       <!-- Sidebar tabs -->
       <div class="sidebar-tabs">
-        <button
-          class="sidebar-tab"
-          :class="{ active: sidebarTab === 'symbols' }"
-          @click="sidebarTab = 'symbols'"
-          data-testid="llm-sidebar-tab-fields"
-        >
-          Fields
-        </button>
         <button
           class="sidebar-tab"
           :class="{ active: sidebarTab === 'artifacts' }"
@@ -85,89 +57,54 @@
           Artifacts
           <span v-if="artifacts.length > 0" class="artifact-count">{{ artifacts.length }}</span>
         </button>
-      </div>
-
-      <!-- Symbols Pane -->
-      <div v-if="sidebarTab === 'symbols'" class="sidebar-content">
-        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
+        <button
+          class="sidebar-tab"
+          :class="{ active: sidebarTab === 'symbols' }"
+          @click="sidebarTab = 'symbols'"
+          data-testid="llm-sidebar-tab-fields"
+        >
+          Fields
+        </button>
       </div>
 
       <!-- Artifacts Pane -->
-      <div v-else-if="sidebarTab === 'artifacts'" class="sidebar-content artifacts-content">
-        <!-- Artifact List -->
-        <div class="artifacts-list" v-if="artifacts.length > 0">
-          <div
-            v-for="(artifact, index) in artifacts"
-            :key="index"
-            class="artifact-list-item"
-            :class="{ active: activeArtifactIndex === index }"
-            @click="setActiveArtifact(index)"
-          >
-            <i :class="getArtifactIcon(artifact)"></i>
-            <div class="artifact-item-content">
-              <span class="artifact-label">{{ getArtifactLabel(artifact, index) }}</span>
-              <span class="artifact-meta">{{ getArtifactMeta(artifact) }}</span>
-            </div>
-          </div>
-        </div>
+      <div v-if="sidebarTab === 'artifacts'" class="sidebar-content artifacts-content">
+        <artifacts-pane
+          :artifacts="artifacts"
+          :activeArtifactIndex="activeArtifactIndex"
+          @update:activeArtifactIndex="setActiveArtifact"
+          @publish-artifacts="$emit('publish-artifacts')"
+          @chart-config-change="handleArtifactChartConfigChange"
+        >
+          <template #custom-artifact="slotProps">
+            <slot name="custom-artifact" v-bind="slotProps"></slot>
+          </template>
+        </artifacts-pane>
+      </div>
 
-        <!-- Expanded Artifact View -->
-        <div class="artifact-expanded" v-if="activeArtifact" ref="artifactExpandedRef">
-          <div class="artifact-content" :style="{ height: artifactContentHeight + 'px' }">
-            <template v-if="activeArtifactResults">
-              <results-component
-                :type="'trilogy'"
-                :results="activeArtifactResults"
-                :chartConfig="activeArtifactChartConfig"
-                :generatedSql="activeArtifact.config?.generatedSql"
-                :trilogySource="activeArtifact.config?.query"
-                :containerHeight="artifactContentHeight"
-                :defaultTab="activeArtifact.type === 'chart' ? 'visualize' : 'results'"
-                @config-change="handleChartConfigChange"
-              />
-            </template>
-            <template v-else-if="activeArtifact.type === 'code'">
-              <code-block
-                :language="activeArtifact.config?.language || 'sql'"
-                :content="activeArtifact.data || ''"
-              />
-            </template>
-            <template v-else>
-              <div class="custom-artifact-view">
-                <slot name="custom-artifact" :artifact="activeArtifact">
-                  <pre>{{ JSON.stringify(activeArtifact.data, null, 2) }}</pre>
-                </slot>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- No artifacts state -->
-        <div class="no-artifacts" v-else>
-          <span>No artifacts yet. Run a query to see results here.</span>
-        </div>
+      <!-- Symbols Pane -->
+      <div v-else-if="sidebarTab === 'symbols'" class="sidebar-content">
+        <SymbolsPane :symbols="symbols" @select-symbol="handleSymbolSelect" />
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch, onMounted, onUnmounted, type PropType } from 'vue'
+import { defineComponent, ref, computed, watch, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
+import ArtifactsPane from './ArtifactsPane.vue'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../../chats/chat'
-import ResultsComponent from '../editor/Results.vue'
-import CodeBlock from '../CodeBlock.vue'
 import DashboardImportSelector from '../dashboard/DashboardImportSelector.vue'
 import SymbolsPane from '../SymbolsPane.vue'
-import { Results, type ChartConfig } from '../../editors/results'
+import type { ChartConfig } from '../../editors/results'
 import type { CompletionItem } from '../../stores/resolver'
 
 export default defineComponent({
   name: 'LLMChatSplitView',
   components: {
     LLMChat,
-    ResultsComponent,
-    CodeBlock,
+    ArtifactsPane,
     DashboardImportSelector,
     SymbolsPane,
   },
@@ -251,6 +188,11 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    // Whether to render artifacts inline in chat messages (default off for artifact-centric view)
+    showInlineArtifacts: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'message-sent',
@@ -263,22 +205,21 @@ export default defineComponent({
     'import-change',
     'select-symbol',
     'title-update',
+    'publish-artifacts',
   ],
   setup(props, { emit }) {
     const chatRef = ref<InstanceType<typeof LLMChat> | null>(null)
-    const artifactExpandedRef = ref<HTMLElement | null>(null)
 
     // State
     const messages = ref<ChatMessage[]>([...props.initialMessages])
     const artifacts = ref<ChatArtifact[]>([...props.initialArtifacts])
     const activeArtifactIndex = ref(props.initialActiveArtifactIndex)
-    const sidebarTab = ref<'symbols' | 'artifacts'>('symbols')
+    const sidebarTab = ref<'symbols' | 'artifacts'>('artifacts')
     const internalLoading = ref(false)
-    const artifactContentHeight = ref(400)
 
-    // Resizer state
+    // Resizer state - controls chat panel width (artifacts panel takes remaining flex space)
     const isResizing = ref(false)
-    const sidebarWidth = ref(350)
+    const chatWidth = ref(350)
 
     const startResize = (e: MouseEvent) => {
       isResizing.value = true
@@ -293,10 +234,10 @@ export default defineComponent({
       if (!container) return
 
       const containerRect = container.getBoundingClientRect()
-      const newWidth = containerRect.right - e.clientX
+      const newWidth = e.clientX - containerRect.left
 
-      // Clamp between 200 and 600 pixels
-      sidebarWidth.value = Math.min(1200, Math.max(200, newWidth))
+      // Clamp chat panel between 200 and 600 pixels
+      chatWidth.value = Math.min(600, Math.max(200, newWidth))
     }
 
     const stopResize = () => {
@@ -309,32 +250,12 @@ export default defineComponent({
 
     const isLoading = computed(() => props.externalLoading || internalLoading.value)
 
-    // Active artifact computed
+    // Active artifact computed (used for highlighting most-recently created/selected artifact)
     const activeArtifact = computed(() => {
       if (activeArtifactIndex.value >= 0 && activeArtifactIndex.value < artifacts.value.length) {
         return artifacts.value[activeArtifactIndex.value]
       }
       return null
-    })
-
-    // Convert artifact data to Results for display
-    const activeArtifactResults = computed(() => {
-      if (!activeArtifact.value) return null
-      const data = activeArtifact.value.data
-
-      if (data instanceof Results) {
-        return data
-      }
-
-      if (data?.headers && data?.data) {
-        return Results.fromJSON(data)
-      }
-
-      return null
-    })
-
-    const activeArtifactChartConfig = computed<ChartConfig | undefined>(() => {
-      return activeArtifact.value?.config?.chartConfig
     })
 
     // Watch for prop changes
@@ -360,33 +281,6 @@ export default defineComponent({
         activeArtifactIndex.value = newIndex
       },
     )
-
-    // Update artifact content height based on container
-    const updateArtifactContentHeight = () => {
-      if (artifactExpandedRef.value) {
-        const headerHeight = 44 // Header height
-        const queryHeight = 0 // Query section is in details, doesn't affect height
-        const containerHeight = artifactExpandedRef.value.parentElement?.clientHeight || 500
-        const listHeight = 200 // Approximate artifact list height
-        artifactContentHeight.value = Math.max(
-          200,
-          containerHeight - listHeight - headerHeight - queryHeight - 60,
-        )
-      }
-    }
-
-    onMounted(() => {
-      updateArtifactContentHeight()
-      window.addEventListener('resize', updateArtifactContentHeight)
-    })
-
-    onUnmounted(() => {
-      window.removeEventListener('resize', updateArtifactContentHeight)
-    })
-
-    watch(activeArtifactIndex, () => {
-      setTimeout(updateArtifactContentHeight, 50)
-    })
 
     // Handlers
     const handleMessagesUpdate = (newMessages: ChatMessage[]) => {
@@ -464,74 +358,11 @@ export default defineComponent({
       emit('update:artifacts', artifacts.value)
       emit('update:activeArtifactIndex', activeArtifactIndex.value)
       emit('artifact-created', artifact)
-      setTimeout(updateArtifactContentHeight, 50)
     }
 
-    const handleChartConfigChange = (config: ChartConfig) => {
-      if (activeArtifact.value) {
-        activeArtifact.value.config = { ...activeArtifact.value.config, chartConfig: config }
-        emit('update:artifacts', artifacts.value)
-      }
-    }
-
-    // Convert artifact data to Results for inline display
-    const getArtifactResults = (artifact: ChatArtifact): Results | null => {
-      const data = artifact.data
-
-      if (data instanceof Results) {
-        return data
-      }
-
-      if (data?.headers && data?.data) {
-        return Results.fromJSON(data)
-      }
-
-      return null
-    }
-
-    // Handle chart config changes for inline artifacts
-    const handleInlineChartConfigChange = (artifact: ChatArtifact, config: ChartConfig) => {
+    const handleArtifactChartConfigChange = (artifact: ChatArtifact, config: ChartConfig) => {
       artifact.config = { ...artifact.config, chartConfig: config }
       emit('update:artifacts', artifacts.value)
-      emit('update:messages', messages.value)
-    }
-
-    // Helper functions for artifact display
-    const getArtifactIcon = (artifact: ChatArtifact): string => {
-      switch (artifact.type) {
-        case 'results':
-          return 'mdi mdi-table'
-        case 'chart':
-          return 'mdi mdi-chart-bar'
-        case 'code':
-          return 'mdi mdi-code-braces'
-        default:
-          return 'mdi mdi-file-document'
-      }
-    }
-
-    const getArtifactLabel = (artifact: ChatArtifact, index: number): string => {
-      if (artifact.config?.title) {
-        return artifact.config.title
-      }
-      const typeLabel =
-        artifact.type === 'results'
-          ? 'Query Result'
-          : artifact.type === 'chart'
-            ? 'Chart'
-            : artifact.type
-      return `${typeLabel} #${index + 1}`
-    }
-
-    const getArtifactMeta = (artifact: ChatArtifact): string => {
-      const parts: string[] = []
-      if (artifact.config?.resultSize) {
-        parts.push(`${artifact.config.resultSize} rows`)
-      }
-      if (artifact.config?.executionTime) {
-        parts.push(`${artifact.config.executionTime}ms`)
-      }
-      return parts.join(' | ')
     }
 
     // Public methods
@@ -559,15 +390,11 @@ export default defineComponent({
 
     return {
       chatRef,
-      artifactExpandedRef,
       messages,
       artifacts,
       activeArtifact,
       activeArtifactIndex,
-      activeArtifactResults,
-      activeArtifactChartConfig,
       sidebarTab,
-      artifactContentHeight,
       isLoading,
       handleMessagesUpdate,
       handleSendMessage,
@@ -575,12 +402,7 @@ export default defineComponent({
       setActiveArtifact,
       collapseArtifact,
       addArtifact,
-      handleChartConfigChange,
-      getArtifactResults,
-      handleInlineChartConfigChange,
-      getArtifactIcon,
-      getArtifactLabel,
-      getArtifactMeta,
+      handleArtifactChartConfigChange,
       addMessage,
       clearChat,
       getMessages,
@@ -588,7 +410,7 @@ export default defineComponent({
       handleSymbolSelect,
       // Resizer
       isResizing,
-      sidebarWidth,
+      chatWidth,
       startResize,
     }
   },
@@ -604,8 +426,9 @@ export default defineComponent({
 }
 
 .chat-panel {
-  flex: 1;
-  min-width: 300px;
+  flex: 0 0 auto;
+  min-width: 200px;
+  max-width: 600px;
   height: 100%;
   overflow: hidden;
 }
@@ -640,18 +463,6 @@ export default defineComponent({
   border-radius: 4px;
 }
 
-/* Inline artifact in chat messages */
-.inline-artifact {
-  width: 100%;
-  min-height: 400px;
-  height: 450px;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: var(--bg-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
 .artifact-placeholder {
   padding: 16px;
   background-color: var(--query-window-bg);
@@ -661,10 +472,10 @@ export default defineComponent({
   border-radius: 8px;
 }
 
-/* Sidebar Panel with tabs */
+/* Sidebar Panel with tabs - primary (larger) panel */
 .sidebar-panel {
-  min-width: 200px;
-  max-width: 1200px;
+  flex: 1;
+  min-width: 300px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -725,48 +536,90 @@ export default defineComponent({
   overflow: hidden;
 }
 
-/* Artifact List */
-.artifacts-list {
-  max-height: 180px;
-  overflow-y: auto;
+/* Publish button */
+.artifacts-actions {
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
 }
 
-.artifact-list-item {
+.publish-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
+  font-size: var(--font-size);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.publish-btn:hover {
+  background-color: var(--special-text);
+  color: white;
+  border-color: var(--special-text);
+}
+
+.publish-btn i {
+  font-size: 16px;
+}
+
+/* Scrollable all-artifacts view */
+.artifacts-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.artifact-card {
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.artifact-card:hover {
+  border-color: var(--border);
+}
+
+.artifact-card.active {
+  border-color: var(--special-text);
+}
+
+.artifact-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
+  padding: 6px 10px;
+  background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
-  transition: background-color 0.15s ease;
+  min-height: 32px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.artifact-list-item:last-child {
-  border-bottom: none;
-}
-
-.artifact-list-item:hover {
+.artifact-card-header:hover {
   background-color: var(--button-mouseover);
 }
 
-.artifact-list-item.active {
-  background-color: var(--sidebar-selector-selected-bg);
-  color: var(--sidebar-selector-font);
-}
-
-.artifact-list-item i {
-  font-size: 16px;
+.artifact-card-header i {
+  font-size: 14px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
-.artifact-item-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.collapse-chevron {
+  margin-left: auto;
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
 .artifact-label {
@@ -775,30 +628,23 @@ export default defineComponent({
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .artifact-meta {
   font-size: var(--small-font-size);
   color: var(--text-faint);
+  flex-shrink: 0;
 }
 
-.artifact-list-item.active .artifact-meta {
-  color: inherit;
-  opacity: 0.7;
-}
-
-/* Expanded Artifact View */
-.artifact-expanded {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.artifact-card-body {
   overflow: hidden;
 }
 
-.artifact-content {
-  flex: 1;
+.markdown-artifact-view {
+  padding: 10px;
   overflow: auto;
-  min-height: 200px;
 }
 
 .custom-artifact-view {
@@ -831,9 +677,11 @@ export default defineComponent({
   }
 
   .chat-panel {
-    flex: 1;
+    flex: 0 0 auto;
+    width: 100% !important;
     max-width: 100%;
-    min-height: 50%;
+    min-width: 100%;
+    height: 40%;
   }
 
   .panel-resizer {
@@ -841,15 +689,12 @@ export default defineComponent({
   }
 
   .sidebar-panel {
+    flex: 1;
     width: 100% !important;
     max-width: 100%;
     min-width: 100%;
-    height: 50%;
+    min-height: 60%;
     border-top: 1px solid var(--border-light);
-  }
-
-  .artifacts-list {
-    max-height: 100px;
   }
 }
 </style>

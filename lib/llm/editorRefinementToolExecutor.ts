@@ -3,6 +3,7 @@ import type { QueryInput } from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatArtifact } from '../chats/chat'
+import { generateArtifactId } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
@@ -10,6 +11,7 @@ import { symbolsToFieldPrompt } from './editorRefinementTools'
 export interface ToolCallResult {
   success: boolean
   artifact?: ChatArtifact
+  artifactId?: string // ID of the artifact created by this tool call
   error?: string
   message?: string
   executionTime?: number
@@ -230,6 +232,7 @@ export class EditorRefinementToolExecutor {
 
       // Build artifact with results
       const artifact: ChatArtifact = {
+        id: generateArtifactId(),
         type: 'results',
         data: queryResult.results,
         config: {
@@ -404,6 +407,7 @@ export class EditorRefinementToolExecutor {
 
       // Build artifact with results
       const artifact: ChatArtifact = {
+        id: generateArtifactId(),
         type: 'results',
         data: queryResult.results,
         config: {

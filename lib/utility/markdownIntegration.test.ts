@@ -473,6 +473,60 @@ Script: {data[0].script}`
     })
   })
 
+  describe('Regression: template expressions protected from markdown emphasis', () => {
+    it('should evaluate arithmetic format expressions in list items without mangling', () => {
+      // Before the fix, processLists merged adjacent <ul> items onto one line, then
+      // processEmphasis paired the * in "{(a/b*100):.1f}" of item 1 with item 2's *,
+      // consuming both * chars and eating the content between them.
+      const data = createResults([
+        {
+          departures_from_logan: 5797,
+          arrivals_to_logan: 5799,
+          cancelled_departures: 83,
+          cancelled_arrivals: 86,
+        },
+      ])
+
+      const template = `## Key Flight Statistics
+
+- **Total Departures**: {departures_from_logan} flights
+- **Total Arrivals**: {arrivals_to_logan} flights
+- **Cancelled Departures**: {cancelled_departures} ({cancelled_departures}/{departures_from_logan} = {(cancelled_departures/departures_from_logan*100):.1f}%)
+- **Cancelled Arrivals**: {cancelled_arrivals} ({cancelled_arrivals}/{arrivals_to_logan} = {(cancelled_arrivals/arrivals_to_logan*100):.1f}%)`
+
+      const result = renderMarkdown(template, data)
+
+      // Simple field names resolve correctly
+      expect(result).toContain('5797')
+      expect(result).toContain('5799')
+      expect(result).toContain('83')
+      expect(result).toContain('86')
+
+      // Arithmetic format expressions evaluate: 83/5797*100 ≈ 1.4, 86/5799*100 ≈ 1.5
+      expect(result).toContain('1.4')
+      expect(result).toContain('1.5')
+
+      // Both list items must be present (cross-item <em> wrapping would eat one of them)
+      expect(result).toContain('<strong>Cancelled Arrivals</strong>')
+      expect(result).toContain('<strong>Cancelled Departures</strong>')
+    })
+
+    it('should evaluate arithmetic format expressions in multiple list items', () => {
+      const data = createResults([{ total: 100, part: 25 }])
+
+      const template = `- **Metric A**: {part} of {total} = {(part/total*100):.1f}%
+- **Metric B**: {part} of {total} = {(part/total*100):.1f}%`
+
+      const result = renderMarkdown(template, data)
+
+      expect(result).toContain('<strong>Metric A</strong>')
+      expect(result).toContain('<strong>Metric B</strong>')
+      // 25/100*100 = 25.0 — should appear twice (once per list item)
+      const matches = result.match(/25\.0/g)
+      expect(matches).toHaveLength(2)
+    })
+  })
+
   describe('Real-world Scenarios', () => {
     it('should handle API response formatting', () => {
       const apiResponse = createResults([

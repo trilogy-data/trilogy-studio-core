@@ -43,7 +43,7 @@ select 3 as id, 'alice' as name
         ],
     )
 
-    response = test_client.post("/parse_model", data=model.model_dump_json())  # type: ignore
+    response = test_client.post("/parse_model", json=model.model_dump(mode="json"))
     assert response.status_code == 200
     assert response.json()["sources"][0]["concepts"][0]["address"] == "local.cuid"
 
@@ -79,7 +79,7 @@ select 3 as id, 'alice' as name
             ],
         ),
     )
-    response = test_client.post("/format_query", data=request.model_dump_json())  # type: ignore
+    response = test_client.post("/format_query", json=request.model_dump(mode="json"))
     assert response.status_code == 200
     assert "customer_count" in response.json()["text"]
 
@@ -125,19 +125,18 @@ select 3 as id, 'alice' as name , 'williams' as last_name
             ],
         ),
     )
-    response = test_client.post("/drilldown_query", data=request.model_dump_json())  # type: ignore
+    response = test_client.post(
+        "/drilldown_query", json=request.model_dump(mode="json")
+    )
     assert response.status_code == 200
-    assert (
-        response.json()["text"]
-        == """import test;
+    assert response.json()["text"] == """import test;
 
 WHERE
     name = 'bob'
 SELECT
     last_name,
     customer_count,
-;"""
-    ), response.json()["text"]
+;""", response.json()["text"]
 
 
 # def test_read_models(test_client: TestClient):

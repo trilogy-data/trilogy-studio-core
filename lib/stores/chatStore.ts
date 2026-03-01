@@ -365,9 +365,9 @@ export const useChatStore = defineStore('chats', {
           },
           addArtifact: (artifact) => {
             this.addArtifactToChat(chatId, artifact)
-            // For chart artifacts, inject the chart into the chat as a message
+            // For chart and markdown artifacts, inject into the chat as a message
             // so the user sees it inline in the conversation
-            if (artifact.type === 'chart') {
+            if (artifact.type === 'chart' || artifact.type === 'markdown') {
               this.addMessageToChat(chatId, {
                 role: 'assistant',
                 content: '',

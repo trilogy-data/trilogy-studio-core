@@ -97,9 +97,8 @@ test.describe('LLM Connection Tests', () => {
 
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
+      await page.getByTestId('sidebar-link-llms').click()
     }
-
-    await page.getByTestId('sidebar-link-llms').click()
 
     await page.getByTestId('llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()

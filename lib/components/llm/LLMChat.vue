@@ -24,8 +24,8 @@
         :data-testid="`message-${message.role}-${index}`"
       >
         <div class="message-content">
-          <!-- Render artifacts if present -->
-          <template v-if="message.artifact">
+          <!-- Render artifacts inline if renderArtifacts is enabled -->
+          <template v-if="message.artifact && renderArtifacts">
             <div class="message-text" v-if="getMessageTextWithoutArtifact(message)">
               <markdown-renderer
                 v-if="message.role === 'assistant'"
@@ -37,7 +37,7 @@
               <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
             </slot>
           </template>
-          <!-- Assistant message with markdown -->
+          <!-- Assistant message with markdown (also handles artifact messages when renderArtifacts is false) -->
           <template v-else-if="message.role === 'assistant'">
             <markdown-renderer :markdown="message.content" />
           </template>
@@ -212,6 +212,11 @@ export default defineComponent({
       type: String,
       default: 'Stop',
     },
+    // Whether to render artifacts inline in chat messages
+    renderArtifacts: {
+      type: Boolean,
+      default: true,
+    },
   },
 
   emits: [
@@ -349,6 +354,12 @@ export default defineComponent({
         remove_import: 'Removing import...',
         list_available_imports: 'Listing imports...',
         connect_data_connection: 'Connecting...',
+        create_markdown: 'Creating markdown...',
+        list_artifacts: 'Listing artifacts...',
+        get_artifact: 'Getting artifact...',
+        update_artifact: 'Updating artifact...',
+        remove_artifact: 'Removing artifact...',
+        reorder_artifacts: 'Reordering artifacts...',
       }
       return toolLabels[toolName] || `Using ${toolName}...`
     }
@@ -370,6 +381,12 @@ export default defineComponent({
         add_import: 'Added import',
         remove_import: 'Removed import',
         list_available_imports: 'Listed imports',
+        create_markdown: 'Created markdown',
+        list_artifacts: 'Listed artifacts',
+        get_artifact: 'Got artifact',
+        update_artifact: 'Updated artifact',
+        remove_artifact: 'Removed artifact',
+        reorder_artifacts: 'Reordered artifacts',
       }
       return toolLabels[toolName] || toolName.replace(/_/g, ' ')
     }

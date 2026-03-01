@@ -26,6 +26,9 @@
             Anthropic
           </option>
           <option value="google" data-testid="llm-connection-creator-google">Google</option>
+          <option value="openrouter" data-testid="llm-connection-creator-openrouter">
+            OpenRouter
+          </option>
         </select>
       </div>
 
@@ -112,16 +115,14 @@ import LoadingButton from '../LoadingButton.vue'
 import { OpenAIProvider } from '../../llm/openai'
 import { AnthropicProvider } from '../../llm/anthropic'
 import { GoogleProvider } from '../../llm/googlev2'
+import { OpenRouterProvider } from '../../llm/openrouter'
 
 // Hardcoded fallback models for when the API hasn't been validated yet
 const FALLBACK_MODELS = {
   openai: ['gpt-5.3', 'gpt-5.2', 'gpt-5.2-mini'],
-  anthropic: [
-    'claude-opus-4-6-20260514',
-    'claude-opus-4-20250514',
-    'claude-sonnet-4-20250514',
-  ],
+  anthropic: ['claude-opus-4-6-20260514', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514'],
   google: ['models/gemini-2.5-pro', 'models/gemini-2.5-flash'],
+  openrouter: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google/gemini-2.5-pro'],
 }
 
 export default defineComponent({
@@ -194,6 +195,11 @@ export default defineComponent({
         case 'google':
           connectionDetails.value.options.model = GoogleProvider.getDefaultModel(
             FALLBACK_MODELS.google,
+          )
+          break
+        case 'openrouter':
+          connectionDetails.value.options.model = OpenRouterProvider.getDefaultModel(
+            FALLBACK_MODELS.openrouter,
           )
           break
         default:

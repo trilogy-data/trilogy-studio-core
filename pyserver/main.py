@@ -24,10 +24,8 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from trilogy import CONFIG, __version__
 from contextlib import asynccontextmanager
 
-
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
-
 
 # Define the path to the .env file
 env_path = Path(__file__).parent / ".env"
@@ -114,9 +112,7 @@ allowed_origins += []
 if os.getenv("ALLOWED_ORIGINS") == "dev" or IS_DOCKER:
     allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 else:
-    allow_origin_regex = (
-        "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(https://greenmtnboy.github.io)|(app://.)"
-    )
+    allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(https://greenmtnboy.github.io)|(app://.)"
 allow_origin_regex = "(https://trilogy-data.github.io)|(https://trilogydata.dev)|(https://greenmtnboy.github.io)|(app://.)|(http://localhost:[0-9]+)|(http://127.0.0.1:[0-9]+)"
 app.add_middleware(
     CORSMiddleware,

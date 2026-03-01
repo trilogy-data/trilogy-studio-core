@@ -10,15 +10,8 @@ export { createChatNamePrompt, extractChatName } from './chatHelpers'
 export type { ModelConceptInput } from './data/models'
 
 // Chat agent prompt builder
-export {
-  buildChatAgentSystemPrompt,
-  buildCustomTrilogyPrompt,
-  CHAT_TOOLS,
-} from './chatAgentPrompt'
-export type {
-  ChatAgentPromptOptions,
-  TrilogyPromptContext,
-} from './chatAgentPrompt'
+export { buildChatAgentSystemPrompt, buildCustomTrilogyPrompt, CHAT_TOOLS } from './chatAgentPrompt'
+export type { ChatAgentPromptOptions, TrilogyPromptContext } from './chatAgentPrompt'
 
 // Editor refinement tools
 export { EDITOR_REFINEMENT_TOOLS, buildEditorRefinementPrompt } from './editorRefinementTools'

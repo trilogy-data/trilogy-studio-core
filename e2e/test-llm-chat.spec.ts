@@ -160,25 +160,24 @@ test.describe('LLM Chat with Artifacts Tests', () => {
     await expect(page.getByTestId('llm-sidebar-tab-fields')).toBeVisible({ timeout: 5000 })
     await expect(page.getByTestId('llm-sidebar-tab-artifacts')).toBeVisible({ timeout: 5000 })
 
-    // Fields tab should be active by default
-    await expect(page.getByTestId('llm-sidebar-tab-fields')).toHaveClass(/active/)
-
-    // Click on Artifacts tab
-    await page.getByTestId('llm-sidebar-tab-artifacts').click()
-
-    // Artifacts tab should now be active
+    // Artifacts tab should be active by default
     await expect(page.getByTestId('llm-sidebar-tab-artifacts')).toHaveClass(/active/)
 
     // Should show no artifacts message
     await expect(page.locator('.no-artifacts')).toBeVisible({ timeout: 5000 })
 
-    // Switch back to Fields
+    // Click on Fields tab
     await page.getByTestId('llm-sidebar-tab-fields').click()
+
+    // Fields tab should now be active
     await expect(page.getByTestId('llm-sidebar-tab-fields')).toHaveClass(/active/)
+
+    // Switch back to Artifacts
+    await page.getByTestId('llm-sidebar-tab-artifacts').click()
+    await expect(page.getByTestId('llm-sidebar-tab-artifacts')).toHaveClass(/active/)
   })
 
   test('should create new chat from sidebar', async ({ page, isMobile }) => {
-
     await page.goto('#skipTips=true')
     await setupLLMConnection(page, isMobile)
 

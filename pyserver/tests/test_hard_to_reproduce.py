@@ -28,9 +28,9 @@ def test_read_main(test_client: TestClient):
     assert response.status_code == 200
 
 
-def _generate_query_worker(test_client: TestClient, query_json: str):
+def _generate_query_worker(test_client: TestClient, query_payload: dict):
     """Worker function to execute a single API call"""
-    response = test_client.post("generate_query", data=query_json)  # type: ignore
+    response = test_client.post("generate_query", json=query_payload)
     if response.status_code != 200:
         print(f"Error: {response.status_code} - {response.text}")
     return response.status_code
@@ -41,13 +41,13 @@ def test_generate_query_parallel(
 ):
     """Execute API requests in parallel using ThreadPoolExecutor"""
     query = QueryInSchema.model_validate(X)
-    query_json = query.model_dump_json()
-    response = test_client.post("/generate_query", data=query_json)  # type: ignore
+    query_payload = query.model_dump(mode="json")
+    response = test_client.post("/generate_query", json=query_payload)
     response.raise_for_status()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks to the executor
         futures = [
-            executor.submit(_generate_query_worker, test_client, query_json)
+            executor.submit(_generate_query_worker, test_client, query_payload)
             for _ in range(num_requests)
         ]
 
@@ -78,8 +78,8 @@ def test_generate_show_query(test_client: TestClient):
         "parameters": {},
     }
     query = QueryInSchema.model_validate(query_data)
-    query_json = query.model_dump_json()
-    response = test_client.post("/generate_query", data=query_json)  # type: ignore
+    query_payload = query.model_dump(mode="json")
+    response = test_client.post("/generate_query", json=query_payload)
     response.raise_for_status()
     json = response.json()
     # assert "generated_sql" in json, json
@@ -111,8 +111,8 @@ def test_generate_multi_select(test_client: TestClient):
         "parameters": {},
     }
     query = QueryInSchema.model_validate(query_data)
-    query_json = query.model_dump_json()
-    response = test_client.post("/generate_query", data=query_json)  # type: ignore
+    query_payload = query.model_dump(mode="json")
+    response = test_client.post("/generate_query", json=query_payload)
     response.raise_for_status()
     json = response.json()
     # assert "generated_sql" in json, json

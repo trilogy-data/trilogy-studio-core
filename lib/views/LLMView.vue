@@ -43,6 +43,7 @@
         @update:activeArtifactIndex="handleActiveArtifactUpdate"
         @import-change="handleImportChange"
         @title-update="handleTitleUpdate"
+        @publish-artifacts="handlePublishArtifacts"
       >
         <template #header-prefix>
           <button
@@ -85,11 +86,13 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
 import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
+import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 import LLMChatSplitView from '../components/llm/LLMChatSplitView.vue'
 import LLMValidationView from '../components/llm/LLMValidationView.vue'
 import DashboardImportSelector from '../components/dashboard/DashboardImportSelector.vue'
 import { useChatWithTools } from '../composables/useChatWithTools'
+import { publishArtifactsToDashboard } from '../chats/publishArtifactsToDashboard'
 
 export default defineComponent({
   name: 'LLMChatDebugComponent',
@@ -121,6 +124,7 @@ export default defineComponent({
     const chatStore = inject('chatStore') as ChatStoreType | null
     const editorStore = inject('editorStore') as EditorStoreType | null
     const navigationStore = inject('navigationStore') as NavigationStore | null
+    const dashboardStore = inject('dashboardStore') as DashboardStoreType | null
 
     // View state - use initialTab if provided, otherwise default to 'chat'
     const activeView = ref<'chat' | 'validation'>(
@@ -219,9 +223,57 @@ export default defineComponent({
       )
     }
 
+    // Publish artifacts as a new dashboard
+    const handlePublishArtifacts = () => {
+      if (!dashboardStore) {
+        console.error('Dashboard store not available')
+        return
+      }
+
+      const activeChat = chatStore?.activeChat
+      if (!activeChat || activeChat.artifacts.length === 0) {
+        console.warn('No artifacts to publish')
+        return
+      }
+
+      const connectionName = activeChat.dataConnectionName || ''
+      if (!connectionName) {
+        console.error('No data connection associated with this chat')
+        return
+      }
+
+      // Generate a unique dashboard name
+      let baseName = activeChat.name || 'Chat Artifacts'
+      let dashboardName = baseName
+      let counter = 1
+      while (dashboardStore.getDashboardByName(dashboardName)) {
+        dashboardName = `${baseName} (${counter})`
+        counter++
+      }
+
+      const dashboard = publishArtifactsToDashboard(activeChat.artifacts, {
+        name: dashboardName,
+        connection: connectionName,
+        imports: activeChat.imports.map((imp) => ({
+          id: imp.id,
+          name: imp.name,
+          alias: imp.alias || '',
+        })),
+      })
+
+      dashboardStore.addDashboard(dashboard)
+      dashboardStore.setActiveDashboard(dashboard.id)
+
+      // Navigate to the dashboard if navigation store is available
+      if (navigationStore) {
+        navigationStore.setActiveDashboard(dashboard.id)
+      }
+    }
+
     return {
       activeView,
       chatSplitView,
+      handlePublishArtifacts,
       // Spread all chat composable returns
       ...chat,
     }

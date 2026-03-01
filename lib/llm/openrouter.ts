@@ -454,7 +454,7 @@ export class OpenRouterProvider extends LLMProvider {
       if (rawToolCalls && rawToolCalls.length > 0) {
         for (const toolCall of rawToolCalls) {
           if (toolCall.type === 'function') {
-            const input = JSON.parse(toolCall.function.arguments)
+            const input = toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {}
             structuredToolCalls.push({
               id: toolCall.id,
               name: toolCall.function.name,
