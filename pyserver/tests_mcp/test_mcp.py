@@ -8,13 +8,11 @@ from mcp_server import (
 def test_create_model_connection():
     c = create_model_connection("test_duckdb_faa", "faa")
 
-    results = c.execute_query(
-        """
+    results = c.execute_query("""
 select
     origin.city,
     count(id2) ->flight_count
-    order by flight_count desc limit 10;"""
-    ).fetchall()
+    order by flight_count desc limit 10;""").fetchall()
 
     assert results[0].origin_city == "CHICAGO"
 

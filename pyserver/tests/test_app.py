@@ -125,19 +125,18 @@ select 3 as id, 'alice' as name , 'williams' as last_name
             ],
         ),
     )
-    response = test_client.post("/drilldown_query", json=request.model_dump(mode="json"))
+    response = test_client.post(
+        "/drilldown_query", json=request.model_dump(mode="json")
+    )
     assert response.status_code == 200
-    assert (
-        response.json()["text"]
-        == """import test;
+    assert response.json()["text"] == """import test;
 
 WHERE
     name = 'bob'
 SELECT
     last_name,
     customer_count,
-;"""
-    ), response.json()["text"]
+;""", response.json()["text"]
 
 
 # def test_read_models(test_client: TestClient):

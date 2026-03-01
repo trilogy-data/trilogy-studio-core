@@ -24,7 +24,6 @@ from trilogy.core.statements.execute import (
 )
 from functools import wraps
 
-
 # Simple in-memory cache for HTTP requests
 _http_cache: dict[str, str] = {}
 
@@ -356,7 +355,9 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
         values = result.fetchall()
     return QueryResult(
         headers=headers,
-        results=[{"_index": idx, **dict(row._mapping)} for idx, row in enumerate(values)],
+        results=[
+            {"_index": idx, **dict(row._mapping)} for idx, row in enumerate(values)
+        ],
     )
 
 
