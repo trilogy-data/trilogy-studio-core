@@ -425,7 +425,6 @@ export default defineComponent({
       emit('update:artifacts', artifacts.value)
       emit('update:activeArtifactIndex', activeArtifactIndex.value)
       emit('artifact-created', artifact)
-      setTimeout(updateArtifactContentHeight, 50)
     }
 
     const handleArtifactChartConfigChange = (artifact: ChatArtifact, config: ChartConfig) => {

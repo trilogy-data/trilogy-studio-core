@@ -49,7 +49,6 @@ export function publishArtifactsToDashboard(
 
   // Layout constants
   const FULL_WIDTH = 20 // grid is 0-20
-  const HALF_WIDTH = 10
 
   // Arrange items: alternate full-width and side-by-side pairs
   for (const artifact of artifacts) {
