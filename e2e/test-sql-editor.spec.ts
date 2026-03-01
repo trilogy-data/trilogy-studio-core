@@ -379,8 +379,9 @@ SELECT 1;
   // Navigate back to the editors
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
+    await page.getByTestId('sidebar-link-editors').click()
   }
-  await page.getByTestId('sidebar-link-editors').click()
+  
 
   // Click on test-one editor
   await page.getByTestId('editor-e-local-duckdb-test-test-one').click()
