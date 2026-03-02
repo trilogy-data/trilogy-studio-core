@@ -188,7 +188,7 @@ RAW_VARIABLE_REQUEST_TWO = {
 def test_parse_with_variables_two():
     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST_TWO)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _ = generate_query_core(query, dialect)
+    final, _, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -230,7 +230,7 @@ INVALID_PARSE_DEBUG = {
 def test_parse_error():
     query = QueryInSchema.model_validate(INVALID_PARSE_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _ = generate_query_core(query, dialect)
+    final, _, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -255,7 +255,7 @@ MAP_DEBUG = {
 def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, columns, _ = generate_query_core(query, dialect)
+    final, columns, _, _ = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
 
 

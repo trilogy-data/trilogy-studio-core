@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon'
+
 // class QueryOut(BaseModel):
 //     connection: str
 //     query: str
@@ -144,9 +146,13 @@ function makeValuesJsonSerializable(
       if (typeof value === 'bigint') {
         serializedObj[key] = value.toString()
       }
-      // Handle Dates
+      // Handle native Dates
       else if (value instanceof Date) {
         serializedObj[key] = value.toISOString()
+      }
+      // Handle luxon DateTime objects (used by DuckDB, Snowflake, BigQuery for date/datetime columns)
+      else if (value !== null && value !== undefined && value.isLuxonDateTime === true) {
+        serializedObj[key] = value.toISO()
       }
       // Recursively handle nested objects or arrays
       else if (Array.isArray(value)) {
@@ -199,9 +205,24 @@ export class Results implements ResultsInterface {
       ]),
     )
 
-    // Parse data
+    // Parse data, restoring date/datetime columns from ISO strings back to luxon DateTime
     if (Array.isArray(parsed.data)) {
-      const data = parsed.data || []
+      const data = (parsed.data as Record<string, any>[]).map((row) => {
+        const processedRow: Record<string, any> = { ...row }
+        headers.forEach((column, key) => {
+          const val = processedRow[key]
+          if (
+            (column.type === ColumnType.DATE ||
+              column.type === ColumnType.DATETIME ||
+              column.type === ColumnType.TIMESTAMP) &&
+            typeof val === 'string' &&
+            val
+          ) {
+            processedRow[key] = DateTime.fromISO(val, { zone: 'UTC' })
+          }
+        })
+        return processedRow
+      })
       return new Results(headers, data)
     } else {
       return new Results(headers, [])

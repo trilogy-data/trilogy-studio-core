@@ -86,6 +86,38 @@ describe('Markdown Conversion', () => {
     })
   })
 
+  describe('h4 Headers', () => {
+    it('should convert h4 markdown headers to HTML', () => {
+      expect(convertMarkdownToHtml('#### Header 4')).toBe(
+        '<h4 class="rendered-markdown-h4">Header 4</h4>',
+      )
+    })
+
+    it('should not confuse #### with ###', () => {
+      const result = convertMarkdownToHtml('#### Deep Section')
+      expect(result).toContain('<h4 class="rendered-markdown-h4">Deep Section</h4>')
+      expect(result).not.toContain('<h3')
+    })
+  })
+
+  describe('Ordered Lists', () => {
+    it('should convert numbered lists to ol/li elements', () => {
+      const markdown = `1. Item one
+2. Item two
+3. Item three`
+      const result = convertMarkdownToHtml(markdown)
+      expect(result).toBe('<ol><li>Item one</li><li>Item two</li><li>Item three</li></ol>')
+    })
+
+    it('should handle ordered lists with emphasis', () => {
+      const markdown = `1. **Bold item**
+2. *Italic item*`
+      const result = convertMarkdownToHtml(markdown)
+      expect(result).toContain('<li><strong>Bold item</strong></li>')
+      expect(result).toContain('<li><em>Italic item</em></li>')
+    })
+  })
+
   describe('Lists', () => {
     it('should convert bullet lists with asterisks', () => {
       const markdown = `* Item 1
@@ -416,6 +448,33 @@ describe('Markdown with Templates', () => {
 
     // Templates outside code blocks should be processed
     expect(result).toContain('<strong>Name:</strong> John')
+  })
+
+  it('should render h4 header, ordered list, and data[N].field:, format expressions', () => {
+    const crimeData = createResults([
+      { primary_type: 'THEFT', crime_count: 77021 },
+      { primary_type: 'BATTERY', crime_count: 56122 },
+      { primary_type: 'CRIMINAL DAMAGE', crime_count: 40492 },
+      { primary_type: 'NARCOTICS', crime_count: 34840 },
+      { primary_type: 'ASSAULT', crime_count: 25251 },
+    ])
+
+    const template = `#### Top 5 Crime Types:
+1. **{data[0].primary_type}**: {data[0].crime_count:,}
+2. **{data[1].primary_type}**: {data[1].crime_count:,}
+3. **{data[2].primary_type}**: {data[2].crime_count:,}
+4. **{data[3].primary_type}**: {data[3].crime_count:,}
+5. **{data[4].primary_type}**: {data[4].crime_count:,}`
+
+    const result = renderMarkdown(template, crimeData)
+
+    expect(result).toContain('<h4 class="rendered-markdown-h4">Top 5 Crime Types:</h4>')
+    expect(result).toContain('<ol>')
+    expect(result).toContain('<li><strong>THEFT</strong>: 77,021</li>')
+    expect(result).toContain('<li><strong>BATTERY</strong>: 56,122</li>')
+    expect(result).toContain('<li><strong>CRIMINAL DAMAGE</strong>: 40,492</li>')
+    expect(result).toContain('<li><strong>NARCOTICS</strong>: 34,840</li>')
+    expect(result).toContain('<li><strong>ASSAULT</strong>: 25,251</li>')
   })
 
   it('should handle fallbacks in markdown context', () => {

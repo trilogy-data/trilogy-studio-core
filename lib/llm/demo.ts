@@ -1,4 +1,5 @@
 import { OpenRouterProvider } from './openrouter'
+import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 
 // URL for the demo token minting service.
 export const DEMO_TOKEN_SERVICE_URL = 'https://open-router-token-service.fly.dev'
@@ -44,6 +45,25 @@ export class DemoProvider extends OpenRouterProvider {
     this.apiKey = await fetchDemoToken()
     this.changed = prevChanged
     return super.reset()
+  }
+
+  /**
+   * If the OpenRouter key returns a 401 (demo key expired after ~1 hour),
+   * automatically fetch a fresh token and retry the request once.
+   */
+  async generateCompletion(
+    options: LLMRequestOptions,
+    history: LLMMessage[] | null = null,
+  ): Promise<LLMResponse> {
+    try {
+      return await super.generateCompletion(options, history)
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('401')) {
+        await this.reset()
+        return await super.generateCompletion(options, history)
+      }
+      throw error
+    }
   }
 
   static getDefaultModel(models: string[]): string {

@@ -211,6 +211,14 @@ export class EditorRefinementToolExecutor {
 
       const queryResult = await result.resultPromise
 
+      if (queryResult.selectCount !== undefined && queryResult.selectCount > 1) {
+        return {
+          success: false,
+          error: `Query contains ${queryResult.selectCount} SELECT statements. Each run_query call must contain exactly one SELECT statement. Please split your selects across multiple run_query calls.`,
+          query,
+        }
+      }
+
       if (!queryResult.success) {
         return {
           success: false,

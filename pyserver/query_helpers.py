@@ -128,6 +128,7 @@ def generate_single_query(
     PROCESSED_STATEMENT_TYPES | None,
     list[QueryOutColumn],
     list[dict] | None,
+    int,
 ]:
     start_time = time.time()
 
@@ -144,12 +145,17 @@ def generate_single_query(
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
     default_values: list[dict] | None = None
+    select_count = sum(
+        1
+        for s in parsed
+        if isinstance(s, (SelectStatement, MultiSelectStatement, PersistStatement))
+    )
     if not parsed:
         if enable_performance_logging:
             perf_logger.debug(
                 f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
             )
-        return None, default_return, default_values
+        return None, default_return, default_values, 0
 
     final = parsed[-1]
     variables = parameters or {}
@@ -162,7 +168,7 @@ def generate_single_query(
                 f"Raw SQL generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return ProcessedRawSQLStatement(text=final.text), default_return, default_values
+        return ProcessedRawSQLStatement(text=final.text), default_return, default_values, select_count
     elif isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedShowStatement)
@@ -183,6 +189,7 @@ def generate_single_query(
                 for x in results.columns
             ],
             results.as_dict(),
+            select_count,
         )
     elif isinstance(final, (ValidateStatement)):
         base = dialect.generate_queries(env, [final])[-1]
@@ -207,6 +214,7 @@ def generate_single_query(
                 else []
             ),
             validate_results.as_dict() if validate_results else None,
+            select_count,
         )
     if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
         columns: list[QueryOutColumn] = []
@@ -216,7 +224,7 @@ def generate_single_query(
                 f"Non-query generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return None, columns, None
+        return None, columns, None, select_count
     final_select = final.select if isinstance(final, PersistStatement) else final
     # Process columns
     col_start = time.time()
@@ -290,7 +298,7 @@ def generate_single_query(
             if k in pre_concepts:
                 env.add_concept(pre_concepts[k], force=True)
                 # env.concepts[k] = pre_concepts[k]
-    return output_statement, columns, default_values
+    return output_statement, columns, default_values, select_count
 
 
 def generate_query_core(
@@ -301,6 +309,7 @@ def generate_query_core(
     PROCESSED_STATEMENT_TYPES | None,
     list[QueryOutColumn],
     list[dict] | None,
+    int,
 ]:
     if enable_performance_logging:
         start_time = time.time()
@@ -331,7 +340,7 @@ def generate_query_core(
         gen_start = time.time()
 
     # Generate query
-    result = generate_single_query(
+    target, columns, results, select_count = generate_single_query(
         query.query, env, dialect, query.extra_filters, query.parameters
     )
 
@@ -345,7 +354,7 @@ def generate_query_core(
             f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time,total_time):.1f}%)"
         )
 
-    return result
+    return target, columns, results, select_count
 
 
 def generate_multi_query_core(
@@ -404,7 +413,7 @@ def generate_multi_query_core(
 
     for idx, subquery in enumerate(query.queries):
         try:
-            generated, columns, values = generate_single_query(
+            generated, columns, values, _ = generate_single_query(
                 subquery.query,
                 env,
                 dialect,
@@ -449,6 +458,7 @@ def query_to_output(
     label: str | None,
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
+    select_count: int | None = None,
 ) -> QueryOut:
     if enable_performance_logging:
         start_time = time.time()
@@ -458,9 +468,9 @@ def query_to_output(
             perf_logger.debug(
                 f"Empty output generation: {time.time() - start_time:.4f}s"
             )
-        return QueryOut(generated_sql=None, columns=columns, label=label)
+        return QueryOut(generated_sql=None, columns=columns, label=label, select_count=select_count)
     if isinstance(target, Exception):
-        return QueryOut(generated_sql=None, columns=[], error=str(target), label=label)
+        return QueryOut(generated_sql=None, columns=[], error=str(target), label=label, select_count=select_count)
     elif (
         isinstance(target, ProcessedShowStatement)
         and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
@@ -471,6 +481,7 @@ def query_to_output(
             generated_output=results,
             columns=columns,
             label=label,
+            select_count=select_count,
         )
     else:
         compile_start = time.time()
@@ -478,7 +489,7 @@ def query_to_output(
         compile_time = time.time() - compile_start
 
         output = QueryOut(
-            generated_sql=sql, generated_output=results, columns=columns, label=label
+            generated_sql=sql, generated_output=results, columns=columns, label=label, select_count=select_count
         )
 
         if enable_performance_logging:
