@@ -149,7 +149,13 @@ FORMAT SPECIFIERS (numeric fields only):
 
 ARITHMETIC WITH FORMAT:
 - {(expr):format} — evaluate arithmetic then format; only field names and + - * / are allowed
-- Example: {(cancelled/total*100):.1f} computes the ratio and shows 1 decimal place`,
+- Example: {(cancelled/total*100):.1f} computes the ratio and shows 1 decimal place
+
+LIMITATIONS — what the template engine cannot do:
+- No comparisons or conditional logic: {{#if (avg < 500)}} is NOT supported
+- No string functions, date arithmetic, or complex expressions
+- No nested loops or grouping logic
+If you need conditional output (e.g. "Regional" vs "Major/National" based on a threshold), compute it in SQL/Trilogy using a CASE expression and return it as a field, then reference the field in the template.`,
         },
         title: {
           type: 'string',
