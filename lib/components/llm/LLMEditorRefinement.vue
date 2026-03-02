@@ -245,6 +245,7 @@ export default defineComponent({
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .connection-info {
@@ -253,6 +254,10 @@ export default defineComponent({
   padding: 2px 8px;
   background-color: var(--bg-color);
   border-radius: 4px;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .action-btn {

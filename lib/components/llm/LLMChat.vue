@@ -479,18 +479,25 @@ export default defineComponent({
   min-height: 30px;
   background-color: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-light);
+  overflow: hidden;
 }
 
 .chat-header-left {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chat-title {
   font-size: var(--font-size);
   font-weight: 600;
   color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-messages {
