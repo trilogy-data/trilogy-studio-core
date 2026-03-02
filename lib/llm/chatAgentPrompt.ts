@@ -182,7 +182,7 @@ ARITHMETIC WITH FORMAT:
   {
     name: 'get_artifact',
     description:
-      'Get the full contents and metadata of an artifact by ID. Returns the artifact type, configuration, and data. Use this to inspect artifact details before updating or when you need to reference artifact data.',
+      'Get the full contents and metadata of an artifact by ID. Returns the artifact type, configuration, and data. Large result sets are truncated; use get_artifact_rows to fetch specific row ranges.',
     input_schema: {
       type: 'object',
       properties: {
@@ -192,6 +192,29 @@ ARITHMETIC WITH FORMAT:
         },
       },
       required: ['artifact_id'],
+    },
+  },
+  {
+    name: 'get_artifact_rows',
+    description:
+      'Fetch a specific range of rows from a query result or chart artifact. Use this to inspect data in large result sets that were truncated in the initial response. Rows are 0-indexed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The ID of the results or chart artifact to fetch rows from',
+        },
+        start_row: {
+          type: 'number',
+          description: 'First row to return (0-indexed, inclusive)',
+        },
+        end_row: {
+          type: 'number',
+          description: 'Last row to return (0-indexed, inclusive)',
+        },
+      },
+      required: ['artifact_id', 'start_row', 'end_row'],
     },
   },
   {

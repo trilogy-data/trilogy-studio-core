@@ -73,9 +73,43 @@ export interface ToolLoopResult {
 }
 
 /**
+ * Maximum number of data rows to include in a tool result sent to the LLM.
+ * When results exceed this limit, the first and last (MAX_TOOL_RESULT_ROWS / 2) rows
+ * are shown with a truncation notice in between.
+ */
+export const MAX_TOOL_RESULT_ROWS = 100
+
+/**
+ * Truncate a deserialized query result object if it has more rows than MAX_TOOL_RESULT_ROWS.
+ * Returns the (possibly truncated) data array and the number of rows cut.
+ *
+ * The caller is responsible for rendering the cut notice between the two halves.
+ */
+export function truncateResultRows(jsonData: any): {
+  head: any[]
+  tail: any[]
+  totalRows: number
+  cutCount: number
+} {
+  const rows: any[] = jsonData?.data
+  if (!Array.isArray(rows) || rows.length <= MAX_TOOL_RESULT_ROWS) {
+    return { head: rows ?? [], tail: [], totalRows: rows?.length ?? 0, cutCount: 0 }
+  }
+  const half = MAX_TOOL_RESULT_ROWS / 2
+  return {
+    head: rows.slice(0, half),
+    tail: rows.slice(rows.length - half),
+    totalRows: rows.length,
+    cutCount: rows.length - MAX_TOOL_RESULT_ROWS,
+  }
+}
+
+/**
  * Format a tool result for sending to the LLM.
  * Handles artifacts, messages, and errors consistently.
  * Includes artifact IDs so the LLM can reference them in follow-up tool calls.
+ * Large result sets are truncated to MAX_TOOL_RESULT_ROWS rows (head + tail)
+ * with a cut notice; the agent can use get_artifact_rows to fetch any range.
  */
 export function formatToolResultText(result: ToolCallResult): string {
   if (result.success) {
@@ -87,8 +121,18 @@ export function formatToolResultText(result: ToolCallResult): string {
       if (artifactData) {
         const jsonData =
           typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-        // Send full data to the LLM - no truncation
-        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows):\n${JSON.stringify(jsonData, null, 2)}`
+        const totalRows = config?.resultSize ?? (Array.isArray(jsonData?.data) ? jsonData.data.length : 0)
+        const { head, tail, cutCount } = truncateResultRows(jsonData)
+        if (cutCount > 0) {
+          const headJson = JSON.stringify({ ...jsonData, data: head }, null, 2)
+          const tailJson = JSON.stringify({ headers: jsonData.headers, data: tail }, null, 2)
+          dataPreview =
+            `\n\nQuery results (${totalRows} rows total — showing first ${head.length} and last ${tail.length}` +
+            `, use get_artifact_rows to fetch any range):\n` +
+            `${headJson}\n...(${cutCount} of ${totalRows} rows cut off — use get_artifact_rows with artifact ID: ${artifactId})...\n${tailJson}`
+        } else {
+          dataPreview = `\n\nQuery results (${totalRows} rows):\n${JSON.stringify(jsonData, null, 2)}`
+        }
       }
       const artifactInfo = config
         ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`

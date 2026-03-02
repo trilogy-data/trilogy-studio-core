@@ -6,6 +6,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import { type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
+import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
 
 export interface ToolCallResult {
   success: boolean
@@ -73,6 +74,12 @@ export class ChatToolExecutor {
         return this.listArtifacts()
       case 'get_artifact':
         return this.getArtifact(toolInput.artifact_id)
+      case 'get_artifact_rows':
+        return this.getArtifactRows(
+          toolInput.artifact_id,
+          toolInput.start_row,
+          toolInput.end_row,
+        )
       case 'update_artifact':
         return this.updateArtifact(
           toolInput.artifact_id,
@@ -93,7 +100,7 @@ export class ChatToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, hide_artifact (accepts array), reorder_artifacts, return_to_user`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, get_artifact_rows, update_artifact, hide_artifact (accepts array), reorder_artifacts, return_to_user`,
         }
     }
   }
@@ -762,12 +769,67 @@ export class ChatToolExecutor {
     } else if (artifact.data) {
       const jsonData =
         typeof artifact.data.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
-      details.data = jsonData
+      const { head, tail, totalRows, cutCount } = truncateResultRows(jsonData)
+      if (cutCount > 0) {
+        const half = MAX_TOOL_RESULT_ROWS / 2
+        details.data = { ...jsonData, data: head }
+        details._truncated = `${cutCount} of ${totalRows} rows cut off (showing first ${half} and last ${half}). Use get_artifact_rows to fetch any range.`
+        details._tail = tail
+      } else {
+        details.data = jsonData
+      }
     }
 
     return {
       success: true,
       message: `Artifact "${artifactId}" (${artifact.type}):\n${JSON.stringify(details, null, 2)}`,
+    }
+  }
+
+  // Fetch a specific row range from a results or chart artifact
+  private getArtifactRows(
+    artifactId: string,
+    startRow: number,
+    endRow: number,
+  ): ToolCallResult {
+    const chat = this.chatStore?.activeChat
+    if (!chat) {
+      return { success: false, error: 'No active chat session.' }
+    }
+
+    const artifact = chat.getArtifactById(artifactId)
+    if (!artifact) {
+      return {
+        success: false,
+        error: `Artifact "${artifactId}" not found. Use list_artifacts to see available artifacts.`,
+      }
+    }
+
+    if (artifact.type !== 'results' && artifact.type !== 'chart') {
+      return {
+        success: false,
+        error: `Artifact "${artifactId}" does not contain tabular data (type: ${artifact.type}). Only results and chart artifacts support row fetching.`,
+      }
+    }
+
+    const jsonData =
+      typeof artifact.data?.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
+    const rows: any[] = jsonData?.data
+
+    if (!Array.isArray(rows)) {
+      return { success: false, error: `Artifact "${artifactId}" has no row data.` }
+    }
+
+    const totalRows = rows.length
+    const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
+    const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
+    const slice = rows.slice(clampedStart, clampedEnd + 1)
+
+    return {
+      success: true,
+      message:
+        `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
+        JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
     }
   }
 

@@ -453,4 +453,140 @@ describe('EditorRefinementToolExecutor', () => {
       expect(result.error).toContain('unknown_tool')
     })
   })
+
+  describe('get_artifact_rows tool', () => {
+    function makeLargeResultsMock(rowCount: number) {
+      const rows = Array.from({ length: rowCount }, (_, i) => ({ id: i, value: `row-${i}` }))
+      return {
+        resultPromise: Promise.resolve({
+          success: true,
+          results: {
+            headers: { id: { name: 'id', type: 'int' }, value: { name: 'value', type: 'string' } },
+            data: rows,
+            toJSON: () => ({
+              headers: { id: { name: 'id', type: 'int' }, value: { name: 'value', type: 'string' } },
+              data: rows,
+            }),
+          },
+          executionTime: 100,
+          resultSize: rowCount,
+          columnCount: 2,
+          generatedSql: 'SELECT id, value FROM t',
+        }),
+      }
+    }
+
+    it('returns an error when artifact ID is not found', async () => {
+      const result = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: 'does-not-exist',
+        start_row: 0,
+        end_row: 10,
+      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('not found')
+    })
+
+    it('fetches a row range from a run_query artifact', async () => {
+      const rowCount = 200
+      mockQueryExecutionService.executeQuery.mockReturnValue(makeLargeResultsMock(rowCount))
+
+      const queryResult = await executor.executeToolCall('run_query', {
+        query: 'SELECT id, value FROM t;',
+      })
+      expect(queryResult.success).toBe(true)
+      const artifactId = queryResult.artifact!.id
+
+      const rowsResult = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: artifactId,
+        start_row: 50,
+        end_row: 59,
+      })
+
+      expect(rowsResult.success).toBe(true)
+      expect(rowsResult.message).toContain(`Rows 50-59 of ${rowCount} total`)
+      expect(rowsResult.message).toContain('"id": 50')
+      expect(rowsResult.message).toContain('"id": 59')
+      expect(rowsResult.message).not.toContain('"id": 49,')
+      expect(rowsResult.message).not.toContain('"id": 60,')
+    })
+
+    it('fetches a row range from a run_active_editor_query artifact', async () => {
+      const rowCount = 150
+      const rows = Array.from({ length: rowCount }, (_, i) => ({ id: i, v: `v${i}` }))
+      onRunActiveEditorQuerySpy.mockResolvedValue({
+        success: true,
+        results: {
+          headers: { id: { name: 'id', type: 'int' }, v: { name: 'v', type: 'string' } },
+          data: rows,
+          toJSON: () => ({
+            headers: { id: { name: 'id', type: 'int' }, v: { name: 'v', type: 'string' } },
+            data: rows,
+          }),
+        },
+        resultSize: rowCount,
+        columnCount: 2,
+        generatedSql: 'SELECT id, v FROM t',
+      })
+
+      const queryResult = await executor.executeToolCall('run_active_editor_query', {})
+      expect(queryResult.success).toBe(true)
+      const artifactId = queryResult.artifact!.id
+
+      const rowsResult = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: artifactId,
+        start_row: 100,
+        end_row: 110,
+      })
+
+      expect(rowsResult.success).toBe(true)
+      expect(rowsResult.message).toContain(`Rows 100-110 of ${rowCount} total`)
+      expect(rowsResult.message).toContain('"id": 100')
+    })
+
+    it('clamps out-of-range start/end to valid bounds', async () => {
+      const rowCount = 10
+      mockQueryExecutionService.executeQuery.mockReturnValue(makeLargeResultsMock(rowCount))
+
+      const queryResult = await executor.executeToolCall('run_query', {
+        query: 'SELECT id, value FROM t;',
+      })
+      const artifactId = queryResult.artifact!.id
+
+      const rowsResult = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: artifactId,
+        start_row: -5,
+        end_row: 999,
+      })
+
+      expect(rowsResult.success).toBe(true)
+      expect(rowsResult.message).toContain('Rows 0-9 of 10 total')
+    })
+
+    it('each run_query call registers a separate artifact', async () => {
+      mockQueryExecutionService.executeQuery
+        .mockReturnValueOnce(makeLargeResultsMock(20))
+        .mockReturnValueOnce(makeLargeResultsMock(30))
+
+      const r1 = await executor.executeToolCall('run_query', { query: 'SELECT 1' })
+      const r2 = await executor.executeToolCall('run_query', { query: 'SELECT 2' })
+
+      expect(r1.artifact!.id).not.toBe(r2.artifact!.id)
+
+      const rows1 = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: r1.artifact!.id,
+        start_row: 0,
+        end_row: 0,
+      })
+      const rows2 = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: r2.artifact!.id,
+        start_row: 0,
+        end_row: 0,
+      })
+
+      expect(rows1.success).toBe(true)
+      expect(rows2.success).toBe(true)
+      expect(rows1.message).toContain('of 20 total')
+      expect(rows2.message).toContain('of 30 total')
+    })
+  })
 })

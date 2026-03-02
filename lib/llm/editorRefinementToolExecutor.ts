@@ -7,6 +7,7 @@ import { generateArtifactId } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
+import { truncateResultRows, MAX_TOOL_RESULT_ROWS } from './toolLoopCore'
 
 export interface ToolCallResult {
   success: boolean
@@ -55,6 +56,8 @@ export class EditorRefinementToolExecutor {
   private connectionStore: ConnectionStoreType
   private editorStore: EditorStoreType | null
   private editorContext: EditorContext
+  /** Artifacts created during this session — used by get_artifact_rows */
+  private artifactRegistry = new Map<string, ChatArtifact>()
 
   constructor(
     queryExecutionService: QueryExecutionService,
@@ -91,6 +94,8 @@ export class EditorRefinementToolExecutor {
         return this.closeSession()
       case 'connect_data_connection':
         return this.connectDataConnection(toolInput.connection)
+      case 'get_artifact_rows':
+        return this.getArtifactRows(toolInput.artifact_id, toolInput.start_row, toolInput.end_row)
       default:
         return {
           success: false,
@@ -253,6 +258,7 @@ export class EditorRefinementToolExecutor {
         },
       }
 
+      this.artifactRegistry.set(artifact.id, artifact)
       return {
         success: true,
         artifact,
@@ -428,6 +434,7 @@ export class EditorRefinementToolExecutor {
         },
       }
 
+      this.artifactRegistry.set(artifact.id, artifact)
       return {
         success: true,
         artifact,
@@ -442,6 +449,40 @@ export class EditorRefinementToolExecutor {
         error: error instanceof Error ? error.message : 'Failed to execute query',
         query,
       }
+    }
+  }
+
+  private getArtifactRows(
+    artifactId: string,
+    startRow: number,
+    endRow: number,
+  ): ToolCallResult {
+    const artifact = this.artifactRegistry.get(artifactId)
+    if (!artifact) {
+      return {
+        success: false,
+        error: `Artifact "${artifactId}" not found. Only artifacts created by run_query or run_active_editor_query in this session are available.`,
+      }
+    }
+
+    const jsonData =
+      typeof artifact.data?.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
+    const rows: any[] = jsonData?.data
+
+    if (!Array.isArray(rows)) {
+      return { success: false, error: `Artifact "${artifactId}" has no row data.` }
+    }
+
+    const totalRows = rows.length
+    const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
+    const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
+    const slice = rows.slice(clampedStart, clampedEnd + 1)
+
+    return {
+      success: true,
+      message:
+        `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
+        JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
     }
   }
 
