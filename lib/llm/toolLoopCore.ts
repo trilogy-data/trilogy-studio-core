@@ -57,6 +57,12 @@ export interface ToolLoopConfig {
   onAwaitsUserInput?: (result: ToolCallResult, executedToolCalls: ChatToolCall[]) => void
   /** Message sent to agent when it responds with text but no tool call. Defaults to a generic reminder. */
   noToolCallReminder?: string
+  /**
+   * If true, terminate the loop when the LLM responds with text but no tool calls,
+   * instead of re-prompting. Use this for standalone/embedded chat modes where the
+   * LLM's plain text response is the final answer.
+   */
+  terminateOnNoToolCall?: boolean
 }
 
 /** Result from running the tool loop */
@@ -189,13 +195,18 @@ export async function runToolLoop(
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
     }
 
-    // If no tool calls, re-prompt the agent — it must call a tool to proceed
+    // If no tool calls, either terminate (standalone mode) or re-prompt the agent
     if (toolCalls.length === 0) {
       // Persist the assistant's text response
       messagePersistence.addMessage({
         role: 'assistant',
         content: responseText,
       })
+
+      // In standalone/embedded chat mode, a plain text response is the final answer
+      if (config.terminateOnNoToolCall) {
+        return { terminated: true, finalMessage: responseText }
+      }
 
       // Re-prompt: agent must call a tool; plain text responses are not a valid exit
       const reminder =

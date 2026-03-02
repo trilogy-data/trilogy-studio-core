@@ -257,7 +257,7 @@ describe('useToolLoop', () => {
       expect(messages.value[2].toolResults).toBeDefined()
       expect(messages.value[2].toolResults).toHaveLength(1)
       expect(messages.value[2].toolResults![0].toolCallId).toBe('call_abc123')
-      expect(messages.value[2].toolResults![0].result).toBe('Session closed successfully.')
+      expect(messages.value[2].toolResults![0].result).toBe('')
     })
 
     it('should include all tool results when terminatesLoop happens after multiple tools', async () => {
@@ -304,7 +304,7 @@ describe('useToolLoop', () => {
       expect(toolResultsMessage.toolResults![0].toolCallId).toBe('call_validate')
       expect(toolResultsMessage.toolResults![0].result).toBe('Query is valid.')
       expect(toolResultsMessage.toolResults![1].toolCallId).toBe('call_close')
-      expect(toolResultsMessage.toolResults![1].result).toBe('Session closed.')
+      expect(toolResultsMessage.toolResults![1].result).toBe('')
     })
 
     it('should handle failed terminating tool calls correctly', async () => {
@@ -330,9 +330,9 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Tool results should contain the error
+      // Tool results are empty for terminating calls (finalMessage carries the result)
       const toolResultsMessage = messages.value[2]
-      expect(toolResultsMessage.toolResults![0].result).toBe('Error: Failed to close session')
+      expect(toolResultsMessage.toolResults![0].result).toBe('')
     })
 
     it('should add artifacts from tool results', async () => {

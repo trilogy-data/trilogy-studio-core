@@ -555,15 +555,15 @@ describe('OpenRouter Model Filtering', () => {
   })
 
   describe('OpenRouterProvider.getDefaultModel', () => {
-    it('should prefer claude-sonnet-4 as default', () => {
+    it('should prefer claude-sonnet-4.6 as default', () => {
       const models = [
         'anthropic/claude-opus-4',
-        'anthropic/claude-sonnet-4',
+        'anthropic/claude-sonnet-4.6',
         'openai/gpt-4o',
         'google/gemini-2.0-flash',
       ]
       const defaultModel = OpenRouterProvider.getDefaultModel(models)
-      expect(defaultModel).toBe('anthropic/claude-sonnet-4')
+      expect(defaultModel).toBe('anthropic/claude-sonnet-4.6')
     })
 
     it('should fall back to gpt-4o if no claude-sonnet', () => {

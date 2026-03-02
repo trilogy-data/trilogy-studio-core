@@ -521,6 +521,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
           {
             tools: customTools,
             buildSystemPrompt: () => chatSystemPrompt.value,
+            terminateOnNoToolCall: true,
           },
         )
         return undefined
