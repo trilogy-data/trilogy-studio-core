@@ -394,7 +394,6 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       }
       return await this.connections[name].generateCompletion(options, history)
     },
-
   },
 
   getters: {

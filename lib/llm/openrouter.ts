@@ -458,7 +458,9 @@ export class OpenRouterProvider extends LLMProvider {
       // Handle error responses from OpenRouter
       if (data.error) {
         const code = data.error.code ? ` (${data.error.code})` : ''
-        throw new Error(`OpenRouter API error${code}: ${data.error.message || JSON.stringify(data.error)}`)
+        throw new Error(
+          `OpenRouter API error${code}: ${data.error.message || JSON.stringify(data.error)}`,
+        )
       }
 
       // Handle tool calls in the response
@@ -529,12 +531,9 @@ export class OpenRouterProvider extends LLMProvider {
   static getDefaultModel(models: string[]): string {
     // Prefer Claude Sonnet 4 as a balanced default
     const preferredDefaults = [
-      'anthropic/claude-sonnet-4',
-      'anthropic/claude-3.5-sonnet',
-      'anthropic/claude-3-5-sonnet',
-      'openai/gpt-4o',
-      'openai/gpt-4-turbo',
-      'google/gemini-2.0-flash',
+      'google/gemini-3.1-pro-preview',
+      'openai/gpt-5.2',
+      'anthropic/claude-sonnet-4.6',
     ]
 
     for (const preferred of preferredDefaults) {

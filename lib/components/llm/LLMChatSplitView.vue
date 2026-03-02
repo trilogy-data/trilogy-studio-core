@@ -55,7 +55,9 @@
           data-testid="llm-sidebar-tab-artifacts"
         >
           Artifacts
-          <span v-if="artifacts.length > 0" class="artifact-count">{{ artifacts.length }}</span>
+          <span v-if="artifacts.filter((a) => !a.hidden).length > 0" class="artifact-count">{{
+            artifacts.filter((a) => !a.hidden).length
+          }}</span>
         </button>
         <button
           class="sidebar-tab"
@@ -75,6 +77,7 @@
           @update:activeArtifactIndex="setActiveArtifact"
           @publish-artifacts="$emit('publish-artifacts')"
           @chart-config-change="handleArtifactChartConfigChange"
+          @unhide-artifact="unhideArtifact"
         >
           <template #custom-artifact="slotProps">
             <slot name="custom-artifact" v-bind="slotProps"></slot>
@@ -365,6 +368,14 @@ export default defineComponent({
       emit('update:artifacts', artifacts.value)
     }
 
+    function unhideArtifact(artifactId: string) {
+      const artifact = artifacts.value.find((a) => a.id === artifactId)
+      if (artifact) {
+        artifact.hidden = false
+        emit('update:artifacts', artifacts.value)
+      }
+    }
+
     // Public methods
     const addMessage = (message: ChatMessage) => {
       messages.value.push(message)
@@ -388,6 +399,9 @@ export default defineComponent({
       emit('select-symbol', symbol)
     }
 
+    // vue-tsc noUnusedLocals workaround: function declarations used only in template
+    void unhideArtifact
+
     return {
       chatRef,
       messages,
@@ -403,6 +417,7 @@ export default defineComponent({
       collapseArtifact,
       addArtifact,
       handleArtifactChartConfigChange,
+      unhideArtifact,
       addMessage,
       clearChat,
       getMessages,

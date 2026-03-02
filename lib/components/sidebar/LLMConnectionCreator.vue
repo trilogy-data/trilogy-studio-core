@@ -133,6 +133,7 @@ import { OpenAIProvider } from '../../llm/openai'
 import { AnthropicProvider } from '../../llm/anthropic'
 import { GoogleProvider } from '../../llm/googlev2'
 import { OpenRouterProvider } from '../../llm/openrouter'
+import { DemoProvider } from '../../llm/demo'
 
 // Hardcoded fallback models for when the API hasn't been validated yet
 const FALLBACK_MODELS = {
@@ -140,6 +141,7 @@ const FALLBACK_MODELS = {
   anthropic: ['claude-opus-4-6-20260514', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514'],
   google: ['models/gemini-2.5-pro', 'models/gemini-2.5-flash'],
   openrouter: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google/gemini-2.5-pro'],
+  demo: ['deepseek/deepseek-v3.2'],
 }
 
 export default defineComponent({
@@ -215,7 +217,7 @@ export default defineComponent({
           )
           break
         case 'demo':
-          connectionDetails.value.options.model = 'deepseek/deepseek-v3.2'
+          connectionDetails.value.options.model = DemoProvider.getDefaultModel(FALLBACK_MODELS.demo)
           break
         case 'openrouter':
           connectionDetails.value.options.model = OpenRouterProvider.getDefaultModel(

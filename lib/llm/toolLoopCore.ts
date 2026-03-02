@@ -251,11 +251,10 @@ export async function runToolLoop(
       }
 
       if (result.terminatesLoop) {
-        const terminatingResultText = formatToolResultText(result)
         toolResults.push({
           toolCallId: toolCall.id,
           toolName: toolCall.name,
-          result: terminatingResultText,
+          result: '',
         })
 
         // Persist assistant message with tool calls

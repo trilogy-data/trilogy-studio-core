@@ -119,7 +119,11 @@ describe('OpenRouterProvider — 401 error message', () => {
       'bad-key',
       'deepseek/deepseek-v3.2',
       false,
-      { maxRetries: 0, retryStatusCodes: [], errorBodyExtractor: OpenRouterProvider.extractErrorMessage },
+      {
+        maxRetries: 0,
+        retryStatusCodes: [],
+        errorBodyExtractor: OpenRouterProvider.extractErrorMessage,
+      },
     )
   })
 
@@ -132,8 +136,8 @@ describe('OpenRouterProvider — 401 error message', () => {
       mockResponse(401, { error: { message: 'User not found.', code: 401 } }, 'Unauthorized'),
     )
 
-    await expect(
-      provider.generateCompletion({ prompt: 'hello' }, null),
-    ).rejects.toThrow('OpenRouter API error (401): User not found.')
+    await expect(provider.generateCompletion({ prompt: 'hello' }, null)).rejects.toThrow(
+      'OpenRouter API error (401): User not found.',
+    )
   })
 })

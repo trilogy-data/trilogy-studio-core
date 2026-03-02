@@ -80,8 +80,8 @@ export class ChatToolExecutor {
           toolInput.title,
           toolInput.chartConfig,
         )
-      case 'remove_artifact':
-        return this.removeArtifacts(toolInput.artifact_ids)
+      case 'hide_artifact':
+        return this.hideArtifacts(toolInput.artifact_ids)
       case 'reorder_artifacts':
         return this.reorderArtifacts(toolInput.artifact_ids)
       case 'return_to_user':
@@ -93,7 +93,7 @@ export class ChatToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact (accepts array), reorder_artifacts, return_to_user`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, hide_artifact (accepts array), reorder_artifacts, return_to_user`,
         }
     }
   }
@@ -697,23 +697,34 @@ export class ChatToolExecutor {
       }
     }
 
-    const artifactList = chat.artifacts
-      .map((a, index) => {
-        const parts: string[] = [`- ID: ${a.id}, Type: ${a.type}`]
-        if (a.config?.title) parts.push(`Title: "${a.config.title}"`)
-        if (a.config?.resultSize) parts.push(`${a.config.resultSize} rows`)
-        if (a.config?.query) parts.push(`Query: "${a.config.query.substring(0, 80)}..."`)
-        if (a.type === 'markdown' && a.data?.markdown) {
-          parts.push(`Content: "${a.data.markdown.substring(0, 80)}..."`)
-        }
-        const active = index === chat.activeArtifactIndex ? ' (currently selected)' : ''
-        return parts.join(', ') + active
-      })
-      .join('\n')
+    const visible = chat.artifacts.filter((a) => !a.hidden)
+    const hidden = chat.artifacts.filter((a) => a.hidden)
+
+    const formatArtifact = (a: (typeof chat.artifacts)[0], index: number): string => {
+      const parts: string[] = [`- ID: ${a.id}, Type: ${a.type}`]
+      if (a.config?.title) parts.push(`Title: "${a.config.title}"`)
+      if (a.config?.resultSize) parts.push(`${a.config.resultSize} rows`)
+      if (a.config?.query) parts.push(`Query: "${a.config.query.substring(0, 80)}..."`)
+      if (a.type === 'markdown' && a.data?.markdown) {
+        parts.push(`Content: "${a.data.markdown.substring(0, 80)}..."`)
+      }
+      const active = index === chat.activeArtifactIndex ? ' (currently selected)' : ''
+      return parts.join(', ') + active
+    }
+
+    const visibleSection =
+      visible.length > 0
+        ? `Visible (${visible.length}):\n${visible.map((a) => formatArtifact(a, chat.artifacts.indexOf(a))).join('\n')}`
+        : 'Visible: none'
+
+    const hiddenSection =
+      hidden.length > 0
+        ? `\n\nHidden (${hidden.length}) — can be restored by the user or referenced by ID:\n${hidden.map((a) => formatArtifact(a, chat.artifacts.indexOf(a))).join('\n')}`
+        : ''
 
     return {
       success: true,
-      message: `Artifacts in current chat (${chat.artifacts.length} total):\n${artifactList}`,
+      message: `Artifacts in current chat (${chat.artifacts.length} total):\n${visibleSection}${hiddenSection}`,
     }
   }
 
@@ -859,8 +870,8 @@ export class ChatToolExecutor {
     }
   }
 
-  // Remove one or more artifacts by ID
-  private removeArtifacts(artifactIds: string | string[]): ToolCallResult {
+  // Hide one or more artifacts by ID (soft-delete — user can restore from the Hidden section)
+  private hideArtifacts(artifactIds: string | string[]): ToolCallResult {
     const chat = this.chatStore?.activeChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
@@ -872,17 +883,17 @@ export class ChatToolExecutor {
     }
 
     const notFound: string[] = []
-    const removed: string[] = []
+    const hidden: string[] = []
 
     for (const id of ids) {
-      if (chat.removeArtifact(id)) {
-        removed.push(id)
+      if (chat.hideArtifact(id)) {
+        hidden.push(id)
       } else {
         notFound.push(id)
       }
     }
 
-    if (removed.length === 0) {
+    if (hidden.length === 0) {
       return {
         success: false,
         error: `No artifacts found with IDs: ${notFound.join(', ')}. Use list_artifacts to see available artifacts.`,
@@ -891,8 +902,8 @@ export class ChatToolExecutor {
 
     const message =
       notFound.length > 0
-        ? `Removed ${removed.length} artifact(s). Not found: ${notFound.join(', ')}.`
-        : `Removed ${removed.length} artifact(s).`
+        ? `Hidden ${hidden.length} artifact(s). Not found: ${notFound.join(', ')}. Hidden artifacts remain accessible to you via list_artifacts and can be restored by the user.`
+        : `Hidden ${hidden.length} artifact(s). They remain accessible via list_artifacts and can be restored by the user.`
 
     return { success: true, message }
   }

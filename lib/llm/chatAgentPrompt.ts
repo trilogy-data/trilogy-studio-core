@@ -222,16 +222,16 @@ ARITHMETIC WITH FORMAT:
     },
   },
   {
-    name: 'remove_artifact',
+    name: 'hide_artifact',
     description:
-      'Remove one or more artifacts from the chat session by ID. Use list_artifacts first to find artifact IDs.',
+      'Hide one or more artifacts from the main view. Hidden artifacts are soft-deleted: they move to a collapsed "Hidden" section the user can expand, and you can still reference them by ID. Use this to remove stale, intermediate, or superseded artifacts during curation. Use list_artifacts first to find artifact IDs.',
     input_schema: {
       type: 'object',
       properties: {
         artifact_ids: {
           type: 'array',
           items: { type: 'string' },
-          description: 'One or more artifact IDs to remove.',
+          description: 'One or more artifact IDs to hide.',
         },
       },
       required: ['artifact_ids'],
@@ -257,7 +257,7 @@ ARITHMETIC WITH FORMAT:
   {
     name: 'return_to_user',
     description:
-      'Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user\'s next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.',
+      "Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user's next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.",
     input_schema: {
       type: 'object',
       properties: {
@@ -350,13 +350,13 @@ ARTIFACT MANAGEMENT:
 - Use list_artifacts to see all artifacts with their IDs, types, and metadata.
 - Use get_artifact to inspect the full contents and configuration of a specific artifact.
 - Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
-- Use remove_artifact to clean up artifacts that are no longer needed.
+- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.
 - When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
 
 ARTIFACT CURATION (required before every return_to_user call):
 Before calling return_to_user, you MUST curate the artifact panel so it reflects a clean, coherent answer to the user's current request:
 1. Call list_artifacts to see everything currently in the panel.
-2. Remove stale or superseded artifacts — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask.
+2. Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.
 3. Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).
 4. Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.
 5. The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.

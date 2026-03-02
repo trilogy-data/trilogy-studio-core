@@ -1,8 +1,7 @@
 import { OpenRouterProvider } from './openrouter'
 
 // URL for the demo token minting service.
-// Update this to the production URL once deployed.
-export const DEMO_TOKEN_SERVICE_URL = 'http://localhost:8080'
+export const DEMO_TOKEN_SERVICE_URL = 'https://open-router-token-service.fly.dev'
 
 async function fetchDemoToken(): Promise<string> {
   const response = await fetch(`${DEMO_TOKEN_SERVICE_URL}/api/token`, {
@@ -25,6 +24,7 @@ async function fetchDemoToken(): Promise<string> {
  * supplied by the user.  The key is never persisted to storage — every
  * reconnect fetches a fresh (but idempotent-per-IP) token.
  */
+// @ts-ignore: fromJSON returns Promise<DemoProvider> rather than the generic Promise<T> from base
 export class DemoProvider extends OpenRouterProvider {
   public type: string = 'demo'
 
@@ -46,6 +46,24 @@ export class DemoProvider extends OpenRouterProvider {
     return super.reset()
   }
 
+  static getDefaultModel(models: string[]): string {
+    const preferredDefaults = [
+      'deepseek/deepseek-v3.2',
+      'anthropic/claude-sonnet-4.6',
+      'openai/gpt-5.2',
+    ]
+
+    for (const preferred of preferredDefaults) {
+      // Check for exact match or prefix match
+      const found = models.find((m) => m === preferred || m.startsWith(preferred))
+      if (found) {
+        return found
+      }
+    }
+
+    // Fall back to first model if no preferred default found
+    return models[0] || ''
+  }
   toJSON(): object {
     return {
       name: this.name,

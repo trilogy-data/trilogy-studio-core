@@ -246,6 +246,7 @@ export default class LocalStorage extends AbstractStorage {
           connections[connection.name] = reactive(await OpenRouterProvider.fromJSON(connection))
           break
         case 'demo':
+          // @ts-ignore
           connections[connection.name] = reactive(await DemoProvider.fromJSON(connection))
           break
         default:

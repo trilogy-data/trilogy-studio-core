@@ -64,8 +64,7 @@ Age: {age}
         { airline_name: 'Delta Air Lines', total_flights: 3453000 },
         { airline_name: 'United Airlines', total_flights: 2100000 },
       ])
-      const template =
-        '{{#each data}}| {airline_name} | {total_flights:,} |\n{{/each}}'
+      const template = '{{#each data}}| {airline_name} | {total_flights:,} |\n{{/each}}'
       const result = renderMarkdown(template, data)
       expect(result).not.toContain('unsafe')
       expect(result).toContain('3,453,000')

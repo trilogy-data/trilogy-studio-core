@@ -399,8 +399,6 @@ const useEditorStore = defineStore('editors', {
         const llmAdapter: LLMAdapter = {
           generateCompletion: (connectionName, llmOptions, msgs) =>
             llmConnectionStore.generateCompletion(connectionName, llmOptions, msgs),
-          shouldAutoContinue: (connectionName, responseText) =>
-            llmConnectionStore.shouldAutoContinue(connectionName, responseText),
         }
 
         const messagePersistence: MessagePersistence = {
@@ -435,7 +433,6 @@ const useEditorStore = defineStore('editors', {
           {
             tools: EDITOR_REFINEMENT_TOOLS,
             maxIterations: 20,
-            maxAutoContinue: 3,
             buildSystemPrompt,
             onToolResult: (toolName, result) => {
               // Update available symbols when validation returns them

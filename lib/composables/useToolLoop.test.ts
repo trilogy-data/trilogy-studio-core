@@ -637,7 +637,7 @@ describe('useToolLoop', () => {
 
     it('should handle real Anthropic response with text + structured tool calls', async () => {
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: "Interesting data! Let me write this query to the editor and set up a scatter plot:",
+        text: 'Interesting data! Let me write this query to the editor and set up a scatter plot:',
         toolCalls: [
           {
             id: 'toolu_01',

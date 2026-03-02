@@ -25,7 +25,10 @@ export interface RetryOptions {
 /**
  * Default retry configuration
  */
-export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal' | 'errorBodyExtractor'> & {
+export const DEFAULT_RETRY_OPTIONS: Omit<
+  Required<RetryOptions>,
+  'signal' | 'errorBodyExtractor'
+> & {
   signal?: AbortSignal
   errorBodyExtractor?: RetryOptions['errorBodyExtractor']
 } = {

@@ -1,7 +1,7 @@
 <template>
   <div class="artifacts-pane">
     <!-- Publish button -->
-    <div class="artifacts-actions" v-if="artifacts.length > 0">
+    <div class="artifacts-actions" v-if="visibleArtifacts.length > 0">
       <button
         class="publish-btn"
         @click="$emit('publish-artifacts')"
@@ -13,27 +13,30 @@
       </button>
     </div>
 
-    <!-- Scrollable view: all artifacts expanded -->
-    <div class="artifacts-scroll" v-if="artifacts.length > 0">
+    <!-- Scrollable view: visible artifacts -->
+    <div class="artifacts-scroll" v-if="visibleArtifacts.length > 0 || hiddenArtifacts.length > 0">
+      <!-- Visible artifacts -->
       <div
-        v-for="(artifact, index) in artifacts"
-        :key="artifact.id || index"
+        v-for="{ artifact, originalIndex } in visibleArtifacts"
+        :key="artifact.id || originalIndex"
         class="artifact-card"
-        :class="{ active: activeArtifactIndex === index }"
+        :class="{ active: activeArtifactIndex === originalIndex }"
       >
-        <div class="artifact-card-header" @click="toggleArtifactCollapsed(artifact, index)">
+        <div class="artifact-card-header" @click="toggleArtifactCollapsed(artifact, originalIndex)">
           <i :class="getArtifactIcon(artifact)"></i>
-          <span class="artifact-label">{{ getArtifactLabel(artifact, index) }}</span>
+          <span class="artifact-label">{{ getArtifactLabel(artifact, originalIndex) }}</span>
           <span class="artifact-meta">{{ getArtifactMeta(artifact) }}</span>
           <i
             :class="
-              isArtifactCollapsed(artifact, index) ? 'mdi mdi-chevron-down' : 'mdi mdi-chevron-up'
+              isArtifactCollapsed(artifact, originalIndex)
+                ? 'mdi mdi-chevron-down'
+                : 'mdi mdi-chevron-up'
             "
             class="collapse-chevron"
           ></i>
         </div>
         <div
-          v-show="!isArtifactCollapsed(artifact, index)"
+          v-show="!isArtifactCollapsed(artifact, originalIndex)"
           class="artifact-card-body"
           :style="getArtifactCardStyle(artifact)"
         >
@@ -75,6 +78,34 @@
           </template>
         </div>
       </div>
+
+      <!-- Hidden artifacts section -->
+      <div v-if="hiddenArtifacts.length > 0" class="hidden-section">
+        <div class="hidden-section-header" @click="showHidden = !showHidden">
+          <i :class="showHidden ? 'mdi mdi-chevron-down' : 'mdi mdi-chevron-right'"></i>
+          <span>Hidden ({{ hiddenArtifacts.length }})</span>
+        </div>
+        <div v-if="showHidden" class="hidden-artifacts-list">
+          <div
+            v-for="{ artifact, originalIndex } in hiddenArtifacts"
+            :key="artifact.id || originalIndex"
+            class="hidden-artifact-row"
+          >
+            <i :class="getArtifactIcon(artifact)" class="hidden-artifact-icon"></i>
+            <span class="artifact-label hidden-artifact-label">{{
+              getArtifactLabel(artifact, originalIndex)
+            }}</span>
+            <span class="artifact-meta">{{ getArtifactMeta(artifact) }}</span>
+            <button
+              class="unhide-btn"
+              title="Restore artifact"
+              @click.stop="$emit('unhide-artifact', artifact.id)"
+            >
+              <i class="mdi mdi-eye-outline"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- No artifacts state -->
@@ -85,7 +116,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType } from 'vue'
+import { defineComponent, ref, computed, type PropType } from 'vue'
 import type { ChatArtifact } from '../../chats/chat'
 import ResultsComponent from '../editor/Results.vue'
 import CodeBlock from '../CodeBlock.vue'
@@ -124,9 +155,28 @@ export default defineComponent({
       default: -1,
     },
   },
-  emits: ['publish-artifacts', 'chart-config-change', 'update:activeArtifactIndex'],
-  setup(_props, { emit }) {
+  emits: [
+    'publish-artifacts',
+    'chart-config-change',
+    'update:activeArtifactIndex',
+    'unhide-artifact',
+  ],
+  setup(props, { emit }) {
     const collapsedArtifacts = ref<Set<string>>(new Set())
+    const showHidden = ref(false)
+
+    // Split artifacts into visible and hidden, preserving original index for activeArtifactIndex matching
+    const visibleArtifacts = computed(() =>
+      props.artifacts
+        .map((artifact, originalIndex) => ({ artifact, originalIndex }))
+        .filter(({ artifact }) => !artifact.hidden),
+    )
+
+    const hiddenArtifacts = computed(() =>
+      props.artifacts
+        .map((artifact, originalIndex) => ({ artifact, originalIndex }))
+        .filter(({ artifact }) => artifact.hidden),
+    )
 
     // Convert artifact data to Results for display
     const getArtifactResults = (artifact: ChatArtifact): Results | null => {
@@ -257,6 +307,9 @@ export default defineComponent({
     }
 
     return {
+      visibleArtifacts,
+      hiddenArtifacts,
+      showHidden,
       getArtifactResults,
       getMarkdownResults,
       getArtifactIcon,
@@ -412,5 +465,82 @@ export default defineComponent({
   font-size: var(--font-size);
   padding: 20px;
   text-align: center;
+}
+
+/* Hidden artifacts section */
+.hidden-section {
+  flex-shrink: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hidden-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background-color: var(--sidebar-bg);
+  cursor: pointer;
+  user-select: none;
+  min-height: 32px;
+  font-size: var(--font-size);
+  color: var(--text-faint);
+}
+
+.hidden-section-header:hover {
+  background-color: var(--button-mouseover);
+  color: var(--text-color);
+}
+
+.hidden-section-header i {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.hidden-artifacts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden-artifact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-top: 1px solid var(--border-light);
+  min-height: 30px;
+}
+
+.hidden-artifact-icon {
+  font-size: 13px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.hidden-artifact-label {
+  font-weight: normal;
+  color: var(--text-faint);
+}
+
+.unhide-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.unhide-btn:hover {
+  border-color: var(--special-text);
+  color: var(--special-text);
+  background-color: var(--button-mouseover);
 }
 </style>
