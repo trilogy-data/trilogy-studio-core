@@ -1,4 +1,5 @@
 export { LLMProvider } from './base'
+export { DemoProvider } from './demo'
 export type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 export { OpenAIProvider } from './openai'
 export { AnthropicProvider } from './anthropic'

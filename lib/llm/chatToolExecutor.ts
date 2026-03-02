@@ -17,6 +17,8 @@ export interface ToolCallResult {
   query?: string
   generatedSql?: string
   triggersSymbolRefresh?: boolean // Indicates this tool call should trigger symbol refresh
+  terminatesLoop?: boolean // If true, the tool loop stops and returns control to the user
+  awaitsUserInput?: boolean // If true, the tool loop pauses waiting for user input
 }
 
 export interface ToolCallInput {
@@ -82,10 +84,16 @@ export class ChatToolExecutor {
         return this.removeArtifacts(toolInput.artifact_ids)
       case 'reorder_artifacts':
         return this.reorderArtifacts(toolInput.artifact_ids)
+      case 'return_to_user':
+        return {
+          success: true,
+          message: toolInput.message || 'Done.',
+          terminatesLoop: true,
+        }
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact (accepts array), reorder_artifacts`,
+          error: `Unknown tool: ${toolName}. Available tools: run_trilogy_query, chart_trilogy_query, select_active_import, list_available_imports, connect_data_connection, create_markdown, list_artifacts, get_artifact, update_artifact, remove_artifact (accepts array), reorder_artifacts, return_to_user`,
         }
     }
   }

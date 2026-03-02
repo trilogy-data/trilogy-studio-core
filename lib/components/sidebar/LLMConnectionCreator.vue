@@ -21,6 +21,7 @@
           required
           data-testid="llm-connection-creator-type"
         >
+          <option value="demo" data-testid="llm-connection-creator-demo">Demo (Free Trial)</option>
           <option value="openai" data-testid="llm-connection-creator-openai">OpenAI</option>
           <option value="anthropic" data-testid="llm-connection-creator-anthropic">
             Anthropic
@@ -32,26 +33,32 @@
         </select>
       </div>
 
-      <div class="form-row">
-        <label for="llm-api-key">API Key</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.apiKey"
-          id="llm-api-key"
-          placeholder="API Key"
-          required
-          data-testid="llm-connection-creator-api-key"
-        />
+      <div v-if="connectionDetails.type === 'demo'" class="form-row demo-info">
+        <span class="demo-label">A limited free API key will be issued automatically.</span>
       </div>
-      <div class="form-row">
-        <label for="save-credential">Save Credential?</label>
-        <input
-          type="checkbox"
-          id="save-credential"
-          v-model="connectionDetails.options.saveCredential"
-          data-testid="llm-connection-creator-save-credential"
-        />
-      </div>
+
+      <template v-if="connectionDetails.type !== 'demo'">
+        <div class="form-row">
+          <label for="llm-api-key">API Key</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.apiKey"
+            id="llm-api-key"
+            placeholder="API Key"
+            required
+            data-testid="llm-connection-creator-api-key"
+          />
+        </div>
+        <div class="form-row">
+          <label for="save-credential">Save Credential?</label>
+          <input
+            type="checkbox"
+            id="save-credential"
+            v-model="connectionDetails.options.saveCredential"
+            data-testid="llm-connection-creator-save-credential"
+          />
+        </div>
+      </template>
 
       <div class="button-row">
         <loading-button
@@ -106,6 +113,16 @@ option {
   font-size: 12px;
   font-weight: 300;
 }
+
+.demo-info {
+  font-size: var(--small-font-size);
+  color: var(--text-muted, #666);
+  font-style: italic;
+}
+
+.demo-label {
+  flex: 1;
+}
 </style>
 
 <script lang="ts">
@@ -149,10 +166,10 @@ export default defineComponent({
   setup(_, { emit }) {
     const connectionDetails = ref({
       name: '',
-      type: 'openai',
+      type: 'demo',
       options: {
         apiKey: '',
-        model: OpenAIProvider.getDefaultModel(FALLBACK_MODELS.openai),
+        model: 'deepseek/deepseek-v3.2',
         saveCredential: false,
       },
     })
@@ -168,7 +185,7 @@ export default defineComponent({
     const createConnection = () => {
       // Reset form
       connectionDetails.value.name = ''
-      connectionDetails.value.type = 'openai'
+      connectionDetails.value.type = 'demo'
       connectionDetails.value.options = {
         apiKey: '',
         model: '',
@@ -176,7 +193,7 @@ export default defineComponent({
       }
 
       // Set default model based on provider type
-      updateDefaultModel('openai')
+      updateDefaultModel('demo')
     }
 
     const updateDefaultModel = (providerType: string) => {
@@ -196,6 +213,9 @@ export default defineComponent({
           connectionDetails.value.options.model = GoogleProvider.getDefaultModel(
             FALLBACK_MODELS.google,
           )
+          break
+        case 'demo':
+          connectionDetails.value.options.model = 'deepseek/deepseek-v3.2'
           break
         case 'openrouter':
           connectionDetails.value.options.model = OpenRouterProvider.getDefaultModel(
@@ -219,7 +239,7 @@ export default defineComponent({
         throw new Error('Provider type is required')
       }
 
-      if (!connectionDetails.value.options.apiKey) {
+      if (!connectionDetails.value.options.apiKey && connectionDetails.value.type !== 'demo') {
         throw new Error('API key is required')
       }
 

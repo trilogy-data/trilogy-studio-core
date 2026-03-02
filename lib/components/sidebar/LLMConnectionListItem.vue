@@ -72,17 +72,15 @@
         </div>
 
         <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
-          <form
-            @submit.prevent="updateModel(item.connection, selectedModel)"
-            :data-testid="`model-update-form-${item.connection.name}`"
-          >
-            <button
-              type="submit"
+          <form @submit.prevent :data-testid="`model-update-form-${item.connection.name}`">
+            <LoadingButton
+              :action="() => updateModel(item.connection, selectedModel)"
+              :use-default-style="false"
               class="customize-button"
               :data-testid="`update-model-${item.connection.name}`"
             >
               Update Model
-            </button>
+            </LoadingButton>
             <select
               v-model="selectedModel"
               id="connection-type"
@@ -103,17 +101,15 @@
         </div>
 
         <div v-else-if="item.type === 'fast-model'" class="api-key-container" @click.stop>
-          <form
-            @submit.prevent="updateFastModel(item.connection, selectedFastModel || null)"
-            :data-testid="`fast-model-update-form-${item.connection.name}`"
-          >
-            <button
-              type="submit"
+          <form @submit.prevent :data-testid="`fast-model-update-form-${item.connection.name}`">
+            <LoadingButton
+              :action="() => updateFastModel(item.connection, selectedFastModel || null)"
+              :use-default-style="false"
               class="customize-button"
               :data-testid="`update-fast-model-${item.connection.name}`"
             >
               Update Fast Model
-            </button>
+            </LoadingButton>
             <select
               v-model="selectedFastModel"
               class="connection-customize"
@@ -435,7 +431,8 @@ export default defineComponent({
       } else if (connection instanceof GoogleProvider) {
         return 'google'
       }
-      return 'unknown'
+      // For openrouter/demo and any future providers, fall back to the type property
+      return (connection as any).type || 'unknown'
     }
 
     // Check if connection is connected

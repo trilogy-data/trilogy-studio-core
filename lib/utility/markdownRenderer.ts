@@ -445,6 +445,21 @@ function processFieldExpression(
     return String(item)
   }
 
+  // Handle format expressions like {field:,} or {field:.2f} inside loops
+  const sepIdx = findFormatSeparator(trimmed)
+  if (sepIdx !== -1) {
+    const exprPart = trimmed.substring(0, sepIdx).trim()
+    const formatSpec = trimmed.substring(sepIdx + 1).trim()
+    if (formatSpec && /^\w+$/.test(exprPart)) {
+      const val = item[exprPart]
+      const num = Number(val)
+      if (val !== null && val !== undefined && val !== '' && !isNaN(num)) {
+        return applyNumericFormat(num, formatSpec)
+      }
+      return val !== undefined ? String(val) : ''
+    }
+  }
+
   if (!isFieldExpressionSafe(trimmed)) {
     console.warn('Potentially unsafe field expression blocked:', trimmed)
     return `unsafe{${trimmed}}`
@@ -806,6 +821,9 @@ function processTables(html: string): string {
         tableRows = []
       }
       tableRows.push(line)
+    } else if (inTable && line === '') {
+      // Skip blank lines inside tables — loop templates produce extra newlines
+      // around each row but the table should still be treated as contiguous
     } else {
       if (inTable) {
         // End of table, process accumulated rows

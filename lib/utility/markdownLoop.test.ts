@@ -58,6 +58,19 @@ Age: {age}
       const result = renderMarkdown(template, sampleData)
       expect(result).toBe('John')
     })
+
+    it('should apply format specs like :, inside loops', () => {
+      const data = createResults([
+        { airline_name: 'Delta Air Lines', total_flights: 3453000 },
+        { airline_name: 'United Airlines', total_flights: 2100000 },
+      ])
+      const template =
+        '{{#each data}}| {airline_name} | {total_flights:,} |\n{{/each}}'
+      const result = renderMarkdown(template, data)
+      expect(result).not.toContain('unsafe')
+      expect(result).toContain('3,453,000')
+      expect(result).toContain('2,100,000')
+    })
   })
 
   describe('Array Field Loops', () => {

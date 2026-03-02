@@ -12,6 +12,7 @@ import {
   AnthropicProvider,
   GoogleProvider,
   OpenRouterProvider,
+  DemoProvider,
 } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
@@ -243,6 +244,9 @@ export default class LocalStorage extends AbstractStorage {
         case 'openrouter':
           // @ts-ignore
           connections[connection.name] = reactive(await OpenRouterProvider.fromJSON(connection))
+          break
+        case 'demo':
+          connections[connection.name] = reactive(await DemoProvider.fromJSON(connection))
           break
         default:
           console.warn(`Unknown LLM connection type: ${connection.type}`)

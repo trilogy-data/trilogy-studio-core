@@ -470,8 +470,6 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
         const llmAdapter: LLMAdapter = {
           generateCompletion: (connName, opts, msgs) =>
             llmConnectionStore.generateCompletion(connName, opts, msgs),
-          shouldAutoContinue: (connName, text) =>
-            llmConnectionStore.shouldAutoContinue(connName, text),
         }
 
         const messagePersistence: MessagePersistence = {

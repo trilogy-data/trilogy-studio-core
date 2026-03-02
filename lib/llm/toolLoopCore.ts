@@ -14,7 +14,6 @@ export interface LLMAdapter {
     options: LLMRequestOptions,
     messages: LLMMessage[],
   ): Promise<LLMResponse>
-  shouldAutoContinue(connectionName: string, responseText: string): Promise<boolean>
 }
 
 /** Interface for persisting messages during tool loop execution */
@@ -47,14 +46,14 @@ export interface ToolLoopConfig {
   tools: any[]
   /** Maximum iterations before stopping (safety limit) */
   maxIterations?: number
-  /** Maximum auto-continue attempts when LLM doesn't call tools */
-  maxAutoContinue?: number
   /** Build system prompt - called each iteration to allow dynamic prompts */
   buildSystemPrompt: () => string
   /** Optional callback invoked after each tool execution */
   onToolResult?: (toolName: string, result: ToolCallResult) => void
   /** Optional callback when a tool returns awaitsUserInput */
   onAwaitsUserInput?: (result: ToolCallResult, executedToolCalls: ChatToolCall[]) => void
+  /** Message sent to agent when it responds with text but no tool call. Defaults to a generic reminder. */
+  noToolCallReminder?: string
 }
 
 /** Result from running the tool loop */
@@ -100,12 +99,15 @@ export function formatToolResultText(result: ToolCallResult): string {
 /**
  * Core tool loop execution.
  * Runs the LLM conversation with tool calls until:
- * - LLM responds without tool calls
- * - A tool returns terminatesLoop: true
- * - A tool returns awaitsUserInput: true
- * - Max iterations reached
+ * - A tool returns terminatesLoop: true (agent explicitly signals done)
+ * - A tool returns awaitsUserInput: true (agent pauses for user input)
+ * - Max iterations reached (safety limit)
  * - Abort signal triggered
  * - An error occurs
+ *
+ * If the LLM responds with text and no tool calls, it is re-prompted with a
+ * reminder to call a tool. The agent must explicitly call a termination tool
+ * (e.g. return_to_user, request_close) to return control to the user.
  */
 export async function runToolLoop(
   userMessage: string,
@@ -117,13 +119,11 @@ export async function runToolLoop(
   config: ToolLoopConfig,
 ): Promise<ToolLoopResult> {
   const MAX_ITERATIONS = config.maxIterations ?? 20
-  const MAX_AUTO_CONTINUE = config.maxAutoContinue ?? 3
 
   // currentMessages is the history to send to the LLM, excluding the message we just added
   // (the current user message is sent separately via options.prompt on first iteration)
   let currentMessages: LLMMessage[] = messagePersistence.getMessages().slice(0, -1)
   let currentPrompt = userMessage
-  let autoContinueCount = 0
   let lastResponseText = ''
   // Track whether we've added the user message to currentMessages (happens after first tool call)
   let userMessageAddedToHistory = false
@@ -179,48 +179,30 @@ export async function runToolLoop(
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
     }
 
-    // If no tool calls, we're done (or check for auto-continue)
+    // If no tool calls, re-prompt the agent — it must call a tool to proceed
     if (toolCalls.length === 0) {
+      // Persist the assistant's text response
       messagePersistence.addMessage({
         role: 'assistant',
         content: responseText,
       })
 
-      // Check if we should auto-continue (skip if aborted)
-      if (autoContinueCount < MAX_AUTO_CONTINUE && !stateUpdater.checkAborted()) {
-        try {
-          const shouldContinue = await llmAdapter.shouldAutoContinue(
-            llmConnectionName,
-            responseText,
-          )
+      // Re-prompt: agent must call a tool; plain text responses are not a valid exit
+      const reminder =
+        config.noToolCallReminder ??
+        'You must call a tool to proceed. If you are finished, call the appropriate completion tool to return control to the user. Do not respond with text only.'
 
-          if (shouldContinue && !stateUpdater.checkAborted()) {
-            autoContinueCount++
-            console.log(`[toolLoopCore] Auto-continue ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
+      console.log('[toolLoopCore] No tool call — re-prompting agent to use a tool')
 
-            // On first continuation, add the user message that was excluded from initial currentMessages
-            currentMessages = [
-              ...currentMessages,
-              ...(!userMessageAddedToHistory
-                ? [{ role: 'user' as const, content: userMessage }]
-                : []),
-              { role: 'assistant' as const, content: responseText },
-              {
-                role: 'user' as const,
-                content: 'Continue with the action you described.',
-                hidden: true,
-              },
-            ]
-            userMessageAddedToHistory = true
-            currentPrompt = 'Continue with the action you described.'
-            continue
-          }
-        } catch (err) {
-          console.error('[toolLoopCore] Auto-continue check error:', err)
-        }
-      }
-
-      return { terminated: false, finalMessage: responseText }
+      currentMessages = [
+        ...currentMessages,
+        ...(!userMessageAddedToHistory ? [{ role: 'user' as const, content: userMessage }] : []),
+        { role: 'assistant' as const, content: responseText },
+        { role: 'user' as const, content: reminder, hidden: true },
+      ]
+      userMessageAddedToHistory = true
+      currentPrompt = reminder
+      continue
     }
 
     // Execute tool calls
@@ -369,7 +351,6 @@ export async function runToolLoop(
     userMessageAddedToHistory = true
 
     currentPrompt = '' // No extra prompt needed - tool results speak for themselves
-    autoContinueCount = 0 // Reset after successful tool execution
 
     // Safety check for last iteration
     if (iteration === MAX_ITERATIONS - 1) {

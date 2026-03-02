@@ -254,6 +254,21 @@ ARITHMETIC WITH FORMAT:
       required: ['artifact_ids'],
     },
   },
+  {
+    name: 'return_to_user',
+    description:
+      'Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user\'s next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'A brief summary of what was accomplished or a response to the user.',
+        },
+      },
+      required: ['message'],
+    },
+  },
 ]
 
 export interface ChatAgentPromptOptions {
@@ -338,12 +353,17 @@ ARTIFACT MANAGEMENT:
 - Use remove_artifact to clean up artifacts that are no longer needed.
 - When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
 
-ARTIFACT CURATION:
-Before you finish responding to a multi-step request, review and curate your artifacts:
-1. Use list_artifacts to see what artifacts currently exist.
-2. Remove any intermediate/exploratory artifacts that are not part of the final answer (e.g., failed queries, test runs, superseded results).
-3. Give remaining artifacts clear, descriptive titles via update_artifact.
-4. Use reorder_artifacts to arrange the final artifacts for maximum clarity and impact — put the most important or overview artifact first (e.g., a summary markdown or key chart), followed by supporting detail artifacts. The artifacts panel is the primary view, so order matters.
-5. The user can publish the artifact list as a dashboard, so ensure the final set is clean, well-ordered, and presentable.
+ARTIFACT CURATION (required before every return_to_user call):
+Before calling return_to_user, you MUST curate the artifact panel so it reflects a clean, coherent answer to the user's current request:
+1. Call list_artifacts to see everything currently in the panel.
+2. Remove stale or superseded artifacts — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask.
+3. Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).
+4. Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.
+5. The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.
+
+COMPLETING YOUR RESPONSE:
+- When you have finished addressing the user's request AND curated the artifact panel, call return_to_user with a brief summary.
+- Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
+- The return_to_user message should be concise — the artifacts panel carries the detail.
 `
 }

@@ -193,11 +193,11 @@ export function compareOpenRouterModels(a: string, b: string): number {
     anthropic: 0,
     openai: 1,
     google: 2,
-    'x-ai': 3,
-    'meta-llama': 4,
+    'x-ai': 6,
+    'meta-llama': 9,
     mistralai: 5,
     mistral: 5,
-    deepseek: 6,
+    deepseek: 3,
     qwen: 7,
     cohere: 8,
     perplexity: 9,
@@ -269,12 +269,26 @@ export class OpenRouterProvider extends LLMProvider {
       maxRetries: 3,
       initialDelayMs: 1000,
       retryStatusCodes: [429, 500, 502, 503, 504],
+      errorBodyExtractor: OpenRouterProvider.extractErrorMessage,
       onRetry: (attempt, delayMs, error) => {
         console.warn(
           `OpenRouter API retry attempt ${attempt} after ${delayMs}ms delay due to error: ${error.message}`,
         )
       },
     }
+  }
+
+  /**
+   * Extract a rich error message from an OpenRouter error response body.
+   * Expected body format: {"error":{"message":"...","code":401}}
+   */
+  static async extractErrorMessage(response: Response): Promise<string> {
+    const data = await response.json()
+    if (data.error) {
+      const code = data.error.code ? ` (${data.error.code})` : ''
+      return `OpenRouter API error${code}: ${data.error.message || JSON.stringify(data.error)}`
+    }
+    return `OpenRouter API error: HTTP ${response.status}: ${response.statusText}`
   }
 
   /**
@@ -443,7 +457,8 @@ export class OpenRouterProvider extends LLMProvider {
 
       // Handle error responses from OpenRouter
       if (data.error) {
-        throw new Error(`OpenRouter API error: ${data.error.message || JSON.stringify(data.error)}`)
+        const code = data.error.code ? ` (${data.error.code})` : ''
+        throw new Error(`OpenRouter API error${code}: ${data.error.message || JSON.stringify(data.error)}`)
       }
 
       // Handle tool calls in the response

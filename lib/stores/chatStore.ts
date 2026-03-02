@@ -355,8 +355,6 @@ export const useChatStore = defineStore('chats', {
             this.clearRateLimitBackoff(chatId)
             return result
           },
-          shouldAutoContinue: (connectionName, responseText) =>
-            llmConnectionStore.shouldAutoContinue(connectionName, responseText),
         }
 
         const messagePersistence: MessagePersistence = {
@@ -416,7 +414,8 @@ export const useChatStore = defineStore('chats', {
           {
             tools: CHAT_TOOLS,
             maxIterations: 50,
-            maxAutoContinue: 3,
+            noToolCallReminder:
+              'You must call a tool to proceed. If you are finished, call return_to_user with a summary of what was done. Do not respond with text only.',
             buildSystemPrompt,
             onToolResult,
           },
