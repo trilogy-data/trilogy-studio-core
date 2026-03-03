@@ -66,14 +66,22 @@ export class DemoProvider extends OpenRouterProvider {
     }
   }
 
-  static getDefaultModel(models: string[]): string {
-    const preferredDefaults = [
-      'deepseek/deepseek-v3.2',
-      'anthropic/claude-sonnet-4.6',
-      'openai/gpt-5.2',
-    ]
+  /**
+   * Ordered list of preferred model IDs used by getDefaultModel().
+   * Override this before creating any DemoProvider instances to change the default model.
+   *
+   * @example
+   * DemoProvider.preferredModels = ['my-org/my-model', ...DemoProvider.preferredModels]
+   */
+  static preferredModels: string[] = [
+    'google/gemini-2.5-flash-preview',
+    'deepseek/deepseek-v3.2',
+    'anthropic/claude-sonnet-4-6',
+    'openai/gpt-4o',
+  ]
 
-    for (const preferred of preferredDefaults) {
+  static getDefaultModel(models: string[]): string {
+    for (const preferred of DemoProvider.preferredModels) {
       // Check for exact match or prefix match
       const found = models.find((m) => m === preferred || m.startsWith(preferred))
       if (found) {

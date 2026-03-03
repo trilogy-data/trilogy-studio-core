@@ -52,8 +52,6 @@ from trilogy.core.internal import DEFAULT_CONCEPTS
 
 perf_logger = getLogger("trilogy.performance")
 
-STATEMENT_LIMIT = 10_000
-
 PARSE_CONFIG = Parsing(strict_name_shadow_enforcement=True)
 
 
@@ -168,7 +166,12 @@ def generate_single_query(
                 f"Raw SQL generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return ProcessedRawSQLStatement(text=final.text), default_return, default_values, select_count
+        return (
+            ProcessedRawSQLStatement(text=final.text),
+            default_return,
+            default_values,
+            select_count,
+        )
     elif isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
         assert isinstance(base, ProcessedShowStatement)
@@ -242,8 +245,6 @@ def generate_single_query(
 
     # Set limits and process filters
     limit_filter_start = time.time()
-    if not final_select.limit:
-        final_select.limit = STATEMENT_LIMIT
 
     candidates = (
         final_select.selects
@@ -468,9 +469,17 @@ def query_to_output(
             perf_logger.debug(
                 f"Empty output generation: {time.time() - start_time:.4f}s"
             )
-        return QueryOut(generated_sql=None, columns=columns, label=label, select_count=select_count)
+        return QueryOut(
+            generated_sql=None, columns=columns, label=label, select_count=select_count
+        )
     if isinstance(target, Exception):
-        return QueryOut(generated_sql=None, columns=[], error=str(target), label=label, select_count=select_count)
+        return QueryOut(
+            generated_sql=None,
+            columns=[],
+            error=str(target),
+            label=label,
+            select_count=select_count,
+        )
     elif (
         isinstance(target, ProcessedShowStatement)
         and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
@@ -489,7 +498,11 @@ def query_to_output(
         compile_time = time.time() - compile_start
 
         output = QueryOut(
-            generated_sql=sql, generated_output=results, columns=columns, label=label, select_count=select_count
+            generated_sql=sql,
+            generated_output=results,
+            columns=columns,
+            label=label,
+            select_count=select_count,
         )
 
         if enable_performance_logging:
