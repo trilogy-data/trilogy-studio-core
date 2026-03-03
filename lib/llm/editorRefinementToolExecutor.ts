@@ -7,7 +7,6 @@ import { generateArtifactId } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
-import { truncateResultRows, MAX_TOOL_RESULT_ROWS } from './toolLoopCore'
 
 export interface ToolCallResult {
   success: boolean

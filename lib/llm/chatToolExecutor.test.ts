@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ChatToolExecutor } from './chatToolExecutor'
 import { MAX_TOOL_RESULT_ROWS } from './toolLoopCore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
@@ -195,7 +195,6 @@ describe('ChatToolExecutor — get_artifact truncation', () => {
     // Head row should be present
     expect(result.message).toContain('"id": 0')
     // A mid-range row should not be present in main data
-    const midRow = MAX_TOOL_RESULT_ROWS / 2 + 1
     const parsed = JSON.parse(result.message!.replace(/^Artifact "[^"]*" \([^)]*\):\n/, ''))
     expect(parsed.data.data).toHaveLength(MAX_TOOL_RESULT_ROWS / 2)
     expect(parsed._tail).toHaveLength(MAX_TOOL_RESULT_ROWS / 2)
