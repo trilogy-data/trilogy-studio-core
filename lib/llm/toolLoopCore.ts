@@ -9,6 +9,8 @@ import type { ToolCallResult } from './editorRefinementToolExecutor'
 
 const USER_INPUT_START = '<user_input>'
 const USER_INPUT_END = '</user_input>'
+const SYSTEM_INPUT_START = '<system_input>'
+const SYSTEM_INPUT_END = '</system_input>'
 
 /** Interface for LLM operations needed by the tool loop */
 export interface LLMAdapter {
@@ -197,7 +199,7 @@ export async function runToolLoop(
       })
       messagePersistence.addMessage({
         role: 'user',
-        content: '[User requested pause - conversation can be continued]',
+        content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
         hidden: true,
       })
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
@@ -233,7 +235,7 @@ export async function runToolLoop(
       })
       messagePersistence.addMessage({
         role: 'user',
-        content: '[User requested pause - conversation can be continued]',
+        content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
         hidden: true,
       })
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
@@ -259,16 +261,17 @@ export async function runToolLoop(
 
       console.log('[toolLoopCore] No tool call — re-prompting agent to use a tool')
 
+      const wrappedReminder = `${SYSTEM_INPUT_START}${reminder}${SYSTEM_INPUT_END}`
       currentMessages = [
         ...currentMessages,
         ...(!userMessageAddedToHistory
           ? [{ role: 'user' as const, content: wrappedUserMessage }]
           : []),
         { role: 'assistant' as const, content: responseText },
-        { role: 'user' as const, content: reminder, hidden: true },
+        { role: 'user' as const, content: wrappedReminder, hidden: true },
       ]
       userMessageAddedToHistory = true
-      currentPrompt = reminder
+      currentPrompt = '' // reminder is already in currentMessages; avoid sending it twice
       continue
     }
 
@@ -287,7 +290,7 @@ export async function runToolLoop(
         })
         messagePersistence.addMessage({
           role: 'user',
-          content: '[User requested pause - conversation can be continued]',
+          content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
           hidden: true,
         })
         return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
