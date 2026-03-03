@@ -34,8 +34,24 @@ export {
   buildCustomTrilogyPrompt,
   buildChatAgentSystemPrompt,
   CHAT_TOOLS,
+  RETURN_TO_USER_TOOL,
 } from './llm/chatAgentPrompt'
 export type { TrilogyPromptContext, ChatAgentPromptOptions } from './llm/chatAgentPrompt'
+
+// Provider UI constants — import these instead of maintaining your own copy
+export { PROVIDERS, PROVIDER_LABELS, KEY_PLACEHOLDERS } from './llm/consts'
+export type { ProviderValue } from './llm/consts'
+
+// Tool loop core — for embedding agentic loops in external apps
+export { runToolLoop } from './llm/toolLoopCore'
+export type {
+  LLMAdapter,
+  MessagePersistence,
+  ToolExecutorFactory,
+  ExecutionStateUpdater,
+  ToolLoopConfig,
+  ToolLoopResult,
+} from './llm/toolLoopCore'
 
 // Trilogy composables - simplified entry points
 export { useTrilogyCore } from './composables/useTrilogyCore'
