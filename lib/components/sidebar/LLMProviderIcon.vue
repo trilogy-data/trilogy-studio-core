@@ -3,6 +3,8 @@
     <i v-if="providerType === 'anthropic'" class="mdi mdi-alpha-c-circle" title="Anthropic"></i>
     <i v-else-if="providerType === 'openai'" class="mdi mdi-flash" title="OpenAI"></i>
     <i v-else-if="providerType === 'google'" class="mdi mdi-google" title="Google"></i>
+    <i v-else-if="providerType === 'openrouter'" class="mdi mdi-robot" title="OpenRouter"></i>
+    <i v-else-if="providerType === 'demo'" class="mdi mdi-history demo-icon" title="Demo"></i>
     <i v-else class="mdi mdi-robot" title="LLM Provider"></i>
   </div>
 </template>
@@ -37,5 +39,8 @@ export default defineComponent({
 }
 .mdi-robot {
   color: #888888;
+}
+.demo-icon {
+  color: #f59e0b;
 }
 </style>

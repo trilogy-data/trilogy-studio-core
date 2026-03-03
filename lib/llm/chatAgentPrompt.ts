@@ -149,7 +149,13 @@ FORMAT SPECIFIERS (numeric fields only):
 
 ARITHMETIC WITH FORMAT:
 - {(expr):format} — evaluate arithmetic then format; only field names and + - * / are allowed
-- Example: {(cancelled/total*100):.1f} computes the ratio and shows 1 decimal place`,
+- Example: {(cancelled/total*100):.1f} computes the ratio and shows 1 decimal place
+
+LIMITATIONS — what the template engine cannot do:
+- No comparisons or conditional logic: {{#if (avg < 500)}} is NOT supported
+- No string functions, date arithmetic, or complex expressions
+- No nested loops or grouping logic
+If you need conditional output (e.g. "Regional" vs "Major/National" based on a threshold), compute it in SQL/Trilogy using a CASE expression and return it as a field, then reference the field in the template.`,
         },
         title: {
           type: 'string',
@@ -182,7 +188,7 @@ ARITHMETIC WITH FORMAT:
   {
     name: 'get_artifact',
     description:
-      'Get the full contents and metadata of an artifact by ID. Returns the artifact type, configuration, and data. Use this to inspect artifact details before updating or when you need to reference artifact data.',
+      'Get the full contents and metadata of an artifact by ID. Returns the artifact type, configuration, and data. Large result sets are truncated; use get_artifact_rows to fetch specific row ranges.',
     input_schema: {
       type: 'object',
       properties: {
@@ -192,6 +198,29 @@ ARITHMETIC WITH FORMAT:
         },
       },
       required: ['artifact_id'],
+    },
+  },
+  {
+    name: 'get_artifact_rows',
+    description:
+      'Fetch a specific range of rows from a query result or chart artifact. Use this to inspect data in large result sets that were truncated in the initial response. Rows are 0-indexed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The ID of the results or chart artifact to fetch rows from',
+        },
+        start_row: {
+          type: 'number',
+          description: 'First row to return (0-indexed, inclusive)',
+        },
+        end_row: {
+          type: 'number',
+          description: 'Last row to return (0-indexed, inclusive)',
+        },
+      },
+      required: ['artifact_id', 'start_row', 'end_row'],
     },
   },
   {
@@ -222,16 +251,16 @@ ARITHMETIC WITH FORMAT:
     },
   },
   {
-    name: 'remove_artifact',
+    name: 'hide_artifact',
     description:
-      'Remove one or more artifacts from the chat session by ID. Use list_artifacts first to find artifact IDs.',
+      'Hide one or more artifacts from the main view. Hidden artifacts are soft-deleted: they move to a collapsed "Hidden" section the user can expand, and you can still reference them by ID. Use this to remove stale, intermediate, or superseded artifacts during curation. Use list_artifacts first to find artifact IDs.',
     input_schema: {
       type: 'object',
       properties: {
         artifact_ids: {
           type: 'array',
           items: { type: 'string' },
-          description: 'One or more artifact IDs to remove.',
+          description: 'One or more artifact IDs to hide.',
         },
       },
       required: ['artifact_ids'],
@@ -252,6 +281,21 @@ ARITHMETIC WITH FORMAT:
         },
       },
       required: ['artifact_ids'],
+    },
+  },
+  {
+    name: 'return_to_user',
+    description:
+      "Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user's next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'A brief summary of what was accomplished or a response to the user.',
+        },
+      },
+      required: ['message'],
     },
   },
 ]
@@ -335,15 +379,20 @@ ARTIFACT MANAGEMENT:
 - Use list_artifacts to see all artifacts with their IDs, types, and metadata.
 - Use get_artifact to inspect the full contents and configuration of a specific artifact.
 - Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
-- Use remove_artifact to clean up artifacts that are no longer needed.
+- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.
 - When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
 
-ARTIFACT CURATION:
-Before you finish responding to a multi-step request, review and curate your artifacts:
-1. Use list_artifacts to see what artifacts currently exist.
-2. Remove any intermediate/exploratory artifacts that are not part of the final answer (e.g., failed queries, test runs, superseded results).
-3. Give remaining artifacts clear, descriptive titles via update_artifact.
-4. Use reorder_artifacts to arrange the final artifacts for maximum clarity and impact — put the most important or overview artifact first (e.g., a summary markdown or key chart), followed by supporting detail artifacts. The artifacts panel is the primary view, so order matters.
-5. The user can publish the artifact list as a dashboard, so ensure the final set is clean, well-ordered, and presentable.
+ARTIFACT CURATION (required before every return_to_user call):
+Before calling return_to_user, you MUST curate the artifact panel so it reflects a clean, coherent answer to the user's current request:
+1. Call list_artifacts to see everything currently in the panel.
+2. Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.
+3. Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).
+4. Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.
+5. The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.
+
+COMPLETING YOUR RESPONSE:
+- When you have finished addressing the user's request AND curated the artifact panel, call return_to_user with a brief summary.
+- Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
+- The return_to_user message should be concise — the artifacts panel carries the detail.
 `
 }

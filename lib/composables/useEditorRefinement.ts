@@ -275,7 +275,6 @@ export function useEditorRefinement(
       {
         tools: EDITOR_REFINEMENT_TOOLS,
         maxIterations: 20,
-        maxAutoContinue: 3,
         onToolResult: (toolName, result) => {
           // Update available symbols when validation returns them
           if (toolName === 'validate_query' && result.availableSymbols) {

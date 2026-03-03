@@ -36,7 +36,7 @@ def test_show_statement():
             },
         }
     )
-    target, columns, results = generate_query_core(query, DuckDBDialect())
+    target, columns, results, _ = generate_query_core(query, DuckDBDialect())
     assert len(results) == 1
 
 
@@ -53,7 +53,7 @@ def test_validate_statement_empty():
         }
     )
     dialect = DuckDBDialect()
-    target, columns, results = generate_query_core(query, dialect)
+    target, columns, results, _ = generate_query_core(query, dialect)
     assert not results, results
     query_to_output(target, columns, results, "default", dialect, False)
 
@@ -92,6 +92,6 @@ def test_validate_statement():
         }
     )
     dialect = DuckDBDialect()
-    target, columns, results = generate_query_core(query, dialect)
+    target, columns, results, _ = generate_query_core(query, dialect)
     assert len(results) == 19, results
     query_to_output(target, columns, results, "default", dialect, False)

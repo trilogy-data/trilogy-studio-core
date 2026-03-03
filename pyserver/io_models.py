@@ -138,6 +138,7 @@ class QueryOut(BaseModel):
     generated_output: list[dict[str, Any]] | None = None
     error: str | None = None
     label: str | None = None
+    select_count: int | None = None
 
 
 class MultiQueryOutSchema(BaseModel):

@@ -257,8 +257,9 @@ const createNavigationStore = (): NavigationStore => {
       // Handle active tab change if we closed the active tab
       if (wasActiveTab) {
         if (state.tabs.value.length > 0) {
-          // Set active to first remaining tab
-          setActiveTab(state.tabs.value[0].id)
+          // Set active to the adjacent tab (previous if available, otherwise next)
+          const targetIndex = tabIndex > 0 ? tabIndex - 1 : 0
+          setActiveTab(state.tabs.value[targetIndex].id)
         } else {
           // No tabs remain, inject welcome tab and make it active
           openTab('welcome', 'Welcome', 'welcome')

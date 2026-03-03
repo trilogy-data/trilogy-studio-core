@@ -35,6 +35,7 @@ export interface QueryResult {
   executionTime: number
   resultSize: number
   columnCount: number
+  selectCount?: number
 }
 
 export interface BatchQueryResult {
@@ -644,6 +645,7 @@ export default class QueryExecutionService {
           executionTime: new Date().getTime() - startTime,
           resultSize: resolveResponse.data.generated_output.length,
           columnCount: columns.length,
+          selectCount: resolveResponse.data.select_count,
         }
         console.log(rval)
         if (onSuccess) {
@@ -698,6 +700,7 @@ export default class QueryExecutionService {
           extraFilters: queryInput.extraFilters,
         })
       }
+      const selectCount = resolveResponse?.data.select_count
       if (onSuccess) {
         onSuccess({
           success: true,
@@ -706,6 +709,7 @@ export default class QueryExecutionService {
           executionTime: new Date().getTime() - startTime,
           resultSize,
           columnCount,
+          selectCount,
         })
       }
       return {
@@ -715,6 +719,7 @@ export default class QueryExecutionService {
         executionTime: new Date().getTime() - startTime,
         resultSize,
         columnCount,
+        selectCount,
       }
     } catch (error) {
       const errorMessage = controller.signal.aborted

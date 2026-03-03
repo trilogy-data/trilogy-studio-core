@@ -18,13 +18,19 @@ export interface RetryOptions {
   onRetry?: (attempt: number, delayMs: number, error: Error) => void
   /** Optional AbortSignal for cancellation */
   signal?: AbortSignal
+  /** Optional function to extract a richer error message from a non-ok response body */
+  errorBodyExtractor?: (response: Response) => Promise<string>
 }
 
 /**
  * Default retry configuration
  */
-export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal'> & {
+export const DEFAULT_RETRY_OPTIONS: Omit<
+  Required<RetryOptions>,
+  'signal' | 'errorBodyExtractor'
+> & {
   signal?: AbortSignal
+  errorBodyExtractor?: RetryOptions['errorBodyExtractor']
 } = {
   maxRetries: 5,
   initialDelayMs: 1000, // 1 second
@@ -33,6 +39,7 @@ export const DEFAULT_RETRY_OPTIONS: Omit<Required<RetryOptions>, 'signal'> & {
   retryStatusCodes: [429, 503, 504], // Rate limit and service unavailable errors
   onRetry: () => {}, // No-op by default
   signal: undefined,
+  errorBodyExtractor: undefined,
 }
 
 /**
@@ -144,11 +151,18 @@ export async function fetchWithRetry(
 
     // If the response is not ok, throw an error with the response attached
     if (!response.ok) {
-      // Create an error with the response attached
-      const error = new Error(
-        `HTTP error ${response.status}: ${response.statusText}`,
-      ) as ResponseError
-      error.response = response.clone() // Clone the response so we can still use it later if needed
+      let message = `HTTP error ${response.status}: ${response.statusText}`
+
+      if (options.errorBodyExtractor) {
+        try {
+          message = await options.errorBodyExtractor(response.clone())
+        } catch {
+          // fall back to default message
+        }
+      }
+
+      const error = new Error(message) as ResponseError
+      error.response = response.clone()
       error.status = response.status
 
       throw error

@@ -13,6 +13,8 @@ export interface ChatArtifact {
   type: 'results' | 'chart' | 'code' | 'markdown' | 'custom'
   data: any
   config?: any
+  /** When true, artifact is soft-deleted and shown in the collapsed Hidden section */
+  hidden?: boolean
 }
 
 /** Generate a short unique artifact ID */
@@ -144,6 +146,29 @@ export class Chat implements ChatSessionData {
     if (this.activeArtifactIndex >= this.artifacts.length) {
       this.activeArtifactIndex = this.artifacts.length - 1
     }
+    this.updatedAt = new Date()
+    this.changed = true
+    return true
+  }
+
+  hideArtifact(id: string): boolean {
+    const artifact = this.artifacts.find((a) => a.id === id)
+    if (!artifact) return false
+    artifact.hidden = true
+    // Deselect if the hidden artifact was active
+    const index = this.artifacts.indexOf(artifact)
+    if (this.activeArtifactIndex === index) {
+      this.activeArtifactIndex = -1
+    }
+    this.updatedAt = new Date()
+    this.changed = true
+    return true
+  }
+
+  unhideArtifact(id: string): boolean {
+    const artifact = this.artifacts.find((a) => a.id === id)
+    if (!artifact) return false
+    artifact.hidden = false
     this.updatedAt = new Date()
     this.changed = true
     return true

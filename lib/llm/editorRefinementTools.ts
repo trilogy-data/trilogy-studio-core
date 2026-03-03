@@ -118,6 +118,29 @@ ${chartConfigGuidance}`,
     },
   },
   {
+    name: 'get_artifact_rows',
+    description:
+      'Fetch a specific range of rows from a query result artifact created by run_query or run_active_editor_query in this session. Use this to inspect data in large result sets that were truncated in the initial response. Rows are 0-indexed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The artifact ID to fetch rows from (shown in the truncation notice)',
+        },
+        start_row: {
+          type: 'number',
+          description: 'First row to return (0-indexed, inclusive)',
+        },
+        end_row: {
+          type: 'number',
+          description: 'Last row to return (0-indexed, inclusive)',
+        },
+      },
+      required: ['artifact_id', 'start_row', 'end_row'],
+    },
+  },
+  {
     name: 'request_close',
     description:
       'Request to close the refinement session. Call this when you believe you are done making changes. The user will have a chance to reply with follow-up requests before confirming. Include a summary of what was done.',
@@ -202,6 +225,7 @@ AVAILABLE TOOLS:
 - validate_query: Check if a query is valid without running it (also returns available fields)
 - run_query: Execute a query to see results (returns results privately to you)
 - run_active_editor_query: Run the current editor query and show results in the main results pane
+- get_artifact_rows: Fetch a row range from a truncated result artifact (use when results were cut off)
 - format_query: Format/prettify a query
 - edit_chart_config: Update chart visualization settings
 - edit_editor: Write changes to the editor
@@ -222,13 +246,14 @@ WORKFLOW:
 2. Use edit_editor to write your changes (this automatically validates and returns errors/available fields)
 3. Optionally use run_query to test and see results privately
 4. Use format_query to clean up formatting if needed
-5. Call request_close with a summary - user can then reply or confirm
+5. Always call request_close with a summary when done — you MUST call a tool, never end with text only
 
 IMPORTANT:
 - Always use edit_editor to write your final answer - don't just show the query in text
 - edit_editor automatically validates, so you don't need to call validate_query separately after editing
 - You can iterate: write → fix based on validation errors → write again
-- Use request_close when done - this gives the user a chance to ask for more changes
+- You MUST always call a tool — never respond with text only. When done, call request_close.
+- request_close gives the user a chance to ask for more changes before closing
 - Only use close_session after the user explicitly confirms (e.g., says "done", "looks good", "close it")
 - If the user selected specific text, use replaceSelection: true to only modify that part
 - After updating chart configuration with edit_chart_config, use run_active_editor_query to show the user the updated visualization

@@ -46,8 +46,10 @@ export function sanitizeHtml(html: string): string {
       'h1',
       'h2',
       'h3',
+      'h4',
       'p',
       'ul',
+      'ol',
       'li',
       'strong',
       'em',
@@ -366,6 +368,19 @@ function evaluateFormatExpression(
     const val = data[0][exprPart]
     const num = Number(val)
     numericValue = val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+  } else {
+    // data[N].field pattern: data[0].crime_count
+    const dataIndexMatch = exprPart.match(/^data\[(\d+)\]\.(.+)$/)
+    if (dataIndexMatch) {
+      const [, index, fieldPath] = dataIndexMatch
+      const rowIndex = parseInt(index)
+      if (data[rowIndex]) {
+        const val = getNestedValue(data[rowIndex], fieldPath)
+        const num = Number(val)
+        numericValue =
+          val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+      }
+    }
   }
 
   if (numericValue === undefined) return undefined
@@ -443,6 +458,21 @@ function processFieldExpression(
 
   if (trimmed === '.') {
     return String(item)
+  }
+
+  // Handle format expressions like {field:,} or {field:.2f} inside loops
+  const sepIdx = findFormatSeparator(trimmed)
+  if (sepIdx !== -1) {
+    const exprPart = trimmed.substring(0, sepIdx).trim()
+    const formatSpec = trimmed.substring(sepIdx + 1).trim()
+    if (formatSpec && /^\w+$/.test(exprPart)) {
+      const val = item[exprPart]
+      const num = Number(val)
+      if (val !== null && val !== undefined && val !== '' && !isNaN(num)) {
+        return applyNumericFormat(num, formatSpec)
+      }
+      return val !== undefined ? String(val) : ''
+    }
   }
 
   if (!isFieldExpressionSafe(trimmed)) {
@@ -737,6 +767,7 @@ function extractCodeBlocks(
  */
 function processHeaders(html: string): string {
   return html
+    .replace(/^#### (.*\S)[\s]*$/gim, '<h4 class="rendered-markdown-h4">$1</h4>')
     .replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
     .replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
     .replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
@@ -750,6 +781,8 @@ function processLists(html: string): string {
     .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
     .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
     .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/^\d+\. (.*$)/gim, '<ol><li>$1</li></ol>')
+    .replace(/<\/ol>\s*<ol>/g, '')
 }
 
 /**
@@ -806,6 +839,9 @@ function processTables(html: string): string {
         tableRows = []
       }
       tableRows.push(line)
+    } else if (inTable && line === '') {
+      // Skip blank lines inside tables — loop templates produce extra newlines
+      // around each row but the table should still be treated as contiguous
     } else {
       if (inTable) {
         // End of table, process accumulated rows

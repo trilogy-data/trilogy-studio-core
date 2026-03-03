@@ -20,8 +20,6 @@ export interface ToolLoopOptions {
   tools: any[]
   /** Maximum iterations before stopping (safety limit) */
   maxIterations?: number
-  /** Maximum auto-continue attempts when LLM doesn't call tools */
-  maxAutoContinue?: number
   /** Optional callback invoked after each tool execution */
   onToolResult?: (toolName: string, result: ToolCallResult) => void
 }
@@ -96,10 +94,11 @@ export function useToolLoop(): UseToolLoopReturn {
   /**
    * Execute a message through the tool loop.
    * Returns when:
-   * - LLM responds without tool calls
-   * - A tool returns terminatesLoop: true
+   * - A tool returns terminatesLoop: true (agent explicitly signals done)
+   * - A tool returns awaitsUserInput: true (agent pauses for user)
    * - Max iterations reached
    * - An error occurs
+   * If the LLM responds without tool calls it is re-prompted until it calls a tool.
    */
   const executeMessage = async (
     userMessage: string,
@@ -133,8 +132,6 @@ export function useToolLoop(): UseToolLoopReturn {
       const llmAdapter: LLMAdapter = {
         generateCompletion: (connectionName, llmOptions, msgs) =>
           llmStore.generateCompletion(connectionName, llmOptions, msgs),
-        shouldAutoContinue: (connectionName, responseText) =>
-          llmStore.shouldAutoContinue(connectionName, responseText),
       }
 
       const messagePersistence: MessagePersistence = {
@@ -168,7 +165,6 @@ export function useToolLoop(): UseToolLoopReturn {
         {
           tools: options.tools,
           maxIterations: options.maxIterations,
-          maxAutoContinue: options.maxAutoContinue,
           buildSystemPrompt: () => systemPrompt,
           onToolResult: options.onToolResult,
         },

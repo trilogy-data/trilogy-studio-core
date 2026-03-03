@@ -6,7 +6,6 @@ import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
 // Mock LLM store type for testing
 type MockLLMStore = {
   generateCompletion: ReturnType<typeof vi.fn>
-  shouldAutoContinue: ReturnType<typeof vi.fn>
 }
 
 describe('useToolLoop', () => {
@@ -18,7 +17,6 @@ describe('useToolLoop', () => {
     // Create mock LLM store
     mockLLMStore = {
       generateCompletion: vi.fn(),
-      shouldAutoContinue: vi.fn().mockResolvedValue(false),
     }
 
     // Create mock tool executor
@@ -87,29 +85,6 @@ describe('useToolLoop', () => {
   })
 
   describe('executeMessage without tools', () => {
-    it('should add user and assistant messages for simple completion', async () => {
-      mockLLMStore.generateCompletion.mockResolvedValue({
-        text: 'I can help you with that!',
-      })
-
-      const { executeMessage, messages } = useToolLoop()
-
-      const result = await executeMessage(
-        'Hello, can you help?',
-        mockLLMStore as unknown as LLMConnectionStoreType,
-        'test-connection',
-        'You are a helpful assistant.',
-        mockToolExecutor,
-        { tools: [] },
-      )
-
-      expect(result.terminated).toBe(false)
-      expect(result.finalMessage).toBe('I can help you with that!')
-      expect(messages.value).toHaveLength(2)
-      expect(messages.value[0].role).toBe('user')
-      expect(messages.value[1].role).toBe('assistant')
-    })
-
     it('should handle missing connection name', async () => {
       const { executeMessage, error } = useToolLoop()
 
@@ -128,8 +103,8 @@ describe('useToolLoop', () => {
   })
 
   describe('executeMessage with tool calls', () => {
-    it('should execute tool calls from LLM response', async () => {
-      // First response has structured tool calls
+    it('should execute tool calls from LLM response and terminate via close_session', async () => {
+      // First response has tool call
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: 'Let me edit the query.',
         toolCalls: [
@@ -137,14 +112,21 @@ describe('useToolLoop', () => {
         ],
       })
 
-      // Second response after tool result
+      // Second response closes the session
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'I have updated the editor with the query.',
+        text: 'Done.',
+        toolCalls: [{ id: 'toolu_02', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({
         success: true,
         message: 'Editor updated.',
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage } = useToolLoop()
@@ -161,8 +143,8 @@ describe('useToolLoop', () => {
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', {
         content: 'SELECT * FROM users;',
       })
-      expect(result.terminated).toBe(false)
-      expect(result.finalMessage).toBe('I have updated the editor with the query.')
+      expect(result.terminated).toBe(true)
+      expect(result.finalMessage).toBe('Session closed.')
     })
 
     it('should handle tool execution errors', async () => {
@@ -171,13 +153,21 @@ describe('useToolLoop', () => {
         toolCalls: [{ id: 'toolu_01', name: 'edit_editor', input: { content: '' } }],
       })
 
+      // After error, agent calls close_session
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Sorry, there was an error updating the editor.',
+        text: 'There was an error.',
+        toolCalls: [{ id: 'toolu_02', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({
         success: false,
         error: 'Content is required',
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage } = useToolLoop()
@@ -267,7 +257,7 @@ describe('useToolLoop', () => {
       expect(messages.value[2].toolResults).toBeDefined()
       expect(messages.value[2].toolResults).toHaveLength(1)
       expect(messages.value[2].toolResults![0].toolCallId).toBe('call_abc123')
-      expect(messages.value[2].toolResults![0].result).toBe('Session closed successfully.')
+      expect(messages.value[2].toolResults![0].result).toBe('')
     })
 
     it('should include all tool results when terminatesLoop happens after multiple tools', async () => {
@@ -314,7 +304,7 @@ describe('useToolLoop', () => {
       expect(toolResultsMessage.toolResults![0].toolCallId).toBe('call_validate')
       expect(toolResultsMessage.toolResults![0].result).toBe('Query is valid.')
       expect(toolResultsMessage.toolResults![1].toolCallId).toBe('call_close')
-      expect(toolResultsMessage.toolResults![1].result).toBe('Session closed.')
+      expect(toolResultsMessage.toolResults![1].result).toBe('')
     })
 
     it('should handle failed terminating tool calls correctly', async () => {
@@ -340,9 +330,9 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Tool results should contain the error
+      // Tool results are empty for terminating calls (finalMessage carries the result)
       const toolResultsMessage = messages.value[2]
-      expect(toolResultsMessage.toolResults![0].result).toBe('Error: Failed to close session')
+      expect(toolResultsMessage.toolResults![0].result).toBe('')
     })
 
     it('should add artifacts from tool results', async () => {
@@ -367,14 +357,22 @@ describe('useToolLoop', () => {
         toolCalls: [{ id: 'toolu_01', name: 'run_query', input: { query: 'SELECT * FROM users' } }],
       })
 
+      // After query, agent closes session
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Query executed successfully.',
+        text: 'Query done.',
+        toolCalls: [{ id: 'toolu_02', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({
         success: true,
         artifact: mockArtifact,
         message: '1 row returned.',
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage, artifacts } = useToolLoop()
@@ -401,7 +399,8 @@ describe('useToolLoop', () => {
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Query is valid.',
+        text: 'Done.',
+        toolCalls: [{ id: 'toolu_02', name: 'close_session', input: {} }],
       })
 
       const toolResult: ToolCallResult = {
@@ -409,7 +408,12 @@ describe('useToolLoop', () => {
         message: 'Query is valid.',
         availableSymbols: [{ label: 'test', trilogyType: 'concept' } as any],
       }
-      executeToolCallSpy.mockResolvedValue(toolResult)
+      executeToolCallSpy.mockResolvedValueOnce(toolResult)
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
+      })
 
       const { executeMessage } = useToolLoop()
 
@@ -423,6 +427,81 @@ describe('useToolLoop', () => {
       )
 
       expect(onToolResult).toHaveBeenCalledWith('validate_query', toolResult)
+    })
+  })
+
+  describe('no-tool-call re-prompt behavior', () => {
+    it('should re-prompt agent when it responds with text only (no tool calls)', async () => {
+      // First response: text only — agent forgets to call a tool
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Here is my analysis...',
+      })
+
+      // Second response: agent calls close_session after the re-prompt
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Closing now.',
+        toolCalls: [{ id: 'toolu_01', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Session closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      const result = await executeMessage(
+        'Analyse this',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // Should have looped: the text-only response is persisted, then the agent is re-prompted
+      expect(mockLLMStore.generateCompletion).toHaveBeenCalledTimes(2)
+      expect(result.terminated).toBe(true)
+
+      // The first assistant text response should be in the messages
+      const assistantMessages = messages.value.filter((m) => m.role === 'assistant')
+      expect(assistantMessages.some((m) => m.content === 'Here is my analysis...')).toBe(true)
+    })
+
+    it('should include a hidden reminder message in history after no-tool-call response', async () => {
+      // First iteration: text only
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Thinking aloud...',
+      })
+
+      // Second iteration: close
+      mockLLMStore.generateCompletion.mockResolvedValueOnce({
+        text: 'Done.',
+        toolCalls: [{ id: 'toolu_01', name: 'close_session', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
+      })
+
+      const { executeMessage, messages } = useToolLoop()
+
+      await executeMessage(
+        'Do something',
+        mockLLMStore as unknown as LLMConnectionStoreType,
+        'test-connection',
+        'System prompt',
+        mockToolExecutor,
+        { tools: [] },
+      )
+
+      // There should be a hidden user reminder message between the two assistant turns
+      const hiddenMessages = messages.value.filter((m) => m.hidden && m.role === 'user')
+      // At least one hidden reminder + the tool result hidden message
+      expect(hiddenMessages.length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -456,63 +535,6 @@ describe('useToolLoop', () => {
     })
   })
 
-  describe('auto-continue behavior', () => {
-    it('should auto-continue when shouldAutoContinue returns true', async () => {
-      // First response without tool call
-      mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Let me think about this...',
-      })
-
-      // shouldAutoContinue returns true
-      mockLLMStore.shouldAutoContinue.mockResolvedValueOnce(true)
-
-      // Second response after auto-continue
-      mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Here is my final answer!',
-      })
-
-      // shouldAutoContinue returns false to stop
-      mockLLMStore.shouldAutoContinue.mockResolvedValueOnce(false)
-
-      const { executeMessage } = useToolLoop()
-
-      const result = await executeMessage(
-        'Help me',
-        mockLLMStore as unknown as LLMConnectionStoreType,
-        'test-connection',
-        'System prompt',
-        mockToolExecutor,
-        { tools: [], maxAutoContinue: 3 },
-      )
-
-      expect(mockLLMStore.shouldAutoContinue).toHaveBeenCalled()
-      expect(result.finalMessage).toBe('Here is my final answer!')
-    })
-
-    it('should respect maxAutoContinue limit', async () => {
-      mockLLMStore.generateCompletion.mockResolvedValue({
-        text: 'Thinking...',
-      })
-
-      mockLLMStore.shouldAutoContinue.mockResolvedValue(true)
-
-      const { executeMessage } = useToolLoop()
-
-      // With maxAutoContinue = 2, it should stop after 2 auto-continues
-      await executeMessage(
-        'Help',
-        mockLLMStore as unknown as LLMConnectionStoreType,
-        'test-connection',
-        'System prompt',
-        mockToolExecutor,
-        { tools: [], maxAutoContinue: 2 },
-      )
-
-      // Should have called shouldAutoContinue twice (and then stopped)
-      expect(mockLLMStore.shouldAutoContinue).toHaveBeenCalledTimes(2)
-    })
-  })
-
   describe('error handling', () => {
     it('should handle LLM generation errors', async () => {
       mockLLMStore.generateCompletion.mockRejectedValue(new Error('Network error'))
@@ -536,8 +558,17 @@ describe('useToolLoop', () => {
 
     it('should set isLoading correctly during execution', async () => {
       mockLLMStore.generateCompletion.mockImplementation(async () => {
-        // Check loading state during execution
-        return { text: 'Response' }
+        // Check loading state during execution — immediately return a close call
+        return {
+          text: 'Done.',
+          toolCalls: [{ id: 'toolu_01', name: 'close_session', input: {} }],
+        }
+      })
+
+      executeToolCallSpy.mockResolvedValue({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage, isLoading } = useToolLoop()
@@ -575,12 +606,16 @@ describe('useToolLoop', () => {
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Both operations completed.',
+        text: 'Both done.',
+        toolCalls: [{ id: 'toolu_03', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({
         success: true,
-        message: 'Done.',
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage } = useToolLoop()
@@ -595,22 +630,21 @@ describe('useToolLoop', () => {
       )
 
       // Both tool calls should have been executed
-      expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
+      expect(executeToolCallSpy).toHaveBeenCalledTimes(3)
       expect(executeToolCallSpy).toHaveBeenCalledWith('validate_query', { query: 'SELECT 1' })
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', { content: 'SELECT 1;' })
     })
 
     it('should handle real Anthropic response with text + structured tool calls', async () => {
-      // This test simulates a structured tool call response
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: "Interesting data! There does appear to be a general trend that larger aircraft (more seats) tend to fly longer distances, though it's not perfectly linear. Let me write this query to the editor and set up a scatter plot visualization to show this relationship clearly:",
+        text: 'Interesting data! Let me write this query to the editor and set up a scatter plot:',
         toolCalls: [
           {
             id: 'toolu_01',
             name: 'edit_editor',
             input: {
               content:
-                'import flight;\n\n# Do planes that fly longer distances tend to carry more passengers?\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance,\n    count(id2) as flight_count\norder by\n    aircraft.aircraft_model.seats asc\nlimit 100;',
+                'import flight;\n\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance\nlimit 100;',
             },
           },
           {
@@ -621,7 +655,6 @@ describe('useToolLoop', () => {
                 chartType: 'point',
                 xField: 'aircraft_aircraft_model_seats',
                 yField: 'avg_distance',
-                sizeField: 'flight_count',
               },
             },
           },
@@ -629,12 +662,16 @@ describe('useToolLoop', () => {
       })
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'I have updated the editor and chart configuration.',
+        text: 'Done.',
+        toolCalls: [{ id: 'toolu_03', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({
         success: true,
-        message: 'Done.',
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage } = useToolLoop()
@@ -648,24 +685,21 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Both tool calls should have been executed
-      expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
+      expect(executeToolCallSpy).toHaveBeenCalledTimes(3)
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', {
         content:
-          'import flight;\n\n# Do planes that fly longer distances tend to carry more passengers?\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance,\n    count(id2) as flight_count\norder by\n    aircraft.aircraft_model.seats asc\nlimit 100;',
+          'import flight;\n\nselect\n    aircraft.aircraft_model.seats,\n    avg(distance) as avg_distance\nlimit 100;',
       })
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_chart_config', {
         chartConfig: {
           chartType: 'point',
           xField: 'aircraft_aircraft_model_seats',
           yField: 'avg_distance',
-          sizeField: 'flight_count',
         },
       })
     })
 
     it('should prefer structured toolCalls over text parsing', async () => {
-      // When response includes structured toolCalls, should use those instead of parsing text
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: 'Let me update the editor and chart config.',
         toolCalls: [
@@ -690,11 +724,15 @@ describe('useToolLoop', () => {
 
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: 'Done!',
+        toolCalls: [{ id: 'toolu_03', name: 'close_session', input: {} }],
       })
 
-      executeToolCallSpy.mockResolvedValue({
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({ success: true, message: 'Done.' })
+      executeToolCallSpy.mockResolvedValueOnce({
         success: true,
-        message: 'Done.',
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       const { executeMessage } = useToolLoop()
@@ -708,8 +746,7 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Both structured tool calls should have been executed
-      expect(executeToolCallSpy).toHaveBeenCalledTimes(2)
+      expect(executeToolCallSpy).toHaveBeenCalledTimes(3)
       expect(executeToolCallSpy).toHaveBeenCalledWith('edit_editor', {
         content: 'SELECT * FROM users;',
       })
@@ -735,7 +772,7 @@ describe('useToolLoop', () => {
         toolCalls: [{ id: 'call_edit', name: 'edit_editor', input: { content: 'SELECT 1' } }],
       })
 
-      // Iteration 2: LLM responds with text and calls request_close (terminating)
+      // Iteration 2: LLM calls request_close (terminating)
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: 'Updated the editor successfully.',
         toolCalls: [{ id: 'call_close', name: 'request_close', input: { message: 'Done' } }],
@@ -773,7 +810,6 @@ describe('useToolLoop', () => {
       // 5. user (hidden): request_close tool result
       expect(messages.value.length).toBe(5)
 
-      // Check iteration 1 messages are persisted
       expect(messages.value[0].role).toBe('user')
       expect(messages.value[0].content).toBe('Write a query')
 
@@ -786,7 +822,6 @@ describe('useToolLoop', () => {
       expect(messages.value[2].toolResults).toBeDefined()
       expect(messages.value[2].toolResults![0].toolCallId).toBe('call_edit')
 
-      // Check iteration 2 messages are also persisted
       expect(messages.value[3].role).toBe('assistant')
       expect(messages.value[3].toolCalls).toBeDefined()
       expect(messages.value[3].toolCalls![0].id).toBe('call_close')
@@ -798,9 +833,6 @@ describe('useToolLoop', () => {
     })
 
     it('should persist messages correctly for follow-up conversations', async () => {
-      // Simulates: user sends message -> tool iterations -> terminates -> user sends follow-up
-      // The follow-up should have access to all previous messages
-
       // First executeMessage call
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
         text: 'Editing the editor.',
@@ -830,13 +862,19 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Now simulate follow-up - messages.value should have full history
       const messageCountAfterFirst = messages.value.length
       expect(messageCountAfterFirst).toBe(5) // user, assistant+tool, tool_result, assistant+tool, tool_result
 
-      // Second executeMessage call (follow-up)
+      // Second executeMessage call (follow-up) — agent immediately closes
       mockLLMStore.generateCompletion.mockResolvedValueOnce({
-        text: 'Here is your follow-up answer.',
+        text: 'Follow-up done.',
+        toolCalls: [{ id: 'call_close_2', name: 'request_close', input: {} }],
+      })
+
+      executeToolCallSpy.mockResolvedValueOnce({
+        success: true,
+        message: 'Closed.',
+        terminatesLoop: true,
       })
 
       await executeMessage(
@@ -848,16 +886,11 @@ describe('useToolLoop', () => {
         { tools: [] },
       )
 
-      // Should have added 2 more messages: user follow-up + assistant response
-      expect(messages.value.length).toBe(messageCountAfterFirst + 2)
+      // Should have added: user follow-up, assistant+tool call, tool result = 3 more
+      expect(messages.value.length).toBe(messageCountAfterFirst + 3)
 
-      // The new user message
       expect(messages.value[5].role).toBe('user')
       expect(messages.value[5].content).toBe('Follow-up request')
-
-      // The assistant's response to follow-up
-      expect(messages.value[6].role).toBe('assistant')
-      expect(messages.value[6].content).toBe('Here is your follow-up answer.')
     })
   })
 })

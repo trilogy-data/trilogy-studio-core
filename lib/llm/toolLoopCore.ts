@@ -7,6 +7,9 @@ import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMToolCall, LLMToolRe
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../chats/chat'
 import type { ToolCallResult } from './editorRefinementToolExecutor'
 
+const USER_INPUT_START = '<user_input>'
+const USER_INPUT_END = '</user_input>'
+
 /** Interface for LLM operations needed by the tool loop */
 export interface LLMAdapter {
   generateCompletion(
@@ -14,7 +17,6 @@ export interface LLMAdapter {
     options: LLMRequestOptions,
     messages: LLMMessage[],
   ): Promise<LLMResponse>
-  shouldAutoContinue(connectionName: string, responseText: string): Promise<boolean>
 }
 
 /** Interface for persisting messages during tool loop execution */
@@ -47,14 +49,20 @@ export interface ToolLoopConfig {
   tools: any[]
   /** Maximum iterations before stopping (safety limit) */
   maxIterations?: number
-  /** Maximum auto-continue attempts when LLM doesn't call tools */
-  maxAutoContinue?: number
   /** Build system prompt - called each iteration to allow dynamic prompts */
   buildSystemPrompt: () => string
   /** Optional callback invoked after each tool execution */
   onToolResult?: (toolName: string, result: ToolCallResult) => void
   /** Optional callback when a tool returns awaitsUserInput */
   onAwaitsUserInput?: (result: ToolCallResult, executedToolCalls: ChatToolCall[]) => void
+  /** Message sent to agent when it responds with text but no tool call. Defaults to a generic reminder. */
+  noToolCallReminder?: string
+  /**
+   * If true, terminate the loop when the LLM responds with text but no tool calls,
+   * instead of re-prompting. Use this for standalone/embedded chat modes where the
+   * LLM's plain text response is the final answer.
+   */
+  terminateOnNoToolCall?: boolean
 }
 
 /** Result from running the tool loop */
@@ -65,9 +73,43 @@ export interface ToolLoopResult {
 }
 
 /**
+ * Maximum number of data rows to include in a tool result sent to the LLM.
+ * When results exceed this limit, the first and last (MAX_TOOL_RESULT_ROWS / 2) rows
+ * are shown with a truncation notice in between.
+ */
+export const MAX_TOOL_RESULT_ROWS = 100
+
+/**
+ * Truncate a deserialized query result object if it has more rows than MAX_TOOL_RESULT_ROWS.
+ * Returns the (possibly truncated) data array and the number of rows cut.
+ *
+ * The caller is responsible for rendering the cut notice between the two halves.
+ */
+export function truncateResultRows(jsonData: any): {
+  head: any[]
+  tail: any[]
+  totalRows: number
+  cutCount: number
+} {
+  const rows: any[] = jsonData?.data
+  if (!Array.isArray(rows) || rows.length <= MAX_TOOL_RESULT_ROWS) {
+    return { head: rows ?? [], tail: [], totalRows: rows?.length ?? 0, cutCount: 0 }
+  }
+  const half = MAX_TOOL_RESULT_ROWS / 2
+  return {
+    head: rows.slice(0, half),
+    tail: rows.slice(rows.length - half),
+    totalRows: rows.length,
+    cutCount: rows.length - MAX_TOOL_RESULT_ROWS,
+  }
+}
+
+/**
  * Format a tool result for sending to the LLM.
  * Handles artifacts, messages, and errors consistently.
  * Includes artifact IDs so the LLM can reference them in follow-up tool calls.
+ * Large result sets are truncated to MAX_TOOL_RESULT_ROWS rows (head + tail)
+ * with a cut notice; the agent can use get_artifact_rows to fetch any range.
  */
 export function formatToolResultText(result: ToolCallResult): string {
   if (result.success) {
@@ -79,8 +121,18 @@ export function formatToolResultText(result: ToolCallResult): string {
       if (artifactData) {
         const jsonData =
           typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-        // Send full data to the LLM - no truncation
-        dataPreview = `\n\nQuery results (${config?.resultSize || 0} rows):\n${JSON.stringify(jsonData, null, 2)}`
+        const totalRows = config?.resultSize ?? (Array.isArray(jsonData?.data) ? jsonData.data.length : 0)
+        const { head, tail, cutCount } = truncateResultRows(jsonData)
+        if (cutCount > 0) {
+          const headJson = JSON.stringify({ ...jsonData, data: head }, null, 2)
+          const tailJson = JSON.stringify({ headers: jsonData.headers, data: tail }, null, 2)
+          dataPreview =
+            `\n\nQuery results (${totalRows} rows total — showing first ${head.length} and last ${tail.length}` +
+            `, use get_artifact_rows to fetch any range):\n` +
+            `${headJson}\n...(${cutCount} of ${totalRows} rows cut off — use get_artifact_rows with artifact ID: ${artifactId})...\n${tailJson}`
+        } else {
+          dataPreview = `\n\nQuery results (${totalRows} rows):\n${JSON.stringify(jsonData, null, 2)}`
+        }
       }
       const artifactInfo = config
         ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
@@ -100,12 +152,15 @@ export function formatToolResultText(result: ToolCallResult): string {
 /**
  * Core tool loop execution.
  * Runs the LLM conversation with tool calls until:
- * - LLM responds without tool calls
- * - A tool returns terminatesLoop: true
- * - A tool returns awaitsUserInput: true
- * - Max iterations reached
+ * - A tool returns terminatesLoop: true (agent explicitly signals done)
+ * - A tool returns awaitsUserInput: true (agent pauses for user input)
+ * - Max iterations reached (safety limit)
  * - Abort signal triggered
  * - An error occurs
+ *
+ * If the LLM responds with text and no tool calls, it is re-prompted with a
+ * reminder to call a tool. The agent must explicitly call a termination tool
+ * (e.g. return_to_user, request_close) to return control to the user.
  */
 export async function runToolLoop(
   userMessage: string,
@@ -117,13 +172,18 @@ export async function runToolLoop(
   config: ToolLoopConfig,
 ): Promise<ToolLoopResult> {
   const MAX_ITERATIONS = config.maxIterations ?? 20
-  const MAX_AUTO_CONTINUE = config.maxAutoContinue ?? 3
 
   // currentMessages is the history to send to the LLM, excluding the message we just added
   // (the current user message is sent separately via options.prompt on first iteration)
-  let currentMessages: LLMMessage[] = messagePersistence.getMessages().slice(0, -1)
-  let currentPrompt = userMessage
-  let autoContinueCount = 0
+  // Wrap user message content with delimiters for consistent LLM context across all turns
+  let currentMessages: LLMMessage[] = messagePersistence.getMessages().slice(0, -1).map((msg) =>
+    msg.role === 'user' && !msg.hidden && msg.content
+      ? { ...msg, content: `${USER_INPUT_START}${msg.content}${USER_INPUT_END}` }
+      : msg,
+  )
+  // Wrap user message in delimiters for LLM context; display strips these automatically
+  const wrappedUserMessage = `${USER_INPUT_START}${userMessage}${USER_INPUT_END}`
+  let currentPrompt = wrappedUserMessage
   let lastResponseText = ''
   // Track whether we've added the user message to currentMessages (happens after first tool call)
   let userMessageAddedToHistory = false
@@ -179,48 +239,37 @@ export async function runToolLoop(
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
     }
 
-    // If no tool calls, we're done (or check for auto-continue)
+    // If no tool calls, either terminate (standalone mode) or re-prompt the agent
     if (toolCalls.length === 0) {
+      // Persist the assistant's text response
       messagePersistence.addMessage({
         role: 'assistant',
         content: responseText,
       })
 
-      // Check if we should auto-continue (skip if aborted)
-      if (autoContinueCount < MAX_AUTO_CONTINUE && !stateUpdater.checkAborted()) {
-        try {
-          const shouldContinue = await llmAdapter.shouldAutoContinue(
-            llmConnectionName,
-            responseText,
-          )
-
-          if (shouldContinue && !stateUpdater.checkAborted()) {
-            autoContinueCount++
-            console.log(`[toolLoopCore] Auto-continue ${autoContinueCount}/${MAX_AUTO_CONTINUE}`)
-
-            // On first continuation, add the user message that was excluded from initial currentMessages
-            currentMessages = [
-              ...currentMessages,
-              ...(!userMessageAddedToHistory
-                ? [{ role: 'user' as const, content: userMessage }]
-                : []),
-              { role: 'assistant' as const, content: responseText },
-              {
-                role: 'user' as const,
-                content: 'Continue with the action you described.',
-                hidden: true,
-              },
-            ]
-            userMessageAddedToHistory = true
-            currentPrompt = 'Continue with the action you described.'
-            continue
-          }
-        } catch (err) {
-          console.error('[toolLoopCore] Auto-continue check error:', err)
-        }
+      // In standalone/embedded chat mode, a plain text response is the final answer
+      if (config.terminateOnNoToolCall) {
+        return { terminated: true, finalMessage: responseText }
       }
 
-      return { terminated: false, finalMessage: responseText }
+      // Re-prompt: agent must call a tool; plain text responses are not a valid exit
+      const reminder =
+        config.noToolCallReminder ??
+        'You must call a tool to proceed. If you are finished, call the appropriate completion tool to return control to the user. Do not respond with text only.'
+
+      console.log('[toolLoopCore] No tool call — re-prompting agent to use a tool')
+
+      currentMessages = [
+        ...currentMessages,
+        ...(!userMessageAddedToHistory
+          ? [{ role: 'user' as const, content: wrappedUserMessage }]
+          : []),
+        { role: 'assistant' as const, content: responseText },
+        { role: 'user' as const, content: reminder, hidden: true },
+      ]
+      userMessageAddedToHistory = true
+      currentPrompt = reminder
+      continue
     }
 
     // Execute tool calls
@@ -269,11 +318,10 @@ export async function runToolLoop(
       }
 
       if (result.terminatesLoop) {
-        const terminatingResultText = formatToolResultText(result)
         toolResults.push({
           toolCallId: toolCall.id,
           toolName: toolCall.name,
-          result: terminatingResultText,
+          result: '',
         })
 
         // Persist assistant message with tool calls
@@ -353,7 +401,9 @@ export async function runToolLoop(
     // On first tool call cycle, add the user message that was excluded from initial currentMessages
     currentMessages = [
       ...currentMessages,
-      ...(!userMessageAddedToHistory ? [{ role: 'user' as const, content: userMessage }] : []),
+      ...(!userMessageAddedToHistory
+        ? [{ role: 'user' as const, content: wrappedUserMessage }]
+        : []),
       {
         role: 'assistant' as const,
         content: responseText,
@@ -369,7 +419,6 @@ export async function runToolLoop(
     userMessageAddedToHistory = true
 
     currentPrompt = '' // No extra prompt needed - tool results speak for themselves
-    autoContinueCount = 0 // Reset after successful tool execution
 
     // Safety check for last iteration
     if (iteration === MAX_ITERATIONS - 1) {

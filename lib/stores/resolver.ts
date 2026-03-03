@@ -62,6 +62,7 @@ export interface QueryAtom {
   columns: any[]
   error: string | null
   label?: string
+  select_count?: number
 }
 
 export interface QueryResponse {

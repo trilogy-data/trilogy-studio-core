@@ -46,6 +46,7 @@ import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
 import type { Chat } from '../../chats/chat'
+import useScreenNavigation from '../../stores/useScreenNavigation'
 
 export default {
   name: 'LLMConnectionList',
@@ -69,6 +70,7 @@ export default {
     if (!llmConnectionStore || !saveConnections) {
       throw new Error('LLM connection store is not provided!')
     }
+    const screenNavigation = useScreenNavigation()
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
@@ -311,15 +313,18 @@ export default {
             type: 'open-validation',
             connection,
           })
-          // API Key setting
-          list.push({
-            id: `${name}-api-key`,
-            name: 'API Key',
-            indent: 1,
-            count: 0,
-            type: 'api-key',
-            connection,
-          })
+          // API Key and credential settings — hidden for demo connections
+          // (the key is minted automatically and is never user-managed)
+          if (connection.type !== 'demo') {
+            list.push({
+              id: `${name}-api-key`,
+              name: 'API Key',
+              indent: 1,
+              count: 0,
+              type: 'api-key' as const,
+              connection,
+            })
+          }
           list.push({
             id: `${name}-model`,
             name: 'Model',
@@ -336,14 +341,16 @@ export default {
             type: 'fast-model',
             connection,
           })
-          list.push({
-            id: `${name}-toggle-save-credential`,
-            name: 'Toggle Save Credential',
-            indent: 1,
-            count: 0,
-            type: 'toggle-save-credential',
-            connection,
-          })
+          if (connection.type !== 'demo') {
+            list.push({
+              id: `${name}-toggle-save-credential`,
+              name: 'Toggle Save Credential',
+              indent: 1,
+              count: 0,
+              type: 'toggle-save-credential' as const,
+              connection,
+            })
+          }
 
           // Loading indicator
           if (isLoading.value[name]) {
@@ -405,6 +412,7 @@ export default {
       rightSplit,
       creatorVisible,
       isItemSelected,
+      screenNavigation,
     }
   },
   components: {
@@ -437,6 +445,18 @@ export default {
     deleteConnection(id: string, connectionName: string) {
       // Ask for confirmation before deleting
       if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
+        // Delete all chats for this connection and close their tabs
+        if (this.chatStore) {
+          const chats = this.chatStore.getConnectionChats(connectionName)
+          chats.forEach((chat) => {
+            this.screenNavigation.closeTab(null, `${connectionName}${KeySeparator}${chat.id}`)
+            this.chatStore.removeChat(chat.id)
+          })
+        }
+
+        // Close the connection's own tab if open
+        this.screenNavigation.closeTab(null, connectionName)
+
         // Remove the connection from the store
         this.llmConnectionStore.connections[connectionName].delete()
 

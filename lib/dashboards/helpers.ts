@@ -7,17 +7,7 @@ import { type FieldEncodingOutput } from './types'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
-const temporalTraits = [
-  'year',
-  'month',
-  'week',
-  'day',
-  'hour',
-  'minute',
-  'second',
-  'day_of_week',
-  'quarter',
-]
+const temporalTraits = ['year', 'week', 'day', 'hour', 'minute', 'second', 'quarter']
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
 
@@ -579,6 +569,12 @@ export const getFormatHint = (
       format: '%Y',
       timeUnit: 'year',
     }
+  }
+  if (getColumnHasTrait(fieldName, columns, 'month')) {
+    return { format: 'd' }
+  }
+  if (getColumnHasTrait(fieldName, columns, 'day_of_week')) {
+    return { format: 'd' }
   }
   switch (column.type) {
     case ColumnType.DATE:
