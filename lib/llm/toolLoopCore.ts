@@ -199,7 +199,7 @@ export async function runToolLoop(
       })
       messagePersistence.addMessage({
         role: 'user',
-        content: '[User requested pause - conversation can be continued]',
+        content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
         hidden: true,
       })
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
@@ -235,7 +235,7 @@ export async function runToolLoop(
       })
       messagePersistence.addMessage({
         role: 'user',
-        content: '[User requested pause - conversation can be continued]',
+        content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
         hidden: true,
       })
       return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
@@ -290,7 +290,7 @@ export async function runToolLoop(
         })
         messagePersistence.addMessage({
           role: 'user',
-          content: '[User requested pause - conversation can be continued]',
+          content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
           hidden: true,
         })
         return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
