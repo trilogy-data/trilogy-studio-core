@@ -50,6 +50,23 @@ export function buildCustomTrilogyPrompt(
   return templateFn({ rulesInput, aggFunctions, functions, datatypes })
 }
 
+// Flow-control tool — exported standalone so embedding apps can include it in their own tool lists
+export const RETURN_TO_USER_TOOL = {
+  name: 'return_to_user',
+  description:
+    "Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user's next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        description: 'A brief summary of what was accomplished or a response to the user.',
+      },
+    },
+    required: ['message'],
+  },
+} as const
+
 // Tool definitions in JSON Schema format (Anthropic/OpenAI compatible)
 export const CHAT_TOOLS = [
   {
@@ -283,21 +300,7 @@ If you need conditional output (e.g. "Regional" vs "Major/National" based on a t
       required: ['artifact_ids'],
     },
   },
-  {
-    name: 'return_to_user',
-    description:
-      "Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user's next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.",
-    input_schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          description: 'A brief summary of what was accomplished or a response to the user.',
-        },
-      },
-      required: ['message'],
-    },
-  },
+  RETURN_TO_USER_TOOL,
 ]
 
 export interface ChatAgentPromptOptions {

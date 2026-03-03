@@ -242,7 +242,13 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             # Time the output formatting
             output_start = time.perf_counter()
             result = query_to_output(
-                target, columns, results, "default", dialect, enable_perf_logging, select_count
+                target,
+                columns,
+                results,
+                "default",
+                dialect,
+                enable_perf_logging,
+                select_count,
             )
             output_time = time.perf_counter() - output_start
 

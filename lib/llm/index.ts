@@ -11,8 +11,17 @@ export { createChatNamePrompt, extractChatName } from './chatHelpers'
 export type { ModelConceptInput } from './data/models'
 
 // Chat agent prompt builder
-export { buildChatAgentSystemPrompt, buildCustomTrilogyPrompt, CHAT_TOOLS } from './chatAgentPrompt'
+export {
+  buildChatAgentSystemPrompt,
+  buildCustomTrilogyPrompt,
+  CHAT_TOOLS,
+  RETURN_TO_USER_TOOL,
+} from './chatAgentPrompt'
 export type { ChatAgentPromptOptions, TrilogyPromptContext } from './chatAgentPrompt'
+
+// Provider UI helpers
+export { PROVIDERS, PROVIDER_LABELS, KEY_PLACEHOLDERS } from './consts'
+export type { ProviderValue } from './consts'
 
 // Editor refinement tools
 export { EDITOR_REFINEMENT_TOOLS, buildEditorRefinementPrompt } from './editorRefinementTools'
