@@ -12,7 +12,9 @@
         />
         <div v-else class="chat-title" :title="title">{{ title }}</div>
       </div>
-      <slot name="header-actions"></slot>
+      <div class="chat-header-actions">
+        <slot name="header-actions"></slot>
+      </div>
     </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
@@ -26,6 +28,12 @@
         ]"
         :data-testid="`message-${message.role}-${index}`"
       >
+        <span
+          v-if="message.role === 'assistant' && !isToolOnlyAssistantMessage(message)"
+          class="message-avatar assistant-avatar"
+        >
+          <i class="mdi mdi-robot-outline"></i>
+        </span>
         <div class="message-content">
           <!-- Render artifacts inline if renderArtifacts is enabled -->
           <template v-if="message.artifact && renderArtifacts">
@@ -456,8 +464,8 @@ export default defineComponent({
 
 .chat-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 0 12px;
   height: 30px;
   min-height: 30px;
@@ -470,7 +478,14 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 112px;
+  overflow: hidden;
+}
+
+.chat-header-actions {
+  display: flex;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -480,10 +495,25 @@ export default defineComponent({
   font-weight: 600;
   color: var(--text-color);
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: 112px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .chat-header {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .chat-header-left {
+    min-width: 96px;
+  }
+
+  .chat-title {
+    min-width: 96px;
+  }
 }
 
 .chat-messages {
@@ -497,6 +527,7 @@ export default defineComponent({
 }
 
 .message {
+  position: relative;
   padding: 8px;
   max-width: 85%;
   word-break: break-word;
@@ -504,18 +535,17 @@ export default defineComponent({
 
 .message.user {
   align-self: flex-end;
-  background-color: color-mix(in srgb, var(--bg-color) 88%, white 12%);
+  background-color: rgba(148, 163, 184, 0.1);
   color: var(--text-color);
-  border: 1px solid var(--border);
   border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  padding: 10px 14px;
+  padding: 4px 8px;
 }
 
 .message.assistant {
   align-self: flex-start;
   background-color: var(--sidebar-bg);
   color: var(--sidebar-font);
+  margin-left: 26px;
 }
 
 .message.system {
@@ -547,6 +577,23 @@ export default defineComponent({
   white-space: pre-wrap;
   font-family: inherit;
   font-size: var(--font-size);
+}
+
+.message-avatar {
+  position: absolute;
+  top: 8px;
+  left: -22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: rgba(100, 116, 139, 0.5);
+  pointer-events: none;
+}
+
+.assistant-avatar i {
+  font-size: 14px;
 }
 
 .message-meta {

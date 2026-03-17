@@ -229,7 +229,8 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 160px;
+  flex: 0 1 180px;
+  min-width: 120px;
   max-width: 220px;
 }
 
@@ -468,8 +469,9 @@ onUnmounted(() => {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .import-selector {
-    min-width: 112px;
-    max-width: 148px;
+    flex-basis: 132px;
+    min-width: 96px;
+    max-width: 132px;
   }
 
   .import-selector-header {

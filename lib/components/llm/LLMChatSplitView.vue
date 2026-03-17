@@ -468,6 +468,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -491,7 +492,13 @@ export default defineComponent({
   }
 
   .connection-info {
-    max-width: 180px;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 720px) {
+  .connection-info {
+    display: none;
   }
 }
 
