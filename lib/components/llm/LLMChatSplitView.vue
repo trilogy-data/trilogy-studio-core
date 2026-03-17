@@ -32,7 +32,7 @@
                 :active-imports="activeImports"
                 @update:imports="$emit('import-change', $event)"
               />
-              <span v-if="connectionInfo" class="connection-info">
+              <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
                 {{ connectionInfo }}
               </span>
             </div>
@@ -468,6 +468,8 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .connection-info {
@@ -476,6 +478,21 @@ export default defineComponent({
   padding: 2px 8px;
   background-color: var(--bg-color);
   border-radius: 4px;
+  min-width: 0;
+  max-width: clamp(140px, 28vw, 280px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .chat-header-controls {
+    gap: 8px;
+  }
+
+  .connection-info {
+    max-width: 180px;
+  }
 }
 
 .artifact-placeholder {

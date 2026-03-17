@@ -66,7 +66,7 @@
               :active-imports="activeImportsForChat"
               @update:imports="handleImportChange"
             />
-            <span v-if="chatConnectionInfo" class="connection-info">
+            <span v-if="chatConnectionInfo" class="connection-info" :title="chatConnectionInfo">
               {{ chatConnectionInfo }}
             </span>
           </div>
@@ -328,6 +328,8 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .auto-name-btn {
@@ -384,5 +386,20 @@ export default defineComponent({
   padding: 2px 8px;
   background-color: var(--bg-color);
   border-radius: 4px;
+  min-width: 0;
+  max-width: clamp(140px, 28vw, 280px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .chat-header-controls {
+    gap: 8px;
+  }
+
+  .connection-info {
+    max-width: 180px;
+  }
 }
 </style>

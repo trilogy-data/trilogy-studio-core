@@ -91,7 +91,9 @@ onUnmounted(() => {
         <div class="summary-content">
           <i class="mdi mdi-file-document-edit-outline summary-icon"></i>
           <span v-if="activeCount === 0">No imports</span>
-          <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
+          <span v-else-if="activeCount === 1" class="summary-text" :title="activeImports[0].name">
+            {{ activeImports[0].name }}
+          </span>
           <span v-else>{{ activeImports.length }} import(s) selected</span>
         </div>
         <svg
@@ -227,7 +229,8 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 200px;
+  min-width: 160px;
+  max-width: 220px;
 }
 
 .import-selector-header {
@@ -271,6 +274,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.summary-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-icon {
@@ -457,28 +468,21 @@ onUnmounted(() => {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .import-selector {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    width: 100%;
-    /* max-width: 300px; */
-    /* min-width: unset; */
+    min-width: 112px;
+    max-width: 148px;
   }
 
   .import-selector-header {
-    flex-direction: column;
-    align-items: center;
     width: 100%;
   }
 
   .import-summary {
-    padding: 4px 0px;
-    text-align: center;
+    min-width: 0;
+    padding: 4px 8px 4px 28px;
   }
 
   .summary-content {
-    justify-content: center;
-    flex: 1;
+    justify-content: flex-start;
   }
 
   .import-dropdown {

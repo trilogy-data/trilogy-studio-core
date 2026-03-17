@@ -10,7 +10,7 @@
           testId="chat-title"
           class="chat-title"
         />
-        <div v-else class="chat-title">{{ title }}</div>
+        <div v-else class="chat-title" :title="title">{{ title }}</div>
       </div>
       <slot name="header-actions"></slot>
     </div>
@@ -20,7 +20,10 @@
         v-for="(message, index) in visibleMessages"
         :key="index"
         class="message"
-        :class="[message.role, { 'has-artifact': message.artifact }]"
+        :class="[
+          message.role,
+          { 'has-artifact': message.artifact, 'tool-only': isToolOnlyAssistantMessage(message) },
+        ]"
         :data-testid="`message-${message.role}-${index}`"
       >
         <div class="message-content">
@@ -50,22 +53,20 @@
             class="tool-calls"
           >
             <div
-              v-for="(toolCall, toolIndex) in message.executedToolCalls"
-              :key="toolIndex"
+              v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
+              :key="toolCall.key"
               class="tool-call"
-              :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
+              :class="{ success: toolCall.success, error: !toolCall.success }"
+              :title="toolCall.error || toolCall.label"
             >
               <span class="tool-icon">
-                <i
-                  :class="
-                    toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'
-                  "
-                ></i>
+                <i :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"></i>
               </span>
-              <span class="tool-name">{{ getToolDisplayName(toolCall.name) }}</span>
-              <span v-if="toolCall.result?.error" class="tool-error">{{
-                toolCall.result.error
-              }}</span>
+              <span class="tool-name">
+                {{ toolCall.label }}
+                <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
+              </span>
+              <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
             </div>
           </div>
         </div>
@@ -136,6 +137,12 @@ import {
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
+import {
+  condenseToolCalls,
+  getToolDisplayName,
+  mergeContiguousToolCallMessages,
+  isToolOnlyAssistantMessage,
+} from './toolCallDisplay'
 
 // Re-export for backwards compatibility
 export type { ChatMessage, ChatArtifact, ChatToolCall }
@@ -270,7 +277,7 @@ export default defineComponent({
     const isLoading = computed(() => props.externalLoading)
 
     const visibleMessages = computed(() => {
-      return internalMessages.value.filter((m) => !m.hidden)
+      return mergeContiguousToolCallMessages(internalMessages.value.filter((m) => !m.hidden))
     })
 
     // Sync with external messages prop
@@ -364,32 +371,7 @@ export default defineComponent({
       return toolLabels[toolName] || `Using ${toolName}...`
     }
 
-    // Get display name for completed tool calls
-    const getToolDisplayName = (toolName: string): string => {
-      const toolLabels: Record<string, string> = {
-        validate_query: 'Validated query',
-        run_query: 'Ran query',
-        run_active_editor_query: 'Ran editor query',
-        format_query: 'Formatted query',
-        edit_chart_config: 'Updated chart',
-        edit_editor: 'Updated editor',
-        request_close: 'Requested close',
-        close_session: 'Closed session',
-        connect_data_connection: 'Connected',
-        run_trilogy_query: 'Ran query',
-        chart_trilogy_query: 'Ran chart query',
-        add_import: 'Added import',
-        remove_import: 'Removed import',
-        list_available_imports: 'Listed imports',
-        create_markdown: 'Created markdown',
-        list_artifacts: 'Listed artifacts',
-        get_artifact: 'Got artifact',
-        update_artifact: 'Updated artifact',
-        remove_artifact: 'Removed artifact',
-        reorder_artifacts: 'Reordered artifacts',
-      }
-      return toolLabels[toolName] || toolName.replace(/_/g, ' ')
-    }
+    const getCondensedToolCalls = (toolCalls: ChatToolCall[]) => condenseToolCalls(toolCalls)
 
     const sendMessage = async () => {
       if (isLoading.value || !userInput.value.trim()) return
@@ -448,6 +430,8 @@ export default defineComponent({
       getMessageTextWithoutArtifact,
       getToolDisplayText,
       getToolDisplayName,
+      getCondensedToolCalls,
+      isToolOnlyAssistantMessage,
       addMessage,
       addArtifact,
       clearMessages,
@@ -495,6 +479,8 @@ export default defineComponent({
   font-size: var(--font-size);
   font-weight: 600;
   color: var(--text-color);
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -518,8 +504,12 @@ export default defineComponent({
 
 .message.user {
   align-self: flex-end;
-  background-color: var(--sidebar-selector-selected-bg);
-  color: var(--sidebar-selector-font);
+  background-color: color-mix(in srgb, var(--bg-color) 88%, white 12%);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 10px 14px;
 }
 
 .message.assistant {
@@ -539,6 +529,11 @@ export default defineComponent({
   width: 100%;
   background-color: transparent;
   padding: 0;
+}
+
+.message.tool-only {
+  max-width: 100%;
+  width: fit-content;
 }
 
 /* Messages with only tool calls should be minimal (no bg, less padding) */
@@ -690,6 +685,7 @@ export default defineComponent({
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-width: 100%;
 }
 
 .tool-call {
@@ -726,6 +722,10 @@ export default defineComponent({
 
 .tool-name {
   font-weight: 500;
+}
+
+.tool-count {
+  margin-left: 4px;
 }
 
 .tool-error {

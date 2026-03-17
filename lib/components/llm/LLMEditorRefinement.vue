@@ -14,7 +14,7 @@
     >
       <template #header-actions>
         <div class="refinement-actions">
-          <span v-if="connectionInfo" class="connection-info">
+          <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
             {{ connectionInfo }}
           </span>
           <button
