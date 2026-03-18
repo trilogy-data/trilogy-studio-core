@@ -73,7 +73,7 @@
               type="text"
               v-model="bigqueryProject"
               placeholder="Billing Project"
-              class="bq-project-input"
+              class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateBigqueryProject"
             />
           </span>
@@ -93,7 +93,7 @@
               type="text"
               v-model="bigqueryBrowsingProject"
               placeholder="Browsing Project"
-              class="bq-project-input"
+              class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateBigqueryBrowsingProject"
             />
           </span>
@@ -105,12 +105,14 @@
               updateMotherDuckToken(item.connection as any as MotherDuckConnection, mdToken)
             "
           >
-            <button type="submit" class="customize-button">Update Token</button>
+            <button type="submit" class="customize-button sidebar-control-button">
+              Update Token
+            </button>
             <input
               type="password"
               v-model="mdToken"
               placeholder="mdToken"
-              class="connection-customize"
+              class="connection-customize sidebar-control-input"
             />
           </form>
         </div>
@@ -129,7 +131,7 @@
               type="password"
               v-model="snowflakePrivateKey"
               placeholder="Private Key"
-              class="bq-project-input"
+              class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateSnowflakePrivateKey"
             />
           </span>
@@ -145,7 +147,7 @@
               type="text"
               v-model="snowflakeAccount"
               placeholder="Account"
-              class="bq-project-input"
+              class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateSnowflakeAccount"
             />
           </span>
@@ -165,7 +167,7 @@
               type="text"
               v-model="snowflakeUsername"
               placeholder="Username"
-              class="bq-project-input"
+              class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateSnowflakeUsername"
             />
           </span>
@@ -176,7 +178,7 @@
           class="md-token-container"
           @click.stop
         >
-          <label class="save-credential-toggle">
+          <label class="save-credential-toggle sidebar-toggle-row">
             <input
               type="checkbox"
               :checked="(item.connection as any as ConnectionWithSaveCredential).saveCredential"
@@ -230,7 +232,7 @@
         <div class="connection-actions" v-else-if="item.type === 'connection'">
           <i
             :data-testid="`toggle-history-${item.connection.name}`"
-            class="mdi mdi-history hover-icon"
+            class="mdi mdi-history hover-icon sidebar-icon-button"
             v-if="isMobile"
             title="Query History"
             @click.stop="toggleMobileMenu"
@@ -263,7 +265,10 @@
           />
 
           <tooltip class="tacticle-button hover-icon" content="Delete Connection" position="left">
-            <span class="remove-btn" @click.stop="deleteConnection(item.connection)">
+            <span
+              class="remove-btn sidebar-icon-button danger"
+              @click.stop="deleteConnection(item.connection)"
+            >
               <i class="mdi mdi-trash-can-outline"></i>
             </span>
           </tooltip>
@@ -555,41 +560,31 @@ export default {
 <style scoped>
 .refresh {
   cursor: pointer;
-  padding: 5px;
+  padding: 5px 0;
   font-size: 12px;
-  color: var(--text);
+  color: var(--text-color);
 }
 
 input,
 input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   font-size: var(--button-font-size);
   font-family: inherit;
-  line-height: var(--sidebar-sub-item-height);
-  height: var(--sidebar-sub-item-height);
   letter-spacing: inherit;
   word-spacing: inherit;
-  padding: 0px;
-  padding-left: 5px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: 1px solid var(--button-border);
 }
 
 .customize-button {
-  padding: 2px 8px;
+  min-width: 104px;
   margin-right: 8px;
-  font-size: var(--button-font-size);
-  background-color: var(--button-bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  cursor: pointer;
-  border-radius: 0px;
+  font-size: 11px;
+  justify-content: flex-start;
 }
 
 .connection-customize {
   width: 150px;
-}
-
-.customize-button:hover {
-  background-color: var(--button-mouseover);
+  min-width: 0;
 }
 
 .sidebar-sub-item {
@@ -607,6 +602,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 .connection-actions {
   display: flex;
   align-items: center;
+  gap: 4px;
   margin-left: auto;
 }
 
@@ -638,7 +634,8 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 
 .input-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-faint);
+  min-width: 52px;
 }
 
 .label-with-status {
@@ -668,11 +665,18 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   justify-content: space-between;
   width: 100%;
   align-items: center;
+  gap: 8px;
   color: var(--text-color);
 }
 
+.bq-project-container > span {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
 .bq-project-input {
-  background: transparent;
+  background: var(--button-bg-color);
   color: var(--text-color);
 }
 
@@ -685,13 +689,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   display: flex;
   width: 100%;
   align-items: center;
-}
-
-.save-credential-toggle {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 0.9em;
+  gap: var(--sidebar-control-gap);
 }
 
 .save-credential-toggle input[type='checkbox'] {

@@ -3,7 +3,7 @@
     <!-- Button to trigger popup -->
     <button
       v-if="props.mode === 'icon'"
-      class="quick-new-editor-button trilogy-class"
+      class="quick-new-editor-button sidebar-icon-button trilogy-class"
       @click.stop="openPopup"
       :data-testid="`create-datasource-${table.name}`"
       title="Create Datasource From Table"
@@ -451,19 +451,11 @@ const createDatasource = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--sidebar-list-item-height);
-  border: none;
-  background: transparent;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.quick-new-editor-button:hover {
-  background-color: var(--hover-color);
 }
 
 .quick-new-editor-button i {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .trilogy-class {
@@ -899,18 +891,18 @@ const createDatasource = async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--query-window-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #475569;
+  min-height: var(--sidebar-control-height);
+  padding: 0 12px;
+  background: var(--button-bg-color);
+  border: 1px solid var(--button-border);
+  border-radius: var(--sidebar-control-radius);
+  font-size: var(--sidebar-control-font-size);
+  color: var(--text-color);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .alt-create-button:hover {
-  background-color: var(--hover-color);
-  border-color: #cc6900;
+  background-color: var(--button-mouseover);
 }
 </style>

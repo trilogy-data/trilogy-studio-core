@@ -270,13 +270,13 @@ Template examples:
 }
 
 .tab-button:hover {
-  background-color: var(--bg-color);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
+  color: var(--special-text);
 }
 
 .tab-button.active {
   border-bottom-color: var(--special-text);
   color: var(--special-text);
-  font-weight: 500;
 }
 
 .editor-body {

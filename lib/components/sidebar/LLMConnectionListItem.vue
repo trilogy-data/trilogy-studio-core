@@ -48,19 +48,21 @@
 
         <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
           <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
-            <button type="submit" class="customize-button">Update API Key</button>
+            <button type="submit" class="customize-button sidebar-control-button">
+              Update API Key
+            </button>
             <div class="api-key-input-wrapper">
               <input
                 :type="showApiKey ? 'text' : 'password'"
                 id="api-key"
                 v-model="apiKeyInput"
                 placeholder="API Key"
-                class="connection-customize"
+                class="connection-customize sidebar-control-input"
                 :data-testid="`api-key-input-${item.connection.name}`"
               />
               <button
                 type="button"
-                class="visibility-toggle"
+                class="visibility-toggle sidebar-icon-button"
                 @click="toggleApiKeyVisibility"
                 :data-testid="`toggle-api-key-visibility-${item.connection.name}`"
                 :title="showApiKey ? 'Hide API Key' : 'Show API Key'"
@@ -76,7 +78,7 @@
             <LoadingButton
               :action="() => updateModel(item.connection, selectedModel)"
               :use-default-style="false"
-              class="customize-button"
+              class="customize-button sidebar-control-button"
               :data-testid="`update-model-${item.connection.name}`"
             >
               Update Model
@@ -85,7 +87,7 @@
               v-model="selectedModel"
               id="connection-type"
               required
-              class="connection-customize"
+              class="connection-customize sidebar-control-select"
               :data-testid="`model-select-${item.connection.name}`"
             >
               <option
@@ -105,14 +107,14 @@
             <LoadingButton
               :action="() => updateFastModel(item.connection, selectedFastModel || null)"
               :use-default-style="false"
-              class="customize-button"
+              class="customize-button sidebar-control-button"
               :data-testid="`update-fast-model-${item.connection.name}`"
             >
               Update Fast Model
             </LoadingButton>
             <select
               v-model="selectedFastModel"
-              class="connection-customize"
+              class="connection-customize sidebar-control-select"
               :data-testid="`fast-model-select-${item.connection.name}`"
             >
               <option value="" :data-testid="`fast-model-option-none`">(Use primary model)</option>
@@ -133,13 +135,13 @@
           class="md-token-container"
           @click.stop
         >
-          <label class="save-credential-toggle">
+          <label class="save-credential-toggle sidebar-toggle-row">
+            <span class="checkbox-label">Save Credentials</span>
             <input
               type="checkbox"
               :checked="item.connection.saveCredential"
               @change="toggleSaveCredential(item.connection)"
             />
-            <span class="checkbox-label">Save Credentials</span>
           </label>
         </div>
 
@@ -158,7 +160,10 @@
         <!-- Delete button for chat items -->
         <div class="chat-actions" v-if="item.type === 'chat-item'">
           <tooltip class="tactile-button" content="Delete Chat" position="left">
-            <span class="remove-btn hover-icon" @click.stop="deleteChat(item.chatId)">
+            <span
+              class="remove-btn hover-icon sidebar-icon-button danger"
+              @click.stop="deleteChat(item.chatId)"
+            >
               <i class="mdi mdi-trash-can-outline"></i>
             </span>
           </tooltip>
@@ -168,11 +173,11 @@
           <!-- Set Active Button for Connection -->
           <i
             v-if="item.connection && item.connection.isDefault"
-            class="mdi mdi-star loading-button is-active"
+            class="mdi mdi-star loading-button sidebar-icon-button active is-active"
           ></i>
           <LoadingButton
             v-else
-            class="loading-button"
+            class="loading-button sidebar-icon-button"
             @click.stop
             :action="() => setAsActive(item.id)"
             title="Set as default"
@@ -190,7 +195,10 @@
           />
 
           <tooltip class="tacticle-button" content="Delete Connection" position="left">
-            <span class="remove-btn" @click.stop="deleteConnection(item.id)">
+            <span
+              class="remove-btn sidebar-icon-button danger"
+              @click.stop="deleteConnection(item.id)"
+            >
               <i class="mdi mdi-trash-can-outline tactile-button"></i>
             </span>
           </tooltip>
@@ -510,10 +518,8 @@ export default defineComponent({
 
 <style scoped>
 .loading-button {
-  height: var(--sidebar-list-item-height);
-  min-height: var(--sidebar-list-item-height);
-  background-color: transparent;
-  padding: 0px;
+  background-color: var(--button-bg-color);
+  padding: 0;
 }
 
 .delete-button:hover {
@@ -521,7 +527,7 @@ export default defineComponent({
 }
 
 .is-active {
-  color: var(--primary-color);
+  color: var(--special-text);
 }
 
 .truncate-text {
@@ -547,32 +553,29 @@ export default defineComponent({
 .connection-actions {
   display: flex;
   align-items: center;
+  gap: 4px;
   margin-left: auto;
 }
 
 .api-key-container {
   display: flex;
   flex-grow: 1;
-  padding-left: 8px;
+  padding: 2px 0 2px 10px;
 }
 
 .api-key-container form {
   display: flex;
   width: 100%;
   align-items: center;
+  gap: 12px;
 }
 
 .connection-customize {
   flex-grow: 1;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-color);
-  margin-left: 8px;
-  font-size: 0.8em;
-  padding: 4px 8px;
   max-width: 100%;
   width: 100%;
   min-width: 0;
+  align-self: center;
 }
 
 .api-key-input-wrapper {
@@ -588,39 +591,22 @@ export default defineComponent({
 
 .visibility-toggle {
   position: absolute;
-  right: 8px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
+  right: 4px;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  outline: none;
-}
-
-.visibility-toggle:hover {
-  color: var(--text-color);
 }
 
 .visibility-toggle i {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .customize-button {
-  background-color: var(--primary-color);
-  border: none;
-  cursor: pointer;
-  font-size: 0.6em;
-  border: 1px solid var(--border-color);
-  white-space: nowrap;
-  min-width: 90px;
-}
-
-.customize-button:hover {
-  background-color: var(--button-mouseover);
+  min-width: 104px;
+  flex-shrink: 0;
+  font-size: 11px;
+  justify-content: flex-start;
 }
 
 .error-indicator {
@@ -637,19 +623,16 @@ export default defineComponent({
 }
 
 .set-active-btn:hover {
-  color: var(--primary-color);
+  color: var(--special-text);
 }
 
 .save-credential-toggle {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 0.9em;
-  padding-left: 8px;
+  padding: 4px 0 6px 12px;
+  gap: 10px;
 }
 
 .save-credential-toggle input[type='checkbox'] {
-  margin-right: 8px;
+  margin: 0;
 }
 
 .checkbox-label {

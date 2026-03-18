@@ -1,6 +1,6 @@
 <template>
   <button
-    class="quick-new-editor-button"
+    class="quick-new-editor-button sidebar-icon-button"
     :class="type === 'trilogy' ? 'trilogy-class' : 'sql-class'"
     @click.stop="createNewEditor"
     :data-testid="`quick-new-editor-${connection}-${type}`"
@@ -15,20 +15,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--sidebar-list-item-height);
-  border-radius: 50%;
-  border: none;
-  background: transparent;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.quick-new-editor-button:hover {
-  background-color: var(--hover-color);
 }
 
 .quick-new-editor-button i {
-  font-size: 16px;
+  font-size: 15px;
 }
 .trilogy-class {
   /* orange */

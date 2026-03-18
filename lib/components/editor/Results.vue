@@ -339,12 +339,13 @@ export default {
 }
 
 .tab-button:hover {
-  color: #0ea5e9;
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
   border-radius: 0px;
 }
 

@@ -450,8 +450,9 @@ export default defineComponent({
   height: 100%;
   overflow: hidden;
   background: var(--query-window-bg);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--surface-shadow);
 }
 
 .chat-split-container.is-resizing {
@@ -525,14 +526,15 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--surface-shadow);
 }
 
 .sidebar-tabs {
   display: flex;
-  background-color: var(--query-window-bg);
+  background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   min-height: 44px;
   padding: 0 14px;

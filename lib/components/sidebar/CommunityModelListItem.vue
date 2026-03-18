@@ -42,7 +42,7 @@
             position="left"
           >
             <span
-              class="remove-btn hover-icon"
+              class="remove-btn hover-icon sidebar-icon-button danger"
               @click.stop="emit('delete-store', item.store)"
               :data-testid="`delete-store-${item.store.id}`"
             >
@@ -148,9 +148,7 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
 }
 
 .remove-btn {
-  margin-left: auto;
   cursor: pointer;
-  flex: 1;
 }
 
 .tag-container {

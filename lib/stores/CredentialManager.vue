@@ -5,7 +5,7 @@
       <div class="confirmation-overlay">
         <div class="confirmation-dialog">
           <h2>One Moment</h2>
-          <h3>Securely accessing your credential storage</h3>
+          <h3>Loading Your Saved Studio Credentials</h3>
           <div v-if="!bypassMode">
             <p>
               Enter a keyphrase to use saved credentials. (This is a secret phrase you created to

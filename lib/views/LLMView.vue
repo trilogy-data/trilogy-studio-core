@@ -315,15 +315,9 @@ export default defineComponent({
   background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
-.view-tab-chat.active {
+.view-tab.active {
   color: var(--special-text);
   border-bottom: 2px solid var(--special-text);
-  border-radius: 0px;
-}
-
-.view-tab-validation.active {
-  color: #7c3aed;
-  border-bottom: 2px solid #7c3aed;
   border-radius: 0px;
 }
 

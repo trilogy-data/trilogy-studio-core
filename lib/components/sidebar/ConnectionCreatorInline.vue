@@ -108,35 +108,47 @@
 .form-row {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  gap: 10px;
 }
 
 .form-row label {
-  flex: 0 0 80px;
-  /* Fixed width for labels */
-  font-size: var(--small-font-size);
-  margin-right: 10px;
+  flex: 0 0 88px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 
 .form-row input,
 .form-row select {
   flex: 1;
-  font-size: var(--small-font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  height: var(--sidebar-sub-item-height);
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  padding: 0 10px;
+  font-size: var(--sidebar-control-font-size);
+  border: 1px solid var(--button-border);
+  border-radius: var(--sidebar-control-radius);
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
 }
 
 .form-row input:focus,
 .form-row select:focus {
-  border-color: var(--border-color);
   outline: none;
+  border-color: rgba(var(--special-text-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb), 0.1);
 }
 
 .button-row {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.button-row button {
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  padding: 0 12px;
 }
 
 option {

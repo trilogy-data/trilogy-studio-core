@@ -1,6 +1,6 @@
 <template>
   <loading-button
-    class="refresh-button"
+    class="refresh-button sidebar-icon-button"
     :action="handleRefresh"
     :data-testid="`refresh-connection-${connection.name}`"
     :useDefaultStyle="false"
@@ -59,15 +59,10 @@ const handleRefresh = async () => {
 
 <style scoped>
 .refresh-button {
-  height: var(--sidebar-list-item-height);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
+  border-radius: var(--radius-sm);
 }
 
 .refresh-icon {
-  font-size: 16px;
+  font-size: 15px;
 }
 </style>

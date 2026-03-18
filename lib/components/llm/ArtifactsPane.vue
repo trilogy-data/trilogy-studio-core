@@ -335,9 +335,10 @@ export default defineComponent({
 
 /* Publish button */
 .artifacts-actions {
-  padding: 14px 16px;
+  padding: 14px 18px 14px 16px;
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
+  background-color: var(--query-window-bg);
 }
 
 .publish-btn {
@@ -373,11 +374,12 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px;
+  padding: 16px 20px 18px 16px;
 }
 
 .artifact-card {
-  border: none;
+  border: 1px solid var(--border);
+  background-color: var(--query-window-bg);
   border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
@@ -385,20 +387,20 @@ export default defineComponent({
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
-  box-shadow: inset 0 0 0 1px var(--border-light);
+  box-shadow: var(--surface-shadow);
 }
 
 .artifact-card:hover {
   transform: translateY(-1px);
   box-shadow:
     inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.28),
-    0 8px 20px rgba(15, 23, 42, 0.08);
+    var(--surface-shadow);
 }
 
 .artifact-card.active {
   box-shadow:
     inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.42),
-    0 8px 20px rgba(15, 23, 42, 0.08);
+    var(--surface-shadow);
 }
 
 .artifact-card-header {
@@ -406,7 +408,7 @@ export default defineComponent({
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
+  background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   min-height: 32px;
   cursor: pointer;
@@ -450,12 +452,12 @@ export default defineComponent({
 }
 
 .markdown-artifact-view {
-  padding: 10px;
+  padding: 10px 14px 10px 10px;
   overflow: auto;
 }
 
 .custom-artifact-view {
-  padding: 10px;
+  padding: 10px 14px 10px 10px;
   overflow: auto;
   height: 100%;
 }
@@ -480,10 +482,11 @@ export default defineComponent({
 /* Hidden artifacts section */
 .hidden-section {
   flex-shrink: 0;
-  border: none;
+  border: 1px solid var(--border);
+  background-color: var(--query-window-bg);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px var(--border-light);
+  box-shadow: var(--surface-shadow);
 }
 
 .hidden-section-header {
@@ -491,7 +494,7 @@ export default defineComponent({
   align-items: center;
   gap: 6px;
   padding: 10px 12px;
-  background-color: rgba(148, 163, 184, 0.06);
+  background-color: var(--panel-header-bg);
   cursor: pointer;
   user-select: none;
   min-height: 32px;

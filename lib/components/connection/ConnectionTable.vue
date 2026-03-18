@@ -465,21 +465,13 @@ export default defineComponent({
 }
 
 .tab-button:hover {
-  color: #2563eb;
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .tab-button.active {
-  color: #2563eb;
-}
-
-.tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2563eb;
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
 }
 
 .structure-header,

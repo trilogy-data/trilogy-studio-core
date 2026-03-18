@@ -125,6 +125,11 @@
   --button-font-size: 12px;
   --button-font-weight: 500;
   --button-padding: 6px 10px;
+  --sidebar-control-height: 32px;
+  --sidebar-control-radius: 10px;
+  --sidebar-control-padding-x: 10px;
+  --sidebar-control-font-size: 12px;
+  --sidebar-control-gap: 8px;
 
   --icon-size: 16px;
 
@@ -147,6 +152,10 @@
     --button-font-size: 14px;
     --button-font-weight: 500;
     --button-padding: 8px 12px;
+    --sidebar-control-height: 36px;
+    --sidebar-control-radius: 10px;
+    --sidebar-control-padding-x: 12px;
+    --sidebar-control-font-size: 14px;
 
     --icon-size: 22px;
 
@@ -217,6 +226,118 @@ button {
 
 button:not(.tab-button):not(.view-tab):not(.sidebar-tab):not(.tab-close-btn):not(.chevron-button) {
   border-radius: var(--radius-sm);
+}
+
+.sidebar-control-button,
+.sidebar-control-input,
+.sidebar-control-select {
+  box-sizing: border-box;
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  border: 1px solid var(--button-border);
+  border-radius: var(--sidebar-control-radius);
+  color: var(--text-color);
+  font-size: var(--sidebar-control-font-size);
+}
+
+.sidebar-control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 var(--sidebar-control-padding-x);
+  white-space: nowrap;
+  font-weight: 500;
+  line-height: 1;
+  background-color: transparent;
+  border-color: var(--border-light);
+  color: var(--text-faint);
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.sidebar-control-button.icon-only {
+  width: var(--sidebar-control-height);
+  padding: 0;
+}
+
+.sidebar-control-button:hover {
+  background-color: var(--button-mouseover);
+  border-color: var(--button-border);
+  color: var(--text-color);
+}
+
+.sidebar-control-button.danger {
+  color: var(--delete-color);
+}
+
+.sidebar-control-input,
+.sidebar-control-select {
+  width: 100%;
+  padding: 0 var(--sidebar-control-padding-x);
+  outline: none;
+  background-color: var(--button-bg-color);
+}
+
+.sidebar-control-input::placeholder {
+  color: var(--text-faint);
+}
+
+.sidebar-control-input:focus,
+.sidebar-control-select:focus {
+  border-color: rgba(var(--special-text-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb), 0.1);
+}
+
+.sidebar-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.sidebar-icon-button:hover {
+  background-color: var(--button-mouseover);
+  border-color: var(--border-light);
+  color: var(--text-color);
+}
+
+.sidebar-icon-button.danger {
+  color: var(--delete-color);
+}
+
+.sidebar-icon-button.active {
+  color: var(--special-text);
+}
+
+.sidebar-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.sidebar-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--sidebar-control-height);
 }
 
 .delete-btn,

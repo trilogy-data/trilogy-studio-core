@@ -43,7 +43,7 @@
             :class="{ selected: !selectedValue }"
             @mousedown.prevent="selectAll"
           >
-            Select All
+            All
           </div>
 
           <div
@@ -81,6 +81,7 @@
   position: relative;
   overflow: visible;
   /* Prevent clipping */
+  padding: 0 12px 10px;
 }
 
 .select-container {
@@ -95,23 +96,20 @@
 
 .search-input-wrapper {
   position: relative;
-  width: 99%;
+  width: 100%;
   display: flex;
   align-items: center;
-  border: 1px solid var(--border-light, #d0d0d0);
-  background-color: var(--bg-color, #ffffff);
+  padding-left: 2px;
+  border: none;
+  background-color: transparent;
   transition:
     border-color 0.2s,
     background-color 0.2s;
 }
 
-.search-input-wrapper:hover:not(:has(.search-input:disabled)) {
-  border-color: var(--border-dark, #999999);
-}
-
 .search-input-wrapper:focus-within {
-  border-color: var(--primary-color, #0066cc);
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .inline-label {
@@ -126,7 +124,7 @@
 
 .search-input {
   flex: 1;
-  padding: 6px 40px 6px 0;
+  padding: 8px 40px 8px 0;
   font-size: 14px;
   color: var(--text-color, #333333);
   background: transparent;
@@ -144,14 +142,12 @@
 }
 
 .search-input:disabled {
-  background-color: var(--border-light, #d0d0d0);
   color: var(--text-color-muted, #999999);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .search-input-wrapper:has(.search-input:disabled) {
-  background-color: var(--border-light, #d0d0d0);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -420,7 +416,7 @@ export default {
       if (!this.selectOptions || this.selectOptions.length === 0) {
         return 'No data available'
       }
-      return this.firstColumn ? `Select ${this.firstColumn?.name}` : 'Select an option'
+      return 'All'
     },
     hasSelection(): boolean {
       return !!(this.selectedLabel && this.selectedValue)

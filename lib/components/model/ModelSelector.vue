@@ -1,11 +1,11 @@
 <template>
   <div class="model-anchor">
-    <button class="button truncate-text" @click="toggleModelForm">
+    <button class="button truncate-text sidebar-control-button" @click="toggleModelForm">
       {{ connection.model || 'Set Model' }}
     </button>
     <div v-if="isModelFormVisible" class="model-form">
       <form @submit.prevent="submitModel">
-        <select v-model="selectedModel" class="model-select" required>
+        <select v-model="selectedModel" class="model-select sidebar-control-select" required>
           <option
             v-for="model in availableModels"
             :key="model"
@@ -19,8 +19,10 @@
           </option>
         </select>
         <div class="model-form-actions">
-          <button type="submit">Submit</button>
-          <button type="button" @click="closeModelForm">Close</button>
+          <button type="submit" class="sidebar-control-button">Submit</button>
+          <button type="button" class="sidebar-control-button" @click="closeModelForm">
+            Close
+          </button>
         </div>
       </form>
     </div>
@@ -75,7 +77,7 @@ const submitModel = async () => {
 <style scoped>
 .model-anchor {
   position: relative;
-  padding-left: 5px;
+  padding-left: 6px;
   min-width: 0;
   flex-shrink: 1;
 }
@@ -83,9 +85,12 @@ const submitModel = async () => {
   position: absolute;
   top: 100%;
   right: 0; /* Anchor to the right */
-  background-color: var(--button-bg);
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 6px;
+  padding: 8px;
+  background-color: var(--floating-surface-strong);
+  box-shadow: var(--surface-shadow);
   border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   z-index: 1001;
   font-size: 12px;
   text-align: center;
@@ -94,18 +99,18 @@ const submitModel = async () => {
 }
 .model-select {
   appearance: none;
-  padding: 2px;
-  font-size: 12px;
   text-align: center;
-  border-radius: 0px;
   width: 100%;
 }
 .model-form-actions {
   display: flex;
   justify-content: space-between;
-  padding: 4px;
+  gap: 8px;
+  padding-top: 8px;
 }
+
 .button {
-  font-size: var(--button-font-size);
+  width: 100%;
+  justify-content: flex-start;
 }
 </style>

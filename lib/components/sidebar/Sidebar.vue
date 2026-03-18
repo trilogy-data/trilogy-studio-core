@@ -541,7 +541,7 @@ export default defineComponent({
 .sidebar-content {
   flex-grow: 1;
   background-color: var(--sidebar-bg);
-  padding: 12px;
+  padding: 12px 0;
   overflow-y: auto;
 }
 

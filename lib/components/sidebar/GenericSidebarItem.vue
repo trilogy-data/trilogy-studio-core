@@ -111,7 +111,7 @@ export default {
   cursor: pointer;
   min-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
-  padding-right: 6px;
+  padding: 0 12px;
 }
 
 .sidebar-padding {
@@ -160,6 +160,10 @@ export default {
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
+  .sidebar-content {
+    padding: 0 10px;
+  }
+
   .chevron-button {
     min-width: 32px;
     min-height: 32px;

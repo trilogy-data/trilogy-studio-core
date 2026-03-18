@@ -348,7 +348,7 @@ export default defineComponent({
   background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border-light);
   padding: 0 12px;
-  min-height: 44px;
+  min-height: 40px;
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;

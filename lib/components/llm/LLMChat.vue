@@ -469,7 +469,7 @@ export default defineComponent({
   padding: 0 12px;
   height: 48px;
   min-height: 48px;
-  background-color: var(--query-window-bg);
+  background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   overflow: hidden;
 }
@@ -519,11 +519,11 @@ export default defineComponent({
 .chat-messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 18px;
+  padding: 18px 22px 18px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: var(--result-window-bg);
+  background-color: var(--query-window-bg);
 }
 
 .message {
@@ -547,7 +547,6 @@ export default defineComponent({
   color: var(--sidebar-font);
   margin-left: 26px;
   border-radius: 14px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
 }
 
 .message.system {
@@ -611,8 +610,9 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background-color: var(--sidebar-bg);
-  border-radius: 4px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   font-size: var(--font-size);
   color: var(--text-color);
   max-width: 85%;
@@ -649,7 +649,7 @@ export default defineComponent({
   display: flex;
   align-items: flex-end;
   width: 100%;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border);
   background-color: var(--query-window-bg);
   padding: 8px;
   gap: 8px;
