@@ -229,9 +229,9 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 0 1 180px;
-  min-width: 120px;
-  max-width: 220px;
+  flex: 0 1 260px;
+  min-width: 160px;
+  max-width: 260px;
 }
 
 .import-selector-header {
@@ -245,30 +245,30 @@ onUnmounted(() => {
 .import-summary {
   display: flex;
   align-items: center;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
-  /* min-width: 150px; */
   justify-content: space-between;
   width: 100%;
-}
-
-.import-summary {
-  padding: 5px 12px 5px 36px;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
+  height: 44px;
+  padding: 0 14px 0 40px;
+  border: 1px solid var(--border-light);
+  color: var(--text-faint);
   font-size: var(--font-size);
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
   appearance: none;
   cursor: pointer;
-  min-width: 150px;
+  min-width: 0;
   outline: none;
-  border-radius: 0; /* Remove rounded corners */
+  border-radius: 12px;
+  box-sizing: border-box;
   -webkit-appearance: none;
   -moz-appearance: none;
 }
 
 .import-summary.has-imports {
   color: var(--text-color);
+}
+
+.import-selector-header:hover .import-summary {
+  border-color: var(--special-text);
 }
 
 .summary-content {
@@ -287,24 +287,27 @@ onUnmounted(() => {
 
 .summary-icon {
   position: absolute;
-  left: 10px;
+  left: 12px;
   font-size: 18px;
   color: var(--text-color);
 }
 
 .dropdown-icon {
-  margin: 0px 8px;
+  flex-shrink: 0;
+  margin-left: 10px;
+  color: var(--text-faint);
 }
 
 .import-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   z-index: 100;
   width: 300px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   padding: 12px;
 }
 
@@ -318,6 +321,8 @@ onUnmounted(() => {
 .import-dropdown-header h4 {
   margin: 0;
   color: var(--text-color);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dropdown-action-buttons {
@@ -327,8 +332,8 @@ onUnmounted(() => {
 }
 
 .clear-all-button {
-  border: none;
-  background: none;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--delete-color);
   cursor: pointer;
   font-size: 12px;
@@ -336,7 +341,7 @@ onUnmounted(() => {
 }
 
 .clear-all-button:hover {
-  text-decoration: underline;
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .close-dropdown-button {
@@ -353,7 +358,7 @@ onUnmounted(() => {
 
 .close-dropdown-button:hover {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(148, 163, 184, 0.08);
   border-radius: 4px;
 }
 
@@ -361,7 +366,7 @@ onUnmounted(() => {
   max-height: 150px;
   overflow-y: auto;
   margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-light);
   padding-bottom: 8px;
   text-align: left;
 }
@@ -374,7 +379,7 @@ onUnmounted(() => {
 }
 
 .import-item:hover {
-  background-color: var(--sidebar-bg);
+  background-color: var(--button-mouseover);
 }
 
 .import-item.active {
@@ -384,7 +389,7 @@ onUnmounted(() => {
 .import-checkbox {
   width: 20px;
   height: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   margin-right: 8px;
   display: flex;
   align-items: center;
@@ -416,11 +421,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--special-text);
-  color: white;
+  background-color: rgba(var(--special-text-rgb), 0.12);
+  color: var(--text-color);
   padding: 4px 8px;
   font-size: 12px;
   width: 100%;
+  border-radius: 10px;
 }
 
 .import-actions {
@@ -438,8 +444,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  opacity: 0.8;
+  color: var(--text-color);
+  opacity: 0.75;
   border-radius: 2px;
 }
 
@@ -456,7 +462,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-color);
   opacity: 0.7;
   border-radius: 2px;
 }
@@ -469,9 +475,9 @@ onUnmounted(() => {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .import-selector {
-    flex-basis: 132px;
-    min-width: 96px;
-    max-width: 132px;
+    flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .import-selector-header {
@@ -480,7 +486,8 @@ onUnmounted(() => {
 
   .import-summary {
     min-width: 0;
-    padding: 4px 8px 4px 28px;
+    height: 40px;
+    padding: 0 12px 0 36px;
   }
 
   .summary-content {

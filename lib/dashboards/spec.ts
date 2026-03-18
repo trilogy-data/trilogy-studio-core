@@ -54,9 +54,13 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
     data: { values: data },
     width: 'container',
     height: 'container',
+    background: 'transparent',
     config: {
       scale: {
         bandPaddingInner: 0.2,
+      },
+      view: {
+        stroke: null,
       },
     },
   }
@@ -143,6 +147,26 @@ export const generateVegaSpec = (
 
   // Create base spec
   let spec: any = createBaseSpec(localData)
+  const lightThemeChartConfig =
+    currentTheme === 'light'
+      ? {
+          view: {
+            fill: '#ffffff',
+            stroke: null,
+          },
+          axis: {
+            domainColor: '#cfd6df',
+            tickColor: '#cfd6df',
+            gridColor: '#e5e9ef',
+            labelColor: '#6b7280',
+            titleColor: '#6b7280',
+          },
+          legend: {
+            labelColor: '#374151',
+            titleColor: '#374151',
+          },
+        }
+      : {}
 
   // Set up color encoding
   let encoding: any = {}
@@ -293,16 +317,15 @@ export const generateVegaSpec = (
       },
     }
   }
-  if (currentTheme === 'dark') {
-    spec.config = {
-      // TODO - figure how to get this from css
-      background: '#262626',
-    }
-  }
-  if (currentTheme === 'light') {
-    spec.config = {
-      background: '#FBFBFB',
-    }
+  spec.background = 'transparent'
+  spec.config = {
+    ...spec.config,
+    ...lightThemeChartConfig,
+    view: {
+      ...(lightThemeChartConfig as any).view,
+      ...(spec.config?.view || {}),
+      stroke: null,
+    },
   }
   if (config.showTitle && title) {
     spec.title = {

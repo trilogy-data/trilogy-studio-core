@@ -1,20 +1,20 @@
 :root.dark-theme {
   /* Main Theme Variables */
-  --background-color: #0f172a;
+  --background-color: #121417;
   /* Background color of tabulator */
-  --border-color: #1e293b;
+  --border-color: #1f242c;
   /* Border to tabulator */
   --text-size: 12px;
   /* Table text size */
 
   /* Header Theming */
-  --header-background-color: #0f172a;
+  --header-background-color: #121417;
   /* Border to tabulator */
   --header-text-color: #fff;
   /* Header text color */
-  --header-border-color: #1e293b;
+  --header-border-color: #1f242c;
   /* Header border color */
-  --header-separator-color: #1e293b;
+  --header-separator-color: #1f242c;
   /* Header bottom separator color */
   --header-margin: 4px;
   /* Padding around header */
@@ -24,14 +24,14 @@
   --sort-arrow-inactive: #bbb;
 
   /* Row Theming */
-  --row-background-color: #0f172a;
-  --row-alt-background-color: #0f172a;
+  --row-background-color: #121417;
+  --row-alt-background-color: #121417;
   /* Alternate row background color */
-  --row-border-color: #1e293b;
+  --row-border-color: #1f242c;
   /* Table border color */
   --row-text-color: #fff;
   /* Table text color */
-  --row-hover-background: #172033;
+  --row-hover-background: #171b21;
   /* Row background color on hover */
 
   --row-selected-background: rgba(96, 165, 250, 0.12);
@@ -46,13 +46,13 @@
   /* Error indication */
 
   /* Footer Theming */
-  --footer-background-color: #0f172a;
+  --footer-background-color: #121417;
   /* Border to tabulator */
-  --footer-text-color: #333;
+  --footer-text-color: #cbd5e1;
   /* Footer text color */
-  --footer-border-color: #aaa;
+  --footer-border-color: #1f242c;
   /* Footer border color */
-  --footer-separator-color: #999;
+  --footer-separator-color: #1f242c;
   /* Footer bottom separator color */
   --footer-active-color: #fff;
   /* Footer bottom active text color */
@@ -80,21 +80,21 @@
 
 :root.light-theme {
   /* Main Theme Variables */
-  --background-color: hsl(0, 0%, 100%);
+  --background-color: #ffffff;
   /* background color of tabulator */
-  --border-color: #e0e0e0;
+  --border-color: #d6dde6;
   /* border to tabulator - lighter */
   --text-size: 12px;
   /* table text size */
 
   /* header theming */
-  --header-background-color: #f8fafc;
+  --header-background-color: #ffffff;
   /* border to tabulator */
-  --header-text-color: #334155;
+  --header-text-color: #1f2937;
   /* header text color - darker for contrast */
-  --header-border-color: #e2e8f0;
+  --header-border-color: #d6dde6;
   /* header border color - lighter */
-  --header-separator-color: #e2e8f0;
+  --header-separator-color: #e1e6ed;
   /* header bottom separator color - lighter */
   --header-margin: 4px;
   /* padding round header */
@@ -108,9 +108,9 @@
   /* row theming */
   --row-background-color: #ffffff;
   --row-alt-background-color: #ffffff;
-  --row-border-color: #e2e8f0;
-  --row-text-color: #334155;
-  --row-hover-background: #f8fafc;
+  --row-border-color: #e1e6ed;
+  --row-text-color: #1f2937;
+  --row-hover-background: #f5f7fa;
   --row-selected-background: rgba(37, 99, 235, 0.08);
   --row-selected-background-hover: rgba(37, 99, 235, 0.12);
   --edit-box-color: #4285f4;
@@ -119,13 +119,13 @@
   /* error indication - softer red */
 
   /* footer theming */
-  --footer-background-color: #f8fafc;
+  --footer-background-color: #ffffff;
   /* border to tabulator */
   --footer-text-color: #4a4a4a;
   /* footer text color - darker for contrast */
-  --footer-border-color: #f0f0f0;
+  --footer-border-color: #d6dde6;
   /* footer border color - lighter */
-  --footer-separator-color: #e6e6e6;
+  --footer-separator-color: #e1e6ed;
   /* footer bottom separator color - lighter */
   --footer-active-color: #4285f4;
   /* footer bottom active text color - brighter blue instead of red */
@@ -590,7 +590,7 @@
 .tabulator .tabulator-tableholder .tabulator-table {
   position: relative;
   display: inline-block;
-  background-color: var(--sort-arrow-active);
+  background-color: var(--background-color);
   white-space: nowrap;
   overflow: visible;
   color: var(--header-text-color);
@@ -848,7 +848,7 @@
 .tabulator-row {
   position: relative;
   box-sizing: border-box;
-  min-height: 36px;
+  min-height: 32px;
   background-color: var(--row-background-color);
   border-bottom: 1px solid var(--row-border-color);
 }
@@ -950,7 +950,7 @@
   display: inline-block;
   position: relative;
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-right: none;
   vertical-align: middle;
   white-space: nowrap;

@@ -284,17 +284,17 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border-light);
-  background-color: rgba(var(--bg-color), 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background-color: rgba(255, 255, 255, 0.84);
   color: var(--text-color);
   cursor: pointer;
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .control-btn:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(241, 245, 249, 0.96);
 }
 
 .control-btn:disabled {

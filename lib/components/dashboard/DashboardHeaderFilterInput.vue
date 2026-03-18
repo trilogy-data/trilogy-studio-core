@@ -26,7 +26,6 @@ const emit = defineEmits(['filter-change', 'filter-apply', 'clear-filter'])
 
 const llmStore = useLLMConnectionStore()
 
-// Refs
 const isLoading = ref(props.isLoading)
 const filterInputRef = ref<HTMLInputElement | null>(null)
 const filterTextareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -34,31 +33,27 @@ const filterInput = ref(props.filterValue || '')
 const hasUnappliedChanges = ref(false)
 const isDropdownOpen = ref(false)
 
-// Display filter value (replace newlines with spaces for display)
 const displayFilterValue = computed(() => {
   return filterInput.value.replace(/\n/g, ' ')
 })
 
-// Check if there's filter text to show clear button
 const hasFilterText = computed(() => {
-  return true
+  return filterInput.value.trim().length > 0
 })
 
-// Apply the filter changes
 function applyFilter() {
   emit('filter-apply', filterInput.value)
   hasUnappliedChanges.value = false
   closeDropdown()
 }
 
-// Clear the filter
 function clearFilter() {
   filterInput.value = ''
   hasUnappliedChanges.value = true
   emit('filter-change', '')
   emit('filter-apply', '')
   emit('clear-filter', '')
-  // Focus the textarea after clearing
+
   setTimeout(() => {
     if (filterTextareaRef.value) {
       filterTextareaRef.value.focus()
@@ -66,7 +61,6 @@ function clearFilter() {
   }, 0)
 }
 
-// Track filter input changes
 function onFilterInput(e: Event) {
   const target = e.target as HTMLInputElement | HTMLTextAreaElement
   filterInput.value = target.value
@@ -74,26 +68,21 @@ function onFilterInput(e: Event) {
   emit('filter-change', filterInput.value)
 }
 
-// Open dropdown for multi-line editing
 function openDropdown() {
   isDropdownOpen.value = true
-  // Focus textarea after DOM update
   setTimeout(() => {
     if (filterTextareaRef.value) {
       filterTextareaRef.value.focus()
-      // Set cursor to end
       const length = filterInput.value.length
       filterTextareaRef.value.setSelectionRange(length, length)
     }
   }, 0)
 }
 
-// Close dropdown
 function closeDropdown() {
   isDropdownOpen.value = false
 }
 
-// Handle clicks outside dropdown
 function handleClickOutside(event: Event) {
   const target = event.target as HTMLElement
   const dropdown = document.querySelector('.filter-dropdown')
@@ -104,10 +93,9 @@ function handleClickOutside(event: Event) {
   }
 }
 
-// Generate filter using LLM
 const filterLLM = () => {
   isLoading.value = true
-  let concepts = props.globalCompletion.map((item) => ({
+  const concepts = props.globalCompletion.map((item) => ({
     name: item.label,
     type: item.datatype,
     description: item.description,
@@ -117,11 +105,8 @@ const filterLLM = () => {
     .generateFilterQuery(filterInput.value, concepts, props.validateFilter)
     .then((response) => {
       if (response && response.length > 0) {
-        // Strip "where" off if present
         filterInput.value = response.replace(/^\s*where\s+/i, '')
-        // Mark as having changes that need to be applied
         hasUnappliedChanges.value = true
-        // Apply the filter
         emit('filter-apply', filterInput.value)
       }
       isLoading.value = false
@@ -131,47 +116,34 @@ const filterLLM = () => {
     })
 }
 
-// Handle keyboard shortcuts
 function handleFilterKeydown(event: KeyboardEvent) {
-  // Add Enter key as a shortcut to search (only in single-line input)
   if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey) {
     if (!isDropdownOpen.value) {
       event.preventDefault()
       applyFilter()
     }
-  }
-  // Keep Ctrl+Shift+Enter for LLM generation
-  else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
+  } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
     event.preventDefault()
     filterLLM()
-  }
-  // Escape to close dropdown
-  else if (event.key === 'Escape' && isDropdownOpen.value) {
+  } else if (event.key === 'Escape' && isDropdownOpen.value) {
     event.preventDefault()
     closeDropdown()
   }
 }
 
-// Handle textarea keyboard shortcuts
 function handleTextareaKeydown(event: KeyboardEvent) {
-  // Ctrl+Enter or Cmd+Enter to apply filter
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
     applyFilter()
-  }
-  // Keep Ctrl+Shift+Enter for LLM generation
-  else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
+  } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'Enter') {
     event.preventDefault()
     filterLLM()
-  }
-  // Escape to close dropdown
-  else if (event.key === 'Escape') {
+  } else if (event.key === 'Escape') {
     event.preventDefault()
     closeDropdown()
   }
 }
 
-// Compute filter validation status
 const filterStatus = computed(() => {
   if ((props.filterError || '').length > 0) {
     return 'error'
@@ -179,14 +151,11 @@ const filterStatus = computed(() => {
   return filterInput.value ? 'valid' : 'neutral'
 })
 
-// Handle completion selection
 function handleCompletionSelected(completion: { text: string; cursorPosition: number }) {
   filterInput.value = completion.text
-  // Mark as having changes
   hasUnappliedChanges.value = true
   emit('filter-change', filterInput.value)
 
-  // Set cursor position and focus the appropriate input
   const activeElement = isDropdownOpen.value ? filterTextareaRef.value : filterInputRef.value
   if (activeElement) {
     activeElement.focus()
@@ -194,7 +163,6 @@ function handleCompletionSelected(completion: { text: string; cursorPosition: nu
   }
 }
 
-// Watch for external filter changes
 watch(
   () => props.filterValue,
   (newValue) => {
@@ -205,7 +173,6 @@ watch(
   },
 )
 
-// Watch for external loading state changes
 watch(
   () => props.isLoading,
   (newValue) => {
@@ -213,7 +180,6 @@ watch(
   },
 )
 
-// Watch dropdown state to add/remove click listener
 watch(isDropdownOpen, (isOpen) => {
   if (isOpen) {
     document.addEventListener('click', handleClickOutside)
@@ -225,10 +191,10 @@ watch(isDropdownOpen, (isOpen) => {
 
 <template>
   <div class="filter-container">
-    <!-- <label for="filter">Where</label> -->
     <div class="filter-input-wrapper">
       <input
         id="filter"
+        ref="filterInputRef"
         data-testid="filter-input"
         type="text"
         :value="displayFilterValue"
@@ -238,10 +204,8 @@ watch(isDropdownOpen, (isOpen) => {
         placeholder="Add a global filter..."
         :class="{ 'filter-error': filterStatus === 'error' }"
         :disabled="isLoading"
-        ref="filterInputRef"
       />
 
-      <!-- Multi-line dropdown -->
       <div v-if="isDropdownOpen" class="filter-dropdown">
         <div class="dropdown-header">
           <span>Global Filters</span>
@@ -249,6 +213,7 @@ watch(isDropdownOpen, (isOpen) => {
             <i class="mdi mdi-close"></i>
           </button>
         </div>
+
         <textarea
           ref="filterTextareaRef"
           class="filter-textarea"
@@ -267,9 +232,8 @@ Use Ctrl+Enter to apply`
           rows="4"
         ></textarea>
 
-        <!-- Error message in dropdown -->
         <div v-if="filterError" class="dropdown-error-message" data-testid="dropdown-error-message">
-          <i class="mdi mdi-alert-circle"></i>
+          <i class="mdi mdi-alert-circle-outline"></i>
           <span>{{ filterError }}</span>
         </div>
 
@@ -291,7 +255,7 @@ Use Ctrl+Enter to apply`
             :disabled="isLoading"
             title="Text to filter (Ctrl+Shift+Enter)"
           >
-            <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
+            <i class="mdi mdi-auto-fix" :class="{ hidden: isLoading }"></i>
             <div v-if="isLoading" class="loader-container">
               <div class="loader"></div>
             </div>
@@ -310,94 +274,81 @@ Use Ctrl+Enter to apply`
       </div>
 
       <FilterAutocomplete
+        v-if="isDropdownOpen ? filterTextareaRef : filterInputRef"
         :input-value="filterInput"
         :completion-items="globalCompletion"
         :input-element="isDropdownOpen ? filterTextareaRef : filterInputRef"
-        v-if="isDropdownOpen ? filterTextareaRef : filterInputRef"
         @select-completion="handleCompletionSelected"
       />
 
-      <!-- Search button -->
-      <button
-        @click="applyFilter"
-        class="search-button"
-        data-testid="filter-search-button"
-        :disabled="isLoading"
-        :class="{ 'has-changes': hasUnappliedChanges }"
-        title="Apply filter (Enter)"
-      >
-        <div class="button-content">
-          <i class="mdi mdi-magnify"></i>
-          <Tooltip
-            :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'"
-            position="top"
-          >
-            <span class="tooltip-trigger"></span>
-          </Tooltip>
-        </div>
-      </button>
-
-      <!-- LLM button -->
-      <button
-        @click="filterLLM"
-        class="sparkle-button"
-        data-testid="filter-llm-button"
-        :disabled="isLoading"
-        v-if="llmStore.hasActiveDefaultConnection"
-        title="Transform text to filter if you have a configured LLM connection"
-      >
-        <div class="button-content">
-          <i class="mdi mdi-creation" :class="{ hidden: isLoading }"></i>
-          <div v-if="isLoading" class="loader-container">
-            <div class="loader"></div>
-          </div>
-          <Tooltip
-            :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'"
-            position="top"
-          >
-            <span class="tooltip-trigger"></span>
-          </Tooltip>
-        </div>
-      </button>
-
-      <!-- Clear filters button -->
-      <button
-        v-if="hasFilterText"
-        @click="clearFilter"
-        class="clear-filters-button"
-        data-testid="clear-filters-button"
-        :disabled="isLoading"
-        title="Clear all filters"
-      >
-        <div class="button-content">
-          <i class="mdi mdi-close"></i>
-          <Tooltip content="Clear all filters" position="top">
-            <span class="tooltip-trigger"></span>
-          </Tooltip>
-        </div>
-      </button>
-
-      <!-- Validation indicator -->
-      <div class="filter-validation-icon" v-if="filterStatus !== 'neutral'">
+      <div class="filter-inline-actions">
         <div
           v-if="filterStatus === 'error'"
-          class="filter-icon error"
+          class="filter-status error"
           data-testid="filter-error-icon"
         >
-          <span class="icon-x">✕</span>
+          <i class="mdi mdi-alert-circle-outline"></i>
           <Tooltip :content="filterError || 'Unknown Error'" position="bottom">
             <span class="tooltip-trigger" data-testid="filter-error-tooltip-trigger"></span>
           </Tooltip>
         </div>
-        <div
-          v-else-if="filterStatus === 'valid'"
-          class="filter-icon valid"
-          data-testid="filter-valid-icon"
+
+        <button
+          @click="applyFilter"
+          class="input-icon-button"
+          data-testid="filter-search-button"
+          :disabled="isLoading"
+          :class="{ 'has-changes': hasUnappliedChanges }"
+          title="Apply filter (Enter)"
         >
-          <Tooltip content="This is a syntactically correct filter." position="top">
-            <span class="icon-check" data-testid="filter-valid-tooltip-trigger">✓</span>
-          </Tooltip>
-        </div>
+          <div class="button-content">
+            <i class="mdi mdi-magnify"></i>
+            <Tooltip
+              :content="hasUnappliedChanges ? 'Apply changes (Enter)' : 'Search (Enter)'"
+              position="top"
+            >
+              <span class="tooltip-trigger"></span>
+            </Tooltip>
+          </div>
+        </button>
+
+        <button
+          v-if="llmStore.hasActiveDefaultConnection"
+          @click="filterLLM"
+          class="input-icon-button"
+          data-testid="filter-llm-button"
+          :disabled="isLoading"
+          title="Transform text to filter if you have a configured LLM connection"
+        >
+          <div class="button-content">
+            <i class="mdi mdi-auto-fix" :class="{ hidden: isLoading }"></i>
+            <div v-if="isLoading" class="loader-container">
+              <div class="loader"></div>
+            </div>
+            <Tooltip
+              :content="isLoading ? 'Processing...' : 'Text to filter (Ctrl+Shift+Enter)'"
+              position="top"
+            >
+              <span class="tooltip-trigger"></span>
+            </Tooltip>
+          </div>
+        </button>
+
+        <button
+          v-if="hasFilterText"
+          @click="clearFilter"
+          class="input-icon-button clear-icon-button"
+          data-testid="clear-filters-button"
+          :disabled="isLoading"
+          title="Clear all filters"
+        >
+          <div class="button-content">
+            <i class="mdi mdi-close"></i>
+            <Tooltip content="Clear all filters" position="top">
+              <span class="tooltip-trigger"></span>
+            </Tooltip>
+          </div>
+        </button>
       </div>
     </div>
   </div>
@@ -414,66 +365,43 @@ Use Ctrl+Enter to apply`
   width: 100%;
 }
 
-.filter-container label {
-  font-weight: 400;
-  color: var(--text-color);
-  white-space: nowrap;
-  font-size: 18px;
-}
-
 .filter-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
-  margin-top: 5px;
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
+  border-radius: 12px;
 }
 
 .filter-container input {
-  padding: 4px;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
-  background-color: var(--bg-color);
   width: 100%;
+  height: 40px;
+  padding: 0 118px 0 14px;
   font-size: var(--font-size);
-  height: 30px;
+  color: var(--text-color);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
   cursor: pointer;
 }
 
-/* Error message in dropdown styles */
-.dropdown-error-message {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 8px 12px;
-  padding: 8px 10px;
-  background-color: rgba(255, 59, 48, 0.1);
-  border: 1px solid rgba(255, 59, 48, 0.3);
-  border-radius: 4px;
-  color: #ff3b30;
-  font-size: 12px;
-  line-height: 1.4;
+.filter-error {
+  border-color: #ff6b6b !important;
 }
 
-.dropdown-error-message .mdi {
-  flex-shrink: 0;
-  font-size: 14px;
-  margin-top: 1px;
-}
-
-/* Dropdown styles */
 .filter-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--bg-color);
-  border: 1px solid var(--border);
-  border-top: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  padding: 0;
+  margin-top: 8px;
+  overflow: hidden;
+  background: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 }
 
 .dropdown-header {
@@ -481,21 +409,20 @@ Use Ctrl+Enter to apply`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: var(--bg-color);
-  border-bottom: 1px solid var(--border);
   font-weight: 500;
   color: var(--text-color);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .close-button {
-  background: none;
-  border: none;
-  color: var(--text-color);
-  cursor: pointer;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 2px;
+  color: var(--text-color);
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .close-button:hover {
@@ -504,28 +431,41 @@ Use Ctrl+Enter to apply`
 
 .filter-dropdown textarea {
   width: 100%;
+  min-height: 80px;
   padding: 8px 12px;
-  border: none;
-  outline: none;
-  background: var(--bg-color);
-  color: var(--sidebar-selector-font);
   font-size: var(--font-size);
   font-family: inherit;
+  color: var(--text-color);
+  background: var(--query-window-bg);
+  border: none;
+  outline: none;
   resize: vertical;
-  min-height: 80px;
 }
 
 .filter-dropdown textarea.filter-error {
-  border-left: 3px solid #ff3b30;
+  border-left: 3px solid #ff6b6b;
+}
+
+.dropdown-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #ff6b6b;
+  background-color: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 8px;
 }
 
 .dropdown-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
   padding: 8px 12px;
-  background: var(--bg-color);
-  border-top: 1px solid var(--border);
-  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
 }
 
 .apply-button,
@@ -535,11 +475,11 @@ Use Ctrl+Enter to apply`
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-color);
-  color: var(--text-color);
-  cursor: pointer;
   font-size: 12px;
+  color: var(--text-color);
+  background: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
@@ -550,15 +490,15 @@ Use Ctrl+Enter to apply`
 }
 
 .apply-button.has-changes {
-  background: var(--special-text);
   color: white;
+  background: var(--special-text);
   border-color: var(--special-text);
 }
 
 .clear-button:hover {
+  color: #ff6b6b;
   background: rgba(255, 59, 48, 0.1);
   border-color: rgba(255, 59, 48, 0.3);
-  color: #ff3b30;
 }
 
 .apply-button:disabled,
@@ -568,89 +508,62 @@ Use Ctrl+Enter to apply`
   cursor: not-allowed;
 }
 
-/* Search button styles */
-.search-button {
+.filter-inline-actions {
   position: absolute;
-  right: 65px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-icon-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-faint);
+  background: transparent;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  color: var(--text-color);
-  width: 30px;
-  height: 30px;
-  z-index: 2;
   transition: all 0.2s ease-in-out;
 }
 
-.search-button.has-changes {
+.input-icon-button:hover:not(:disabled) {
+  color: var(--text-color);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.input-icon-button.has-changes {
   color: var(--special-text);
-  animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.1);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-.sparkle-button {
-  position: absolute;
-  right: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  width: 30px;
-  height: 30px;
-  z-index: 2;
-}
-
-/* Clear filters button styles */
-.clear-filters-button {
-  position: absolute;
-  right: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  width: 30px;
-  height: 30px;
-  z-index: 2;
-  transition: all 0.2s ease;
-}
-
-.clear-filters-button:hover:not(:disabled) {
-  color: #ff3b30;
+.clear-icon-button:hover:not(:disabled) {
+  color: #ff6b6b;
   background: rgba(255, 59, 48, 0.1);
 }
 
-.clear-filters-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.filter-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-faint);
+  position: relative;
+}
+
+.filter-status.error {
+  color: #ff6b6b;
 }
 
 .button-content {
   position: relative;
+  display: flex;
   width: 100%;
   height: 100%;
-  display: flex;
   align-items: center;
   justify-content: center;
 }
@@ -663,7 +576,6 @@ Use Ctrl+Enter to apply`
   display: none;
 }
 
-/* Loader animation */
 .loader-container {
   display: flex;
   align-items: center;
@@ -673,11 +585,11 @@ Use Ctrl+Enter to apply`
 }
 
 .loader {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top: 2px solid var(--special-text);
   width: 16px;
   height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid var(--special-text);
+  border-radius: 50%;
   animation: loader-spin 1s linear infinite;
 }
 
@@ -691,94 +603,26 @@ Use Ctrl+Enter to apply`
   }
 }
 
-.filter-error {
-  border-color: #ff3b30 !important;
-}
-
-.filter-validation-icon {
-  position: absolute;
-  right: 10px;
-  display: flex;
-  align-items: center;
-}
-
-.filter-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.filter-icon.error {
-  color: #ff3b30;
-}
-
-.filter-icon.valid {
-  color: #4cd964;
-}
-
-.icon-x {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.icon-check {
-  font-weight: bold;
-  font-size: 14px;
-}
-
 .tooltip-trigger {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   cursor: help;
 }
 
-/* Media query adjustments */
 @media (max-width: 768px) {
   .filter-container {
     flex: 1;
-    margin-top: 5px;
+    margin-top: 0;
   }
 
-  .sparkle-button {
-    right: 30px;
-  }
-
-  .search-button {
-    right: 60px;
-  }
-
-  .clear-filters-button {
-    right: 0px;
+  .filter-container input {
+    padding-right: 110px;
   }
 }
 
 @media (max-width: 480px) {
-  .filter-container {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .filter-container label {
-    margin-right: 8px;
-    white-space: nowrap;
-  }
-
-  .sparkle-button {
-    right: 25px;
-  }
-
-  .search-button {
-    right: 50px;
-  }
-
-  .clear-filters-button {
-    right: 0px;
+  .filter-container input {
+    padding-right: 102px;
   }
 
   .dropdown-actions {
@@ -790,20 +634,6 @@ Use Ctrl+Enter to apply`
   .clear-button {
     width: 100%;
     justify-content: center;
-  }
-}
-
-@media (max-width: 360px) {
-  .sparkle-button {
-    right: 20px;
-  }
-
-  .search-button {
-    right: 45px;
-  }
-
-  .clear-filters-button {
-    right: 0px;
   }
 }
 </style>

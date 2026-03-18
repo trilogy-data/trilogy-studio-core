@@ -52,6 +52,8 @@
   height: 100%;
   width: 100%;
   position: relative;
+  box-sizing: border-box;
+  padding-top: 6px;
 }
 
 .controls-toggle {
@@ -81,9 +83,9 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border-light, #d0d0d0);
-  background-color: rgba(var(--bg-color, 255, 255, 255), 0.9);
-  color: var(--text-color, #333333);
+  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
+  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.96));
+  color: var(--floating-text, var(--text-color, #333333));
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
@@ -93,7 +95,7 @@
 }
 
 .control-btn:hover:not(:disabled) {
-  background-color: var(--button-mouseover, #f0f0f0);
+  background-color: var(--floating-surface, rgba(255, 255, 255, 0.88));
 }
 
 .control-btn:disabled {
@@ -130,7 +132,8 @@
 
 .tabulator {
   position: relative;
-  border: 0;
+  border: 1px solid var(--border, #d6dde6);
+  border-radius: 0 0 14px 14px;
   width: 100%;
   flex-grow: 1;
 }
@@ -140,21 +143,6 @@
 }
 
 /* Dark theme support */
-.dark-theme-table .control-btn {
-  background-color: rgba(var(--dark-bg-color, 42, 42, 42), 0.9);
-  color: var(--dark-text-color, #e0e0e0);
-  border-color: var(--dark-border-color, #555555);
-}
-
-.dark-theme-table .control-btn:hover:not(:disabled) {
-  background-color: var(--dark-button-hover-bg, #4a4a4a);
-}
-
-.dark-theme-table .control-btn:disabled {
-  background-color: var(--dark-border-color, #555555);
-  color: var(--dark-text-color-muted, #999999);
-}
-
 /* Highlighted cell styling */
 .highlighted-cell {
   background-color: var(--highlight-bg, #fff3cd) !important;

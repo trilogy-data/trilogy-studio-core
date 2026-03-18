@@ -6,96 +6,91 @@
     @mouseleave="controlsManager.onChartMouseLeave"
   >
     <div
-      class="controls-toggle"
-      :class="{
-        'bottom-controls': isShortContainer,
-        'controls-visible': controlsManager.controlsVisible.value,
-      }"
-      v-if="showControls"
+      class="chart-workspace"
+      :class="{ 'with-bottom-controls': isShortContainer && showControls }"
     >
-      <button
-        @click="downloadChart"
-        class="control-btn"
-        data-testid="download-chart-btn"
-        title="Download chart as PNG"
-      >
-        <i class="mdi mdi-download-outline icon"></i>
-      </button>
-      <button
-        @click="refreshChart"
-        class="control-btn"
-        data-testid="refresh-chart-btn"
-        title="Refresh chart"
-      >
-        <i class="mdi mdi-refresh icon"></i>
-      </button>
-      <button
-        v-if="$props.drilldownActive"
-        @click="revertDrilldown"
-        class="control-btn"
-        data-testid="refresh-chart-btn"
-        title="Clear Drilldown"
-      >
-        <i class="mdi mdi-undo icon"></i>
-      </button>
-      <button
-        @click="controlsManager.toggleControls"
-        class="control-btn"
-        :class="{ active: controlsManager.showingControls.value }"
-        data-testid="toggle-chart-controls-btn"
-        :title="controlsManager.showingControls.value ? 'View Chart' : 'Edit Chart'"
-      >
-        <i
-          :class="
-            controlsManager.showingControls.value ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'
-          "
-          class="icon"
-        ></i>
-      </button>
-    </div>
-    <!-- Content area with conditional rendering -->
-    <div
-      ref="chartContentArea"
-      class="chart-content-area"
-      :class="{
-        'with-bottom-controls': isShortContainer && showControls,
-        'with-side-controls': !isShortContainer && showControls,
-        'no-controls': !showControls,
-      }"
-    >
-      <!-- Dual chart visualization containers for smooth hot-swapping -->
-      <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
-        <div
-          ref="vegaContainer1"
-          class="vega-container"
-          :class="{
-            'vega-active': renderManager.activeContainer.value === 1,
-            'vega-transitioning':
-              renderManager.transitioning.value && renderManager.activeContainer.value === 1,
-          }"
-          data-testid="vega-chart-container-1"
-        ></div>
-        <div
-          ref="vegaContainer2"
-          class="vega-container"
-          :class="{
-            'vega-active': renderManager.activeContainer.value === 2,
-            'vega-transitioning':
-              renderManager.transitioning.value && renderManager.activeContainer.value === 2,
-          }"
-          data-testid="vega-chart-container-2"
-        ></div>
+      <div ref="chartContentArea" class="chart-content-area">
+        <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
+          <div
+            ref="vegaContainer1"
+            class="vega-container"
+            :class="{
+              'vega-active': renderManager.activeContainer.value === 1,
+              'vega-transitioning':
+                renderManager.transitioning.value && renderManager.activeContainer.value === 1,
+            }"
+            data-testid="vega-chart-container-1"
+          ></div>
+          <div
+            ref="vegaContainer2"
+            class="vega-container"
+            :class="{
+              'vega-active': renderManager.activeContainer.value === 2,
+              'vega-transitioning':
+                renderManager.transitioning.value && renderManager.activeContainer.value === 2,
+            }"
+            data-testid="vega-chart-container-2"
+          ></div>
+        </div>
+        <ChartControlPanel
+          v-if="controlsManager.showingControls.value"
+          :config="controlsManager.internalConfig.value"
+          :charts="charts"
+          :filtered-columns="filteredColumnsInternal"
+          @update-config="updateConfig"
+          @open-vega-editor="openInVegaEditor"
+        />
       </div>
 
-      <!-- Controls panel - only show when toggled -->
-      <ChartControlPanel
-        v-if="controlsManager.showingControls.value"
-        :config="controlsManager.internalConfig.value"
-        :charts="charts"
-        :filtered-columns="filteredColumnsInternal"
-        @update-config="updateConfig"
-        @open-vega-editor="openInVegaEditor"
-      />
+      <div
+        class="controls-toggle"
+        :class="{
+          'bottom-controls': isShortContainer,
+          'controls-visible':
+            controlsManager.controlsVisible.value || controlsManager.showingControls.value,
+        }"
+        v-if="showControls"
+      >
+        <button
+          @click="downloadChart"
+          class="control-btn"
+          data-testid="download-chart-btn"
+          title="Download chart as PNG"
+        >
+          <i class="mdi mdi-download-outline icon"></i>
+        </button>
+        <button
+          @click="refreshChart"
+          class="control-btn"
+          data-testid="refresh-chart-btn"
+          title="Refresh chart"
+        >
+          <i class="mdi mdi-refresh icon"></i>
+        </button>
+        <button
+          v-if="$props.drilldownActive"
+          @click="revertDrilldown"
+          class="control-btn"
+          data-testid="refresh-chart-btn"
+          title="Clear Drilldown"
+        >
+          <i class="mdi mdi-undo icon"></i>
+        </button>
+        <button
+          @click="controlsManager.toggleControls"
+          class="control-btn"
+          :class="{ active: controlsManager.showingControls.value }"
+          data-testid="toggle-chart-controls-btn"
+          :title="controlsManager.showingControls.value ? 'View Chart' : 'Edit Chart'"
+        >
+          <i
+            :class="
+              controlsManager.showingControls.value ? 'mdi mdi-eye-outline' : 'mdi mdi-cog-outline'
+            "
+            class="icon"
+          ></i>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -187,10 +182,10 @@ export default defineComponent({
     const vegaContainer2 = ref<HTMLElement | null>(null)
     const chartContentArea = ref<HTMLElement | null>(null)
 
-    // Resize observer for beeswarm charts
+    // Resize observer for live chart area sizing
     let resizeObserver: ResizeObserver | null = null
 
-    // Internal dimensions that override props when set (for beeswarm charts)
+    // Internal dimensions tracked from the rendered chart area
     const internalWidth = ref<number | null>(null)
     const internalHeight = ref<number | null>(null)
 
@@ -213,17 +208,17 @@ export default defineComponent({
       chartHelpers.handleBrush(name, item, controlsManager.internalConfig.value, props.columns)
     }, 500)
 
-    // Create debounced resize handler for beeswarm charts
+    // Create debounced resize handler for live chart resizing
     const debouncedResizeHandler = debounce(() => {
       renderChart(true)
     }, 300)
 
     // Generate Vega-Lite spec based on current configuration
     const generateVegaSpecInternal = () => {
-      // Use internal dimensions if available (for beeswarm charts), otherwise use props
-      // const effectiveHeight = internalHeight.value ?? props.containerHeight
-      const effectiveHeight = props.containerHeight
-      const effectiveWidth = internalWidth.value ?? props.containerWidth
+      const effectiveHeight =
+        chartContentArea.value?.clientHeight ?? internalHeight.value ?? props.containerHeight
+      const effectiveWidth =
+        chartContentArea.value?.clientWidth ?? internalWidth.value ?? props.containerWidth
 
       return generateVegaSpec(
         props.data,
@@ -257,41 +252,31 @@ export default defineComponent({
       )
     }
 
-    // Setup resize observer for beeswarm charts
+    // Setup resize observer for the chart content area
     const setupResizeObserver = () => {
-      if (
-        !props.containerWidth ||
-        (controlsManager.internalConfig.value.chartType === 'beeswarm' && chartContentArea.value)
-      ) {
-        if (resizeObserver) {
-          resizeObserver.disconnect()
-        }
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
 
-        resizeObserver = new ResizeObserver((entries) => {
-          for (let entry of entries) {
-            const { width, height } = entry.contentRect
-            // Store internal dimensions for beeswarm charts
-            internalWidth.value = width
-            internalHeight.value = height
+      if (!chartContentArea.value) {
+        return
+      }
 
+      resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          const { width, height } = entry.contentRect
+          internalWidth.value = width
+          internalHeight.value = height
+
+          if (!controlsManager.showingControls.value) {
             debouncedResizeHandler()
           }
-        })
-
-        if (chartContentArea.value) {
-          resizeObserver.observe(chartContentArea.value)
-
-          // Set initial internal dimensions
-          internalWidth.value = chartContentArea.value.clientWidth
-          internalHeight.value = chartContentArea.value.clientHeight
         }
+      })
 
-        console.log('Resize observer set up for beeswarm chart')
-      } else {
-        // Clear internal dimensions for non-beeswarm charts
-        internalWidth.value = null
-        internalHeight.value = null
-      }
+      resizeObserver.observe(chartContentArea.value)
+      internalWidth.value = chartContentArea.value.clientWidth
+      internalHeight.value = chartContentArea.value.clientHeight
     }
 
     // Cleanup resize observer
@@ -424,10 +409,12 @@ export default defineComponent({
     watch(
       () => controlsManager.showingControls.value,
       (showing) => {
-        // If switching to chart view, need to render chart after toggle
-        if (!showing) {
-          nextTick(() => renderChart(true))
-        }
+        nextTick(() => {
+          setupResizeObserver()
+          if (!showing) {
+            renderChart(true)
+          }
+        })
       },
     )
 
@@ -471,43 +458,59 @@ export default defineComponent({
 .vega-lite-chart {
   width: 100%;
   height: 100%;
-  position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .controls-toggle {
-  position: absolute;
-  top: 50%;
-  right: 0px;
-  transform: translateY(-50%);
-  z-index: 10;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
   opacity: 0;
-  visibility: hidden;
+  overflow: hidden;
   transition:
     opacity 0.2s ease-in-out,
-    visibility 0.2s ease-in-out;
+    width 0.22s ease-in-out,
+    flex-basis 0.22s ease-in-out;
+  transition-delay: 0s;
 }
 
 .controls-toggle.controls-visible {
   opacity: 1;
-  visibility: visible;
+  width: 36px;
+  flex-basis: 36px;
+  transition-delay: var(--hover-drawer-delay);
 }
 
 .controls-toggle.bottom-controls {
-  position: absolute;
-  top: auto;
-  bottom: 0;
-  right: 50%;
-  transform: translateX(50%);
   flex-direction: row;
+  justify-content: center;
+  align-items: center;
   gap: 4px;
-  padding: 4px;
-  background-color: rgba(var(--bg-color), 0.9);
-  border-radius: 4px 4px 0 0;
-  backdrop-filter: blur(4px);
+  width: 100%;
+  height: 0;
+  flex-basis: 0;
+  padding: 0 6px;
+  border-top: 1px solid transparent;
+  transition:
+    opacity 0.2s ease-in-out,
+    height 0.22s ease-in-out,
+    flex-basis 0.22s ease-in-out,
+    padding 0.22s ease-in-out;
+  transition-delay: 0s;
+}
+
+.controls-toggle.bottom-controls.controls-visible {
+  height: 40px;
+  flex-basis: 40px;
+  padding: 4px 6px;
+  border-top-color: rgba(148, 163, 184, 0.12);
+  transition-delay: var(--hover-drawer-delay);
 }
 
 .viz {
@@ -551,24 +554,21 @@ export default defineComponent({
 
 .chart-content-area {
   flex: 1;
-  height: 100%;
   position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* Default: no controls - full width */
-.chart-content-area.no-controls {
-  width: 100%;
+.chart-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
 }
 
-/* Side controls for normal height containers */
-.chart-content-area.with-side-controls {
-  width: calc(100% - 28px);
-}
-
-/* Bottom controls for short containers */
-.chart-content-area.with-bottom-controls {
-  width: 100%;
-  height: calc(100% - 36px);
+.chart-workspace.with-bottom-controls {
+  flex-direction: column;
 }
 
 /* Hot-swap container styles */
@@ -604,34 +604,19 @@ export default defineComponent({
   .control-btn {
     width: 32px;
     height: 32px;
-    margin-top: 5px;
-    margin-bottom: 5px;
   }
 
-  /* Force bottom controls on mobile and make them always visible */
   .controls-toggle {
-    position: absolute;
-    top: auto;
-    bottom: 0;
-    right: 50%;
-    transform: translateX(50%);
     flex-direction: row;
     gap: 4px;
-    padding: 4px;
-    background-color: rgba(var(--bg-color), 0.9);
-    border-radius: 4px 4px 0 0;
-    backdrop-filter: blur(4px);
-    opacity: 1;
-    visibility: visible;
+    width: 100%;
+    height: 0;
+    flex-basis: 0;
+    padding: 0 6px;
   }
 
-  .chart-content-area {
-    width: 100%;
-    height: calc(100% - 40px);
-  }
-
-  .chart-content-area.with-side-controls {
-    width: 100%;
+  .chart-workspace {
+    flex-direction: column;
   }
 }
 </style>

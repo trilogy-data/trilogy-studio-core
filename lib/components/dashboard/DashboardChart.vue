@@ -207,7 +207,10 @@ export default defineComponent({
     })
 
     const chartConfig = computed(() => {
-      return itemData.value.chartConfig || null
+      return {
+        ...(itemData.value.chartConfig || {}),
+        showTitle: false,
+      }
     })
 
     const loading = computed(() => {
@@ -266,11 +269,18 @@ export default defineComponent({
     )
 
     const onChartConfigChange = (chartConfig: ChartConfig) => {
+      const nextChartConfig = {
+        ...chartConfig,
+        showTitle: false,
+      }
+
       if (hasDrilldown.value) {
-        props.setItemData(props.itemId, props.dashboardId, { drilldownChartConfig: chartConfig })
+        props.setItemData(props.itemId, props.dashboardId, {
+          drilldownChartConfig: nextChartConfig,
+        })
         return
       }
-      props.setItemData(props.itemId, props.dashboardId, { chartConfig: chartConfig })
+      props.setItemData(props.itemId, props.dashboardId, { chartConfig: nextChartConfig })
     }
 
     if (!connectionStore) {
@@ -429,10 +439,11 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   /* padding: 5px; */
-  color: #666;
+  color: var(--text-faint);
   position: relative;
   overflow-y: hidden;
-  padding-top: 5px;
+  padding-top: 0;
+  background: transparent;
 }
 
 .loading-overlay {
@@ -499,7 +510,7 @@ export default defineComponent({
 }
 
 .chart-placeholder-edit-mode {
-  padding-top: 15px;
+  padding-top: 0;
 }
 
 .controls-toggle {
@@ -528,17 +539,17 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border-light);
-  background-color: rgba(var(--bg-color), 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background-color: rgba(255, 255, 255, 0.84);
   color: var(--text-color);
   cursor: pointer;
   font-size: var(--button-font-size);
   transition: background-color 0.2s;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .control-btn:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(241, 245, 249, 0.96);
 }
 
 .control-btn:disabled {

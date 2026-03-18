@@ -343,7 +343,7 @@ async function exportToImage() {
   width: 100%;
   font-size: var(--font-size);
   color: var(--text-color);
-  background-color: var(--bg-color);
+  background-color: var(--main-bg-color);
 }
 
 .toggle-mode-button {
@@ -354,8 +354,8 @@ async function exportToImage() {
 .grid-container {
   flex: 1;
   overflow: auto;
-  padding: 15px;
-  background-color: var(--bg-color);
+  padding: 16px 18px 24px;
+  background-color: var(--main-bg-color);
   display: flex;
   justify-content: center;
 }
@@ -376,12 +376,12 @@ async function exportToImage() {
 }
 
 .vue-grid-layout {
-  background: var(--bg-color);
+  background: transparent;
   height: 100%;
 }
 
 .vue-grid-item:not(.vue-grid-placeholder) {
-  background: var(--result-window-bg);
+  background: transparent;
 }
 
 .vue-grid-item .resizing {

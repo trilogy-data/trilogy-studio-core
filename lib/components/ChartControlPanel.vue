@@ -137,19 +137,18 @@ export default defineComponent({
   setup(props, { emit }) {
     // Helper function to determine input type
     const getInputType = (field: string): 'select' | 'checkbox' => {
-      return ['hideLegend', 'hideLabel', 'showTitle', 'linkY2'].includes(field)
-        ? 'checkbox'
-        : 'select'
+      return ['hideLegend', 'hideLabel', 'linkY2'].includes(field) ? 'checkbox' : 'select'
     }
 
     // Enhanced controls with input type
     const enhancedControls = computed((): EnhancedChartControl[] => {
-      return Controls.filter((control) => control.visibleFor.includes(props.config.chartType)).map(
-        (control) => ({
-          ...control,
-          inputType: getInputType(control.field),
-        }),
-      )
+      return Controls.filter(
+        (control) =>
+          control.field !== 'showTitle' && control.visibleFor.includes(props.config.chartType),
+      ).map((control) => ({
+        ...control,
+        inputType: getInputType(control.field),
+      }))
     })
 
     // Group controls into sections

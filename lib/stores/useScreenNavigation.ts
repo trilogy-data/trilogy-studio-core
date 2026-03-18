@@ -143,6 +143,41 @@ const createNavigationStore = (): NavigationStore => {
     fullScreen: ref(false),
   }
 
+  const sidebarScreens = new Set<ScreenType>([
+    'editors',
+    'tutorial',
+    'llms',
+    'dashboard',
+    'models',
+    'community-models',
+    'profile',
+    'settings',
+    'connections',
+  ])
+
+  const updateSidebarScreen = (screen: ScreenType, skipUrlUpdate: boolean = false): void => {
+    if (state.activeSidebarScreen.value === screen) {
+      return
+    }
+
+    state.activeSidebarScreen.value = screen
+
+    if (skipUrlUpdate) {
+      return
+    }
+
+    if (screen) {
+      pushHashToUrl('sidebarScreen', screen)
+      return
+    }
+
+    removeHashFromUrl('sidebarScreen')
+  }
+
+  const syncSidebarScreenWithTab = (screen: ScreenType, skipUrlUpdate: boolean = false): void => {
+    updateSidebarScreen(sidebarScreens.has(screen) ? screen : '', skipUrlUpdate)
+  }
+
   const getName = (screen: ScreenType, title: string | null, address: string): string => {
     if (title) {
       return title
@@ -358,6 +393,7 @@ const createNavigationStore = (): NavigationStore => {
     if (tabInfo) {
       state.activeTab.value = tabId
       setActiveScreen(tabInfo.screen)
+      syncSidebarScreenWithTab(tabInfo.screen, skipUrlUpdate)
       let baseTips: ModalItem[] = userSettingsStore.getUnreadTips(tips)
 
       if (tabInfo.screen === 'editors') {
@@ -411,8 +447,7 @@ const createNavigationStore = (): NavigationStore => {
   }
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {
-    state.activeSidebarScreen.value = screen
-    pushHashToUrl('sidebarScreen', screen)
+    updateSidebarScreen(screen)
     if (screen == 'settings') {
       openTab('settings', 'Settings', 'settings')
     } else if (screen == 'profile') {
