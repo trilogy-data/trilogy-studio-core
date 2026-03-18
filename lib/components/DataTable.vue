@@ -1,10 +1,11 @@
 <template>
   <div
     class="result-table row pa-0 ba-0"
+    :class="{ 'result-table-flush': flushChrome }"
     @mouseenter="controlsVisible = true"
     @mouseleave="controlsVisible = false"
   >
-    <div class="table-container">
+    <div class="table-container" :class="{ 'table-container-flush': flushChrome }">
       <!-- Minimal floating action buttons -->
       <div class="controls-toggle" :class="{ 'controls-visible': controlsVisible }">
         <button
@@ -54,6 +55,15 @@
   position: relative;
   box-sizing: border-box;
   padding-top: 6px;
+}
+
+.result-table-flush {
+  background-color: transparent;
+}
+
+.table-container-flush {
+  padding-top: 0;
+  background-color: transparent;
 }
 
 .controls-toggle {
@@ -136,6 +146,20 @@
   border-radius: 0 0 14px 14px;
   width: 100%;
   flex-grow: 1;
+}
+
+.result-table-flush .tabulator {
+  border-top: 0;
+  border-right: 1px solid var(--border, #d6dde6);
+  border-bottom: 1px solid var(--border, #d6dde6);
+  border-left: 1px solid var(--border, #d6dde6);
+  border-radius: 0 0 16px 16px;
+  background-color: var(--query-window-bg);
+  overflow: hidden;
+}
+
+.result-table-flush .tabulator .tabulator-footer {
+  box-shadow: inset 0 -1px 0 var(--border, #d6dde6);
 }
 
 .tabulator-cell {
@@ -408,6 +432,10 @@ export default {
       default: false,
     },
     fitParent: {
+      type: Boolean,
+      default: false,
+    },
+    flushChrome: {
       type: Boolean,
       default: false,
     },

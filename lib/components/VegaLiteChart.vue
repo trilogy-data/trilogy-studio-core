@@ -524,17 +524,21 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border-light);
-  background-color: rgba(var(--bg-color), 0.9);
-  color: var(--text-color);
+  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
+  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
+  color: var(--floating-text, var(--text-color));
   cursor: pointer;
   font-size: var(--button-font-size);
-  transition: background-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   backdrop-filter: blur(4px);
 }
 
 .control-btn:hover {
-  background-color: var(--button-mouseover);
+  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
 }
 
 .control-btn:disabled {

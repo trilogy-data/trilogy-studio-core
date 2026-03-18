@@ -95,6 +95,10 @@ export default {
 </script>
 
 <style scoped>
+.sidebar-item {
+  width: 100%;
+}
+
 .sidebar-item:hover {
   background-color: var(--button-mouseover);
 }
@@ -103,6 +107,7 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
+  box-sizing: border-box;
   cursor: pointer;
   min-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);

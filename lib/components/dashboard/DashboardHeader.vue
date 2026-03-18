@@ -191,15 +191,23 @@ const modeIcon = computed(() => {
         />
 
         <div class="grid-actions top-actions">
-          <button @click="$emit('add-item')" class="btn btn-success" data-testid="add-item-button">
-            Add Item
+          <button
+            @click="$emit('add-item')"
+            class="btn btn-success"
+            data-testid="add-item-button"
+            title="Add Item"
+          >
+            <i class="mdi mdi-plus top-action-icon" aria-hidden="true"></i>
+            <span class="top-action-label">Add</span>
           </button>
           <button
             @click="$emit('clear-items')"
             class="btn btn-danger"
             data-testid="clear-items-button"
+            title="Clear All"
           >
-            Clear All
+            <i class="mdi mdi-delete-outline top-action-icon" aria-hidden="true"></i>
+            <span class="top-action-label">Clear</span>
           </button>
         </div>
       </div>
@@ -460,6 +468,37 @@ const modeIcon = computed(() => {
 
 .top-actions {
   justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.top-actions .btn {
+  min-width: 72px;
+}
+
+.top-action-icon {
+  display: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.top-action-label {
+  display: inline;
+}
+
+@media (max-width: 1520px) {
+  .top-actions .btn {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .top-action-icon {
+    display: inline-flex;
+  }
+
+  .top-action-label {
+    display: none;
+  }
 }
 
 .filter-actions {
@@ -628,6 +667,20 @@ const modeIcon = computed(() => {
   .filter-actions {
     justify-content: stretch;
     margin-left: 0;
+  }
+
+  .top-actions .btn {
+    width: auto;
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+  .top-action-icon {
+    display: none;
+  }
+
+  .top-action-label {
+    display: inline;
   }
 
   .btn {

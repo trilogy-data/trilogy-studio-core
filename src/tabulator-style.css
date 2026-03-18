@@ -96,7 +96,7 @@
   /* header border color - lighter */
   --header-separator-color: #e1e6ed;
   /* header bottom separator color - lighter */
-  --header-margin: 4px;
+  --header-margin: 0px;
   /* padding round header */
 
   /* column header arrows */
@@ -123,7 +123,7 @@
   /* border to tabulator */
   --footer-text-color: #4a4a4a;
   /* footer text color - darker for contrast */
-  --footer-border-color: #d6dde6;
+  --footer-border-color: #e1e6ed;
   /* footer border color - lighter */
   --footer-separator-color: #e1e6ed;
   /* footer bottom separator color - lighter */
@@ -135,6 +135,7 @@
 
 .tabulator {
   position: relative;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   background-color: var(--background-color);
   font-size: var(--text-size);
@@ -183,6 +184,7 @@
 }
 
 .tabulator[tabulator-layout='fitDataFill'] .tabulator-tableholder .tabulator-table {
+  width: 100%;
   min-width: 100%;
 }
 
@@ -554,7 +556,9 @@
 
 .tabulator .tabulator-tableholder {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   white-space: nowrap;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
@@ -590,6 +594,8 @@
 .tabulator .tabulator-tableholder .tabulator-table {
   position: relative;
   display: inline-block;
+  box-sizing: border-box;
+  max-width: 100%;
   background-color: var(--background-color);
   white-space: nowrap;
   overflow: visible;
@@ -649,6 +655,7 @@
 }
 
 .tabulator .tabulator-footer {
+  box-sizing: border-box;
   border-top: 1px solid var(--footer-border-color);
   background-color: var(--footer-background-color);
   color: var(--footer-text-color);

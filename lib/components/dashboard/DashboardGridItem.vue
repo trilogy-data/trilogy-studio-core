@@ -551,9 +551,9 @@ const displayTitle = computed(() => {
   justify-content: center;
   width: var(--chart-control-height);
   height: var(--chart-control-height);
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  background-color: rgba(15, 23, 42, 0.82);
-  color: rgba(241, 245, 249, 0.92);
+  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
+  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
+  color: var(--floating-text, var(--text-color));
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -564,18 +564,21 @@ const displayTitle = computed(() => {
 }
 
 .control-btn:hover {
-  background-color: rgba(30, 41, 59, 0.96);
-  border-color: rgba(96, 165, 250, 0.42);
+  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
 }
 
 .control-btn.remove-btn {
-  color: #fca5a5;
-  border-color: rgba(248, 113, 113, 0.34);
+  color: var(--delete-color, #dc2626);
+  border-color: currentColor;
+  opacity: 0.82;
 }
 
 .control-btn.remove-btn:hover {
-  background-color: rgba(127, 29, 29, 0.5);
-  border-color: rgba(248, 113, 113, 0.5);
+  background-color: var(--delete-color, #dc2626);
+  border-color: var(--delete-color, #dc2626);
+  color: #ffffff;
+  opacity: 1;
 }
 
 .icon {

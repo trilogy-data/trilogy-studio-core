@@ -392,6 +392,31 @@ async function exportToImage() {
   background: var(--sidebar-selector-bg);
 }
 
+:deep(.vue-resizable-handle) {
+  width: 22px !important;
+  height: 22px !important;
+  right: -6px !important;
+  bottom: -6px !important;
+  background-image: none !important;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 0.96;
+}
+
+:deep(.vue-resizable-handle::before) {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 13px;
+  height: 13px;
+  border-right: 1.5px solid rgba(148, 163, 184, 0.72);
+  border-bottom: 1.5px solid rgba(148, 163, 184, 0.72);
+  border-radius: 0 0 15px 0;
+}
+
 .editor-overlay {
   position: fixed;
   top: 0;

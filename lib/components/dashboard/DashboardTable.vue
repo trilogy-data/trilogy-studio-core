@@ -15,6 +15,7 @@
       :containerHeight="chartHeight"
       :prettyPrint="true"
       :fitParent="true"
+      :flushChrome="true"
       @cell-click="handleDimensionClick"
       @background-click="handleBackgroundClick"
     />
