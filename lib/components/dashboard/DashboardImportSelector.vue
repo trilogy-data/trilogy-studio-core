@@ -250,7 +250,7 @@ onUnmounted(() => {
   height: 44px;
   padding: 0 14px 0 40px;
   border: 1px solid var(--border-light);
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   font-size: var(--font-size);
   background-color: var(--query-window-bg);
   appearance: none;
@@ -295,7 +295,7 @@ onUnmounted(() => {
 .dropdown-icon {
   flex-shrink: 0;
   margin-left: 10px;
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
 }
 
 .import-dropdown {

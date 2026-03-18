@@ -416,8 +416,8 @@ const displayTitle = computed(() => {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
-  padding: 5px 12px 4px;
+  min-height: 27px;
+  padding: 4px 12px 3px;
   background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
@@ -473,7 +473,11 @@ const displayTitle = computed(() => {
 }
 
 .item-title {
+  font-family: var(--font-heading);
+  font-size: var(--widget-title-font-size);
   font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
   color: var(--text-color);
 }
 
@@ -603,6 +607,7 @@ const displayTitle = computed(() => {
   max-width: 220px;
   padding: 1px 7px;
   font-size: 10px;
+  letter-spacing: var(--ui-label-letter-spacing);
   background: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
@@ -666,8 +671,8 @@ const displayTitle = computed(() => {
   }
 
   .grid-item-header {
-    padding: 4px 10px 3px;
-    min-height: 26px;
+    padding: 3px 10px 2px;
+    min-height: 25px;
   }
 
   .grid-item-header-right {

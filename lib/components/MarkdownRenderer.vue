@@ -50,14 +50,15 @@ export default defineComponent({
 
 <style>
 .rendered-markdown {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
   color: var(--text-color, #333);
 }
 
 .rendered-markdown p {
   margin-top: 0.25em;
-  margin-bottom: 0.75em;
+  margin-bottom: 0.85em;
 }
 
 .rendered-markdown ul {
@@ -94,27 +95,33 @@ export default defineComponent({
   color: var(--em-color, #7f8c8d);
 }
 .rendered-markdown h1 {
-  font-size: 1.8em;
-  margin-top: 0.5em;
+  font-family: var(--font-heading);
+  font-size: 1.55em;
+  margin-top: 0.35em;
   margin-bottom: 0.5em;
   border-bottom: 2px solid var(--text-color);
   padding-bottom: 0.25em;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .rendered-markdown-h2 {
-  font-size: 1.5em;
+  font-family: var(--font-heading);
+  font-size: 1.2em;
   margin-top: 0.25em;
   margin-bottom: 0.5em;
   font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-color);
 }
 
 .rendered-markdown-h3 {
-  font-size: 1.2em;
+  font-family: var(--font-heading);
+  font-size: 1.05em;
   margin-top: 0.5em;
   margin-bottom: 0.25em;
   font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--text-color);
 }
 
@@ -254,6 +261,7 @@ code {
   border-collapse: collapse;
   width: 100%;
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .md-table th,

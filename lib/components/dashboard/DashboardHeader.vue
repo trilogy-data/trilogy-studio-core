@@ -318,8 +318,11 @@ const modeIcon = computed(() => {
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  font-size: var(--title-font-size);
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--page-title-font-size);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .title-text {
@@ -333,7 +336,7 @@ const modeIcon = computed(() => {
   display: inline-flex;
   align-items: center;
   opacity: 0;
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   font-size: 15px;
   transition: opacity 0.2s ease;
 }
@@ -347,8 +350,10 @@ const modeIcon = computed(() => {
   min-width: 240px;
   height: 44px;
   padding: 0 14px;
-  font-size: 18px;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: calc(var(--page-title-font-size) - 2px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
   color: var(--text-color);
   background: var(--query-window-bg);
   border: 1px solid var(--border-light);
@@ -405,7 +410,7 @@ const modeIcon = computed(() => {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: translateY(-60%) rotate(45deg);
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   pointer-events: none;
 }
 
@@ -420,7 +425,9 @@ const modeIcon = computed(() => {
   min-width: 0;
   padding: 0 40px 0 40px;
   color: var(--text-color);
-  font-size: var(--font-size);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: var(--ui-label-letter-spacing);
   background-color: var(--query-window-bg);
   border: 1px solid var(--border-light);
   border-radius: 12px;
@@ -518,8 +525,9 @@ const modeIcon = computed(() => {
   padding: 0 14px;
   margin-top: 0;
   color: var(--text-color);
-  font-size: var(--button-font-size);
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--ui-label-letter-spacing);
   text-align: center;
   white-space: nowrap;
   background: var(--query-window-bg);

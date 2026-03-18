@@ -147,7 +147,7 @@ export const generateVegaSpec = (
 
   // Create base spec
   let spec: any = createBaseSpec(localData)
-  const lightThemeChartConfig =
+  const themeChartConfig =
     currentTheme === 'light'
       ? {
           view: {
@@ -158,15 +158,29 @@ export const generateVegaSpec = (
             domainColor: '#cfd6df',
             tickColor: '#cfd6df',
             gridColor: '#e5e9ef',
-            labelColor: '#6b7280',
-            titleColor: '#6b7280',
+            labelColor: '#475569',
+            titleColor: '#475569',
           },
           legend: {
-            labelColor: '#374151',
-            titleColor: '#374151',
+            labelColor: '#475569',
+            titleColor: '#334155',
           },
+          header: {},
         }
-      : {}
+      : {
+          axis: {
+            domainColor: '#2a2f37',
+            tickColor: '#2a2f37',
+            gridColor: '#1f242c',
+            labelColor: '#cbd5e1',
+            titleColor: '#cbd5e1',
+          },
+          legend: {
+            labelColor: '#cbd5e1',
+            titleColor: '#e5e7eb',
+          },
+          header: {},
+        }
 
   // Set up color encoding
   let encoding: any = {}
@@ -320,9 +334,9 @@ export const generateVegaSpec = (
   spec.background = 'transparent'
   spec.config = {
     ...spec.config,
-    ...lightThemeChartConfig,
+    ...themeChartConfig,
     view: {
-      ...(lightThemeChartConfig as any).view,
+      ...(themeChartConfig as any).view,
       ...(spec.config?.view || {}),
       stroke: null,
     },
@@ -330,8 +344,8 @@ export const generateVegaSpec = (
   if (config.showTitle && title) {
     spec.title = {
       text: title,
-      // fontSize: 20,
-      // fontWeight: 'bold',
+      anchor: 'start',
+      offset: 12,
       color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
     }
   }

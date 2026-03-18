@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   border-radius: 0px;
@@ -43,6 +45,7 @@
 
   --result-window-bg: #121417;
   --result-window-font: #cbd5e1;
+  --dashboard-helper-text: #d3dbe5;
 
   --border: #2a2f37;
   --dashboard-border: transparent;
@@ -90,6 +93,7 @@
 
   --result-window-bg: #ffffff;
   --result-window-font: #334155;
+  --dashboard-helper-text: #425466;
 
   --border: #d6dde6;
   --dashboard-border: transparent;
@@ -108,6 +112,8 @@
 
 /* sizing */
 :root {
+  --font-body: 'IBM Plex Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'IBM Plex Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --sidebar-width: 240px;
   --sidebar-icon-width: 48px;
 
@@ -117,9 +123,14 @@
   --sidebar-sub-item-font-size: 12px;
 
   --font-size: 14px;
-  --title-font-size: 22px;
+  --title-font-size: 24px;
+  --page-title-font-size: 28px;
+  --section-title-font-size: 18px;
+  --widget-title-font-size: 15px;
   --big-font-size: 18px;
   --small-font-size: 12px;
+  --helper-font-size: 13px;
+  --ui-label-letter-spacing: 0.02em;
   --radius-sm: 8px;
   --radius-md: 12px;
   --button-font-size: 12px;
@@ -149,6 +160,10 @@
     --font-size: 16px;
     --big-font-size: 20px;
     --small-font-size: 14px;
+    --page-title-font-size: 22px;
+    --section-title-font-size: 16px;
+    --widget-title-font-size: 14px;
+    --helper-font-size: 13px;
     --button-font-size: 14px;
     --button-font-weight: 500;
     --button-padding: 8px 12px;
@@ -180,16 +195,30 @@ body {
   place-items: center;
   min-height: 100vh;
   background-color: var(--bg-color);
+  font-family: var(--font-body);
+  font-variant-numeric: proportional-nums;
 }
 
-input {
+input,
+select,
+textarea {
   box-sizing: border-box;
   border-radius: 0px;
+  font-family: inherit;
 }
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+}
+
+h1,
+h2,
+h3,
+h4,
+.section-title,
+.page-title {
+  font-family: var(--font-heading);
 }
 
 .main {
@@ -570,6 +599,10 @@ button:not(.tab-button):not(.view-tab):not(.sidebar-tab):not(.tab-close-btn):not
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-family: var(--font-heading);
+  font-size: var(--section-title-font-size);
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 /* TIPS */

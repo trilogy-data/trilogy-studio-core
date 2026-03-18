@@ -523,7 +523,7 @@ Use Ctrl+Enter to apply`
   width: 28px;
   height: 28px;
   padding: 0;
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -551,7 +551,7 @@ Use Ctrl+Enter to apply`
   justify-content: center;
   width: 20px;
   height: 20px;
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   position: relative;
 }
 

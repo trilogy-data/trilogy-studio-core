@@ -439,7 +439,7 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   /* padding: 5px; */
-  color: var(--text-faint);
+  color: var(--dashboard-helper-text);
   position: relative;
   overflow-y: hidden;
   padding-top: 0;

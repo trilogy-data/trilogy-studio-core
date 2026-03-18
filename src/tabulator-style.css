@@ -138,7 +138,9 @@
   box-sizing: border-box;
   border: 1px solid var(--border-color);
   background-color: var(--background-color);
+  font-family: var(--font-body);
   font-size: var(--text-size);
+  font-variant-numeric: tabular-nums;
   text-align: left;
   overflow: hidden;
   border-radius: 12px;

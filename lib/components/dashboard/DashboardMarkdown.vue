@@ -243,6 +243,39 @@ export default defineComponent({
   overflow-y: hidden;
 }
 
+.chart-placeholder :deep(.markdown-content) {
+  padding: 2px 18px 14px;
+}
+
+.chart-placeholder :deep(.rendered-markdown) {
+  font-size: var(--helper-font-size);
+  line-height: 1.75;
+  color: var(--dashboard-helper-text);
+}
+
+
+
+.chart-placeholder :deep(.rendered-markdown h1),
+.chart-placeholder :deep(.rendered-markdown-h2),
+.chart-placeholder :deep(.rendered-markdown-h3) {
+  color: var(--text-color);
+}
+
+.chart-placeholder :deep(.rendered-markdown h1) {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.35em;
+  font-size: var(--section-title-font-size);
+}
+
+.chart-placeholder :deep(.rendered-markdown-h2) {
+  font-size: 15px;
+}
+
+.chart-placeholder :deep(.rendered-markdown-h3) {
+  font-size: 14px;
+}
+
 .loading-overlay {
   position: absolute;
   top: 0;
