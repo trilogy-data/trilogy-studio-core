@@ -456,7 +456,7 @@ export default defineComponent({
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
   overflow: hidden;
   color: var(--text-color);
   font-family: ui-sans-serif, system-ui, sans-serif;
@@ -467,9 +467,9 @@ export default defineComponent({
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  height: 30px;
-  min-height: 30px;
-  background-color: var(--sidebar-bg);
+  height: 48px;
+  min-height: 48px;
+  background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border-light);
   overflow: hidden;
 }
@@ -519,10 +519,10 @@ export default defineComponent({
 .chat-messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   background-color: var(--result-window-bg);
 }
 
@@ -543,9 +543,11 @@ export default defineComponent({
 
 .message.assistant {
   align-self: flex-start;
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
   color: var(--sidebar-font);
   margin-left: 26px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
 }
 
 .message.system {
@@ -638,19 +640,20 @@ export default defineComponent({
 
 .input-container {
   display: flex;
-  padding: 5px;
+  padding: 12px;
   border-top: 1px solid var(--border-light);
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
 }
 
 .input-wrapper {
   display: flex;
   align-items: flex-end;
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   background-color: var(--query-window-bg);
-  padding: 6px;
+  padding: 8px;
   gap: 8px;
+  border-radius: 14px;
 }
 
 .textarea-wrapper {
@@ -690,16 +693,17 @@ export default defineComponent({
 .send-button {
   padding: 0 15px;
   cursor: pointer;
-  height: 28px;
-  border: none;
+  height: 34px;
   background-color: var(--special-text);
   color: white;
-  font-weight: 300;
+  font-weight: 600;
   font-size: 12px;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
   flex-shrink: 0;
+  border-color: var(--special-text);
+  box-shadow: none;
 }
 
 .send-button:hover:not(:disabled) {

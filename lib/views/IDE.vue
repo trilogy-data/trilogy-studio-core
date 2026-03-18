@@ -185,8 +185,8 @@ header {
 .full-screen-header {
   display: flex;
   justify-content: flex-end;
-  padding: 0.5rem 1rem;
-  background: var(--bg-light, #f8f9fa);
+  padding: 0.75rem 1rem;
+  background: var(--query-window-bg, #fff);
   border-bottom: 1px solid var(--border-light, #e0e0e0);
   flex-shrink: 0;
 }
@@ -219,25 +219,30 @@ aside {
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
+  background: var(--query-window-bg);
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 4px;
 }
 
 .tab-button {
-  /* padding: 0.5rem 1rem; */
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 13px;
+  font-weight: 500;
   border-bottom: 2px solid transparent;
+  padding: 0 16px;
 }
 
 .tab-button:hover {
-  color: #0ea5e9;
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
 }
 
 .tab-content {

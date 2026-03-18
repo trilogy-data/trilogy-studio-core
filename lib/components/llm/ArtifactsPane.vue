@@ -335,7 +335,7 @@ export default defineComponent({
 
 /* Publish button */
 .artifacts-actions {
-  padding: 8px 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
 }
@@ -345,13 +345,15 @@ export default defineComponent({
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  background-color: var(--sidebar-bg);
+  padding: 10px 14px;
+  border: 1px solid var(--special-text);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
   color: var(--text-color);
-  font-size: var(--font-size);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  border-radius: 12px;
 }
 
 .publish-btn:hover {
@@ -370,33 +372,41 @@ export default defineComponent({
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 16px;
 }
 
 .artifact-card {
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border: none;
+  border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: inset 0 0 0 1px var(--border-light);
 }
 
 .artifact-card:hover {
-  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.28),
+    0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .artifact-card.active {
-  border-color: var(--special-text);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.42),
+    0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .artifact-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
+  padding: 10px 12px;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
   border-bottom: 1px solid var(--border-light);
   min-height: 32px;
   cursor: pointer;
@@ -470,17 +480,18 @@ export default defineComponent({
 /* Hidden artifacts section */
 .hidden-section {
   flex-shrink: 0;
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border: none;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border-light);
 }
 
 .hidden-section-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
+  padding: 10px 12px;
+  background-color: rgba(148, 163, 184, 0.06);
   cursor: pointer;
   user-select: none;
   min-height: 32px;

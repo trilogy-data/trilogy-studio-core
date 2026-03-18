@@ -438,6 +438,9 @@ export default defineComponent({
   height: 100%;
   width: 100%;
   overflow: hidden;
+  gap: 12px;
+  padding: 12px;
+  background: var(--main-bg-color);
 }
 
 .chat-panel {
@@ -446,6 +449,9 @@ export default defineComponent({
   max-width: 600px;
   height: 100%;
   overflow: hidden;
+  background: var(--query-window-bg);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .chat-split-container.is-resizing {
@@ -455,13 +461,13 @@ export default defineComponent({
 
 .panel-resizer {
   flex: 0 0 4px;
-  background-color: var(--border-light);
+  background-color: transparent;
   cursor: col-resize;
   transition: background-color 0.15s ease;
 }
 
 .panel-resizer:hover {
-  background-color: var(--special-text);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
 }
 
 .chat-header-controls {
@@ -518,24 +524,30 @@ export default defineComponent({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .sidebar-tabs {
   display: flex;
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border-light);
-  min-height: 36px;
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 4px;
 }
 
 .sidebar-tab {
-  flex: 1;
-  padding: 8px 12px;
+  flex: 0 0 auto;
+  padding: 0 12px;
   border: none;
   border-radius: 0;
   background: transparent;
   color: var(--text-color);
-  font-size: var(--font-size);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.15s ease;
@@ -546,7 +558,7 @@ export default defineComponent({
 }
 
 .sidebar-tab:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .sidebar-tab.active {
@@ -612,33 +624,41 @@ export default defineComponent({
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 16px;
 }
 
 .artifact-card {
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border: none;
+  border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: inset 0 0 0 1px var(--border-light);
 }
 
 .artifact-card:hover {
-  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.28),
+    0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .artifact-card.active {
-  border-color: var(--special-text);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.42),
+    0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .artifact-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
+  padding: 10px 12px;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
   border-bottom: 1px solid var(--border-light);
   min-height: 32px;
   cursor: pointer;

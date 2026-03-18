@@ -80,27 +80,29 @@ export default {
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-  height: 40px;
-  min-height: 40px; /* Ensure consistent height */
+  background: var(--query-window-bg);
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 4px;
 }
 .tab-button {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 13px;
+  font-weight: 500;
   border-bottom: 2px solid transparent;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding: 0 16px;
   border-radius: 0px;
-  /* max-width:100px; */
 }
 .tab-button:hover {
-  color: #0ea5e9;
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 .tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
   border-radius: 0px;
 }
 </style>

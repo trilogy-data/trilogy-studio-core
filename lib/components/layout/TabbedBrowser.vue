@@ -345,39 +345,42 @@ export default defineComponent({
 .tab-bar {
   display: flex;
   align-items: center;
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0;
-  min-height: 20px;
+  background-color: var(--query-window-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 12px;
+  min-height: 44px;
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;
+  gap: 4px;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  padding-left: 4px;
-  background-color: var(--button-bg);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  margin-right: 2px;
+  padding: 0 10px;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
   user-select: none;
   min-width: 120px;
   max-width: 200px;
-  transition: background-color 0.2s ease;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+  border-radius: 0;
 }
 
 .tab:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .tab-active {
-  background-color: var(--special-bg);
-  border-bottom: 1px solid var(--special-bg);
-  position: relative;
-  z-index: 1;
+  border-bottom-color: var(--special-text);
+  color: var(--special-text);
 }
 
 .tab-icon {
@@ -394,7 +397,8 @@ export default defineComponent({
 
 .tab-title {
   flex: 1;
-  font-size: var(--small-font-size);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-color);
   margin-right: 8px;
   overflow: hidden;
@@ -414,6 +418,7 @@ export default defineComponent({
   margin-left: 4px;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  box-shadow: none;
 }
 
 .tab-close-btn:hover {
@@ -439,20 +444,22 @@ export default defineComponent({
 /* Context Menu Styles */
 .context-menu {
   position: fixed;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
   z-index: 1000;
   min-width: 160px;
-  padding: 4px 0;
+  padding: 6px;
+  border-radius: 12px;
 }
 
 .context-menu-item {
-  padding: 8px 16px;
+  padding: 10px 12px;
   cursor: pointer;
   color: var(--text-color);
-  font-size: var(--small-font-size);
+  font-size: 13px;
   transition: background-color 0.2s ease;
+  border-radius: 8px;
 }
 
 .context-menu-item:hover:not(.disabled) {
@@ -477,6 +484,7 @@ export default defineComponent({
 .tab-content {
   flex: 1;
   overflow: hidden;
+  background: var(--main-bg-color);
 }
 
 /* Drag and Drop Visual Feedback */
