@@ -1,7 +1,8 @@
 <template>
   <div class="sidebar-list">
     <div class="sidebar-header-container">
-      <h3 v-if="!isMobile" class="font-sans sidebar-header">{{ title }}</h3>
+      <slot v-if="$slots.header" name="header"></slot>
+      <h3 v-else-if="!isMobile" class="font-sans sidebar-header">{{ title }}</h3>
     </div>
     <div class="action-slot">
       <slot name="actions"> </slot>

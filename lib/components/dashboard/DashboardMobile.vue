@@ -94,7 +94,8 @@ function updateItemDimensions(itemId: string): void {
   const container = document.querySelector(`.mobile-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
-    const headerHeight = 36 // Approximate height of the header
+    const headerHeight =
+      getItemData(itemId, dashboard.value.id).type === CELL_TYPES.SECTION_HEADER ? 0 : 36
 
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
@@ -138,6 +139,10 @@ function calculateMobileHeight(item: any): number | string {
 
   if (itemData.type === CELL_TYPES.FILTER) {
     return '100%' // Full height for filter items
+  }
+
+  if (itemData.type === CELL_TYPES.SECTION_HEADER) {
+    return `${Math.max(item.h * 30 + 4, 36)}px`
   }
 
   if (itemData.type === CELL_TYPES.CHART) {

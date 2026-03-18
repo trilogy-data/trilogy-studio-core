@@ -124,9 +124,9 @@
 
   --font-size: 14px;
   --title-font-size: 24px;
-  --page-title-font-size: 28px;
-  --section-title-font-size: 18px;
-  --widget-title-font-size: 15px;
+  --page-title-font-size: 30px;
+  --section-title-font-size: 17px;
+  --widget-title-font-size: 14px;
   --big-font-size: 18px;
   --small-font-size: 12px;
   --helper-font-size: 13px;
@@ -160,9 +160,9 @@
     --font-size: 16px;
     --big-font-size: 20px;
     --small-font-size: 14px;
-    --page-title-font-size: 22px;
-    --section-title-font-size: 16px;
-    --widget-title-font-size: 14px;
+    --page-title-font-size: 24px;
+    --section-title-font-size: 15px;
+    --widget-title-font-size: 13px;
     --helper-font-size: 13px;
     --button-font-size: 14px;
     --button-font-weight: 500;

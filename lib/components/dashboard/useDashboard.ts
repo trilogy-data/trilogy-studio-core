@@ -132,7 +132,9 @@ export function useDashboard(
     // Run any unrun items in the dashboard
     const executor = getDashboardQueryExecutor(dashboardData.id)
     const unRun = Object.keys(dashboardData.gridItems).filter(
-      (itemId) => !dashboardData.gridItems[itemId].results,
+      (itemId) =>
+        dashboardData.gridItems[itemId].type !== CELL_TYPES.SECTION_HEADER &&
+        !dashboardData.gridItems[itemId].results,
     )
     executor?.runBatch(unRun)
 
@@ -306,7 +308,10 @@ export function useDashboard(
   function addItem(type: CellType = CELL_TYPES.CHART): void {
     if (!dashboard.value || !dashboard.value.id) return
 
-    const itemId = dashboardStore.addItemToDashboard(dashboard.value.id, type)
+    const itemId =
+      type === CELL_TYPES.SECTION_HEADER
+        ? dashboardStore.addItemToDashboard(dashboard.value.id, type, 0, 0, 20, 1)
+        : dashboardStore.addItemToDashboard(dashboard.value.id, type)
     showAddItemModal.value = false
 
     // Update dimensions after add
@@ -357,6 +362,8 @@ export function useDashboard(
         showQueryEditor.value = true
       } else if (itemData.type === CELL_TYPES.FILTER) {
         showQueryEditor.value = true
+      } else if (itemData.type === CELL_TYPES.SECTION_HEADER) {
+        editingItem.value = null
       }
     }
   }

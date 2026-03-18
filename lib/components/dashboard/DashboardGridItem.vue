@@ -53,6 +53,7 @@ function startTitleEditing(): void {
   if (!props.editMode) return
 
   const currentItemData = props.getItemData(props.item.i, props.dashboardId)
+  isHeaderVisible.value = false
   editingItemTitle.value = true
   editableItemName.value = currentItemData.name
 
@@ -108,6 +109,10 @@ function cancelTitleEdit(): void {
 }
 
 function openEditor(): void {
+  if (isSectionHeader.value) {
+    startTitleEditing()
+    return
+  }
   emit('edit-content', props.item)
 }
 
@@ -134,6 +139,7 @@ function removeFilter(filterSource: string): void {
 }
 
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
+const isSectionHeader = computed(() => itemData.value.type === CELL_TYPES.SECTION_HEADER)
 
 const cellComponent = computed(() => {
   switch (itemData.value.type) {
@@ -143,6 +149,8 @@ const cellComponent = computed(() => {
       return DashboardTable
     case CELL_TYPES.FILTER:
       return DashboardFilter
+    case CELL_TYPES.SECTION_HEADER:
+      return null
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
@@ -157,6 +165,8 @@ const getPlaceholderText = computed(() => {
       return 'Table Name'
     case CELL_TYPES.FILTER:
       return 'Filter Name'
+    case CELL_TYPES.SECTION_HEADER:
+      return 'Section Header'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'
@@ -232,6 +242,7 @@ const titleLevelClass = computed(() => {
         //@ts-ignore
         itemData.type,
       ),
+      'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
     }"
     @mouseenter="
@@ -248,10 +259,11 @@ const titleLevelClass = computed(() => {
     <div
       v-if="editMode"
       class="dev-toolbar-shell"
-      :class="{ 'dev-toolbar-visible': isHeaderVisible || editingItemTitle }"
+      :class="{ 'dev-toolbar-visible': isHeaderVisible && !editingItemTitle }"
     >
       <div class="dev-toolbar" data-testid="dashboard-item-header-controls">
         <button
+          v-if="!isSectionHeader"
           @click="increaseHeight"
           class="control-btn"
           :data-testid="`increase-height-item-${item.i}`"
@@ -260,6 +272,7 @@ const titleLevelClass = computed(() => {
           <i class="mdi mdi-plus icon"></i>
         </button>
         <button
+          v-if="!isSectionHeader"
           @click="decreaseHeight"
           class="control-btn"
           :data-testid="`decrease-height-item-${item.i}`"
@@ -271,11 +284,16 @@ const titleLevelClass = computed(() => {
           @click="openEditor"
           class="control-btn"
           :data-testid="`edit-dashboard-item-content-${item.i}`"
-          title="Edit data"
+          :title="isSectionHeader ? 'Edit title' : 'Edit data'"
         >
-          <i class="mdi mdi-database-edit-outline icon"></i>
+          <i
+            :class="
+              isSectionHeader ? 'mdi mdi-pencil-outline icon' : 'mdi mdi-database-edit-outline icon'
+            "
+          ></i>
         </button>
         <button
+          v-if="!isSectionHeader"
           @click="toggleCrossFilterEligible"
           class="control-btn"
           :data-testid="`toggle-crossfilter-item-content-${item.i}`"
@@ -305,7 +323,7 @@ const titleLevelClass = computed(() => {
       </div>
     </div>
 
-    <div class="grid-item-header">
+    <div v-if="!isSectionHeader" class="grid-item-header">
       <div class="grid-item-header-left">
         <div v-if="editMode" class="drag-handle-icon grid-item-drag-handle">
           <svg
@@ -387,8 +405,33 @@ const titleLevelClass = computed(() => {
       </div>
     </div>
 
-    <div class="content-area">
+    <div class="content-area" :class="{ 'section-header-content': isSectionHeader }">
+      <template v-if="isSectionHeader">
+        <div
+          v-if="!editingItemTitle"
+          class="section-header-display no-drag"
+          :class="[titleLevelClass, { 'section-header-editable': editMode }]"
+          :title="displayTitle"
+          @click="startTitleEditing"
+        >
+          <span class="section-header-text">{{ displayTitle }}</span>
+        </div>
+
+        <input
+          v-else
+          :id="`title-input-${item.i}`"
+          v-model="editableItemName"
+          @blur="saveTitleEdit"
+          @keyup.enter="saveTitleEdit"
+          @keyup.esc="cancelTitleEdit"
+          class="title-input section-header-input no-drag"
+          type="text"
+          :placeholder="getPlaceholderText"
+        />
+      </template>
+
       <component
+        v-else
         :is="cellComponent"
         :dashboardId="props.dashboardId"
         :itemId="item.i"
@@ -414,10 +457,31 @@ const titleLevelClass = computed(() => {
   position: relative;
   overflow-y: hidden;
   background-color: var(--dashboard-background);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow:
     inset 0 0 0 1px var(--border),
     var(--surface-shadow);
+}
+
+.grid-item-section-header-style {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.grid-item-section-header-style .dev-toolbar-shell {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.grid-item-section-header-style .dev-toolbar {
+  pointer-events: auto;
+  margin: 0 auto;
 }
 
 .dev-toolbar-shell {
@@ -456,7 +520,7 @@ const titleLevelClass = computed(() => {
   min-height: 27px;
   padding: 4px 12px 3px;
   background-color: var(--panel-header-bg);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -509,12 +573,24 @@ const titleLevelClass = computed(() => {
   min-height: 0;
 }
 
+.section-header-content {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 12px;
+}
+
 .item-title {
   font-family: var(--font-heading);
   font-size: var(--widget-title-font-size);
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   color: var(--text-color);
 }
 
@@ -522,21 +598,21 @@ const titleLevelClass = computed(() => {
   font-size: calc(var(--section-title-font-size) + 1px);
   font-weight: 700;
   line-height: 1.05;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
 
 .item-title-level-2 {
   font-size: calc(var(--widget-title-font-size) + 2px);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.08;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .item-title-level-3 {
   font-size: var(--widget-title-font-size);
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
 .editable-title {
@@ -556,6 +632,48 @@ const titleLevelClass = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.section-header-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  text-align: center;
+  color: var(--dashboard-helper-text);
+  opacity: 0.9;
+  overflow: hidden;
+}
+
+.section-header-display::before,
+.section-header-display::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: 18px;
+  height: 1px;
+  background: var(--border-light);
+  opacity: 0.9;
+}
+
+.section-header-editable {
+  cursor: pointer;
+}
+
+.section-header-editable:hover {
+  color: var(--special-text);
+}
+
+.section-header-text {
+  min-width: 0;
+  max-width: min(100%, 900px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
 }
 
 .editable-title:hover {
@@ -586,6 +704,17 @@ const titleLevelClass = computed(() => {
   background-color: var(--query-window-bg);
   color: var(--text-color);
   border-radius: 10px;
+}
+
+.section-header-input {
+  box-sizing: border-box;
+  max-width: min(100%, 560px);
+  text-align: center;
+}
+
+.grid-item-section-header-style :deep(.vue-resizable-handle) {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .grid-item-drag-handle {

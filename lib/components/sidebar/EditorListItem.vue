@@ -211,16 +211,23 @@ export default {
 .tag-container {
   margin-left: auto;
   display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .tag {
-  font-size: 8px;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+  padding: 0 6px;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
+  border: 1px solid rgba(var(--special-text-rgb, 37, 99, 235), 0.2);
+  color: var(--special-text);
+  line-height: 1;
   cursor: pointer;
 }
 

@@ -231,6 +231,129 @@ export default defineComponent({
   color: var(--text-color);
 }
 
+.md-admonition {
+  margin: 1rem 0;
+  padding: 0.125rem 0 0.125rem 1rem;
+  border-left: 4px solid var(--border-light, #d0d7de);
+  background: transparent;
+}
+
+.md-admonition-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.md-admonition-body {
+  padding: 0;
+}
+
+.md-admonition-body > :first-child {
+  margin-top: 0;
+}
+
+.md-admonition-body > :last-child {
+  margin-bottom: 0.35em;
+}
+
+.md-admonition-header::before {
+  font-family: 'Material Design Icons';
+  line-height: 1;
+}
+
+.md-admonition-note {
+  border-left-color: #0969da;
+}
+
+.md-admonition-note .md-admonition-header {
+  color: #0969da;
+}
+
+.md-admonition-note .md-admonition-header::before {
+  content: '\F02FC';
+}
+
+.md-admonition-tip {
+  border-left-color: #1a7f37;
+}
+
+.md-admonition-tip .md-admonition-header {
+  color: #1a7f37;
+}
+
+.md-admonition-tip .md-admonition-header::before {
+  content: '\F0335';
+}
+
+.md-admonition-important {
+  border-left-color: #8250df;
+}
+
+.md-admonition-important .md-admonition-header {
+  color: #8250df;
+}
+
+.md-admonition-important .md-admonition-header::before {
+  content: '\F02D1';
+}
+
+.md-admonition-warning {
+  border-left-color: #9a6700;
+}
+
+.md-admonition-warning .md-admonition-header {
+  color: #9a6700;
+}
+
+.md-admonition-warning .md-admonition-header::before {
+  content: '\F0026';
+}
+
+.md-admonition-caution {
+  border-left-color: #cf222e;
+}
+
+.md-admonition-caution .md-admonition-header {
+  color: #cf222e;
+}
+
+.md-admonition-caution .md-admonition-header::before {
+  content: '\F0026';
+}
+
+:root.dark-theme .md-admonition-note .md-admonition-header {
+  color: #79c0ff;
+}
+
+:root.dark-theme .md-admonition-tip .md-admonition-header {
+  color: #3fb950;
+}
+
+:root.dark-theme .md-admonition-important .md-admonition-header {
+  color: #bc8cff;
+}
+
+:root.dark-theme .md-admonition-warning .md-admonition-header {
+  color: #d29922;
+}
+
+:root.dark-theme .md-admonition-caution .md-admonition-header {
+  color: #ff7b72;
+}
+
+.md-admonition-body,
+.md-admonition-body p,
+.md-admonition-body li,
+.md-admonition-body strong,
+.md-admonition-body em,
+.md-admonition-body code {
+  color: var(--text-color);
+}
+
 .loading-pill {
   display: inline-block;
   background: linear-gradient(

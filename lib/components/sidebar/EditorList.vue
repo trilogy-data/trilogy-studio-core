@@ -1,8 +1,10 @@
 <template>
   <sidebar-list title="Editors">
-    <template #actions>
-      <div class="button-container">
+    <template #header>
+      <div class="editors-header-row">
+        <h3 v-if="!isMobile" class="font-sans sidebar-header-local">Editors</h3>
         <button
+          class="editors-new-button"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
         >
@@ -10,20 +12,32 @@
           {{ creatorVisible ? 'Hide' : 'New' }}
         </button>
       </div>
+    </template>
+    <template #actions>
       <editor-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
         :testTag="testTag"
       />
-      <span
-        v-for="tag in EditorTag"
-        :key="tag"
-        :class="{ 'tag-excluded': hiddenTags.has(tag) }"
-        class="tag"
-        @click="toggleTagFilter(tag)"
-      >
-        {{ formatEditorTag(tag) }} Editors
-      </span>
+      <div ref="filterDropdown" class="tag-filter-dropdown">
+        <button
+          class="tag-filter-button"
+          type="button"
+          @click="filterMenuOpen = !filterMenuOpen"
+          :aria-expanded="filterMenuOpen"
+        >
+          <span class="tag-filter-button-scope">Scope:</span>
+          <span class="tag-filter-button-label">{{ filterSummary }}</span>
+          <i class="mdi mdi-chevron-down tag-filter-chevron" :class="{ open: filterMenuOpen }"></i>
+        </button>
+
+        <div v-if="filterMenuOpen" class="tag-filter-menu">
+          <label v-for="tag in EditorTag" :key="tag" class="tag-filter-option">
+            <input type="checkbox" :checked="!hiddenTags.has(tag)" @change="toggleTagFilter(tag)" />
+            <span>{{ formatEditorTag(tag) }} Editors</span>
+          </label>
+        </div>
+      </div>
     </template>
 
     <editor-list-item
@@ -55,7 +69,7 @@
 </template>
 
 <script lang="ts">
-import { inject, ref, computed, onMounted } from 'vue'
+import { inject, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import EditorCreatorInline from '../editor/EditorCreatorInline.vue'
@@ -86,6 +100,8 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
+    const filterMenuOpen = ref(false)
+    const filterDropdown = ref<HTMLElement | null>(null)
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
         collapsed.value[key] = false
@@ -95,6 +111,35 @@ export default {
 
     const toggleTagFilter = (tag: string) => {
       hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
+    }
+
+    const filterSummary = computed(() => {
+      const hiddenCount = hiddenTags.value.size
+      if (hiddenCount === 0) {
+        return 'All editors'
+      }
+      const visibleTags = Object.values(EditorTag).filter((tag) => !hiddenTags.value.has(tag))
+      if (visibleTags.length === 0) {
+        return 'No editors'
+      }
+      if (visibleTags.length === 1) {
+        return `${
+          visibleTags.map((tag) =>
+            tag
+              .split('_')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' '),
+          )[0]
+        } only`
+      }
+      return `${visibleTags.length} types`
+    })
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (filterDropdown.value && target && !filterDropdown.value.contains(target)) {
+        filterMenuOpen.value = false
+      }
     }
     const current = getDefaultValueFromHash('editor') || ''
 
@@ -162,6 +207,12 @@ export default {
           collapsed.value[folderPath] = false
         })
       }
+
+      document.addEventListener('click', handleDocumentClick)
+    })
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleDocumentClick)
     })
 
     const contentList = computed(() => {
@@ -184,6 +235,9 @@ export default {
       collapsed,
       hiddenTags,
       creatorVisible,
+      filterMenuOpen,
+      filterDropdown,
+      filterSummary,
     }
   },
   data() {
@@ -238,30 +292,108 @@ export default {
 </script>
 
 <style scoped>
-.tag {
-  font-size: 8px;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
+.editors-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-header-local {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-color);
+  margin: 0;
+  min-width: 0;
+}
+
+.editors-new-button {
+  flex-shrink: 0;
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  padding: 0 12px;
+  background-color: transparent;
+  border-color: var(--border-light);
+  border-radius: var(--sidebar-control-radius);
+}
+
+.tag-filter-dropdown {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tag-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.tag-filter-button:hover {
+  color: var(--text-color);
+}
+
+.tag-filter-button-scope {
+  color: var(--text-faint);
+}
+
+.tag-filter-button-label {
+  white-space: nowrap;
+  color: var(--text-color);
+}
+
+.tag-filter-chevron {
+  font-size: 14px;
+  transition: transform 0.16s ease;
+}
+
+.tag-filter-chevron.open {
+  transform: rotate(180deg);
+}
+
+.tag-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  padding: 8px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tag-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: var(--text-color);
   cursor: pointer;
+  font-size: 12px;
 }
 
-.tag-excluded {
-  background-color: hsla(0, 0%, 69%, 0.1);
-  border: 1px solid hsl(210, 100%, 50%, 0.25);
+.tag-filter-option:hover {
+  background-color: var(--button-mouseover);
 }
 
-.tag:hover {
-  background-color: hsl(210, 100%, 50%, 0.5);
-  border: 1px solid hsl(210, 100%, 50%, 0.75);
-}
-
-.tag-excluded:hover {
-  background-color: hsla(0, 0%, 69%, 0.2);
-  border: 1px solid hsla(0, 0%, 69%, 0.2);
+.tag-filter-option input {
+  margin: 0;
 }
 
 .confirmation-overlay {

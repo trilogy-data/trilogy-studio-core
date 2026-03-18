@@ -86,6 +86,15 @@ onUnmounted(() => {
             />
             Filter
           </label>
+          <label>
+            <input
+              type="radio"
+              v-model="newItemType"
+              :value="CELL_TYPES.SECTION_HEADER"
+              data-testid="dashboard-add-item-type-section-header"
+            />
+            Section Header
+          </label>
         </div>
         <div class="editor-actions">
           <button @click="addItem" class="add-button" data-testid="dashboard-add-item-confirm">

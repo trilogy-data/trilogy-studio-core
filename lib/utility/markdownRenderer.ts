@@ -20,6 +20,8 @@ interface FallbackExpression {
   fallbackExpr: string
 }
 
+type AdmonitionType = 'tip' | 'warning' | 'note' | 'important' | 'caution'
+
 // ============================================================================
 // SECURITY AND VALIDATION
 // ============================================================================
@@ -733,6 +735,38 @@ function createCodeBlockHtml(language: string, code: string, blockId: string): s
   </div>`
 }
 
+function createAdmonitionHtml(type: AdmonitionType, content: string): string {
+  const titleMap: Record<AdmonitionType, string> = {
+    tip: 'Tip',
+    warning: 'Warning',
+    note: 'Note',
+    important: 'Important',
+    caution: 'Caution',
+  }
+
+  return `<div class="md-admonition md-admonition-${type}">
+    <div class="md-admonition-header">${titleMap[type]}</div>
+    <div class="md-admonition-body">${convertMarkdownToHtml(content.trim())}</div>
+  </div>`
+}
+
+function extractAdmonitions(html: string): { html: string; placeholders: CodeBlockPlaceholder } {
+  const admonitionPlaceholders: CodeBlockPlaceholder = {}
+  let admonitionCounter = 0
+
+  const processedHtml = html.replace(
+    /^:::(tip|warning|note|important|caution)\s*\n([\s\S]*?)\n:::\s*$/gim,
+    (_match: string, type: AdmonitionType, content: string) => {
+      const placeholder = `__ADMONITION_${admonitionCounter}__`
+      admonitionPlaceholders[placeholder] = createAdmonitionHtml(type, content)
+      admonitionCounter++
+      return placeholder
+    },
+  )
+
+  return { html: processedHtml, placeholders: admonitionPlaceholders }
+}
+
 /**
  * Extract and replace fenced code blocks with placeholders
  */
@@ -967,13 +1001,15 @@ function restoreCodeBlocks(html: string, placeholders: CodeBlockPlaceholder): st
 export function convertMarkdownToHtml(text: string): string {
   // Extract code blocks first to protect them from other processing
   const { html: htmlWithoutCode, placeholders } = extractCodeBlocks(text)
+  const { html: htmlWithoutAdmonitions, placeholders: admonitionPlaceholders } =
+    extractAdmonitions(htmlWithoutCode)
 
   // Extract {template} expressions before emphasis processing. Without this, * chars inside
   // expressions (e.g. {(a/b*100):.1f}) can pair up across merged list items and get consumed
   // by processEmphasis, mangling the literal text of unresolved expressions.
   const templatePlaceholders: CodeBlockPlaceholder = {}
   let templateCounter = 0
-  let html = htmlWithoutCode.replace(/\{([^{}]+)\}/g, (match: string) => {
+  let html = htmlWithoutAdmonitions.replace(/\{([^{}]+)\}/g, (match: string) => {
     const placeholder = `__TEMPLATEEXPR_${templateCounter}__`
     templatePlaceholders[placeholder] = match
     templateCounter++
@@ -994,6 +1030,7 @@ export function convertMarkdownToHtml(text: string): string {
 
   // Restore code blocks
   html = restoreCodeBlocks(html, placeholders)
+  html = restoreCodeBlocks(html, admonitionPlaceholders)
 
   return html
 }

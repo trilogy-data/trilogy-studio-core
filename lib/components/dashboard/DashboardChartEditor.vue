@@ -27,7 +27,6 @@ const queryText = ref(props.content)
 const imports = ref(props.imports)
 const editor = ref(null as EditorRef | null)
 
-// Use the resizable dialog composable
 const { editorElement, dialogStyle, startResize } = useResizableDialog(() => emit('cancel'), {
   initialWidth: props.initialWidth,
   initialHeight: props.initialHeight,
@@ -35,8 +34,7 @@ const { editorElement, dialogStyle, startResize } = useResizableDialog(() => emi
 
 function saveQuery(): void {
   if (editor.value) {
-    const editorContent = editor.value.getContent()
-    emit('save', editorContent)
+    emit('save', editor.value.getContent())
   }
 }
 
@@ -65,7 +63,6 @@ function cancel(): void {
         <button @click="cancel" class="cancel-button">Cancel</button>
       </div>
 
-      <!-- Use the ResizeHandles component -->
       <ResizeHandles :onStartResize="startResize" />
     </div>
   </div>
@@ -74,10 +71,7 @@ function cancel(): void {
 <style scoped>
 .editor-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -89,9 +83,10 @@ function cancel(): void {
   position: absolute;
   background-color: var(--query-window-bg);
   color: var(--query-window-font);
-  padding: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  padding: 14px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
   border: 1px solid var(--border);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -111,27 +106,43 @@ function cancel(): void {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: 10px;
+  padding-top: 12px;
   flex-shrink: 0;
 }
 
 .save-button,
 .cancel-button {
-  padding: 8px 16px;
-  border: none;
+  padding: 8px 14px;
   cursor: pointer;
   font-weight: 500;
   font-size: var(--button-font-size);
+  border-radius: 10px;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .save-button {
   background-color: var(--special-text);
   color: white;
+  border: 1px solid var(--special-text);
+}
+
+.save-button:hover {
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
 }
 
 .cancel-button {
-  background-color: var(--delete-color);
-  color: white;
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+}
+
+.cancel-button:hover {
+  background-color: var(--button-mouseover);
+  border-color: var(--button-border);
 }
 
 @media screen and (max-width: 768px) {

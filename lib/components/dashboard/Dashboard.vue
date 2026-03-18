@@ -105,7 +105,7 @@ function updateItemDimensions(itemId: string): void {
   const container = document.querySelector(`.vue-grid-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
-    const headerHeight = 36 // Approximate height of the header
+    const headerHeight = getItemData(itemId, dashboard.value.id).type === 'section-header' ? 0 : 36
 
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
