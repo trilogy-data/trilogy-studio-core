@@ -13,6 +13,7 @@
         @name-update="updateEditorName"
         @save="$emit('save-editors')"
         @validate="validateQuery"
+        @format="formatQuery"
         @run="runQuery"
         @cancel="cancelQuery"
         @toggle-tag="toggleTag"
@@ -56,6 +57,9 @@
   display: flex;
   flex-grow: 1;
   position: relative;
+  gap: 10px;
+  padding-right: 10px;
+  background: var(--main-bg-color);
 }
 
 .parent {

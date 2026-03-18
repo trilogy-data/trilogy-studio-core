@@ -1,5 +1,9 @@
 <template>
   <div class="symbols-pane" :style="{ height: editorHeightCalc }">
+    <div class="pane-header">
+      <div class="pane-title">Symbols</div>
+      <div class="pane-count">{{ filteredSymbols.length }}</div>
+    </div>
     <div class="search-container">
       <input
         type="text"
@@ -9,28 +13,27 @@
         @input="filterSymbols"
         ref="symbolSearchInput"
       />
-      <div class="symbol-count">({{ filteredSymbols.length }})</div>
     </div>
     <div class="filter-container">
       <label class="filter-label">
         <input type="checkbox" v-model="filters.keys" @change="filterSymbols" />
         <i class="mdi mdi-key-outline" title="Show Keys"></i>
-        <!-- <span>Keys</span> -->
+        <span>Keys</span>
       </label>
       <label class="filter-label">
         <input type="checkbox" v-model="filters.properties" @change="filterSymbols" />
         <i class="mdi mdi-tag-outline" title="Show Properties"></i>
-        <!-- <span>Properties</span> -->
+        <span>Fields</span>
       </label>
       <label class="filter-label">
         <input type="checkbox" v-model="filters.metrics" @change="filterSymbols" />
         <i class="mdi mdi-cube-outline" title="Show Metrics"></i>
-        <!-- <span>Metrics</span> -->
+        <span>Metrics</span>
       </label>
       <label class="filter-label auto-derived-label">
         <input type="checkbox" v-model="filters.showAutoDerived" @change="filterSymbols" />
         <i class="mdi mdi-calendar-clock-outline" title="Show Auto-Derived Concepts"></i>
-        <!-- <span>Auto-Derived</span> -->
+        <span>Auto</span>
       </label>
       <button
         v-if="isFiltering"
@@ -466,13 +469,14 @@ export default defineComponent({
 /* Symbols pane styling */
 .symbols-pane {
   width: 300px;
-  border-left: 1px solid var(--border-color, #444);
   display: flex;
   flex-direction: column;
-  background-color: var(--editor-bg);
+  background-color: var(--query-window-bg);
   font-size: 12px;
   overflow-y: scroll;
   position: relative;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
 
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
@@ -484,21 +488,41 @@ export default defineComponent({
   scrollbar-width: none; /* Firefox */
 }
 
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--panel-header-bg);
+}
+
+.pane-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.pane-count {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
 .search-container {
   display: flex;
   align-items: center;
-  padding: 4px;
-  border-bottom: 1px solid var(--border-color, #444);
+  padding: 8px 10px 6px;
 }
 
 .symbols-search {
-  flex: 0.9;
-  height: 24px;
-  background-color: var(--editor-bg);
+  flex: 1;
+  height: 28px;
+  background-color: var(--button-bg-color);
   color: var(--text-color, #d4d4d4);
-  border: 1px solid var(--border-color, #444);
-  padding: 0 6px;
+  border: 1px solid var(--border);
+  padding: 0 8px;
   font-size: 12px;
+  border-radius: 8px;
 }
 
 .symbol-count {
@@ -511,23 +535,24 @@ export default defineComponent({
 .filter-container {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color, #444);
-  background-color: var(--editor-bg);
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--query-window-bg);
   flex-wrap: wrap;
+  gap: 4px;
 }
 
 .filter-label {
   display: flex;
   align-items: center;
-  margin-right: 10px;
+  gap: 4px;
   cursor: pointer;
   font-size: 11px;
-  color: var(--text-color, #d4d4d4);
-  opacity: 0.7;
+  color: var(--text-faint);
+  opacity: 0.85;
   transition: opacity 0.2s;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
 .filter-label:hover {
@@ -536,11 +561,10 @@ export default defineComponent({
 }
 
 .filter-label input {
-  margin-right: 4px;
+  margin: 0;
 }
 
 .filter-label i {
-  margin-right: 4px;
   font-size: 14px;
 }
 

@@ -4,7 +4,9 @@
       <div class="menu-title" @click="startEditing">
         <span v-if="!isEditing" class="editable-text" data-testid="editor-name-display">
           {{ name }}
-          <span class="edit-indicator" data-testid="edit-editor-name">✎</span>
+          <span class="edit-indicator" data-testid="edit-editor-name">
+            <i class="mdi mdi-pencil-outline"></i>
+          </span>
         </span>
         <input
           v-else
@@ -19,59 +21,86 @@
         />
       </div>
     </div>
+
     <div class="menu-actions">
-      <button
-        v-if="editorType === 'sql'"
-        class="toggle-button tag-inactive action-item"
-        :class="{ tag: tags.includes(EditorTag.STARTUP_SCRIPT) }"
-        @click="$emit('toggle-tag', EditorTag.STARTUP_SCRIPT)"
-        data-testid="editor-set-startup-script"
-      >
-        {{ tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is' : 'Set as' }} Startup Script
-      </button>
-      <loading-button
-        v-if="editorType !== 'sql' && connectionHasModel"
-        class="toggle-button tag-inactive action-item"
-        :class="{ tag: tags.includes(EditorTag.SOURCE) }"
-        :action="() => $emit('toggle-tag', EditorTag.SOURCE)"
-        data-testid="editor-set-source"
-      >
-        {{ tags.includes(EditorTag.SOURCE) ? 'Is' : 'Set as' }} Source
-      </loading-button>
-      <button class="action-item" @click="$emit('save')" data-testid="editor-save-button">
-        <i class="mdi mdi-content-save-outline icon"></i>
-        Save
-      </button>
-      <loading-button
-        v-if="editorType !== 'sql'"
-        :useDefaultStyle="false"
-        class="action-item"
-        :action="() => $emit('validate')"
-        testId="editor-validate-button"
-      >
-        <i class="mdi mdi-code-braces icon"></i>
-        Parse
-      </loading-button>
-      <loading-button
-        v-if="editorType !== 'sql'"
-        :useDefaultStyle="false"
-        class="action-item"
-        :action="() => $emit('generate')"
-        data-testid="editor-generate-button"
-      >
-        <i class="mdi mdi-creation-outline icon"></i>
-        AI
-      </loading-button>
-      <button
-        @click="() => (loading ? $emit('cancel') : $emit('run'))"
-        class="action-item"
-        :class="{ 'button-cancel': loading, 'button-run': !loading }"
-        data-testid="editor-run-button"
-      >
-        <i v-if="loading" class="mdi mdi-stop-circle-outline icon"></i>
-        <i v-else class="mdi mdi-play-outline icon"></i>
-        {{ loading ? 'Cancel' : 'Run' }}
-      </button>
+      <div class="action-group action-group-scope">
+        <button
+          v-if="editorType === 'sql'"
+          class="toggle-button action-item action-item-scope"
+          :class="{ tag: tags.includes(EditorTag.STARTUP_SCRIPT) }"
+          @click="$emit('toggle-tag', EditorTag.STARTUP_SCRIPT)"
+          data-testid="editor-set-startup-script"
+        >
+          {{ tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is Startup' : 'Startup' }}
+        </button>
+        <loading-button
+          v-if="editorType !== 'sql' && connectionHasModel"
+          :useDefaultStyle="false"
+          class="toggle-button action-item action-item-scope"
+          :class="{ tag: tags.includes(EditorTag.SOURCE) }"
+          :action="() => $emit('toggle-tag', EditorTag.SOURCE)"
+          data-testid="editor-set-source"
+        >
+          {{ tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source' }}
+        </loading-button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="action-group">
+        <button class="action-item" @click="$emit('save')" data-testid="editor-save-button">
+          <i class="mdi mdi-content-save-outline icon"></i>
+          Save
+        </button>
+        <loading-button
+          v-if="editorType !== 'sql'"
+          :useDefaultStyle="false"
+          class="action-item"
+          :action="() => $emit('validate')"
+          testId="editor-validate-button"
+        >
+          <i class="mdi mdi-code-braces icon"></i>
+          Parse
+        </loading-button>
+        <button
+          v-if="editorType !== 'sql'"
+          class="action-item"
+          @click="$emit('format')"
+          data-testid="editor-format-button"
+        >
+          <i class="mdi mdi-format-align-left icon"></i>
+          Format
+        </button>
+      </div>
+
+      <div v-if="editorType !== 'sql'" class="toolbar-divider"></div>
+
+      <div v-if="editorType !== 'sql'" class="action-group">
+        <loading-button
+          :useDefaultStyle="false"
+          class="action-item action-item-ai"
+          :action="() => $emit('generate')"
+          data-testid="editor-generate-button"
+        >
+          <i class="mdi mdi-creation-outline icon"></i>
+          AI
+        </loading-button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="action-group">
+        <button
+          @click="() => (loading ? $emit('cancel') : $emit('run'))"
+          class="action-item"
+          :class="{ 'button-cancel': loading, 'button-run': !loading }"
+          data-testid="editor-run-button"
+        >
+          <i v-if="loading" class="mdi mdi-stop-circle-outline icon"></i>
+          <i v-else class="mdi mdi-play-outline icon"></i>
+          {{ loading ? 'Cancel' : 'Run' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -108,7 +137,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['name-update', 'save', 'validate', 'run', 'cancel', 'toggle-tag', 'generate'],
+  emits: ['name-update', 'save', 'validate', 'format', 'run', 'cancel', 'toggle-tag', 'generate'],
   data() {
     return {
       isEditing: false,
@@ -138,61 +167,31 @@ export default defineComponent({
 
 <style scoped>
 .menu-bar {
-  background-color: var(--editor-bg);
+  background-color: var(--query-window-bg);
   display: flex;
   flex-shrink: 0;
-  flex-direction: row;
-  gap: 0.5rem;
-  padding: 0.25rem;
+  gap: 0.35rem;
+  padding: 0 6px 0 10px;
   justify-content: space-between;
-  padding-right: 0.5rem;
-  height: 40px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.menu-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.15rem;
-  align-items: center;
-  flex-grow: 1;
-}
-
-.action-item {
-  height: 25px;
-  width: 80px;
-  font-weight: 300;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-}
-
-.icon {
-  font-size: 14px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .menu-left {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  min-width: 50%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .menu-title {
   font-weight: 500;
   cursor: pointer;
-  padding: 0.375rem;
-  border-radius: 4px;
+  padding: 0.25rem 0;
   display: flex;
   align-items: center;
   white-space: nowrap;
-  /* overflow: hidden; */
+  overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
 }
@@ -204,20 +203,22 @@ export default defineComponent({
 .editable-text {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  overflow: hidden;
 }
 
 .edit-indicator {
   opacity: 0;
-  font-size: 0.875rem;
+  font-size: 13px;
   transition: opacity 0.2s ease;
+  flex-shrink: 0;
 }
 
 .name-input {
   background: var(--bg-color);
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
   font-size: inherit;
   font-weight: 500;
   width: auto;
@@ -227,8 +228,81 @@ export default defineComponent({
 
 .name-input:focus {
   outline: none;
-  border-color: #339af0;
-  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+}
+
+.menu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  align-items: center;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.action-group-scope {
+  margin-right: 2px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border-light);
+  flex-shrink: 0;
+}
+
+.action-item {
+  min-height: 24px;
+  height: 24px;
+  width: auto;
+  min-width: 0;
+  padding: 0 9px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.action-item:hover {
+  background: var(--button-mouseover);
+}
+
+.action-item-scope {
+  min-height: 22px;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.action-item-ai {
+  color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.22);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.04);
+}
+
+.icon {
+  font-size: 14px;
 }
 
 .button-cancel {
@@ -240,31 +314,25 @@ export default defineComponent({
 .button-run {
   background-color: var(--special-text);
   color: white;
-  border: 0px;
+  border: 1px solid var(--special-text);
+}
+
+.button-run:hover,
+.button-cancel:hover {
+  filter: brightness(0.96);
 }
 
 .tag {
-  font-size: 8px;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsl(210, 100%, 50%, 0.25);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.26);
+  color: var(--special-text);
 }
 
-.tag-inactive {
-  font-size: 8px;
-  padding: 2px;
-  color: var(--tag-font);
-  line-height: 10px;
-}
-
-/* device specific */
 @media screen and (max-width: 768px) {
   .menu-bar {
-    height: 60px;
+    min-height: 56px;
     display: block;
+    padding: 6px 8px;
   }
 
   .menu-left {
@@ -275,23 +343,19 @@ export default defineComponent({
   .menu-actions {
     display: flex;
     justify-content: center;
-    flex-wrap: nowrap;
-    gap: 0.1rem;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     align-items: center;
     width: 100%;
   }
 
   .action-item {
-    height: 25px;
     flex-grow: 1;
-    width: auto;
-    font-weight: 500;
-    cursor: pointer;
-    cursor: pointer;
-    margin-left: 0rem;
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
+    height: 26px;
+  }
+
+  .toolbar-divider {
+    display: none;
   }
 }
 </style>
