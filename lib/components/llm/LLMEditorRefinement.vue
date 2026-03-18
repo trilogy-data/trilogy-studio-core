@@ -17,24 +17,26 @@
           <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
             {{ connectionInfo }}
           </span>
-          <button
-            class="action-btn accept-btn"
-            @click="handleAccept"
-            :disabled="isLoading"
-            data-testid="accept-button"
-          >
-            <i class="mdi mdi-close"></i>
-            Close
-          </button>
-          <button
-            class="action-btn discard-btn"
-            @click="handleDiscard"
-            :disabled="isLoading"
-            data-testid="discard-button"
-          >
-            <i class="mdi mdi-close"></i>
-            Discard Changes
-          </button>
+          <div class="refinement-action-group">
+            <button
+              class="action-btn accept-btn"
+              @click="handleAccept"
+              :disabled="isLoading"
+              data-testid="accept-button"
+            >
+              <i class="mdi mdi-close"></i>
+              Close
+            </button>
+            <button
+              class="action-btn discard-btn"
+              @click="handleDiscard"
+              :disabled="isLoading"
+              data-testid="discard-button"
+            >
+              <i class="mdi mdi-undo-variant"></i>
+              Discard
+            </button>
+          </div>
         </div>
       </template>
 
@@ -128,7 +130,7 @@ export default defineComponent({
       if (!activeName) return ''
       const connection = llmConnectionStore.connections[activeName]
       if (!connection) return activeName
-      return connection.model ? `${activeName} (${connection.model})` : activeName
+      return connection.model || activeName
     })
 
     // Placeholders for input
@@ -243,58 +245,68 @@ export default defineComponent({
 
 .refinement-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-shrink: 0;
 }
 
 .connection-info {
-  font-size: var(--small-font-size);
+  font-size: 11px;
   color: var(--text-faint);
-  padding: 2px 8px;
-  background-color: var(--bg-color);
-  border-radius: 4px;
-  max-width: 160px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.refinement-action-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 12px;
-  border-radius: 4px;
-  font-size: var(--font-size);
+  padding: 0 7px;
+  min-height: 22px;
+  border-radius: 5px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-light);
   background: transparent;
+  color: var(--text-faint);
 }
 
 .action-btn i {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .accept-btn {
   color: var(--special-text);
-  border-color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.24);
 }
 
 .accept-btn:hover:not(:disabled) {
-  background-color: var(--special-text);
-  color: white;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
 }
 
 .discard-btn {
   color: var(--delete-color);
-  border-color: var(--delete-color);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 .discard-btn:hover:not(:disabled) {
-  background-color: var(--delete-color);
-  color: white;
+  background-color: rgba(220, 38, 38, 0.05);
 }
 
 .action-btn:disabled {
@@ -308,7 +320,7 @@ export default defineComponent({
   min-height: 250px;
   height: 300px;
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   background-color: var(--bg-color);
   margin-top: 8px;
@@ -320,7 +332,71 @@ export default defineComponent({
   border: 1px dashed var(--border);
   text-align: center;
   color: var(--text-faint);
-  border-radius: 8px;
+  border-radius: 0;
   margin-top: 8px;
+}
+
+:deep(.llm-chat-container) {
+  background: var(--query-window-bg);
+}
+
+:deep(.chat-header) {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 6px;
+  gap: 4px;
+  background: var(--query-window-bg);
+  border-bottom-color: rgba(148, 163, 184, 0.1);
+}
+
+:deep(.chat-title) {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+:deep(.chat-messages) {
+  padding: 10px 12px 10px 10px;
+  gap: 6px;
+}
+
+:deep(.message.user) {
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+:deep(.message.assistant) {
+  margin-left: 18px;
+}
+
+:deep(.input-container) {
+  padding: 6px;
+  border-top: none;
+}
+
+:deep(.input-wrapper) {
+  padding: 4px 5px;
+  gap: 4px;
+  border-radius: 8px;
+}
+
+:deep(.textarea-wrapper textarea) {
+  min-height: 26px;
+  padding: 5px 6px;
+  font-size: 12px;
+}
+
+:deep(.animated-placeholder) {
+  top: 5px;
+  left: 6px;
+  font-size: 12px;
+}
+
+:deep(.send-button) {
+  height: 26px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 11px;
 }
 </style>

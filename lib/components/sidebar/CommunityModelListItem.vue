@@ -25,7 +25,7 @@
     <template #extra-content>
       <template v-if="item.type === 'model'">
         <span class="tag-container">
-          <span v-for="tag in item.model?.tags || []" :key="tag" class="tag">{{ tag }}</span>
+          <sidebar-tag-chip v-for="tag in item.model?.tags || []" :key="tag" :label="tag" />
         </span>
       </template>
       <template v-else-if="item.type === 'engine'">
@@ -71,6 +71,7 @@ import { DEFAULT_GITHUB_STORE } from '../../remotes/models'
 import type { AnyModelStore } from '../../remotes/models'
 import { useCommunityApiStore } from '../../stores'
 import type { Status } from '../StatusIcon.vue'
+import SidebarTagChip from './SidebarTagChip.vue'
 
 interface Props {
   item: any
@@ -154,21 +155,11 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
 .tag-container {
   margin-left: auto;
   display: flex;
-  padding: 4px;
+  align-items: center;
+  gap: 4px;
 }
 .right-pad {
   padding-right: 5px;
-}
-.tag {
-  font-size: 6px;
-  border-radius: 3px;
-  margin-left: 2px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 9px;
-  cursor: pointer;
 }
 
 .text-light {
@@ -187,5 +178,9 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
 /* Show hover icons when parent sidebar item is hovered */
 :deep(.sidebar-item:hover) .hover-icon {
   opacity: 1;
+}
+
+:deep(.sidebar-tag-chip) {
+  max-width: 72px;
 }
 </style>

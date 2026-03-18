@@ -296,7 +296,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .sidebar-header-local {
@@ -309,9 +309,9 @@ export default {
 
 .editors-new-button {
   flex-shrink: 0;
-  min-height: var(--sidebar-control-height);
-  height: var(--sidebar-control-height);
-  padding: 0 12px;
+  min-height: 30px;
+  height: 30px;
+  padding: 0 11px;
   background-color: transparent;
   border-color: var(--border-light);
   border-radius: var(--sidebar-control-radius);
@@ -326,15 +326,15 @@ export default {
 .tag-filter-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 0 10px;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 9px;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-faint);
   background-color: transparent;
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 7px;
   line-height: 1;
 }
 
@@ -366,26 +366,26 @@ export default {
   left: 0;
   z-index: 20;
   min-width: 180px;
-  padding: 8px;
+  padding: 6px;
   background-color: var(--query-window-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--surface-shadow);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .tag-filter-option {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
+  min-height: 24px;
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text-color);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .tag-filter-option:hover {

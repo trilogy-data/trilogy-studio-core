@@ -89,7 +89,7 @@
 
       <div class="toolbar-divider"></div>
 
-      <div class="action-group">
+      <div class="action-group action-group-execute">
         <button
           @click="() => (loading ? $emit('cancel') : $emit('run'))"
           class="action-item"
@@ -252,6 +252,10 @@ export default defineComponent({
   margin-right: 2px;
 }
 
+.action-group-execute {
+  margin-left: 2px;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 14px;
@@ -297,8 +301,8 @@ export default defineComponent({
 
 .action-item-ai {
   color: var(--special-text);
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.22);
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.04);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.16);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
 }
 
 .icon {

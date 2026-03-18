@@ -468,7 +468,7 @@ export default defineComponent({
 <style scoped>
 /* Symbols pane styling */
 .symbols-pane {
-  width: 300px;
+  width: 286px;
   display: flex;
   flex-direction: column;
   background-color: var(--query-window-bg);
@@ -476,7 +476,7 @@ export default defineComponent({
   overflow-y: scroll;
   position: relative;
   border: 1px solid var(--border-light);
-  border-radius: 10px;
+  border-radius: 0;
 
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
@@ -492,37 +492,37 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px 6px;
+  padding: 6px 8px 4px;
   border-bottom: 1px solid var(--border-light);
-  background: var(--panel-header-bg);
+  background: var(--query-window-bg);
 }
 
 .pane-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-color);
 }
 
 .pane-count {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-faint);
 }
 
 .search-container {
   display: flex;
   align-items: center;
-  padding: 8px 10px 6px;
+  padding: 6px 8px 4px;
 }
 
 .symbols-search {
   flex: 1;
-  height: 28px;
-  background-color: var(--button-bg-color);
+  height: 24px;
+  background-color: transparent;
   color: var(--text-color, #d4d4d4);
-  border: 1px solid var(--border);
-  padding: 0 8px;
-  font-size: 12px;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  padding: 0 7px;
+  font-size: 11px;
+  border-radius: 6px;
 }
 
 .symbol-count {
@@ -535,29 +535,28 @@ export default defineComponent({
 .filter-container {
   display: flex;
   align-items: center;
-  padding: 0 10px 8px;
+  padding: 0 8px 6px;
   border-bottom: 1px solid var(--border-light);
   background-color: var(--query-window-bg);
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px 6px;
 }
 
 .filter-label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-faint);
-  opacity: 0.85;
+  opacity: 0.8;
   transition: opacity 0.2s;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 0;
+  border-radius: 0;
 }
 
 .filter-label:hover {
   opacity: 1;
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .filter-label input {
@@ -565,7 +564,7 @@ export default defineComponent({
 }
 
 .filter-label i {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .filter-label i.mdi-key-outline {
@@ -590,15 +589,14 @@ export default defineComponent({
   border: none;
   color: var(--text-subtle, #aaa);
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 1px 2px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .clear-filters-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
   color: var(--text-color, #d4d4d4);
 }
 

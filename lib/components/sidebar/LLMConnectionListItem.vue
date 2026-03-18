@@ -171,10 +171,13 @@
 
         <div class="connection-actions" v-if="item.type === 'connection'">
           <!-- Set Active Button for Connection -->
-          <i
+          <span
             v-if="item.connection && item.connection.isDefault"
-            class="mdi mdi-star loading-button sidebar-icon-button active is-active"
-          ></i>
+            class="sidebar-icon-button is-active"
+            title="Default connection"
+          >
+            <i class="mdi mdi-star"></i>
+          </span>
           <LoadingButton
             v-else
             class="loading-button sidebar-icon-button"
@@ -518,7 +521,6 @@ export default defineComponent({
 
 <style scoped>
 .loading-button {
-  background-color: var(--button-bg-color);
   padding: 0;
 }
 

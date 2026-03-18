@@ -486,7 +486,7 @@ export default defineComponent({
 .sidebar-icons {
   background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
-  padding: 10px 0 8px;
+  padding: 8px 0 6px;
   width: var(--sidebar-icon-width);
   min-width: var(--sidebar-icon-width);
   display: flex;
@@ -495,6 +495,7 @@ export default defineComponent({
   justify-content: flex-start;
   font-weight: 500;
   gap: 2px;
+  border-right: 1px solid var(--border-light);
 }
 
 .sidebar-icon {
@@ -529,19 +530,20 @@ export default defineComponent({
 }
 
 .sidebar-icon i {
-  font-size: 20px;
+  font-size: 19px;
+  opacity: 0.92;
 }
 
 .sidebar-icon.selected {
   background-color: transparent;
-  color: #f8fafc;
+  color: #e5edf8;
   box-shadow: inset 0 -2px 0 var(--special-text);
 }
 
 .sidebar-content {
   flex-grow: 1;
   background-color: var(--sidebar-bg);
-  padding: 12px 0;
+  padding: 8px 0;
   overflow-y: auto;
 }
 
@@ -556,9 +558,9 @@ export default defineComponent({
   cursor: pointer;
   width: calc(100% - 8px);
   text-align: center;
-  padding: 4px 0;
-  opacity: 0.7;
-  font-size: 14px;
+  padding: 2px 0;
+  opacity: 0.62;
+  font-size: 13px;
   border-radius: 0;
   transition:
     opacity 0.15s ease,
@@ -574,7 +576,7 @@ export default defineComponent({
   width: 28px;
   height: 1px;
   background-color: rgba(148, 163, 184, 0.18);
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 /* Bottom icons container */

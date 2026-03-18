@@ -300,15 +300,15 @@ export default defineComponent({
 .tab {
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 7px;
   height: 100%;
   background-color: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   user-select: none;
-  min-width: 110px;
-  max-width: 200px;
+  min-width: 102px;
+  max-width: 188px;
   transition:
     background-color 0.16s ease,
     border-color 0.16s ease,
@@ -329,13 +329,14 @@ export default defineComponent({
 }
 
 .tab:not(.tab-active) {
-  opacity: 0.62;
+  opacity: 0.54;
 }
 
 .tab-icon {
-  font-size: 15px;
-  margin-right: 6px;
+  font-size: 14px;
+  margin-right: 5px;
   flex-shrink: 0;
+  opacity: 0.88;
 }
 
 .tab-icon-status-connected {
@@ -364,10 +365,10 @@ export default defineComponent({
 
 .tab-title {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: currentColor;
-  margin-right: 6px;
+  margin-right: 4px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

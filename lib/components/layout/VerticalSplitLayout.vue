@@ -47,7 +47,7 @@
 import Split from 'split.js'
 import { defineComponent, ref } from 'vue'
 
-const DEFAULT_SIZE = [60, 40]
+const DEFAULT_SIZE = [68, 32]
 
 export default defineComponent({
   name: 'VerticalSplitLayout',
@@ -72,7 +72,7 @@ export default defineComponent({
     this.split = Split([this.$refs.editor, this.$refs.results], {
       direction: 'vertical',
       sizes: DEFAULT_SIZE,
-      minSize: [250, 250],
+      minSize: [280, 180],
       // minSize: 200,
       // expandToMin: true,
       gutterSize: 0,

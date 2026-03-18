@@ -59,23 +59,36 @@
           <div
             v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
             class="tool-calls"
+            :class="{ summarized: shouldSummarizeToolCalls(message) }"
           >
             <div
-              v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
-              :key="toolCall.key"
-              class="tool-call"
-              :class="{ success: toolCall.success, error: !toolCall.success }"
-              :title="toolCall.error || toolCall.label"
+              v-if="shouldSummarizeToolCalls(message)"
+              class="tool-call-summary"
+              :title="getToolCallSummaryTitle(message)"
             >
-              <span class="tool-icon">
-                <i :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"></i>
-              </span>
-              <span class="tool-name">
-                {{ toolCall.label }}
-                <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
-              </span>
-              <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
+              <i class="mdi mdi-check-circle"></i>
+              <span>{{ getToolCallSummary(message) }}</span>
             </div>
+            <template v-else>
+              <div
+                v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
+                :key="toolCall.key"
+                class="tool-call"
+                :class="{ success: toolCall.success, error: !toolCall.success }"
+                :title="toolCall.error || toolCall.label"
+              >
+                <span class="tool-icon">
+                  <i
+                    :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"
+                  ></i>
+                </span>
+                <span class="tool-name">
+                  {{ toolCall.label }}
+                  <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
+                </span>
+                <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
+              </div>
+            </template>
           </div>
         </div>
         <div v-if="message.modelInfo" class="message-meta">
@@ -381,6 +394,46 @@ export default defineComponent({
 
     const getCondensedToolCalls = (toolCalls: ChatToolCall[]) => condenseToolCalls(toolCalls)
 
+    const shouldSummarizeToolCalls = (message: ChatMessage): boolean => {
+      if (!isToolOnlyAssistantMessage(message) || !message.executedToolCalls?.length) return false
+
+      const condensed = getCondensedToolCalls(message.executedToolCalls)
+      return (
+        condensed.length > 1 && condensed.every((toolCall) => toolCall.success && !toolCall.error)
+      )
+    }
+
+    const getToolCallSummary = (message: ChatMessage): string => {
+      const condensed = message.executedToolCalls
+        ? getCondensedToolCalls(message.executedToolCalls)
+        : []
+      if (condensed.length === 0) return ''
+
+      const totalActions = condensed.reduce((sum, toolCall) => sum + toolCall.count, 0)
+      const preview = condensed.slice(0, 2).map((toolCall) => toolCall.label)
+      const remaining = condensed.length - preview.length
+
+      let summary = `${totalActions} action${totalActions === 1 ? '' : 's'} completed`
+      if (preview.length > 0) {
+        summary += ` · ${preview.join(' · ')}`
+      }
+      if (remaining > 0) {
+        summary += ` · +${remaining} more`
+      }
+      return summary
+    }
+
+    const getToolCallSummaryTitle = (message: ChatMessage): string => {
+      const condensed = message.executedToolCalls
+        ? getCondensedToolCalls(message.executedToolCalls)
+        : []
+      return condensed
+        .map((toolCall) =>
+          toolCall.count > 1 ? `${toolCall.label} (x${toolCall.count})` : toolCall.label,
+        )
+        .join(' · ')
+    }
+
     const sendMessage = async () => {
       if (isLoading.value || !userInput.value.trim()) return
 
@@ -439,6 +492,9 @@ export default defineComponent({
       getToolDisplayText,
       getToolDisplayName,
       getCondensedToolCalls,
+      shouldSummarizeToolCalls,
+      getToolCallSummary,
+      getToolCallSummaryTitle,
       isToolOnlyAssistantMessage,
       addMessage,
       addArtifact,
@@ -739,6 +795,10 @@ export default defineComponent({
   max-width: 100%;
 }
 
+.tool-calls.summarized {
+  gap: 0;
+}
+
 .tool-call {
   display: inline-flex;
   align-items: center;
@@ -787,6 +847,20 @@ export default defineComponent({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tool-call-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.tool-call-summary i {
+  color: #28a745;
+  font-size: 12px;
 }
 
 @media screen and (max-width: 768px) {

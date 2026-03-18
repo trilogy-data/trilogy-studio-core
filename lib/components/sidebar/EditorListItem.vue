@@ -53,7 +53,7 @@
       <template #extra-content>
         <template v-if="item.type === 'editor'">
           <span class="tag-container">
-            <span v-for="tag in item.editor.tags" :key="tag" class="tag">{{ tag }}</span>
+            <sidebar-tag-chip v-for="tag in item.editor.tags" :key="tag" :label="tag" />
           </span>
 
           <tooltip content="Delete Editor" position="left">
@@ -107,6 +107,7 @@ import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
 import useModelConfigStore from '../../stores/modelStore'
+import SidebarTagChip from './SidebarTagChip.vue'
 
 export default {
   name: 'EditorListItem',
@@ -179,6 +180,7 @@ export default {
     Tooltip,
     ConnectionStatusIcon,
     EditorCreatorIcon,
+    SidebarTagChip,
   },
 }
 </script>
@@ -213,22 +215,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 18px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  border-radius: 6px;
-  padding: 0 6px;
-  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
-  border: 1px solid rgba(var(--special-text-rgb, 37, 99, 235), 0.2);
-  color: var(--special-text);
-  line-height: 1;
-  cursor: pointer;
 }
 
 .text-light {

@@ -118,7 +118,7 @@ export default defineComponent({
 
     const splitViewRef = ref<HTMLElement | null>(null)
     const resultsContainerRef = ref<InstanceType<typeof ResultsContainer> | null>(null)
-    const splitRatio = ref(0.5) // Start at 50/50
+    const splitRatio = ref(0.58)
     const isDragging = ref(false)
     const minPaneWidth = 200 // Minimum width in pixels
 
@@ -253,6 +253,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--query-window-bg);
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .split-view {
@@ -260,11 +262,13 @@ export default defineComponent({
   flex-direction: row;
   height: 100%;
   overflow: hidden;
+  background: var(--query-window-bg);
 }
 
 .results-pane {
   min-width: 200px;
   overflow: hidden;
+  background: var(--query-window-bg);
 }
 
 .chat-pane {
@@ -272,34 +276,33 @@ export default defineComponent({
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--query-window-bg);
 }
 
 .divider {
-  width: 8px;
-  background: var(--sidebar-bg);
+  width: 4px;
+  background: transparent;
   cursor: col-resize;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-left: 1px solid var(--border-light);
-  border-right: 1px solid var(--border-light);
 }
 
 .divider:hover,
 .divider:active {
-  background: var(--border-light);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
 }
 
 .divider-handle {
-  width: 4px;
-  height: 32px;
-  background: var(--border);
-  border-radius: 2px;
+  width: 2px;
+  height: 26px;
+  background: rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
 }
 
 .divider:hover .divider-handle,
 .divider:active .divider-handle {
-  background: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.4);
 }
 </style>

@@ -98,6 +98,7 @@
         :headers="results.headers"
         :results="results.data"
         :containerHeight="tabContentHeight"
+        :flushChrome="true"
         @drilldown-click="activateDrilldown"
       />
     </div>
@@ -173,7 +174,7 @@ export default {
     return {
       activeTab: this.defaultTab || getDefaultValueFromHash('activeEditorTab', 'results'),
       activeDrilldown: null as Drilldown | null,
-      TABS_HEIGHT: 30, // Height of the tabs header
+      TABS_HEIGHT: 26,
     }
   },
   methods: {
@@ -278,16 +279,17 @@ export default {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background: var(--query-window-bg);
 }
 
 .tabs {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-  min-height: 30px;
-  height: 30px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: var(--query-window-bg);
+  min-height: 24px;
+  height: 24px;
   z-index: 99;
 }
 
@@ -299,15 +301,15 @@ export default {
 .tabs-right {
   display: flex;
   align-items: center;
-  padding-right: 8px;
+  padding-right: 4px;
 }
 
 .chat-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border: none;
   background: transparent;
   color: var(--text-faint);
@@ -322,36 +324,38 @@ export default {
 }
 
 .chat-button i {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .tab-button {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.875rem;
-  border-bottom: 2px solid transparent;
-  padding-left: 20px;
-  padding-right: 20px;
-  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1.5px solid transparent;
+  padding-left: 10px;
+  padding-right: 10px;
+  color: var(--text-faint);
   border-radius: 0px;
-  /* max-width:100px; */
+  line-height: 1;
 }
 
 .tab-button:hover {
-  color: var(--special-text);
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
+  color: var(--text-color);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
 }
 
 .tab-button.active {
   color: var(--special-text);
-  border-bottom: 2px solid var(--special-text);
+  border-bottom: 1.5px solid var(--special-text);
   border-radius: 0px;
 }
 
 .tab-content {
   flex: 1;
   overflow: auto;
+  background: var(--query-window-bg);
 }
 
 .sql-view {
@@ -370,5 +374,54 @@ export default {
   font-size: 0.875rem;
   line-height: 1.5;
   height: 100%;
+}
+
+.tab-content :deep(.result-table),
+.tab-content :deep(.table-container),
+.tab-content :deep(.tabulator) {
+  background: var(--query-window-bg);
+}
+
+.tab-content :deep(.tabulator) {
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+}
+
+.tab-content :deep(.tabulator .tabulator-header) {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: var(--query-window-bg);
+}
+
+.tab-content :deep(.tabulator .tabulator-header .tabulator-col) {
+  border-right: 0;
+}
+
+.tab-content :deep(.tabulator .tabulator-header .tabulator-col .tabulator-col-content) {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.tab-content :deep(.tabulator .tabulator-row) {
+  min-height: 28px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.tab-content :deep(.tabulator .tabulator-row .tabulator-cell) {
+  border-right: 0;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.tab-content :deep(.tabulator .tabulator-row:hover) {
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
+}
+
+.tab-content :deep(.tabulator .tabulator-footer .tabulator-footer-contents) {
+  padding-top: 3px;
+  padding-bottom: 3px;
 }
 </style>

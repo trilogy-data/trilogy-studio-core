@@ -30,14 +30,14 @@
 }
 
 .sidebar-header-container {
-  padding: 0 16px 6px;
+  padding: 0 14px 4px;
 }
 
 .action-slot {
-  padding: 0 16px 12px;
+  padding: 0 14px 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .sidebar-header {

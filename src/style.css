@@ -31,9 +31,9 @@
   --light-bg-color: #111318;
   --bg-loading: rgba(12, 14, 18, 0.72);
 
-  --sidebar-selector-bg: #0c0e12;
-  --sidebar-selector-font: #94a3b8;
-  --sidebar-selector-selected-bg: #181c22;
+  --sidebar-selector-bg: #12161d;
+  --sidebar-selector-font: #7f8da1;
+  --sidebar-selector-selected-bg: #1b212a;
 
   --sidebar-bg: #111318;
   --sidebar-bg-color: #111318;
@@ -79,9 +79,9 @@
   --light-bg-color: #f6f8fb;
   --bg-loading: rgba(255, 255, 255, 0.78);
 
-  --sidebar-selector-bg: #0f172a;
-  --sidebar-selector-font: #94a3b8;
-  --sidebar-selector-selected-bg: #1e293b;
+  --sidebar-selector-bg: #182233;
+  --sidebar-selector-font: #7e8ca2;
+  --sidebar-selector-selected-bg: #243247;
 
   --sidebar-bg: #ffffff;
   --sidebar-bg-color: #ffffff;
@@ -115,7 +115,7 @@
   --font-body: 'IBM Plex Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'IBM Plex Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --sidebar-width: 224px;
-  --sidebar-icon-width: 48px;
+  --sidebar-icon-width: 44px;
 
   --sidebar-list-item-height: 32px;
   --sidebar-list-item-font-size: 13px;
