@@ -180,9 +180,46 @@ const hiddenFilterCount = computed(() => {
   return Math.max(0, filterCount.value - visibleHeaderFilters.value.length)
 })
 
+type WidgetHeaderLevel = 1 | 2 | 3
+
+function parseWidgetHeaderTitle(
+  rawTitle: string | undefined,
+  fallbackTitle: string,
+): {
+  text: string
+  level: WidgetHeaderLevel
+} {
+  const trimmedTitle = rawTitle?.trim()
+  if (!trimmedTitle) {
+    return { text: fallbackTitle, level: 3 }
+  }
+
+  const headingMatch = trimmedTitle.match(/^(#{1,3})\s*(.+)$/)
+  if (!headingMatch) {
+    return { text: trimmedTitle, level: 3 }
+  }
+
+  const headingText = headingMatch[2]?.trim()
+  if (!headingText) {
+    return { text: trimmedTitle, level: 3 }
+  }
+
+  return {
+    text: headingText,
+    level: headingMatch[1].length as WidgetHeaderLevel,
+  }
+}
+
+const parsedDisplayTitle = computed(() => {
+  return parseWidgetHeaderTitle(itemData.value.name, getPlaceholderText.value)
+})
+
 const displayTitle = computed(() => {
-  const name = itemData.value.name?.trim()
-  return name || getPlaceholderText.value
+  return parsedDisplayTitle.value.text
+})
+
+const titleLevelClass = computed(() => {
+  return `item-title-level-${parsedDisplayTitle.value.level}`
 })
 </script>
 
@@ -293,7 +330,7 @@ const displayTitle = computed(() => {
           <div
             v-if="!editingItemTitle"
             class="item-title editable-title"
-            :class="{ 'item-title-static': !editMode }"
+            :class="[titleLevelClass, { 'item-title-static': !editMode }]"
             :title="displayTitle"
             @click="startTitleEditing"
           >
@@ -479,6 +516,27 @@ const displayTitle = computed(() => {
   line-height: 1.15;
   letter-spacing: -0.015em;
   color: var(--text-color);
+}
+
+.item-title-level-1 {
+  font-size: calc(var(--section-title-font-size) + 1px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.item-title-level-2 {
+  font-size: calc(var(--widget-title-font-size) + 2px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.item-title-level-3 {
+  font-size: var(--widget-title-font-size);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
 }
 
 .editable-title {

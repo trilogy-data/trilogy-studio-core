@@ -1,13 +1,63 @@
 <template>
   <div class="markdown-content">
-    <div class="rendered-markdown" v-html="renderedMarkdown"></div>
+    <div ref="markdownRoot" class="rendered-markdown" v-html="renderedMarkdown"></div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, type PropType } from 'vue'
+import { defineComponent, computed, nextTick, onMounted, ref, watch, type PropType } from 'vue'
 import type { Results } from '../editors/results'
 import { renderMarkdown } from '../utility/markdownRenderer'
+import Prism from 'prismjs'
+
+const ensureMarkdownLanguagesReady = async () => {
+  const languageLoaders: Array<Promise<any>> = []
+
+  if (!Prism.languages.sql) {
+    languageLoaders.push(import('prismjs/components/prism-sql'))
+  }
+  if (!Prism.languages.javascript) {
+    languageLoaders.push(import('prismjs/components/prism-javascript'))
+  }
+  if (!Prism.languages.typescript) {
+    languageLoaders.push(import('prismjs/components/prism-typescript'))
+  }
+  if (!Prism.languages.python) {
+    languageLoaders.push(import('prismjs/components/prism-python'))
+  }
+
+  if (languageLoaders.length > 0) {
+    await Promise.all(languageLoaders)
+  }
+
+  if (!Prism.languages.trilogy && Prism.languages.sql) {
+    Prism.languages.trilogy = {
+      ...Prism.languages.sql,
+      keyword: [
+        ...(Array.isArray(Prism.languages.sql.keyword)
+          ? Prism.languages.sql.keyword
+          : Prism.languages.sql.keyword
+            ? [Prism.languages.sql.keyword]
+            : []),
+        /\b(?:DATASOURCE)\b/i,
+        /\b(?:GRAIN)\b/i,
+        /\b(?:ADDRESS)\b/i,
+        /\b(?:DEF)\b/i,
+        /\b(?:IMPORT)\b/i,
+        /\b(?:MERGE)\b/i,
+        /\b(?:HAVING_CLAUSE)\b/i,
+        /\b(?:WHERE_CLAUSE)\b/i,
+        /\b(?:SELECT_LIST)\b/i,
+        /\b(?:ORDER_BY)\b/i,
+        /\b(?:SELECT_STATEMENT)\b/i,
+        /\b(?:SELECT_ITEM)\b/i,
+        /\b(?:ALIGN_CLAUSE)\b/i,
+        /\b(?:ALIGN_ITEM)\b/i,
+        /\b(?:IDENTIFIER)\b/i,
+      ],
+    }
+  }
+}
 
 export default defineComponent({
   name: 'MarkdownRenderer',
@@ -27,11 +77,67 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const markdownRoot = ref<HTMLElement | null>(null)
     const renderedMarkdown = computed(() => {
       return renderMarkdown(props.markdown, props.results, props.loading)
     })
 
+    const wireMarkdownCodeBlocks = async () => {
+      await nextTick()
+      await ensureMarkdownLanguagesReady()
+
+      if (!markdownRoot.value) {
+        return
+      }
+
+      markdownRoot.value.querySelectorAll('pre code[class*="language-"]').forEach((block) => {
+        Prism.highlightElement(block as HTMLElement)
+      })
+
+      markdownRoot.value
+        .querySelectorAll<HTMLButtonElement>('.markdown-copy-button')
+        .forEach((button) => {
+          if (button.dataset.bound === 'true') {
+            return
+          }
+
+          button.dataset.bound = 'true'
+          button.addEventListener('click', async () => {
+            const container = button.closest<HTMLElement>('.md-code-container')
+            const content = container?.dataset.content ?? ''
+            if (!content) {
+              return
+            }
+
+            try {
+              await navigator.clipboard.writeText(content)
+              const copyIcon = button.querySelector<HTMLElement>('.copy-icon')
+              const checkIcon = button.querySelector<HTMLElement>('.check-icon')
+              if (copyIcon && checkIcon) {
+                copyIcon.style.display = 'none'
+                checkIcon.style.display = 'block'
+                window.setTimeout(() => {
+                  copyIcon.style.display = 'block'
+                  checkIcon.style.display = 'none'
+                }, 1500)
+              }
+            } catch (error) {
+              console.error('Failed to copy markdown code block:', error)
+            }
+          })
+        })
+    }
+
+    onMounted(() => {
+      void wireMarkdownCodeBlocks()
+    })
+
+    watch(renderedMarkdown, () => {
+      void wireMarkdownCodeBlocks()
+    })
+
     return {
+      markdownRoot,
       renderedMarkdown,
     }
   },
@@ -173,7 +279,6 @@ export default defineComponent({
   font-size: 14px;
   line-height: 1.5;
   text-shadow: none !important;
-  color: var(--text-color, #24292f) !important;
 }
 
 .language-sql,
@@ -183,7 +288,6 @@ export default defineComponent({
 .language-python,
 .language-text {
   text-shadow: none !important;
-  color: var(--text-color, #24292f) !important;
 }
 .code-container {
   position: relative;
@@ -193,12 +297,10 @@ export default defineComponent({
 
 .language-sql {
   text-shadow: none !important;
-  color: var(--text-color) !important;
 }
 
 .language-trilogy {
   text-shadow: none !important;
-  color: var(--text-color) !important;
 }
 
 .code-block {
