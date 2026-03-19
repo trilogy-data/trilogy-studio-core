@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  deleteEditor,
   prepareTestPage,
   refreshConnection,
   runEditorQueryAndExpectCount,
@@ -443,8 +444,7 @@ order by
   await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
-  await page.getByTestId('delete-editor-sales-report').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/reports/sales-report')
 
   // if (isMobile) {
   //   await page.getByTestId('editor-list-id-e-local-duckdb-test-analysis/reports/sales-report').click()
@@ -452,12 +452,10 @@ order by
 
   // Delete the customer-data editor
 
-  await page.getByTestId('delete-editor-customer-data').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/data/customer-data')
 
   // Delete the regular editor
-  await page.getByTestId('delete-editor-test-one').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-test-one')
 
   await page.getByTestId('trilogy-icon').click()
   await page.waitForTimeout(1200) // 1000ms animation + 200ms buffer
@@ -472,11 +470,13 @@ order by
   const testOneCount = await page.getByTestId('editor-e-local-duckdb-test-test-one').count()
   expect(testOneCount).toBe(0)
 
-  const salesReportCount = await page.getByTestId('editor-e-local-duckdb-test-sales-report').count()
+  const salesReportCount = await page
+    .getByTestId('editor-e-local-duckdb-test-analysis/reports/sales-report')
+    .count()
   expect(salesReportCount).toBe(0)
 
   const customerDataCount = await page
-    .getByTestId('editor-e-local-duckdb-test-customer-data')
+    .getByTestId('editor-e-local-duckdb-test-analysis/data/customer-data')
     .count()
   expect(customerDataCount).toBe(0)
 

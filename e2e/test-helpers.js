@@ -4,6 +4,10 @@ export async function prepareTestPage(page) {
   const resolverUrl = process.env.VITE_RESOLVER_URL || 'https://trilogy-service.fly.dev'
 
   await page.addInitScript((url) => {
+    if (window.localStorage.getItem('__playwright_prepared') === 'true') {
+      return
+    }
+
     window.localStorage.clear()
     window.sessionStorage.clear()
     window.localStorage.setItem(
@@ -16,6 +20,7 @@ export async function prepareTestPage(page) {
         skipAllTips: true,
       }),
     )
+    window.localStorage.setItem('__playwright_prepared', 'true')
   }, resolverUrl)
 }
 
@@ -79,6 +84,22 @@ export async function createEditorFromConnection(page, connectionName, type = 't
 
   const actionLabel = type === 'sql' ? 'New SQL editor' : 'New Trilogy editor'
   await page.locator('.context-menu-item', { hasText: actionLabel }).click()
+}
+
+async function openSidebarOverflowMenu(page, labelLocator, tooltip) {
+  const row = labelLocator.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
+
+  await expect(row).toBeVisible()
+  await row.hover()
+  await row.locator(`[title="${tooltip}"]`).first().click()
+}
+
+export async function deleteEditor(page, editorTestId) {
+  const editorLabel = page.getByTestId(editorTestId)
+
+  await openSidebarOverflowMenu(page, editorLabel, 'Editor actions')
+  await page.locator('.context-menu-item', { hasText: 'Delete editor' }).click()
+  await page.getByTestId('confirm-editor-deletion').click()
 }
 
 export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 30000) {
