@@ -39,6 +39,19 @@ export async function waitForConnectionReady(page, connectionName, timeout = 150
   )
 }
 
+async function getVisibleConnectionRow(page, connectionName) {
+  const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`).filter({
+    visible: true,
+  })
+  const rowByTextLabel = page.getByText(connectionName, { exact: true }).filter({
+    visible: true,
+  })
+  const connectionLabel =
+    (await rowByTestIdLabel.count()) > 0 ? rowByTestIdLabel.first() : rowByTextLabel.first()
+
+  return connectionLabel.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
+}
+
 export async function refreshConnection(page, connectionName) {
   const directRefresh = page.getByTestId(`refresh-connection-${connectionName}`).filter({
     visible: true,
@@ -49,18 +62,35 @@ export async function refreshConnection(page, connectionName) {
     return
   }
 
-  const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`)
-  const rowByTextLabel = page.getByText(connectionName, { exact: true })
-  const connectionLabel =
-    (await rowByTestIdLabel.count()) > 0 ? rowByTestIdLabel.first() : rowByTextLabel.first()
-  const connectionRow = connectionLabel.locator(
-    'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
-  )
+  const connectionRow = await getVisibleConnectionRow(page, connectionName)
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
   await connectionRow.locator('[title="Connection actions"]').first().click()
   await page.locator('.context-menu-item', { hasText: 'Refresh connection' }).click()
+}
+
+export async function createEditorFromConnectionList(page, connectionName, type = 'trilogy') {
+  const connectionRow = await getVisibleConnectionRow(page, connectionName)
+
+  await expect(connectionRow).toBeVisible()
+  await connectionRow.hover()
+  await connectionRow.locator('[title="Connection actions"]').first().click()
+
+  const actionLabel = type === 'sql' ? 'New SQL editor' : 'New Trilogy editor'
+  await page.locator('.context-menu-item', { hasText: actionLabel }).click()
+}
+
+export async function refreshLLMConnection(page, connectionName) {
+  const connectionLabel = page.getByTestId(`llm-connection-${connectionName}`).filter({
+    visible: true,
+  })
+  const connectionRow = connectionLabel.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
+
+  await expect(connectionRow).toBeVisible()
+  await connectionRow.hover()
+  await connectionRow.locator('[title="Connection actions"]').first().click()
+  await page.locator('.context-menu-item', { hasText: 'Refresh Connection' }).click()
 }
 
 export async function createEditorFromConnection(page, connectionName, type = 'trilogy') {
@@ -73,7 +103,9 @@ export async function createEditorFromConnection(page, connectionName, type = 't
     return
   }
 
-  const editorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`)
+  const editorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
+    visible: true,
+  })
   const connectionRow = editorConnectionLabel.locator(
     'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
   )

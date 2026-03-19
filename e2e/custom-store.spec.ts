@@ -227,8 +227,10 @@ test.describe('Custom Model Store', () => {
     // Create a new editor for the model
     await createEditorFromConnection(page, connectionName, 'trilogy')
 
-    // Verify editor is created with the imported model content
-    await expect(page.getByTestId('editor')).toBeVisible()
+    // Verify a new editor was created under the imported model connection
+    await expect(
+      page.locator(`[data-testid^="editor-e-local-${connectionName}-new-editor-"]`).first(),
+    ).toBeVisible()
   })
 
   test('should show error for unreachable custom store', async ({ page, isMobile }) => {

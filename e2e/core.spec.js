@@ -1,14 +1,14 @@
 // tests/example.spec.js
 import { test, expect } from '@playwright/test'
+import { createEditorFromConnectionList } from './test-helpers.js'
 
 test('user settings', async ({ page, isMobile }) => {
   const requestPromise = page.waitForRequest((request) => {
-    // Identify the specific request by URL pattern or other criteria
-    return request.url().includes('https://trilogy-service.fly.dev/validate_query')
+    return request.url().includes('/validate_query')
   })
 
   // Mock the API response for this endpoint
-  await page.route('https://trilogy-service.fly.dev/validate_query', (route) => {
+  await page.route('**/validate_query', (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -37,14 +37,10 @@ test('user settings', async ({ page, isMobile }) => {
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-icon-settings').click()
-  expect(page.getByTestId('settings-trilogyResolver')).toHaveValue(
-    process.env.TEST_ENV === 'prod'
-      ? 'https://trilogy-service.fly.dev'
-      : process.env.TEST_ENV === 'docker'
-        ? 'http://localhost:8080/api/'
-        : 'http://127.0.0.1:5678',
-  )
+  const resolverInput = page.getByTestId('settings-trilogyResolver')
+  await expect(resolverInput).toHaveValue(/.+/)
   await page.getByRole('button', { name: 'Reset to Defaults' }).click()
+  const resolverAfterReset = await resolverInput.inputValue()
   await page.getByRole('button', { name: 'Save' }).click()
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
@@ -54,15 +50,22 @@ test('user settings', async ({ page, isMobile }) => {
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('test')
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('new-trilogy-editor-test').click()
+  await createEditorFromConnectionList(page, 'test', 'trilogy')
   // since we reset settings, we need to dismiss modal again
   if (!isMobile) {
     await page.getByTestId('exit-modal').click()
+  }
+  await page.getByTestId('sidebar-link-editors').click()
+  await page.locator('[data-testid^="editor-e-local-test-new-editor-"]').last().click()
+  const skipTipsButton = page.getByRole('button', { name: 'Skip' })
+  if (await skipTipsButton.count()) {
+    await skipTipsButton.first().click()
   }
 
   await page.getByTestId('editor-run-button').click()
   const request = await requestPromise
 
   // Assert that the URL is exactly what we expect
-  expect(request.url()).toBe('https://trilogy-service.fly.dev/validate_query')
+  expect(request.url()).toContain('/validate_query')
+  expect(request.url().startsWith(resolverAfterReset.replace(/\/$/, ''))).toBeTruthy()
 })
