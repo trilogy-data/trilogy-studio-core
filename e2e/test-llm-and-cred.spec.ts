@@ -5,6 +5,7 @@ import {
   createCompletionHandler,
   createToolCallResponse,
 } from './mock-openai'
+import { createEditorFromConnection } from './test-helpers.js'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -273,7 +274,7 @@ limit 10;`,
 
     // Create new editor
     await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+    await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Enter initial content in editor
     await page
@@ -393,7 +394,7 @@ select
 
     // Create new editor
     await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+    await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Clear editor and enter minimal content
     await page.getByTestId('editor').click({ clickCount: 3 })

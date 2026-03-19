@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { openDashboardItemEditor, refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 // use this if debug menus is on
 // const vegaSelector = '.vega-container .chart-wrapper canvas'
@@ -130,7 +131,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
 
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content-0').click()
+  await openDashboardItemEditor(page, 0)
 
   // set content
   await page.getByTestId('simple-editor-content').click()
@@ -333,7 +334,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-type-table').check()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content-1').click()
+  await openDashboardItemEditor(page, 1)
 
   // set content
   await page.getByTestId('simple-editor-content').click()
@@ -482,15 +483,8 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('refresh-connection-duckdb-test2').click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-duckdb-test2"]')
-    if (!element) return false
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
+  await refreshConnection(page, connectionName)
+  await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
   await page.getByTestId('sidebar-link-editors').click()
@@ -555,7 +549,7 @@ select rows;
   // Add a custom item to the dashboard
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content-0').click()
+  await openDashboardItemEditor(page, 0)
 
   // Set content using the custom editor query
   await page.getByTestId('simple-editor-content').click()
@@ -573,7 +567,7 @@ select rows;
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-type-table').check()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content-1').click()
+  await openDashboardItemEditor(page, 1)
 
   // Set content for table
   await page.getByTestId('simple-editor-content').click()
@@ -602,15 +596,8 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('refresh-connection-duckdb-test2').click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-duckdb-test2"]')
-    if (!element) return false
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
+  await refreshConnection(page, connectionName)
+  await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
   await page.getByTestId('sidebar-link-editors').click()
@@ -677,7 +664,7 @@ select rows;
   // Add a custom item to the dashboard
   await page.getByTestId('add-item-button').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
-  await page.getByTestId('edit-dashboard-item-content-0').click()
+  await openDashboardItemEditor(page, 0)
 
   // Set content using the custom editor query
   await page.getByTestId('simple-editor-content').click({ clickCount: 3 })

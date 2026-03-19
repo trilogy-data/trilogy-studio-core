@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 // Get the directory name in ESM context
 const __filename = fileURLToPath(import.meta.url)
@@ -54,17 +55,8 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await page.getByTestId('connection-creator-name').click()
     await page.getByTestId('connection-creator-name').fill('upload-test')
     await page.getByTestId('connection-creator-submit').click()
-    await page.getByTestId('refresh-connection-upload-test').click()
-
-    // Wait for connection to be ready (green status)
-    await page.waitForFunction(() => {
-      const element = document.querySelector('[data-testid="status-icon-upload-test"]')
-      if (!element) return false
-      const style = window.getComputedStyle(element)
-      const backgroundColor = style.backgroundColor
-      // Check if the background color is green (in RGB format)
-      return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-    })
+    await refreshConnection(page, 'upload-test')
+    await waitForConnectionReady(page, 'upload-test')
 
     // Click on the connection to expand it
     await page.getByTestId('expand-connection-upload-test').click()

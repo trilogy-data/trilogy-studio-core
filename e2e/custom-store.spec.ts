@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  createEditorFromConnection,
+  refreshConnection,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 // Get the directory name in ESM context
 const __filename = fileURLToPath(import.meta.url)
@@ -199,23 +204,8 @@ test.describe('Custom Model Store', () => {
     await expect(page.getByTestId(`expand-connection-${connectionName}`)).toBeVisible()
 
     // Test the connection
-    await page.getByTestId(`refresh-connection-${connectionName}`).click()
-
-    // Wait for connection to be ready (green status)
-    await page.waitForFunction(
-      (connName) => {
-        const element = document.querySelector(`[data-testid="status-icon-${connName}"]`)
-        if (!element) return false
-
-        const style = window.getComputedStyle(element)
-        const backgroundColor = style.backgroundColor
-
-        // Check if the background color is green (in RGB format)
-        return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-      },
-      connectionName,
-      { timeout: 10000 },
-    )
+    await refreshConnection(page, connectionName)
+    await waitForConnectionReady(page, connectionName, 10000)
 
     // Navigate to editors
     await page.getByTestId('sidebar-link-editors').click()
@@ -230,10 +220,7 @@ test.describe('Custom Model Store', () => {
     }
 
     // Create a new editor for the model
-    await page
-      .getByTestId(`quick-new-editor-${connectionName}-trilogy`)
-      .filter({ visible: true })
-      .click()
+    await createEditorFromConnection(page, connectionName, 'trilogy')
 
     // Verify editor is created with the imported model content
     await expect(page.getByTestId('editor')).toBeVisible()

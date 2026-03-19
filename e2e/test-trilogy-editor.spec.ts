@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 const connectionName = 'duckdb-test2'
 
@@ -12,16 +13,8 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('refresh-connection-duckdb-test2').click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-duckdb-test2"]')
-    if (!element) return false
-
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
+  await refreshConnection(page, connectionName)
+  await waitForConnectionReady(page, connectionName)
 
   await page.getByTestId('sidebar-link-editors').click()
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')
@@ -10,21 +11,8 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByRole('button', { name: '󱘖' }).click()
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this testid, so filter to the visible one
-  await page
-    .getByTestId('refresh-connection-demo-model-connection')
-    .filter({ visible: true })
-    .click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
-    if (!element) return false
-
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    console.log(backgroundColor)
-
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
+  await refreshConnection(page, 'demo-model-connection')
+  await waitForConnectionReady(page, 'demo-model-connection')
 
   //
   await page.getByTestId('editor-creator-add-tutorial').click()
