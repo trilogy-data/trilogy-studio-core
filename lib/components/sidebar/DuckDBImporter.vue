@@ -3,6 +3,7 @@
     type="button"
     class="file-upload-container"
     :class="{ 'drag-active': isDragging, loading: isLoading }"
+    :data-testid="`duckdb-importer-${connection.name}`"
     @click="openFilePicker"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
@@ -15,7 +16,11 @@
       ref="fileInput"
       class="hidden-input"
     />
-    <div v-if="successMessage && !isLoading" class="upload-row upload-success">
+    <div
+      v-if="successMessage && !isLoading"
+      class="upload-row upload-success"
+      :data-testid="`duckdb-import-success-${connection.name}`"
+    >
       <i class="mdi mdi-check-circle-outline upload-icon"></i>
       <span class="upload-copy truncate-text">{{ successMessage }}</span>
     </div>
@@ -26,7 +31,11 @@
         <span class="upload-subtitle">CSV, Parquet, DuckDB</span>
       </span>
     </div>
-    <div v-else class="upload-row loading-container">
+    <div
+      v-else
+      class="upload-row loading-container"
+      :data-testid="`duckdb-import-loading-${connection.name}`"
+    >
       <span class="spinner"></span>
       <span class="upload-copy truncate-text">{{ loadingMessage }}</span>
     </div>

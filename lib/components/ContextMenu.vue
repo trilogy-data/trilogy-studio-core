@@ -1,11 +1,21 @@
 <template>
-  <div v-if="isVisible" :style="positionStyle" class="context-menu">
+  <div
+    v-if="isVisible"
+    :style="positionStyle"
+    class="context-menu"
+    :data-testid="id ? `context-menu-${id}` : undefined"
+  >
     <div v-for="item in items" :key="item.id">
-      <div v-if="item.kind === 'separator'" class="context-menu-separator"></div>
+      <div
+        v-if="item.kind === 'separator'"
+        class="context-menu-separator"
+        :data-testid="id ? `${id}-${item.id}` : `context-menu-item-${item.id}`"
+      ></div>
       <div
         v-else
         class="context-menu-item"
         :class="{ danger: item.danger, disabled: item.disabled }"
+        :data-testid="id ? `${id}-${item.id}` : `context-menu-item-${item.id}`"
         @click="handleItemClick(item)"
       >
         <i v-if="item.icon" :class="`mdi ${item.icon}`"></i>

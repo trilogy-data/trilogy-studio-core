@@ -95,10 +95,14 @@ test.describe('CSV Upload and Datasource Creation', () => {
     )
 
     // Wait for the processing to complete - loading indicator should disappear
-    await page.waitForSelector('.loading-container', { state: 'detached' })
+    await page.waitForSelector('[data-testid="duckdb-import-loading-upload-test"]', {
+      state: 'detached',
+    })
 
     // Check for the updated inline success state
-    await expect(page.locator('.upload-success')).toContainText('sample_users')
+    await expect(page.getByTestId('duckdb-import-success-upload-test')).toContainText(
+      'sample_users',
+    )
 
     // expand the connection
     await page.getByTestId('expand-connection-upload-test+memory').click()

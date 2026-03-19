@@ -2,10 +2,15 @@
   <div>
     <!-- Generic modal dialog -->
     <teleport to="body" v-if="showModal && currentItem">
-      <div class="confirmation-overlay">
-        <div class="confirmation-dialog" ref="editorElement" :style="dialogStyle">
+      <div class="confirmation-overlay" data-testid="tutorial-popup-overlay">
+        <div
+          class="confirmation-dialog"
+          ref="editorElement"
+          :style="dialogStyle"
+          data-testid="tutorial-popup-dialog"
+        >
           <div class="modal-header">
-            <h2>{{ currentItem.title }}</h2>
+            <h2 data-testid="tutorial-popup-title">{{ currentItem.title }}</h2>
             <button
               @click="skipSequence"
               class="exit-button"
@@ -35,7 +40,9 @@
             >
               Got it!
             </button>
-            <button @click="skipSequence" class="cancel-btn">Skip</button>
+            <button @click="skipSequence" class="cancel-btn" data-testid="skip-sequence">
+              Skip
+            </button>
           </div>
 
           <!-- Resize handles -->

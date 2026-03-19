@@ -59,6 +59,7 @@
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Editor actions"
+            :test-id-base="`editor-actions-${item.key}`"
             @select="handleContextMenuItemClick"
           />
         </template>
@@ -71,6 +72,7 @@
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Connection actions"
+            :test-id-base="`editor-actions-${item.key}`"
             @select="handleContextMenuItemClick"
           />
         </template>
@@ -79,6 +81,7 @@
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Folder actions"
+            :test-id-base="`editor-actions-${item.key}`"
             @select="handleContextMenuItemClick"
           />
         </template>

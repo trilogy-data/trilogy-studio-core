@@ -66,8 +66,8 @@ export async function refreshConnection(page, connectionName) {
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.locator('[title="Connection actions"]').first().click()
-  await page.locator('.context-menu-item', { hasText: 'Refresh connection' }).click()
+  await connectionRow.getByTestId(`connection-actions-${connectionName}-trigger`).click()
+  await page.getByTestId(`connection-actions-${connectionName}-refresh`).click()
 }
 
 export async function createEditorFromConnectionList(page, connectionName, type = 'trilogy') {
@@ -75,22 +75,24 @@ export async function createEditorFromConnectionList(page, connectionName, type 
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.locator('[title="Connection actions"]').first().click()
+  await connectionRow.getByTestId(`connection-actions-${connectionName}-trigger`).click()
 
-  const actionLabel = type === 'sql' ? 'New SQL editor' : 'New Trilogy editor'
-  await page.locator('.context-menu-item', { hasText: actionLabel }).click()
+  const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
+  await page.getByTestId(`connection-actions-${connectionName}-${actionId}`).click()
 }
 
 export async function refreshLLMConnection(page, connectionName) {
   const connectionLabel = page.getByTestId(`llm-connection-${connectionName}`).filter({
     visible: true,
   })
-  const connectionRow = connectionLabel.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
+  const connectionRow = connectionLabel.locator(
+    'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
+  )
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.locator('[title="Connection actions"]').first().click()
-  await page.locator('.context-menu-item', { hasText: 'Refresh Connection' }).click()
+  await connectionRow.getByTestId(`llm-connection-actions-${connectionName}-trigger`).click()
+  await page.getByTestId(`llm-connection-actions-${connectionName}-refresh`).click()
 }
 
 export async function createEditorFromConnection(page, connectionName, type = 'trilogy') {
@@ -112,25 +114,26 @@ export async function createEditorFromConnection(page, connectionName, type = 't
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.locator('[title="Connection actions"]').first().click()
+  await connectionRow.getByTestId(`editor-actions-c-local-${connectionName}-trigger`).click()
 
-  const actionLabel = type === 'sql' ? 'New SQL editor' : 'New Trilogy editor'
-  await page.locator('.context-menu-item', { hasText: actionLabel }).click()
+  const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
+  await page.getByTestId(`editor-actions-c-local-${connectionName}-${actionId}`).click()
 }
 
-async function openSidebarOverflowMenu(page, labelLocator, tooltip) {
+async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {
   const row = labelLocator.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
 
   await expect(row).toBeVisible()
   await row.hover()
-  await row.locator(`[title="${tooltip}"]`).first().click()
+  await row.getByTestId(triggerTestId).click()
 }
 
 export async function deleteEditor(page, editorTestId) {
   const editorLabel = page.getByTestId(editorTestId)
+  const editorKey = editorTestId.replace(/^editor-/, '')
 
-  await openSidebarOverflowMenu(page, editorLabel, 'Editor actions')
-  await page.locator('.context-menu-item', { hasText: 'Delete editor' }).click()
+  await openSidebarOverflowMenu(page, editorLabel, `editor-actions-${editorKey}-trigger`)
+  await page.getByTestId(`editor-actions-${editorKey}-delete-editor`).click()
   await page.getByTestId('confirm-editor-deletion').click()
 }
 

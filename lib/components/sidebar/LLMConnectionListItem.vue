@@ -149,6 +149,7 @@
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Connection actions"
+            :test-id-base="`llm-connection-actions-${item.id}`"
             @select="handleContextMenuItemClick"
           />
         </div>

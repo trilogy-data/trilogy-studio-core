@@ -4,6 +4,7 @@
       :items="items"
       :position="contextMenuPosition"
       :is-visible="contextMenuVisible"
+      :id="testIdBase"
       @item-click="handleItemClick"
       @close="contextMenuVisible = false"
     />
@@ -14,6 +15,7 @@
         :class="buttonClass"
         @click.stop="openOverflowMenu"
         :title="tooltip"
+        :data-testid="testIdBase ? `${testIdBase}-trigger` : undefined"
       >
         <i class="mdi mdi-dots-horizontal"></i>
       </button>
@@ -38,6 +40,7 @@ export interface SidebarOverflowMenuProps {
   tooltip?: string
   menuWidth?: number
   buttonClass?: string
+  testIdBase?: string
 }
 
 const emit = defineEmits<{
