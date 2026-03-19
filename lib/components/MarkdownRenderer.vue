@@ -355,6 +355,7 @@ export default defineComponent({
     monospace;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--prism-text, var(--text-color));
   background: transparent !important;
   text-shadow: none !important;
 }

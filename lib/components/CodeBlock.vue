@@ -162,6 +162,7 @@ code {
     monospace;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--prism-text, var(--text-color));
 }
 
 .copy-button {

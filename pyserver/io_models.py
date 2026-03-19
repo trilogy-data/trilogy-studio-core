@@ -5,8 +5,11 @@ from trilogy.authoring import (
     Purpose,
     ArrayType,
     StructType,
+    EnumType,
+    NumericType,
+    TraitDataType,
+    MapType,
 )  # , NumericType, TraitDataType
-from trilogy.core.models.core import NumericType, TraitDataType, MapType
 from pydantic import BaseModel, Field
 
 
@@ -30,7 +33,15 @@ class UIConcept(BaseModel):
     address: str
     name: str
     namespace: str
-    datatype: DataType | ArrayType | MapType | StructType | NumericType | TraitDataType
+    datatype: (
+        DataType
+        | ArrayType
+        | MapType
+        | StructType
+        | NumericType
+        | TraitDataType
+        | EnumType
+    )
     purpose: Purpose
     description: Optional[str] = None
     lineage: List[LineageItem] = Field(default_factory=list)
@@ -126,7 +137,7 @@ class ValidateQueryInSchema(BaseModel):
 
 class QueryOutColumn(BaseModel):
     name: str
-    datatype: DataType | TraitDataType | ArrayType | StructType | MapType | NumericType
+    datatype: DataType | TraitDataType | ArrayType | StructType | MapType | NumericType | EnumType
     purpose: Purpose
     traits: List[str] | None = None
     description: str | None = None

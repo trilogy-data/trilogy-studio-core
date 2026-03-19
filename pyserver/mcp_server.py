@@ -11,6 +11,7 @@ from trilogy.core.models.core import (
     NumericType,
     DataTyped,
     StructComponent,
+    EnumType,
 )
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
@@ -101,6 +102,7 @@ def datatype_to_str_datatype(
         | NumericType
         | DataTyped
         | StructComponent
+        | EnumType
     ),
 ) -> str:
     """Convert a TraitDataType to a string representation"""
