@@ -58,8 +58,10 @@ async function loadPrismLanguage(language: string) {
     case 'javascript':
       if (!Prism.languages.javascript) {
         if (!Prism.languages.clike) {
-          await import('prismjs/components/prism-clike')
+          // @ts-ignore
+        await import('prismjs/components/prism-clike')
         }
+        // @ts-ignore
         await import('prismjs/components/prism-javascript')
       }
       break
@@ -68,16 +70,19 @@ async function loadPrismLanguage(language: string) {
         if (!Prism.languages.javascript) {
           await loadPrismLanguage('javascript')
         }
+        // @ts-ignore
         await import('prismjs/components/prism-typescript')
       }
       break
     case 'python':
       if (!Prism.languages.python) {
+        // @ts-ignore
         await import('prismjs/components/prism-python')
       }
       break
     case 'sql':
       if (!Prism.languages.sql) {
+        // @ts-ignore
         await import('prismjs/components/prism-sql')
       }
       break
@@ -86,6 +91,7 @@ async function loadPrismLanguage(language: string) {
         if (!Prism.languages.javascript) {
           await loadPrismLanguage('javascript')
         }
+        // @ts-ignore
         await import('prismjs/components/prism-json')
       }
       break
@@ -93,6 +99,7 @@ async function loadPrismLanguage(language: string) {
     case 'html':
     case 'xml':
       if (!Prism.languages.markup) {
+        // @ts-ignore
         await import('prismjs/components/prism-markup')
       }
       break
@@ -101,6 +108,7 @@ async function loadPrismLanguage(language: string) {
         if (!Prism.languages.markup) {
           await loadPrismLanguage('markup')
         }
+        // @ts-ignore
         await import('prismjs/components/prism-markdown')
       }
       break

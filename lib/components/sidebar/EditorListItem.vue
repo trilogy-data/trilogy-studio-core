@@ -88,7 +88,7 @@
 </template>
 
 <script lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, inject } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import SidebarItem from './GenericSidebarItem.vue'
@@ -173,6 +173,7 @@ export default {
           editorName,
           type === 'trilogy' ? 'preql' : 'sql',
           connection,
+          undefined,
         )
 
         await saveEditors()

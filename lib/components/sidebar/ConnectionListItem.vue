@@ -391,6 +391,7 @@ export default {
           editorName,
           type === 'trilogy' ? 'preql' : 'sql',
           props.item.connection.name,
+          undefined,
         )
 
         await saveEditors()

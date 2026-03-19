@@ -42,9 +42,6 @@ const availableModels = computed(() => (modelStore ? Object.keys(modelStore.mode
 const toggleModelForm = () => {
   isModelFormVisible.value = !isModelFormVisible.value
 }
-const closeModelForm = () => {
-  isModelFormVisible.value = false
-}
 const selectModel = async (modelName: string) => {
   if (!connectionStore) {
     return

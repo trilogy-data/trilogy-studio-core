@@ -62,7 +62,7 @@
 </template>
 
 <script lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, inject } from 'vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'

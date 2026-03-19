@@ -21,7 +21,7 @@
       :columns="results.headers"
       :data="results.data"
       :showControls="editMode"
-      :initialConfig="chartConfig || undefined"
+      :initialConfig="chartConfig"
       :containerHeight="chartHeight"
       :container-width="chartWidth"
       :onChartConfigChange="onChartConfigChange"
@@ -206,9 +206,10 @@ export default defineComponent({
       return itemData.value.width || 300
     })
 
-    const chartConfig = computed(() => {
+    const chartConfig = computed((): ChartConfig | undefined => {
+      if (!itemData.value.chartConfig) return undefined
       return {
-        ...(itemData.value.chartConfig || {}),
+        ...(itemData.value.chartConfig as ChartConfig),
         showTitle: false,
       }
     })
