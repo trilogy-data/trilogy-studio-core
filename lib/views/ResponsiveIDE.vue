@@ -87,6 +87,7 @@ let chats = useChatStore()
   </div>
 </template>
 
+<style scoped src="../components/layout/ideViewport.css"></style>
 <style scoped>
 .logo {
   height: 6em;
@@ -101,10 +102,5 @@ let chats = useChatStore()
 
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
-}
-
-.main {
-  width: 100vw;
-  height: 100vh;
 }
 </style>

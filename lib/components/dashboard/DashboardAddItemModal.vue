@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { CELL_TYPES, type CellType } from '../../dashboards/base'
 
 // Define props and emits
@@ -7,7 +7,7 @@ export interface DashboardAddItemModalProps {
   show: boolean
 }
 
-const props = defineProps<DashboardAddItemModalProps>()
+defineProps<DashboardAddItemModalProps>()
 
 const emit = defineEmits<{
   add: [type: CellType]
@@ -26,29 +26,11 @@ function addItem(): void {
 function closeModal(): void {
   emit('close')
 }
-
-function handleClickOutside(event: MouseEvent): void {
-  const importSelector = document.querySelector('.content-editor')
-  if (importSelector && !importSelector.contains(event.target as Node) && props.show) {
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  nextTick(() => {
-    document.addEventListener('click', handleClickOutside)
-  })
-})
-
-// Remove event listener on unmounted
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
   <Teleport to="body" v-if="show">
-    <div class="editor-overlay">
+    <div class="editor-overlay" @click.self="closeModal">
       <div class="add-item-modal">
         <h3>Add New Item</h3>
         <div class="item-type-selector">

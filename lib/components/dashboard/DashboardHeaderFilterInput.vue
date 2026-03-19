@@ -4,6 +4,7 @@ import { useLLMConnectionStore } from '../../stores'
 import Tooltip from '../Tooltip.vue'
 import FilterAutocomplete from './DashboardFilterAutocomplete.vue'
 import { type CompletionItem } from '../../stores/resolver'
+import { useClickOutside } from '../../composables/useClickOutside'
 
 const props = defineProps({
   filterValue: {
@@ -29,6 +30,7 @@ const llmStore = useLLMConnectionStore()
 const isLoading = ref(props.isLoading)
 const filterInputRef = ref<HTMLInputElement | null>(null)
 const filterTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const filterDropdownRef = ref<HTMLElement | null>(null)
 const filterInput = ref(props.filterValue || '')
 const hasUnappliedChanges = ref(false)
 const isDropdownOpen = ref(false)
@@ -81,16 +83,6 @@ function openDropdown() {
 
 function closeDropdown() {
   isDropdownOpen.value = false
-}
-
-function handleClickOutside(event: Event) {
-  const target = event.target as HTMLElement
-  const dropdown = document.querySelector('.filter-dropdown')
-  const input = filterInputRef.value
-
-  if (dropdown && !dropdown.contains(target) && target !== input) {
-    closeDropdown()
-  }
 }
 
 const filterLLM = () => {
@@ -180,13 +172,15 @@ watch(
   },
 )
 
-watch(isDropdownOpen, (isOpen) => {
-  if (isOpen) {
-    document.addEventListener('click', handleClickOutside)
-  } else {
-    document.removeEventListener('click', handleClickOutside)
-  }
-})
+useClickOutside(
+  () => [filterDropdownRef.value, filterInputRef.value],
+  () => {
+    closeDropdown()
+  },
+  {
+    enabled: () => isDropdownOpen.value,
+  },
+)
 </script>
 
 <template>
@@ -206,7 +200,7 @@ watch(isDropdownOpen, (isOpen) => {
         :disabled="isLoading"
       />
 
-      <div v-if="isDropdownOpen" class="filter-dropdown">
+      <div v-if="isDropdownOpen" ref="filterDropdownRef" class="filter-dropdown">
         <div class="dropdown-header">
           <span>Global Filters</span>
           <button @click="closeDropdown" class="close-button" title="Close (Esc)">

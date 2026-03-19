@@ -1,7 +1,8 @@
 <!-- ImportSelector.vue -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { type DashboardImport } from '../../dashboards/base'
+import { useClickOutside } from '../../composables/useClickOutside'
 
 export interface ImportSelectorProps {
   availableImports: DashboardImport[]
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 
 // Show/hide dropdown
 const showDropdown = ref<boolean>(false)
+const selectorRef = ref<HTMLElement | null>(null)
 
 // Toggle dropdown visibility
 function toggleDropdown(): void {
@@ -37,7 +39,7 @@ function isImportActive(importId: string): boolean {
 function toggleImport(importItem: DashboardImport): void {
   let newImports: DashboardImport[] = []
 
-  if (isImportActive(importItem.name)) {
+  if (isImportActive(importItem.id)) {
     // If already active, deselect it (empty array)
     newImports = []
   } else {
@@ -61,27 +63,13 @@ function exploreImport(importItem: DashboardImport): void {
 // Count of active imports
 const activeCount = computed((): number => props.activeImports.length)
 
-// Close dropdown when clicking outside
-function handleClickOutside(event: MouseEvent): void {
-  const importSelector = document.querySelector('.import-selector')
-  if (importSelector && !importSelector.contains(event.target as Node) && showDropdown.value) {
-    showDropdown.value = false
-  }
-}
-
-// Add event listener on mounted
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-// Remove event listener on unmounted
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+useClickOutside(selectorRef, closeDropdown, {
+  enabled: () => showDropdown.value,
 })
 </script>
 
 <template>
-  <div class="import-selector" data-testid="dashboard-import-wrapper">
+  <div ref="selectorRef" class="import-selector" data-testid="dashboard-import-wrapper">
     <div class="import-selector-header" @click="toggleDropdown">
       <div
         class="import-summary"

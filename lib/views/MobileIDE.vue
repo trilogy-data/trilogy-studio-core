@@ -102,6 +102,7 @@
   </div>
 </template>
 
+<style scoped src="../components/layout/ideViewport.css"></style>
 <style scoped>
 .ide-context-manager {
   height: 100vh;
@@ -113,64 +114,8 @@ header {
   flex-shrink: 0;
 }
 
-.main {
-  width: 100vw;
-  height: 100vh;
-}
-
 aside {
   flex-shrink: 0;
-}
-
-.results-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-}
-
-.tab-button {
-  /* padding: 0.5rem 1rem; */
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-button:hover {
-  color: var(--special-text);
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
-}
-
-.tab-button.active {
-  color: var(--special-text);
-  border-bottom: 2px solid var(--special-text);
-}
-
-.tab-content {
-  flex: 1;
-  overflow: auto;
-}
-
-.sql-view {
-  padding: 1rem;
-  height: 100%;
-}
-
-.sql-view pre {
-  margin: 0;
-  background: var(--bg-light);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
 }
 </style>
 

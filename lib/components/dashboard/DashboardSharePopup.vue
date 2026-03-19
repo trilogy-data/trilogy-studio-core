@@ -108,18 +108,10 @@ const copyToClipboard = (): void => {
       console.error('Could not copy text: ', err)
     })
 }
-
-// Handle click outside to close popup
-const popupContent = ref<HTMLElement | null>(null)
-const handleClickOutside = (event: MouseEvent): void => {
-  if (popupContent.value && !popupContent.value.contains(event.target as Node)) {
-    emit('close')
-  }
-}
 </script>
 <template>
-  <div v-if="isOpen" class="popup-overlay" @click="handleClickOutside">
-    <div class="popup-content" ref="popupContent" data-testid="dashboard-share-popup">
+  <div v-if="isOpen" class="popup-overlay" @click.self="emit('close')">
+    <div class="popup-content" data-testid="dashboard-share-popup">
       <div class="popup-header">
         <h3>Definition</h3>
         <button @click="emit('close')" class="close-button" data-testid="close-popup-button">
