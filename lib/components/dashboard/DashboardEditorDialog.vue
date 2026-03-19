@@ -2,22 +2,21 @@
 import ResizeHandles from '../../composables/ResizeHandles.vue'
 import { useResizableDialog } from '../../composables/useResizableDialog'
 
-const props = withDefaults(
-  defineProps<{
-    initialWidth?: number
-    initialHeight?: number
-    minWidth?: number
-    minHeight?: number
-    saveLabel?: string
-    saveTestId?: string
-  }>(),
-  {
-    minWidth: 400,
-    minHeight: 200,
-    saveLabel: 'Save',
-    saveTestId: '',
-  },
-)
+export interface DashboardEditorDialogProps {
+  initialWidth?: number
+  initialHeight?: number
+  minWidth?: number
+  minHeight?: number
+  saveLabel?: string
+  saveTestId?: string
+}
+
+const props = withDefaults(defineProps<DashboardEditorDialogProps>(), {
+  minWidth: 400,
+  minHeight: 200,
+  saveLabel: 'Save',
+  saveTestId: '',
+})
 
 const emit = defineEmits<{
   save: []

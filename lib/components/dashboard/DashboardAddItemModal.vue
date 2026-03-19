@@ -3,9 +3,11 @@ import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { CELL_TYPES, type CellType } from '../../dashboards/base'
 
 // Define props and emits
-const props = defineProps<{
+export interface DashboardAddItemModalProps {
   show: boolean
-}>()
+}
+
+const props = defineProps<DashboardAddItemModalProps>()
 
 const emit = defineEmits<{
   add: [type: CellType]

@@ -11,11 +11,13 @@ import { useDashboard } from './useDashboard'
 import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
-const props = defineProps<{
+export interface DashboardMobileProps {
   name: string
   connectionId?: string
   viewMode?: boolean
-}>()
+}
+
+const props = defineProps<DashboardMobileProps>()
 
 const mobileMinHeight = 400 // Minimum height for mobile items
 const dashboardStore = useDashboardStore()

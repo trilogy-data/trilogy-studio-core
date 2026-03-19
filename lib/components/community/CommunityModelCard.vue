@@ -133,7 +133,7 @@ import { getDefaultConnection as getDefaultConnectionService } from '../../remot
 import type { ModelFile } from '../../remotes/models'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 
-interface Props {
+export interface CommunityModelCardProps {
   file: ModelFile
   // Optional overrides for initial state
   initialCreatorExpanded?: boolean
@@ -141,7 +141,7 @@ interface Props {
   initialDescriptionExpanded?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<CommunityModelCardProps>(), {
   initialCreatorExpanded: false,
   initialComponentsExpanded: false,
   initialDescriptionExpanded: false,

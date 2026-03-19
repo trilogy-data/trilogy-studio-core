@@ -5,16 +5,8 @@
       title="Tips"
       :showModal="showTipModal"
       :activeItems="displayedTips"
-      @mark-item-read="
-        (id) => {
-          markTipRead(id)
-        }
-      "
-      @close-modal="
-        () => {
-          showTipModal = false
-        }
-      "
+      @mark-item-read="handleTipRead"
+      @close-modal="closeTipModal"
     />
     <ChatCreatorModal
       :visible="showChatCreatorModal"
@@ -288,6 +280,7 @@ import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { DrillDownEvent } from '../events/display.ts'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
+import { defineComponent, type Component } from 'vue'
 // Lazy load all page components
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -317,7 +310,7 @@ export interface IDEProps {
   showingCredentialPrompt?: boolean
 }
 
-export default {
+const IDEComponent: Component = defineComponent({
   name: 'IDEComponent',
   data() {
     return {
@@ -439,6 +432,12 @@ export default {
     provide('navigationStore', screenNavigation)
 
     const markTipRead = userSettingsStore.markTipRead
+    const handleTipRead = (id: string) => {
+      markTipRead(id)
+    }
+    const closeTipModal = () => {
+      showTipModal.value = false
+    }
 
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
@@ -516,6 +515,8 @@ export default {
       displayedTips,
       fullScreen,
       markTipRead,
+      handleTipRead,
+      closeTipModal,
       showTipModal,
       toggleFullScreen,
       llmInitialTab,
@@ -596,5 +597,7 @@ export default {
       return this.editorStore.editors
     },
   },
-}
+})
+
+export default IDEComponent
 </script>

@@ -13,7 +13,7 @@ import {
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { CompletionItem } from '../../stores/resolver'
 
-const props = defineProps<{
+export interface DashboardGridItemProps {
   dashboardId: string
   item: LayoutItem
   editMode: boolean
@@ -21,7 +21,9 @@ const props = defineProps<{
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
   getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   setItemData: (itemId: string, dashboardId: string, data: any) => void
-}>()
+}
+
+const props = defineProps<DashboardGridItemProps>()
 
 const emit = defineEmits<{
   'edit-content': [item: LayoutItem]

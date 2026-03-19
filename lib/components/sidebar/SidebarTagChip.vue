@@ -3,9 +3,11 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+export interface SidebarTagChipProps {
   label: string
-}>()
+}
+
+defineProps<SidebarTagChipProps>()
 </script>
 
 <style scoped>

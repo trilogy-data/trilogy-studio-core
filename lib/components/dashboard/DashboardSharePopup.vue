@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { type Dashboard } from '../../dashboards/base'
-const props = defineProps<{
+export interface DashboardSharePopupProps {
   dashboard: Dashboard | null
   isOpen: boolean
-}>()
+}
+
+const props = defineProps<DashboardSharePopupProps>()
 const emit = defineEmits<{
   close: []
 }>()

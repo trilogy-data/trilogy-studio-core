@@ -4,7 +4,13 @@ import Tooltip from './Tooltip.vue'
 
 export type Status = 'connected' | 'running' | 'failed' | 'idle' | 'disabled' | 'waiting'
 
-const props = defineProps<{ status: Status; message?: string; testName?: string }>()
+export interface StatusIconProps {
+  status: Status
+  message?: string
+  testName?: string
+}
+
+const props = defineProps<StatusIconProps>()
 
 const statusClasses = computed(() => {
   return (

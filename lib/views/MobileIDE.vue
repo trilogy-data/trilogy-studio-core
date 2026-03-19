@@ -14,8 +14,8 @@
       :activeScreen="activeScreen"
       :tabs="tabs"
       :activeTab="activeTab"
-      @tab-closed="(tab) => closeTab(tab, null)"
-      @close-other-tabs="(tab) => closeOtherTabsExcept(tab)"
+      @tab-closed="handleTabClosed"
+      @close-other-tabs="handleCloseOtherTabs"
     >
       <template #sidebar>
         <sidebar
@@ -197,6 +197,7 @@ import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
+import { defineComponent, type Component } from 'vue'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -214,7 +215,7 @@ const ChatCreatorModal = defineAsyncComponent(
 
 export interface MobileIDEProps {}
 
-export default {
+const MobileIDEComponent: Component = defineComponent({
   name: 'MobileIDEComponent',
   data() {},
   components: {
@@ -301,6 +302,12 @@ export default {
     } = screenNavigation
     const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
+    }
+    const handleTabClosed = (tab: Tab) => {
+      closeTab(tab.id, null)
+    }
+    const handleCloseOtherTabs = (tab: Tab) => {
+      closeOtherTabsExcept(tab.id)
     }
     onInitialLoad()
     addBackListeners()
@@ -399,6 +406,8 @@ export default {
       closeTab,
       closeOtherTabsExcept,
       tabSelected,
+      handleTabClosed,
+      handleCloseOtherTabs,
       llmInitialTab,
       handleLLMOpenView,
       showChatCreatorModal,
@@ -445,5 +454,7 @@ export default {
       return this.editorStore.editors
     },
   },
-}
+})
+
+export default MobileIDEComponent
 </script>

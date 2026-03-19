@@ -40,10 +40,12 @@ import { KeySeparator } from '../../data/constants'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import type { ModelFile } from '../../remotes/models'
 
-const props = defineProps<{
+export interface CommunityModelsProps {
   activeCommunityModelKey: string
   initialSearch?: string
-}>()
+}
+
+const props = defineProps<CommunityModelsProps>()
 
 const emit = defineEmits<{
   (

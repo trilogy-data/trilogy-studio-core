@@ -73,14 +73,14 @@ import { useCommunityApiStore } from '../../stores'
 import type { Status } from '../StatusIcon.vue'
 import SidebarTagChip from './SidebarTagChip.vue'
 
-interface Props {
+export interface CommunityModelListItemProps {
   item: any
   activeModel?: string
   isCollapsed?: boolean
   isMobile?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<CommunityModelListItemProps>(), {
   activeModel: '',
   isCollapsed: false,
   isMobile: false,

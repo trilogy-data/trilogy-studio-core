@@ -27,19 +27,18 @@ import Tooltip from '../Tooltip.vue'
 import ContextMenu from '../ContextMenu.vue'
 import type { ContextMenuItem, Position } from '../ContextMenu.vue'
 
-const props = withDefaults(
-  defineProps<{
-    items: ContextMenuItem[]
-    tooltip?: string
-    menuWidth?: number
-    buttonClass?: string
-  }>(),
-  {
-    tooltip: 'Actions',
-    menuWidth: 160,
-    buttonClass: '',
-  },
-)
+const props = withDefaults(defineProps<SidebarOverflowMenuProps>(), {
+  tooltip: 'Actions',
+  menuWidth: 160,
+  buttonClass: '',
+})
+
+export interface SidebarOverflowMenuProps {
+  items: ContextMenuItem[]
+  tooltip?: string
+  menuWidth?: number
+  buttonClass?: string
+}
 
 const emit = defineEmits<{
   select: [item: ContextMenuItem]

@@ -5,9 +5,12 @@ import { type ConnectionStoreType } from '../../stores/connectionStore'
 import { DashboardModel } from '../../dashboards'
 
 // @ts-ignore
-const props = defineProps<{
+export interface DashboardImportPopupProps {
   isOpen: boolean
-}>()
+}
+
+// @ts-ignore
+const props = defineProps<DashboardImportPopupProps>()
 
 // @ts-ignore
 const _ = props

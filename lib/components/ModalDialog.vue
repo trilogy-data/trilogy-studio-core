@@ -1,19 +1,18 @@
 <script setup lang="ts">
-const props = withDefaults(
-  defineProps<{
-    show: boolean
-    title?: string
-    maxWidth?: string
-    testId?: string
-    closeOnOverlay?: boolean
-  }>(),
-  {
-    title: '',
-    maxWidth: '400px',
-    testId: '',
-    closeOnOverlay: true,
-  },
-)
+export interface ModalDialogProps {
+  show: boolean
+  title?: string
+  maxWidth?: string
+  testId?: string
+  closeOnOverlay?: boolean
+}
+
+const props = withDefaults(defineProps<ModalDialogProps>(), {
+  title: '',
+  maxWidth: '400px',
+  testId: '',
+  closeOnOverlay: true,
+})
 
 const emit = defineEmits<{
   close: []

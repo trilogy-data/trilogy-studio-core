@@ -1,25 +1,24 @@
 <script setup lang="ts">
 import ModalDialog from './ModalDialog.vue'
 
-withDefaults(
-  defineProps<{
-    show: boolean
-    title: string
-    message: string
-    confirmLabel?: string
-    cancelLabel?: string
-    confirmTestId?: string
-    cancelTestId?: string
-    confirmDisabled?: boolean
-  }>(),
-  {
-    confirmLabel: 'Confirm',
-    cancelLabel: 'Cancel',
-    confirmTestId: '',
-    cancelTestId: '',
-    confirmDisabled: false,
-  },
-)
+export interface ConfirmDialogProps {
+  show: boolean
+  title: string
+  message: string
+  confirmLabel?: string
+  cancelLabel?: string
+  confirmTestId?: string
+  cancelTestId?: string
+  confirmDisabled?: boolean
+}
+
+withDefaults(defineProps<ConfirmDialogProps>(), {
+  confirmLabel: 'Confirm',
+  cancelLabel: 'Cancel',
+  confirmTestId: '',
+  cancelTestId: '',
+  confirmDisabled: false,
+})
 
 const emit = defineEmits<{
   close: []

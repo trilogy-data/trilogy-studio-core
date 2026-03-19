@@ -11,12 +11,14 @@ import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
-const props = defineProps<{
+export interface DashboardProps {
   name: string
   connectionId?: string
   maxWidth?: number
   viewMode?: boolean
-}>()
+}
+
+const props = defineProps<DashboardProps>()
 
 const emit = defineEmits<{
   fullScreen: [enabled: boolean]
