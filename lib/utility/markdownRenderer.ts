@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify'
 import type { Results, Row } from '../editors/results'
 import { ARRAY_IMPLICIT_COLUMN } from '../connections/constants'
+import { normalizePrismLanguage } from './prism'
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -718,7 +719,7 @@ function generateCodeBlockId(): string {
  * Create HTML for code blocks with copy functionality
  */
 function createCodeBlockHtml(language: string, code: string, blockId: string): string {
-  const lang = language.trim() || 'text'
+  const lang = normalizePrismLanguage(language)
   const escapedCode = escapeHtml(code.trim())
 
   return `<div class="md-code-container" data-language="${lang}" data-content="${escapeHtml(code.trim())}" id="${blockId}">

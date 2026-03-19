@@ -1,15 +1,29 @@
 <template>
   <sidebar-list title="Community Models">
-    <template #actions>
-      <div class="button-container">
-        <button @click="communityStore.refreshData()" :disabled="communityStore.loading">
-          {{ communityStore.loading ? 'Refreshing...' : 'Refresh' }}
-        </button>
-        <button @click="communityStore.openAddStoreModal()" :disabled="communityStore.loading">
-          Add Store
-        </button>
+    <template #header>
+      <div class="community-header">
+        <h3 class="font-sans sidebar-header">Community Models</h3>
+        <div class="community-header-actions">
+          <button
+            class="sidebar-control-button sidebar-header-action"
+            @click="communityStore.refreshData()"
+            :disabled="communityStore.loading"
+          >
+            <i class="mdi mdi-refresh"></i>
+            {{ communityStore.loading ? 'Refreshing' : 'Refresh' }}
+          </button>
+          <button
+            class="sidebar-control-button sidebar-header-action"
+            @click="communityStore.openAddStoreModal()"
+            :disabled="communityStore.loading"
+          >
+            <i class="mdi mdi-plus"></i>
+            Add Store
+          </button>
+        </div>
       </div>
     </template>
+    <template #actions> </template>
 
     <!-- Error Display -->
     <div v-if="communityStore.hasErrors" class="error-container">
@@ -209,7 +223,18 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.button-container {
+.community-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.community-header .sidebar-header {
+  margin: 0;
+}
+
+.community-header-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

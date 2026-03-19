@@ -58,8 +58,8 @@
           :connection="item.connection as any as DuckDBConnection"
         />
 
-        <div v-else-if="item.type === 'model'" class="bq-project-container" @click.stop>
-          <label class="input-label">Model</label>
+        <div v-else-if="item.type === 'model'" class="connection-meta-row" @click.stop>
+          <span class="meta-label">Model:</span>
           <model-selector :connection="item.connection" />
         </div>
 
@@ -196,13 +196,6 @@
           {{ item.name }}
           <span v-if="item.count !== undefined && item.count > 0"> ({{ item.count }}) </span>
           <span
-            v-if="item.type === 'connection'"
-            class="hover-icon"
-            @click.stop="handleRefreshConnectionClick"
-          >
-            <i class="mdi mdi-refresh"></i>
-          </span>
-          <span
             v-if="item.type === 'database'"
             class="hover-icon"
             @click.stop="handleRefreshDatabaseClick"
@@ -230,51 +223,12 @@
           />
         </div>
         <div class="connection-actions" v-else-if="item.type === 'connection'">
-          <i
-            :data-testid="`toggle-history-${item.connection.name}`"
-            class="mdi mdi-history hover-icon sidebar-icon-button"
-            v-if="isMobile"
-            title="Query History"
-            @click.stop="toggleMobileMenu"
-          ></i>
-          <editor-creator-icon
-            class="tacticle-button hover-icon"
-            :connection="item.connection.name"
-            type="sql"
-            title="New SQL Editor"
-            :data-testid="
-              testTag
-                ? `new-sql-editor-${item.connection.name}-${testTag}`
-                : `new-sql-editor-${item.connection.name}`
-            "
-          />
-          <editor-creator-icon
-            class="tacticle-button hover-icon"
-            :connection="item.connection.name"
-            title="New Trilogy Editor"
-            :data-testid="
-              testTag
-                ? `new-trilogy-editor-${item.connection.name}-${testTag}`
-                : `new-trilogy-editor-${item.connection.name}`
-            "
-          />
-          <connection-refresh
-            class="tacticle-button hover-icon"
-            :connection="item.connection"
-            :is-connected="item.connection.connected"
-          />
-
-          <tooltip class="tacticle-button hover-icon" content="Delete Connection" position="left">
-            <span
-              class="remove-btn sidebar-icon-button danger"
-              @click.stop="deleteConnection(item.connection)"
-            >
-              <i class="mdi mdi-trash-can-outline"></i>
-            </span>
-          </tooltip>
-
-          <!-- Connection status icon should always be visible -->
           <connection-status-icon :connection="item.connection" />
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Connection actions"
+            @select="handleContextMenuItemClick"
+          />
         </div>
       </template>
     </sidebar-item>
@@ -286,14 +240,15 @@ import { ref, computed, inject } from 'vue'
 import type { PropType, Ref } from 'vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import ConnectionIcon from './ConnectionIcon.vue'
-import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
-import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
 import DuckDBImporter from '../sidebar/DuckDBImporter.vue'
 import ModelSelector from '../model/ModelSelector.vue'
 import Tooltip from '../Tooltip.vue'
 import CreateEditorFromDatasourcePopup from './CreateEditorFromDatasourcePopup.vue'
 import { Connection, MotherDuckConnection, DuckDBConnection } from '../../connections'
+import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
+import type { ContextMenuItem } from '../ContextMenu.vue'
+import type { EditorStoreType } from '../../stores/editorStore'
 
 // Interface for connections that have common properties
 interface ConnectionWithSaveCredential {
@@ -328,13 +283,12 @@ export default {
   components: {
     SidebarItem,
     ConnectionIcon,
-    ConnectionRefresh,
     ConnectionStatusIcon,
-    EditorCreatorIcon,
     CreateEditorFromDatasourcePopup,
     DuckDBImporter,
     ModelSelector,
     Tooltip,
+    SidebarOverflowMenu,
   },
   props: {
     item: {
@@ -370,6 +324,14 @@ export default {
   ],
   setup(props, { emit }) {
     const isMobile = inject<boolean>('isMobile', false)
+    const editorStore = inject<EditorStoreType>('editorStore')
+    const saveEditors = inject<Function>('saveEditors')
+    const setActiveScreen = inject<Function>('setActiveScreen')
+    const setActiveEditor = inject<Function>('setActiveEditor')
+
+    if (!editorStore || !saveEditors || !setActiveScreen || !setActiveEditor) {
+      throw new Error('Editor store is not provided!')
+    }
 
     const isExpandable = computed(() =>
       ['connection', 'database', 'schema'].includes(props.item.type),
@@ -420,6 +382,25 @@ export default {
       emit('toggleMobileMenu')
     }
 
+    const createNewEditor = async (type: string) => {
+      try {
+        const timestamp = Date.now()
+        const editorName = `new-editor-${timestamp}`
+
+        const editor = editorStore.newEditor(
+          editorName,
+          type === 'trilogy' ? 'preql' : 'sql',
+          props.item.connection.name,
+        )
+
+        await saveEditors()
+        setActiveEditor(editor.id)
+        setActiveScreen('editors')
+      } catch (error) {
+        console.error('Failed to create new editor:', error)
+      }
+    }
+
     const handleRefreshConnectionClick = () => {
       emit('refresh', props.item.connection?.name, props.item.connection?.name || '', 'connection')
     }
@@ -434,6 +415,49 @@ export default {
 
     const deleteConnection = (connection: Connection) => {
       emit('deleteConnection', connection)
+    }
+
+    const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      if (props.item.type !== 'connection') {
+        return []
+      }
+
+      const items: ContextMenuItem[] = []
+      if (isMobile) {
+        items.push({ id: 'query-history', label: 'Query history', icon: 'mdi-history' })
+      }
+      items.push(
+        { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
+        {
+          id: 'new-trilogy',
+          label: 'New Trilogy editor',
+          icon: 'mdi-file-document-plus-outline',
+        },
+        { id: 'refresh', label: 'Refresh connection', icon: 'mdi-refresh' },
+        { id: 'delete-separator', kind: 'separator' },
+        { id: 'delete', label: 'Delete connection', icon: 'mdi-trash-can-outline', danger: true },
+      )
+      return items
+    })
+
+    const handleContextMenuItemClick = (item: ContextMenuItem) => {
+      switch (item.id) {
+        case 'query-history':
+          toggleMobileMenu()
+          break
+        case 'new-sql':
+          createNewEditor('sql')
+          break
+        case 'new-trilogy':
+          createNewEditor('trilogy')
+          break
+        case 'refresh':
+          handleRefreshConnectionClick()
+          break
+        case 'delete':
+          deleteConnection(props.item.connection)
+          break
+      }
     }
 
     // Configuration reactive variables with proper initialization
@@ -531,6 +555,8 @@ export default {
       handleRefreshDatabaseClick,
       handleRefreshSchemaClick,
       deleteConnection,
+      contextMenuItems,
+      handleContextMenuItemClick,
       // Config variables
       bigqueryProject,
       bigqueryBrowsingProject,
@@ -560,8 +586,8 @@ export default {
 <style scoped>
 .refresh {
   cursor: pointer;
-  padding: 5px 0;
-  font-size: 12px;
+  padding: 2px 0;
+  font-size: var(--sidebar-sub-item-font-size);
   color: var(--text-color);
 }
 
@@ -604,6 +630,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   align-items: center;
   gap: 4px;
   margin-left: auto;
+  padding-right: 6px;
 }
 
 .loading-indicator {
@@ -638,6 +665,13 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   min-width: 52px;
 }
 
+.meta-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .label-with-status {
   display: flex;
   align-items: center;
@@ -669,10 +703,23 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   color: var(--text-color);
 }
 
+.connection-meta-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  color: var(--text-color);
+}
+
 .bq-project-container > span {
   flex: 1;
   min-width: 0;
   position: relative;
+}
+
+.connection-meta-row :deep(.model-anchor) {
+  min-width: 0;
+  flex: 1;
 }
 
 .bq-project-input {

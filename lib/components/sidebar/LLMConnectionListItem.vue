@@ -10,23 +10,14 @@
       itemType="llm-connection"
       @click="handleItemClick"
       @toggle="toggleCollapse"
-      @contextmenu.prevent="showContextMenu"
     >
-      <!-- Context Menu -->
-      <context-menu
-        :items="contextMenuItems"
-        :position="contextMenuPosition"
-        :is-visible="contextMenuVisible"
-        @item-click="handleContextMenuItemClick"
-        @close="contextMenuVisible = false"
-      />
-
       <!-- Custom icon slot for different item types -->
       <template #icon>
         <LLMProviderIcon
           v-if="item.type === 'connection'"
           :provider-type="getProviderType(item.connection)"
         />
+        <i v-else-if="item.type === 'settings-group'" class="mdi mdi-tune-vertical node-icon"></i>
         <i v-else-if="item.type === 'error'" class="mdi mdi-alert-circle node-icon"></i>
         <i v-else-if="item.type === 'open-chat'" class="mdi mdi-chat-outline node-icon"></i>
         <i v-else-if="item.type === 'open-validation'" class="mdi mdi-test-tube node-icon"></i>
@@ -47,15 +38,13 @@
         </div>
 
         <div v-else-if="item.type === 'api-key'" class="api-key-container" @click.stop>
-          <form @submit.prevent="updateApiKey(item.connection, apiKeyInput)">
-            <button type="submit" class="customize-button sidebar-control-button">
-              Update API Key
-            </button>
+          <form @submit.prevent>
             <div class="api-key-input-wrapper">
               <input
                 :type="showApiKey ? 'text' : 'password'"
                 id="api-key"
                 v-model="apiKeyInput"
+                @input="handleApiKeyInput"
                 placeholder="API Key"
                 class="connection-customize sidebar-control-input"
                 :data-testid="`api-key-input-${item.connection.name}`"
@@ -75,16 +64,9 @@
 
         <div v-else-if="item.type === 'model'" class="api-key-container" @click.stop>
           <form @submit.prevent :data-testid="`model-update-form-${item.connection.name}`">
-            <LoadingButton
-              :action="() => updateModel(item.connection, selectedModel)"
-              :use-default-style="false"
-              class="customize-button sidebar-control-button"
-              :data-testid="`update-model-${item.connection.name}`"
-            >
-              Update Model
-            </LoadingButton>
             <select
               v-model="selectedModel"
+              @change="handleModelChange"
               id="connection-type"
               required
               class="connection-customize sidebar-control-select"
@@ -104,16 +86,9 @@
 
         <div v-else-if="item.type === 'fast-model'" class="api-key-container" @click.stop>
           <form @submit.prevent :data-testid="`fast-model-update-form-${item.connection.name}`">
-            <LoadingButton
-              :action="() => updateFastModel(item.connection, selectedFastModel || null)"
-              :use-default-style="false"
-              class="customize-button sidebar-control-button"
-              :data-testid="`update-fast-model-${item.connection.name}`"
-            >
-              Update Fast Model
-            </LoadingButton>
             <select
               v-model="selectedFastModel"
+              @change="handleFastModelChange"
               class="connection-customize sidebar-control-select"
               :data-testid="`fast-model-select-${item.connection.name}`"
             >
@@ -136,12 +111,12 @@
           @click.stop
         >
           <label class="save-credential-toggle sidebar-toggle-row">
-            <span class="checkbox-label">Save Credentials</span>
             <input
               type="checkbox"
               :checked="item.connection.saveCredential"
               @change="toggleSaveCredential(item.connection)"
             />
+            <span class="checkbox-label">Save credentials</span>
           </label>
         </div>
 
@@ -170,44 +145,12 @@
         </div>
 
         <div class="connection-actions" v-if="item.type === 'connection'">
-          <!-- Set Active Button for Connection -->
-          <span
-            v-if="item.connection && item.connection.isDefault"
-            class="sidebar-icon-button is-active"
-            title="Default connection"
-          >
-            <i class="mdi mdi-star"></i>
-          </span>
-          <LoadingButton
-            v-else
-            class="loading-button sidebar-icon-button"
-            @click.stop
-            :action="() => setAsActive(item.id)"
-            title="Set as default"
-          >
-            <i class="mdi mdi-star-outline"></i>
-          </LoadingButton>
-
-          <!-- Refresh Button for Connection -->
-          <connection-refresh
-            v-if="item.connection"
-            :connection="item.connection"
-            type="llm"
-            :is-connected="isConnected(item.connection)"
-            :data-testid="`refresh-llm-connection-${item.connection.name}`"
-          />
-
-          <tooltip class="tacticle-button" content="Delete Connection" position="left">
-            <span
-              class="remove-btn sidebar-icon-button danger"
-              @click.stop="deleteConnection(item.id)"
-            >
-              <i class="mdi mdi-trash-can-outline tactile-button"></i>
-            </span>
-          </tooltip>
-
-          <!-- Status Indicator -->
           <connection-status-icon v-if="item.connection" :connection="item.connection" />
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Connection actions"
+            @select="handleContextMenuItemClick"
+          />
         </div>
       </template>
     </sidebar-item>
@@ -220,11 +163,9 @@ import type { PropType } from 'vue'
 import { AnthropicProvider, OpenAIProvider, GoogleProvider } from '../../llm'
 import SidebarItem from './GenericSidebarItem.vue'
 import LLMProviderIcon from './LLMProviderIcon.vue'
-import ConnectionRefresh from './ConnectionRefresh.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
-import LoadingButton from '../LoadingButton.vue'
-import ContextMenu from '../ContextMenu.vue'
-import type { Position, ContextMenuItem } from '../ContextMenu.vue'
+import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
+import type { ContextMenuItem } from '../ContextMenu.vue'
 import type { LLMProvider } from '../../llm/base'
 import Tooltip from '../Tooltip.vue'
 
@@ -240,6 +181,7 @@ export interface ListItem {
     | 'api-key'
     | 'model'
     | 'fast-model'
+    | 'settings-group'
     | 'toggle-save-credential'
     | 'loading'
     | 'open-chat'
@@ -257,11 +199,9 @@ export default defineComponent({
   components: {
     SidebarItem,
     LLMProviderIcon,
-    ConnectionRefresh,
     ConnectionStatusIcon,
-    LoadingButton,
-    ContextMenu,
     Tooltip,
+    SidebarOverflowMenu,
   },
   props: {
     item: {
@@ -293,6 +233,7 @@ export default defineComponent({
     const showApiKey = ref<boolean>(false)
     const selectedModel = ref<string>('')
     const selectedFastModel = ref<string>('')
+    let apiKeySaveTimeout: ReturnType<typeof setTimeout> | null = null
 
     // Initialize values on mount
     onMounted(() => {
@@ -342,33 +283,27 @@ export default defineComponent({
       { immediate: true },
     )
 
-    // Context Menu
-    const contextMenuVisible = ref<boolean>(false)
-    const contextMenuPosition = ref<Position>({ x: 0, y: 0 })
-
     const contextMenuItems = computed<ContextMenuItem[]>(() => {
       const items: ContextMenuItem[] = []
 
       if (props.item.type === 'connection') {
+        if (!props.item.connection?.isDefault) {
+          items.push({
+            id: 'set-default',
+            label: 'Set as default',
+            icon: 'mdi-star-outline',
+          })
+        }
+
         items.push(
-          { id: 'set-default', label: 'Set as Default', icon: 'mdi-star-outline' },
           { id: 'refresh', label: 'Refresh Connection', icon: 'mdi-refresh' },
-          { id: 'delete', label: 'Delete Connection', icon: 'mdi-delete-outline', danger: true },
+          { id: 'delete-separator', kind: 'separator' },
+          { id: 'delete', label: 'Delete connection', icon: 'mdi-trash-can-outline', danger: true },
         )
       }
 
       return items
     })
-
-    const showContextMenu = (event: MouseEvent) => {
-      if (props.item.type === 'connection') {
-        contextMenuPosition.value = {
-          x: event.clientX,
-          y: event.clientY,
-        }
-        contextMenuVisible.value = true
-      }
-    }
 
     const handleContextMenuItemClick = (item: ContextMenuItem) => {
       switch (item.id) {
@@ -386,16 +321,21 @@ export default defineComponent({
 
     // Determine if item is expandable
     const isExpandable = computed<boolean>(() => {
-      return ['connection'].includes(props.item.type)
+      return ['connection', 'settings-group'].includes(props.item.type)
     })
 
     // Get item name (for simple cases where name slot isn't needed)
     const getItemName = () => {
       // Return empty string for complex items that use the name slot
       if (
-        ['api-key', 'model', 'fast-model', 'toggle-save-credential', 'refresh-connection'].includes(
-          props.item.type,
-        )
+        [
+          'api-key',
+          'model',
+          'fast-model',
+          'settings-group',
+          'toggle-save-credential',
+          'refresh-connection',
+        ].includes(props.item.type)
       ) {
         return ''
       }
@@ -483,6 +423,49 @@ export default defineComponent({
       emit('updateFastModel', connection, fastModel)
     }
 
+    const handleApiKeyInput = () => {
+      if (props.item.type !== 'api-key' || !props.item.connection) {
+        return
+      }
+
+      if (apiKeyInput.value === (props.item.connection.getApiKey() || '')) {
+        return
+      }
+
+      if (apiKeySaveTimeout) {
+        clearTimeout(apiKeySaveTimeout)
+      }
+
+      apiKeySaveTimeout = setTimeout(() => {
+        updateApiKey(props.item.connection, apiKeyInput.value)
+      }, 500)
+    }
+
+    const handleModelChange = () => {
+      if (props.item.type !== 'model' || !props.item.connection) {
+        return
+      }
+
+      if (!selectedModel.value || selectedModel.value === props.item.connection.model) {
+        return
+      }
+
+      updateModel(props.item.connection, selectedModel.value)
+    }
+
+    const handleFastModelChange = () => {
+      if (props.item.type !== 'fast-model' || !props.item.connection) {
+        return
+      }
+
+      const fastModelValue = selectedFastModel.value || null
+      if (fastModelValue === (props.item.connection.fastModel || null)) {
+        return
+      }
+
+      updateFastModel(props.item.connection, fastModelValue)
+    }
+
     const toggleApiKeyVisibility = () => {
       showApiKey.value = !showApiKey.value
     }
@@ -501,14 +484,13 @@ export default defineComponent({
       updateApiKey,
       updateModel,
       updateFastModel,
+      handleApiKeyInput,
+      handleModelChange,
+      handleFastModelChange,
       toggleSaveCredential,
       deleteConnection,
       deleteChat,
-      // Context menu
-      contextMenuVisible,
-      contextMenuPosition,
       contextMenuItems,
-      showContextMenu,
       handleContextMenuItemClick,
       toggleCollapse,
       // API key visibility
@@ -520,10 +502,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.loading-button {
-  padding: 0;
-}
-
 .delete-button:hover {
   color: var(--error-color);
 }
@@ -555,21 +533,22 @@ export default defineComponent({
 .connection-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   margin-left: auto;
+  padding-right: 2px;
 }
 
 .api-key-container {
   display: flex;
   flex-grow: 1;
-  padding: 2px 0 2px 10px;
+  padding: 1px 0 1px 4px;
 }
 
 .api-key-container form {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .connection-customize {
@@ -578,6 +557,10 @@ export default defineComponent({
   width: 100%;
   min-width: 0;
   align-self: center;
+  min-height: 30px;
+  height: 30px;
+  border-radius: 12px;
+  font-size: 13px;
 }
 
 .api-key-input-wrapper {
@@ -588,12 +571,12 @@ export default defineComponent({
 }
 
 .api-key-input-wrapper input {
-  padding-right: 30px;
+  padding-right: 28px;
 }
 
 .visibility-toggle {
   position: absolute;
-  right: 4px;
+  right: 2px;
   margin: 0;
   display: flex;
   align-items: center;
@@ -602,13 +585,6 @@ export default defineComponent({
 
 .visibility-toggle i {
   font-size: 14px;
-}
-
-.customize-button {
-  min-width: 104px;
-  flex-shrink: 0;
-  font-size: 11px;
-  justify-content: flex-start;
 }
 
 .error-indicator {
@@ -629,8 +605,10 @@ export default defineComponent({
 }
 
 .save-credential-toggle {
-  padding: 4px 0 6px 12px;
-  gap: 10px;
+  padding: 2px 0 4px 6px;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-faint);
 }
 
 .save-credential-toggle input[type='checkbox'] {

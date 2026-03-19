@@ -2,14 +2,14 @@
   <sidebar-list title="Editors">
     <template #header>
       <div class="editors-header-row">
-        <h3 v-if="!isMobile" class="font-sans sidebar-header-local">Editors</h3>
+        <h3 v-if="!isMobile" class="font-sans sidebar-header">Editors</h3>
         <button
-          class="editors-new-button"
+          class="sidebar-control-button sidebar-header-action"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
         >
-          <i v-if="!creatorVisible" class="mdi mdi-plus"></i>
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
       </div>
     </template>
@@ -296,25 +296,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
 }
 
-.sidebar-header-local {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-color);
+.editors-header-row .sidebar-header {
   margin: 0;
   min-width: 0;
-}
-
-.editors-new-button {
-  flex-shrink: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 11px;
-  background-color: transparent;
-  border-color: var(--border-light);
-  border-radius: var(--sidebar-control-radius);
 }
 
 .tag-filter-dropdown {

@@ -1,16 +1,21 @@
 <template>
-  <sidebar-list title="LLM Connections">
-    <template #actions>
-      <div class="button-container">
+  <sidebar-list title="AI & Agents">
+    <template #header>
+      <div class="llm-header">
+        <h3 class="font-sans sidebar-header">AI & Agents</h3>
         <button
+          class="sidebar-control-button sidebar-header-action llm-new-button"
           @click="creatorVisible = !creatorVisible"
           :data-testid="
             testTag ? `llm-connection-creator-add-${testTag}` : 'llm-connection-creator-add'
           "
         >
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
       </div>
+    </template>
+    <template #actions>
       <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
     <LLMConnectionListItem
@@ -35,9 +40,6 @@
 <script lang="ts">
 import { ref, computed, inject, onMounted } from 'vue'
 import SidebarList from './SidebarList.vue'
-import LoadingButton from '../LoadingButton.vue'
-import StatusIcon from '../StatusIcon.vue'
-import Tooltip from '../Tooltip.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ChatStoreType } from '../../stores/chatStore'
 import { KeySeparator } from '../../data/constants'
@@ -70,51 +72,49 @@ export default {
     if (!llmConnectionStore || !saveConnections) {
       throw new Error('LLM connection store is not provided!')
     }
+
     const screenNavigation = useScreenNavigation()
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
+    const collapsed = ref<Record<string, boolean>>({})
+
+    const settingsId = (connectionName: string) => `${connectionName}-settings`
+
     const updateApiKey = async (connection: LLMProvider, apiKey: string) => {
-      if (apiKey) {
-        // Replace the old connection
-        await llmConnectionStore.connections[connection.name].setApiKey(apiKey)
-        // Reset/test the connection
-        llmConnectionStore.resetConnection(connection.name)
-        await saveConnections()
+      if (!apiKey) {
+        return
       }
+
+      await llmConnectionStore.connections[connection.name].setApiKey(apiKey)
+      llmConnectionStore.resetConnection(connection.name)
+      await saveConnections()
     }
 
     const updateModel = (connection: LLMProvider, model: string) => {
-      // This would need to be implemented based on your provider structure
-      if (model) {
-        llmConnectionStore.connections[connection.name].setModel(model)
-
-        // Reset/test the connection
-        llmConnectionStore.resetConnection(connection.name)
-        // save our new model
-        saveConnections()
+      if (!model) {
+        return
       }
-    }
 
-    const updateFastModel = (connection: LLMProvider, fastModel: string | null) => {
-      // Set fast model for light tasks like summarization
-      llmConnectionStore.connections[connection.name].setFastModel(fastModel)
-      // save our new fast model
+      llmConnectionStore.connections[connection.name].setModel(model)
+      llmConnectionStore.resetConnection(connection.name)
       saveConnections()
     }
 
-    const collapsed = ref<Record<string, boolean>>({})
+    const updateFastModel = (connection: LLMProvider, fastModel: string | null) => {
+      llmConnectionStore.connections[connection.name].setFastModel(fastModel)
+      saveConnections()
+    }
 
     const refreshId = async (id: string, connectionName: string, type: string) => {
       if (!llmConnectionStore.connections[connectionName]) {
-        isErrored.value[id] = `Connection not found`
+        isErrored.value[id] = 'Connection not found'
         return
       }
 
       try {
         isLoading.value[id] = true
         if (type === 'connection') {
-          // Test the connection
           const connection = llmConnectionStore.connections[connectionName] as any
           if (connection.testConnection) {
             await connection.testConnection()
@@ -138,35 +138,30 @@ export default {
       type: string,
       extraData?: any,
     ) => {
-      // Handle new chat creation
       if (type === 'new-chat') {
         emit('create-new-chat', connectionName)
         return
       }
 
-      // Handle existing chat selection
       if (type === 'chat-item') {
         if (chatStore && extraData?.chatId) {
           chatStore.setActiveChat(extraData.chatId)
-          // Set this LLM connection as active
           llmConnectionStore.activeConnection = connectionName
         }
-        // Include chatId in the event so it can be stored in URL
         emit('llm-open-view', connectionName, 'chat', extraData?.chatId)
         return
       }
 
-      // Handle chat/validation item clicks - these navigate to the LLM view with specific tab
       if (type === 'open-chat') {
         emit('llm-open-view', connectionName, 'chat')
         return
       }
+
       if (type === 'open-validation') {
         emit('llm-open-view', connectionName, 'validation')
         return
       }
 
-      // If expanding a connection, fetch its details
       if (
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
@@ -181,7 +176,6 @@ export default {
         }
       }
 
-      // Toggle collapsed state
       if (collapsed.value[id] === undefined) {
         collapsed.value[id] = false
       } else {
@@ -189,32 +183,27 @@ export default {
       }
     }
 
-    // Initialize collapse state for existing connections
-    Object.entries(llmConnectionStore.connections).forEach(([name, _]) => {
-      let connectionKey = name
-      collapsed.value[connectionKey] = true
+    Object.entries(llmConnectionStore.connections).forEach(([name]) => {
+      collapsed.value[name] = true
+      collapsed.value[settingsId(name)] = true
     })
 
-    // On mount, expand to the active LLM connection/chat from URL
     onMounted(() => {
       const currentLLMKey = getDefaultValueFromHash('llm-key', '')
-      if (currentLLMKey) {
-        // The key may contain a chat ID after KeySeparator (e.g., "connectionName+chatId")
-        const parts = currentLLMKey.split(KeySeparator)
-        const connectionName = parts[0]
-        const chatId = parts[1]
+      if (!currentLLMKey) {
+        return
+      }
 
-        // Expand the connection
-        if (connectionName && llmConnectionStore.connections[connectionName]) {
-          collapsed.value[connectionName] = false
+      const parts = currentLLMKey.split(KeySeparator)
+      const connectionName = parts[0]
+      const chatId = parts[1]
 
-          // Set the active connection
-          llmConnectionStore.activeConnection = connectionName
+      if (connectionName && llmConnectionStore.connections[connectionName]) {
+        collapsed.value[connectionName] = false
+        llmConnectionStore.activeConnection = connectionName
 
-          // If there's a chat ID, set it as active in the chat store
-          if (chatId && chatStore) {
-            chatStore.setActiveChat(chatId)
-          }
+        if (chatId && chatStore) {
+          chatStore.setActiveChat(chatId)
         }
       }
     })
@@ -229,6 +218,7 @@ export default {
           | 'model'
           | 'fast-model'
           | 'connection'
+          | 'settings-group'
           | 'toggle-save-credential'
           | 'refresh-connection'
           | 'error'
@@ -244,7 +234,6 @@ export default {
         chatId?: string
       }> = []
 
-      // Sort connections by status and name
       const sorted = Object.entries(llmConnectionStore.connections).sort(
         ([nameA, a], [nameB, b]) => {
           const providerA = a as any
@@ -252,129 +241,138 @@ export default {
 
           if (providerA.connected && !providerB.connected) {
             return -1
-          } else if (!providerA.connected && providerB.connected) {
-            return 1
-          } else {
-            return nameA.localeCompare(nameB)
           }
+          if (!providerA.connected && providerB.connected) {
+            return 1
+          }
+          return nameA.localeCompare(nameB)
         },
       )
 
       sorted.forEach(([name, provider]) => {
         const connection = provider as any
         const modelCount = connection.availableModels?.length || 0
-        if (connection.deleted) return // Skip deleted connections
+        if (connection.deleted) {
+          return
+        }
 
-        // Add the connection itself
         list.push({
           id: name,
-          name: name,
+          name,
           indent: 0,
           count: modelCount,
           type: 'connection',
           connection,
         })
 
-        // If expanded, show connection details
-        if (collapsed.value[name] === false) {
-          // Get chats for this connection
-          const connectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+        if (collapsed.value[name] !== false) {
+          return
+        }
 
-          // Chats section header with new chat button
+        const connectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+
+        list.push({
+          id: `${name}-new-chat`,
+          name: 'New Chat',
+          indent: 1,
+          count: connectionChats.length,
+          type: 'new-chat',
+          connection,
+        })
+
+        connectionChats.forEach((chat) => {
           list.push({
-            id: `${name}-new-chat`,
-            name: 'New Chat',
-            indent: 1,
-            count: connectionChats.length,
-            type: 'new-chat',
+            id: `${name}-chat-${chat.id}`,
+            name: chat.name,
+            indent: 2,
+            count: chat.messages.length,
+            type: 'chat-item',
             connection,
+            chat,
+            chatId: chat.id,
           })
+        })
 
-          // Add existing chats for this connection
-          connectionChats.forEach((chat) => {
-            list.push({
-              id: `${name}-chat-${chat.id}`,
-              name: chat.name,
-              indent: 2,
-              count: chat.messages.length,
-              type: 'chat-item',
-              connection,
-              chat,
-              chatId: chat.id,
-            })
-          })
+        list.push({
+          id: `${name}-open-validation`,
+          name: 'Validation Tests',
+          indent: 1,
+          count: 0,
+          type: 'open-validation',
+          connection,
+        })
 
-          // Validation Tests navigation
-          list.push({
-            id: `${name}-open-validation`,
-            name: 'Validation Tests',
-            indent: 1,
-            count: 0,
-            type: 'open-validation',
-            connection,
-          })
-          // API Key and credential settings — hidden for demo connections
-          // (the key is minted automatically and is never user-managed)
+        list.push({
+          id: settingsId(name),
+          name: 'Settings',
+          indent: 1,
+          count: 0,
+          type: 'settings-group',
+          connection,
+        })
+
+        if (collapsed.value[settingsId(name)] === false) {
           if (connection.type !== 'demo') {
             list.push({
               id: `${name}-api-key`,
               name: 'API Key',
-              indent: 1,
+              indent: 2,
               count: 0,
-              type: 'api-key' as const,
+              type: 'api-key',
               connection,
             })
           }
+
           list.push({
             id: `${name}-model`,
             name: 'Model',
-            indent: 1,
+            indent: 2,
             count: 0,
             type: 'model',
             connection,
           })
+
           list.push({
             id: `${name}-fast-model`,
             name: 'Fast Model',
-            indent: 1,
+            indent: 2,
             count: 0,
             type: 'fast-model',
             connection,
           })
+
           if (connection.type !== 'demo') {
             list.push({
               id: `${name}-toggle-save-credential`,
               name: 'Toggle Save Credential',
-              indent: 1,
+              indent: 2,
               count: 0,
-              type: 'toggle-save-credential' as const,
+              type: 'toggle-save-credential',
               connection,
             })
           }
+        }
 
-          // Loading indicator
-          if (isLoading.value[name]) {
-            list.push({
-              id: `${name}-loading`,
-              name: 'Loading...',
-              indent: 1,
-              count: 0,
-              type: 'loading',
-              connection,
-            })
-          }
+        if (isLoading.value[name]) {
+          list.push({
+            id: `${name}-loading`,
+            name: 'Loading...',
+            indent: 1,
+            count: 0,
+            type: 'loading',
+            connection,
+          })
+        }
 
-          // Error message
-          if (isErrored.value[name]) {
-            list.push({
-              id: `${name}-error`,
-              name: isErrored.value[name],
-              indent: 1,
-              count: 0,
-              type: 'error',
-              connection,
-            })
-          }
+        if (isErrored.value[name]) {
+          list.push({
+            id: `${name}-error`,
+            name: isErrored.value[name],
+            indent: 1,
+            count: 0,
+            type: 'error',
+            connection,
+          })
         }
       })
 
@@ -382,20 +380,13 @@ export default {
     })
 
     const isItemSelected = (item: any): boolean => {
-      // For chat items, check if the chat matches the active chat
       if (item.type === 'chat-item' && item.chatId && chatStore) {
         return item.chatId === chatStore.activeChatId
       }
-      // For connection items, check if it matches the active connection
       if (item.type === 'connection') {
         return item.id === llmConnectionStore.activeConnection
       }
       return false
-    }
-
-    const rightSplit = (str: string) => {
-      const index = str.lastIndexOf(KeySeparator)
-      return index !== -1 ? str.substring(0, index) : str
     }
 
     return {
@@ -409,7 +400,6 @@ export default {
       updateModel,
       updateFastModel,
       refreshId,
-      rightSplit,
       creatorVisible,
       isItemSelected,
       screenNavigation,
@@ -419,9 +409,6 @@ export default {
     SidebarList,
     LLMConnectionListItem,
     LLMConnectionCreator,
-    LoadingButton,
-    StatusIcon,
-    Tooltip,
   },
   methods: {
     resetConnection(connection: LLMProvider) {
@@ -432,7 +419,6 @@ export default {
       this.llmConnectionStore.activeConnection = connectionName
       this.llmConnectionStore.connections[connectionName].isDefault = true
       this.llmConnectionStore.connections[connectionName].changed = true
-      // for all other connections, set isDefault to false
       Object.keys(this.llmConnectionStore.connections).forEach((key) => {
         if (key !== connectionName && this.llmConnectionStore.connections[key].isDefault) {
           this.llmConnectionStore.connections[key].isDefault = false
@@ -443,9 +429,7 @@ export default {
     },
 
     deleteConnection(id: string, connectionName: string) {
-      // Ask for confirmation before deleting
       if (confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
-        // Delete all chats for this connection and close their tabs
         if (this.chatStore) {
           const chats = this.chatStore.getConnectionChats(connectionName)
           chats.forEach((chat) => {
@@ -454,13 +438,9 @@ export default {
           })
         }
 
-        // Close the connection's own tab if open
         this.screenNavigation.closeTab(null, connectionName)
-
-        // Remove the connection from the store
         this.llmConnectionStore.connections[connectionName].delete()
 
-        // If this was the active connection, reset active connection
         if (this.llmConnectionStore.activeConnection === id) {
           this.llmConnectionStore.activeConnection = ''
         }
@@ -468,7 +448,6 @@ export default {
     },
 
     deleteChat(chatId: string, _connectionName: string) {
-      // Ask for confirmation before deleting
       if (confirm('Are you sure you want to delete this chat?')) {
         if (this.chatStore) {
           this.chatStore.removeChat(chatId)
@@ -490,6 +469,25 @@ export default {
 </script>
 
 <style scoped>
+.llm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.llm-header .sidebar-header {
+  margin: 0;
+}
+
+.llm-new-button {
+  min-height: 30px;
+  height: 30px;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 13px;
+}
+
 .error-indicator {
   color: red;
   font-size: 12px;

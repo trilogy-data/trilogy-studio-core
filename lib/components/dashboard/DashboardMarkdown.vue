@@ -253,8 +253,6 @@ export default defineComponent({
   color: var(--dashboard-helper-text);
 }
 
-
-
 .chart-placeholder :deep(.rendered-markdown h1),
 .chart-placeholder :deep(.rendered-markdown-h2),
 .chart-placeholder :deep(.rendered-markdown-h3) {
@@ -274,6 +272,15 @@ export default defineComponent({
 
 .chart-placeholder :deep(.rendered-markdown-h3) {
   font-size: 14px;
+}
+
+.chart-placeholder :deep(.rendered-markdown pre.code-block) {
+  border: 1px solid var(--markdown-code-border);
+  background-color: var(--markdown-code-bg);
+}
+
+.chart-placeholder :deep(.rendered-markdown pre.code-block code) {
+  background: transparent;
 }
 
 .loading-overlay {

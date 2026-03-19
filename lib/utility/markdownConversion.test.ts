@@ -204,7 +204,7 @@ b = 2
 \`\`\``
       const result = convertMarkdownToHtml(markdown)
 
-      expect(result).toContain('language-js')
+      expect(result).toContain('language-javascript')
       expect(result).toContain('language-python')
       expect(result).toContain('const a = 1;')
       expect(result).toContain('b = 2')

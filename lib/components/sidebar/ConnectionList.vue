@@ -1,15 +1,19 @@
 <template>
   <sidebar-list title="Connections">
-    <template #actions>
-      <div class="button-container">
+    <template #header>
+      <div class="connections-header">
+        <h3 class="font-sans sidebar-header">Connections</h3>
         <button
+          class="sidebar-control-button sidebar-header-action connections-new-btn"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
         >
-          <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
       </div>
+    </template>
+    <template #actions>
       <connection-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
@@ -427,6 +431,21 @@ export default {
 </script>
 
 <style scoped>
+.connections-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.connections-header .sidebar-header {
+  margin: 0;
+}
+
+.connections-new-btn {
+  flex: 0 0 auto;
+}
+
 .error-indicator {
   color: red;
   font-size: 12px;
@@ -468,15 +487,15 @@ export default {
 .search-input {
   width: 100%;
   box-sizing: border-box;
-  min-height: var(--sidebar-control-height);
-  height: var(--sidebar-control-height);
+  min-height: 30px;
+  height: 30px;
   border-radius: var(--sidebar-control-radius);
   border: 1px solid var(--button-border);
   background-color: var(--button-bg-color);
   color: var(--text-color);
   line-height: 1;
   font-size: var(--sidebar-control-font-size);
-  padding: 0 40px 0 10px;
+  padding: 0 34px 0 10px;
 }
 
 .search-input:focus {

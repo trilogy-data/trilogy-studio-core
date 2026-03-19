@@ -32,30 +32,19 @@
     <template #extra-content>
       <div class="dashboard-actions">
         <template v-if="item.type === 'connection'">
-          <span class="tag-container hover-icon">
-            <dashboard-creator-icon :connection="item.label" title="New Dashboard" />
-          </span>
           <status-icon :status="connectionStatus" />
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Connection actions"
+            @select="handleContextMenuItemClick"
+          />
         </template>
         <template v-if="item.type === 'dashboard'">
-          <tooltip content="Clone Dashboard" position="left">
-            <span
-              class="clone-btn hover-icon"
-              @click.stop="handleClone"
-              :data-testid="`clone-dashboard-${item.label}`"
-            >
-              <i class="mdi mdi-content-copy"></i>
-            </span>
-          </tooltip>
-          <tooltip content="Delete Dashboard" position="left">
-            <span
-              class="remove-btn hover-icon"
-              @click.stop="handleDelete"
-              :data-testid="`delete-dashboard-${item.label}`"
-            >
-              <i class="mdi mdi-trash-can-outline"></i>
-            </span>
-          </tooltip>
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Dashboard actions"
+            @select="handleContextMenuItemClick"
+          />
         </template>
       </div>
     </template>
@@ -73,13 +62,14 @@
 </template>
 
 <script lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
-import DashboardCreatorIcon from '../dashboard/DashboardCreatorIcon.vue'
 import Tooltip from '../Tooltip.vue'
 import StatusIcon from '../StatusIcon.vue'
+import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
+import type { ContextMenuItem } from '../ContextMenu.vue'
 
 export default {
   name: 'DashboardListItem',
@@ -128,11 +118,33 @@ export default {
       }
     })
 
+    const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      if (props.item.type === 'connection') {
+        return [{ id: 'new-dashboard', label: 'New dashboard', icon: 'mdi-table-plus' }]
+      }
+
+      if (props.item.type === 'dashboard') {
+        return [
+          { id: 'clone-dashboard', label: 'Clone dashboard', icon: 'mdi-content-copy' },
+          { id: 'delete-separator', kind: 'separator' },
+          {
+            id: 'delete-dashboard',
+            label: 'Delete dashboard',
+            icon: 'mdi-trash-can-outline',
+            danger: true,
+          },
+        ]
+      }
+
+      return []
+    })
+
     return {
       isMobile,
       dashboardStore,
       connectionInfo,
       connectionStatus,
+      contextMenuItems,
     }
   },
   methods: {
@@ -148,12 +160,28 @@ export default {
     handleClone() {
       this.dashboardStore.cloneDashboard(this.item.id)
     },
+    handleContextMenuItemClick(item: ContextMenuItem) {
+      switch (item.id) {
+        case 'new-dashboard': {
+          const defaultName = `${this.item.label} Dashboard ${Date.now().toString().slice(-4)}`
+          const dashboard = this.dashboardStore.newDashboard(defaultName, this.item.label)
+          this.dashboardStore.setActiveDashboard(dashboard.id)
+          break
+        }
+        case 'clone-dashboard':
+          this.handleClone()
+          break
+        case 'delete-dashboard':
+          this.handleDelete()
+          break
+      }
+    },
   },
   components: {
     SidebarItem,
-    DashboardCreatorIcon,
     Tooltip,
     StatusIcon,
+    SidebarOverflowMenu,
   },
 }
 </script>
@@ -170,23 +198,6 @@ export default {
   align-items: center;
 }
 
-.clone-btn,
-.remove-btn {
-  margin-left: 8px;
-  cursor: pointer;
-  flex: 1;
-}
-
-.clone-btn:hover,
-.remove-btn:hover {
-  opacity: 0.7;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-}
-
 .text-light {
   color: var(--text-faint);
 }
@@ -194,6 +205,7 @@ export default {
 .dashboard-actions {
   display: flex;
   align-items: center;
+  gap: 4px;
   margin-left: auto;
 }
 
@@ -207,22 +219,5 @@ export default {
 .creator-item {
   padding: 8px;
   cursor: pointer;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-/* on mobile, always show hover icons */
-@media (max-width: 768px) {
-  .hover-icon {
-    opacity: 1;
-  }
 }
 </style>

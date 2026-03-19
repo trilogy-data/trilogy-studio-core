@@ -96,37 +96,46 @@ const getPurposeDescription = (purpose: string) => {
   color: var(--text-faint);
 }
 .concept-container {
-  background: var(--result-window-bg);
-  margin: 1rem;
+  background: var(--query-window-bg);
+  height: 100%;
   overflow: hidden;
 }
 
 .concept-header {
-  background: var(--result-window-bg);
-  padding: 1.5rem;
+  background: var(--query-window-bg);
+  padding: 18px 20px 12px;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .concept-header h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--page-title-font-size);
+  line-height: 1.15;
 }
 
 .namespace-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(var(--special-text-rgb), 0.08);
+  color: var(--special-text);
+  border: 1px solid rgba(var(--special-text-rgb), 0.14);
 }
 
 .concept-content {
-  padding: 1.5rem;
+  padding: 14px 20px 20px;
 }
 
 .concept-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 14px;
 }
 
 .concept-section:last-child {
@@ -136,10 +145,11 @@ const getPurposeDescription = (purpose: string) => {
 .concept-section label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  margin-bottom: 6px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
 }
 
 .concept-section p {
@@ -157,21 +167,21 @@ const getPurposeDescription = (purpose: string) => {
 .key-link {
   display: inline-block;
   text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-light);
+  color: var(--text-color);
   transition: all 0.2s ease;
 }
 
 .lineage-link:hover,
 .key-link:hover {
-  background: #1971c2;
+  background: rgba(var(--special-text-rgb), 0.06);
+  border-color: rgba(var(--special-text-rgb), 0.16);
 }
 
 .key-link {
-  /* color: #495057; */
-}
-
-.key-link:hover {
-  background: #495057;
+  color: var(--text-color);
 }
 </style>

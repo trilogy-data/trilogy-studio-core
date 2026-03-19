@@ -8,56 +8,7 @@
 import { defineComponent, computed, nextTick, onMounted, ref, watch, type PropType } from 'vue'
 import type { Results } from '../editors/results'
 import { renderMarkdown } from '../utility/markdownRenderer'
-import Prism from 'prismjs'
-
-const ensureMarkdownLanguagesReady = async () => {
-  const languageLoaders: Array<Promise<any>> = []
-
-  if (!Prism.languages.sql) {
-    languageLoaders.push(import('prismjs/components/prism-sql'))
-  }
-  if (!Prism.languages.javascript) {
-    languageLoaders.push(import('prismjs/components/prism-javascript'))
-  }
-  if (!Prism.languages.typescript) {
-    languageLoaders.push(import('prismjs/components/prism-typescript'))
-  }
-  if (!Prism.languages.python) {
-    languageLoaders.push(import('prismjs/components/prism-python'))
-  }
-
-  if (languageLoaders.length > 0) {
-    await Promise.all(languageLoaders)
-  }
-
-  if (!Prism.languages.trilogy && Prism.languages.sql) {
-    Prism.languages.trilogy = {
-      ...Prism.languages.sql,
-      keyword: [
-        ...(Array.isArray(Prism.languages.sql.keyword)
-          ? Prism.languages.sql.keyword
-          : Prism.languages.sql.keyword
-            ? [Prism.languages.sql.keyword]
-            : []),
-        /\b(?:DATASOURCE)\b/i,
-        /\b(?:GRAIN)\b/i,
-        /\b(?:ADDRESS)\b/i,
-        /\b(?:DEF)\b/i,
-        /\b(?:IMPORT)\b/i,
-        /\b(?:MERGE)\b/i,
-        /\b(?:HAVING_CLAUSE)\b/i,
-        /\b(?:WHERE_CLAUSE)\b/i,
-        /\b(?:SELECT_LIST)\b/i,
-        /\b(?:ORDER_BY)\b/i,
-        /\b(?:SELECT_STATEMENT)\b/i,
-        /\b(?:SELECT_ITEM)\b/i,
-        /\b(?:ALIGN_CLAUSE)\b/i,
-        /\b(?:ALIGN_ITEM)\b/i,
-        /\b(?:IDENTIFIER)\b/i,
-      ],
-    }
-  }
-}
+import { Prism, ensurePrismLanguagesReady } from '../utility/prism'
 
 export default defineComponent({
   name: 'MarkdownRenderer',
@@ -84,11 +35,20 @@ export default defineComponent({
 
     const wireMarkdownCodeBlocks = async () => {
       await nextTick()
-      await ensureMarkdownLanguagesReady()
 
       if (!markdownRoot.value) {
         return
       }
+
+      const languages = Array.from(
+        markdownRoot.value.querySelectorAll<HTMLElement>('pre code[class*="language-"]'),
+      ).map((block) =>
+        Array.from(block.classList)
+          .find((className) => className.startsWith('language-'))
+          ?.replace('language-', ''),
+      )
+
+      await ensurePrismLanguagesReady(languages)
 
       markdownRoot.value.querySelectorAll('pre code[class*="language-"]').forEach((block) => {
         Prism.highlightElement(block as HTMLElement)
@@ -380,27 +340,22 @@ export default defineComponent({
   opacity: 1;
 }
 
-.code-block {
+.rendered-markdown pre.code-block {
   margin: 0px;
   border-radius: 6px;
-  border: 1px solid var(--border-color, #e1e5e9);
-  background-color: var(--sidebar-bg, #f8f9fa);
+  border: 1px solid var(--markdown-code-border, var(--border-color, #e1e5e9)) !important;
+  background-color: var(--markdown-code-bg, #f8f9fa) !important;
   text-shadow: none !important;
   overflow-x: auto;
 }
 
-.code-block pre {
-  margin: 0;
-  padding: 16px;
-  overflow-x: auto;
-}
-
-.code-block code {
+.rendered-markdown pre.code-block code {
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 14px;
   line-height: 1.5;
+  background: transparent !important;
   text-shadow: none !important;
 }
 
@@ -423,14 +378,6 @@ export default defineComponent({
 }
 
 .language-trilogy {
-  text-shadow: none !important;
-}
-
-.code-block {
-  margin: 0px;
-  border-radius: 0px;
-  border: 0px;
-  background-color: var(--sidebar-bg);
   text-shadow: none !important;
 }
 

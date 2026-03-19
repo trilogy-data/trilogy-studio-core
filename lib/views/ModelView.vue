@@ -21,6 +21,7 @@
 .view-container {
   height: 100%;
   background-color: var(--query-window-bg);
+  overflow: hidden;
 }
 
 .editor-inline {
@@ -165,25 +166,36 @@ export default defineComponent({
     selectedSource() {
       return this.activeModelKey.split(KeySeparator)[2]
     },
+    selectedDatasource() {
+      const parts = this.activeModelKey.split(KeySeparator)
+      if (parts[0] === 'datasource') return parts[3]
+      if (parts[0] === 'concept' && parts.length > 5) return parts[3]
+      return ''
+    },
     selectedSourceFull() {
       return this.modelConfigs[this.selectedModel]?.sources.find(
         (x) => x.alias === this.selectedSource,
       )
     },
+    selectedDatasourceFull() {
+      return this.selectedSourceFull?.datasources.find((x) => x.name === this.selectedDatasource)
+    },
     selectedConceptNamespace() {
-      return this.activeModelKey.split(KeySeparator)[3]
+      const parts = this.activeModelKey.split(KeySeparator)
+      return parts[parts.length - 2] || ''
     },
     selectedConceptName() {
-      return this.activeModelKey.split(KeySeparator)[4]
+      const parts = this.activeModelKey.split(KeySeparator)
+      return parts[parts.length - 1] || ''
     },
     selectedConceptFull() {
-      return this.modelConfigs[this.selectedModel]?.sources
-        .find((x) => x.alias === this.selectedSource)
-        ?.concepts.find(
-          (concept) =>
-            concept.name === this.selectedConceptName &&
-            concept.namespace === this.selectedConceptNamespace,
-        )
+      const concepts =
+        this.selectedDatasourceFull?.concepts || this.selectedSourceFull?.concepts || []
+      return concepts.find(
+        (concept) =>
+          concept.name === this.selectedConceptName &&
+          concept.namespace === this.selectedConceptNamespace,
+      )
     },
   },
   methods: {

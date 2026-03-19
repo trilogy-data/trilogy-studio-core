@@ -1,64 +1,70 @@
 <template>
   <sidebar-list title="Models">
-    <template #actions>
-      <div class="button-container">
-        <button
-          @click="creatorVisible = !creatorVisible"
-          :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
-        >
-          {{ creatorVisible ? 'Hide' : 'New' }}
-        </button>
-        <loading-button :action="saveModels" :key-combination="['control', 's']">
-          Save
-        </loading-button>
+    <template #header>
+      <div class="models-header">
+        <h3 class="font-sans sidebar-header">Models</h3>
+        <div class="models-header-actions">
+          <button
+            class="sidebar-control-button sidebar-header-action"
+            @click="creatorVisible = !creatorVisible"
+            :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
+          >
+            <i class="mdi mdi-plus"></i>
+            {{ creatorVisible ? 'Close' : 'New' }}
+          </button>
+          <loading-button
+            class="sidebar-control-button sidebar-header-action"
+            :action="saveModels"
+            :key-combination="['control', 's']"
+            :use-default-style="false"
+          >
+            Save
+          </loading-button>
+        </div>
       </div>
+    </template>
+    <template #actions>
       <model-creator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
 
-    <sidebar-item
-      v-for="item in flatList"
-      :key="item.id"
-      :item-id="item.id"
-      :name="item.name"
-      :indent="item.indent"
-      :is-selected="activeModelKey === item.id"
-      :is-collapsible="
-        ['model'].includes(item.type) ||
-        (['source', 'datasource'].includes(item.type) && item.count > 0)
-      "
-      :is-collapsed="collapsed[item.id]"
-      @click="handleClick"
-      @toggle="handleToggle"
-    >
-      <!-- Custom icon slot for different item types -->
-      <template #icon>
-        <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
-        <span
-          v-else-if="item.type === 'concept'"
-          :class="`purpose-${item.concept.purpose.toLowerCase()}`"
-        >
-          {{ item.concept.purpose.charAt(0).toUpperCase() }}
-        </span>
-        <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
-      </template>
+    <template v-for="item in flatList" :key="item.id">
+      <sidebar-item
+        :item-id="item.id"
+        :name="item.name"
+        :indent="item.indent"
+        :is-selected="activeModelKey === item.id"
+        :is-collapsible="
+          ['model'].includes(item.type) ||
+          (['source', 'datasource'].includes(item.type) && item.count > 0)
+        "
+        :is-collapsed="collapsed[item.id]"
+        @click="handleClick"
+        @toggle="handleToggle"
+      >
+        <!-- Custom icon slot for different item types -->
+        <template #icon>
+          <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
+          <span
+            v-else-if="item.type === 'concept'"
+            :class="`purpose-${item.concept.purpose.toLowerCase()}`"
+          >
+            {{ item.concept.purpose.charAt(0).toUpperCase() }}
+          </span>
+          <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
+        </template>
 
-      <!-- Custom extra content slot for action buttons -->
-      <template #extra-content>
-        <span class="right-container hover-icon">
-          <tooltip v-if="item.type === 'model'" content="Refresh Model" position="left">
-            <loading-button :action="() => fetchParseResults(item.name)">
-              <i class="mdi mdi-cog-refresh-outline"></i>
-            </loading-button>
-          </tooltip>
-          <tooltip v-if="item.type === 'model'" content="Delete Model" position="left">
-            <i
-              class="mdi mdi-delete-outline"
-              @click="() => modelStore.removeModelConfig(item.name)"
-            ></i>
-          </tooltip>
-        </span>
-      </template>
-    </sidebar-item>
+        <!-- Custom extra content slot for action buttons -->
+        <template #extra-content>
+          <span v-if="item.type === 'model'" class="right-container">
+            <sidebar-overflow-menu
+              :items="contextMenuItems(item)"
+              tooltip="Model actions"
+              @select="handleContextMenuItemClick(item, $event)"
+            />
+          </span>
+        </template>
+      </sidebar-item>
+    </template>
   </sidebar-list>
 </template>
 
@@ -76,6 +82,8 @@ import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { useScreenNavigation } from '../../stores'
 import Tooltip from '../Tooltip.vue'
+import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
+import type { ContextMenuItem } from '../ContextMenu.vue'
 
 export default {
   name: 'ModelList',
@@ -98,6 +106,7 @@ export default {
     const currentType = current.split(KeySeparator)[0]
     let currentModel = ''
     let currentSource = ''
+    let currentDatasource = ''
     let splits = current.split(KeySeparator)
     if (currentType === 'model') {
       currentModel = splits[1]
@@ -107,9 +116,13 @@ export default {
     } else if (currentType === 'datasource') {
       currentModel = splits[1]
       currentSource = splits[2]
+      currentDatasource = splits[3]
     } else if (currentType === 'concept') {
       currentModel = splits[1]
       currentSource = splits[2]
+      if (splits.length > 5) {
+        currentDatasource = splits[3]
+      }
     }
 
     if (!modelStore || !saveModels || !editorStore || !trilogyResolver) {
@@ -131,7 +144,13 @@ export default {
         }
         source.datasources.forEach((ds) => {
           let dsId = ['datasource', model.name, source.alias, ds.name].join(KeySeparator)
-          collapsedPre[dsId] = true
+          if (
+            model.name !== currentModel ||
+            source.alias !== currentSource ||
+            ds.name !== currentDatasource
+          ) {
+            collapsedPre[dsId] = true
+          }
         })
       })
     })
@@ -256,6 +275,29 @@ export default {
       collapsed.value[id] = !collapsed.value[id]
     }
 
+    const contextMenuItems = (item: any): ContextMenuItem[] => {
+      if (item.type !== 'model') {
+        return []
+      }
+
+      return [
+        { id: 'refresh-model', label: 'Refresh model', icon: 'mdi-cog-refresh-outline' },
+        { id: 'delete-separator', kind: 'separator' },
+        { id: 'delete-model', label: 'Delete model', icon: 'mdi-trash-can-outline', danger: true },
+      ]
+    }
+
+    const handleContextMenuItemClick = (item: any, menuItem: ContextMenuItem) => {
+      switch (menuItem.id) {
+        case 'refresh-model':
+          fetchParseResults(item.name)
+          break
+        case 'delete-model':
+          modelStore.removeModelConfig(item.name)
+          break
+      }
+    }
+
     return {
       creatorVisible,
       flatList,
@@ -267,6 +309,8 @@ export default {
       handleClick,
       handleToggle,
       modelStore,
+      contextMenuItems,
+      handleContextMenuItemClick,
     }
   },
 
@@ -276,6 +320,7 @@ export default {
     ModelCreator,
     LoadingButton,
     Tooltip,
+    SidebarOverflowMenu,
   },
 }
 </script>
@@ -288,7 +333,25 @@ export default {
 .right-container {
   margin-left: auto;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.models-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.models-header .sidebar-header {
+  margin: 0;
+}
+
+.models-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .trilogy-icon {
@@ -298,39 +361,25 @@ export default {
 
 .purpose-key {
   color: #436fe8;
-  font-weight: bold;
-  padding-right: 4px;
-  font-size: 12px;
+  font-weight: 700;
+  padding-right: 2px;
+  font-size: 11px;
+  opacity: 0.9;
 }
 
 .purpose-property {
   color: #de6d2e;
-  font-weight: bold;
-  padding-right: 4px;
-  font-size: 12px;
+  font-weight: 700;
+  padding-right: 2px;
+  font-size: 11px;
+  opacity: 0.9;
 }
 
 .purpose-metric {
   color: #73bd29;
-  font-weight: bold;
-  padding-right: 4px;
-  font-size: 12px;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-/* on mobile, always show hover icons */
-@media (max-width: 768px) {
-  .hover-icon {
-    opacity: 1;
-  }
+  font-weight: 700;
+  padding-right: 2px;
+  font-size: 11px;
+  opacity: 0.9;
 }
 </style>

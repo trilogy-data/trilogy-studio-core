@@ -1,30 +1,23 @@
 <template>
   <div class="model-anchor">
-    <button class="button truncate-text sidebar-control-button" @click="toggleModelForm">
-      {{ connection.model || 'Set Model' }}
+    <button class="model-trigger truncate-text" type="button" @click="toggleModelForm">
+      <span class="model-trigger-text truncate-text">{{ connection.model || 'Set model' }}</span>
+      <i class="mdi mdi-chevron-down model-trigger-icon"></i>
     </button>
     <div v-if="isModelFormVisible" class="model-form">
-      <form @submit.prevent="submitModel">
-        <select v-model="selectedModel" class="model-select sidebar-control-select" required>
-          <option
-            v-for="model in availableModels"
-            :key="model"
-            :value="model"
-            class="model-select-item"
-          >
-            {{ model }}
-          </option>
-          <option key="~new-model" value="~new-model" class="model-select-item">
-            Create New Model
-          </option>
-        </select>
-        <div class="model-form-actions">
-          <button type="submit" class="sidebar-control-button">Submit</button>
-          <button type="button" class="sidebar-control-button" @click="closeModelForm">
-            Close
-          </button>
-        </div>
-      </form>
+      <button
+        v-for="model in availableModels"
+        :key="model"
+        type="button"
+        class="model-option"
+        :class="{ active: model === connection.model }"
+        @click="selectModel(model)"
+      >
+        {{ model }}
+      </button>
+      <button type="button" class="model-option" @click="selectModel('~new-model')">
+        Create New Model
+      </button>
     </div>
   </div>
 </template>
@@ -44,7 +37,6 @@ const modelStore = inject<ModelConfigStoreType>('modelStore')
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const saveConnections = inject<Function>('saveConnections', () => {})
 const isModelFormVisible = ref(false)
-const selectedModel = ref(props.connection.model || '')
 // Compute available models from the model store
 const availableModels = computed(() => (modelStore ? Object.keys(modelStore.models) : []))
 const toggleModelForm = () => {
@@ -53,64 +45,105 @@ const toggleModelForm = () => {
 const closeModelForm = () => {
   isModelFormVisible.value = false
 }
-const submitModel = async () => {
-  if (selectedModel.value && connectionStore) {
-    let modelName = selectedModel.value
-    if (modelName === '~new-model') {
-      // Create new model
-      modelName = props.connection.name
-      await modelStore?.addModelConfig(
-        new ModelConfig({
-          name: props.connection.name,
-          sources: [],
-          storage: 'local',
-          description: '',
-        }),
-      )
-    }
-    connectionStore.connections[props.connection.name].model = modelName
+const selectModel = async (modelName: string) => {
+  if (!connectionStore) {
+    return
   }
-  saveConnections()
+
+  let nextModel = modelName
+  if (nextModel === '~new-model') {
+    nextModel = props.connection.name
+    await modelStore?.addModelConfig(
+      new ModelConfig({
+        name: props.connection.name,
+        sources: [],
+        storage: 'local',
+        description: '',
+      }),
+    )
+  }
+
+  connectionStore.connections[props.connection.name].model = nextModel
+  await saveConnections()
   isModelFormVisible.value = false
 }
 </script>
 <style scoped>
 .model-anchor {
   position: relative;
-  padding-left: 6px;
   min-width: 0;
   flex-shrink: 1;
 }
+
+.model-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 2px 0 0;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: var(--sidebar-sub-item-font-size);
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.model-trigger:hover {
+  background: transparent;
+  color: var(--special-text);
+}
+
+.model-trigger-text {
+  min-width: 0;
+}
+
+.model-trigger-icon {
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
 .model-form {
   position: absolute;
   top: 100%;
-  right: 0; /* Anchor to the right */
-  margin-top: 6px;
-  padding: 8px;
+  left: 0;
+  margin-top: 4px;
+  padding: 4px;
   background-color: var(--floating-surface-strong);
   box-shadow: var(--surface-shadow);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   z-index: 1001;
-  font-size: 12px;
-  text-align: center;
-  /* This ensures the form extends to the left if needed */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 148px;
   white-space: nowrap;
 }
-.model-select {
-  appearance: none;
-  text-align: center;
-  width: 100%;
-}
-.model-form-actions {
+
+.model-option {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  box-shadow: none;
 }
 
-.button {
-  width: 100%;
-  justify-content: flex-start;
+.model-option:hover {
+  background: var(--button-mouseover);
+}
+
+.model-option.active {
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb), 0.08);
 }
 </style>

@@ -1,15 +1,26 @@
 <!-- DashboardList.vue -->
 <template>
   <sidebar-list title="Dashboards">
-    <template #actions>
-      <div class="button-container">
+    <template #header>
+      <div class="dashboards-header">
+        <h3 class="font-sans sidebar-header">Dashboards</h3>
         <button
+          class="sidebar-control-button sidebar-header-action"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `dashboard-creator-add-${testTag}` : 'dashboard-creator-add'"
         >
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
-        <button @click="importPopupVisible = true" data-testid="dashboard-import-button">
+      </div>
+    </template>
+    <template #actions>
+      <div class="button-container">
+        <button
+          class="sidebar-control-button sidebar-header-action"
+          @click="importPopupVisible = true"
+          data-testid="dashboard-import-button"
+        >
           Import
         </button>
       </div>
@@ -265,6 +276,17 @@ export default {
 </script>
 
 <style scoped>
+.dashboards-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboards-header .sidebar-header {
+  margin: 0;
+}
+
 .import-button:hover {
   background-color: var(--button-hover-bg);
 }
