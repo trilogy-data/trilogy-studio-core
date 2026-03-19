@@ -5,10 +5,11 @@ import {
   createCompletionHandler,
   createToolCallResponse,
 } from './mock-openai'
-import { createEditorFromConnection } from './test-helpers.js'
+import { createEditorFromConnection, prepareTestPage } from './test-helpers.js'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
     // Set up our mocks before each test
     await setupOpenAIMocks(page, {
       models: CONST_GPT_MODELS,

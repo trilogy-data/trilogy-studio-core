@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import { prepareTestPage, refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 // Get the directory name in ESM context
 const __filename = fileURLToPath(import.meta.url)
@@ -28,6 +28,10 @@ const createSampleCSV = () => {
 
 test.describe('CSV Upload and Datasource Creation', () => {
   let csvFilePath: string
+
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
 
   // Set up before tests
   test.beforeAll(async () => {

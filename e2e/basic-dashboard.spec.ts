@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   openDashboardItemEditor,
+  prepareTestPage,
   refreshConnection,
   waitForConnectionReady,
 } from './test-helpers.js'
@@ -8,6 +9,10 @@ import {
 // use this if debug menus is on
 // const vegaSelector = '.vega-container .chart-wrapper canvas'
 const vegaSelector = '.vega-active canvas'
+
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
 
 async function getRelativePixelColor(page, relX, relY) {
   // these cannot use vegaSelector constant as evaluated in the browser context

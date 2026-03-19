@@ -1,5 +1,24 @@
 import { expect } from '@playwright/test'
 
+export async function prepareTestPage(page) {
+  const resolverUrl = process.env.VITE_RESOLVER_URL || 'https://trilogy-service.fly.dev'
+
+  await page.addInitScript((url) => {
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+    window.localStorage.setItem(
+      'userSettings',
+      JSON.stringify({
+        theme: '',
+        trilogyResolver: url,
+        telemetryEnabled: false,
+        tipsRead: [],
+        skipAllTips: true,
+      }),
+    )
+  }, resolverUrl)
+}
+
 export async function waitForConnectionReady(page, connectionName, timeout = 15000) {
   await page.waitForFunction(
     (name) => {

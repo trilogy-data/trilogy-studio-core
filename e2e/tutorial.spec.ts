@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import { prepareTestPage, refreshConnection, waitForConnectionReady } from './test-helpers.js'
+
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
 
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')

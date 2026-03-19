@@ -4,6 +4,7 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
   createEditorFromConnection,
+  prepareTestPage,
   refreshConnection,
   waitForConnectionReady,
 } from './test-helpers.js'
@@ -18,6 +19,10 @@ const MOCK_SERVER_URL = `http://localhost:${MOCK_SERVER_PORT}`
 
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
+
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
 
   // Skip these tests in production and docker environments since they require a local mock server
   test.skip(
@@ -318,6 +323,10 @@ test.describe('Custom Model Store', () => {
 
 test.describe('Asset Auto-Import via URL', () => {
   let mockServer: ChildProcess | null = null
+
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
 
   // Skip these tests in production and docker environments since they require a local mock server
   test.skip(

@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test'
-import { refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import { prepareTestPage, refreshConnection, waitForConnectionReady } from './test-helpers.js'
 
 const connectionName = 'duckdb-test2'
+
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
 
 test('test', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
