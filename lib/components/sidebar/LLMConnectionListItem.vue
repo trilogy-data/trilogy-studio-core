@@ -133,7 +133,7 @@
       <!-- Custom extra content slot for connection actions -->
       <template #extra-content>
         <!-- Delete button for chat items -->
-        <div class="chat-actions" v-if="item.type === 'chat-item'">
+        <div class="connection-actions chat-actions" v-if="item.type === 'chat-item'">
           <tooltip class="tactile-button" content="Delete Chat" position="left">
             <span
               class="remove-btn hover-icon sidebar-icon-button danger"
@@ -501,6 +501,7 @@ export default defineComponent({
 })
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
 .delete-button:hover {
   color: var(--error-color);
@@ -510,20 +511,13 @@ export default defineComponent({
   color: var(--special-text);
 }
 
-.truncate-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-grow: 1;
-}
-
 .title-pad-left {
-  padding-left: 8px;
+  --sidebar-title-pad-left: 8px;
 }
 
 .sidebar-sub-item {
-  font-size: 0.9em;
-  opacity: 0.8;
+  --sidebar-sub-item-font-size-local: 0.9em;
+  --sidebar-sub-item-opacity: 0.8;
 }
 
 .refresh:hover {
@@ -531,11 +525,8 @@ export default defineComponent({
 }
 
 .connection-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: auto;
-  padding-right: 2px;
+  --sidebar-actions-gap: 2px;
+  --sidebar-actions-pad-right: 2px;
 }
 
 .api-key-container {
@@ -625,22 +616,7 @@ export default defineComponent({
 }
 
 .chat-actions {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-}
-
-.remove-btn {
-  cursor: pointer;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
+  --sidebar-actions-gap: 0;
+  --sidebar-actions-pad-right: 0;
 }
 </style>

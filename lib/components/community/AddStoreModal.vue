@@ -1,7 +1,11 @@
 <template>
-  <div v-if="show" class="confirmation-overlay" @click="$emit('close')">
-    <div class="confirmation-dialog" data-testid="add-store-modal" @click.stop>
-      <h3>Add Model Store</h3>
+  <ModalDialog
+    :show="show"
+    title="Add Model Store"
+    test-id="add-store-modal"
+    @close="$emit('close')"
+  >
+    <template #default>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
           <label>Store Type: <span class="required">*</span></label>
@@ -102,16 +106,20 @@
           </button>
         </div>
       </form>
-    </div>
-  </div>
+    </template>
+  </ModalDialog>
 </template>
 
 <script lang="ts">
 import { ref, watch } from 'vue'
 import type { GenericModelStore, GithubModelStore } from '../../remotes/models'
+import ModalDialog from '../ModalDialog.vue'
 
 export default {
   name: 'AddStoreModal',
+  components: {
+    ModalDialog,
+  },
   props: {
     show: {
       type: Boolean,
@@ -208,34 +216,6 @@ export default {
 </script>
 
 <style scoped>
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.confirmation-dialog {
-  background-color: var(--bg-color);
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
-}
-
-.confirmation-dialog h3 {
-  margin: 0 0 16px 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
 .form-group {
   margin-bottom: 16px;
 }
@@ -288,25 +268,20 @@ export default {
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
   gap: 10px;
+  margin-top: 20px;
 }
 
 .cancel-btn {
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border);
 }
 
 .confirm-btn {
-  padding: 8px 16px;
-  background-color: #dc3545;
+  background-color: var(--special-text);
   color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  border: 1px solid var(--special-text);
 }
 
 .confirm-btn:disabled {

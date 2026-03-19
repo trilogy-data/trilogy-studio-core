@@ -7,6 +7,7 @@
           <input
             type="text"
             v-model.trim="modelDetails.name"
+            class="sidebar-control-input"
             id="model-name"
             required
             @input="validateForm"
@@ -16,6 +17,7 @@
           <label for="model-import">Assign To Connection</label>
           <select
             v-model="modelDetails.connection"
+            class="sidebar-control-select"
             id="model-connection"
             placeholder="Models must have a connection."
             data-testid="model-creator-connection"
@@ -41,6 +43,7 @@
           <input
             type="text"
             v-model.trim="modelDetails.options.mdToken"
+            class="sidebar-control-input"
             id="md-token"
             placeholder="MotherDuck Token"
             required
@@ -53,6 +56,7 @@
           <input
             type="text"
             v-model.trim="modelDetails.options.projectId"
+            class="sidebar-control-input"
             id="project-id"
             placeholder="Billing Project ID"
             required
@@ -65,6 +69,7 @@
             <input
               type="text"
               v-model.trim="modelDetails.options.username"
+              class="sidebar-control-input"
               id="snowflake-username"
               placeholder="Snowflake Username"
               required
@@ -76,6 +81,7 @@
             <input
               type="text"
               v-model.trim="modelDetails.options.account"
+              class="sidebar-control-input"
               id="snowflake-account"
               placeholder="Snowflake Account"
               required
@@ -87,6 +93,7 @@
             <input
               type="text"
               v-model.trim="modelDetails.options.sshPrivateKey"
+              class="sidebar-control-input"
               id="snowflake-ssh-private-key"
               placeholder="Private Key"
               required
@@ -100,6 +107,7 @@
             placeholder="Optional. Import github definition."
             type="text"
             v-model.trim="modelDetails.importAddress"
+            class="sidebar-control-input"
             id="model-import"
             @input="validateForm"
           />
@@ -120,49 +128,10 @@
   </div>
 </template>
 
+<style scoped src="../creatorForm.css"></style>
 <style scoped>
-.form-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.form-row label {
-  flex: 0 0 80px;
-  /* Fixed width for labels */
-  font-size: var(--small-font-size);
-  margin-right: 10px;
-}
-
-.form-row input,
-.form-row select {
-  flex: 1;
-  font-size: var(--small-font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  height: var(--sidebar-sub-item-height);
-}
-
-.form-row input:focus,
-.form-row select:focus {
-  border-color: var(--border-color);
-  outline: none;
-}
-
-.button-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-option {
-  font-size: 12px;
-  font-weight: 300;
-}
-
-.submit-button {
-  /* Ensure consistent styling with button */
-  border: 1px solid var(--border-color);
+.creator-container {
+  --creator-label-width: 124px;
 }
 </style>
 <script lang="ts">

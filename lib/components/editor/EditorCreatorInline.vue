@@ -7,6 +7,7 @@
           :data-testid="testTag ? `editor-creator-name-${testTag}` : 'editor-creator-name'"
           type="text"
           v-model="editorDetails.name"
+          class="sidebar-control-input"
           id="editor-name"
           required
         />
@@ -17,6 +18,7 @@
         <select
           :data-testid="testTag ? `editor-creator-type-${testTag}` : 'editor-creator-type'"
           v-model="editorDetails.type"
+          class="sidebar-control-select"
           id="editor-type"
           required
         >
@@ -33,6 +35,7 @@
               : 'editor-creator-connection-select'
           "
           v-model="editorDetails.connection"
+          class="sidebar-control-select"
           id="connection-name"
           required
         >
@@ -57,49 +60,10 @@
   </div>
 </template>
 
+<style scoped src="../creatorForm.css"></style>
 <style scoped>
-.form-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.form-row label {
-  flex: 0 0 80px;
-  /* Fixed width for labels */
-  font-size: var(--small-font-size);
-  margin-right: 10px;
-}
-
-.form-row input {
-  width: 100%;
-}
-
-.form-row div .form-row input,
-.form-row select {
-  flex: 1;
-  font-size: var(--small-font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  height: var(--sidebar-sub-item-height);
-  width: 100%;
-}
-
-.form-row input:focus,
-.form-row select:focus {
-  border-color: var(--border-color);
-  outline: none;
-}
-
-.button-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-option {
-  font-size: 12px;
-  font-weight: 300;
+.creator-container {
+  --creator-label-width: 80px;
 }
 </style>
 

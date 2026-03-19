@@ -43,24 +43,16 @@
       @delete="showDeleteConfirmation"
     />
 
-    <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
-      <div class="confirmation-dialog">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete this dashboard? Contents cannot be recovered.</p>
-        <div class="dialog-actions">
-          <button class="cancel-btn" data-testid="cancel-dashboard-deletion" @click="cancelDelete">
-            Cancel
-          </button>
-          <button
-            class="confirm-btn"
-            data-testid="confirm-dashboard-deletion"
-            @click="confirmDelete"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      :show="showDeleteConfirmationState"
+      title="Confirm Deletion"
+      message="Are you sure you want to delete this dashboard? Contents cannot be recovered."
+      confirm-label="Delete"
+      cancel-test-id="cancel-dashboard-deletion"
+      confirm-test-id="confirm-dashboard-deletion"
+      @close="cancelDelete"
+      @confirm="confirmDelete"
+    />
   </sidebar-list>
 </template>
 
@@ -71,10 +63,12 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import DashboardCreatorInline from '../dashboard/DashboardCreatorInline.vue'
 import DashboardImportPopup from '../dashboard/DashboardImportPopup.vue'
 import DashboardListItem from './DashboardListItem.vue'
-import { DashboardModel } from '../../dashboards'
+import type { DashboardModel } from '../../dashboards'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
+import ConfirmDialog from '../ConfirmDialog.vue'
+import { useConfirmationState } from '../useConfirmationState'
 
 // Helper function to build dashboard tree
 function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean>) {
@@ -217,6 +211,15 @@ export default {
       return buildDashboardTree(Object.values(dashboardStore.dashboards), collapsed.value)
     })
 
+    const {
+      isOpen: showDeleteConfirmationState,
+      openConfirmation: showDeleteConfirmation,
+      closeConfirmation: cancelDelete,
+      confirm: confirmDelete,
+    } = useConfirmationState<DashboardModel>((dashboard) => {
+      dashboard.delete()
+    })
+
     return {
       connectionStore,
       dashboardStore,
@@ -226,33 +229,13 @@ export default {
       creatorVisible,
       importPopupVisible,
       saveDashboards,
-    }
-  },
-  data() {
-    return {
-      showDeleteConfirmationState: false,
-      dashboardToDelete: null as string | null,
+      showDeleteConfirmationState,
+      showDeleteConfirmation,
+      cancelDelete,
+      confirmDelete,
     }
   },
   methods: {
-    showDeleteConfirmation(dashboard: DashboardModel) {
-      this.dashboardToDelete = dashboard.id
-      this.showDeleteConfirmationState = true
-    },
-    cancelDelete() {
-      this.showDeleteConfirmationState = false
-      this.dashboardToDelete = null
-    },
-    confirmDelete() {
-      if (this.dashboardToDelete) {
-        // Mark as deleted for sync (if that property exists)
-        if (this.dashboardStore.dashboards[this.dashboardToDelete]) {
-          this.dashboardStore.dashboards[this.dashboardToDelete].delete()
-        }
-      }
-      this.showDeleteConfirmationState = false
-      this.dashboardToDelete = null
-    },
     dashboardCreated(id: string) {
       console.log('Dashboard created event received:', id)
       this.$emit('dashboard-key-selected', id)
@@ -271,6 +254,7 @@ export default {
     DashboardListItem,
     SidebarList,
     LoadingButton,
+    ConfirmDialog,
   },
 }
 </script>
@@ -289,53 +273,5 @@ export default {
 
 .import-button:hover {
   background-color: var(--button-hover-bg);
-}
-
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.confirmation-dialog {
-  width: 300px;
-  background-color: var(--bg-color);
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.confirmation-dialog h3 {
-  margin-top: 0;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.dialog-actions button {
-  padding: 8px 16px;
-  margin-left: 10px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.cancel-btn {
-  background-color: var(--button-bg);
-  color: var(--text-color);
-}
-
-.confirm-btn {
-  background-color: var(--delete-color);
-  color: white;
 }
 </style>

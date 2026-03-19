@@ -51,20 +51,16 @@
       @delete-editor="showDeleteConfirmation"
     />
 
-    <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
-      <div class="confirmation-dialog">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
-        <div class="dialog-actions">
-          <button class="cancel-btn" data-testid="cancel-editor-deletion" @click="cancelDelete">
-            Cancel
-          </button>
-          <button class="confirm-btn" data-testid="confirm-editor-deletion" @click="confirmDelete">
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      :show="showDeleteConfirmationState"
+      title="Confirm Deletion"
+      message="Are you sure you want to delete this editor? Contents cannot be recovered."
+      confirm-label="Delete"
+      cancel-test-id="cancel-editor-deletion"
+      confirm-test-id="confirm-editor-deletion"
+      @close="cancelDelete"
+      @confirm="confirmDelete"
+    />
   </sidebar-list>
 </template>
 
@@ -75,10 +71,13 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import EditorCreatorInline from '../editor/EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
-import { EditorTag, Editor } from '../../editors'
+import { EditorTag } from '../../editors'
+import type { Editor } from '../../editors'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { buildEditorTree } from '../../editors'
 import EditorListItem from './EditorListItem.vue'
+import ConfirmDialog from '../ConfirmDialog.vue'
+import { useConfirmationState } from '../useConfirmationState'
 
 export default {
   name: 'EditorList',
@@ -224,6 +223,15 @@ export default {
       )
     })
 
+    const {
+      isOpen: showDeleteConfirmationState,
+      openConfirmation: showDeleteConfirmation,
+      closeConfirmation: cancelDelete,
+      confirm: confirmDelete,
+    } = useConfirmationState<Editor>((editor) => {
+      editor.delete()
+    })
+
     return {
       isMobile,
       connectionStore,
@@ -238,12 +246,10 @@ export default {
       filterMenuOpen,
       filterDropdown,
       filterSummary,
-    }
-  },
-  data() {
-    return {
-      showDeleteConfirmationState: false,
-      editorToDelete: null as string | null,
+      showDeleteConfirmationState,
+      showDeleteConfirmation,
+      cancelDelete,
+      confirmDelete,
     }
   },
   methods: {
@@ -254,21 +260,6 @@ export default {
       return words
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ')
-    },
-    showDeleteConfirmation(editor: Editor) {
-      this.editorToDelete = editor.id
-      this.showDeleteConfirmationState = true
-    },
-    cancelDelete() {
-      this.showDeleteConfirmationState = false
-      this.editorToDelete = null
-    },
-    confirmDelete() {
-      if (this.editorToDelete) {
-        this.editorStore.editors[this.editorToDelete].delete()
-      }
-      this.showDeleteConfirmationState = false
-      this.editorToDelete = null
     },
     saveEditors() {
       this.$emit('save-editors')
@@ -287,6 +278,7 @@ export default {
     SidebarList,
     LoadingButton,
     EditorListItem,
+    ConfirmDialog,
   },
 }
 </script>
@@ -381,51 +373,5 @@ export default {
 
 .tag-filter-option input {
   margin: 0;
-}
-
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.confirmation-dialog {
-  background-color: var(--bg-color);
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.cancel-btn {
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.confirm-btn {
-  padding: 8px 16px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
 }
 </style>

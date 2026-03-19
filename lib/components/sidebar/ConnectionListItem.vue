@@ -584,6 +584,7 @@ export default {
 }
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
 .refresh {
   cursor: pointer;
@@ -615,23 +616,20 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
 }
 
 .sidebar-sub-item {
-  line-height: var(--sidebar-sub-item-height);
-  height: var(--sidebar-sub-item-height);
-  font-size: var(--sidebar-sub-item-font-size);
+  --sidebar-sub-item-line-height: var(--sidebar-sub-item-height);
+  --sidebar-sub-item-height-local: var(--sidebar-sub-item-height);
+  --sidebar-sub-item-font-size-local: var(--sidebar-sub-item-font-size);
 }
 
 .title-pad-left {
-  padding-left: 3px;
-  flex-grow: 1;
-  width: 100%;
+  --sidebar-title-pad-left: 3px;
+  --sidebar-title-flex-grow: 1;
+  --sidebar-title-width: 100%;
 }
 
 .connection-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding-right: 6px;
+  --sidebar-actions-gap: 4px;
+  --sidebar-actions-pad-right: 6px;
 }
 
 .loading-indicator {
@@ -748,20 +746,7 @@ input:is([type='text'], [type='password'], [type='email'], [type='number']) {
   white-space: nowrap;
 }
 
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
 .hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-/* if mobile, always show hover icons */
-@media (max-width: 768px) {
-  .hover-icon {
-    opacity: 1;
-  }
+  --sidebar-hover-icon-mobile-opacity: 1;
 }
 </style>

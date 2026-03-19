@@ -337,7 +337,6 @@ function scrollDownOne() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
         @save="saveContent"
         @cancel="closeEditors"
       />

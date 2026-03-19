@@ -261,6 +261,7 @@ export default {
 }
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
 .sql {
   color: var(--text-color);
@@ -280,21 +281,6 @@ export default {
   align-items: center;
 }
 
-.remove-btn {
-  cursor: pointer;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.text-light {
-  color: var(--text-faint);
-}
-
 .no-model-text {
   cursor: pointer;
   text-decoration: underline dotted;
@@ -307,15 +293,5 @@ export default {
 .creator-item {
   padding: 8px;
   cursor: pointer;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
 }
 </style>

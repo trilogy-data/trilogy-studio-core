@@ -141,43 +141,14 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
 }
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
-.details-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.remove-btn {
-  cursor: pointer;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 .right-pad {
   padding-right: 5px;
 }
 
-.text-light {
-  color: var(--text-faint);
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
 .sidebar-icon {
   padding-right: 5px;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
 }
 
 :deep(.sidebar-tag-chip) {

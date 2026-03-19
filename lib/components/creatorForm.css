@@ -1,0 +1,58 @@
+.creator-container {
+  --creator-label-width: 88px;
+}
+
+.creator-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.form-row label {
+  flex: 0 0 var(--creator-label-width);
+  font-size: var(--sidebar-control-font-size);
+  color: var(--text-faint);
+}
+
+.form-row input:not([type='checkbox']),
+.form-row select,
+.form-row textarea {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+}
+
+.form-row input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.button-row button,
+.button-row :deep(.submit-button) {
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  padding: 0 12px;
+}
+
+option {
+  font-size: 12px;
+  font-weight: 300;
+}
