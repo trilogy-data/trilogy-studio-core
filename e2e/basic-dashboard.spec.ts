@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { openDashboardItemEditor, refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import {
+  openDashboardItemEditor,
+  refreshConnection,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 // use this if debug menus is on
 // const vegaSelector = '.vega-container .chart-wrapper canvas'

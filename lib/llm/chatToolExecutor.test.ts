@@ -53,11 +53,10 @@ function makeExecutor(artifacts: any[]) {
 
 describe('ChatToolExecutor — get_artifact_rows', () => {
   it('returns error when no active chat', async () => {
-    const executor = new ChatToolExecutor(
-      {} as any,
-      makeConnectionStoreMock(),
-      { activeChat: null, activeChatId: null } as unknown as ChatStoreType,
-    )
+    const executor = new ChatToolExecutor({} as any, makeConnectionStoreMock(), {
+      activeChat: null,
+      activeChatId: null,
+    } as unknown as ChatStoreType)
     const result = await executor.executeToolCall('get_artifact_rows', {
       artifact_id: 'art-1',
       start_row: 0,

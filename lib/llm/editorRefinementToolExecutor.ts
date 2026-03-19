@@ -451,11 +451,7 @@ export class EditorRefinementToolExecutor {
     }
   }
 
-  private getArtifactRows(
-    artifactId: string,
-    startRow: number,
-    endRow: number,
-  ): ToolCallResult {
+  private getArtifactRows(artifactId: string, startRow: number, endRow: number): ToolCallResult {
     const artifact = this.artifactRegistry.get(artifactId)
     if (!artifact) {
       return {

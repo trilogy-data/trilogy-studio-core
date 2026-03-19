@@ -27,7 +27,8 @@ export async function refreshConnection(page, connectionName) {
 
   const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`)
   const rowByTextLabel = page.getByText(connectionName, { exact: true })
-  const connectionLabel = (await rowByTestIdLabel.count()) > 0 ? rowByTestIdLabel.first() : rowByTextLabel.first()
+  const connectionLabel =
+    (await rowByTestIdLabel.count()) > 0 ? rowByTestIdLabel.first() : rowByTextLabel.first()
   const connectionRow = connectionLabel.locator(
     'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
   )

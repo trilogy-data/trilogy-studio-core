@@ -123,7 +123,8 @@ export function formatToolResultText(result: ToolCallResult): string {
       if (artifactData) {
         const jsonData =
           typeof artifactData.toJSON === 'function' ? artifactData.toJSON() : artifactData
-        const totalRows = config?.resultSize ?? (Array.isArray(jsonData?.data) ? jsonData.data.length : 0)
+        const totalRows =
+          config?.resultSize ?? (Array.isArray(jsonData?.data) ? jsonData.data.length : 0)
         const { head, tail, cutCount } = truncateResultRows(jsonData)
         if (cutCount > 0) {
           const headJson = JSON.stringify({ ...jsonData, data: head }, null, 2)
@@ -178,11 +179,14 @@ export async function runToolLoop(
   // currentMessages is the history to send to the LLM, excluding the message we just added
   // (the current user message is sent separately via options.prompt on first iteration)
   // Wrap user message content with delimiters for consistent LLM context across all turns
-  let currentMessages: LLMMessage[] = messagePersistence.getMessages().slice(0, -1).map((msg) =>
-    msg.role === 'user' && !msg.hidden && msg.content
-      ? { ...msg, content: `${USER_INPUT_START}${msg.content}${USER_INPUT_END}` }
-      : msg,
-  )
+  let currentMessages: LLMMessage[] = messagePersistence
+    .getMessages()
+    .slice(0, -1)
+    .map((msg) =>
+      msg.role === 'user' && !msg.hidden && msg.content
+        ? { ...msg, content: `${USER_INPUT_START}${msg.content}${USER_INPUT_END}` }
+        : msg,
+    )
   // Wrap user message in delimiters for LLM context; display strips these automatically
   const wrappedUserMessage = `${USER_INPUT_START}${userMessage}${USER_INPUT_END}`
   let currentPrompt = wrappedUserMessage

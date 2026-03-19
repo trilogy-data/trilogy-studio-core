@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  MAX_TOOL_RESULT_ROWS,
-  truncateResultRows,
-  formatToolResultText,
-} from './toolLoopCore'
+import { MAX_TOOL_RESULT_ROWS, truncateResultRows, formatToolResultText } from './toolLoopCore'
 import type { ToolCallResult } from './editorRefinementToolExecutor'
 
 // Helper: build a plain jsonData object with N rows

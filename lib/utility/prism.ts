@@ -59,7 +59,7 @@ async function loadPrismLanguage(language: string) {
       if (!Prism.languages.javascript) {
         if (!Prism.languages.clike) {
           // @ts-ignore
-        await import('prismjs/components/prism-clike')
+          await import('prismjs/components/prism-clike')
         }
         // @ts-ignore
         await import('prismjs/components/prism-javascript')
