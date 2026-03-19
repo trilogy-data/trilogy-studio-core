@@ -109,22 +109,24 @@ def datatype_to_str_datatype(
     if isinstance(datatype, TraitDataType):
         traits = ",".join(datatype.traits)
         return f"{datatype_to_str_datatype(datatype.data_type)}<{traits}>"
-    if isinstance(datatype, ArrayType):
+    elif isinstance(datatype, ArrayType):
         return f"ARRAY<{datatype_to_str_datatype(datatype.value_data_type)}>"
-    if isinstance(datatype, StructType):
+    elif isinstance(datatype, StructType):
         fields = ", ".join(
             f"{name}:{datatype_to_str_datatype(datatype.fields[key])}"
             for key, name in enumerate(datatype.fields_map.keys())
         )
         return f"STRUCT<{fields}>"
-    if isinstance(datatype, MapType):
+    elif isinstance(datatype, MapType):
         return f"MAP<{datatype_to_str_datatype(datatype.key_data_type)}, {datatype_to_str_datatype(datatype.value_data_type)}>"
-    if isinstance(datatype, NumericType):
+    elif isinstance(datatype, NumericType):
         return f"Numeric<{datatype.precision},{datatype.scale}>"
-    if isinstance(datatype, DataTyped):
+    elif isinstance(datatype, DataTyped):
         return datatype_to_str_datatype(datatype.output_datatype)
     if isinstance(datatype, StructComponent):
         return f"{datatype.name}:{datatype_to_str_datatype(datatype.type)}>"
+    elif isinstance(datatype, EnumType):
+        return f"ENUM<{datatype_to_str_datatype(datatype.data_type)}[{','.join(datatype.values)}]>"
     return str(datatype.name)
 
 

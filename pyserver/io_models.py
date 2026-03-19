@@ -137,7 +137,15 @@ class ValidateQueryInSchema(BaseModel):
 
 class QueryOutColumn(BaseModel):
     name: str
-    datatype: DataType | TraitDataType | ArrayType | StructType | MapType | NumericType | EnumType
+    datatype: (
+        DataType
+        | TraitDataType
+        | ArrayType
+        | StructType
+        | MapType
+        | NumericType
+        | EnumType
+    )
     purpose: Purpose
     traits: List[str] | None = None
     description: str | None = None
