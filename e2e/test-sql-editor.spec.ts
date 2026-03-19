@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { prepareTestPage, refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import {
+  prepareTestPage,
+  refreshConnection,
+  runEditorQueryAndExpectCount,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
@@ -399,10 +404,7 @@ SELECT 1;
 
   // Continue with the rest of the original test...
   // Run the query to verify it works
-  await page.getByTestId('editor-run-button').click()
-  // we need to wait again, as we reloaded the page
-  await page.waitForTimeout(5000)
-  await expect(page.getByTestId('query-results-length')).toContainText('1')
+  await runEditorQueryAndExpectCount(page, 1)
 
   // Test folder collapse/expand functionality
   if (isMobile) {

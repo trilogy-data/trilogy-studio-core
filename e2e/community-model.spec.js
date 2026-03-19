@@ -3,6 +3,7 @@ import {
   createEditorFromConnection,
   prepareTestPage,
   refreshConnection,
+  runEditorQueryAndExpectCount,
   waitForConnectionReady,
 } from './test-helpers.js'
 
@@ -38,6 +39,5 @@ test('test', async ({ page, isMobile }) => {
     await page.getByTestId('editor-c-local-titanic-connection').click()
   }
   await createEditorFromConnection(page, 'titanic-connection', 'trilogy')
-  await page.getByTestId('editor-run-button').click()
-  await expect(page.getByTestId('query-results-length')).toContainText('1')
+  await runEditorQueryAndExpectCount(page, 1)
 })

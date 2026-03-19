@@ -81,6 +81,14 @@ export async function createEditorFromConnection(page, connectionName, type = 't
   await page.locator('.context-menu-item', { hasText: actionLabel }).click()
 }
 
+export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 30000) {
+  await page.getByTestId('editor-run-button').click()
+  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")', { timeout })
+  await expect(page.getByTestId('query-results-length')).toContainText(String(expectedCount), {
+    timeout,
+  })
+}
+
 export async function openDashboardItemEditor(page, itemId) {
   const itemCard = page.getByTestId(`dashboard-component-${itemId}`)
   const editButton = page.getByTestId(`edit-dashboard-item-content-${itemId}`)

@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { prepareTestPage, refreshConnection, waitForConnectionReady } from './test-helpers.js'
+import {
+  prepareTestPage,
+  refreshConnection,
+  runEditorQueryAndExpectCount,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 const connectionName = 'duckdb-test2'
 
@@ -48,9 +53,7 @@ select unnest(x) as rows;
 
   await page.keyboard.type(testOneContent)
 
-  await page.getByTestId('editor-run-button').click()
-
-  await expect(page.getByTestId('query-results-length')).toContainText('5')
+  await runEditorQueryAndExpectCount(page, 5)
 })
 
 test('test_demo_editor', async ({ page, isMobile, browser }) => {
