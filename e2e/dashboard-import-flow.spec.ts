@@ -88,9 +88,9 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   }
 
   // Check models too
-  // if (isMobile) {
-  //   await page.getByTestId('mobile-menu-toggle').click()
-  // }
+  if (isMobile) {
+    await page.getByTestId('mobile-menu-toggle').click()
+  }
   await openSidebarScreen(page, 'models', isMobile)
 
   const modelExists =

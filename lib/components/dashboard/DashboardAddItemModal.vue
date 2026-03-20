@@ -88,6 +88,7 @@ function closeModal(): void {
           :key="option.value"
           class="item-option"
           :class="{ selected: newItemType === option.value }"
+          :data-testid="`${option.testId}-option`"
         >
           <input
             v-model="newItemType"

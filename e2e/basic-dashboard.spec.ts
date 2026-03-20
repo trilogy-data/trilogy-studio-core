@@ -84,10 +84,7 @@ function isMapDataPixel(color) {
 
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
   await page.goto('#skipTips=true')
-  // setup
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
+
 
   await openSidebarScreen(page, 'community-models', isMobile)
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
@@ -354,10 +351,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   }
 
   await page.getByTestId('add-item-button').click()
-  await page
-    .getByTestId('dashboard-add-item-type-table')
-    .locator('xpath=ancestor::label[1]')
-    .click()
+  await page.getByTestId('dashboard-add-item-type-table-option').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
   await openDashboardItemEditor(page, 1)
 
@@ -583,10 +577,7 @@ select rows;
 
   // Add a second dashboard item as a table
   await page.getByTestId('add-item-button').click()
-  await page
-    .getByTestId('dashboard-add-item-type-table')
-    .locator('xpath=ancestor::label[1]')
-    .click()
+  await page.getByTestId('dashboard-add-item-type-table-option').click()
   await page.getByTestId('dashboard-add-item-confirm').click()
   await openDashboardItemEditor(page, 1)
 
