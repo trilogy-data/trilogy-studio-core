@@ -304,6 +304,16 @@ export default defineComponent({
         globalEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, () => {
           this.formatQuery()
         })
+
+        globalEditor.addAction({
+          id: 'trilogy.simple-editor.format-query',
+          label: 'Format Query',
+          contextMenuGroupId: 'navigation',
+          contextMenuOrder: 1.5,
+          run: () => {
+            this.formatQuery()
+          },
+        })
       }
     },
 

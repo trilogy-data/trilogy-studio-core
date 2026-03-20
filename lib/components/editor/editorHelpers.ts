@@ -502,6 +502,16 @@ export const setupKeyBindings = (
     editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, () => {
       callbacks.onFormatQuery()
     })
+
+    editorInstance.addAction({
+      id: 'trilogy.format-query',
+      label: 'Format Query',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.5,
+      run: () => {
+        callbacks.onFormatQuery()
+      },
+    })
   }
 
   // LLM query generation: Ctrl+Shift+Enter
