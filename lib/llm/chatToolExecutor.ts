@@ -75,11 +75,7 @@ export class ChatToolExecutor {
       case 'get_artifact':
         return this.getArtifact(toolInput.artifact_id)
       case 'get_artifact_rows':
-        return this.getArtifactRows(
-          toolInput.artifact_id,
-          toolInput.start_row,
-          toolInput.end_row,
-        )
+        return this.getArtifactRows(toolInput.artifact_id, toolInput.start_row, toolInput.end_row)
       case 'update_artifact':
         return this.updateArtifact(
           toolInput.artifact_id,
@@ -787,11 +783,7 @@ export class ChatToolExecutor {
   }
 
   // Fetch a specific row range from a results or chart artifact
-  private getArtifactRows(
-    artifactId: string,
-    startRow: number,
-    endRow: number,
-  ): ToolCallResult {
+  private getArtifactRows(artifactId: string, startRow: number, endRow: number): ToolCallResult {
     const chat = this.chatStore?.activeChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }

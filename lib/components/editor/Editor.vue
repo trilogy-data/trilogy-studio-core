@@ -1,5 +1,5 @@
 <template>
-  <div class="parent">
+  <div class="parent" :data-testid="`editor-${editorId}`">
     <error-message v-if="!editorData"
       >An editor by this ID ({{ editorId }}) could not be found.</error-message
     >
@@ -13,6 +13,7 @@
         @name-update="updateEditorName"
         @save="$emit('save-editors')"
         @validate="validateQuery"
+        @format="formatQuery"
         @run="runQuery"
         @cancel="cancelQuery"
         @toggle-tag="toggleTag"
@@ -56,6 +57,9 @@
   display: flex;
   flex-grow: 1;
   position: relative;
+  gap: 10px;
+  padding-right: 10px;
+  background: var(--main-bg-color);
 }
 
 .parent {

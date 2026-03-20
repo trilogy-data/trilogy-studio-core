@@ -5,9 +5,11 @@ import {
   createCompletionHandler,
   createToolCallResponse,
 } from './mock-openai'
+import { createEditorFromConnection, openSidebarScreen, prepareTestPage } from './test-helpers.js'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
     // Set up our mocks before each test
     await setupOpenAIMocks(page, {
       models: CONST_GPT_MODELS,
@@ -34,12 +36,8 @@ test.describe('LLM Connection Tests', () => {
 
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Set up LLM connection
-    await page.getByTestId('sidebar-link-llms').click()
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -50,26 +48,19 @@ test.describe('LLM Connection Tests', () => {
     await page.getByTestId('llm-connection-creator-save-credential').check()
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Now, test that we are connected
-    await page.getByTestId('llm-connection-trilogy-llm-openai').click()
-    await page.getByTestId('refresh-llm-connection-trilogy-llm-openai').click()
-
+    // Expand the connection settings and verify available models were loaded
+    await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
+    await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
+    await expect(page.getByTestId('status-icon-trilogy-llm-openai')).toHaveClass(/connected/, {
+      timeout: 5000,
+    })
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toBeVisible()
-
-    // Get the current selected model (should be the default one)
-    const initialModel = await page.getByTestId('model-select-trilogy-llm-openai').inputValue()
 
     // Select a different model (assuming gpt-5.2-mini is not the default)
     await page.getByTestId('model-select-trilogy-llm-openai').selectOption('gpt-5.2-mini')
 
     // Verify the model has been selected in the dropdown
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
-
-    // Click the update button
-    // this will trigger a save
-    await page.getByTestId('update-model-trilogy-llm-openai').click()
-
-    // await page.getByRole('button', { name: 'Save' }).click()
 
     // Handle keyphrase input for local storage based browsers
     if (usesLocalStorage) {
@@ -94,13 +85,11 @@ test.describe('LLM Connection Tests', () => {
       await page.getByTestId('keyphrase-input').fill('test')
       await page.getByTestId('submit-keyphrase').click()
     }
+    await page.waitForTimeout(2000)
+    await openSidebarScreen(page, 'llms', isMobile)
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-      await page.getByTestId('sidebar-link-llms').click()
-    }
-
-    await page.getByTestId('llm-connection-trilogy-llm-openai').click()
+    await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
+    await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
@@ -130,6 +119,7 @@ test.describe('LLM Connection Tests', () => {
 
   test('should handle LLM errors gracefully', async ({ page, isMobile }) => {
     // Override the default mocks with one that simulates an error
+    await page.unroute('https://api.openai.com/v1/models')
     await page.route('https://api.openai.com/v1/models', async (route) => {
       await route.fulfill({
         status: 401,
@@ -146,12 +136,8 @@ test.describe('LLM Connection Tests', () => {
     await page.goto('#skipTips=true')
 
     // Navigate to LLM testing page
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Set up LLM connection
-    await page.getByTestId('sidebar-link-llms').click()
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -162,16 +148,7 @@ test.describe('LLM Connection Tests', () => {
     await page.getByTestId('llm-connection-creator-save-credential').check()
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Select the existing connection
-    // await page.getByTestId('llm-connection-trilogy-llm-openai').click();
-
-    // Try to test the connection
-    await page.getByTestId('refresh-llm-connection-trilogy-llm-openai').click()
-
-    const buttonContainer = page.getByTestId('refresh-connection-trilogy-llm-openai')
-
-    // Verify it appears after the action fails
-    await expect(page.getByTestId('refresh-connection-trilogy-llm-openai-error')).toBeVisible({
+    await expect(page.getByTestId('status-icon-trilogy-llm-openai')).toHaveClass(/disabled/, {
       timeout: 5000,
     })
   })
@@ -237,15 +214,12 @@ limit 10;`,
     await page.goto('#skipTips=true')
 
     // Navigate to LLM testing page
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
     const usesLocalStorage = ['firefox', 'webkit'].includes(
       page.context()?.browser()?.browserType()?.name() || '',
     )
 
     // Set up LLM connection
-    await page.getByTestId('sidebar-link-llms').click()
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -257,8 +231,8 @@ limit 10;`,
     await page.getByTestId('llm-connection-creator-submit').click()
 
     // Import demo model
-    await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'editors', isMobile)
+    await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
     await page.getByTestId('community-model-search').click()
     await page.getByTestId('community-model-search').fill('demo')
@@ -272,8 +246,8 @@ limit 10;`,
     }
 
     // Create new editor
-    await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+    await openSidebarScreen(page, 'editors', isMobile)
+    await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Enter initial content in editor
     await page
@@ -370,7 +344,7 @@ select
     )
 
     // Set up LLM connection
-    await page.getByTestId('sidebar-link-llms').click()
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
     await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })
@@ -379,8 +353,8 @@ select
     await page.getByTestId('llm-connection-creator-submit').click()
 
     // Import demo model
-    await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'editors', isMobile)
+    await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
@@ -392,8 +366,8 @@ select
     }
 
     // Create new editor
-    await page.getByTestId('sidebar-link-editors').click()
-    await page.getByTestId('quick-new-editor-demo-model-connection-trilogy').click()
+    await openSidebarScreen(page, 'editors', isMobile)
+    await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Clear editor and enter minimal content
     await page.getByTestId('editor').click({ clickCount: 3 })

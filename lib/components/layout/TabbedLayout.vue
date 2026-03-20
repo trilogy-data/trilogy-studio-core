@@ -45,21 +45,8 @@ export default {
   },
 }
 </script>
+<style scoped src="./tabbedLayoutShell.css"></style>
 <style scoped>
-.results-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  overflow: hidden; /* Prevent content from overflowing */
-}
-.tab-content {
-  flex: 1;
-  position: relative;
-  height: 100%; /* Subtract tabs height */
-  overflow: hidden; /* Changed from auto to hidden */
-  display: flex; /* Add flex display */
-}
 .editor-entry {
   display: flex;
   flex-direction: column;
@@ -76,31 +63,5 @@ export default {
 }
 .editor-results {
   height: 100%;
-}
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-  height: 40px;
-  min-height: 40px; /* Ensure consistent height */
-}
-.tab-button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  border-bottom: 2px solid transparent;
-  padding-left: 20px;
-  padding-right: 20px;
-  border-radius: 0px;
-  /* max-width:100px; */
-}
-.tab-button:hover {
-  color: #0ea5e9;
-}
-.tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
-  border-radius: 0px;
 }
 </style>

@@ -13,8 +13,7 @@ import {
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { CompletionItem } from '../../stores/resolver'
 
-// Props definition
-const props = defineProps<{
+export interface DashboardGridItemProps {
   dashboardId: string
   item: LayoutItem
   editMode: boolean
@@ -22,9 +21,10 @@ const props = defineProps<{
   getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
   getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   setItemData: (itemId: string, dashboardId: string, data: any) => void
-}>()
+}
 
-// Emits
+const props = defineProps<DashboardGridItemProps>()
+
 const emit = defineEmits<{
   'edit-content': [item: LayoutItem]
   'update-dimensions': [itemId: string]
@@ -35,22 +35,14 @@ const emit = defineEmits<{
   'copy-item': [itemId: string]
 }>()
 
-// Item title editing states
 const editingItemTitle = ref(false)
 const editableItemName = ref('')
-
-// Header visibility state
 const isHeaderVisible = ref(false)
 
-// Filter visibility state
-const isFiltersVisible = ref(false)
-
-// Helper function to clean and format filter values
 function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
 }
 
-// Helper function to truncate filter values
 function truncateFilterValue(value: string, maxLength: number = 1000): string {
   const cleanValue = cleanFilterValue(value)
   if (cleanValue.length <= maxLength) {
@@ -59,15 +51,14 @@ function truncateFilterValue(value: string, maxLength: number = 1000): string {
   return cleanValue.substring(0, maxLength) + '...'
 }
 
-// Start editing an item title
 function startTitleEditing(): void {
-  if (!props.editMode) return // Only allow editing in edit mode
+  if (!props.editMode) return
 
-  const itemData = props.getItemData(props.item.i, props.dashboardId)
+  const currentItemData = props.getItemData(props.item.i, props.dashboardId)
+  isHeaderVisible.value = false
   editingItemTitle.value = true
-  editableItemName.value = itemData.name
+  editableItemName.value = currentItemData.name
 
-  // Focus on the input field after rendering
   setTimeout(() => {
     const input = document.getElementById(`title-input-${props.item.i}`)
     if (input) {
@@ -76,32 +67,25 @@ function startTitleEditing(): void {
   }, 0)
 }
 
-// Save edited title
 function saveTitleEdit(): void {
   if (editingItemTitle.value) {
-    const itemData = props.getItemData(props.item.i, props.dashboardId)
+    const currentItemData = props.getItemData(props.item.i, props.dashboardId)
+    const newName = editableItemName.value.trim() || currentItemData.name
 
-    // Don't allow empty names
-    const newName = editableItemName.value.trim() || itemData.name
-
-    // Update item name via setItemData
     props.setItemData(props.item.i, props.dashboardId, { name: newName })
-
     editingItemTitle.value = false
   }
 }
 
 function toggleCrossFilterEligible(): void {
-  const itemData = props.getItemData(props.item.i, props.dashboardId)
-  const newAllowCrossFilter = !itemData.allowCrossFilter
+  const currentItemData = props.getItemData(props.item.i, props.dashboardId)
+  const newAllowCrossFilter = !currentItemData.allowCrossFilter
 
-  // Update the allowCrossFilter property
   props.setItemData(props.item.i, props.dashboardId, {
     allowCrossFilter: newAllowCrossFilter,
   })
 }
 
-// Increase height
 function increaseHeight(): void {
   const newHeight = props.item.h + 1
   props.setItemData(props.item.i, props.dashboardId, {
@@ -112,7 +96,6 @@ function increaseHeight(): void {
   })
 }
 
-// Decrease height (minimum height of 1)
 function decreaseHeight(): void {
   const newHeight = Math.max(1, props.item.h - 1)
   props.setItemData(props.item.i, props.dashboardId, {
@@ -123,13 +106,15 @@ function decreaseHeight(): void {
   })
 }
 
-// Cancel title editing
 function cancelTitleEdit(): void {
   editingItemTitle.value = false
 }
 
-// Open content editor
 function openEditor(): void {
+  if (isSectionHeader.value) {
+    startTitleEditing()
+    return
+  }
   emit('edit-content', props.item)
 }
 
@@ -151,15 +136,13 @@ function backgroundClick(): void {
   emit('background-click', props.item.i)
 }
 
-// Remove a filter by index
 function removeFilter(filterSource: string): void {
   emit('remove-filter', props.item.i, filterSource)
 }
 
-// Get item data
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
+const isSectionHeader = computed(() => itemData.value.type === CELL_TYPES.SECTION_HEADER)
 
-// Determine which component to render based on the cell type
 const cellComponent = computed(() => {
   switch (itemData.value.type) {
     case CELL_TYPES.CHART:
@@ -168,13 +151,14 @@ const cellComponent = computed(() => {
       return DashboardTable
     case CELL_TYPES.FILTER:
       return DashboardFilter
+    case CELL_TYPES.SECTION_HEADER:
+      return null
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
   }
 })
 
-// Determine placeholder text based on cell type
 const getPlaceholderText = computed(() => {
   switch (itemData.value.type) {
     case CELL_TYPES.CHART:
@@ -183,21 +167,71 @@ const getPlaceholderText = computed(() => {
       return 'Table Name'
     case CELL_TYPES.FILTER:
       return 'Filter Name'
+    case CELL_TYPES.SECTION_HEADER:
+      return 'Section Header'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'
   }
 })
 
-// Check if the item type supports filters
 const supportsFilters = computed(() => {
   //@ts-ignore
   return [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.MARKDOWN].includes(itemData.value.type)
 })
 
-// Get the count of filters applied to this item
 const filterCount = computed(() => {
   return itemData.value.filters ? itemData.value.filters.length : 0
+})
+
+const visibleHeaderFilters = computed(() => {
+  return (itemData.value.filters || []).slice(0, 2)
+})
+
+const hiddenFilterCount = computed(() => {
+  return Math.max(0, filterCount.value - visibleHeaderFilters.value.length)
+})
+
+type WidgetHeaderLevel = 1 | 2 | 3
+
+function parseWidgetHeaderTitle(
+  rawTitle: string | undefined,
+  fallbackTitle: string,
+): {
+  text: string
+  level: WidgetHeaderLevel
+} {
+  const trimmedTitle = rawTitle?.trim()
+  if (!trimmedTitle) {
+    return { text: fallbackTitle, level: 3 }
+  }
+
+  const headingMatch = trimmedTitle.match(/^(#{1,3})\s*(.+)$/)
+  if (!headingMatch) {
+    return { text: trimmedTitle, level: 3 }
+  }
+
+  const headingText = headingMatch[2]?.trim()
+  if (!headingText) {
+    return { text: trimmedTitle, level: 3 }
+  }
+
+  return {
+    text: headingText,
+    level: headingMatch[1].length as WidgetHeaderLevel,
+  }
+}
+
+const parsedDisplayTitle = computed(() => {
+  return parseWidgetHeaderTitle(itemData.value.name, getPlaceholderText.value)
+})
+
+const displayTitle = computed(() => {
+  return parsedDisplayTitle.value.text
+})
+
+const titleLevelClass = computed(() => {
+  return `item-title-level-${parsedDisplayTitle.value.level}`
 })
 </script>
 
@@ -210,116 +244,181 @@ const filterCount = computed(() => {
         //@ts-ignore
         itemData.type,
       ),
+      'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
     }"
     @mouseenter="
       () => {
         isHeaderVisible = true
-        isFiltersVisible = true
       }
     "
     @mouseleave="
       () => {
         isHeaderVisible = false
-        isFiltersVisible = false
       }
     "
   >
-    <!-- Edit Controls (styled like control buttons) -->
     <div
-      class="header-controls"
-      data-testid="dashboard-item-header-controls"
-      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
       v-if="editMode"
+      class="dev-toolbar-shell"
+      :class="{ 'dev-toolbar-visible': isHeaderVisible && !editingItemTitle }"
     >
-      <button
-        @click="increaseHeight"
-        class="control-btn"
-        :data-testid="`increase-height-item-${item.i}`"
-        title="Increase height"
-      >
-        <i class="mdi mdi-plus icon"></i>
-      </button>
-      <button
-        @click="decreaseHeight"
-        class="control-btn"
-        :data-testid="`decrease-height-item-${item.i}`"
-        title="Decrease height"
-      >
-        <i class="mdi mdi-minus icon"></i>
-      </button>
-      <button
-        @click="openEditor"
-        class="control-btn"
-        :data-testid="`edit-dashboard-item-content-${item.i}`"
-        title="Edit data"
-      >
-        <i class="mdi mdi-database-edit-outline icon"></i>
-      </button>
-      <button
-        @click="toggleCrossFilterEligible"
-        class="control-btn"
-        :data-testid="`toggle-crossfilter-item-content-${item.i}`"
-        :title="
-          itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
-        "
-      >
-        <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
-        <i v-else class="mdi mdi-filter-outline icon"></i>
-      </button>
-      <button
-        @click="copyItem"
-        class="control-btn"
-        :data-testid="`copy-dashboard-item-${item.i}`"
-        title="Copy item"
-      >
-        <i class="mdi mdi-content-copy icon"></i>
-      </button>
-      <button
-        @click="removeItem"
-        class="control-btn remove-btn"
-        :data-testid="`remove-dashboard-item-${item.i}`"
-        title="Remove item"
-      >
-        <i class="mdi mdi-delete-outline icon"></i>
-      </button>
+      <div class="dev-toolbar" data-testid="dashboard-item-header-controls">
+        <button
+          v-if="!isSectionHeader"
+          @click="increaseHeight"
+          class="control-btn"
+          :data-testid="`increase-height-item-${item.i}`"
+          title="Increase height"
+        >
+          <i class="mdi mdi-plus icon"></i>
+        </button>
+        <button
+          v-if="!isSectionHeader"
+          @click="decreaseHeight"
+          class="control-btn"
+          :data-testid="`decrease-height-item-${item.i}`"
+          title="Decrease height"
+        >
+          <i class="mdi mdi-minus icon"></i>
+        </button>
+        <button
+          @click="openEditor"
+          class="control-btn"
+          :data-testid="`edit-dashboard-item-content-${item.i}`"
+          :title="isSectionHeader ? 'Edit title' : 'Edit data'"
+        >
+          <i
+            :class="
+              isSectionHeader ? 'mdi mdi-pencil-outline icon' : 'mdi mdi-database-edit-outline icon'
+            "
+          ></i>
+        </button>
+        <button
+          v-if="!isSectionHeader"
+          @click="toggleCrossFilterEligible"
+          class="control-btn"
+          :data-testid="`toggle-crossfilter-item-content-${item.i}`"
+          :title="
+            itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
+          "
+        >
+          <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
+          <i v-else class="mdi mdi-filter-outline icon"></i>
+        </button>
+        <button
+          @click="copyItem"
+          class="control-btn"
+          :data-testid="`copy-dashboard-item-${item.i}`"
+          title="Copy item"
+        >
+          <i class="mdi mdi-content-copy icon"></i>
+        </button>
+        <button
+          @click="removeItem"
+          class="control-btn remove-btn"
+          :data-testid="`remove-dashboard-item-${item.i}`"
+          title="Remove item"
+        >
+          <i class="mdi mdi-delete-outline icon"></i>
+        </button>
+      </div>
     </div>
 
-    <!-- Transparent overlay header (only in edit mode) -->
-    <div
-      v-if="editMode"
-      class="grid-item-header overlay-header"
-      :class="{ 'header-visible': isHeaderVisible || editingItemTitle }"
-    >
-      <!-- Drag handle icon -->
-      <div class="drag-handle-icon grid-item-drag-handle">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="drag-handle-svg"
-        >
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </div>
-
-      <!-- Editable item title -->
-      <div class="item-title-container no-drag">
-        <!-- Display title (clickable) -->
-        <div v-if="!editingItemTitle" class="item-title editable-title" @click="startTitleEditing">
-          {{ itemData.name }}
-          <span class="edit-indicator">✎</span>
+    <div v-if="!isSectionHeader" class="grid-item-header">
+      <div class="grid-item-header-left">
+        <div v-if="editMode" class="drag-handle-icon grid-item-drag-handle">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="drag-handle-svg"
+          >
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
         </div>
 
-        <!-- Edit title input -->
+        <div class="item-title-container no-drag">
+          <div
+            v-if="!editingItemTitle"
+            class="item-title editable-title"
+            :class="[titleLevelClass, { 'item-title-static': !editMode }]"
+            :title="displayTitle"
+            @click="startTitleEditing"
+          >
+            <span class="item-title-text">{{ displayTitle }}</span>
+            <i v-if="editMode" class="mdi mdi-pencil-outline edit-indicator"></i>
+          </div>
+
+          <input
+            v-else
+            :id="`title-input-${item.i}`"
+            v-model="editableItemName"
+            @blur="saveTitleEdit"
+            @keyup.enter="saveTitleEdit"
+            @keyup.esc="cancelTitleEdit"
+            class="title-input"
+            type="text"
+            :placeholder="getPlaceholderText"
+          />
+        </div>
+      </div>
+
+      <div class="grid-item-header-right">
+        <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
+          <div
+            v-for="(filter, index) in visibleHeaderFilters"
+            :key="`${filter.source}-${filter.value}-${index}`"
+            class="header-filter-chip"
+            :title="cleanFilterValue(filter.value)"
+          >
+            <span class="filter-content">
+              <span class="filter-source"
+                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+              >
+              <span class="filter-value">{{ truncateFilterValue(filter.value, 40) }}</span>
+            </span>
+            <button
+              v-if="editMode && filter.source !== 'global'"
+              class="filter-remove-btn"
+              @click="removeFilter(filter.source)"
+              :title="`Remove ${filter.source} filter`"
+            >
+              x
+            </button>
+          </div>
+
+          <div
+            v-if="hiddenFilterCount > 0"
+            class="header-filter-chip filter-overflow"
+            :title="`${hiddenFilterCount} more filter(s)`"
+          >
+            +{{ hiddenFilterCount }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-area" :class="{ 'section-header-content': isSectionHeader }">
+      <template v-if="isSectionHeader">
+        <div
+          v-if="!editingItemTitle"
+          class="section-header-display no-drag"
+          :class="[titleLevelClass, { 'section-header-editable': editMode }]"
+          :title="displayTitle"
+          @click="startTitleEditing"
+        >
+          <span class="section-header-text">{{ displayTitle }}</span>
+        </div>
+
         <input
           v-else
           :id="`title-input-${item.i}`"
@@ -327,17 +426,14 @@ const filterCount = computed(() => {
           @blur="saveTitleEdit"
           @keyup.enter="saveTitleEdit"
           @keyup.esc="cancelTitleEdit"
-          class="title-input"
+          class="title-input section-header-input no-drag"
           type="text"
           :placeholder="getPlaceholderText"
         />
-      </div>
-    </div>
+      </template>
 
-    <!-- Content area (now full height) -->
-    <div class="content-area">
-      <!-- Render the appropriate component based on cell type -->
       <component
+        v-else
         :is="cellComponent"
         :dashboardId="props.dashboardId"
         :itemId="item.i"
@@ -350,71 +446,6 @@ const filterCount = computed(() => {
         @background-click="backgroundClick"
       />
     </div>
-
-    <!-- Filters overlay container (positioned over content area) -->
-    <div class="filters-overlay" v-if="supportsFilters">
-      <!-- Edit mode - show filters normally -->
-      <template v-if="editMode">
-        <div class="filters-container edit-mode">
-          <div
-            class="filter-tag"
-            v-for="(filter, index) in itemData.filters"
-            :key="`${filter.source}-${filter.value}-${index}`"
-            :title="cleanFilterValue(filter.value)"
-          >
-            <span class="filter-content">
-              <span class="filter-source"
-                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
-              >
-              <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
-            </span>
-            <button
-              class="filter-remove-btn"
-              @click="removeFilter(filter.source)"
-              title="Remove filter"
-              v-if="filter.source !== 'global'"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- View mode - show icon with count, or detailed filters on mouseover -->
-      <template v-else>
-        <div class="filters-container view-mode" v-if="filterCount > 0">
-          <!-- Show icon when not hovering -->
-          <div class="filter-summary" v-if="!isFiltersVisible">
-            <i class="mdi mdi-filter-outline filter-icon"></i>
-          </div>
-
-          <!-- Show detailed filters when hovering -->
-          <div v-if="isFiltersVisible" class="filter-details">
-            <div
-              class="filter-tag"
-              v-for="(filter, index) in itemData.filters"
-              :key="`${filter.source}-${filter.value}-${index}`"
-              :title="cleanFilterValue(filter.value)"
-            >
-              <span class="filter-content">
-                <span class="filter-source"
-                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp</span
-                >
-                <span class="filter-value"> {{ truncateFilterValue(filter.value) }}</span>
-              </span>
-              <button
-                class="filter-remove-btn"
-                @click="removeFilter(filter.source)"
-                :title="`Remove ${filter.source} filter`"
-                v-if="filter.source !== 'global'"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        </div>
-      </template>
-    </div>
   </div>
 </template>
 
@@ -425,86 +456,92 @@ const filterCount = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--result-window-font);
-  border: 1px solid var(--dashboard-border);
   position: relative;
   overflow-y: hidden;
   background-color: var(--dashboard-background);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    var(--surface-shadow);
 }
 
-/* Header controls styling (positioned in top right of header) */
-.header-controls {
+.grid-item-section-header-style {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.grid-item-section-header-style .dev-toolbar-shell {
   position: absolute;
-  top: 0px;
-  right: 0px;
-  z-index: 20;
-  display: flex;
-  opacity: 0;
-  /* gap: 4px; */
-}
-
-.control-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--chart-control-height);
-  height: var(--chart-control-height);
-  border: 1px solid var(--border-light);
-  background-color: transparent;
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--button-font-size);
-  transition: background-color 0.2s;
-  /* border-radius: 4px; */
-  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.8);
-}
-
-.control-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.control-btn.remove-btn {
-  color: var(--delete-color);
-  border-color: var(--delete-color);
-}
-
-.control-btn.remove-btn:hover {
-  background-color: rgba(255, 0, 0, 0.1);
-}
-
-.icon {
-  font-size: 16px;
-}
-
-.overlay-header {
-  position: absolute;
-  top: 0;
+  top: -4px;
   left: 0;
   right: 0;
-  z-index: 10;
-  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 1);
-  /* backdrop-filter: blur(2px); */
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  z-index: 2;
   pointer-events: none;
 }
 
-.header-visible {
+.grid-item-section-header-style .dev-toolbar {
+  pointer-events: auto;
+  margin: 0 auto;
+}
+
+.dev-toolbar-shell {
+  display: flex;
+  justify-content: center;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.18s ease,
+    opacity 0.18s ease;
+  transition-delay: 0s;
+  flex-shrink: 0;
+}
+
+.dev-toolbar-visible {
+  max-height: calc(var(--chart-control-height) + 8px);
   opacity: 1;
-  backdrop-filter: blur(2px);
-  pointer-events: all;
-  background-color: var(--sidebar-bg);
+  transition-delay: var(--hover-drawer-delay);
+}
+
+.dev-toolbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 3px 8px 4px;
 }
 
 .grid-item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-left: 4px;
-  border-bottom: 1px solid transparent;
-  height: var(--chart-control-height);
+  gap: 8px;
+  min-height: 27px;
+  padding: 4px 12px 3px;
+  background-color: var(--panel-header-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-/* Make sure non-drag-handle content doesn't trigger dragging */
+.grid-item-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.grid-item-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1;
+}
+
 @media (min-width: 769px) {
   .grid-item-content *:not(.grid-item-drag-handle) {
     touch-action: none;
@@ -517,7 +554,6 @@ const filterCount = computed(() => {
   }
 }
 
-/* Mobile/tablet - allow normal touch behavior */
 @media (max-width: 768px) {
   .grid-item-content *:not(.grid-item-drag-handle) {
     touch-action: auto;
@@ -536,49 +572,151 @@ const filterCount = computed(() => {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  /* Content now takes full height */
+  min-height: 0;
+}
+
+.section-header-content {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 12px;
 }
 
 .item-title {
-  font-weight: bold;
+  font-family: var(--font-heading);
+  font-size: var(--widget-title-font-size);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   color: var(--text-color);
+}
+
+.item-title-level-1 {
+  font-size: calc(var(--section-title-font-size) + 1px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.item-title-level-2 {
+  font-size: calc(var(--widget-title-font-size) + 2px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.item-title-level-3 {
+  font-size: var(--widget-title-font-size);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.editable-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 0;
+  cursor: pointer;
+}
+
+.item-title-static {
+  cursor: default;
+}
+
+.item-title-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.editable-title {
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 3px;
+.section-header-display {
   display: flex;
-  align-items: left;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  text-align: center;
+  color: var(--dashboard-helper-text);
+  opacity: 0.9;
+  overflow: hidden;
+}
+
+.section-header-display::before,
+.section-header-display::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: 18px;
+  height: 1px;
+  background: var(--border-light);
+  opacity: 0.9;
+}
+
+.section-header-editable {
+  cursor: pointer;
+}
+
+.section-header-editable:hover {
+  color: var(--special-text);
+}
+
+.section-header-text {
+  min-width: 0;
+  max-width: min(100%, 900px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
 }
 
 .editable-title:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  color: var(--special-text);
+}
+
+.item-title-static:hover {
+  color: var(--text-color);
 }
 
 .edit-indicator {
-  font-size: 12px;
-  margin-left: 8px;
-  opacity: 1;
-  display: none;
+  font-size: 13px;
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
 .editable-title:hover .edit-indicator {
-  display: inline;
+  opacity: 0.9;
 }
 
 .title-input {
   width: 100%;
-  padding: 4px;
+  padding: 4px 6px;
   font-size: var(--font-size);
-  font-weight: bold;
+  font-weight: 600;
   border: 1px solid var(--special-text);
   outline: none;
-  background-color: var(--sidebar-selector-bg);
+  background-color: var(--query-window-bg);
   color: var(--text-color);
+  border-radius: 10px;
+}
+
+.section-header-input {
+  box-sizing: border-box;
+  max-width: min(100%, 560px);
+  text-align: center;
+}
+
+.grid-item-section-header-style :deep(.vue-resizable-handle) {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .grid-item-drag-handle {
@@ -588,9 +726,8 @@ const filterCount = computed(() => {
 .drag-handle-icon {
   display: flex;
   align-items: center;
-  margin-right: 10px;
   color: var(--text-color);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .vue-resizable-handle {
@@ -598,63 +735,92 @@ const filterCount = computed(() => {
 }
 
 .grid-item-header:hover .drag-handle-icon {
-  opacity: 0.5;
+  opacity: 0.7;
 }
 
-/* Filters overlay - positioned over content area */
-.filters-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 7;
-  pointer-events: none;
-  /* Allow clicks to pass through to content below */
-}
-
-.filters-container {
-  display: flex;
-  flex-wrap: wrap;
-  pointer-events: auto;
-  /* Re-enable pointer events for filter elements */
-}
-
-.filters-container.edit-mode {
-  /* backdrop-filter: blur(2px); */
-  border-bottom: 1px solid var(--dashboard-border);
-  min-height: var(--chart-control-height);
-}
-
-.filters-container.view-mode {
-  background-color: transparent;
-  justify-content: flex-end;
-  /* Move filter summary to the right */
-}
-
-.filter-tag {
+.control-btn {
   display: flex;
   align-items: center;
-  padding: 0px 3px 0px 3px;
-  font-size: calc(var(--small-font-size) - 5px);
+  justify-content: center;
+  width: var(--chart-control-height);
+  height: var(--chart-control-height);
+  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
+  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
+  color: var(--floating-text, var(--text-color));
+  cursor: pointer;
+  font-size: var(--button-font-size);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+  border-radius: 10px;
+}
+
+.control-btn:hover {
+  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+}
+
+.control-btn.remove-btn {
+  color: var(--delete-color, #dc2626);
+  border-color: currentColor;
+  opacity: 0.82;
+}
+
+.control-btn.remove-btn:hover {
+  background-color: var(--delete-color, #dc2626);
+  border-color: var(--delete-color, #dc2626);
+  color: #ffffff;
+  opacity: 1;
+}
+
+.icon {
+  font-size: 15px;
+}
+
+.header-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  margin-left: auto;
+}
+
+.header-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 1px 7px;
+  font-size: 10px;
+  letter-spacing: var(--ui-label-letter-spacing);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
+  color: var(--text-color);
 }
 
 .filter-content {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .filter-source {
   font-weight: 600;
   color: var(--special-text);
+  flex-shrink: 0;
 }
 
 .filter-value {
   color: var(--text-color);
-  word-break: break-word;
-  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .filter-remove-btn {
@@ -667,8 +833,8 @@ const filterCount = computed(() => {
   color: var(--text-color);
   opacity: 0.7;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 700;
   width: 14px;
   height: 14px;
   padding: 0;
@@ -676,72 +842,43 @@ const filterCount = computed(() => {
 
 .filter-remove-btn:hover {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(148, 163, 184, 0.08);
 }
 
-.no-filters {
-  font-style: italic;
-  color: var(--text-muted);
-  font-size: var(--small-font-size);
-}
-
-/* View mode filter summary styles */
-.filter-summary {
-  display: flex;
-  align-items: center;
-  padding: 6px 8px;
-  cursor: pointer;
-  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.8);
-  backdrop-filter: blur(2px);
-  border-radius: 4px;
-  margin: 4px;
-  margin-right: 16px;
-  /* Add some space on the right */
-  margin-left: auto;
-  /* Push to the right side */
-}
-
-.filter-icon {
-  color: var(--special-text);
-  font-size: 16px;
-}
-
-.filter-count {
-  font-size: calc(var(--small-font-size) - 3px);
+.filter-overflow {
   font-weight: 600;
-  color: var(--text-color);
-}
-
-.filter-details {
-  display: flex;
-  flex-wrap: wrap;
-  background-color: rgba(var(--sidebar-bg, 245, 245, 245), 0.9);
-  backdrop-filter: blur(2px);
-  animation: fadeIn 0.2s ease;
-  border-radius: 4px;
-  margin: 4px;
-  margin-left: auto;
-  /* Align with filter summary on the right */
-  max-width: 300px;
-  /* Prevent it from being too wide */
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
+  .dev-toolbar-visible {
+    max-height: calc(var(--chart-control-height) + 6px);
+  }
+
+  .dev-toolbar {
+    padding: 2px 6px 4px;
+  }
+
+  .grid-item-header {
+    padding: 3px 10px 2px;
+    min-height: 25px;
+  }
+
+  .grid-item-header-right {
+    justify-content: flex-end;
+  }
+
+  .header-filters {
+    max-width: 45%;
+  }
+
+  .header-filter-chip {
+    max-width: 150px;
+  }
+
   .control-btn {
     width: 32px;
     height: 32px;
-    margin-left: 5px;
-    margin-right: 5px;
   }
 }
 </style>

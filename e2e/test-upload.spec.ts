@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  openSidebarScreen,
+  prepareTestPage,
+  refreshConnection,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 // Get the directory name in ESM context
 const __filename = fileURLToPath(import.meta.url)
@@ -28,6 +34,10 @@ const createSampleCSV = () => {
 test.describe('CSV Upload and Datasource Creation', () => {
   let csvFilePath: string
 
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
+
   // Set up before tests
   test.beforeAll(async () => {
     // Create sample CSV file for testing
@@ -44,27 +54,18 @@ test.describe('CSV Upload and Datasource Creation', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to connections and create upload connection
-    await page.getByTestId('sidebar-link-connections').click()
+    await openSidebarScreen(page, 'connections', isMobile)
     await page.getByTestId('connection-creator-add').click()
     await page.getByTestId('connection-creator-name').click()
     await page.getByTestId('connection-creator-name').fill('upload-test')
     await page.getByTestId('connection-creator-submit').click()
-    await page.getByTestId('refresh-connection-upload-test').click()
+    await refreshConnection(page, 'upload-test')
+    await waitForConnectionReady(page, 'upload-test')
 
-    // Wait for connection to be ready (green status)
-    await page.waitForFunction(() => {
-      const element = document.querySelector('[data-testid="status-icon-upload-test"]')
-      if (!element) return false
-      const style = window.getComputedStyle(element)
-      const backgroundColor = style.backgroundColor
-      // Check if the background color is green (in RGB format)
-      return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-    })
+    if (isMobile) {
+      await openSidebarScreen(page, 'connections', isMobile)
+    }
 
     // Click on the connection to expand it
     await page.getByTestId('expand-connection-upload-test').click()
@@ -99,10 +100,14 @@ test.describe('CSV Upload and Datasource Creation', () => {
     )
 
     // Wait for the processing to complete - loading indicator should disappear
-    await page.waitForSelector('.loading-container', { state: 'detached' })
+    await page.waitForSelector('[data-testid="duckdb-import-loading-upload-test"]', {
+      state: 'detached',
+    })
 
-    // Check for success message
-    await expect(page.locator('.success-message')).toContainText('sample_users')
+    // Check for the updated inline success state
+    await expect(page.getByTestId('duckdb-import-success-upload-test')).toContainText(
+      'sample_users',
+    )
 
     // expand the connection
     await page.getByTestId('expand-connection-upload-test+memory').click()

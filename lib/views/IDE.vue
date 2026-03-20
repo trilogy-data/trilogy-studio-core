@@ -5,16 +5,8 @@
       title="Tips"
       :showModal="showTipModal"
       :activeItems="displayedTips"
-      @mark-item-read="
-        (id) => {
-          markTipRead(id)
-        }
-      "
-      @close-modal="
-        () => {
-          showTipModal = false
-        }
-      "
+      @mark-item-read="handleTipRead"
+      @close-modal="closeTipModal"
     />
     <ChatCreatorModal
       :visible="showChatCreatorModal"
@@ -159,6 +151,7 @@
   </div>
 </template>
 
+<style scoped src="../components/layout/ideViewport.css"></style>
 <style scoped>
 .ide-context-manager {
   height: 100vh;
@@ -168,11 +161,6 @@
 
 header {
   flex-shrink: 0;
-}
-
-.main {
-  width: 100vw;
-  height: 100vh;
 }
 
 .full-screen-container {
@@ -185,8 +173,8 @@ header {
 .full-screen-header {
   display: flex;
   justify-content: flex-end;
-  padding: 0.5rem 1rem;
-  background: var(--bg-light, #f8f9fa);
+  padding: 0.75rem 1rem;
+  background: var(--query-window-bg, #fff);
   border-bottom: 1px solid var(--border-light, #e0e0e0);
   flex-shrink: 0;
 }
@@ -208,56 +196,6 @@ header {
 
 aside {
   flex-shrink: 0;
-}
-
-.results-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-}
-
-.tab-button {
-  /* padding: 0.5rem 1rem; */
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-button:hover {
-  color: #0ea5e9;
-}
-
-.tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
-}
-
-.tab-content {
-  flex: 1;
-  overflow: auto;
-}
-
-.sql-view {
-  padding: 1rem;
-  height: 100%;
-}
-
-.sql-view pre {
-  margin: 0;
-  background: var(--bg-light);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
 }
 </style>
 
@@ -283,6 +221,7 @@ import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import type { DrillDownEvent } from '../events/display.ts'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
+import { defineComponent, type Component } from 'vue'
 // Lazy load all page components
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -312,7 +251,7 @@ export interface IDEProps {
   showingCredentialPrompt?: boolean
 }
 
-export default {
+const IDEComponent: Component = defineComponent({
   name: 'IDEComponent',
   data() {
     return {
@@ -434,6 +373,12 @@ export default {
     provide('navigationStore', screenNavigation)
 
     const markTipRead = userSettingsStore.markTipRead
+    const handleTipRead = (id: string) => {
+      markTipRead(id)
+    }
+    const closeTipModal = () => {
+      showTipModal.value = false
+    }
 
     // LLM view tab management
     const llmInitialTab = ref<'chat' | 'validation' | ''>('')
@@ -511,6 +456,8 @@ export default {
       displayedTips,
       fullScreen,
       markTipRead,
+      handleTipRead,
+      closeTipModal,
       showTipModal,
       toggleFullScreen,
       llmInitialTab,
@@ -591,5 +538,7 @@ export default {
       return this.editorStore.editors
     },
   },
-}
+})
+
+export default IDEComponent
 </script>

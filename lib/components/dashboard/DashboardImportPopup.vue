@@ -5,9 +5,12 @@ import { type ConnectionStoreType } from '../../stores/connectionStore'
 import { DashboardModel } from '../../dashboards'
 
 // @ts-ignore
-const props = defineProps<{
+export interface DashboardImportPopupProps {
   isOpen: boolean
-}>()
+}
+
+// @ts-ignore
+const props = defineProps<DashboardImportPopupProps>()
 
 // @ts-ignore
 const _ = props
@@ -179,20 +182,12 @@ const importDashboard = async () => {
 // Handle copy functionality
 const importSuccess = ref<boolean>(false)
 
-// Handle click outside to close popup
-const popupContent = ref<HTMLElement | null>(null)
-const handleClickOutside = (event: MouseEvent): void => {
-  if (popupContent.value && !popupContent.value.contains(event.target as Node)) {
-    emit('close')
-  }
-}
-
 // Initial validation
 validateForm()
 </script>
 <template>
-  <div v-if="isOpen" class="popup-overlay" @click="handleClickOutside">
-    <div class="popup-content" ref="popupContent" data-testid="dashboard-import-popup">
+  <div v-if="isOpen" class="popup-overlay" @click.self="emit('close')">
+    <div class="popup-content" data-testid="dashboard-import-popup">
       <div class="popup-header">
         <h3>Import Dashboard</h3>
         <button @click="emit('close')" class="close-button" data-testid="close-popup-button">

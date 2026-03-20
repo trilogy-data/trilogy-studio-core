@@ -150,6 +150,7 @@ export const CELL_TYPES = {
     CHART: 'chart',
     MARKDOWN: 'markdown',
     TABLE: 'table',
+    SECTION_HEADER: 'section-header',
   } as const
   
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]

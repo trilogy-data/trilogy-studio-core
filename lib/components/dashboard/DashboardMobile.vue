@@ -11,11 +11,13 @@ import { useDashboard } from './useDashboard'
 import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
-const props = defineProps<{
+export interface DashboardMobileProps {
   name: string
   connectionId?: string
   viewMode?: boolean
-}>()
+}
+
+const props = defineProps<DashboardMobileProps>()
 
 const mobileMinHeight = 400 // Minimum height for mobile items
 const dashboardStore = useDashboardStore()
@@ -94,7 +96,8 @@ function updateItemDimensions(itemId: string): void {
   const container = document.querySelector(`.mobile-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
-    const headerHeight = 36 // Approximate height of the header
+    const headerHeight =
+      getItemData(itemId, dashboard.value.id).type === CELL_TYPES.SECTION_HEADER ? 0 : 36
 
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
@@ -138,6 +141,10 @@ function calculateMobileHeight(item: any): number | string {
 
   if (itemData.type === CELL_TYPES.FILTER) {
     return '100%' // Full height for filter items
+  }
+
+  if (itemData.type === CELL_TYPES.SECTION_HEADER) {
+    return `${Math.max(item.h * 30 + 4, 36)}px`
   }
 
   if (itemData.type === CELL_TYPES.CHART) {
@@ -332,7 +339,6 @@ function scrollDownOne() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
         @save="saveContent"
         @cancel="closeEditors"
       />

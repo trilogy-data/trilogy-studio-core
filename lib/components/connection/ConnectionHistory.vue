@@ -193,17 +193,9 @@ onMounted(() => {
 <style scoped>
 /* QueryHistory styles */
 .query-history {
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Arial,
-    sans-serif;
   color: var(--text-color);
-  background-color: var(--bg-color);
-  border: 1px solid var(--border);
+  background-color: var(--query-window-bg);
+  border: 0;
   overflow: hidden;
   height: 100%;
   display: flex;
@@ -214,6 +206,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--section-title-font-size);
+  font-weight: 600;
 }
 
 .query-count {
@@ -224,13 +221,14 @@ onMounted(() => {
 
 .query-history-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
 .refresh-btn {
-  padding: 4px 8px;
-  font-size: 14px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .clear-btn {
@@ -255,20 +253,20 @@ onMounted(() => {
 }
 
 .query-history-item {
-  border-bottom: 1px solid var(--border);
-  background-color: var(--bg-color);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background-color: var(--query-window-bg);
 }
 
 .query-history-item.error .query-history-item-header {
-  background-color: rgba(211, 47, 47, 0.05);
+  background-color: rgba(211, 47, 47, 0.035);
 }
 
 .query-history-item.success .query-history-item-header {
-  background-color: rgba(76, 175, 80, 0.05);
+  background-color: rgba(76, 175, 80, 0.03);
 }
 
 .query-history-item-header {
-  padding: 12px 16px;
+  padding: 10px 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -277,7 +275,7 @@ onMounted(() => {
 }
 
 .query-history-item-header:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
 }
 
 .query-history-item-status {
@@ -309,6 +307,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 4px;
+  font-size: 12px;
 }
 
 .query-history-item-meta {
@@ -325,36 +324,37 @@ onMounted(() => {
 }
 
 .query-history-item-details {
-  padding: 0 16px 16px;
-  border-top: 1px solid var(--border);
-  background-color: var(--bg-color);
+  padding: 0 18px 16px;
+  border-top: 1px solid var(--border-light);
+  background-color: var(--query-window-bg);
 }
 
 /* Query tabs navigation */
 .query-tabs {
   display: flex;
   margin-top: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .tab-btn {
-  padding: 8px 16px;
+  padding: 0 12px;
+  min-height: 28px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--text-color);
+  font-size: 12px;
+  color: var(--text-faint);
   transition: all 0.2s ease;
 }
 
 .tab-btn:hover {
-  color: #333;
+  color: var(--text-color);
 }
 
 .tab-btn.active {
-  color: #2196f3;
-  border-bottom-color: #2196f3;
+  color: var(--special-text);
+  border-bottom-color: var(--special-text);
   font-weight: 500;
 }
 

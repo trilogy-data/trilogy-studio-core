@@ -1,29 +1,43 @@
 <template>
   <sidebar-list title="Editors">
-    <template #actions>
-      <div class="button-container">
+    <template #header>
+      <div class="editors-header-row">
+        <h3 v-if="!isMobile" class="font-sans sidebar-header">Editors</h3>
         <button
+          class="sidebar-control-button sidebar-header-action"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
         >
-          <i v-if="!creatorVisible" class="mdi mdi-plus"></i>
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
       </div>
+    </template>
+    <template #actions>
       <editor-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
         :testTag="testTag"
       />
-      <span
-        v-for="tag in EditorTag"
-        :key="tag"
-        :class="{ 'tag-excluded': hiddenTags.has(tag) }"
-        class="tag"
-        @click="toggleTagFilter(tag)"
-      >
-        {{ formatEditorTag(tag) }} Editors
-      </span>
+      <div ref="filterDropdown" class="tag-filter-dropdown">
+        <button
+          class="tag-filter-button"
+          type="button"
+          @click="filterMenuOpen = !filterMenuOpen"
+          :aria-expanded="filterMenuOpen"
+        >
+          <span class="tag-filter-button-scope">Scope:</span>
+          <span class="tag-filter-button-label">{{ filterSummary }}</span>
+          <i class="mdi mdi-chevron-down tag-filter-chevron" :class="{ open: filterMenuOpen }"></i>
+        </button>
+
+        <div v-if="filterMenuOpen" class="tag-filter-menu">
+          <label v-for="tag in EditorTag" :key="tag" class="tag-filter-option">
+            <input type="checkbox" :checked="!hiddenTags.has(tag)" @change="toggleTagFilter(tag)" />
+            <span>{{ formatEditorTag(tag) }} Editors</span>
+          </label>
+        </div>
+      </div>
     </template>
 
     <editor-list-item
@@ -37,34 +51,33 @@
       @delete-editor="showDeleteConfirmation"
     />
 
-    <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
-      <div class="confirmation-dialog">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete this editor? Contents cannot be recovered.</p>
-        <div class="dialog-actions">
-          <button class="cancel-btn" data-testid="cancel-editor-deletion" @click="cancelDelete">
-            Cancel
-          </button>
-          <button class="confirm-btn" data-testid="confirm-editor-deletion" @click="confirmDelete">
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      :show="showDeleteConfirmationState"
+      title="Confirm Deletion"
+      message="Are you sure you want to delete this editor? Contents cannot be recovered."
+      confirm-label="Delete"
+      cancel-test-id="cancel-editor-deletion"
+      confirm-test-id="confirm-editor-deletion"
+      @close="cancelDelete"
+      @confirm="confirmDelete"
+    />
   </sidebar-list>
 </template>
 
 <script lang="ts">
-import { inject, ref, computed, onMounted } from 'vue'
+import { inject, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import EditorCreatorInline from '../editor/EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
-import { EditorTag, Editor } from '../../editors'
+import { EditorTag } from '../../editors'
+import type { Editor } from '../../editors'
 import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { buildEditorTree } from '../../editors'
 import EditorListItem from './EditorListItem.vue'
+import ConfirmDialog from '../ConfirmDialog.vue'
+import { useConfirmationState } from '../useConfirmationState'
 
 export default {
   name: 'EditorList',
@@ -86,6 +99,8 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
+    const filterMenuOpen = ref(false)
+    const filterDropdown = ref<HTMLElement | null>(null)
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
         collapsed.value[key] = false
@@ -95,6 +110,35 @@ export default {
 
     const toggleTagFilter = (tag: string) => {
       hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
+    }
+
+    const filterSummary = computed(() => {
+      const hiddenCount = hiddenTags.value.size
+      if (hiddenCount === 0) {
+        return 'All editors'
+      }
+      const visibleTags = Object.values(EditorTag).filter((tag) => !hiddenTags.value.has(tag))
+      if (visibleTags.length === 0) {
+        return 'No editors'
+      }
+      if (visibleTags.length === 1) {
+        return `${
+          visibleTags.map((tag) =>
+            tag
+              .split('_')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' '),
+          )[0]
+        } only`
+      }
+      return `${visibleTags.length} types`
+    })
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (filterDropdown.value && target && !filterDropdown.value.contains(target)) {
+        filterMenuOpen.value = false
+      }
     }
     const current = getDefaultValueFromHash('editor') || ''
 
@@ -162,6 +206,12 @@ export default {
           collapsed.value[folderPath] = false
         })
       }
+
+      document.addEventListener('click', handleDocumentClick)
+    })
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleDocumentClick)
     })
 
     const contentList = computed(() => {
@@ -171,6 +221,15 @@ export default {
         collapsed.value,
         hiddenTags.value,
       )
+    })
+
+    const {
+      isOpen: showDeleteConfirmationState,
+      openConfirmation: showDeleteConfirmation,
+      closeConfirmation: cancelDelete,
+      confirm: confirmDelete,
+    } = useConfirmationState<Editor>((editor) => {
+      editor.delete()
     })
 
     return {
@@ -184,12 +243,13 @@ export default {
       collapsed,
       hiddenTags,
       creatorVisible,
-    }
-  },
-  data() {
-    return {
-      showDeleteConfirmationState: false,
-      editorToDelete: null as string | null,
+      filterMenuOpen,
+      filterDropdown,
+      filterSummary,
+      showDeleteConfirmationState,
+      showDeleteConfirmation,
+      cancelDelete,
+      confirmDelete,
     }
   },
   methods: {
@@ -200,21 +260,6 @@ export default {
       return words
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ')
-    },
-    showDeleteConfirmation(editor: Editor) {
-      this.editorToDelete = editor.id
-      this.showDeleteConfirmationState = true
-    },
-    cancelDelete() {
-      this.showDeleteConfirmationState = false
-      this.editorToDelete = null
-    },
-    confirmDelete() {
-      if (this.editorToDelete) {
-        this.editorStore.editors[this.editorToDelete].delete()
-      }
-      this.showDeleteConfirmationState = false
-      this.editorToDelete = null
     },
     saveEditors() {
       this.$emit('save-editors')
@@ -233,80 +278,100 @@ export default {
     SidebarList,
     LoadingButton,
     EditorListItem,
+    ConfirmDialog,
   },
 }
 </script>
 
 <style scoped>
-.tag {
-  font-size: 8px;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
-  cursor: pointer;
-}
-
-.tag-excluded {
-  background-color: hsla(0, 0%, 69%, 0.1);
-  border: 1px solid hsl(210, 100%, 50%, 0.25);
-}
-
-.tag:hover {
-  background-color: hsl(210, 100%, 50%, 0.5);
-  border: 1px solid hsl(210, 100%, 50%, 0.75);
-}
-
-.tag-excluded:hover {
-  background-color: hsla(0, 0%, 69%, 0.2);
-  border: 1px solid hsla(0, 0%, 69%, 0.2);
-}
-
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+.editors-header-row {
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.confirmation-dialog {
-  background-color: var(--bg-color);
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
+.editors-header-row .sidebar-header {
+  margin: 0;
+  min-width: 0;
 }
 
-.dialog-actions {
+.tag-filter-dropdown {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tag-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  line-height: 1;
+}
+
+.tag-filter-button:hover {
+  color: var(--text-color);
+}
+
+.tag-filter-button-scope {
+  color: var(--text-faint);
+}
+
+.tag-filter-button-label {
+  white-space: nowrap;
+  color: var(--text-color);
+}
+
+.tag-filter-chevron {
+  font-size: 14px;
+  transition: transform 0.16s ease;
+}
+
+.tag-filter-chevron.open {
+  transform: rotate(180deg);
+}
+
+.tag-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  padding: 6px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--surface-shadow);
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.cancel-btn {
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 4px;
+.tag-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text-color);
   cursor: pointer;
+  font-size: 11px;
 }
 
-.confirm-btn {
-  padding: 8px 16px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.tag-filter-option:hover {
+  background-color: var(--button-mouseover);
+}
+
+.tag-filter-option input {
+  margin: 0;
 }
 </style>

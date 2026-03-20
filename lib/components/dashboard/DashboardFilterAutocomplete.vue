@@ -1,7 +1,8 @@
 <!-- FilterAutocomplete.vue -->
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { CompletionItem } from '../../stores/resolver'
+import { useClickOutside } from '../../composables/useClickOutside'
 
 const props = defineProps({
   inputValue: {
@@ -135,17 +136,6 @@ const selectCompletion = (item: CompletionItem) => {
   isVisible.value = false
 }
 
-// Handle clicks outside to close dropdown
-const handleClickOutside = (event: MouseEvent) => {
-  if (
-    dropdown.value &&
-    !dropdown.value.contains(event.target as Node) &&
-    props.inputElement !== event.target
-  ) {
-    isVisible.value = false
-  }
-}
-
 // Get icon class for symbol type (similar to SymbolsPane)
 const getIconClass = (symbol: CompletionItem): string => {
   if (symbol.trilogySubType) {
@@ -162,26 +152,16 @@ watch(
   },
 )
 
-// Setup event listeners
-onMounted(() => {
-  document.addEventListener('mousedown', handleClickOutside)
-  if (props.inputElement) {
-    // console.log('Adding event listeners to inputElement')
-    // console.log(props.inputElement)
-    // props.inputElement.addEventListener('keydown', handleKeyDown)
-    // props.inputElement.addEventListener('click', updateCurrentWord)
-    // props.inputElement.addEventListener('focus', updateCurrentWord)
-  }
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleClickOutside)
-  if (props.inputElement) {
-    // props.inputElement.removeEventListener('keydown', handleKeyDown)
-    // props.inputElement.removeEventListener('click', updateCurrentWord)
-    // props.inputElement.removeEventListener('focus', updateCurrentWord)
-  }
-})
+useClickOutside(
+  () => [dropdown.value, props.inputElement],
+  () => {
+    isVisible.value = false
+  },
+  {
+    enabled: () => isVisible.value,
+    eventName: 'mousedown',
+  },
+)
 
 // Initialize
 updateCurrentWord()

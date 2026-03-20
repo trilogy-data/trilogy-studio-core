@@ -281,8 +281,33 @@ complete_for_clause?
       'code',
     ),
     new Paragraph(
+      'Partial Data',
+      'Sometimes partial data is all we need. For example, imagine a recent and archive table. When you query the last 7 days, and the last 30 are in recent - we can prune the archive.',
+    ),
+    new Paragraph(
+      'Example',
+      `partial datasource recent_sales (
+  order_id: orders.id,
+  cu_id: customers.id,
+  revenue: orders.revenue,
+  date: orders.date
+)\ngrain (orders.id)
+complete where orders.date > current_date - 30
+address warehouse.sales;
+
+partial datasource archive_sales (
+  order_id: orders.id,
+  cu_id: customers.id,
+  revenue: orders.revenue,
+  date: orders.date
+)\ngrain (orders.id)
+complete where orders.date <= current_date - 30
+address warehouse.sales_archive;`,
+      'code',
+    ),
+    new Paragraph(
       'Partial Keys',
-      'A query of the form `SELECT sum(orders.revenue), customer.name` would mean "get all customer names, and their total revenue". This would be resolved via a join through customer.id, with the order table being on the right side of the join, to ensure that all customers were returned regardless of if they placed an order.',
+      'A query of the form `where orders.date > current_date -7 can safely resolve to just our recent. This lets us efficiently prune and select relevant datasources.',
     ),
   ]),
   new Article('Grains and Aggregation', [

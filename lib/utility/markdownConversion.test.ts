@@ -204,10 +204,37 @@ b = 2
 \`\`\``
       const result = convertMarkdownToHtml(markdown)
 
-      expect(result).toContain('language-js')
+      expect(result).toContain('language-javascript')
       expect(result).toContain('language-python')
       expect(result).toContain('const a = 1;')
       expect(result).toContain('b = 2')
+    })
+  })
+
+  describe('Admonitions', () => {
+    it('should convert fenced admonition blocks to HTML', () => {
+      const markdown = `:::tip
+Use view mode first, then switch to edit.
+:::`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('<div class="md-admonition md-admonition-tip">')
+      expect(result).toContain('<div class="md-admonition-header">Tip</div>')
+      expect(result).toContain('Use view mode first, then switch to edit.')
+    })
+
+    it('should preserve markdown formatting inside admonition bodies', () => {
+      const markdown = `:::warning
+**Important** changes are visible to your browser session only.
+
+- Review
+- Edit
+:::`
+      const result = convertMarkdownToHtml(markdown)
+
+      expect(result).toContain('<div class="md-admonition md-admonition-warning">')
+      expect(result).toContain('<strong>Important</strong>')
+      expect(result).toContain('<ul><li>Review</li><li>Edit</li></ul>')
     })
   })
 

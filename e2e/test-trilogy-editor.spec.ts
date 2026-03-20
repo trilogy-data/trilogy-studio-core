@@ -1,29 +1,29 @@
 import { test, expect } from '@playwright/test'
+import {
+  openSidebarScreen,
+  prepareTestPage,
+  refreshConnection,
+  runEditorQueryAndExpectCount,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 const connectionName = 'duckdb-test2'
 
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
+
 test('test', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('refresh-connection-duckdb-test2').click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-duckdb-test2"]')
-    if (!element) return false
+  await refreshConnection(page, connectionName)
+  await waitForConnectionReady(page, connectionName)
 
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
-
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors', isMobile)
 
   // Create first editor (regular name)
   await page.getByTestId('editor-creator-add').click()
@@ -51,9 +51,7 @@ select unnest(x) as rows;
 
   await page.keyboard.type(testOneContent)
 
-  await page.getByTestId('editor-run-button').click()
-
-  await expect(page.getByTestId('query-results-length')).toContainText('5')
+  await runEditorQueryAndExpectCount(page, 5)
 })
 
 test('test_demo_editor', async ({ page, isMobile, browser }) => {

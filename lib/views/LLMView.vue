@@ -4,7 +4,7 @@
     <div class="view-tabs">
       <button
         class="view-tab"
-        :class="{ active: activeView === 'chat' }"
+        :class="{ active: activeView === 'chat', 'view-tab-chat': true }"
         @click="activeView = 'chat'"
         data-testid="llm-view-tab-chat"
       >
@@ -12,7 +12,7 @@
       </button>
       <button
         class="view-tab"
-        :class="{ active: activeView === 'validation' }"
+        :class="{ active: activeView === 'validation', 'view-tab-validation': true }"
         @click="activeView = 'validation'"
         data-testid="llm-view-tab-validation"
       >
@@ -66,7 +66,7 @@
               :active-imports="activeImportsForChat"
               @update:imports="handleImportChange"
             />
-            <span v-if="chatConnectionInfo" class="connection-info">
+            <span v-if="chatConnectionInfo" class="connection-info" :title="chatConnectionInfo">
               {{ chatConnectionInfo }}
             </span>
           </div>
@@ -292,8 +292,10 @@ export default defineComponent({
 .view-tabs {
   display: flex;
   border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-  min-height: 30px;
+  background: var(--query-window-bg);
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 4px;
   z-index: 99;
 }
 
@@ -301,33 +303,37 @@ export default defineComponent({
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 13px;
+  font-weight: 500;
   border-bottom: 2px solid transparent;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding: 0 16px;
   color: var(--text-color);
   border-radius: 0px;
 }
 
 .view-tab:hover {
-  color: #0ea5e9;
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .view-tab.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
   border-radius: 0px;
 }
 
 .chat-view {
   flex: 1;
   overflow: hidden;
+  background: var(--main-bg-color);
 }
 
 .chat-header-controls {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .auto-name-btn {
@@ -384,5 +390,26 @@ export default defineComponent({
   padding: 2px 8px;
   background-color: var(--bg-color);
   border-radius: 4px;
+  min-width: 0;
+  max-width: clamp(140px, 28vw, 280px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .chat-header-controls {
+    gap: 8px;
+  }
+
+  .connection-info {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 720px) {
+  .connection-info {
+    display: none;
+  }
 }
 </style>

@@ -154,7 +154,6 @@ export default {
 .btn {
   /* width: 100%; */
   position: relative;
-  padding: 0px;
   margin: 0px;
   /* height:100%; */
 }

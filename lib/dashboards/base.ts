@@ -27,7 +27,7 @@ export interface LayoutItem {
 }
 
 export interface DashboardTypes {
-  CellType: 'chart' | 'markdown' | 'table' | 'filter'
+  CellType: 'chart' | 'markdown' | 'table' | 'filter' | 'section-header'
 }
 // export types for 'fullscreen' | 'editing' | 'published' | 'locked'
 export type DashboardState = 'fullscreen' | 'editing' | 'published' | 'locked'
@@ -139,6 +139,7 @@ export const CELL_TYPES = {
   MARKDOWN: 'markdown',
   TABLE: 'table',
   FILTER: 'filter',
+  SECTION_HEADER: 'section-header',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
@@ -245,6 +246,8 @@ export class DashboardModel implements Dashboard {
     let defaultHeight = 10 // Default height for CHART and TABLE
     if (type === CELL_TYPES.MARKDOWN) {
       defaultHeight = 3 // Smaller height for markdown
+    } else if (type === CELL_TYPES.SECTION_HEADER) {
+      defaultHeight = 1
     }
     let yFinal = y
     yFinal = this.layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0)
@@ -263,6 +266,8 @@ export class DashboardModel implements Dashboard {
       defaultName = `Chart ${itemId}`
     } else if (type === CELL_TYPES.TABLE) {
       defaultName = `Table ${itemId}`
+    } else if (type === CELL_TYPES.SECTION_HEADER) {
+      defaultName = '### Section Header'
     }
 
     let finalName = name || defaultName
@@ -273,6 +278,8 @@ export class DashboardModel implements Dashboard {
       defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim"
     } else if (type === CELL_TYPES.TABLE) {
       defaultContent = "SELECT [1,2,3,4] as value, 'example' as dim"
+    } else if (type === CELL_TYPES.SECTION_HEADER) {
+      defaultContent = ''
     }
 
     let finalContent = content || defaultContent
@@ -284,7 +291,7 @@ export class DashboardModel implements Dashboard {
       name: finalName,
       width: 0,
       height: 0,
-      allowCrossFilter: true, // Default to allowing cross-filtering
+      allowCrossFilter: type === CELL_TYPES.SECTION_HEADER ? false : true,
     }
 
     this.nextId++

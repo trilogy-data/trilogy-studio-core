@@ -1,7 +1,8 @@
 <!-- ImportSelector.vue -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { type DashboardImport } from '../../dashboards/base'
+import { useClickOutside } from '../../composables/useClickOutside'
 
 export interface ImportSelectorProps {
   availableImports: DashboardImport[]
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 
 // Show/hide dropdown
 const showDropdown = ref<boolean>(false)
+const selectorRef = ref<HTMLElement | null>(null)
 
 // Toggle dropdown visibility
 function toggleDropdown(): void {
@@ -37,7 +39,7 @@ function isImportActive(importId: string): boolean {
 function toggleImport(importItem: DashboardImport): void {
   let newImports: DashboardImport[] = []
 
-  if (isImportActive(importItem.name)) {
+  if (isImportActive(importItem.id)) {
     // If already active, deselect it (empty array)
     newImports = []
   } else {
@@ -61,27 +63,13 @@ function exploreImport(importItem: DashboardImport): void {
 // Count of active imports
 const activeCount = computed((): number => props.activeImports.length)
 
-// Close dropdown when clicking outside
-function handleClickOutside(event: MouseEvent): void {
-  const importSelector = document.querySelector('.import-selector')
-  if (importSelector && !importSelector.contains(event.target as Node) && showDropdown.value) {
-    showDropdown.value = false
-  }
-}
-
-// Add event listener on mounted
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-// Remove event listener on unmounted
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+useClickOutside(selectorRef, closeDropdown, {
+  enabled: () => showDropdown.value,
 })
 </script>
 
 <template>
-  <div class="import-selector" data-testid="dashboard-import-wrapper">
+  <div ref="selectorRef" class="import-selector" data-testid="dashboard-import-wrapper">
     <div class="import-selector-header" @click="toggleDropdown">
       <div
         class="import-summary"
@@ -91,7 +79,9 @@ onUnmounted(() => {
         <div class="summary-content">
           <i class="mdi mdi-file-document-edit-outline summary-icon"></i>
           <span v-if="activeCount === 0">No imports</span>
-          <span v-else-if="activeCount === 1">{{ activeImports[0].name }}</span>
+          <span v-else-if="activeCount === 1" class="summary-text" :title="activeImports[0].name">
+            {{ activeImports[0].name }}
+          </span>
           <span v-else>{{ activeImports.length }} import(s) selected</span>
         </div>
         <svg
@@ -227,7 +217,9 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 200px;
+  flex: 0 1 260px;
+  min-width: 160px;
+  max-width: 260px;
 }
 
 .import-selector-header {
@@ -241,24 +233,20 @@ onUnmounted(() => {
 .import-summary {
   display: flex;
   align-items: center;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
-  /* min-width: 150px; */
   justify-content: space-between;
   width: 100%;
-}
-
-.import-summary {
-  padding: 5px 12px 5px 36px;
-  border: 1px solid var(--border);
-  color: var(--sidebar-selector-font);
+  height: 44px;
+  padding: 0 14px 0 40px;
+  border: 1px solid var(--border-light);
+  color: var(--dashboard-helper-text);
   font-size: var(--font-size);
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
   appearance: none;
   cursor: pointer;
-  min-width: 150px;
+  min-width: 0;
   outline: none;
-  border-radius: 0; /* Remove rounded corners */
+  border-radius: 12px;
+  box-sizing: border-box;
   -webkit-appearance: none;
   -moz-appearance: none;
 }
@@ -267,32 +255,47 @@ onUnmounted(() => {
   color: var(--text-color);
 }
 
+.import-selector-header:hover .import-summary {
+  border-color: var(--special-text);
+}
+
 .summary-content {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.summary-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-icon {
   position: absolute;
-  left: 10px;
+  left: 12px;
   font-size: 18px;
   color: var(--text-color);
 }
 
 .dropdown-icon {
-  margin: 0px 8px;
+  flex-shrink: 0;
+  margin-left: 10px;
+  color: var(--dashboard-helper-text);
 }
 
 .import-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   z-index: 100;
   width: 300px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   padding: 12px;
 }
 
@@ -306,6 +309,8 @@ onUnmounted(() => {
 .import-dropdown-header h4 {
   margin: 0;
   color: var(--text-color);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dropdown-action-buttons {
@@ -315,8 +320,8 @@ onUnmounted(() => {
 }
 
 .clear-all-button {
-  border: none;
-  background: none;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--delete-color);
   cursor: pointer;
   font-size: 12px;
@@ -324,7 +329,7 @@ onUnmounted(() => {
 }
 
 .clear-all-button:hover {
-  text-decoration: underline;
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .close-dropdown-button {
@@ -341,7 +346,7 @@ onUnmounted(() => {
 
 .close-dropdown-button:hover {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(148, 163, 184, 0.08);
   border-radius: 4px;
 }
 
@@ -349,7 +354,7 @@ onUnmounted(() => {
   max-height: 150px;
   overflow-y: auto;
   margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-light);
   padding-bottom: 8px;
   text-align: left;
 }
@@ -362,7 +367,7 @@ onUnmounted(() => {
 }
 
 .import-item:hover {
-  background-color: var(--sidebar-bg);
+  background-color: var(--button-mouseover);
 }
 
 .import-item.active {
@@ -372,7 +377,7 @@ onUnmounted(() => {
 .import-checkbox {
   width: 20px;
   height: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   margin-right: 8px;
   display: flex;
   align-items: center;
@@ -404,11 +409,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--special-text);
-  color: white;
+  background-color: rgba(var(--special-text-rgb), 0.12);
+  color: var(--text-color);
   padding: 4px 8px;
   font-size: 12px;
   width: 100%;
+  border-radius: 10px;
 }
 
 .import-actions {
@@ -426,8 +432,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  opacity: 0.8;
+  color: var(--text-color);
+  opacity: 0.75;
   border-radius: 2px;
 }
 
@@ -444,7 +450,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-color);
   opacity: 0.7;
   border-radius: 2px;
 }
@@ -457,28 +463,23 @@ onUnmounted(() => {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .import-selector {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    width: 100%;
-    /* max-width: 300px; */
-    /* min-width: unset; */
+    flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .import-selector-header {
-    flex-direction: column;
-    align-items: center;
     width: 100%;
   }
 
   .import-summary {
-    padding: 4px 0px;
-    text-align: center;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px 0 36px;
   }
 
   .summary-content {
-    justify-content: center;
-    flex: 1;
+    justify-content: flex-start;
   }
 
   .import-dropdown {

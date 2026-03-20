@@ -54,9 +54,13 @@ export const createBaseSpec = (data: readonly Row[] | null) => {
     data: { values: data },
     width: 'container',
     height: 'container',
+    background: 'transparent',
     config: {
       scale: {
         bandPaddingInner: 0.2,
+      },
+      view: {
+        stroke: null,
       },
     },
   }
@@ -143,6 +147,40 @@ export const generateVegaSpec = (
 
   // Create base spec
   let spec: any = createBaseSpec(localData)
+  const themeChartConfig =
+    currentTheme === 'light'
+      ? {
+          view: {
+            fill: '#ffffff',
+            stroke: null,
+          },
+          axis: {
+            domainColor: '#cfd6df',
+            tickColor: '#cfd6df',
+            gridColor: '#e5e9ef',
+            labelColor: '#475569',
+            titleColor: '#475569',
+          },
+          legend: {
+            labelColor: '#475569',
+            titleColor: '#334155',
+          },
+          header: {},
+        }
+      : {
+          axis: {
+            domainColor: '#2a2f37',
+            tickColor: '#2a2f37',
+            gridColor: '#1f242c',
+            labelColor: '#cbd5e1',
+            titleColor: '#cbd5e1',
+          },
+          legend: {
+            labelColor: '#cbd5e1',
+            titleColor: '#e5e7eb',
+          },
+          header: {},
+        }
 
   // Set up color encoding
   let encoding: any = {}
@@ -293,22 +331,21 @@ export const generateVegaSpec = (
       },
     }
   }
-  if (currentTheme === 'dark') {
-    spec.config = {
-      // TODO - figure how to get this from css
-      background: '#262626',
-    }
-  }
-  if (currentTheme === 'light') {
-    spec.config = {
-      background: '#FBFBFB',
-    }
+  spec.background = 'transparent'
+  spec.config = {
+    ...spec.config,
+    ...themeChartConfig,
+    view: {
+      ...(themeChartConfig as any).view,
+      ...(spec.config?.view || {}),
+      stroke: null,
+    },
   }
   if (config.showTitle && title) {
     spec.title = {
       text: title,
-      // fontSize: 20,
-      // fontWeight: 'bold',
+      anchor: 'start',
+      offset: 12,
       color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
     }
   }

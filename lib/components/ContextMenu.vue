@@ -1,14 +1,26 @@
 <template>
-  <div v-if="isVisible" :style="positionStyle" class="context-menu">
-    <div
-      v-for="item in items"
-      :key="item.id"
-      class="context-menu-item"
-      :class="{ danger: item.danger }"
-      @click="handleItemClick(item)"
-    >
-      <i v-if="item.icon" :class="`mdi ${item.icon}`"></i>
-      <span>{{ item.label }}</span>
+  <div
+    v-if="isVisible"
+    :style="positionStyle"
+    class="context-menu"
+    :data-testid="id ? `context-menu-${id}` : undefined"
+  >
+    <div v-for="item in items" :key="item.id">
+      <div
+        v-if="item.kind === 'separator'"
+        class="context-menu-separator"
+        :data-testid="id ? `${id}-${item.id}` : `context-menu-item-${item.id}`"
+      ></div>
+      <div
+        v-else
+        class="context-menu-item"
+        :class="{ danger: item.danger, disabled: item.disabled }"
+        :data-testid="id ? `${id}-${item.id}` : `context-menu-item-${item.id}`"
+        @click="handleItemClick(item)"
+      >
+        <i v-if="item.icon" :class="`mdi ${item.icon}`"></i>
+        <span>{{ item.label }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -24,9 +36,11 @@ export interface Position {
 
 export interface ContextMenuItem {
   id: string
-  label: string
+  label?: string
   icon?: string
   danger?: boolean
+  disabled?: boolean
+  kind?: 'item' | 'separator'
 }
 
 export default defineComponent({
@@ -59,6 +73,9 @@ export default defineComponent({
     })
 
     const handleItemClick = (item: ContextMenuItem) => {
+      if (item.disabled || item.kind === 'separator') {
+        return
+      }
       emit('item-click', item)
       emit('close')
     }
@@ -92,34 +109,73 @@ export default defineComponent({
 
 <style scoped>
 .context-menu {
-  /* position: fixed; */
-  position: absolute;
+  position: fixed;
   background-color: var(--sidebar-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
   z-index: 1000;
   min-width: 150px;
+  padding: 3px;
 }
 
 .context-menu-item {
-  padding: 4px 6px;
+  min-height: 27px;
+  padding: 0 7px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   color: var(--text-color);
-  transition: background-color 0.2s;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.1;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.context-menu-item i {
+  width: 15px;
+  min-width: 15px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-faint);
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 2px 2px 3px;
+  background-color: var(--border-light);
 }
 
 .context-menu-item:hover {
-  background-color: var(--border-color);
+  background-color: var(--button-mouseover);
 }
 
 .context-menu-item.danger {
   color: var(--error-color);
 }
 
+.context-menu-item.danger i {
+  color: rgba(var(--delete-color-rgb), 0.62);
+}
+
 .context-menu-item.danger:hover {
-  background-color: var(--border-color);
+  background-color: rgba(var(--delete-color-rgb), 0.08);
+}
+
+.context-menu-item.disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.context-menu-item.disabled i {
+  color: var(--text-faint);
+}
+
+.context-menu-item.disabled:hover {
+  background-color: transparent;
 }
 </style>

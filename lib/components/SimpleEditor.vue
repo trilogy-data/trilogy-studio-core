@@ -109,6 +109,7 @@ import SymbolsPane from './SymbolsPane.vue'
 import LoadingView from './LoadingView.vue'
 import { type AnalyticsStoreType } from '../stores/analyticsStore.ts'
 import type { ContentInput } from '../stores/resolver'
+import { useUserSettingsStore } from '../stores/userSettingsStore'
 export interface OperationState {
   success: boolean
   duration: number
@@ -132,7 +133,7 @@ export default defineComponent({
     },
     theme: {
       type: String,
-      default: 'vs-dark',
+      default: '',
     },
     initContent: {
       type: String,
@@ -180,12 +181,14 @@ export default defineComponent({
     const isMobile = inject('isMobile')
     const llmConnectionStore = inject('llmConnectionStore')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
+    const userSettingsStore = useUserSettingsStore()
     return {
       queryExecutionService,
       connectionStore,
       isMobile,
       llmConnectionStore,
       analyticsStore,
+      userSettingsStore,
     }
   },
   created() {
@@ -197,6 +200,12 @@ export default defineComponent({
   mounted() {
     this.$nextTick(() => {
       this.createEditor()
+      this.$watch(
+        () => this.userSettingsStore?.settings.theme,
+        () => {
+          this.applyEditorTheme()
+        },
+      )
       // Set up keyboard shortcut to focus on the symbol search box
       document.addEventListener('keydown', this.handleKeyboardShortcuts)
       this.validateQuery()
@@ -211,6 +220,16 @@ export default defineComponent({
   },
 
   methods: {
+    getResolvedTheme(): 'light' | 'dark' {
+      const explicitTheme = this.theme === 'light' || this.theme === 'dark' ? this.theme : ''
+      const storeTheme = this.userSettingsStore?.settings.theme || ''
+      return (explicitTheme || storeTheme || 'dark') === 'light' ? 'light' : 'dark'
+    },
+
+    applyEditorTheme(): void {
+      configureEditorTheme(this.getResolvedTheme())
+    },
+
     // New methods for panel management
     togglePanel(panelName: string): void {
       if (this.activePanel === panelName && this.isPanelVisible) {
@@ -255,8 +274,7 @@ export default defineComponent({
     },
 
     createEditor(): void {
-      // Configure the editor theme
-      configureEditorTheme(this.theme === 'vs-dark' ? 'dark' : 'light')
+      this.applyEditorTheme()
 
       // Create the editor instance
       globalEditor = createMonacoEditor(this.$refs.editorElement as HTMLElement, {

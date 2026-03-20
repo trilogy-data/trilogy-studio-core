@@ -18,9 +18,11 @@ if (!dashboardStore || !llmStore || !queryExecutionService || !saveDashboards) {
   throw new Error('DashboardStore, LLMConnectionStore, or QueryExecutionService not provided')
 }
 // Props definition
-const props = defineProps<{
+export interface DashboardCTAProps {
   dashboardId: string
-}>()
+}
+
+const props = defineProps<DashboardCTAProps>()
 
 const hasLlmConnection = computed(() => {
   return llmStore.activeConnection

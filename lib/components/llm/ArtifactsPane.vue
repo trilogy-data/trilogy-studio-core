@@ -1,18 +1,5 @@
 <template>
   <div class="artifacts-pane">
-    <!-- Publish button -->
-    <div class="artifacts-actions" v-if="visibleArtifacts.length > 0">
-      <button
-        class="publish-btn"
-        @click="$emit('publish-artifacts')"
-        title="Publish artifacts as a dashboard"
-        data-testid="publish-artifacts-btn"
-      >
-        <i class="mdi mdi-view-dashboard-outline"></i>
-        Publish as Dashboard
-      </button>
-    </div>
-
     <!-- Scrollable view: visible artifacts -->
     <div class="artifacts-scroll" v-if="visibleArtifacts.length > 0 || hiddenArtifacts.length > 0">
       <!-- Visible artifacts -->
@@ -155,12 +142,7 @@ export default defineComponent({
       default: -1,
     },
   },
-  emits: [
-    'publish-artifacts',
-    'chart-config-change',
-    'update:activeArtifactIndex',
-    'unhide-artifact',
-  ],
+  emits: ['chart-config-change', 'update:activeArtifactIndex', 'unhide-artifact'],
   setup(props, { emit }) {
     const collapsedArtifacts = ref<Set<string>>(new Set())
     const showHidden = ref(false)
@@ -333,78 +315,49 @@ export default defineComponent({
   height: 100%;
 }
 
-/* Publish button */
-.artifacts-actions {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-light);
-  flex-shrink: 0;
-}
-
-.publish-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  background-color: var(--sidebar-bg);
-  color: var(--text-color);
-  font-size: var(--font-size);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.publish-btn:hover {
-  background-color: var(--special-text);
-  color: white;
-  border-color: var(--special-text);
-}
-
-.publish-btn i {
-  font-size: 16px;
-}
-
 /* Scrollable all-artifacts view */
 .artifacts-scroll {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px 10px 10px 8px;
 }
 
 .artifact-card {
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  background-color: var(--query-window-bg);
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   cursor: pointer;
   transition: border-color 0.15s ease;
+  box-shadow: none;
 }
 
 .artifact-card:hover {
-  border-color: var(--border);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
 }
 
 .artifact-card.active {
-  border-color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.26);
 }
 
 .artifact-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
+  padding: 7px 9px;
+  background-color: transparent;
   border-bottom: 1px solid var(--border-light);
-  min-height: 32px;
+  min-height: 30px;
   cursor: pointer;
   user-select: none;
 }
 
 .artifact-card-header:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
 }
 
 .artifact-card-header i {
@@ -420,8 +373,8 @@ export default defineComponent({
 }
 
 .artifact-label {
-  font-size: var(--font-size);
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -430,7 +383,7 @@ export default defineComponent({
 }
 
 .artifact-meta {
-  font-size: var(--small-font-size);
+  font-size: 10px;
   color: var(--text-faint);
   flex-shrink: 0;
 }
@@ -440,12 +393,12 @@ export default defineComponent({
 }
 
 .markdown-artifact-view {
-  padding: 10px;
+  padding: 6px 8px;
   overflow: auto;
 }
 
 .custom-artifact-view {
-  padding: 10px;
+  padding: 6px 8px;
   overflow: auto;
   height: 100%;
 }
@@ -471,20 +424,22 @@ export default defineComponent({
 .hidden-section {
   flex-shrink: 0;
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  background-color: var(--query-window-bg);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: none;
 }
 
 .hidden-section-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
+  padding: 7px 9px;
+  background-color: transparent;
   cursor: pointer;
   user-select: none;
-  min-height: 32px;
-  font-size: var(--font-size);
+  min-height: 30px;
+  font-size: 12px;
   color: var(--text-faint);
 }
 
@@ -507,7 +462,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-top: 1px solid var(--border-light);
   min-height: 30px;
 }
@@ -542,5 +497,66 @@ export default defineComponent({
   border-color: var(--special-text);
   color: var(--special-text);
   background-color: var(--button-mouseover);
+}
+
+:deep(.results-container),
+:deep(.tab-content),
+:deep(.sql-view),
+:deep(.result-table),
+:deep(.table-container) {
+  background: transparent;
+}
+
+:deep(.results-container) {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+:deep(.tabulator) {
+  border-top: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+:deep(.tabs) {
+  min-height: 22px;
+  height: 22px;
+  padding: 0 8px;
+}
+
+:deep(.tab-content) {
+  background: transparent !important;
+}
+
+:deep(.result-table-flush .tabulator) {
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
+}
+
+:deep(.result-table-flush .tabulator .tabulator-footer) {
+  box-shadow: none !important;
+}
+
+:deep(.markdown-content p) {
+  margin: 0 0 10px;
+  line-height: 1.55;
+}
+
+:deep(.markdown-content h1),
+:deep(.markdown-content h2),
+:deep(.markdown-content h3),
+:deep(.markdown-content h4) {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+:deep(.markdown-content ul),
+:deep(.markdown-content ol) {
+  margin: 0 0 10px 18px;
 }
 </style>

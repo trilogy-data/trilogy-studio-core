@@ -25,7 +25,7 @@
     <template #extra-content>
       <template v-if="item.type === 'model'">
         <span class="tag-container">
-          <span v-for="tag in item.model?.tags || []" :key="tag" class="tag">{{ tag }}</span>
+          <sidebar-tag-chip v-for="tag in item.model?.tags || []" :key="tag" :label="tag" />
         </span>
       </template>
       <template v-else-if="item.type === 'engine'">
@@ -42,7 +42,7 @@
             position="left"
           >
             <span
-              class="remove-btn hover-icon"
+              class="remove-btn hover-icon sidebar-icon-button danger"
               @click.stop="emit('delete-store', item.store)"
               :data-testid="`delete-store-${item.store.id}`"
             >
@@ -71,15 +71,16 @@ import { DEFAULT_GITHUB_STORE } from '../../remotes/models'
 import type { AnyModelStore } from '../../remotes/models'
 import { useCommunityApiStore } from '../../stores'
 import type { Status } from '../StatusIcon.vue'
+import SidebarTagChip from './SidebarTagChip.vue'
 
-interface Props {
+export interface CommunityModelListItemProps {
   item: any
   activeModel?: string
   isCollapsed?: boolean
   isMobile?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<CommunityModelListItemProps>(), {
   activeModel: '',
   isCollapsed: false,
   isMobile: false,
@@ -140,54 +141,17 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
 }
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
-.details-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.remove-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-  padding: 4px;
-}
 .right-pad {
   padding-right: 5px;
-}
-.tag {
-  font-size: 6px;
-  border-radius: 3px;
-  margin-left: 2px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 9px;
-  cursor: pointer;
-}
-
-.text-light {
-  color: var(--text-faint);
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
 }
 
 .sidebar-icon {
   padding-right: 5px;
 }
 
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
+:deep(.sidebar-tag-chip) {
+  max-width: 72px;
 }
 </style>

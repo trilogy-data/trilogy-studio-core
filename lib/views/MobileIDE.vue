@@ -14,8 +14,8 @@
       :activeScreen="activeScreen"
       :tabs="tabs"
       :activeTab="activeTab"
-      @tab-closed="(tab) => closeTab(tab, null)"
-      @close-other-tabs="(tab) => closeOtherTabsExcept(tab)"
+      @tab-closed="handleTabClosed"
+      @close-other-tabs="handleCloseOtherTabs"
     >
       <template #sidebar>
         <sidebar
@@ -102,6 +102,7 @@
   </div>
 </template>
 
+<style scoped src="../components/layout/ideViewport.css"></style>
 <style scoped>
 .ide-context-manager {
   height: 100vh;
@@ -113,63 +114,8 @@ header {
   flex-shrink: 0;
 }
 
-.main {
-  width: 100vw;
-  height: 100vh;
-}
-
 aside {
   flex-shrink: 0;
-}
-
-.results-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--sidebar-bg);
-}
-
-.tab-button {
-  /* padding: 0.5rem 1rem; */
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-button:hover {
-  color: #0ea5e9;
-}
-
-.tab-button.active {
-  color: #0ea5e9;
-  border-bottom: 2px solid #0ea5e9;
-}
-
-.tab-content {
-  flex: 1;
-  overflow: auto;
-}
-
-.sql-view {
-  padding: 1rem;
-  height: 100%;
-}
-
-.sql-view pre {
-  margin: 0;
-  background: var(--bg-light);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
 }
 </style>
 
@@ -196,6 +142,7 @@ import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
+import { defineComponent, type Component } from 'vue'
 
 const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
@@ -213,7 +160,7 @@ const ChatCreatorModal = defineAsyncComponent(
 
 export interface MobileIDEProps {}
 
-export default {
+const MobileIDEComponent: Component = defineComponent({
   name: 'MobileIDEComponent',
   data() {},
   components: {
@@ -300,6 +247,12 @@ export default {
     } = screenNavigation
     const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
+    }
+    const handleTabClosed = (tab: Tab) => {
+      closeTab(tab.id, null)
+    }
+    const handleCloseOtherTabs = (tab: Tab) => {
+      closeOtherTabsExcept(tab.id)
     }
     onInitialLoad()
     addBackListeners()
@@ -398,6 +351,8 @@ export default {
       closeTab,
       closeOtherTabsExcept,
       tabSelected,
+      handleTabClosed,
+      handleCloseOtherTabs,
       llmInitialTab,
       handleLLMOpenView,
       showChatCreatorModal,
@@ -444,5 +399,7 @@ export default {
       return this.editorStore.editors
     },
   },
-}
+})
+
+export default MobileIDEComponent
 </script>

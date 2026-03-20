@@ -33,15 +33,29 @@
   height: 100%;
   width: 100%;
   background-color: var(--query-window-bg);
-  padding: 8px;
+  padding: 0;
+  overflow: hidden;
 }
+
 .no-selection {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
   width: 100%;
+  padding: 24px;
+  color: var(--text-faint);
+  text-align: center;
 }
+
+.no-selection h3 {
+  max-width: 720px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
 .model-display {
   height: 100%;
   overflow-y: hidden;

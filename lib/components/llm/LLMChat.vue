@@ -10,9 +10,11 @@
           testId="chat-title"
           class="chat-title"
         />
-        <div v-else class="chat-title">{{ title }}</div>
+        <div v-else class="chat-title" :title="title">{{ title }}</div>
       </div>
-      <slot name="header-actions"></slot>
+      <div class="chat-header-actions">
+        <slot name="header-actions"></slot>
+      </div>
     </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
@@ -20,9 +22,18 @@
         v-for="(message, index) in visibleMessages"
         :key="index"
         class="message"
-        :class="[message.role, { 'has-artifact': message.artifact }]"
+        :class="[
+          message.role,
+          { 'has-artifact': message.artifact, 'tool-only': isToolOnlyAssistantMessage(message) },
+        ]"
         :data-testid="`message-${message.role}-${index}`"
       >
+        <span
+          v-if="message.role === 'assistant' && !isToolOnlyAssistantMessage(message)"
+          class="message-avatar assistant-avatar"
+        >
+          <i class="mdi mdi-robot-outline"></i>
+        </span>
         <div class="message-content">
           <!-- Render artifacts inline if renderArtifacts is enabled -->
           <template v-if="message.artifact && renderArtifacts">
@@ -48,25 +59,36 @@
           <div
             v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
             class="tool-calls"
+            :class="{ summarized: shouldSummarizeToolCalls(message) }"
           >
             <div
-              v-for="(toolCall, toolIndex) in message.executedToolCalls"
-              :key="toolIndex"
-              class="tool-call"
-              :class="{ success: toolCall.result?.success, error: !toolCall.result?.success }"
+              v-if="shouldSummarizeToolCalls(message)"
+              class="tool-call-summary"
+              :title="getToolCallSummaryTitle(message)"
             >
-              <span class="tool-icon">
-                <i
-                  :class="
-                    toolCall.result?.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'
-                  "
-                ></i>
-              </span>
-              <span class="tool-name">{{ getToolDisplayName(toolCall.name) }}</span>
-              <span v-if="toolCall.result?.error" class="tool-error">{{
-                toolCall.result.error
-              }}</span>
+              <i class="mdi mdi-check-circle"></i>
+              <span>{{ getToolCallSummary(message) }}</span>
             </div>
+            <template v-else>
+              <div
+                v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
+                :key="toolCall.key"
+                class="tool-call"
+                :class="{ success: toolCall.success, error: !toolCall.success }"
+                :title="toolCall.error || toolCall.label"
+              >
+                <span class="tool-icon">
+                  <i
+                    :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"
+                  ></i>
+                </span>
+                <span class="tool-name">
+                  {{ toolCall.label }}
+                  <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
+                </span>
+                <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
+              </div>
+            </template>
           </div>
         </div>
         <div v-if="message.modelInfo" class="message-meta">
@@ -136,6 +158,12 @@ import {
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../../chats/chat'
 import EditableTitle from '../EditableTitle.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
+import {
+  condenseToolCalls,
+  getToolDisplayName,
+  mergeContiguousToolCallMessages,
+  isToolOnlyAssistantMessage,
+} from './toolCallDisplay'
 
 // Re-export for backwards compatibility
 export type { ChatMessage, ChatArtifact, ChatToolCall }
@@ -270,7 +298,7 @@ export default defineComponent({
     const isLoading = computed(() => props.externalLoading)
 
     const visibleMessages = computed(() => {
-      return internalMessages.value.filter((m) => !m.hidden)
+      return mergeContiguousToolCallMessages(internalMessages.value.filter((m) => !m.hidden))
     })
 
     // Sync with external messages prop
@@ -364,31 +392,46 @@ export default defineComponent({
       return toolLabels[toolName] || `Using ${toolName}...`
     }
 
-    // Get display name for completed tool calls
-    const getToolDisplayName = (toolName: string): string => {
-      const toolLabels: Record<string, string> = {
-        validate_query: 'Validated query',
-        run_query: 'Ran query',
-        run_active_editor_query: 'Ran editor query',
-        format_query: 'Formatted query',
-        edit_chart_config: 'Updated chart',
-        edit_editor: 'Updated editor',
-        request_close: 'Requested close',
-        close_session: 'Closed session',
-        connect_data_connection: 'Connected',
-        run_trilogy_query: 'Ran query',
-        chart_trilogy_query: 'Ran chart query',
-        add_import: 'Added import',
-        remove_import: 'Removed import',
-        list_available_imports: 'Listed imports',
-        create_markdown: 'Created markdown',
-        list_artifacts: 'Listed artifacts',
-        get_artifact: 'Got artifact',
-        update_artifact: 'Updated artifact',
-        remove_artifact: 'Removed artifact',
-        reorder_artifacts: 'Reordered artifacts',
+    const getCondensedToolCalls = (toolCalls: ChatToolCall[]) => condenseToolCalls(toolCalls)
+
+    const shouldSummarizeToolCalls = (message: ChatMessage): boolean => {
+      if (!isToolOnlyAssistantMessage(message) || !message.executedToolCalls?.length) return false
+
+      const condensed = getCondensedToolCalls(message.executedToolCalls)
+      return (
+        condensed.length > 1 && condensed.every((toolCall) => toolCall.success && !toolCall.error)
+      )
+    }
+
+    const getToolCallSummary = (message: ChatMessage): string => {
+      const condensed = message.executedToolCalls
+        ? getCondensedToolCalls(message.executedToolCalls)
+        : []
+      if (condensed.length === 0) return ''
+
+      const totalActions = condensed.reduce((sum, toolCall) => sum + toolCall.count, 0)
+      const preview = condensed.slice(0, 2).map((toolCall) => toolCall.label)
+      const remaining = condensed.length - preview.length
+
+      let summary = `${totalActions} action${totalActions === 1 ? '' : 's'} completed`
+      if (preview.length > 0) {
+        summary += ` · ${preview.join(' · ')}`
       }
-      return toolLabels[toolName] || toolName.replace(/_/g, ' ')
+      if (remaining > 0) {
+        summary += ` · +${remaining} more`
+      }
+      return summary
+    }
+
+    const getToolCallSummaryTitle = (message: ChatMessage): string => {
+      const condensed = message.executedToolCalls
+        ? getCondensedToolCalls(message.executedToolCalls)
+        : []
+      return condensed
+        .map((toolCall) =>
+          toolCall.count > 1 ? `${toolCall.label} (x${toolCall.count})` : toolCall.label,
+        )
+        .join(' · ')
     }
 
     const sendMessage = async () => {
@@ -448,6 +491,11 @@ export default defineComponent({
       getMessageTextWithoutArtifact,
       getToolDisplayText,
       getToolDisplayName,
+      getCondensedToolCalls,
+      shouldSummarizeToolCalls,
+      getToolCallSummary,
+      getToolCallSummaryTitle,
+      isToolOnlyAssistantMessage,
       addMessage,
       addArtifact,
       clearMessages,
@@ -464,7 +512,7 @@ export default defineComponent({
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
   overflow: hidden;
   color: var(--text-color);
   font-family: ui-sans-serif, system-ui, sans-serif;
@@ -472,12 +520,12 @@ export default defineComponent({
 
 .chat-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 0 12px;
-  height: 30px;
-  min-height: 30px;
-  background-color: var(--sidebar-bg);
+  height: 48px;
+  min-height: 48px;
+  background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   overflow: hidden;
 }
@@ -486,7 +534,14 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 112px;
+  overflow: hidden;
+}
+
+.chat-header-actions {
+  display: flex;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -495,22 +550,40 @@ export default defineComponent({
   font-size: var(--font-size);
   font-weight: 600;
   color: var(--text-color);
+  flex: 1 1 auto;
+  min-width: 112px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+@media (max-width: 768px) {
+  .chat-header {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .chat-header-left {
+    min-width: 96px;
+  }
+
+  .chat-title {
+    min-width: 96px;
+  }
+}
+
 .chat-messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 18px 22px 18px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background-color: var(--result-window-bg);
+  gap: 12px;
+  background-color: var(--query-window-bg);
 }
 
 .message {
+  position: relative;
   padding: 8px;
   max-width: 85%;
   word-break: break-word;
@@ -518,14 +591,18 @@ export default defineComponent({
 
 .message.user {
   align-self: flex-end;
-  background-color: var(--sidebar-selector-selected-bg);
-  color: var(--sidebar-selector-font);
+  background-color: rgba(148, 163, 184, 0.1);
+  color: var(--text-color);
+  border-radius: 18px;
+  padding: 4px 8px;
 }
 
 .message.assistant {
   align-self: flex-start;
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
   color: var(--sidebar-font);
+  margin-left: 26px;
+  border-radius: 14px;
 }
 
 .message.system {
@@ -541,6 +618,11 @@ export default defineComponent({
   padding: 0;
 }
 
+.message.tool-only {
+  max-width: 100%;
+  width: fit-content;
+}
+
 /* Messages with only tool calls should be minimal (no bg, less padding) */
 .message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
   background-color: transparent;
@@ -552,6 +634,23 @@ export default defineComponent({
   white-space: pre-wrap;
   font-family: inherit;
   font-size: var(--font-size);
+}
+
+.message-avatar {
+  position: absolute;
+  top: 8px;
+  left: -22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: rgba(100, 116, 139, 0.5);
+  pointer-events: none;
+}
+
+.assistant-avatar i {
+  font-size: 14px;
 }
 
 .message-meta {
@@ -567,8 +666,9 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background-color: var(--sidebar-bg);
-  border-radius: 4px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   font-size: var(--font-size);
   color: var(--text-color);
   max-width: 85%;
@@ -596,9 +696,9 @@ export default defineComponent({
 
 .input-container {
   display: flex;
-  padding: 5px;
+  padding: 12px;
   border-top: 1px solid var(--border-light);
-  background-color: var(--sidebar-bg);
+  background-color: var(--query-window-bg);
 }
 
 .input-wrapper {
@@ -607,8 +707,9 @@ export default defineComponent({
   width: 100%;
   border: 1px solid var(--border);
   background-color: var(--query-window-bg);
-  padding: 6px;
+  padding: 8px;
   gap: 8px;
+  border-radius: 14px;
 }
 
 .textarea-wrapper {
@@ -648,16 +749,17 @@ export default defineComponent({
 .send-button {
   padding: 0 15px;
   cursor: pointer;
-  height: 28px;
-  border: none;
+  height: 34px;
   background-color: var(--special-text);
   color: white;
-  font-weight: 300;
+  font-weight: 600;
   font-size: 12px;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
   flex-shrink: 0;
+  border-color: var(--special-text);
+  box-shadow: none;
 }
 
 .send-button:hover:not(:disabled) {
@@ -690,6 +792,11 @@ export default defineComponent({
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-width: 100%;
+}
+
+.tool-calls.summarized {
+  gap: 0;
 }
 
 .tool-call {
@@ -728,6 +835,10 @@ export default defineComponent({
   font-weight: 500;
 }
 
+.tool-count {
+  margin-left: 4px;
+}
+
 .tool-error {
   color: #dc3545;
   font-size: var(--small-font-size);
@@ -736,6 +847,20 @@ export default defineComponent({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tool-call-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.tool-call-summary i {
+  color: #28a745;
+  font-size: 12px;
 }
 
 @media screen and (max-width: 768px) {

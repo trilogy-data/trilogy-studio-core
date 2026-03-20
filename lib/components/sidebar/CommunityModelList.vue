@@ -1,15 +1,29 @@
 <template>
   <sidebar-list title="Community Models">
-    <template #actions>
-      <div class="button-container">
-        <button @click="communityStore.refreshData()" :disabled="communityStore.loading">
-          {{ communityStore.loading ? 'Refreshing...' : 'Refresh' }}
-        </button>
-        <button @click="communityStore.openAddStoreModal()" :disabled="communityStore.loading">
-          Add Store
-        </button>
+    <template #header>
+      <div class="community-header">
+        <h3 class="font-sans sidebar-header">Community Models</h3>
+        <div class="community-header-actions">
+          <button
+            class="sidebar-control-button sidebar-header-action"
+            @click="communityStore.refreshData()"
+            :disabled="communityStore.loading"
+          >
+            <i class="mdi mdi-refresh"></i>
+            {{ communityStore.loading ? 'Refreshing' : 'Refresh' }}
+          </button>
+          <button
+            class="sidebar-control-button sidebar-header-action"
+            @click="communityStore.openAddStoreModal()"
+            :disabled="communityStore.loading"
+          >
+            <i class="mdi mdi-plus"></i>
+            Add Store
+          </button>
+        </div>
       </div>
     </template>
+    <template #actions> </template>
 
     <!-- Error Display -->
     <div v-if="communityStore.hasErrors" class="error-container">
@@ -40,29 +54,16 @@
       @add="handleAddStoreSubmit"
     />
 
-    <!-- Delete Store Confirmation Modal -->
-    <div
-      v-if="showDeleteConfirmationState"
-      class="confirmation-overlay"
-      @click.self="cancelDeleteStore"
-    >
-      <div class="confirmation-dialog">
-        <h3>Confirm Store Removal</h3>
-        <p>Are you sure you want to remove this store? This will not delete any imported models.</p>
-        <div class="dialog-actions">
-          <button class="cancel-btn" data-testid="cancel-store-deletion" @click="cancelDeleteStore">
-            Cancel
-          </button>
-          <button
-            class="confirm-btn"
-            data-testid="confirm-store-deletion"
-            @click="confirmDeleteStore"
-          >
-            Remove
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      :show="showDeleteConfirmationState"
+      title="Confirm Store Removal"
+      message="Are you sure you want to remove this store? This will not delete any imported models."
+      confirm-label="Remove"
+      cancel-test-id="cancel-store-deletion"
+      confirm-test-id="confirm-store-deletion"
+      @close="cancelDeleteStore"
+      @confirm="confirmDeleteStore"
+    />
   </sidebar-list>
 </template>
 
@@ -75,6 +76,8 @@ import CommunityModelListItem from './CommunityModelListItem.vue'
 import AddStoreModal from '../community/AddStoreModal.vue'
 import type { ModelFile, ModelRoot, AnyModelStore } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
+import ConfirmDialog from '../ConfirmDialog.vue'
+import { useConfirmationState } from '../useConfirmationState'
 
 export default defineComponent({
   name: 'CommunityModelList',
@@ -119,42 +122,24 @@ export default defineComponent({
       }
     }
 
-    // Local state for error handling in the modal
-    const addError = ref<string | null>(null)
-
-    // State for delete confirmation
-    const showDeleteConfirmationState = ref(false)
-    const storeToDelete = ref<AnyModelStore | null>(null)
-
     // Handle adding a store from the modal
     const handleAddStoreSubmit = async (store: any) => {
-      addError.value = null
       try {
         await communityStore.addStore(store)
         communityStore.closeAddStoreModal()
       } catch (error) {
-        addError.value = error instanceof Error ? error.message : 'Failed to add store'
+        console.error('Failed to add store:', error)
       }
     }
 
-    // Handle store deletion
-    const showDeleteStoreConfirmation = (store: AnyModelStore) => {
-      storeToDelete.value = store
-      showDeleteConfirmationState.value = true
-    }
-
-    const cancelDeleteStore = () => {
-      showDeleteConfirmationState.value = false
-      storeToDelete.value = null
-    }
-
-    const confirmDeleteStore = () => {
-      if (storeToDelete.value) {
-        communityStore.removeStore(storeToDelete.value.id)
-      }
-      showDeleteConfirmationState.value = false
-      storeToDelete.value = null
-    }
+    const {
+      isOpen: showDeleteConfirmationState,
+      openConfirmation: showDeleteStoreConfirmation,
+      closeConfirmation: cancelDeleteStore,
+      confirm: confirmDeleteStore,
+    } = useConfirmationState<AnyModelStore>((store) => {
+      communityStore.removeStore(store.id)
+    })
 
     // Handle model selection
     const handleModelSelected = (model: ModelFile, key: string, modelRoot: ModelRoot) => {
@@ -187,7 +172,6 @@ export default defineComponent({
     return {
       communityStore,
       navigationStore,
-      addError,
       handleAddStoreSubmit,
       showDeleteStoreConfirmation,
       cancelDeleteStore,
@@ -204,12 +188,24 @@ export default defineComponent({
     SidebarList,
     CommunityModelListItem,
     AddStoreModal,
+    ConfirmDialog,
   },
 })
 </script>
 
 <style scoped>
-.button-container {
+.community-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.community-header .sidebar-header {
+  margin: 0;
+}
+
+.community-header-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -249,104 +245,5 @@ export default defineComponent({
 
 .clear-error:hover {
   color: #991b1b;
-}
-
-.confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.confirmation-dialog {
-  background-color: var(--bg-color);
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
-}
-
-.confirmation-dialog h3 {
-  margin: 0 0 16px 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.required {
-  color: #dc2626;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb;
-}
-
-.form-error {
-  padding: 8px 12px;
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  border-radius: 4px;
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-bottom: 16px;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.cancel-btn {
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.confirm-btn {
-  padding: 8px 16px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.confirm-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

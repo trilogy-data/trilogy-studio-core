@@ -1,13 +1,14 @@
 <template>
   <div class="markdown-content">
-    <div class="rendered-markdown" v-html="renderedMarkdown"></div>
+    <div ref="markdownRoot" class="rendered-markdown" v-html="renderedMarkdown"></div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, type PropType } from 'vue'
+import { defineComponent, computed, nextTick, onMounted, ref, watch, type PropType } from 'vue'
 import type { Results } from '../editors/results'
 import { renderMarkdown } from '../utility/markdownRenderer'
+import { Prism, ensurePrismLanguagesReady } from '../utility/prism'
 
 export default defineComponent({
   name: 'MarkdownRenderer',
@@ -27,11 +28,76 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const markdownRoot = ref<HTMLElement | null>(null)
     const renderedMarkdown = computed(() => {
       return renderMarkdown(props.markdown, props.results, props.loading)
     })
 
+    const wireMarkdownCodeBlocks = async () => {
+      await nextTick()
+
+      if (!markdownRoot.value) {
+        return
+      }
+
+      const languages = Array.from(
+        markdownRoot.value.querySelectorAll<HTMLElement>('pre code[class*="language-"]'),
+      ).map((block) =>
+        Array.from(block.classList)
+          .find((className) => className.startsWith('language-'))
+          ?.replace('language-', ''),
+      )
+
+      await ensurePrismLanguagesReady(languages)
+
+      markdownRoot.value.querySelectorAll('pre code[class*="language-"]').forEach((block) => {
+        Prism.highlightElement(block as HTMLElement)
+      })
+
+      markdownRoot.value
+        .querySelectorAll<HTMLButtonElement>('.markdown-copy-button')
+        .forEach((button) => {
+          if (button.dataset.bound === 'true') {
+            return
+          }
+
+          button.dataset.bound = 'true'
+          button.addEventListener('click', async () => {
+            const container = button.closest<HTMLElement>('.md-code-container')
+            const content = container?.dataset.content ?? ''
+            if (!content) {
+              return
+            }
+
+            try {
+              await navigator.clipboard.writeText(content)
+              const copyIcon = button.querySelector<HTMLElement>('.copy-icon')
+              const checkIcon = button.querySelector<HTMLElement>('.check-icon')
+              if (copyIcon && checkIcon) {
+                copyIcon.style.display = 'none'
+                checkIcon.style.display = 'block'
+                window.setTimeout(() => {
+                  copyIcon.style.display = 'block'
+                  checkIcon.style.display = 'none'
+                }, 1500)
+              }
+            } catch (error) {
+              console.error('Failed to copy markdown code block:', error)
+            }
+          })
+        })
+    }
+
+    onMounted(() => {
+      void wireMarkdownCodeBlocks()
+    })
+
+    watch(renderedMarkdown, () => {
+      void wireMarkdownCodeBlocks()
+    })
+
     return {
+      markdownRoot,
       renderedMarkdown,
     }
   },
@@ -50,14 +116,15 @@ export default defineComponent({
 
 <style>
 .rendered-markdown {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
   color: var(--text-color, #333);
 }
 
 .rendered-markdown p {
   margin-top: 0.25em;
-  margin-bottom: 0.75em;
+  margin-bottom: 0.85em;
 }
 
 .rendered-markdown ul {
@@ -94,27 +161,156 @@ export default defineComponent({
   color: var(--em-color, #7f8c8d);
 }
 .rendered-markdown h1 {
-  font-size: 1.8em;
-  margin-top: 0.5em;
+  font-family: var(--font-heading);
+  font-size: 1.55em;
+  margin-top: 0.35em;
   margin-bottom: 0.5em;
   border-bottom: 2px solid var(--text-color);
   padding-bottom: 0.25em;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .rendered-markdown-h2 {
-  font-size: 1.5em;
+  font-family: var(--font-heading);
+  font-size: 1.2em;
   margin-top: 0.25em;
   margin-bottom: 0.5em;
   font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-color);
 }
 
 .rendered-markdown-h3 {
-  font-size: 1.2em;
+  font-family: var(--font-heading);
+  font-size: 1.05em;
   margin-top: 0.5em;
   margin-bottom: 0.25em;
   font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-color);
+}
+
+.md-admonition {
+  margin: 1rem 0;
+  padding: 0.125rem 0 0.125rem 1rem;
+  border-left: 4px solid var(--border-light, #d0d7de);
+  background: transparent;
+}
+
+.md-admonition-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.md-admonition-body {
+  padding: 0;
+}
+
+.md-admonition-body > :first-child {
+  margin-top: 0;
+}
+
+.md-admonition-body > :last-child {
+  margin-bottom: 0.35em;
+}
+
+.md-admonition-header::before {
+  font-family: 'Material Design Icons';
+  line-height: 1;
+}
+
+.md-admonition-note {
+  border-left-color: #0969da;
+}
+
+.md-admonition-note .md-admonition-header {
+  color: #0969da;
+}
+
+.md-admonition-note .md-admonition-header::before {
+  content: '\F02FC';
+}
+
+.md-admonition-tip {
+  border-left-color: #1a7f37;
+}
+
+.md-admonition-tip .md-admonition-header {
+  color: #1a7f37;
+}
+
+.md-admonition-tip .md-admonition-header::before {
+  content: '\F0335';
+}
+
+.md-admonition-important {
+  border-left-color: #8250df;
+}
+
+.md-admonition-important .md-admonition-header {
+  color: #8250df;
+}
+
+.md-admonition-important .md-admonition-header::before {
+  content: '\F02D1';
+}
+
+.md-admonition-warning {
+  border-left-color: #9a6700;
+}
+
+.md-admonition-warning .md-admonition-header {
+  color: #9a6700;
+}
+
+.md-admonition-warning .md-admonition-header::before {
+  content: '\F0026';
+}
+
+.md-admonition-caution {
+  border-left-color: #cf222e;
+}
+
+.md-admonition-caution .md-admonition-header {
+  color: #cf222e;
+}
+
+.md-admonition-caution .md-admonition-header::before {
+  content: '\F0026';
+}
+
+:root.dark-theme .md-admonition-note .md-admonition-header {
+  color: #79c0ff;
+}
+
+:root.dark-theme .md-admonition-tip .md-admonition-header {
+  color: #3fb950;
+}
+
+:root.dark-theme .md-admonition-important .md-admonition-header {
+  color: #bc8cff;
+}
+
+:root.dark-theme .md-admonition-warning .md-admonition-header {
+  color: #d29922;
+}
+
+:root.dark-theme .md-admonition-caution .md-admonition-header {
+  color: #ff7b72;
+}
+
+.md-admonition-body,
+.md-admonition-body p,
+.md-admonition-body li,
+.md-admonition-body strong,
+.md-admonition-body em,
+.md-admonition-body code {
   color: var(--text-color);
 }
 
@@ -144,29 +340,24 @@ export default defineComponent({
   opacity: 1;
 }
 
-.code-block {
+.rendered-markdown pre.code-block {
   margin: 0px;
   border-radius: 6px;
-  border: 1px solid var(--border-color, #e1e5e9);
-  background-color: var(--sidebar-bg, #f8f9fa);
+  border: 1px solid var(--markdown-code-border, var(--border-color, #e1e5e9)) !important;
+  background-color: var(--markdown-code-bg, #f8f9fa) !important;
   text-shadow: none !important;
   overflow-x: auto;
 }
 
-.code-block pre {
-  margin: 0;
-  padding: 16px;
-  overflow-x: auto;
-}
-
-.code-block code {
+.rendered-markdown pre.code-block code {
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--prism-text, var(--text-color));
+  background: transparent !important;
   text-shadow: none !important;
-  color: var(--text-color, #24292f) !important;
 }
 
 .language-sql,
@@ -176,7 +367,6 @@ export default defineComponent({
 .language-python,
 .language-text {
   text-shadow: none !important;
-  color: var(--text-color, #24292f) !important;
 }
 .code-container {
   position: relative;
@@ -186,19 +376,9 @@ export default defineComponent({
 
 .language-sql {
   text-shadow: none !important;
-  color: var(--text-color) !important;
 }
 
 .language-trilogy {
-  text-shadow: none !important;
-  color: var(--text-color) !important;
-}
-
-.code-block {
-  margin: 0px;
-  border-radius: 0px;
-  border: 0px;
-  background-color: var(--sidebar-bg);
   text-shadow: none !important;
 }
 
@@ -254,6 +434,7 @@ code {
   border-collapse: collapse;
   width: 100%;
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .md-table th,

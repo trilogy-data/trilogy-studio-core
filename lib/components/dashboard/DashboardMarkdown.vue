@@ -33,21 +33,20 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, computed, ref, onMounted, type PropType } from 'vue'
+import { defineComponent, inject, computed, type PropType } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { Results } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
-import LoadingView from '../LoadingView.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { type GridItemDataResponse } from '../../dashboards/base'
 import type { AnalyticsStoreType } from '../../stores/analyticsStore'
+import { useDashboardItemShell } from './useDashboardItemShell'
 
 export default defineComponent({
   name: 'DynamicMarkdownChart',
   components: {
     ErrorMessage,
-    LoadingView,
     MarkdownRenderer,
   },
   props: {
@@ -79,59 +78,10 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const ready = ref(false)
-    const chartContainer = ref<HTMLElement | null>(null)
-    const currentQueryId = ref<string | null>(null)
-    const controlsVisible = ref(false)
-
-    // Mouse event handlers for hover controls
-    const onChartMouseEnter = () => {
-      controlsVisible.value = true
-    }
-
-    const onChartMouseLeave = () => {
-      controlsVisible.value = false
-    }
-
-    const getPositionBasedDelay = () => {
-      if (!chartContainer.value) return 0
-
-      const rect = chartContainer.value.getBoundingClientRect()
-      const scrollY = window.scrollY || document.documentElement.scrollTop
-
-      // Get absolute position from top of document
-      const absoluteTop = rect.top + scrollY
-
-      // Very minimal delays (10ms per 200px)
-      const delay = Math.floor(absoluteTop / 200) * 10
-
-      // Cap at reasonable maximum
-      let finalDelay = Math.min(delay, 100)
-      return finalDelay
-    }
-
-    // Set up event listeners when the component is mounted
-    onMounted(() => {
-      // Apply position-based delay after DOM is ready
-      setTimeout(() => {
-        // this is to delay *rendering* the component, not query execution
-        const delay = getPositionBasedDelay()
-
-        if (!results.value) {
-          ready.value = true
-          // executeQuery()
-        } else {
-          // Cached results with delay
-          setTimeout(() => {
-            ready.value = true
-          }, delay)
-        }
-      }, 0) // Use nextTick equivalent
-    })
+    const itemData = computed(() => props.getItemData(props.itemId, props.dashboardId))
 
     const contentData = computed(() => {
-      const itemData = props.getItemData(props.itemId, props.dashboardId)
-      return itemData.structured_content || { markdown: '', query: '' }
+      return itemData.value.structured_content || { markdown: '', query: '' }
     })
 
     const markdown = computed(() => {
@@ -143,25 +93,23 @@ export default defineComponent({
     })
 
     const results = computed((): Results | null => {
-      return props.getItemData(props.itemId, props.dashboardId).results || null
+      return itemData.value.results || null
     })
 
     const loading = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).loading || false
+      return itemData.value.loading || false
     })
 
     const error = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).error || null
+      return itemData.value.error || null
     })
 
     const startTime = computed(() => {
-      return props.getItemData(props.itemId, props.dashboardId).loadStartTime || null
+      return itemData.value.loadStartTime || null
     })
 
-    // Get refresh callback from item data if available
     const onRefresh = computed(() => {
-      const itemData = props.getItemData(props.itemId, props.dashboardId)
-      return itemData.onRefresh || null
+      return itemData.value.onRefresh || null
     })
 
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
@@ -171,45 +119,25 @@ export default defineComponent({
       throw new Error('Connection store not found!')
     }
 
-    const executeQuery = async (): Promise<any> => {
-      if (!query.value) {
-        // If no query, just render the markdown as-is
-        return
-      }
-
-      const dashboardQueryExecutor = props.getDashboardQueryExecutor(props.dashboardId)
-      if (!dashboardQueryExecutor) {
-        throw new Error('Dashboard query executor not found!')
-      }
-
-      try {
-        if (analyticsStore) {
-          analyticsStore.log('dashboard-markdown-execution', 'MARKDOWN', true)
-        }
-
-        // Cancel any existing query for this markdown component
-        if (currentQueryId.value) {
-          dashboardQueryExecutor.cancelQuery(currentQueryId.value)
-        }
-
-        // Execute query through the dashboard query executor
-        let queryId = await dashboardQueryExecutor.runSingle(props.itemId)
-
-        await dashboardQueryExecutor.waitForQuery(queryId)
-      } catch (err) {
-        console.error('Error setting up query:', err)
-        currentQueryId.value = null
-      }
-    }
-
-    // Handle individual component refresh button click
-    const handleLocalRefresh = () => {
-      if (onRefresh.value) {
-        onRefresh.value(props.itemId)
-      } else {
-        executeQuery()
-      }
-    }
+    const {
+      chartContainer,
+      ready,
+      controlsVisible,
+      handleLocalRefresh,
+      onChartMouseEnter,
+      onChartMouseLeave,
+    } = useDashboardItemShell({
+      dashboardId: () => props.dashboardId,
+      itemId: () => props.itemId,
+      query,
+      results,
+      loading,
+      onRefresh,
+      getDashboardQueryExecutor: props.getDashboardQueryExecutor,
+      analyticsStore,
+      analyticsEvent: 'dashboard-markdown-execution',
+      analyticsType: 'MARKDOWN',
+    })
 
     return {
       chartContainer,
@@ -219,7 +147,6 @@ export default defineComponent({
       error,
       query,
       markdown,
-      onRefresh,
       handleLocalRefresh,
       startTime,
       controlsVisible,
@@ -230,6 +157,7 @@ export default defineComponent({
 })
 </script>
 
+<style scoped src="./dashboardItemShell.css"></style>
 <style scoped>
 .chart-placeholder {
   flex: 1;
@@ -243,73 +171,44 @@ export default defineComponent({
   overflow-y: hidden;
 }
 
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  vertical-align: middle;
-  background-color: var(--bg-loading);
-  backdrop-filter: blur(2px);
-  z-index: 10;
+.chart-placeholder :deep(.markdown-content) {
+  padding: 2px 18px 14px;
 }
 
-.controls-toggle {
-  position: absolute;
-  top: 50%;
-  right: 0px;
-  transform: translateY(-50%);
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.2s ease-in-out,
-    visibility 0.2s ease-in-out;
+.chart-placeholder :deep(.rendered-markdown) {
+  font-size: var(--helper-font-size);
+  line-height: 1.75;
+  color: var(--dashboard-helper-text);
 }
 
-.controls-toggle.controls-visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.control-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-light);
-  background-color: rgba(var(--bg-color), 0.9);
+.chart-placeholder :deep(.rendered-markdown h1),
+.chart-placeholder :deep(.rendered-markdown-h2),
+.chart-placeholder :deep(.rendered-markdown-h3) {
   color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--button-font-size);
-  transition: background-color 0.2s;
-  backdrop-filter: blur(4px);
 }
 
-.control-btn:hover {
-  background-color: var(--button-mouseover);
+.chart-placeholder :deep(.rendered-markdown h1) {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.35em;
+  font-size: var(--section-title-font-size);
 }
 
-.control-btn:disabled {
-  background-color: var(--border-light);
-  color: var(--text-color-muted);
-  cursor: not-allowed;
+.chart-placeholder :deep(.rendered-markdown-h2) {
+  font-size: 15px;
 }
 
-.control-btn:disabled:hover {
-  background-color: var(--border-light);
+.chart-placeholder :deep(.rendered-markdown-h3) {
+  font-size: 14px;
 }
 
-.control-btn.active {
-  background-color: var(--special-text);
-  color: white;
+.chart-placeholder :deep(.rendered-markdown pre.code-block) {
+  border: 1px solid var(--markdown-code-border);
+  background-color: var(--markdown-code-bg);
+}
+
+.chart-placeholder :deep(.rendered-markdown pre.code-block code) {
+  background: transparent;
 }
 
 /* Mobile responsiveness - always show controls on mobile */

@@ -444,7 +444,7 @@ export default defineComponent({
 }
 
 .trilogy-icon-padding {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .trilogy-icon.spinning {
@@ -460,7 +460,7 @@ export default defineComponent({
   position: absolute;
   top: -4px;
   right: -4px;
-  background-color: #2196f3;
+  background-color: var(--special-text);
   color: white;
   border-radius: 50%;
   width: 12px;
@@ -486,29 +486,41 @@ export default defineComponent({
 .sidebar-icons {
   background-color: var(--sidebar-selector-bg);
   color: var(--sidebar-selector-font);
-  padding-top: 10px;
+  padding: 8px 0 6px;
   width: var(--sidebar-icon-width);
   min-width: var(--sidebar-icon-width);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  font-weight: 200;
+  font-weight: 500;
+  gap: 2px;
+  border-right: 1px solid var(--border-light);
 }
 
 .sidebar-icon {
-  width: 100%;
+  width: calc(100% - 8px);
+  margin: 0 4px;
   cursor: pointer;
   text-align: center;
+  border-radius: 0;
+  color: inherit;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .sidebar-icon-margin {
-  margin: 10px 0;
+  margin: 0;
 }
 
 .sidebar-icon span {
   font-size: 12px;
   display: block;
+}
+
+.sidebar-icon:hover {
+  background-color: rgba(148, 163, 184, 0.12);
 }
 
 .sidebar-icon a {
@@ -518,18 +530,20 @@ export default defineComponent({
 }
 
 .sidebar-icon i {
-  font-size: 20px;
+  font-size: 19px;
+  opacity: 0.92;
 }
 
 .sidebar-icon.selected {
-  background-color: var(--sidebar-selector-selected-bg);
-  /* border-radius: 50%; */
+  background-color: transparent;
+  color: #e5edf8;
+  box-shadow: inset 0 -2px 0 var(--special-text);
 }
 
 .sidebar-content {
   flex-grow: 1;
-  /* background-color: white; */
-  padding: 5px;
+  background-color: var(--sidebar-bg);
+  padding: 8px 0;
   overflow-y: auto;
 }
 
@@ -542,23 +556,27 @@ export default defineComponent({
 
 .sidebar-collapse-btn {
   cursor: pointer;
-  width: 100%;
+  width: calc(100% - 8px);
   text-align: center;
-  padding: 4px 0;
-  opacity: 0.5;
-  font-size: 14px;
-  transition: opacity 0.15s ease;
+  padding: 2px 0;
+  opacity: 0.62;
+  font-size: 13px;
+  border-radius: 0;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .sidebar-collapse-btn:hover {
   opacity: 1;
+  background-color: rgba(148, 163, 184, 0.12);
 }
 
 .sidebar-divider {
-  width: 60%;
+  width: 28px;
   height: 1px;
-  background-color: var(--sidebar-selector-selected-bg, #ccc);
-  margin: 10px 0;
+  background-color: rgba(148, 163, 184, 0.18);
+  margin: 6px 0;
 }
 
 /* Bottom icons container */

@@ -1,0 +1,68 @@
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  vertical-align: middle;
+  background-color: var(--bg-loading);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
+.controls-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    visibility 0.2s ease-in-out;
+}
+
+.controls-toggle.controls-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background-color: rgba(255, 255, 255, 0.84);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--button-font-size);
+  transition: background-color 0.2s;
+  backdrop-filter: blur(8px);
+}
+
+.control-btn:hover {
+  background-color: rgba(241, 245, 249, 0.96);
+}
+
+.control-btn:disabled {
+  background-color: var(--border-light);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+.control-btn:disabled:hover {
+  background-color: var(--border-light);
+}
+
+.control-btn.active {
+  background-color: var(--special-text);
+  color: white;
+}

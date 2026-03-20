@@ -94,24 +94,28 @@
 <style scoped>
 .schema-display {
   width: 100%;
+  height: 100%;
+  background: var(--query-window-bg);
 }
 
 .schema-display-body {
-  padding: 1rem;
+  padding: 18px 20px;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 16px;
 }
 
 .breadcrumb {
   display: flex;
   align-items: center;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: var(--page-title-font-size);
+  font-weight: 600;
+  line-height: 1.15;
+  flex-wrap: wrap;
 }
 
 .separator {
@@ -156,23 +160,24 @@
 .schema-details {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 14px;
 }
 
 .metadata-card {
-  background-color: var(--surface-card);
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: none;
 }
 
 .metadata-card h3 {
   margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+  margin-bottom: 12px;
+  font-size: var(--section-title-font-size);
   font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
 }
 
 .metadata-content {
@@ -197,39 +202,42 @@
 }
 
 .tables-container {
-  background-color: var(--surface-card);
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: none;
 }
 
 .tables-container h3 {
   margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+  margin-bottom: 12px;
+  font-size: var(--section-title-font-size);
   font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
 }
 
 .search-bar {
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  background-color: var(--input-bg);
-  color: var(--text-primary);
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--button-border);
+  border-radius: 10px;
+  font-size: 13px;
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  box-sizing: border-box;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+  border-color: rgba(var(--special-text-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb), 0.1);
 }
 
 .tables-grid {
@@ -239,18 +247,22 @@
 }
 
 .table-card {
-  background-color: var(--surface-hover);
-  border-radius: var(--border-radius);
-  padding: 1rem;
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 .table-card:hover {
-  background-color: var(--surface-active);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
 }
 
 .table-header {
@@ -265,21 +277,24 @@
 }
 
 .table-type-badge {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.375rem;
+  font-size: 11px;
+  padding: 1px 6px;
   border-radius: 999px;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
+  border: 1px solid transparent;
 }
 
 .table-type-badge.table {
-  background-color: rgba(var(--primary-color-rgb), 0.1);
-  color: var(--primary-color);
+  background-color: rgba(var(--special-text-rgb), 0.08);
+  color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb), 0.14);
 }
 
 .table-type-badge.view {
-  background-color: rgba(var(--secondary-color-rgb), 0.1);
-  color: var(--secondary-color);
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #0f9f6e;
+  border-color: rgba(16, 185, 129, 0.14);
 }
 
 .table-details {

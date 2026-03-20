@@ -464,7 +464,10 @@ describe('EditorRefinementToolExecutor', () => {
             headers: { id: { name: 'id', type: 'int' }, value: { name: 'value', type: 'string' } },
             data: rows,
             toJSON: () => ({
-              headers: { id: { name: 'id', type: 'int' }, value: { name: 'value', type: 'string' } },
+              headers: {
+                id: { name: 'id', type: 'int' },
+                value: { name: 'value', type: 'string' },
+              },
               data: rows,
             }),
           },

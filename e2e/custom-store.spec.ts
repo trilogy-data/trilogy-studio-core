@@ -2,6 +2,13 @@ import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  createEditorFromConnection,
+  openSidebarScreen,
+  prepareTestPage,
+  refreshConnection,
+  waitForConnectionReady,
+} from './test-helpers.js'
 
 // Get the directory name in ESM context
 const __filename = fileURLToPath(import.meta.url)
@@ -13,6 +20,10 @@ const MOCK_SERVER_URL = `http://localhost:${MOCK_SERVER_PORT}`
 
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
+
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
 
   // Skip these tests in production and docker environments since they require a local mock server
   test.skip(
@@ -109,12 +120,8 @@ test.describe('Custom Model Store', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -188,10 +195,7 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(2000)
 
     // Navigate to connections to verify the model was imported
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-    await page.getByTestId('sidebar-link-connections').click()
+    await openSidebarScreen(page, 'connections', isMobile)
 
     const connectionName = 'Example DuckDB Model-connection'
 
@@ -199,26 +203,11 @@ test.describe('Custom Model Store', () => {
     await expect(page.getByTestId(`expand-connection-${connectionName}`)).toBeVisible()
 
     // Test the connection
-    await page.getByTestId(`refresh-connection-${connectionName}`).click()
-
-    // Wait for connection to be ready (green status)
-    await page.waitForFunction(
-      (connName) => {
-        const element = document.querySelector(`[data-testid="status-icon-${connName}"]`)
-        if (!element) return false
-
-        const style = window.getComputedStyle(element)
-        const backgroundColor = style.backgroundColor
-
-        // Check if the background color is green (in RGB format)
-        return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-      },
-      connectionName,
-      { timeout: 10000 },
-    )
+    await refreshConnection(page, connectionName)
+    await waitForConnectionReady(page, connectionName, 10000)
 
     // Navigate to editors
-    await page.getByTestId('sidebar-link-editors').click()
+    await openSidebarScreen(page, 'editors', isMobile)
 
     // Verify the model appears in the editors tree
     try {
@@ -230,25 +219,20 @@ test.describe('Custom Model Store', () => {
     }
 
     // Create a new editor for the model
-    await page
-      .getByTestId(`quick-new-editor-${connectionName}-trilogy`)
-      .filter({ visible: true })
-      .click()
+    await createEditorFromConnection(page, connectionName, 'trilogy')
 
-    // Verify editor is created with the imported model content
-    await expect(page.getByTestId('editor')).toBeVisible()
+    // Verify a new editor was created under the imported model connection
+    await expect(
+      page.getByTestId(`editor-run-button`),
+    ).toBeVisible()
   })
 
   test('should show error for unreachable custom store', async ({ page, isMobile }) => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -282,12 +266,8 @@ test.describe('Custom Model Store', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -331,6 +311,10 @@ test.describe('Custom Model Store', () => {
 
 test.describe('Asset Auto-Import via URL', () => {
   let mockServer: ChildProcess | null = null
+
+  test.beforeEach(async ({ page }) => {
+    await prepareTestPage(page)
+  })
 
   // Skip these tests in production and docker environments since they require a local mock server
   test.skip(
@@ -459,10 +443,7 @@ test.describe('Asset Auto-Import via URL', () => {
     })
 
     // Verify the store was registered by checking the sidebar
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // The store should now appear in the community models list
     const storeId = 'localhost:8100'

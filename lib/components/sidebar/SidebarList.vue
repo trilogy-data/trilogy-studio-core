@@ -1,7 +1,8 @@
 <template>
   <div class="sidebar-list">
     <div class="sidebar-header-container">
-      <h3 v-if="!isMobile" class="font-sans sidebar-header">{{ title }}</h3>
+      <slot v-if="$slots.header" name="header"></slot>
+      <h3 v-else-if="!isMobile" class="font-sans sidebar-header">{{ title }}</h3>
     </div>
     <div class="action-slot">
       <slot name="actions"> </slot>
@@ -15,8 +16,8 @@
 <style scoped>
 .sidebar-list {
   border-radius: 0px;
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: 0;
+  padding-right: 0;
 
   /* height: 100%; */
 }
@@ -24,17 +25,48 @@
 .sidebar-content {
   display: flex;
   flex-direction: column;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.sidebar-header-container {
+  padding: 0 14px 4px;
 }
 
 .action-slot {
-  padding-bottom: 5px;
+  padding: 0 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .sidebar-header {
-  font-weight: 400;
-  font-size: 14px;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-color);
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.action-slot :deep(.button-container) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sidebar-control-gap);
+}
+
+.action-slot :deep(.button-container > button),
+.action-slot :deep(.button-container > .btn) {
+  min-height: var(--sidebar-control-height);
+  height: var(--sidebar-control-height);
+  padding: 0 12px;
+  background-color: transparent;
+  border-color: var(--border-light);
+  border-radius: var(--sidebar-control-radius);
+}
+
+.action-slot :deep(.creator-container) {
+  padding-top: 2px;
 }
 </style>
 <script lang="ts">

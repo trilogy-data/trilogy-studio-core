@@ -37,57 +37,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUpdated, type PropType } from 'vue'
-import Prism from 'prismjs'
-
-// Function to ensure SQL language is loaded
-const ensureSqlLanguage = async () => {
-  if (!Prism.languages.sql) {
-    // Dynamically import SQL if not already loaded
-    //@ts-ignore
-    await import('prismjs/components/prism-sql')
-  }
-}
-
-// Function to define trilogy language
-const defineTrilogyLanguage = () => {
-  if (!Prism.languages.trilogy && Prism.languages.sql) {
-    Prism.languages.trilogy = {
-      // Inherit all properties from the SQL language definition
-      ...Prism.languages.sql,
-
-      // Override or add new keywords
-      keyword: [
-        // Include original SQL keywords (if using an array)
-        ...(Array.isArray(Prism.languages.sql.keyword)
-          ? Prism.languages.sql.keyword
-          : Prism.languages.sql.keyword
-            ? [Prism.languages.sql.keyword]
-            : []),
-        /\b(?:DATASOURCE)\b/i,
-        /\b(?:GRAIN)\b/i,
-        /\b(?:ADDRESS)\b/i,
-        /\b(?:DEF)\b/i,
-        /\b(?:IMPORT)\b/i,
-        /\b(?:MERGE)\b/i,
-        /\b(?:HAVING_CLAUSE)\b/i,
-        /\b(?:WHERE_CLAUSE)\b/i,
-        /\b(?:SELECT_LIST)\b/i,
-        /\b(?:ORDER_BY)\b/i,
-        /\b(?:SELECT_STATEMENT)\b/i,
-        /\b(?:SELECT_ITEM)\b/i,
-        /\b(?:ALIGN_CLAUSE)\b/i,
-        /\b(?:ALIGN_ITEM)\b/i,
-        /\b(?:IDENTIFIER)\b/i,
-      ],
-    }
-  }
-}
-
-// Function to ensure both SQL and trilogy languages are ready
-const ensureLanguagesReady = async () => {
-  await ensureSqlLanguage()
-  defineTrilogyLanguage()
-}
+import { Prism, ensurePrismLanguagesReady, normalizePrismLanguage } from '../utility/prism'
 
 export default defineComponent({
   name: 'CodeBlock',
@@ -109,7 +59,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const codeBlock = ref<HTMLElement | null>(null)
     const copied = ref(false)
-    const codeClass = ref(`language-${props.language}`)
+    const codeClass = ref(`language-${normalizePrismLanguage(props.language)}`)
     const languagesReady = ref(false)
 
     // Method to copy code to clipboard
@@ -136,7 +86,7 @@ export default defineComponent({
     const updateRefs = async () => {
       // Block until languages are ready
       if (!languagesReady.value) {
-        await ensureLanguagesReady()
+        await ensurePrismLanguagesReady([props.language])
         languagesReady.value = true
       }
 
@@ -152,7 +102,7 @@ export default defineComponent({
     }
 
     onMounted(async () => {
-      await ensureLanguagesReady()
+      await ensurePrismLanguagesReady([props.language])
       languagesReady.value = true
       updateRefs()
     })
@@ -190,9 +140,9 @@ export default defineComponent({
 
 .code-block {
   margin: 0px;
-  border-radius: 0px;
-  border: 0px;
-  background-color: var(--sidebar-bg);
+  border-radius: 6px;
+  border: 1px solid var(--markdown-code-border, var(--border-color, #e1e5e9));
+  background-color: var(--markdown-code-bg, #f8f9fa);
   text-shadow: none !important;
 }
 
@@ -212,6 +162,7 @@ code {
     monospace;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--prism-text, var(--text-color));
 }
 
 .copy-button {

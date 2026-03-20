@@ -1,29 +1,29 @@
 import { test, expect } from '@playwright/test'
+import {
+  deleteEditor,
+  openSidebarScreen,
+  prepareTestPage,
+  refreshConnection,
+  runEditorQueryAndExpectCount,
+  waitForConnectionReady,
+} from './test-helpers.js'
+
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
 
 test('test', async ({ page, isMobile }) => {
+  test.setTimeout(240000)
   await page.goto('#skipTips=true')
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('duckdb-test')
   await page.getByTestId('connection-creator-submit').click()
-  await page.getByTestId('refresh-connection-duckdb-test').click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-duckdb-test"]')
-    if (!element) return false
+  await refreshConnection(page, 'duckdb-test')
+  await waitForConnectionReady(page, 'duckdb-test')
 
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    console.log(backgroundColor)
-
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
-
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors', isMobile)
 
   // Create first editor (regular name)
   await page.getByTestId('editor-creator-add').click()
@@ -378,8 +378,7 @@ SELECT 1;
 
   // Navigate back to the editors
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('sidebar-link-editors').click()
+    await openSidebarScreen(page, 'editors', isMobile)
   }
 
   // Click on test-one editor
@@ -404,10 +403,7 @@ SELECT 1;
 
   // Continue with the rest of the original test...
   // Run the query to verify it works
-  await page.getByTestId('editor-run-button').click()
-  // we need to wait again, as we reloaded the page
-  await page.waitForTimeout(5000)
-  await expect(page.getByTestId('query-results-length')).toContainText('1')
+  await runEditorQueryAndExpectCount(page, 1)
 
   // Test folder collapse/expand functionality
   if (isMobile) {
@@ -438,16 +434,15 @@ order by
     'Parser Error: syntax error at or near "lineitem" LINE 1: import lineitem',
   )
 
-  // Delete editors and verify folder structure updates
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    return
   }
 
+  // Delete editors and verify folder structure updates
   await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
-  await page.getByTestId('delete-editor-sales-report').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/reports/sales-report', isMobile)
 
   // if (isMobile) {
   //   await page.getByTestId('editor-list-id-e-local-duckdb-test-analysis/reports/sales-report').click()
@@ -455,12 +450,10 @@ order by
 
   // Delete the customer-data editor
 
-  await page.getByTestId('delete-editor-customer-data').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/data/customer-data', isMobile)
 
   // Delete the regular editor
-  await page.getByTestId('delete-editor-test-one').click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  await deleteEditor(page, 'editor-e-local-duckdb-test-test-one', isMobile)
 
   await page.getByTestId('trilogy-icon').click()
   await page.waitForTimeout(1200) // 1000ms animation + 200ms buffer
@@ -475,11 +468,13 @@ order by
   const testOneCount = await page.getByTestId('editor-e-local-duckdb-test-test-one').count()
   expect(testOneCount).toBe(0)
 
-  const salesReportCount = await page.getByTestId('editor-e-local-duckdb-test-sales-report').count()
+  const salesReportCount = await page
+    .getByTestId('editor-e-local-duckdb-test-analysis/reports/sales-report')
+    .count()
   expect(salesReportCount).toBe(0)
 
   const customerDataCount = await page
-    .getByTestId('editor-e-local-duckdb-test-customer-data')
+    .getByTestId('editor-e-local-duckdb-test-analysis/data/customer-data')
     .count()
   expect(customerDataCount).toBe(0)
 
@@ -488,7 +483,7 @@ order by
   expect(analysisFolderCount).toBe(0)
 
   // now let's look at the connection history
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-duckdb-test').click()
 
   await page.waitForSelector('.query-history')

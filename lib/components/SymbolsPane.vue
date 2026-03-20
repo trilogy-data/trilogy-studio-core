@@ -1,5 +1,9 @@
 <template>
   <div class="symbols-pane" :style="{ height: editorHeightCalc }">
+    <div class="pane-header">
+      <div class="pane-title">Symbols</div>
+      <div class="pane-count">{{ filteredSymbols.length }}</div>
+    </div>
     <div class="search-container">
       <input
         type="text"
@@ -9,28 +13,27 @@
         @input="filterSymbols"
         ref="symbolSearchInput"
       />
-      <div class="symbol-count">({{ filteredSymbols.length }})</div>
     </div>
     <div class="filter-container">
       <label class="filter-label">
         <input type="checkbox" v-model="filters.keys" @change="filterSymbols" />
         <i class="mdi mdi-key-outline" title="Show Keys"></i>
-        <!-- <span>Keys</span> -->
+        <span>Keys</span>
       </label>
       <label class="filter-label">
         <input type="checkbox" v-model="filters.properties" @change="filterSymbols" />
         <i class="mdi mdi-tag-outline" title="Show Properties"></i>
-        <!-- <span>Properties</span> -->
+        <span>Fields</span>
       </label>
       <label class="filter-label">
         <input type="checkbox" v-model="filters.metrics" @change="filterSymbols" />
         <i class="mdi mdi-cube-outline" title="Show Metrics"></i>
-        <!-- <span>Metrics</span> -->
+        <span>Metrics</span>
       </label>
       <label class="filter-label auto-derived-label">
         <input type="checkbox" v-model="filters.showAutoDerived" @change="filterSymbols" />
         <i class="mdi mdi-calendar-clock-outline" title="Show Auto-Derived Concepts"></i>
-        <!-- <span>Auto-Derived</span> -->
+        <span>Auto</span>
       </label>
       <button
         v-if="isFiltering"
@@ -465,14 +468,15 @@ export default defineComponent({
 <style scoped>
 /* Symbols pane styling */
 .symbols-pane {
-  width: 300px;
-  border-left: 1px solid var(--border-color, #444);
+  width: 286px;
   display: flex;
   flex-direction: column;
-  background-color: var(--editor-bg);
+  background-color: var(--query-window-bg);
   font-size: 12px;
   overflow-y: scroll;
   position: relative;
+  border: 1px solid var(--border-light);
+  border-radius: 0;
 
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
@@ -484,21 +488,41 @@ export default defineComponent({
   scrollbar-width: none; /* Firefox */
 }
 
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--query-window-bg);
+}
+
+.pane-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.pane-count {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
 .search-container {
   display: flex;
   align-items: center;
-  padding: 4px;
-  border-bottom: 1px solid var(--border-color, #444);
+  padding: 6px 8px 4px;
 }
 
 .symbols-search {
-  flex: 0.9;
+  flex: 1;
   height: 24px;
-  background-color: var(--editor-bg);
+  background-color: transparent;
   color: var(--text-color, #d4d4d4);
-  border: 1px solid var(--border-color, #444);
-  padding: 0 6px;
-  font-size: 12px;
+  border: 1px solid var(--border-light);
+  padding: 0 7px;
+  font-size: 11px;
+  border-radius: 6px;
 }
 
 .symbol-count {
@@ -511,37 +535,36 @@ export default defineComponent({
 .filter-container {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color, #444);
-  background-color: var(--editor-bg);
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--query-window-bg);
   flex-wrap: wrap;
+  gap: 2px 6px;
 }
 
 .filter-label {
   display: flex;
   align-items: center;
-  margin-right: 10px;
+  gap: 3px;
   cursor: pointer;
-  font-size: 11px;
-  color: var(--text-color, #d4d4d4);
-  opacity: 0.7;
+  font-size: 10px;
+  color: var(--text-faint);
+  opacity: 0.8;
   transition: opacity 0.2s;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 1px 0;
+  border-radius: 0;
 }
 
 .filter-label:hover {
   opacity: 1;
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .filter-label input {
-  margin-right: 4px;
+  margin: 0;
 }
 
 .filter-label i {
-  margin-right: 4px;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .filter-label i.mdi-key-outline {
@@ -566,15 +589,14 @@ export default defineComponent({
   border: none;
   color: var(--text-subtle, #aaa);
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 1px 2px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .clear-filters-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
   color: var(--text-color, #d4d4d4);
 }
 

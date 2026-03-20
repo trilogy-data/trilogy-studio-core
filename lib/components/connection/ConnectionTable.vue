@@ -1,20 +1,23 @@
 <template>
   <div class="table-viewer">
     <div class="table-header">
-      <div class="table-title">
-        <h2>
-          <span class="text-faint" v-if="table.database">{{ table.database }}.</span
-          ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
-        </h2>
-        <span
-          class="table-type-badge"
-          :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
-        >
-          {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
-        </span>
+      <div class="table-title-row">
+        <div class="table-title-block">
+          <h2 class="table-title">
+            <span class="text-faint" v-if="table.database">{{ table.database }}.</span
+            ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+          </h2>
+          <span
+            class="table-type-badge"
+            :class="[table.assetType === AssetType.TABLE ? 'table-badge' : 'view-badge']"
+          >
+            {{ table.assetType === AssetType.TABLE ? 'Table' : 'View' }}
+          </span>
+        </div>
         <div class="data-toolbar">
           <button class="refresh-button" @click="loadSampleData">
-            <span class="refresh-icon">⟳</span> Refresh
+            <i class="mdi mdi-refresh"></i>
+            Refresh
           </button>
           <CreateEditorFromDatasourcePopup
             v-if="connectionInfo"
@@ -75,7 +78,11 @@
                 <td>
                   <div class="column-name">
                     {{ column.name }}
-                    <span v-if="column.primary" class="key-icon" title="Primary Key">🔑</span>
+                    <i
+                      v-if="column.primary"
+                      class="mdi mdi-key-variant key-icon"
+                      title="Primary Key"
+                    ></i>
                   </div>
                 </td>
                 <td>{{ column.type }}</td>
@@ -101,7 +108,7 @@
         </div>
 
         <div v-else-if="error" class="error-message">
-          <span>⚠️ {{ error }}</span>
+          <span><i class="mdi mdi-alert-circle-outline"></i> {{ error }}</span>
         </div>
 
         <div v-else-if="currentSampleData?.data.length === 0" class="empty-state">
@@ -158,20 +165,16 @@ export default defineComponent({
     const isLoading = ref(false)
     const error = ref<string | null>(null)
 
-    // Refs for measuring container height
     const resultContainerRef = ref<HTMLElement | null>(null)
     const tabsRef = ref<HTMLElement | null>(null)
-    const containerHeight = ref(500) // Default height
+    const containerHeight = ref(500)
 
-    // Inject the connection store
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
-    // Generate a unique key for caching sample data
     const getTableKey = (table: Table) => {
       return `${table.database || ''}.${table.schema || ''}.${table.name}`
     }
 
-    // Computed property for filtered columns
     const filteredColumns = computed(() => {
       if (!searchTerm.value) return props.table.columns
 
@@ -182,13 +185,11 @@ export default defineComponent({
       )
     })
 
-    // Computed property for current table's sample data
     const currentSampleData = computed(() => {
       const tableKey = getTableKey(props.table)
       return sampleData.value[tableKey] || new Results(new Map(), [])
     })
 
-    // Check if sample data needs to be loaded
     const needsSampleData = computed(() => {
       const tableKey = getTableKey(props.table)
       const hasData = sampleData.value[tableKey]?.data?.length > 0
@@ -196,25 +197,19 @@ export default defineComponent({
       return !hasData || !hasColumns
     })
 
-    // Function to calculate available height based on viewport and existing elements
     const calculateAvailableHeight = () => {
       if (!resultContainerRef.value) return
 
       const viewportHeight = window.innerHeight
       const containerTop = resultContainerRef.value.getBoundingClientRect().top
+      const bottomBuffer = 36
+      const availableHeight = Math.max(280, viewportHeight - containerTop - bottomBuffer)
 
-      // Reserve space for potential scrollbars, padding, and bottom margin
-      const bottomBuffer = 40
-      const availableHeight = Math.max(300, viewportHeight - containerTop - bottomBuffer)
-
-      // Only update if the change is significant to avoid unnecessary re-renders
       if (Math.abs(availableHeight - containerHeight.value) > 10) {
         containerHeight.value = availableHeight
-        console.log('Updated container height to', containerHeight.value)
       }
     }
 
-    // Throttled resize handler to improve performance
     let resizeTimeout: number | null = null
     const handleWindowResize = () => {
       if (resizeTimeout) {
@@ -224,15 +219,13 @@ export default defineComponent({
         if (activeTab.value === 'data') {
           calculateAvailableHeight()
         }
-      }, 150) // 150ms throttle
+      }, 150)
     }
 
-    // Setup window resize listener
     const setupWindowListener = () => {
       window.addEventListener('resize', handleWindowResize)
     }
 
-    // Clean up window resize listener
     const cleanupWindowListener = () => {
       window.removeEventListener('resize', handleWindowResize)
       if (resizeTimeout) {
@@ -241,17 +234,14 @@ export default defineComponent({
       }
     }
 
-    // Load sample data for the current table
     const loadSampleData = async (forceRefresh = false) => {
       const tableKey = getTableKey(props.table)
 
-      // Skip if data already exists and we're not forcing a refresh
       if (
         !forceRefresh &&
         sampleData.value[tableKey]?.data?.length > 0 &&
         props.table.columns.length > 0
       ) {
-        console.log('Sample data already loaded for', tableKey)
         return
       }
 
@@ -263,14 +253,12 @@ export default defineComponent({
           throw new Error('Connection store not found')
         }
 
-        // Refresh columns to ensure we have the latest structure
         await connectionStore.connections[props.connectionName].refreshColumns(
           props.table.database,
           props.table.schema,
           props.table.name,
         )
 
-        // Get sample data
         const result = await connectionStore.connections[props.connectionName].getTableSample(
           props.table.database,
           props.table.schema,
@@ -287,26 +275,19 @@ export default defineComponent({
       }
     }
 
-    // Watch for table changes and load data if needed
     watch(
       () => props.table,
       async (newTable, oldTable) => {
         const newTableKey = getTableKey(newTable)
         const oldTableKey = oldTable ? getTableKey(oldTable) : null
 
-        // Only load if we're switching to a different table
         if (newTableKey !== oldTableKey) {
-          console.log('Table changed from', oldTableKey, 'to', newTableKey)
-
-          // Reset search when switching tables
           searchTerm.value = ''
 
-          // Load sample data if needed
           if (needsSampleData.value) {
             await loadSampleData()
           }
 
-          // Recalculate height for data tab
           if (activeTab.value === 'data') {
             await nextTick()
             calculateAvailableHeight()
@@ -316,7 +297,6 @@ export default defineComponent({
       { immediate: false },
     )
 
-    // Watch for tab changes to recalculate height
     watch(activeTab, async (newTab) => {
       if (newTab === 'data') {
         await nextTick()
@@ -324,24 +304,19 @@ export default defineComponent({
       }
     })
 
-    // Initial setup
     onMounted(async () => {
-      // Setup window resize listener
       setupWindowListener()
 
-      // Load sample data if needed on initial mount
       if (needsSampleData.value) {
         await loadSampleData()
       }
 
-      // Calculate initial height if we're on the data tab
       if (activeTab.value === 'data') {
         await nextTick()
         calculateAvailableHeight()
       }
     })
 
-    // Cleanup
     onUnmounted(() => {
       cleanupWindowListener()
     })
@@ -350,6 +325,7 @@ export default defineComponent({
       if (!connectionStore) return null
       return connectionStore.connections[props.connectionName]
     })
+
     return {
       activeTab,
       searchTerm,
@@ -357,7 +333,7 @@ export default defineComponent({
       currentSampleData,
       isLoading,
       error,
-      loadSampleData: () => loadSampleData(true), // Force refresh when called manually
+      loadSampleData: () => loadSampleData(true),
       AssetType,
       resultContainerRef,
       tabsRef,
@@ -369,246 +345,288 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.result-container-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  overflow-y: scroll;
-}
-
-.result-container {
-  max-width: 98%;
-  width: 100%;
-  height: 100%;
-  border: 1px solid var(--border);
-}
-
-.table-data {
-  height: 100%;
-}
-
 .table-viewer {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
-  color: #2c3e50;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   max-width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--query-window-bg);
+  color: var(--text-color);
 }
 
 .table-header {
-  padding: 0rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--border-light);
   background: var(--query-window-bg);
 }
 
-.table-title {
+.table-title-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.table-title h2 {
+.table-title-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.table-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--page-title-font-size);
   font-weight: 600;
   color: var(--text-color);
   word-break: break-word;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  line-height: 1.15;
 }
 
 .table-type-badge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
 }
 
 .table-badge {
-  background-color: #e3f2fd;
-  color: #1976d2;
+  background-color: rgba(var(--special-text-rgb), 0.08);
+  color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb), 0.14);
 }
 
 .view-badge {
-  background-color: #e8f5e9;
-  color: #388e3c;
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #0f9f6e;
+  border-color: rgba(16, 185, 129, 0.14);
 }
 
-.table-description {
-  margin: 0.5rem 0 0;
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--query-window-bg);
-}
-
-.tab-button {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  background: transparent;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  font-size: 0.875rem;
-}
-
-.tab-button:hover {
-  color: #2563eb;
-}
-
-.tab-button.active {
-  color: #2563eb;
-}
-
-.tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2563eb;
-}
-
-.structure-header,
 .data-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.table-description {
+  margin: 8px 0 0;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--query-window-bg);
+  min-height: 34px;
+  padding: 0 16px;
+}
+
+.tab-button {
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  font-weight: 500;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  font-size: 13px;
+  line-height: 1;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: var(--special-text);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
+}
+
+.tab-button.active {
+  color: var(--special-text);
+  border-bottom: 2px solid var(--special-text);
+}
+
+.tab-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.table-structure,
+.table-data {
+  height: 100%;
+}
+
+.structure-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px 8px;
 }
 
 .search-container {
   position: relative;
-  width: 300px;
+  width: min(100%, 330px);
 }
 
 .search-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.875rem;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--button-border);
+  border-radius: 10px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s;
+  background: var(--button-bg-color);
+  color: var(--text-color);
+  box-sizing: border-box;
 }
 
 .search-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: rgba(var(--special-text-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb), 0.1);
 }
 
 .column-count {
-  font-size: 0.875rem;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 
 .structure-table-container {
   overflow-x: auto;
-  padding: 0 1.5rem 1.5rem;
+  padding: 0 16px 16px;
 }
 
 .structure-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .structure-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 8px 16px;
   background: var(--query-window-bg);
   color: var(--text-faint);
   font-weight: 600;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
 }
 
 .structure-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   color: var(--text-color);
 }
 
 .structure-table tr:hover {
-  background-color: var(--query-window-bg);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
 }
 
 .column-name {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
   font-weight: 500;
 }
 
 .key-icon {
-  font-size: 0.9rem;
+  font-size: 12px;
+  color: #c57c0a;
 }
 
 .constraint-badges {
   display: flex;
-  gap: 0.25rem;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .constraint-badge {
-  font-size: 0.6875rem;
+  font-size: 10px;
   font-weight: 600;
-  padding: 0.125rem 0.25rem;
-  border-radius: 3px;
+  padding: 1px 5px;
+  border-radius: 999px;
   text-transform: uppercase;
+  border: 1px solid transparent;
 }
 
 .constraint-badge.primary {
-  background-color: var(--query-window-bg);
-  color: #1976d2;
+  background-color: rgba(var(--special-text-rgb), 0.08);
+  color: var(--special-text);
+  border-color: rgba(var(--special-text-rgb), 0.14);
 }
 
 .constraint-badge.unique {
-  background-color: var(--query-window-bg);
-  color: #388e3c;
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #0f9f6e;
+  border-color: rgba(16, 185, 129, 0.14);
 }
 
 .constraint-badge.not-null {
-  background-color: #ede7f6;
-  color: #5e35b1;
+  background-color: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.14);
 }
 
 .constraint-badge.auto-inc {
-  background-color: #fff3e0;
-  color: #f57c00;
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #c57c0a;
+  border-color: rgba(245, 158, 11, 0.14);
 }
 
 .refresh-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--query-window-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #475569;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--button-border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.16s ease;
 }
 
 .refresh-button:hover {
-  background: var(--query-window-bg);
+  background: var(--button-mouseover);
+  color: var(--text-color);
+}
+
+.refresh-button i {
+  font-size: 14px;
+}
+
+.result-container-wrapper {
+  width: 100%;
+  display: flex;
+  height: 100%;
+  overflow: auto;
+  padding: 0 16px 16px;
+  box-sizing: border-box;
+}
+
+.result-container {
+  width: 100%;
+  height: 100%;
 }
 
 .loading-spinner {
@@ -616,9 +634,9 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
-  color: #64748b;
-  font-size: 0.875rem;
+  padding: 40px 24px;
+  color: var(--text-faint);
+  font-size: 13px;
 }
 
 .spinner {
@@ -645,12 +663,16 @@ export default defineComponent({
 .empty-state {
   display: flex;
   justify-content: center;
-  padding: 3rem;
-  color: #64748b;
-  font-size: 0.875rem;
+  padding: 40px 24px;
+  color: var(--text-faint);
+  font-size: 13px;
 }
 
 .error-message {
   color: #ef4444;
+}
+
+.error-message i {
+  margin-right: 6px;
 }
 </style>

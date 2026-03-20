@@ -6,6 +6,7 @@
         <input
           type="text"
           v-model="connectionDetails.name"
+          class="sidebar-control-input"
           id="llm-connection-name"
           required
           data-testid="llm-connection-creator-name"
@@ -17,6 +18,7 @@
         <label for="llm-provider-type">Provider</label>
         <select
           v-model="connectionDetails.type"
+          class="sidebar-control-select"
           id="llm-provider-type"
           required
           data-testid="llm-connection-creator-type"
@@ -43,6 +45,7 @@
           <input
             type="password"
             v-model="connectionDetails.options.apiKey"
+            class="sidebar-control-input"
             id="llm-api-key"
             placeholder="API Key"
             required
@@ -74,44 +77,10 @@
   </div>
 </template>
 
+<style scoped src="../creatorForm.css"></style>
 <style scoped>
-.form-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.form-row label {
-  flex: 0 0 80px;
-  /* Fixed width for labels */
-  font-size: var(--small-font-size);
-  margin-right: 10px;
-}
-
-.form-row input,
-.form-row select {
-  flex: 1;
-  font-size: var(--small-font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  height: var(--sidebar-sub-item-height);
-}
-
-.form-row input:focus,
-.form-row select:focus {
-  border-color: var(--border-color);
-  outline: none;
-}
-
-.button-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-option {
-  font-size: 12px;
-  font-weight: 300;
+.creator-container {
+  --creator-label-width: 88px;
 }
 
 .demo-info {

@@ -1,37 +1,45 @@
 <template>
-  <div
+  <button
+    type="button"
     class="file-upload-container"
+    :class="{ 'drag-active': isDragging, loading: isLoading }"
+    :data-testid="`duckdb-importer-${connection.name}`"
+    @click="openFilePicker"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
     @drop.prevent="handleDrop"
-    :class="{ 'drag-active': isDragging }"
   >
-    <div class="upload-area">
-      <div v-if="successMessage && !isLoading" class="success-message">
-        <span>{{ successMessage }}</span>
-      </div>
-      <div v-else-if="!isLoading">
-        <div class="truncate-text">
-          Drag or<label class="file-input-label">
-            select
-            <input
-              type="file"
-              accept=".csv,.parquet,.db"
-              @change="handleFileInput"
-              ref="fileInput"
-              class="hidden-input"
-            />
-          </label>
-          CSV/Parquet or DuckDB DB
-        </div>
-      </div>
-
-      <div v-else class="loading-container">
-        <span class="spinner"></span>
-        <span>{{ loadingMessage }}</span>
-      </div>
+    <input
+      type="file"
+      accept=".csv,.parquet,.db"
+      @change="handleFileInput"
+      ref="fileInput"
+      class="hidden-input"
+    />
+    <div
+      v-if="successMessage && !isLoading"
+      class="upload-row upload-success"
+      :data-testid="`duckdb-import-success-${connection.name}`"
+    >
+      <i class="mdi mdi-check-circle-outline upload-icon"></i>
+      <span class="upload-copy truncate-text">{{ successMessage }}</span>
     </div>
-  </div>
+    <div v-else-if="!isLoading" class="upload-row">
+      <i class="mdi mdi-plus upload-icon"></i>
+      <span class="upload-copy">
+        <span class="upload-label">Import data...</span>
+        <span class="upload-subtitle">CSV, Parquet, DuckDB</span>
+      </span>
+    </div>
+    <div
+      v-else
+      class="upload-row loading-container"
+      :data-testid="`duckdb-import-loading-${connection.name}`"
+    >
+      <span class="spinner"></span>
+      <span class="upload-copy truncate-text">{{ loadingMessage }}</span>
+    </div>
+  </button>
 </template>
 
 <script lang="ts">
@@ -66,6 +74,10 @@ export default defineComponent({
       if (target.files && target.files.length > 0) {
         await processFile(target.files[0])
       }
+    }
+
+    const openFilePicker = () => {
+      fileInput.value?.click()
     }
 
     const handleDrop = async (event: DragEvent) => {
@@ -134,6 +146,7 @@ export default defineComponent({
       loadingMessage,
       successMessage,
       fileInput,
+      openFilePicker,
       handleDragOver,
       handleDragLeave,
       handleDrop,
@@ -145,26 +158,70 @@ export default defineComponent({
 
 <style scoped>
 .file-upload-container {
-  border: 2px dashed #ccc;
-  text-align: center;
-  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
   width: 100%;
-  margin-top: 4px;
-  margin-bottom: 4px;
-  line-height: calc(var(--sidebar-list-item-height) - 8px);
+  min-height: 26px;
+  padding: 2px 0 2px 2px;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  text-align: left;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease;
+  width: 100%;
+  margin: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.file-upload-container:hover {
+  background: transparent;
+  color: var(--special-text);
 }
 
 .drag-active {
-  border-color: #2196f3;
-  background-color: rgba(33, 150, 243, 0.1);
+  color: var(--special-text);
 }
 
-.icon-container {
-  margin-bottom: 10px;
+.loading {
+  cursor: default;
 }
 
-.icon-container svg {
-  color: #666;
+.upload-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.upload-copy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--sidebar-sub-item-font-size);
+}
+
+.upload-label {
+  color: inherit;
+  white-space: nowrap;
+}
+
+.upload-subtitle {
+  color: var(--text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.upload-icon {
+  font-size: 14px;
+  color: var(--special-text);
+}
+
+.upload-success .upload-icon {
+  color: #16a34a;
 }
 
 .hidden-input {
@@ -178,22 +235,16 @@ export default defineComponent({
   border: 0;
 }
 
-.file-input-label {
-  color: #2196f3;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
 .loading-container {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  line-height: calc(var(--sidebar-list-item-height) - 8px);
 }
 
 .spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
   border-top-color: #2196f3;
   animation: spin 1s ease-in-out infinite;
@@ -206,9 +257,6 @@ export default defineComponent({
 }
 
 .success-message {
-  background-color: #e6f7e6;
-  color: #2e7d32;
-  line-height: calc(var(--sidebar-list-item-height) - 8px);
   white-space: nowrap;
 }
 </style>

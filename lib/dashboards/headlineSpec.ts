@@ -152,7 +152,7 @@ const createHeadlineLayer = (
         align: 'center',
         baseline: 'middle',
         dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : 0, // Vertical offset for mobile, fixed for desktop
+        dy: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : -5, // Vertical offset for mobile, fixed for desktop
       },
       encoding: {
         text: {
@@ -186,7 +186,7 @@ const createHeadlineLayer = (
       align: 'center',
       baseline: 'top',
       dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 20, // Vertical offset for mobile, fixed for desktop
+      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 15, // Vertical offset for mobile, fixed for desktop
     },
     encoding: {
       text: { value: snakeCaseToCapitalizedWords(column) },

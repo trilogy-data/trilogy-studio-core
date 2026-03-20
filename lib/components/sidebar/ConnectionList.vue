@@ -1,15 +1,19 @@
 <template>
   <sidebar-list title="Connections">
-    <template #actions>
-      <div class="button-container">
+    <template #header>
+      <div class="connections-header">
+        <h3 class="font-sans sidebar-header">Connections</h3>
         <button
+          class="sidebar-control-button sidebar-header-action connections-new-btn"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
         >
-          <i v-if="creatorVisible" class="mdi mdi-plus icon"></i>
-          {{ creatorVisible ? 'Hide' : 'New' }}
+          <i class="mdi mdi-plus"></i>
+          {{ creatorVisible ? 'Close' : 'New' }}
         </button>
       </div>
+    </template>
+    <template #actions>
       <connection-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
@@ -25,7 +29,7 @@
         <button
           v-if="searchTerm"
           @click="clearSearch"
-          class="clear-search-btn"
+          class="clear-search-btn sidebar-icon-button"
           :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'"
         >
           ✕
@@ -427,6 +431,21 @@ export default {
 </script>
 
 <style scoped>
+.connections-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.connections-header .sidebar-header {
+  margin: 0;
+}
+
+.connections-new-btn {
+  flex: 0 0 auto;
+}
+
 .error-indicator {
   color: red;
   font-size: 12px;
@@ -463,26 +482,26 @@ export default {
 /* Add styles for the search box */
 .search-container {
   position: relative;
-  margin-top: 5px;
 }
 
 .search-input {
   width: 100%;
   box-sizing: border-box;
-  border-radius: 0px;
-  border: 1px solid var(--sidebar-border-color, #ccc);
-  background-color: transparent;
-  color: var(--sidebar-text-color, #333);
-  line-height: var(--sidebar-list-item-height);
-  font-size: var(--sidebar-font-size, 14px);
-  padding-left: 8px;
-  /* Add this line */
+  min-height: 30px;
+  height: 30px;
+  border-radius: var(--sidebar-control-radius);
+  border: 1px solid var(--button-border);
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  line-height: 1;
+  font-size: var(--sidebar-control-font-size);
+  padding: 0 34px 0 10px;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: var(--sidebar-active-border-color, #66afe9);
-  box-shadow: 0 0 0 2px rgba(102, 175, 233, 0.25);
+  border-color: rgba(var(--special-text-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb), 0.1);
 }
 
 .clear-search-btn {
@@ -490,16 +509,13 @@ export default {
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--sidebar-text-color, #999);
-  font-size: 14px;
-  padding: 0;
-  line-height: 1;
+  font-size: 0;
 }
 
-.clear-search-btn:hover {
-  color: var(--sidebar-active-text-color, #666);
+.clear-search-btn::before {
+  content: '\F0156';
+  font-family: 'Material Design Icons';
+  font-size: 14px;
+  line-height: 1;
 }
 </style>

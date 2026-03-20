@@ -13,22 +13,24 @@
         draggable="true"
         :data-testid="`tab-${tab.address}`"
       >
-        <i :class="getTabIcon(tab.screen)" class="tab-icon"></i>
-        <StatusIcon v-if="getTabStatus(tab)" :status="getTabStatus(tab)!" class="tab-status" />
+        <i
+          :class="[
+            getTabIcon(tab.screen),
+            'tab-icon',
+            `tab-icon-status-${getTabStatus(tab) || 'none'}`,
+          ]"
+        ></i>
         <span class="tab-title truncate-text">{{ tab.title }}</span>
         <button class="tab-close-btn" @click.stop="closeTab(tab.id, null)" v-if="tabs.length > 1">
-          ×
+          <i class="mdi mdi-close"></i>
         </button>
       </div>
-      <!-- <button class="new-tab-btn" @click="$emit('new-tab')" title="New Tab">+</button> -->
     </div>
 
-    <!-- Content Area -->
     <div class="tab-content">
       <slot></slot>
     </div>
 
-    <!-- Context Menu -->
     <div
       v-if="contextMenu.visible"
       class="context-menu"
@@ -51,7 +53,6 @@
       </div>
     </div>
 
-    <!-- Invisible overlay to close context menu -->
     <div v-if="contextMenu.visible" class="context-menu-overlay" @click="hideContextMenu"></div>
   </div>
 </template>
@@ -63,14 +64,10 @@ import { type ScreenType, type Tab } from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import useConnectionStore from '../../stores/connectionStore'
 import useChatStore from '../../stores/chatStore'
-import StatusIcon from '../StatusIcon.vue'
 import type { Status } from '../StatusIcon.vue'
 
 export default defineComponent({
   name: 'TabbedLayout',
-  components: {
-    StatusIcon,
-  },
   emits: ['new-tab', 'tab-added', 'tab-closed', 'tab-selected', 'tabs-reordered'],
   setup() {
     const navigationStore = useScreenNavigation()
@@ -84,27 +81,19 @@ export default defineComponent({
       openTab,
       closeTab,
       setActiveTab,
-      // Stub methods for new functionality - to be implemented in store
       closeOtherTabsExcept,
       closeTabsToRightOf,
     } = navigationStore
 
-    /**
-     * Get status for a tab based on its type and state.
-     * - Editors: running (blue flash) if query executing, connected (green) if connection active, idle (gray) otherwise
-     * - LLMs: running (blue flash) if query executing, waiting (orange) if LLM responding, connected (green) if idle
-     */
     const getTabStatus = (tab: Tab): Status | null => {
       if (tab.screen === 'editors') {
         const editor = editorStore.editors[tab.address]
         if (!editor) return null
 
-        // Check if query is running
         if (editor.loading) {
           return 'running'
         }
 
-        // Check if the editor's connection is active
         const connection = connectionStore.connections[editor.connection]
         if (connection?.connected) {
           return 'connected'
@@ -114,14 +103,11 @@ export default defineComponent({
       }
 
       if (tab.screen === 'llms') {
-        // Parse chatId from address (format: "connectionName::chatId" or just "connectionName")
         const parts = tab.address.split('::')
         const chatId = parts.length > 1 ? parts[1] : null
 
         if (chatId) {
-          // Check if the chat is executing (LLM responding)
           if (chatStore.isChatExecuting(chatId)) {
-            // Check if a tool is running (query executing)
             const activeToolName = chatStore.getChatActiveToolName(chatId)
             if (activeToolName === 'run_query') {
               return 'running'
@@ -130,7 +116,6 @@ export default defineComponent({
           }
         }
 
-        // Default to connected for LLM tabs
         return 'connected'
       }
 
@@ -159,7 +144,6 @@ export default defineComponent({
         targetTabId: '',
         targetTabIndex: -1,
       },
-      // Icon mapping that matches the sidebar configuration
       iconMap: {
         editors: 'mdi mdi-file-document-edit-outline',
         connections: 'mdi mdi-database-outline',
@@ -173,7 +157,7 @@ export default defineComponent({
         settings: 'mdi mdi-cog-outline',
         profile: 'mdi mdi-account-outline',
         welcome: 'mdi mdi-home-outline',
-        '': 'mdi mdi-file-document-outline', // fallback icon
+        '': 'mdi mdi-file-document-outline',
       } as Record<ScreenType, string>,
     }
   },
@@ -191,7 +175,6 @@ export default defineComponent({
       this.setActiveTab(tabId)
     },
 
-    // Context Menu Methods
     showContextMenu(event: MouseEvent, tabId: string, tabIndex: number): void {
       event.preventDefault()
       this.contextMenu.visible = true
@@ -210,12 +193,8 @@ export default defineComponent({
     closeOtherTabs(): void {
       if (this.tabs.length <= 1) return
 
-      // Call store method to close all tabs except the target tab
       if (this.closeOtherTabsExcept) {
         this.closeOtherTabsExcept(this.contextMenu.targetTabId)
-      } else {
-        // Fallback implementation until store method is available
-        console.log('closeOtherTabsExcept not implemented in store yet')
       }
       this.hideContextMenu()
     },
@@ -223,17 +202,12 @@ export default defineComponent({
     closeTabsToRight(): void {
       if (!this.canCloseTabsToRight) return
 
-      // Call store method to close tabs to the right of the target tab
       if (this.closeTabsToRightOf) {
         this.closeTabsToRightOf(this.contextMenu.targetTabId)
-      } else {
-        // Fallback implementation until store method is available
-        console.log('closeTabsToRightOf not implemented in store yet')
       }
       this.hideContextMenu()
     },
 
-    // Drag and Drop
     handleDragStart(index: number, event: DragEvent): void {
       this.draggedTabIndex = index
       if (event.dataTransfer) {
@@ -260,20 +234,13 @@ export default defineComponent({
 
       this.draggedTabIndex = -1
     },
-
-    // Split.js Integration
-    initializeSplit(): void {
-      // No split functionality needed
-    },
   },
 
   mounted() {
-    // Initialize with provided tabs or create a default one
     if (this.tabs.length === 0) {
       const currentScreen: ScreenType = 'welcome'
       this.openTab(currentScreen, 'Welcome', 'welcome')
     }
-    // Hide context menu when clicking outside
     document.addEventListener('click', this.hideContextMenu)
     document.addEventListener('contextmenu', (e: Event) => {
       if (!(e.target instanceof Element) || !e.target.closest('.tab')) {
@@ -283,26 +250,7 @@ export default defineComponent({
   },
 
   beforeUnmount() {
-    // Clean up event listeners
     document.removeEventListener('click', this.hideContextMenu)
-  },
-
-  watch: {
-    // Watch navigation store changes to sync with tabs (when store is available)
-    // 'navigationStore.activeScreen': {
-    //   handler(newScreen: ScreenType) {
-    //     if (!newScreen) return
-    //     // Check if we already have a tab for this screen
-    //     const existingTab = this.tabs.find((tab: Tab) => tab.screen === newScreen)
-    //     if (existingTab && this.currentTabId !== existingTab.id) {
-    //       this.currentTabId = existingTab.id
-    //     } else if (!existingTab) {
-    //       // Create a new tab for this screen
-    //       this.addTab(newScreen)
-    //     }
-    //   },
-    //   immediate: true
-    // }
   },
 })
 </script>
@@ -315,17 +263,12 @@ export default defineComponent({
   height: 100%;
   position: relative;
   overflow: hidden;
-}
-
-.tabbed-container {
-  /* Modern browsers */
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
-/* Webkit browsers */
 .tabbed-container::-webkit-scrollbar {
-  height: 4px; /* Very thin */
+  height: 4px;
 }
 
 .tabbed-container::-webkit-scrollbar-track {
@@ -341,62 +284,91 @@ export default defineComponent({
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Tab Bar Styles */
 .tab-bar {
   display: flex;
   align-items: center;
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0;
-  min-height: 20px;
+  background-color: var(--query-window-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 8px;
+  min-height: 32px;
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;
+  gap: 2px;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  padding-left: 4px;
-  background-color: var(--button-bg);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  margin-right: 2px;
+  padding: 0 7px;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
   user-select: none;
-  min-width: 120px;
-  max-width: 200px;
-  transition: background-color 0.2s ease;
+  min-width: 102px;
+  max-width: 188px;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+  border-radius: 0;
+  color: var(--text-faint);
 }
 
 .tab:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.05);
 }
 
 .tab-active {
-  background-color: var(--special-bg);
-  border-bottom: 1px solid var(--special-bg);
-  position: relative;
-  z-index: 1;
+  border-bottom-color: var(--special-text);
+  color: var(--text-color);
+  opacity: 1;
+}
+
+.tab:not(.tab-active) {
+  opacity: 0.54;
 }
 
 .tab-icon {
-  font-size: 16px;
-  margin-right: 4px;
-  color: var(--text-color);
+  font-size: 14px;
+  margin-right: 5px;
   flex-shrink: 0;
+  opacity: 0.88;
 }
 
-.tab-status {
-  flex-shrink: 0;
-  margin-right: 4px;
+.tab-icon-status-connected {
+  color: #22c55e;
+  animation: tab-icon-pulse 1.8s ease-in-out infinite;
+}
+
+.tab-icon-status-running {
+  color: var(--special-text);
+  animation: tab-icon-pulse 1s ease-in-out infinite;
+}
+
+.tab-icon-status-waiting {
+  color: #f59e0b;
+}
+
+.tab-icon-status-failed {
+  color: var(--delete-color);
+}
+
+.tab-icon-status-idle,
+.tab-icon-status-disabled,
+.tab-icon-status-none {
+  color: currentColor;
 }
 
 .tab-title {
   flex: 1;
-  font-size: var(--small-font-size);
-  color: var(--text-color);
-  margin-right: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: currentColor;
+  margin-right: 4px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -407,13 +379,14 @@ export default defineComponent({
   border: none;
   color: var(--text-faint);
   cursor: pointer;
-  font-size: 16px;
-  padding: 2px 4px;
+  font-size: 14px;
+  padding: 1px 2px;
   line-height: 1;
-  border-radius: 2px;
-  margin-left: 4px;
+  border-radius: 0;
+  margin-left: 2px;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  box-shadow: none;
 }
 
 .tab-close-btn:hover {
@@ -421,38 +394,24 @@ export default defineComponent({
   color: var(--text-color);
 }
 
-.new-tab-btn {
-  background-color: var(--button-bg);
-  border: 1px solid var(--border);
-  color: var(--text-color);
-  cursor: pointer;
-  padding: 6px 10px;
-  margin-left: 4px;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
-}
-
-.new-tab-btn:hover {
-  background-color: var(--button-mouseover);
-}
-
-/* Context Menu Styles */
 .context-menu {
   position: fixed;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
   z-index: 1000;
   min-width: 160px;
-  padding: 4px 0;
+  padding: 6px;
+  border-radius: 12px;
 }
 
 .context-menu-item {
-  padding: 8px 16px;
+  padding: 10px 12px;
   cursor: pointer;
   color: var(--text-color);
-  font-size: var(--small-font-size);
+  font-size: 13px;
   transition: background-color 0.2s ease;
+  border-radius: 8px;
 }
 
 .context-menu-item:hover:not(.disabled) {
@@ -466,20 +425,16 @@ export default defineComponent({
 
 .context-menu-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 999;
 }
 
-/* Content Area */
 .tab-content {
   flex: 1;
   overflow: hidden;
+  background: var(--main-bg-color);
 }
 
-/* Drag and Drop Visual Feedback */
 .tab[draggable='true'] {
   cursor: pointer;
 }
@@ -488,19 +443,29 @@ export default defineComponent({
   cursor: grabbing;
 }
 
-/* Utility Classes */
 .truncate-text {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Responsive Design */
+@keyframes tab-icon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
 @media screen and (max-width: 768px) {
   .tab {
     min-width: 100px;
     max-width: 150px;
-    padding: 6px 8px;
+    padding: 0 8px;
   }
 
   .tab-icon {
@@ -513,7 +478,7 @@ export default defineComponent({
   }
 
   .tab-bar {
-    min-height: 44px;
+    min-height: 36px;
   }
 
   .context-menu {
@@ -525,12 +490,11 @@ export default defineComponent({
     font-size: var(--font-size);
   }
 
-  /* On very small screens, consider hiding tab titles and showing only icons */
   @media screen and (max-width: 480px) {
     .tab {
       min-width: 40px;
       max-width: 50px;
-      padding: 6px 4px;
+      padding: 0 4px;
       justify-content: center;
     }
 

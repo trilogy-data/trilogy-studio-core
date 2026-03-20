@@ -32,7 +32,7 @@
                 :active-imports="activeImports"
                 @update:imports="$emit('import-change', $event)"
               />
-              <span v-if="connectionInfo" class="connection-info">
+              <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
                 {{ connectionInfo }}
               </span>
             </div>
@@ -48,25 +48,39 @@
     <div class="sidebar-panel">
       <!-- Sidebar tabs -->
       <div class="sidebar-tabs">
-        <button
-          class="sidebar-tab"
-          :class="{ active: sidebarTab === 'artifacts' }"
-          @click="sidebarTab = 'artifacts'"
-          data-testid="llm-sidebar-tab-artifacts"
-        >
-          Artifacts
-          <span v-if="artifacts.filter((a) => !a.hidden).length > 0" class="artifact-count">{{
-            artifacts.filter((a) => !a.hidden).length
-          }}</span>
-        </button>
-        <button
-          class="sidebar-tab"
-          :class="{ active: sidebarTab === 'symbols' }"
-          @click="sidebarTab = 'symbols'"
-          data-testid="llm-sidebar-tab-fields"
-        >
-          Fields
-        </button>
+        <div class="sidebar-tabs-left">
+          <button
+            class="sidebar-tab"
+            :class="{ active: sidebarTab === 'artifacts' }"
+            @click="sidebarTab = 'artifacts'"
+            data-testid="llm-sidebar-tab-artifacts"
+          >
+            Artifacts
+            <span v-if="visibleArtifactCount > 0" class="artifact-count">{{
+              visibleArtifactCount
+            }}</span>
+          </button>
+          <button
+            class="sidebar-tab"
+            :class="{ active: sidebarTab === 'symbols' }"
+            @click="sidebarTab = 'symbols'"
+            data-testid="llm-sidebar-tab-fields"
+          >
+            Fields
+          </button>
+        </div>
+        <div class="sidebar-tabs-right">
+          <button
+            v-if="sidebarTab === 'artifacts' && visibleArtifactCount > 0"
+            class="publish-link-btn"
+            @click="$emit('publish-artifacts')"
+            title="Publish artifacts as a dashboard"
+            data-testid="publish-artifacts-btn"
+          >
+            <i class="mdi mdi-view-dashboard-outline"></i>
+            Publish
+          </button>
+        </div>
       </div>
 
       <!-- Artifacts Pane -->
@@ -75,7 +89,6 @@
           :artifacts="artifacts"
           :activeArtifactIndex="activeArtifactIndex"
           @update:activeArtifactIndex="setActiveArtifact"
-          @publish-artifacts="$emit('publish-artifacts')"
           @chart-config-change="handleArtifactChartConfigChange"
           @unhide-artifact="unhideArtifact"
         >
@@ -222,7 +235,7 @@ export default defineComponent({
 
     // Resizer state - controls chat panel width (artifacts panel takes remaining flex space)
     const isResizing = ref(false)
-    const chatWidth = ref(350)
+    const chatWidth = ref(300)
 
     const startResize = (e: MouseEvent) => {
       isResizing.value = true
@@ -239,8 +252,8 @@ export default defineComponent({
       const containerRect = container.getBoundingClientRect()
       const newWidth = e.clientX - containerRect.left
 
-      // Clamp chat panel between 200 and 600 pixels
-      chatWidth.value = Math.min(600, Math.max(200, newWidth))
+      // Clamp chat panel between 220 and 480 pixels
+      chatWidth.value = Math.min(480, Math.max(220, newWidth))
     }
 
     const stopResize = () => {
@@ -260,6 +273,8 @@ export default defineComponent({
       }
       return null
     })
+
+    const visibleArtifactCount = computed(() => artifacts.value.filter((a) => !a.hidden).length)
 
     // Watch for prop changes
     watch(
@@ -408,6 +423,7 @@ export default defineComponent({
       artifacts,
       activeArtifact,
       activeArtifactIndex,
+      visibleArtifactCount,
       sidebarTab,
       isLoading,
       handleMessagesUpdate,
@@ -438,14 +454,21 @@ export default defineComponent({
   height: 100%;
   width: 100%;
   overflow: hidden;
+  gap: 0;
+  padding: 0;
+  background: var(--query-window-bg);
 }
 
 .chat-panel {
   flex: 0 0 auto;
-  min-width: 200px;
-  max-width: 600px;
+  min-width: 220px;
+  max-width: 480px;
   height: 100%;
   overflow: hidden;
+  background: var(--query-window-bg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .chat-split-container.is-resizing {
@@ -454,28 +477,80 @@ export default defineComponent({
 }
 
 .panel-resizer {
-  flex: 0 0 4px;
-  background-color: var(--border-light);
+  flex: 0 0 1px;
+  background-color: rgba(148, 163, 184, 0.14);
   cursor: col-resize;
   transition: background-color 0.15s ease;
 }
 
 .panel-resizer:hover {
-  background-color: var(--special-text);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.2);
 }
 
 .chat-header-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .connection-info {
-  font-size: var(--small-font-size);
+  font-size: 11px;
   color: var(--text-faint);
-  padding: 2px 8px;
-  background-color: var(--bg-color);
-  border-radius: 4px;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  min-width: 0;
+  max-width: clamp(120px, 20vw, 220px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.chat-header) {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 8px;
+  background: transparent;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+:deep(.chat-title) {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:deep(.chat-messages) {
+  padding: 10px 12px 10px 10px;
+}
+
+:deep(.input-container) {
+  padding: 6px 8px 8px;
+  border-top: 0;
+}
+
+:deep(.input-wrapper) {
+  padding: 4px 5px;
+  gap: 6px;
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .chat-header-controls {
+    gap: 8px;
+  }
+
+  .connection-info {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 720px) {
+  .connection-info {
+    display: none;
+  }
 }
 
 .artifact-placeholder {
@@ -494,26 +569,45 @@ export default defineComponent({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-color);
+  background-color: var(--query-window-bg);
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
 }
 
 .sidebar-tabs {
   display: flex;
-  background-color: var(--sidebar-bg);
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--query-window-bg);
   border-bottom: 1px solid var(--border-light);
-  min-height: 36px;
+  min-height: 34px;
+  padding: 0 10px;
+  gap: 8px;
+}
+
+.sidebar-tabs-left,
+.sidebar-tabs-right {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-tabs-left {
+  gap: 4px;
 }
 
 .sidebar-tab {
-  flex: 1;
-  padding: 8px 12px;
+  flex: 0 0 auto;
+  padding: 0 8px;
   border: none;
   border-radius: 0;
   background: transparent;
-  color: var(--text-color);
-  font-size: var(--font-size);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-bottom: 1.5px solid transparent;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
@@ -522,7 +616,8 @@ export default defineComponent({
 }
 
 .sidebar-tab:hover {
-  background-color: var(--button-mouseover);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.03);
+  color: var(--text-color);
 }
 
 .sidebar-tab.active {
@@ -531,13 +626,32 @@ export default defineComponent({
 }
 
 .artifact-count {
-  background-color: var(--special-text);
-  color: white;
-  font-size: 11px;
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.12);
+  color: var(--special-text);
+  font-size: 10px;
   padding: 1px 6px;
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
+}
+
+.publish-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(var(--special-text-rgb, 37, 99, 235), 0.14);
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.04);
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 11px;
+  border-radius: 7px;
+}
+
+.publish-link-btn:hover {
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  color: var(--text-color);
 }
 
 .sidebar-content {
@@ -549,140 +663,6 @@ export default defineComponent({
 
 .sidebar-content.artifacts-content {
   overflow: hidden;
-}
-
-/* Publish button */
-.artifacts-actions {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-light);
-  flex-shrink: 0;
-}
-
-.publish-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  background-color: var(--sidebar-bg);
-  color: var(--text-color);
-  font-size: var(--font-size);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.publish-btn:hover {
-  background-color: var(--special-text);
-  color: white;
-  border-color: var(--special-text);
-}
-
-.publish-btn i {
-  font-size: 16px;
-}
-
-/* Scrollable all-artifacts view */
-.artifacts-scroll {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-}
-
-.artifact-card {
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
-  overflow: hidden;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.artifact-card:hover {
-  border-color: var(--border);
-}
-
-.artifact-card.active {
-  border-color: var(--special-text);
-}
-
-.artifact-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background-color: var(--sidebar-bg);
-  border-bottom: 1px solid var(--border-light);
-  min-height: 32px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.artifact-card-header:hover {
-  background-color: var(--button-mouseover);
-}
-
-.artifact-card-header i {
-  font-size: 14px;
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
-.collapse-chevron {
-  margin-left: auto;
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-
-.artifact-label {
-  font-size: var(--font-size);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-}
-
-.artifact-meta {
-  font-size: var(--small-font-size);
-  color: var(--text-faint);
-  flex-shrink: 0;
-}
-
-.artifact-card-body {
-  overflow: hidden;
-}
-
-.markdown-artifact-view {
-  padding: 10px;
-  overflow: auto;
-}
-
-.custom-artifact-view {
-  padding: 10px;
-  overflow: auto;
-  height: 100%;
-}
-
-.custom-artifact-view pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-size: var(--font-size);
-}
-
-.no-artifacts {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-faint);
-  font-size: var(--font-size);
-  padding: 20px;
-  text-align: center;
 }
 
 /* Responsive design */

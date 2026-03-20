@@ -53,45 +53,37 @@
       <template #extra-content>
         <template v-if="item.type === 'editor'">
           <span class="tag-container">
-            <span v-for="tag in item.editor.tags" :key="tag" class="tag">{{ tag }}</span>
+            <sidebar-tag-chip v-for="tag in item.editor.tags" :key="tag" :label="tag" />
           </span>
 
-          <tooltip content="Delete Editor" position="left">
-            <span
-              class="remove-btn hover-icon"
-              @click.stop="$emit('delete-editor', item.editor)"
-              :data-testid="`delete-editor-${item.label}`"
-            >
-              <i class="mdi mdi-trash-can-outline"></i>
-            </span>
-          </tooltip>
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Editor actions"
+            :test-id-base="`editor-actions-${item.key}`"
+            @select="handleContextMenuItemClick"
+          />
         </template>
 
         <template v-else-if="item.type === 'connection'">
-          <span class="tag-container hover-icon">
-            <editor-creator-icon :connection="item.label" type="sql" title="New SQL Editor" />
-            <editor-creator-icon :connection="item.label" title="New Trilogy Editor" />
-          </span>
           <connection-status-icon
             v-if="connectionStore.connections[item.label]"
             :connection="connectionStore.connections[item.label]"
           />
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Connection actions"
+            :test-id-base="`editor-actions-${item.key}`"
+            @select="handleContextMenuItemClick"
+          />
         </template>
 
         <template v-else-if="item.type === 'folder'">
-          <span class="tag-container hover-icon">
-            <editor-creator-icon
-              :connection="item.connection"
-              type="sql"
-              title="New SQL Editor"
-              :root="item.objectKey"
-            />
-            <editor-creator-icon
-              :connection="item.connection"
-              title="New Trilogy Editor"
-              :root="item.objectKey"
-            />
-          </span>
+          <sidebar-overflow-menu
+            :items="contextMenuItems"
+            tooltip="Folder actions"
+            :test-id-base="`editor-actions-${item.key}`"
+            @select="handleContextMenuItemClick"
+          />
         </template>
       </template>
     </sidebar-item>
@@ -99,14 +91,17 @@
 </template>
 
 <script lang="ts">
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { EditorStoreType } from '../../stores/editorStore'
 import SidebarItem from './GenericSidebarItem.vue'
 import Tooltip from '../Tooltip.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import trilogyIcon from '../../static/trilogy_small.webp'
-import EditorCreatorIcon from '../editor/EditorCreatorIcon.vue'
 import useModelConfigStore from '../../stores/modelStore'
+import SidebarTagChip from './SidebarTagChip.vue'
+import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
+import type { ContextMenuItem } from '../ContextMenu.vue'
 
 export default {
   name: 'EditorListItem',
@@ -131,15 +126,26 @@ export default {
   emits: ['item-click', 'delete-editor', 'toggle'],
   setup(props, { emit }) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const editorStore = inject<EditorStoreType>('editorStore')
     const saveModels = inject<CallableFunction>('saveModels')
     const saveConnections = inject<CallableFunction>('saveConnections')
+    const saveEditors = inject<CallableFunction>('saveEditors')
+    const setActiveScreen = inject<CallableFunction>('setActiveScreen')
+    const setActiveEditor = inject<CallableFunction>('setActiveEditor')
 
-    if (!connectionStore || !saveModels || !saveConnections) {
+    if (
+      !connectionStore ||
+      !editorStore ||
+      !saveModels ||
+      !saveConnections ||
+      !saveEditors ||
+      !setActiveScreen ||
+      !setActiveEditor
+    ) {
       throw new Error('Connection store is not provided!')
     }
 
     const modelConfigStore = useModelConfigStore()
-
     const createDefaultModel = async (connectionName: string) => {
       try {
         // Create a new model with the same name as the connection
@@ -158,6 +164,55 @@ export default {
       }
     }
 
+    const createNewEditor = async (connection: string, type: string, root = '') => {
+      try {
+        const timestamp = Date.now()
+        let editorName = `new-editor-${timestamp}`
+        if (root) {
+          editorName = `${root}/${editorName}`
+        }
+
+        const editor = editorStore.newEditor(
+          editorName,
+          type === 'trilogy' ? 'preql' : 'sql',
+          connection,
+          undefined,
+        )
+
+        await saveEditors()
+        setActiveEditor(editor.id)
+        setActiveScreen('editors')
+      } catch (error) {
+        console.error('Failed to create new editor:', error)
+      }
+    }
+
+    const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      if (props.item.type === 'editor') {
+        return [
+          {
+            id: 'delete-editor',
+            label: 'Delete editor',
+            icon: 'mdi-trash-can-outline',
+            danger: true,
+          },
+        ]
+      }
+
+      if (props.item.type === 'connection' || props.item.type === 'folder') {
+        return [
+          { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
+          {
+            id: 'new-trilogy',
+            label: 'New Trilogy editor',
+            icon: 'mdi-file-document-plus-outline',
+          },
+        ]
+      }
+
+      return []
+    })
+
     const handleClick = () => {
       emit('item-click', props.item.type, props.item.objectKey, props.item.key)
     }
@@ -170,19 +225,46 @@ export default {
       connectionStore,
       trilogyIcon,
       createDefaultModel,
+      createNewEditor,
+      contextMenuItems,
       handleClick,
       handleToggle,
     }
+  },
+  methods: {
+    handleContextMenuItemClick(item: ContextMenuItem) {
+      switch (item.id) {
+        case 'delete-editor':
+          this.$emit('delete-editor', this.item.editor)
+          break
+        case 'new-sql':
+          this.createNewEditor(
+            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            'sql',
+            this.item.type === 'folder' ? this.item.objectKey : '',
+          )
+          break
+        case 'new-trilogy':
+          this.createNewEditor(
+            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            'trilogy',
+            this.item.type === 'folder' ? this.item.objectKey : '',
+          )
+          break
+      }
+    },
   },
   components: {
     SidebarItem,
     Tooltip,
     ConnectionStatusIcon,
-    EditorCreatorIcon,
+    SidebarTagChip,
+    SidebarOverflowMenu,
   },
 }
 </script>
 
+<style scoped src="./sidebarItemChrome.css"></style>
 <style scoped>
 .sql {
   color: var(--text-color);
@@ -202,32 +284,6 @@ export default {
   align-items: center;
 }
 
-.remove-btn {
-  margin-left: auto;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tag-container {
-  margin-left: auto;
-  display: flex;
-}
-
-.tag {
-  font-size: 8px;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: hsla(210, 100%, 50%, 0.516);
-  border: 1px solid hsl(210, 100%, 50%, 0.5);
-  color: var(--tag-font);
-  line-height: 10px;
-  cursor: pointer;
-}
-
-.text-light {
-  color: var(--text-faint);
-}
-
 .no-model-text {
   cursor: pointer;
   text-decoration: underline dotted;
@@ -240,15 +296,5 @@ export default {
 .creator-item {
   padding: 8px;
   cursor: pointer;
-}
-
-/* Show hover icons when parent sidebar item is hovered */
-:deep(.sidebar-item:hover) .hover-icon {
-  opacity: 1;
-}
-
-.hover-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
 }
 </style>

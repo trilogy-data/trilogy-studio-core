@@ -7,6 +7,7 @@
           data-testid="connection-creator-name"
           type="text"
           v-model="connectionDetails.name"
+          class="sidebar-control-input"
           id="connection-name"
           required
         />
@@ -14,7 +15,12 @@
 
       <div class="form-row">
         <label for="connection-type">Type</label>
-        <select v-model="connectionDetails.type" id="connection-type" required>
+        <select
+          v-model="connectionDetails.type"
+          class="sidebar-control-select"
+          id="connection-type"
+          required
+        >
           <option value="duckdb">DuckDB</option>
           <!-- Need to figure out CORS to support this and bigquery-->
           <!-- <option value="motherduck">MotherDuck</option> -->
@@ -30,6 +36,7 @@
         <input
           type="password"
           v-model="connectionDetails.options.mdToken"
+          class="sidebar-control-input"
           id="md-token"
           placeholder="MotherDuck Token"
           required
@@ -48,6 +55,7 @@
         <input
           type="text"
           v-model="connectionDetails.options.projectId"
+          class="sidebar-control-input"
           id="project-id"
           placeholder="Billing Project ID"
           required
@@ -55,11 +63,18 @@
       </div>
       <div v-if="connectionDetails.type === 'sqlserver'" class="form-row">
         <label for="username">Username</label>
-        <input type="text" v-model="connectionDetails.options.username" id="username" required />
+        <input
+          type="text"
+          v-model="connectionDetails.options.username"
+          class="sidebar-control-input"
+          id="username"
+          required
+        />
         <label for="password">Password</label>
         <input
           type="password"
           v-model="connectionDetails.options.password"
+          class="sidebar-control-input"
           id="username"
           required
         />
@@ -80,17 +95,30 @@
       <template v-if="connectionDetails.type === 'snowflake'">
         <div class="form-row">
           <label for="account">Account</label>
-          <input type="text" v-model="connectionDetails.options.account" id="account" required />
+          <input
+            type="text"
+            v-model="connectionDetails.options.account"
+            class="sidebar-control-input"
+            id="account"
+            required
+          />
         </div>
         <div class="form-row">
           <label for="username">Username</label>
-          <input type="text" v-model="connectionDetails.options.username" id="username" required />
+          <input
+            type="text"
+            v-model="connectionDetails.options.username"
+            class="sidebar-control-input"
+            id="username"
+            required
+          />
         </div>
         <div class="form-row">
           <label for="privateKey">Private Key</label>
           <input
             type="password"
             v-model="connectionDetails.options.privateKey"
+            class="sidebar-control-input"
             id="privateKey"
             required
           />
@@ -104,44 +132,10 @@
   </div>
 </template>
 
+<style scoped src="../creatorForm.css"></style>
 <style scoped>
-.form-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.form-row label {
-  flex: 0 0 80px;
-  /* Fixed width for labels */
-  font-size: var(--small-font-size);
-  margin-right: 10px;
-}
-
-.form-row input,
-.form-row select {
-  flex: 1;
-  font-size: var(--small-font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  height: var(--sidebar-sub-item-height);
-}
-
-.form-row input:focus,
-.form-row select:focus {
-  border-color: var(--border-color);
-  outline: none;
-}
-
-.button-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-option {
-  font-size: 12px;
-  font-weight: 300;
+.creator-container {
+  --creator-label-width: 88px;
 }
 </style>
 

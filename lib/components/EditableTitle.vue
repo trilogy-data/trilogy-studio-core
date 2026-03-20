@@ -1,5 +1,5 @@
 <template>
-  <div class="editable-title" @click="startEditing">
+  <div class="editable-title" @click="startEditing" :title="isEditing ? undefined : modelValue">
     <span v-if="!isEditing" class="editable-text" :data-testid="testId + '-display'">
       {{ modelValue }}
       <span class="edit-indicator" :data-testid="testId + '-edit-icon'">✎</span>
@@ -80,6 +80,8 @@ export default defineComponent({
   border-radius: 4px;
   display: flex;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -92,12 +94,17 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .edit-indicator {
   opacity: 0;
   font-size: 0.875rem;
   transition: opacity 0.2s ease;
+  flex-shrink: 0;
 }
 
 .name-input {

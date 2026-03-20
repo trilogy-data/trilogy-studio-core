@@ -63,17 +63,19 @@
 <style scoped>
 .database-display {
   width: 100%;
+  height: 100%;
+  background: var(--query-window-bg);
 }
 
 .database-display-body {
-  padding: 1rem;
+  padding: 18px 20px;
 }
 
 .header {
   display: flex;
   align-items: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.25rem;
+  margin: 0 0 16px;
+  font-size: var(--page-title-font-size);
   font-weight: 600;
 }
 
@@ -88,25 +90,26 @@
 
 .metadata-section,
 .schemas-section {
-  background-color: var(--surface-card);
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: none;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
 }
 
 .section-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--section-title-font-size);
   font-weight: 600;
 }
 
@@ -154,24 +157,28 @@
 .schemas-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .schema-item {
-  background-color: var(--surface-hover);
-  border-radius: var(--border-radius);
-  padding: 0.75rem;
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 10px 12px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .schema-item:hover {
-  background-color: var(--surface-active);
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
 }
 
 .schema-name {
   font-weight: 500;
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
 }
 
 .schema-details {
@@ -192,6 +199,10 @@
   line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.refresh-class {
+  margin-left: 8px;
 }
 </style>
 

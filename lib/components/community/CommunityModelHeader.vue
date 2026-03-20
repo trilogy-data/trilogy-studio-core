@@ -57,7 +57,7 @@
 import { computed, inject } from 'vue'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 
-const props = defineProps<{
+export interface CommunityModelHeaderProps {
   searchQuery: string
   selectedEngine: string
   importStatus: string
@@ -65,7 +65,9 @@ const props = defineProps<{
   loading: boolean
   remote: string | null
   engineDisabled: boolean
-}>()
+}
+
+const props = defineProps<CommunityModelHeaderProps>()
 
 defineEmits<{
   (e: 'refresh'): void

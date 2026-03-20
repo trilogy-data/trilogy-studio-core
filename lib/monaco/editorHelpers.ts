@@ -6,8 +6,9 @@ import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
  */
 export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
   // Define the Trilogy theme
+  const isLight = theme === 'light'
   editor.defineTheme('trilogyStudio', {
-    base: theme === 'light' ? 'vs' : 'vs-dark',
+    base: isLight ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [
       { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' },
@@ -23,8 +24,21 @@ export function configureEditorTheme(theme: 'light' | 'dark' = 'dark'): void {
       { token: 'property', foreground: '#BFBFBF' },
     ],
     colors: {
-      'editorCursor.foreground': theme === 'light' ? '#333333' : '#ffffff',
-      'editorCursor.background': theme === 'light' ? '#ffffff' : '#000000',
+      'editor.background': isLight ? '#ffffff' : '#111318',
+      'editor.foreground': isLight ? '#1f2937' : '#e5e7eb',
+      'editorLineNumber.foreground': isLight ? '#94a3b8' : '#64748b',
+      'editorLineNumber.activeForeground': isLight ? '#475569' : '#cbd5e1',
+      'editorGutter.background': isLight ? '#ffffff' : '#111318',
+      editorLineHighlightBackground: isLight ? '#f6f8fb' : '#181c22',
+      'editor.selectionBackground': isLight ? '#dbeafe' : '#1d4ed833',
+      'editor.inactiveSelectionBackground': isLight ? '#e2e8f0' : '#33415555',
+      'editorCursor.foreground': isLight ? '#334155' : '#ffffff',
+      'editorCursor.background': isLight ? '#ffffff' : '#111318',
+      'editorIndentGuide.background1': isLight ? '#e2e8f0' : '#2a2f37',
+      'editorIndentGuide.activeBackground1': isLight ? '#cbd5e1' : '#475569',
+      'editorWhitespace.foreground': isLight ? '#cbd5e1' : '#334155',
+      'editorWidget.background': isLight ? '#ffffff' : '#111318',
+      'editorWidget.border': isLight ? '#d6dde6' : '#2a2f37',
     },
   })
 

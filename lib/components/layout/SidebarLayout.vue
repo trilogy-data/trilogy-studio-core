@@ -27,7 +27,7 @@
   isolation: isolate;
 }
 .sidebar {
-  background-color: var(--sidebar-bg);
+  background-color: var(--sidebar-bg-color);
   display: flex;
   flex-direction: column;
   flex-grow: 0;
@@ -54,6 +54,7 @@
   min-width: 350px;
   z-index: 1;
   overflow: auto;
+  background: var(--main-bg-color);
 }
 </style>
 

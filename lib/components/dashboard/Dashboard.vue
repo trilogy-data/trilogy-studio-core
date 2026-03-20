@@ -11,12 +11,14 @@ import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
-const props = defineProps<{
+export interface DashboardProps {
   name: string
   connectionId?: string
   maxWidth?: number
   viewMode?: boolean
-}>()
+}
+
+const props = defineProps<DashboardProps>()
 
 const emit = defineEmits<{
   fullScreen: [enabled: boolean]
@@ -105,7 +107,7 @@ function updateItemDimensions(itemId: string): void {
   const container = document.querySelector(`.vue-grid-item[data-i="${itemId}"] .grid-item-content`)
   if (container) {
     const rect = container.getBoundingClientRect()
-    const headerHeight = 36 // Approximate height of the header
+    const headerHeight = getItemData(itemId, dashboard.value.id).type === 'section-header' ? 0 : 36
 
     const width = Math.floor(rect.width)
     const height = Math.floor(rect.height - headerHeight)
@@ -298,7 +300,6 @@ async function exportToImage() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).content"
-        :showing="showQueryEditor"
         @save="saveContent"
         @cancel="closeEditors"
       />
@@ -343,7 +344,7 @@ async function exportToImage() {
   width: 100%;
   font-size: var(--font-size);
   color: var(--text-color);
-  background-color: var(--bg-color);
+  background-color: var(--main-bg-color);
 }
 
 .toggle-mode-button {
@@ -354,8 +355,8 @@ async function exportToImage() {
 .grid-container {
   flex: 1;
   overflow: auto;
-  padding: 15px;
-  background-color: var(--bg-color);
+  padding: 16px 18px 24px;
+  background-color: var(--main-bg-color);
   display: flex;
   justify-content: center;
 }
@@ -376,12 +377,12 @@ async function exportToImage() {
 }
 
 .vue-grid-layout {
-  background: var(--bg-color);
+  background: transparent;
   height: 100%;
 }
 
 .vue-grid-item:not(.vue-grid-placeholder) {
-  background: var(--result-window-bg);
+  background: transparent;
 }
 
 .vue-grid-item .resizing {
@@ -390,6 +391,31 @@ async function exportToImage() {
 
 .vue-grid-item .static {
   background: var(--sidebar-selector-bg);
+}
+
+:deep(.vue-resizable-handle) {
+  width: 22px !important;
+  height: 22px !important;
+  right: -6px !important;
+  bottom: -6px !important;
+  background-image: none !important;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 0.96;
+}
+
+:deep(.vue-resizable-handle::before) {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 13px;
+  height: 13px;
+  border-right: 1.5px solid rgba(148, 163, 184, 0.72);
+  border-bottom: 1.5px solid rgba(148, 163, 184, 0.72);
+  border-radius: 0 0 15px 0;
 }
 
 .editor-overlay {

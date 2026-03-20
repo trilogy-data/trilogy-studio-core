@@ -95,6 +95,10 @@ export default {
 </script>
 
 <style scoped>
+.sidebar-item {
+  width: 100%;
+}
+
 .sidebar-item:hover {
   background-color: var(--button-mouseover);
 }
@@ -103,13 +107,17 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
+  box-sizing: border-box;
   cursor: pointer;
+  min-height: var(--sidebar-list-item-height);
   height: var(--sidebar-list-item-height);
+  padding: 0 12px;
 }
 
 .sidebar-padding {
   width: 7px;
-  height: 22px;
+  height: 100%;
+  align-self: stretch;
   margin-right: 5px;
   border-right: 1px solid var(--border-light);
 }
@@ -134,8 +142,10 @@ export default {
   border: none;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  min-width: var(--sidebar-item-height);
-  min-height: var(--sidebar-item-height);
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  margin-right: 2px;
 }
 
 .chevron-icon {
@@ -150,6 +160,10 @@ export default {
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
+  .sidebar-content {
+    padding: 0 10px;
+  }
+
   .chevron-button {
     min-width: 32px;
     min-height: 32px;

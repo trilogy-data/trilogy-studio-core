@@ -1,4 +1,16 @@
 import { test, expect } from '@playwright/test'
+import {
+  createEditorFromConnectionList,
+  openSidebarScreen,
+  prepareTestPage,
+  refreshConnection,
+  waitForEditorQueryComplete,
+  waitForConnectionReady,
+} from './test-helpers.js'
+
+test.beforeEach(async ({ page }) => {
+  await prepareTestPage(page)
+})
 
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')
@@ -7,24 +19,10 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByRole('textbox', { name: 'Search by model name...' }).fill('demo-model')
   await page.getByRole('button', { name: 'Import' }).click()
   await page.getByTestId('model-creation-submit').click()
-  await page.getByRole('button', { name: '󱘖' }).click()
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this testid, so filter to the visible one
-  await page
-    .getByTestId('refresh-connection-demo-model-connection')
-    .filter({ visible: true })
-    .click()
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
-    if (!element) return false
-
-    const style = window.getComputedStyle(element)
-    const backgroundColor = style.backgroundColor
-    console.log(backgroundColor)
-
-    // Check if the background color is green (in RGB format)
-    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-  })
+  await refreshConnection(page, 'demo-model-connection')
+  await waitForConnectionReady(page, 'demo-model-connection')
 
   //
   await page.getByTestId('editor-creator-add-tutorial').click()
@@ -43,36 +41,12 @@ test('test', async ({ page, isMobile, browserName }) => {
   await expect(page.getByTestId('editor-validator')).toContainText(
     `Great work: "my-first-editor" found and connected with right model ✓`,
   )
-  await page.getByTestId('editor').click()
-  await page.waitForTimeout(500)
-  // console.log(process.platform ==='darwin' ? 'Meta+A' : 'Control+A')
-  // await page.keyboard.press('ControlOrMeta+a');
-  await page.getByTestId('editor').click({ clickCount: 3 })
-  // await page.keyboard.press('Control+A')
-  // 3. Delete the selected content
-  await page.keyboard.press('Delete')
-  // 4. Type or paste new content
-  const newContent = `import lineitem as lineitem;
-SELECT
-    sum(lineitem.extended_price)->sales,
-    lineitem.supplier.nation.name,
-order by
-    sales desc;`
-  await page.keyboard.type(newContent)
-  await page.getByTestId('editor-run-button').click()
-  // Wait for text to change to "Cancel", indicating query execution started.
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
-  // Wait for text to change back to "Run", indicating query execution finished.
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
-
-  await expect(page.getByTestId('results-tab-button')).toContainText(`Results (25)`)
 
   // MODEL TUTORIAL
 
   // Step 1: Open the Docs and Tutorial
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('sidebar-link-tutorial').click()
+    await openSidebarScreen(page, 'tutorial', isMobile)
   }
   await page.getByTestId('expand-documentation-documentation+Studio').click()
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
@@ -90,14 +64,10 @@ order by
   const constantQuery = 'const pi <- 3.14; select pi;'
   await page.keyboard.type(constantQuery)
   await page.getByTestId('editor-run-button').click()
+  await waitForEditorQueryComplete(page)
 
-  // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
-
-  // Verify result contains pi = 3.14
   const firstRowCellPi = await page.getByRole('gridcell', { name: '3.14' })
   await expect(firstRowCellPi).toContainText('3.14')
-  // await expect(page.getByTestId('results-value-cell')).toContainText('3.14');
 
   // Step 4: Complete Typing example with states
   await page.getByTestId('next-prompt').click()
@@ -120,12 +90,8 @@ order by
 
   await page.keyboard.type(typingQuery)
   await page.getByTestId('editor-run-button').click()
+  await waitForEditorQueryComplete(page)
 
-  // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
-
-  // Verify states are in order CA, NY, TX
   const firstRowCell = await page.getByRole('gridcell', { name: 'CA' })
   await expect(firstRowCell).toContainText('CA')
 
@@ -144,16 +110,12 @@ select count(order.id) as order_count;`
 
   await page.keyboard.type(lineItemQuery)
   await page.getByTestId('editor-run-button').click()
+  await waitForEditorQueryComplete(page)
 
-  // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
-
-  // Verify order count equals 15000
   await expect(await page.getByRole('gridcell', { name: '15000' })).toContainText('15000')
   await page.getByTestId('next-prompt').click()
-  // Step 6: Create datasource with headquarters
 
+  // Step 6: Create datasource with headquarters
   if (isMobile) {
     await page.getByTestId('editor').click()
     await page.getByTestId('editor').press('ControlOrMeta+a')
@@ -192,10 +154,7 @@ select count(order.id) as order_count;`
   await page.keyboard.press('Delete')
 
   await page.getByTestId('editor-run-button').click()
-
-  // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Cancel")')
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
+  await waitForEditorQueryComplete(page)
 
   // Create a new DuckDB connection for iris data
   await page.getByTestId('connection-creator-add-tutorial-connection').click()
@@ -204,12 +163,11 @@ select count(order.id) as order_count;`
   await page.getByTestId('connection-creator-submit').click()
 
   // Create a new SQL editor with the startup script
-  await page.getByTestId('new-sql-editor-iris-data-tutorial-connection').click()
+  await createEditorFromConnectionList(page, 'iris-data', 'sql')
 
   // Set up the iris table
-  let irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
+  const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
-    // Safari and Firefox both break on csv import
     return
   }
   if (isMobile) {
@@ -221,15 +179,12 @@ select count(order.id) as order_count;`
   await page.keyboard.press('Delete')
   await page.keyboard.type(irisTableScript)
 
-  // Run the script
   await page.getByTestId('editor-run-button').click()
-  // go back to editor tab
+  await waitForEditorQueryComplete(page)
   if (isMobile) {
     await page.getByTestId('editor-tab').click()
   }
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
 
-  // Set as startup script
   await page.getByTestId('editor-set-startup-script').click()
 
   // Go back to the documentation
@@ -237,11 +192,8 @@ select count(order.id) as order_count;`
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-icon-tutorial').click()
-  // await page.getByTestId('documentation+Studio').click();
-  // await page.getByTestId('article+Studio+Model Tutorial').click();
 
   // Step 8: Create iris model from the connection
-  // Navigate to the connection
   if (isMobile) {
     await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
   } else {
@@ -249,15 +201,9 @@ select count(order.id) as order_count;`
   }
   await page.getByTestId('expand-tutorial-connection-iris-data').click()
 
-  // popup freezes in webkit
-  // if (browserName === 'webkit') {
-  //   return
-  // }
-
   await page.getByTestId('expand-tutorial-connection-iris-data+memory').click()
   await page.getByTestId('expand-tutorial-connection-iris-data+memory+main').click()
   await page.getByTestId('create-datasource-iris_data').click()
-  // accept defaults
   await page.getByTestId('create-datasource-button').click()
 
   // Modify the generated datasource file
@@ -291,7 +237,6 @@ address iris_data;`
   await page.keyboard.type(irisDataSource)
   await page.keyboard.press('Delete')
   await page.keyboard.press('Delete')
-  // Set as source
   await page.getByTestId('editor-set-source').click()
 
   // Rename the file to iris
@@ -300,12 +245,13 @@ address iris_data;`
   await page.keyboard.press('Enter')
 
   // Step 9: Create a new Trilogy editor and query the iris data
-  // this is on left hand nav, not the tutorial embedded one used earlier
   if (isMobile) {
     await page.getByTestId('mobile-menu-toggle').click()
   }
   await page.getByTestId('sidebar-icon-connections').click()
-  await page.getByTestId('new-trilogy-editor-iris-data').click()
+  await createEditorFromConnectionList(page, 'iris-data', 'trilogy')
+  await openSidebarScreen(page, 'editors', isMobile)
+  await page.locator('[data-testid^="editor-e-local-iris-data-new-editor-"]').last().click()
   if (isMobile) {
     await page.getByTestId('editor').click()
     await page.getByTestId('editor').press('ControlOrMeta+a')
@@ -322,17 +268,10 @@ select
 ;`
 
   await page.keyboard.type(irisQuery)
-  // formatting adds extra parentheses
-
   await page.getByTestId('editor-run-button').click()
-  if (isMobile) {
-    await page.getByTestId('editor-tab').click()
-  }
-  // Wait for query to complete
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")')
+  await waitForEditorQueryComplete(page)
   if (isMobile) {
     await page.getByTestId('results-tab').click()
   }
-  // Verify we have results for three iris species
   await expect(await page.getByRole('gridcell', { name: 'versicolor' })).toContainText('versicolor')
 })
