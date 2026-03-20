@@ -183,6 +183,7 @@ export default defineComponent({
     const modelDetails = ref({
       name: props.formDefaults.name || '',
       importAddress: props.formDefaults.importAddress,
+      importToken: props.formDefaults.importToken || '',
       connection: props.formDefaults.connection || '',
       options: {
         mdToken: '',
@@ -256,6 +257,7 @@ export default defineComponent({
     const createModel = () => {
       modelDetails.value.name = props.formDefaults.name || ''
       modelDetails.value.importAddress = props.formDefaults.importAddress
+      modelDetails.value.importToken = props.formDefaults.importToken || ''
       modelDetails.value.connection = props.formDefaults.connection || ''
       modelDetails.value.options = {
         mdToken: '',
@@ -306,6 +308,7 @@ export default defineComponent({
             modelDetails.value.name,
             modelDetails.value.importAddress,
             connectionName,
+            modelDetails.value.importToken || undefined,
           )
         } catch (error) {
           console.error('Error importing model:', error)

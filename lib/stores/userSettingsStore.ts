@@ -8,6 +8,7 @@ export interface UserSettings {
   telemetryEnabled: boolean | null
   tipsRead: string[]
   skipAllTips: boolean
+  disableEditorHints: boolean
   [key: string]: string | boolean | number | null | undefined | string[]
 }
 
@@ -21,11 +22,15 @@ export const useUserSettingsStore = defineStore('userSettings', {
       telemetryEnabled: null,
       tipsRead: [] as string[],
       skipAllTips: false,
+      disableEditorHints: false,
     } as UserSettings,
     defaults: {
       theme: 'dark',
       trilogyResolver: 'https://trilogy-service.fly.dev',
       telemetryEnabled: true,
+      tipsRead: [] as string[],
+      skipAllTips: false,
+      disableEditorHints: false,
     } as UserSettings,
     isLoading: false,
     hasChanges: false,
@@ -132,7 +137,10 @@ export const useUserSettingsStore = defineStore('userSettings', {
       try {
         const savedSettings = localStorage.getItem(storageKey)
         if (savedSettings) {
-          this.settings = JSON.parse(savedSettings)
+          this.settings = {
+            ...this.settings,
+            ...JSON.parse(savedSettings),
+          }
           // set telemetry
           const analyticsStore = useAnalyticsStore()
           if (this.settings.telemetryEnabled === false) {
@@ -140,6 +148,9 @@ export const useUserSettingsStore = defineStore('userSettings', {
           }
           if (!this.settings.tipsRead) {
             this.settings.tipsRead = []
+          }
+          if (typeof this.settings.disableEditorHints !== 'boolean') {
+            this.settings.disableEditorHints = false
           }
         }
       } catch (error) {

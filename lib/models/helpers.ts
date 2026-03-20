@@ -35,13 +35,25 @@ export class ModelImportService {
     this.dashboardStore = dashboardStore
   }
 
+  private buildRequestInit(token?: string): RequestInit | undefined {
+    if (!token) {
+      return undefined
+    }
+
+    return {
+      headers: {
+        'X-Trilogy-Token': token,
+      },
+    }
+  }
+
   /**
    * Fetches model import base definition from URL
    * @param url URL to fetch the model import definition from
    * @returns Promise resolving to ModelImport
    */
-  public async fetchModelImportBase(url: string): Promise<ModelImport> {
-    const response = await fetch(url)
+  public async fetchModelImportBase(url: string, token?: string): Promise<ModelImport> {
+    const response = await fetch(url, this.buildRequestInit(token))
     if (!response.ok) {
       throw new Error(`Failed to fetch model import from ${url}: ${response.statusText}`)
     }
@@ -74,7 +86,7 @@ export class ModelImportService {
    * @param modelImport Model import definition
    * @returns Promise resolving to array of component details
    */
-  public async fetchModelImports(modelImport: ModelImport): Promise<ComponentData[]> {
+  public async fetchModelImports(modelImport: ModelImport, token?: string): Promise<ComponentData[]> {
     const results = await Promise.all(
       modelImport.components.map(async (component): Promise<ComponentData | null> => {
         if (component.purpose === 'data') {
@@ -82,7 +94,7 @@ export class ModelImportService {
         }
 
         try {
-          const response = await fetch(component.url)
+          const response = await fetch(component.url, this.buildRequestInit(token))
           if (!response.ok) {
             throw new Error(`Failed to fetch ${component.url}: ${response.statusText}`)
           }
@@ -204,6 +216,7 @@ export class ModelImportService {
     modelName: string,
     importAddress: string,
     connectionName: string,
+    token?: string,
   ): Promise<ImportOutput | null> {
     if (!importAddress) {
       return null
@@ -214,8 +227,8 @@ export class ModelImportService {
     const trilogy = new Map<string, string>()
 
     try {
-      const modelImportBase = await this.fetchModelImportBase(importAddress)
-      const components = await this.fetchModelImports(modelImportBase)
+      const modelImportBase = await this.fetchModelImportBase(importAddress, token)
+      const components = await this.fetchModelImports(modelImportBase, token)
 
       // Separate components by type
       const editorComponents = components.filter((c) => c.type === 'sql' || c.type === 'trilogy')

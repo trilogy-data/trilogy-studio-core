@@ -863,12 +863,11 @@ export class DashboardModel implements Dashboard {
 
   // Get a serializable object for storage
   serialize(): Dashboard {
-    // Create a copy of gridItems without the results property
+    // Create a copy of gridItems without transient execution state
     const serializedGridItems: Record<string, GridItemData> = {}
 
     for (const [itemId, gridItem] of Object.entries(this.gridItems)) {
-      // Destructure to separate results from other properties
-      const { results, ...itemWithoutResults } = gridItem
+      const { results, loading, error, loadStartTime, ...itemWithoutResults } = gridItem
       serializedGridItems[itemId] = itemWithoutResults
     }
 
@@ -898,6 +897,10 @@ export class DashboardModel implements Dashboard {
     for (const [itemId, itemData] of Object.entries(data.gridItems)) {
       gridItems[itemId] = {
         ...itemData,
+        results: null,
+        loading: false,
+        error: null,
+        loadStartTime: null,
         allowCrossFilter: itemData.allowCrossFilter !== false, // Default to true if not explicitly false
         chartConfig: migrateChartConfig(itemData.chartConfig),
         drilldownChartConfig: migrateChartConfig(itemData.drilldownChartConfig),

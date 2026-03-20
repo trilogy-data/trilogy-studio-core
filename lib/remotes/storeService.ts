@@ -7,6 +7,18 @@ import type {
 } from './models'
 import { fetchWithBackoff } from './modelApiService'
 
+const buildAuthRequest = (token?: string): RequestInit | undefined => {
+  if (!token) {
+    return undefined
+  }
+
+  return {
+    headers: {
+      'X-Trilogy-Token': token,
+    },
+  }
+}
+
 /**
  * Fetch models from a generic store
  * @param store The generic store configuration
@@ -24,7 +36,7 @@ export const fetchFromGenericStore = async (
   try {
     // Fetch the index from the base URL
     const indexUrl = `${store.baseUrl}/index.json`
-    const response = await fetchWithBackoff(indexUrl)
+    const response = await fetchWithBackoff(indexUrl, buildAuthRequest(store.token))
 
     if (!response.ok) {
       throw new Error(`Failed to fetch store index: ${response.status} ${response.statusText}`)
@@ -35,7 +47,7 @@ export const fetchFromGenericStore = async (
     // Fetch each model file
     const filePromises = index.models.map(async (modelRef) => {
       try {
-        const modelResponse = await fetchWithBackoff(modelRef.url)
+        const modelResponse = await fetchWithBackoff(modelRef.url, buildAuthRequest(store.token))
 
         if (!modelResponse.ok) {
           console.warn(`Failed to fetch model ${modelRef.name}: ${modelResponse.statusText}`)

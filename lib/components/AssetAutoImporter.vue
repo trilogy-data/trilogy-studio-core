@@ -46,6 +46,7 @@ if (
 const isLoading = ref<boolean>(true)
 const modelUrl = ref<string>('')
 const storeUrl = ref<string>('')
+const importToken = ref<string>('')
 const assetName = ref<string>('')
 const assetType = ref<AssetType>('dashboard')
 const modelName = ref<string>('')
@@ -210,6 +211,9 @@ const registerStoreIfNeeded = async (): Promise<void> => {
   // Check if store already exists
   const existingStore = communityApiStore.stores.find((s) => s.id === storeId)
   if (existingStore) {
+    if (existingStore.type === 'generic' && importToken.value) {
+      existingStore.token = importToken.value
+    }
     console.log(`Store ${storeId} already registered`)
     return
   }
@@ -220,6 +224,7 @@ const registerStoreIfNeeded = async (): Promise<void> => {
     id: storeId,
     name: `Auto-registered: ${storeUrl.value}`,
     baseUrl: storeUrl.value.replace(/\/$/, ''), // Remove trailing slash
+    token: importToken.value || undefined,
   }
 
   try {
@@ -277,6 +282,7 @@ const performImport = async () => {
       modelName.value,
       modelUrl.value,
       connectionName,
+      importToken.value || undefined,
     )
 
     // Transition to connecting step
@@ -364,6 +370,7 @@ const performImport = async () => {
     // Clean up URL parameters
     removeHashFromUrl('import')
     removeHashFromUrl('store')
+    removeHashFromUrl('token')
     removeHashFromUrl('assetType')
     removeHashFromUrl('assetName')
     removeHashFromUrl('dashboard') // Legacy parameter
@@ -406,6 +413,7 @@ onMounted(async () => {
     // Get URL parameters
     const modelUrlParam = screenNavigation.modelImport.value
     const storeUrlParam = getDefaultValueFromHash('store', '')
+    const tokenParam = getDefaultValueFromHash('token', '')
     const assetTypeParam = getDefaultValueFromHash('assetType', '') as AssetType
     const assetNameParam = getDefaultValueFromHash('assetName', '')
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '') // Legacy support
@@ -436,6 +444,7 @@ onMounted(async () => {
 
     modelUrl.value = decodeURIComponent(modelUrlParam)
     storeUrl.value = storeUrlParam ? decodeURIComponent(storeUrlParam) : ''
+    importToken.value = tokenParam ? decodeURIComponent(tokenParam) : ''
     assetName.value = decodeURIComponent(finalAssetName)
     assetType.value = finalAssetType
     modelName.value = decodeURIComponent(modelNameParam)

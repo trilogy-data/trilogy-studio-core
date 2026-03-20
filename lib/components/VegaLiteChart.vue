@@ -184,6 +184,8 @@ export default defineComponent({
 
     // Resize observer for live chart area sizing
     let resizeObserver: ResizeObserver | null = null
+    let hasMounted = false
+    let updatePending = false
 
     // Internal dimensions tracked from the rendered chart area
     const internalWidth = ref<number | null>(null)
@@ -262,21 +264,30 @@ export default defineComponent({
         return
       }
 
+      internalWidth.value = Math.round(chartContentArea.value.clientWidth)
+      internalHeight.value = Math.round(chartContentArea.value.clientHeight)
+
       resizeObserver = new ResizeObserver((entries) => {
-        for (let entry of entries) {
-          const { width, height } = entry.contentRect
+        for (const entry of entries) {
+          const width = Math.round(entry.contentRect.width)
+          const height = Math.round(entry.contentRect.height)
+          const widthChanged = width !== internalWidth.value
+          const heightChanged = height !== internalHeight.value
+
+          if (!widthChanged && !heightChanged) {
+            continue
+          }
+
           internalWidth.value = width
           internalHeight.value = height
 
-          if (!controlsManager.showingControls.value) {
+          if (hasMounted && !controlsManager.showingControls.value) {
             debouncedResizeHandler()
           }
         }
       })
 
       resizeObserver.observe(chartContentArea.value)
-      internalWidth.value = chartContentArea.value.clientWidth
-      internalHeight.value = chartContentArea.value.clientHeight
     }
 
     // Cleanup resize observer
@@ -342,11 +353,12 @@ export default defineComponent({
         props.initialConfig,
         props.onChartConfigChange,
       )
-      renderChart()
+      hasMounted = true
 
       // Set up resize observer after initial render
       nextTick(() => {
         setupResizeObserver()
+        renderChart()
       })
     })
 
@@ -354,6 +366,9 @@ export default defineComponent({
     watch(
       () => controlsManager.internalConfig.value.chartType,
       (newChartType, oldChartType) => {
+        if (!hasMounted) {
+          return
+        }
         if (newChartType !== oldChartType) {
           cleanupResizeObserver()
           nextTick(() => {
@@ -367,7 +382,7 @@ export default defineComponent({
     watch(
       () => [props.chartSelection],
       (newValues, oldValues) => {
-        if (updatePending) return
+        if (!hasMounted || updatePending) return
         const [newSelection] = newValues
         const oldSelection = oldValues ? oldValues[0] : undefined
         if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
@@ -375,10 +390,12 @@ export default defineComponent({
       },
     )
     // Watch for data/column changes
-    let updatePending = false
     watch(
       () => [props.columns, props.data, props.containerHeight, props.containerWidth],
       (newValues, oldValues) => {
+        if (!hasMounted) {
+          return
+        }
         if (updatePending) {
           return
         }
@@ -409,6 +426,9 @@ export default defineComponent({
     watch(
       () => controlsManager.showingControls.value,
       (showing) => {
+        if (!hasMounted) {
+          return
+        }
         nextTick(() => {
           setupResizeObserver()
           if (!showing) {
@@ -464,53 +484,49 @@ export default defineComponent({
 }
 
 .controls-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 0;
-  width: 0;
-  min-width: 0;
+  gap: 4px;
   opacity: 0;
-  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
   transition:
     opacity 0.2s ease-in-out,
-    width 0.22s ease-in-out,
-    flex-basis 0.22s ease-in-out;
+    visibility 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
   transition-delay: 0s;
+  transform: translateY(-4px);
 }
 
 .controls-toggle.controls-visible {
   opacity: 1;
-  width: 36px;
-  flex-basis: 36px;
+  visibility: visible;
+  pointer-events: auto;
   transition-delay: var(--hover-drawer-delay);
+  transform: translateY(0);
 }
 
 .controls-toggle.bottom-controls {
   flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  height: 0;
-  flex-basis: 0;
-  padding: 0 6px;
-  border-top: 1px solid transparent;
-  transition:
-    opacity 0.2s ease-in-out,
-    height 0.22s ease-in-out,
-    flex-basis 0.22s ease-in-out,
-    padding 0.22s ease-in-out;
-  transition-delay: 0s;
+  top: auto;
+  right: auto;
+  bottom: 8px;
+  left: 50%;
+  padding: 6px 8px;
+  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
+  background: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, 6px);
 }
 
 .controls-toggle.bottom-controls.controls-visible {
-  height: 40px;
-  flex-basis: 40px;
-  padding: 4px 6px;
-  border-top-color: rgba(148, 163, 184, 0.12);
-  transition-delay: var(--hover-drawer-delay);
+  transform: translate(-50%, 0);
 }
 
 .viz {
@@ -532,13 +548,16 @@ export default defineComponent({
   transition:
     background-color 0.2s,
     border-color 0.2s,
-    color 0.2s;
+    color 0.2s,
+    box-shadow 0.2s;
   backdrop-filter: blur(4px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
 }
 
 .control-btn:hover {
   background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
   border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 
 .control-btn:disabled {
@@ -569,6 +588,7 @@ export default defineComponent({
   min-height: 0;
   display: flex;
   align-items: stretch;
+  position: relative;
 }
 
 .chart-workspace.with-bottom-controls {
@@ -612,11 +632,15 @@ export default defineComponent({
 
   .controls-toggle {
     flex-direction: row;
-    gap: 4px;
-    width: 100%;
-    height: 0;
-    flex-basis: 0;
-    padding: 0 6px;
+    top: auto;
+    right: auto;
+    bottom: 8px;
+    left: 50%;
+    transform: translate(-50%, 6px);
+  }
+
+  .controls-toggle.controls-visible {
+    transform: translate(-50%, 0);
   }
 
   .chart-workspace {

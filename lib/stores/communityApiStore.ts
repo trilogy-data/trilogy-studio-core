@@ -131,7 +131,16 @@ const useCommunityApiStore = defineStore('communityApi', {
     saveStoresToStorage(): void {
       try {
         // Save only custom stores (not the default one)
-        const customStores = this.stores.filter((s) => s.id !== DEFAULT_GITHUB_STORE.id)
+        const customStores = this.stores
+          .filter((s) => s.id !== DEFAULT_GITHUB_STORE.id)
+          .map((store) => {
+            if (store.type !== 'generic') {
+              return store
+            }
+
+            const { token, ...persistedStore } = store
+            return persistedStore
+          })
         localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(customStores))
       } catch (error) {
         console.error('Error saving stores to localStorage:', error)
