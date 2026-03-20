@@ -354,7 +354,10 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   }
 
   await page.getByTestId('add-item-button').click()
-  await page.getByTestId('dashboard-add-item-type-table').check()
+  await page
+    .getByTestId('dashboard-add-item-type-table')
+    .locator('xpath=ancestor::label[1]')
+    .click()
   await page.getByTestId('dashboard-add-item-confirm').click()
   await openDashboardItemEditor(page, 1)
 
@@ -580,7 +583,10 @@ select rows;
 
   // Add a second dashboard item as a table
   await page.getByTestId('add-item-button').click()
-  await page.getByTestId('dashboard-add-item-type-table').check()
+  await page
+    .getByTestId('dashboard-add-item-type-table')
+    .locator('xpath=ancestor::label[1]')
+    .click()
   await page.getByTestId('dashboard-add-item-confirm').click()
   await openDashboardItemEditor(page, 1)
 

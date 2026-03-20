@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import ModalDialog from '../ModalDialog.vue'
 import { type Dashboard } from '../../dashboards/base'
+
 export interface DashboardSharePopupProps {
   dashboard: Dashboard | null
   isOpen: boolean
@@ -10,26 +12,23 @@ const props = defineProps<DashboardSharePopupProps>()
 const emit = defineEmits<{
   close: []
 }>()
-// Create a ref for the formatted JSON string
-const jsonString = ref<string>('')
 
-// Function to filter out unwanted properties
-const filterDashboard = (dashboard: Dashboard): any => {
+const jsonString = ref<string>('')
+const copySuccess = ref(false)
+
+const filterDashboard = (dashboard: Dashboard): Record<string, unknown> | null => {
   if (!dashboard) return null
 
-  // Create a deep copy to avoid modifying the original
-  const dashboardCopy = JSON.parse(JSON.stringify(dashboard))
+  const dashboardCopy = JSON.parse(JSON.stringify(dashboard)) as Record<string, any>
 
-  // Remove top level properties
   delete dashboardCopy.id
   delete dashboardCopy.connection
   delete dashboardCopy.storage
   delete dashboardCopy.changed
   delete dashboardCopy.deleted
 
-  // Remove specified properties from each item if items exist
   if (dashboardCopy.layout && Array.isArray(dashboardCopy.layout)) {
-    dashboardCopy.layout = dashboardCopy.layout.map((item: any) => {
+    dashboardCopy.layout = dashboardCopy.layout.map((item: Record<string, unknown>) => {
       const itemCopy = { ...item }
       delete itemCopy.static
       delete itemCopy.moved
@@ -38,36 +37,28 @@ const filterDashboard = (dashboard: Dashboard): any => {
     })
   }
 
-  // Iterate over gridItems: Record<string, GridItemData> and remove results objects
   if (dashboardCopy.gridItems && typeof dashboardCopy.gridItems === 'object') {
     for (const [itemId, gridItem] of Object.entries(dashboardCopy.gridItems)) {
-      const itemCopy = { ...(gridItem as any) }
+      const itemCopy = { ...(gridItem as Record<string, any>) }
       delete itemCopy.results
       delete itemCopy.loading
       delete itemCopy.loadStartTime
-
       delete itemCopy.error
-      if (!itemCopy.filters) {
-        delete itemCopy.filters
-      }
-      if (!itemCopy.crossFilters) {
-        delete itemCopy.crossFilters
-      }
-      if (!itemCopy.chartFilters) {
-        delete itemCopy.chartFilters
-      }
-      if (!itemCopy.conceptFilters) {
-        delete itemCopy.conceptFilters
-      }
+
+      if (!itemCopy.filters) delete itemCopy.filters
+      if (!itemCopy.crossFilters) delete itemCopy.crossFilters
+      if (!itemCopy.chartFilters) delete itemCopy.chartFilters
+      if (!itemCopy.conceptFilters) delete itemCopy.conceptFilters
       if (itemCopy.chartConfig) {
         delete itemCopy.chartConfig.showDebug
       }
+
       dashboardCopy.gridItems[itemId] = itemCopy
     }
   }
 
   if (dashboardCopy.imports && Array.isArray(dashboardCopy.imports)) {
-    dashboardCopy.imports = dashboardCopy.imports.map((imp: any) => {
+    dashboardCopy.imports = dashboardCopy.imports.map((imp: Record<string, unknown>) => {
       const impCopy = { ...imp }
       delete impCopy.id
       return impCopy
@@ -77,24 +68,21 @@ const filterDashboard = (dashboard: Dashboard): any => {
   return dashboardCopy
 }
 
-// Format the dashboard object as pretty-printed JSON only when popup is visible
 watch(
   [() => props.dashboard, () => props.isOpen],
   ([newDashboard, isOpen]) => {
-    // Only filter and format when the popup is actually open
     if (isOpen && newDashboard) {
       const filteredDashboard = filterDashboard(newDashboard)
       jsonString.value = JSON.stringify(filteredDashboard, null, 2)
+      copySuccess.value = false
     } else if (!isOpen) {
-      // Clear the JSON string when popup is closed to free memory
       jsonString.value = ''
+      copySuccess.value = false
     }
   },
   { immediate: true },
 )
 
-// Handle copy functionality
-const copySuccess = ref<boolean>(false)
 const copyToClipboard = (): void => {
   navigator.clipboard
     .writeText(jsonString.value)
@@ -109,144 +97,160 @@ const copyToClipboard = (): void => {
     })
 }
 </script>
+
 <template>
-  <div v-if="isOpen" class="popup-overlay" @click.self="emit('close')">
-    <div class="popup-content" data-testid="dashboard-share-popup">
-      <div class="popup-header">
-        <h3>Definition</h3>
-        <button @click="emit('close')" class="close-button" data-testid="close-popup-button">
-          ✕
-        </button>
-      </div>
-      <div class="popup-body">
-        <div class="json-container">
-          <pre data-testid="dashboard-json">{{ jsonString }}</pre>
+  <ModalDialog
+    :show="isOpen"
+    title="Export Definition"
+    max-width="860px"
+    test-id="dashboard-share-popup"
+    @close="emit('close')"
+  >
+    <div class="share-popup-body">
+      <p class="share-popup-description">
+        Copy a definition of this dashboard; it can be imported by others with the same model
+        defined. Existing runtime/results info is removed automatically.
+      </p>
+
+      <div class="json-container">
+        <div class="json-toolbar">
+          <span class="json-toolbar-label">dashboard.json</span>
         </div>
-      </div>
-      <div class="popup-footer">
-        <button
-          @click="copyToClipboard"
-          class="dashboard-copy-button"
-          data-testid="copy-json-button"
-        >
-          {{ copySuccess ? 'Copied!' : 'Copy' }}
-        </button>
+        <pre data-testid="dashboard-json" class="json-code">{{ jsonString }}</pre>
       </div>
     </div>
-  </div>
-</template>
-<style scoped>
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
 
-.popup-content {
-  background-color: var(--sidebar-bg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
+    <template #footer>
+      <button class="secondary-button" @click="emit('close')">Close</button>
+      <button @click="copyToClipboard" class="dashboard-copy-button" data-testid="copy-json-button">
+        <i
+          class="mdi"
+          :class="copySuccess ? 'mdi-check-circle-outline' : 'mdi-content-copy'"
+          aria-hidden="true"
+        ></i>
+        <span>{{ copySuccess ? 'Copied' : 'Copy JSON' }}</span>
+      </button>
+    </template>
+  </ModalDialog>
+</template>
+
+<style scoped>
+.share-popup-body {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid var(--border);
-}
-
-.popup-header h3 {
+.share-popup-description {
   margin: 0;
-  color: var(--text-color);
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--text-color);
-}
-
-.popup-body {
-  padding: 15px;
-  flex: 1;
-  overflow: auto;
+  color: var(--text-faint);
+  line-height: 1.55;
 }
 
 .json-container {
-  background-color: var(--sidebar-selector-bg);
-  padding: 10px;
-  overflow: auto;
-  max-height: 50vh;
+  border: 1px solid var(--markdown-code-border, var(--border));
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--special-text-rgb, 37, 99, 235), 0.05),
+      rgba(var(--special-text-rgb, 37, 99, 235), 0.015)
+    ),
+    var(--editor-bg-color, var(--editor-bg, var(--query-window-bg)));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
-.json-container pre {
-  margin: 0;
-  color: var(--sidebar-selector-font);
-  white-space: pre-wrap;
-  font-family: monospace;
-  font-size: 14px;
-}
-
-.popup-footer {
-  padding: 15px;
+.json-toolbar {
   display: flex;
-  justify-content: flex-end;
-  border-top: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.json-toolbar-label {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.json-code {
+  margin: 0;
+  max-height: min(56vh, 560px);
+  padding: 16px 18px;
+  overflow: auto;
+  white-space: pre;
+  color: var(--prism-text, var(--text-color));
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.secondary-button,
+.dashboard-copy-button {
+  height: 40px;
+  min-width: 108px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.secondary-button {
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  border-color: var(--border);
 }
 
 .dashboard-copy-button {
   background-color: var(--special-text);
   color: white;
-  border: none;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-weight: 500;
+  border-color: var(--special-text);
 }
 
-.dashboard-copy-button:hover {
-  opacity: 0.9;
-}
-
-/* Media queries for responsiveness */
-@media (max-width: 768px) {
-  .popup-content {
-    width: 95%;
+@media (max-width: 640px) {
+  .json-toolbar {
+    padding: 10px;
   }
 
-  .json-container {
-    max-height: 40vh;
+  .json-code {
+    max-height: 48vh;
+    padding: 14px;
+    font-size: 12px;
+  }
+
+  :deep(.modal-footer) {
+    gap: 8px;
   }
 }
 
 @media (max-width: 480px) {
-  .popup-header {
-    padding: 10px;
+  :deep(.modal-footer) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .popup-body {
-    padding: 10px;
-  }
-
-  .popup-footer {
-    padding: 10px;
-  }
-
-  .json-container {
-    max-height: 30vh;
+  .secondary-button,
+  .dashboard-copy-button {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

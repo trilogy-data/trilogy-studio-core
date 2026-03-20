@@ -70,55 +70,53 @@ function closeModal(): void {
 </script>
 
 <template>
-  <Teleport to="body">
-    <ModalDialog
-      :show="show"
-      title="Add New Item"
-      max-width="680px"
-      test-id="dashboard-add-item-modal"
-      @close="closeModal"
-    >
-      <div class="add-item-content">
-        <p class="add-item-description">
-          Choose the kind of block you want to add to the dashboard.
-        </p>
+  <ModalDialog
+    :show="show"
+    title="Add New Item"
+    max-width="680px"
+    test-id="dashboard-add-item-modal"
+    @close="closeModal"
+  >
+    <div class="add-item-content">
+      <p class="add-item-description">
+        Choose the kind of block you want to add to the dashboard.
+      </p>
 
-        <div class="item-type-grid" role="radiogroup" aria-label="Dashboard item type">
-          <label
-            v-for="option in itemOptions"
-            :key="option.value"
-            class="item-option"
-            :class="{ selected: newItemType === option.value }"
-          >
-            <input
-              v-model="newItemType"
-              class="item-option-input"
-              type="radio"
-              name="dashboard-add-item-type"
-              :value="option.value"
-              :data-testid="option.testId"
-            />
-            <span class="item-option-card">
-              <span class="item-option-icon" aria-hidden="true">
-                <i class="mdi" :class="option.icon"></i>
-              </span>
-              <span class="item-option-text">
-                <span class="item-option-label">{{ option.label }}</span>
-                <span class="item-option-help">{{ option.description }}</span>
-              </span>
+      <div class="item-type-grid" role="radiogroup" aria-label="Dashboard item type">
+        <label
+          v-for="option in itemOptions"
+          :key="option.value"
+          class="item-option"
+          :class="{ selected: newItemType === option.value }"
+        >
+          <input
+            v-model="newItemType"
+            class="item-option-input"
+            type="radio"
+            name="dashboard-add-item-type"
+            :value="option.value"
+            :data-testid="option.testId"
+          />
+          <span class="item-option-card">
+            <span class="item-option-icon" aria-hidden="true">
+              <i class="mdi" :class="option.icon"></i>
             </span>
-          </label>
-        </div>
+            <span class="item-option-text">
+              <span class="item-option-label">{{ option.label }}</span>
+              <span class="item-option-help">{{ option.description }}</span>
+            </span>
+          </span>
+        </label>
       </div>
+    </div>
 
-      <template #footer>
-        <button class="cancel-button" @click="closeModal">Cancel</button>
-        <button @click="addItem" class="add-button" data-testid="dashboard-add-item-confirm">
-          Add Item
-        </button>
-      </template>
-    </ModalDialog>
-  </Teleport>
+    <template #footer>
+      <button class="cancel-button" @click="closeModal">Cancel</button>
+      <button @click="addItem" class="add-button" data-testid="dashboard-add-item-confirm">
+        Add Item
+      </button>
+    </template>
+  </ModalDialog>
 </template>
 
 <style scoped>

@@ -20,30 +20,32 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    v-if="props.show"
-    class="modal-overlay"
-    @click="props.closeOnOverlay ? emit('close') : undefined"
-  >
+  <Teleport to="body">
     <div
-      class="modal-panel"
-      :style="{ maxWidth: props.maxWidth }"
-      :data-testid="props.testId || undefined"
-      @click.stop
+      v-if="props.show"
+      class="modal-overlay"
+      @click="props.closeOnOverlay ? emit('close') : undefined"
     >
-      <div v-if="props.title || $slots.header" class="modal-header">
-        <slot name="header">
-          <h3 class="modal-title">{{ props.title }}</h3>
-        </slot>
-      </div>
-      <div class="modal-body">
-        <slot />
-      </div>
-      <div v-if="$slots.footer" class="modal-footer">
-        <slot name="footer" />
+      <div
+        class="modal-panel"
+        :style="{ maxWidth: props.maxWidth }"
+        :data-testid="props.testId || undefined"
+        @click.stop
+      >
+        <div v-if="props.title || $slots.header" class="modal-header">
+          <slot name="header">
+            <h3 class="modal-title">{{ props.title }}</h3>
+          </slot>
+        </div>
+        <div class="modal-body">
+          <slot />
+        </div>
+        <div v-if="$slots.footer" class="modal-footer">
+          <slot name="footer" />
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -55,7 +57,7 @@ const emit = defineEmits<{
   justify-content: center;
   padding: 20px;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 1100;
 }
 
 .modal-panel {
