@@ -30,8 +30,12 @@
           :class="{ tag: tags.includes(EditorTag.STARTUP_SCRIPT) }"
           @click="$emit('toggle-tag', EditorTag.STARTUP_SCRIPT)"
           data-testid="editor-set-startup-script"
+          title="Mark as startup script"
+          aria-label="Mark as startup script"
         >
-          {{ tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is Startup' : 'Startup' }}
+          <span class="action-label">{{
+            tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is Startup' : 'Startup'
+          }}</span>
         </button>
         <loading-button
           v-if="editorType !== 'sql' && connectionHasModel"
@@ -40,36 +44,48 @@
           :class="{ tag: tags.includes(EditorTag.SOURCE) }"
           :action="() => $emit('toggle-tag', EditorTag.SOURCE)"
           data-testid="editor-set-source"
+          title="Toggle source model"
+          aria-label="Toggle source model"
         >
-          {{ tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source' }}
+          <span class="action-label">{{ tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source' }}</span>
         </loading-button>
       </div>
 
       <div class="toolbar-divider"></div>
 
       <div class="action-group">
-        <button class="action-item" @click="$emit('save')" data-testid="editor-save-button">
+        <button
+          class="action-item action-item-compact"
+          @click="$emit('save')"
+          data-testid="editor-save-button"
+          title="Save editor"
+          aria-label="Save editor"
+        >
           <i class="mdi mdi-content-save-outline icon"></i>
-          Save
+          <span class="action-label">Save</span>
         </button>
         <loading-button
           v-if="editorType !== 'sql'"
           :useDefaultStyle="false"
-          class="action-item"
+          class="action-item action-item-compact"
           :action="() => $emit('validate')"
           testId="editor-validate-button"
+          title="Parse editor"
+          aria-label="Parse editor"
         >
           <i class="mdi mdi-code-braces icon"></i>
-          Parse
+          <span class="action-label">Parse</span>
         </loading-button>
         <button
           v-if="editorType !== 'sql'"
-          class="action-item"
+          class="action-item action-item-compact"
           @click="$emit('format')"
           data-testid="editor-format-button"
+          title="Format editor"
+          aria-label="Format editor"
         >
           <i class="mdi mdi-format-align-left icon"></i>
-          Format
+          <span class="action-label">Format</span>
         </button>
       </div>
 
@@ -78,12 +94,14 @@
       <div v-if="editorType !== 'sql'" class="action-group">
         <loading-button
           :useDefaultStyle="false"
-          class="action-item action-item-ai"
+          class="action-item action-item-ai action-item-compact"
           :action="() => $emit('generate')"
           data-testid="editor-generate-button"
+          title="Open AI assistant"
+          aria-label="Open AI assistant"
         >
           <i class="mdi mdi-creation-outline icon"></i>
-          AI
+          <span class="action-label">AI</span>
         </loading-button>
       </div>
 
@@ -95,10 +113,12 @@
           class="action-item"
           :class="{ 'button-cancel': loading, 'button-run': !loading }"
           data-testid="editor-run-button"
+          :title="loading ? 'Cancel query' : 'Run query'"
+          :aria-label="loading ? 'Cancel query' : 'Run query'"
         >
           <i v-if="loading" class="mdi mdi-stop-circle-outline icon"></i>
           <i v-else class="mdi mdi-play-outline icon"></i>
-          {{ loading ? 'Cancel' : 'Run' }}
+          <span class="action-label">{{ loading ? 'Cancel' : 'Run' }}</span>
         </button>
       </div>
     </div>
@@ -205,6 +225,7 @@ export default defineComponent({
   align-items: center;
   gap: 0.4rem;
   overflow: hidden;
+  min-width: 0;
 }
 
 .edit-indicator {
@@ -239,6 +260,7 @@ export default defineComponent({
   align-items: center;
   flex-grow: 1;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .action-group {
@@ -285,6 +307,10 @@ export default defineComponent({
   background: transparent;
   color: var(--text-color);
   white-space: nowrap;
+}
+
+.action-label {
+  display: inline;
 }
 
 .action-item:hover {
@@ -334,32 +360,97 @@ export default defineComponent({
 
 @media screen and (max-width: 768px) {
   .menu-bar {
-    min-height: 56px;
+    min-height: 0;
     display: block;
-    padding: 6px 8px;
+    padding: 8px 8px 10px;
   }
 
   .menu-left {
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
+    margin-bottom: 8px;
   }
 
   .menu-actions {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    align-items: center;
+    gap: 6px;
+    align-items: stretch;
     width: 100%;
   }
 
+  .action-group {
+    gap: 6px;
+  }
+
   .action-item {
-    flex-grow: 1;
-    height: 26px;
+    min-height: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+  }
+
+  .action-item-compact {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .action-item-compact .action-label {
+    display: none;
+  }
+
+  .action-item-scope {
+    width: auto;
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  .action-group-execute {
+    margin-left: auto;
+  }
+
+  .action-group-execute .action-item {
+    min-width: 72px;
+    padding: 0 14px;
+  }
+
+  .action-group-execute .action-label {
+    display: inline;
   }
 
   .toolbar-divider {
     display: none;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .menu-bar {
+    padding: 8px 6px 10px;
+  }
+
+  .menu-title {
+    padding: 0.15rem 0;
+  }
+
+  .action-group {
+    flex-wrap: wrap;
+  }
+
+  .action-item {
+    min-height: 34px;
+    height: 34px;
+  }
+
+  .action-item-compact {
+    width: 34px;
+    min-width: 34px;
+  }
+
+  .action-group-execute .action-item {
+    min-width: 68px;
   }
 }
 </style>

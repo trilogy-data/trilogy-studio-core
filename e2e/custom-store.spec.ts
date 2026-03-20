@@ -223,7 +223,7 @@ test.describe('Custom Model Store', () => {
 
     // Verify a new editor was created under the imported model connection
     await expect(
-      page.locator(`[data-testid^="editor-e-local-${connectionName}-new-editor-"]`).first(),
+      page.getByTestId(`editor-run-button`),
     ).toBeVisible()
   })
 

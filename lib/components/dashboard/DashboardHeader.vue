@@ -228,24 +228,36 @@ const modeIcon = computed(() => {
         <LoadingButton
           :action="handleDownloadAction"
           :use-default-style="false"
-          class="btn btn-secondary"
+          class="btn btn-secondary filter-action-btn"
           data-testid="download-button"
           test-id="download-button"
+          title="Download dashboard image"
+          aria-label="Download dashboard image"
         >
-          Download
+          <i class="mdi mdi-download-outline filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Download</span>
         </LoadingButton>
 
         <button
           @click="toggleSharePopup"
-          class="btn btn-secondary"
+          class="btn btn-secondary filter-action-btn"
           data-testid="share-dashboard-button"
+          title="Export dashboard"
+          aria-label="Export dashboard"
         >
-          Export
+          <i class="mdi mdi-export-variant filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Export</span>
         </button>
 
-        <button @click="handleRefresh" class="btn btn-primary" data-testid="refresh-button">
-          <i class="mdi mdi-refresh"></i>
-          <span>Refresh</span>
+        <button
+          @click="handleRefresh"
+          class="btn btn-primary filter-action-btn"
+          data-testid="refresh-button"
+          title="Refresh dashboard"
+          aria-label="Refresh dashboard"
+        >
+          <i class="mdi mdi-refresh filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Refresh</span>
         </button>
 
         <div class="mode-selector" data-testid="mode-selector-wrapper">
@@ -514,6 +526,22 @@ const modeIcon = computed(() => {
   flex-wrap: nowrap;
 }
 
+.filter-action-btn {
+  flex: 0 0 auto;
+}
+
+.filter-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.filter-action-label {
+  display: inline;
+}
+
 .btn {
   min-width: 86px;
   height: 40px;
@@ -697,9 +725,39 @@ const modeIcon = computed(() => {
     padding: 0 12px;
   }
 
+  .filter-action-btn {
+    flex: 0 0 auto;
+  }
+
   .filter-row > :first-child {
     min-width: 0;
     flex-basis: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-actions {
+    gap: 6px;
+  }
+
+  .filter-action-btn {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .filter-action-label {
+    display: none;
+  }
+
+  .mode-selector {
+    flex: 1 1 auto;
+  }
+
+  .mode-selector .select-wrapper {
+    width: 100%;
+    min-width: 124px;
   }
 }
 
@@ -707,6 +765,12 @@ const modeIcon = computed(() => {
   .btn {
     font-size: calc(var(--button-font-size) - 1px);
     padding: 0 10px;
+  }
+
+  .filter-action-btn {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
   }
 }
 </style>

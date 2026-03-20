@@ -14,10 +14,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('test', async ({ page, isMobile, browser }) => {
-  test.skip(
-    isMobile,
-    'Query-heavy Trilogy editor flows are unstable under emulated mobile browsers in CI.',
-  )
   await page.goto('#skipTips=true')
   await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-creator-add').click()
@@ -59,10 +55,6 @@ select unnest(x) as rows;
 })
 
 test('test_demo_editor', async ({ page, isMobile, browser }) => {
-  test.skip(
-    isMobile,
-    'Query-heavy Trilogy editor flows are unstable under emulated mobile browsers in CI.',
-  )
   await page.goto('#skipTips=true&sidebarScreen=editors&screen=welcome&welcome=welcome')
 
   await page.getByTestId('demo-editor-button').click()

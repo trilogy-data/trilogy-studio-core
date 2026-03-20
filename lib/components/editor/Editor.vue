@@ -1,5 +1,5 @@
 <template>
-  <div class="parent">
+  <div class="parent" :data-testid="`editor-${editorId}`">
     <error-message v-if="!editorData"
       >An editor by this ID ({{ editorId }}) could not be found.</error-message
     >

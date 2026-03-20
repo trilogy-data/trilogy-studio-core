@@ -13,10 +13,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('test', async ({ page, isMobile }) => {
-  test.skip(
-    isMobile,
-    'Community model query execution is unstable under emulated mobile browsers in CI.',
-  )
   await page.goto('#skipTips=true')
   await openSidebarScreen(page, 'community-models')
   await page.getByTestId('community-trilogy-data-trilogy-public-models-main+duckdb+titanic').click()

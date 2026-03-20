@@ -13,7 +13,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('test', async ({ page, isMobile, browserName }) => {
-  test.skip(isMobile, 'Tutorial query flows are unstable under emulated mobile browsers in CI.')
   await page.goto('#skipTips=true')
   await page.getByTestId('tutorial-button').click()
   await page.getByTestId('community-model-search').click()
