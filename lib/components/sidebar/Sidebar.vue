@@ -149,6 +149,11 @@
         @model-key-selected="modelKeySelected"
         :activeModelKey="activeModelKey"
       />
+      <JobsList
+        v-show="active === 'jobs'"
+        @jobs-key-selected="jobsKeySelected"
+        :activeJobsKey="activeJobsKey"
+      />
       <TutorialSidebar
         v-show="active === 'tutorial'"
         @documentation-key-selected="documentationKeySelected"
@@ -172,6 +177,7 @@ import EditorList from '../sidebar/EditorList.vue'
 import ConnectionList from '../sidebar/ConnectionList.vue'
 import TutorialSidebar from '../sidebar/TutorialSidebar.vue'
 import ModelSidebar from './ModelSidebar.vue'
+import JobsList from './JobsList.vue'
 import LLMConnectionList from './LLMConnectionList.vue'
 import DashboardList from './DashboardList.vue'
 import CommunityModelList from './CommunityModelList.vue'
@@ -186,6 +192,7 @@ export interface SidebarProps {
   activeDocumentationKey?: string
   activeConnectionKey?: string
   activeLLMKey?: string
+  activeJobsKey?: string
   activeDashboardKey?: string
   containerWidth?: number
 }
@@ -212,6 +219,10 @@ export default defineComponent({
     activeConnectionKey: {
       type: String,
       default: getDefaultValueFromHash('connection'),
+    },
+    activeJobsKey: {
+      type: String,
+      default: getDefaultValueFromHash('jobs'),
     },
     activeLLMKey: {
       type: String,
@@ -254,6 +265,12 @@ export default defineComponent({
         tooltip: 'Share & Explore',
         icon: 'mdi mdi-library-outline',
         screen: 'community-models',
+      },
+      {
+        name: 'jobs',
+        tooltip: 'Jobs',
+        icon: 'mdi mdi-playlist-play',
+        screen: 'jobs',
       },
       {
         name: 'help',
@@ -314,6 +331,7 @@ export default defineComponent({
     Tooltip,
     TutorialSidebar,
     ModelSidebar,
+    JobsList,
     LLMConnectionList,
     DashboardList,
     CommunityModelList,
@@ -377,6 +395,9 @@ export default defineComponent({
     },
     documentationKeySelected(key: string) {
       this.$emit('documentation-key-selected', key)
+    },
+    jobsKeySelected(key: string) {
+      this.$emit('jobs-key-selected', key)
     },
     connectionKeySelected(key: string) {
       this.$emit('connection-key-selected', key)

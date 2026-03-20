@@ -10,6 +10,7 @@ import {
   useLLMConnectionStore,
   useDashboardStore,
   useCommunityApiStore,
+  useJobsApiStore,
   useChatStore,
 } from '../stores'
 
@@ -63,6 +64,7 @@ let llms = useLLMConnectionStore()
 let dashboards = useDashboardStore()
 
 let communityApiStore = useCommunityApiStore()
+let jobsApiStore = useJobsApiStore()
 
 let chats = useChatStore()
 </script>
@@ -81,6 +83,7 @@ let chats = useChatStore()
       :dashboardStore="dashboards"
       :llmConnectionStore="llms"
       :communityApiStore="communityApiStore"
+      :jobsApiStore="jobsApiStore"
       :chatStore="chats"
     >
     </Manager>

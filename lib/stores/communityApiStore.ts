@@ -7,7 +7,7 @@ import {
   type GenericModelStore,
   DEFAULT_GITHUB_STORE,
 } from '../remotes/models'
-import { fetchFromAllStores } from '../remotes/storeService'
+import { fetchFromAllStores, fetchFromStore } from '../remotes/storeService'
 import type { ModelConfigStoreType } from './modelStore'
 
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
@@ -195,6 +195,31 @@ const useCommunityApiStore = defineStore('communityApi', {
       await this.fetchAllFiles()
     },
 
+    async fetchStoreFiles(storeId: string): Promise<void> {
+      const store = this.stores.find((item) => item.id === storeId)
+      if (!store) {
+        return
+      }
+
+      this.loading = true
+      this.storeStatus[storeId] = 'idle'
+
+      try {
+        const result = await fetchFromStore(store)
+        this.filesByStore[storeId] = result.files
+
+        if (result.error) {
+          this.errors[storeId] = result.error
+          this.storeStatus[storeId] = 'failed'
+        } else {
+          delete this.errors[storeId]
+          this.storeStatus[storeId] = 'connected'
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+
     /**
      * Filter files across all stores
      */
@@ -295,6 +320,16 @@ const useCommunityApiStore = defineStore('communityApi', {
         // Save to localStorage
         this.saveStoresToStorage()
       }
+    },
+
+    updateStoreToken(storeId: string, token: string): void {
+      const store = this.stores.find((item) => item.id === storeId)
+      if (!store || store.type !== 'generic') {
+        return
+      }
+
+      store.token = token || undefined
+      this.saveStoresToStorage()
     },
 
     /**

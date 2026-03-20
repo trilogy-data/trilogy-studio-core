@@ -23,6 +23,7 @@
           @screen-selected="setActiveSidebarScreen"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
+          @jobs-key-selected="setActiveJobsKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @dashboard-key-selected="setActiveDashboard"
           @toggle-mobile-menu="toggleMobileMenu"
@@ -35,6 +36,7 @@
           :activeDocumentationKey="activeDocumentationKey"
           :activeConnectionKey="activeConnectionKey"
           :activeModelKey="activeModelKey"
+          :activeJobsKey="activeJobsKey"
           :activeDashboardKey="activeDashboard"
           :activeLLMKey="activeLLMConnectionKey"
         />
@@ -92,6 +94,9 @@
       <template v-else-if="activeScreen === 'community-models'">
         <community-models :activeCommunityModelKey="activeCommunityModelKey" />
       </template>
+      <template v-else-if="activeScreen === 'jobs'">
+        <jobs-view :activeJobsKey="activeJobsKey" />
+      </template>
       <template v-else-if="activeScreen === 'llms'">
         <LLMView :initialTab="llmInitialTab" />
       </template>
@@ -122,6 +127,7 @@ aside {
 <script lang="ts">
 import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
 import CommunityModels from '../components/community/CommunityModels.vue'
+import JobsView from '../components/jobs/JobsView.vue'
 import ConnectionView from './ConnectionView.vue'
 import AssetAutoImporter from '../components/AssetAutoImporter.vue'
 import TabbedLayout from '../components/layout/TabbedLayout.vue'
@@ -182,6 +188,7 @@ const MobileIDEComponent: Component = defineComponent({
     TabbedLayout,
     MobileSidebarLayout,
     CommunityModels,
+    JobsView,
     ConnectionView,
     ResultsView,
     LLMView,
@@ -235,6 +242,8 @@ const MobileIDEComponent: Component = defineComponent({
       activeLLMConnectionKey,
       setActiveLLMConnectionKey,
       activeCommunityModelKey,
+      activeJobsKey,
+      setActiveJobsKey,
       mobileMenuOpen,
       toggleMobileMenu,
       tabs,
@@ -327,6 +336,7 @@ const MobileIDEComponent: Component = defineComponent({
       saveDashboards,
       modelStore,
       activeCommunityModelKey,
+      activeJobsKey,
       activeTab,
       activeScreen,
       activeSidebarScreen,
@@ -344,6 +354,7 @@ const MobileIDEComponent: Component = defineComponent({
       setActiveDocumentationKey,
       activeLLMConnectionKey,
       setActiveLLMConnectionKey,
+      setActiveJobsKey,
       mobileMenuOpen,
       toggleMobileMenu,
       tabs,

@@ -8,7 +8,9 @@
       :loading="loading && !error"
       :remote="remote"
       :engineDisabled="!!props.engine"
+      :showTokenButton="isGenericRemote"
       @refresh="refreshData"
+      @manage-token="showTokenModal = true"
     />
     <div class="model-content">
       <div v-if="filteredFiles.length">
@@ -29,9 +31,19 @@
       <error-message v-if="error" type="error">
         {{ error }}
         <template #action>
-          <button @click="refreshData" class="retry-button" data-testid="retry-fetch-button">
-            Retry
-          </button>
+          <div class="error-actions">
+            <button
+              v-if="isGenericRemote"
+              @click="showTokenModal = true"
+              class="retry-button secondary"
+              data-testid="retry-token-button"
+            >
+              Set Token
+            </button>
+            <button @click="refreshData" class="retry-button" data-testid="retry-fetch-button">
+              Retry
+            </button>
+          </div>
         </template>
       </error-message>
       <p v-else-if="loading" class="text-loading">Loading community models...</p>
@@ -39,6 +51,15 @@
         No models match your search criteria.
       </p>
     </div>
+
+    <store-token-modal
+      v-if="selectedStore"
+      :show="showTokenModal"
+      :store-name="selectedStore.name"
+      :token="selectedStore.type === 'generic' ? selectedStore.token : ''"
+      @close="showTokenModal = false"
+      @save="handleTokenSave"
+    />
   </div>
 </template>
 
@@ -49,6 +70,7 @@ import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import CommunityModelHeader from './CommunityModelHeader.vue'
 import CommunityModelCard from './CommunityModelCard.vue'
 import ErrorMessage from '../ErrorMessage.vue'
+import StoreTokenModal from '../StoreTokenModal.vue'
 
 const props = defineProps({
   initialSearch: {
@@ -67,6 +89,7 @@ const props = defineProps({
 
 const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
 const { refreshData, availableEngines } = communityApiStore
+const showTokenModal = ref(false)
 
 // Make error reactive by computing it from the store
 const error = computed(() => (props.remote ? communityApiStore.errors[props.remote] : null))
@@ -97,6 +120,10 @@ watch(
 )
 
 const loading = computed(() => communityApiStore.loading)
+const selectedStore = computed(() =>
+  props.remote ? communityApiStore.stores.find((store) => store.id === props.remote) || null : null,
+)
+const isGenericRemote = computed(() => selectedStore.value?.type === 'generic')
 
 const filteredFiles = computed(() => {
   return communityApiStore.filteredFiles(
@@ -121,6 +148,16 @@ const getInitialDescriptionExpanded = (fileName: string): boolean => {
 const handleDashboardLinkCopy = (component: any): void => {
   // Handle any additional logic for dashboard link copying if needed
   console.log('Dashboard link copied for component:', component.name)
+}
+
+const handleTokenSave = async (token: string): Promise<void> => {
+  if (!props.remote) {
+    return
+  }
+
+  communityApiStore.updateStoreToken(props.remote, token)
+  showTokenModal.value = false
+  await communityApiStore.fetchStoreFiles(props.remote)
 }
 
 onMounted(async () => {
@@ -224,6 +261,18 @@ onMounted(async () => {
   cursor: pointer;
   transition: background-color 0.2s;
   margin-top: 12px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.retry-button.secondary {
+  background: transparent;
+  border: 1px solid var(--border-light);
 }
 
 .retry-button:hover {
