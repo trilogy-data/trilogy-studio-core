@@ -39,40 +39,23 @@ export async function waitForConnectionReady(page, connectionName, timeout = 150
   )
 }
 
-export async function openSidebarScreen(page, screen) {
-  await Promise.race([
-    page.getByTestId('mobile-menu-toggle').waitFor({ state: 'visible', timeout: 10000 }),
-    page
-      .getByTestId(`sidebar-icon-${screen}`)
-      .first()
-      .waitFor({ state: 'visible', timeout: 10000 }),
-  ]).catch(() => {})
+export async function openSidebarScreen(page, screen, isMobile = false) {
+  if (isMobile) {
+    const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
+    await expect(mobileMenuToggle).toBeVisible({ timeout: 10000 })
+    await mobileMenuToggle.click()
 
-  const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
+    const mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`)
 
-  if ((await mobileMenuToggle.count()) > 0) {
-    const sidebarIcons = page.getByTestId('sidebar-icons')
-
-    if ((await sidebarIcons.filter({ visible: true }).count()) === 0) {
-      await mobileMenuToggle.first().click({ force: true })
-      await expect(sidebarIcons).toBeVisible({ timeout: 5000 })
-    }
-
-    const mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
     await expect(mobileSidebarIcon).toBeVisible({ timeout: 5000 })
     await mobileSidebarIcon.scrollIntoViewIfNeeded()
     await mobileSidebarIcon.click({ force: true })
     return
   }
 
-  const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({
-    visible: true,
-  })
-  if ((await sidebarIcon.count()) > 0) {
-    await sidebarIcon.first().click({ force: true })
-    return
-  }
-  throw new Error(`Could not find a visible sidebar trigger for screen "${screen}"`)
+  const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
+  await expect(sidebarIcon).toBeVisible({ timeout: 10000 })
+  await sidebarIcon.click({ force: true })
 }
 
 async function getVisibleConnectionRow(page, connectionName) {
@@ -164,13 +147,12 @@ async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {
   await row.getByTestId(triggerTestId).click()
 }
 
-export async function deleteEditor(page, editorTestId) {
-  const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
+export async function deleteEditor(page, editorTestId, isMobile = false) {
   const visibleEditorLabel = page.getByTestId(editorTestId).filter({ visible: true })
   const editorKey = editorTestId.replace(/^editor-/, '')
 
-  if ((await visibleEditorLabel.count()) === 0 && (await mobileMenuToggle.count()) > 0) {
-    await openSidebarScreen(page, 'editors')
+  if ((await visibleEditorLabel.count()) === 0 && isMobile) {
+    await openSidebarScreen(page, 'editors', true)
   }
 
   await openSidebarOverflowMenu(

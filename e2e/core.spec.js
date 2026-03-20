@@ -42,7 +42,7 @@ test('user settings', async ({ page, isMobile }) => {
   await page.getByRole('button', { name: 'Reset to Defaults' }).click()
   const resolverAfterReset = await resolverInput.inputValue()
   await page.getByRole('button', { name: 'Save' }).click()
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('test')
@@ -52,7 +52,7 @@ test('user settings', async ({ page, isMobile }) => {
   if (!isMobile) {
     await page.getByTestId('exit-modal').click()
   }
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
   await page.locator('[data-testid^="editor-e-local-test-new-editor-"]').last().click()
   const skipTipsButton = page.getByRole('button', { name: 'Skip' })
   if (await skipTipsButton.count()) {

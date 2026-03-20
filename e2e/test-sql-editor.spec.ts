@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 test('test', async ({ page, isMobile }) => {
   test.setTimeout(240000)
   await page.goto('#skipTips=true')
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('duckdb-test')
@@ -23,7 +23,7 @@ test('test', async ({ page, isMobile }) => {
   await refreshConnection(page, 'duckdb-test')
   await waitForConnectionReady(page, 'duckdb-test')
 
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
 
   // Create first editor (regular name)
   await page.getByTestId('editor-creator-add').click()
@@ -378,7 +378,7 @@ SELECT 1;
 
   // Navigate back to the editors
   if (isMobile) {
-    await openSidebarScreen(page, 'editors')
+    await openSidebarScreen(page, 'editors', isMobile)
   }
 
   // Click on test-one editor
@@ -442,7 +442,7 @@ order by
   await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
-  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/reports/sales-report')
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/reports/sales-report', isMobile)
 
   // if (isMobile) {
   //   await page.getByTestId('editor-list-id-e-local-duckdb-test-analysis/reports/sales-report').click()
@@ -450,10 +450,10 @@ order by
 
   // Delete the customer-data editor
 
-  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/data/customer-data')
+  await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/data/customer-data', isMobile)
 
   // Delete the regular editor
-  await deleteEditor(page, 'editor-e-local-duckdb-test-test-one')
+  await deleteEditor(page, 'editor-e-local-duckdb-test-test-one', isMobile)
 
   await page.getByTestId('trilogy-icon').click()
   await page.waitForTimeout(1200) // 1000ms animation + 200ms buffer
@@ -483,7 +483,7 @@ order by
   expect(analysisFolderCount).toBe(0)
 
   // now let's look at the connection history
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-duckdb-test').click()
 
   await page.waitForSelector('.query-history')

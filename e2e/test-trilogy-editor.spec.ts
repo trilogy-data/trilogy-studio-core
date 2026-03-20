@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 
 test('test', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
@@ -23,7 +23,7 @@ test('test', async ({ page, isMobile, browser }) => {
   await refreshConnection(page, connectionName)
   await waitForConnectionReady(page, connectionName)
 
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
 
   // Create first editor (regular name)
   await page.getByTestId('editor-creator-add').click()

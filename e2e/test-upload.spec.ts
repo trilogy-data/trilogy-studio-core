@@ -55,7 +55,7 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await page.goto('#skipTips=true')
 
     // Navigate to connections and create upload connection
-    await openSidebarScreen(page, 'connections')
+    await openSidebarScreen(page, 'connections', isMobile)
     await page.getByTestId('connection-creator-add').click()
     await page.getByTestId('connection-creator-name').click()
     await page.getByTestId('connection-creator-name').fill('upload-test')
@@ -64,7 +64,7 @@ test.describe('CSV Upload and Datasource Creation', () => {
     await waitForConnectionReady(page, 'upload-test')
 
     if (isMobile) {
-      await openSidebarScreen(page, 'connections')
+      await openSidebarScreen(page, 'connections', isMobile)
     }
 
     // Click on the connection to expand it

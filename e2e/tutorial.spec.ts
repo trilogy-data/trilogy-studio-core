@@ -46,7 +46,7 @@ test('test', async ({ page, isMobile, browserName }) => {
 
   // Step 1: Open the Docs and Tutorial
   if (isMobile) {
-    await openSidebarScreen(page, 'tutorial')
+    await openSidebarScreen(page, 'tutorial', isMobile)
   }
   await page.getByTestId('expand-documentation-documentation+Studio').click()
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
@@ -250,7 +250,7 @@ address iris_data;`
   }
   await page.getByTestId('sidebar-icon-connections').click()
   await createEditorFromConnectionList(page, 'iris-data', 'trilogy')
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
   await page.locator('[data-testid^="editor-e-local-iris-data-new-editor-"]').last().click()
   if (isMobile) {
     await page.getByTestId('editor').click()

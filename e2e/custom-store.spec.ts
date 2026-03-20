@@ -121,7 +121,7 @@ test.describe('Custom Model Store', () => {
     await page.goto('#skipTips=true')
 
     // Navigate to Community Models
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -195,7 +195,7 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(2000)
 
     // Navigate to connections to verify the model was imported
-    await openSidebarScreen(page, 'connections')
+    await openSidebarScreen(page, 'connections', isMobile)
 
     const connectionName = 'Example DuckDB Model-connection'
 
@@ -207,7 +207,7 @@ test.describe('Custom Model Store', () => {
     await waitForConnectionReady(page, connectionName, 10000)
 
     // Navigate to editors
-    await openSidebarScreen(page, 'editors')
+    await openSidebarScreen(page, 'editors', isMobile)
 
     // Verify the model appears in the editors tree
     try {
@@ -232,7 +232,7 @@ test.describe('Custom Model Store', () => {
     await page.goto('#skipTips=true')
 
     // Navigate to Community Models
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -267,7 +267,7 @@ test.describe('Custom Model Store', () => {
     await page.goto('#skipTips=true')
 
     // Navigate to Community Models
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -443,7 +443,7 @@ test.describe('Asset Auto-Import via URL', () => {
     })
 
     // Verify the store was registered by checking the sidebar
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'community-models', isMobile)
 
     // The store should now appear in the community models list
     const storeId = 'localhost:8100'

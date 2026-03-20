@@ -89,7 +89,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  await openSidebarScreen(page, 'community-models')
+  await openSidebarScreen(page, 'community-models', isMobile)
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()
   // await page.getByTestId('community-model-search').press('ControlOrMeta+a')
@@ -100,7 +100,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('imported-faa')
 
   // dashboard
-  await openSidebarScreen(page, 'dashboard')
+  await openSidebarScreen(page, 'dashboard', isMobile)
   await page.getByTestId('dashboard-creator-add').click({ force: true })
   await page.getByTestId('dashboard-creator-name').click()
   await page.getByTestId('dashboard-creator-name').fill('faa-test')
@@ -497,7 +497,7 @@ const connectionName = 'duckdb-test2'
 test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.goto('#skipTips=true')
   // Setup connection
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
@@ -506,7 +506,7 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
   await page.getByTestId('editor-creator-add').click()
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
@@ -531,7 +531,7 @@ select rows;
   await runEditorQueryAndExpectCount(page, 5)
 
   // Navigate to dashboard creation
-  await openSidebarScreen(page, 'dashboard')
+  await openSidebarScreen(page, 'dashboard', isMobile)
 
   // Create dashboard with custom editor as source
   await page.getByTestId('dashboard-creator-add').click()
@@ -603,7 +603,7 @@ select rows;
 test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
   // Setup connection
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
@@ -612,7 +612,7 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
-  await openSidebarScreen(page, 'editors')
+  await openSidebarScreen(page, 'editors', isMobile)
   await page.getByTestId('editor-creator-add').click()
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
@@ -639,7 +639,7 @@ select rows;
   await runEditorQueryAndExpectCount(page, 5)
 
   // Navigate to dashboard creation
-  await openSidebarScreen(page, 'dashboard')
+  await openSidebarScreen(page, 'dashboard', isMobile)
 
   // Create dashboard with custom editor as source
   await page.getByTestId('dashboard-creator-add').click()

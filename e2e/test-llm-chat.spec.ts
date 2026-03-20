@@ -6,7 +6,7 @@ import { openSidebarScreen } from './test-helpers.js'
  * Helper function to set up an LLM connection for tests
  */
 async function setupLLMConnection(page: any, isMobile: boolean, connectionName = 'test-openai') {
-  await openSidebarScreen(page, 'llms')
+  await openSidebarScreen(page, 'llms', isMobile)
   await page.getByTestId('llm-connection-creator-add').click()
   await page.getByTestId('llm-connection-creator-name').fill(connectionName)
   await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })

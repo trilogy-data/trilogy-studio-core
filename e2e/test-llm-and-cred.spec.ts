@@ -37,7 +37,7 @@ test.describe('LLM Connection Tests', () => {
     await page.goto('#skipTips=true')
 
     // Set up LLM connection
-    await openSidebarScreen(page, 'llms')
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -85,8 +85,8 @@ test.describe('LLM Connection Tests', () => {
       await page.getByTestId('keyphrase-input').fill('test')
       await page.getByTestId('submit-keyphrase').click()
     }
-
-    await openSidebarScreen(page, 'llms')
+    await page.waitForTimeout(2000)
+    await openSidebarScreen(page, 'llms', isMobile)
 
     await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
     await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
@@ -137,7 +137,7 @@ test.describe('LLM Connection Tests', () => {
 
     // Navigate to LLM testing page
     // Set up LLM connection
-    await openSidebarScreen(page, 'llms')
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -219,7 +219,7 @@ limit 10;`,
     )
 
     // Set up LLM connection
-    await openSidebarScreen(page, 'llms')
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
@@ -231,8 +231,8 @@ limit 10;`,
     await page.getByTestId('llm-connection-creator-submit').click()
 
     // Import demo model
-    await openSidebarScreen(page, 'editors')
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'editors', isMobile)
+    await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
     await page.getByTestId('community-model-search').click()
     await page.getByTestId('community-model-search').fill('demo')
@@ -246,7 +246,7 @@ limit 10;`,
     }
 
     // Create new editor
-    await openSidebarScreen(page, 'editors')
+    await openSidebarScreen(page, 'editors', isMobile)
     await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Enter initial content in editor
@@ -344,7 +344,7 @@ select
     )
 
     // Set up LLM connection
-    await openSidebarScreen(page, 'llms')
+    await openSidebarScreen(page, 'llms', isMobile)
     await page.getByTestId('llm-connection-creator-add').click()
     await page.getByTestId('llm-connection-creator-name').fill('trilogy-llm-openai')
     await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })
@@ -353,8 +353,8 @@ select
     await page.getByTestId('llm-connection-creator-submit').click()
 
     // Import demo model
-    await openSidebarScreen(page, 'editors')
-    await openSidebarScreen(page, 'community-models')
+    await openSidebarScreen(page, 'editors', isMobile)
+    await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
@@ -366,7 +366,7 @@ select
     }
 
     // Create new editor
-    await openSidebarScreen(page, 'editors')
+    await openSidebarScreen(page, 'editors', isMobile)
     await createEditorFromConnection(page, 'demo-model-connection', 'trilogy')
 
     // Clear editor and enter minimal content

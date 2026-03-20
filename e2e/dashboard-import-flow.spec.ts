@@ -76,7 +76,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to check if the connection was created
   await page.getByTestId('mode-selector').selectOption('editing')
 
-  await openSidebarScreen(page, 'connections')
+  await openSidebarScreen(page, 'connections', isMobile)
 
   // Should see the iris_data-connection or similar
   const connectionExists =
@@ -91,7 +91,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // if (isMobile) {
   //   await page.getByTestId('mobile-menu-toggle').click()
   // }
-  await openSidebarScreen(page, 'models')
+  await openSidebarScreen(page, 'models', isMobile)
 
   const modelExists =
     (await page.isVisible('[data-testid*="iris_data"]')) ||
