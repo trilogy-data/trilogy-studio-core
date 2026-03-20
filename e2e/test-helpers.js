@@ -39,6 +39,42 @@ export async function waitForConnectionReady(page, connectionName, timeout = 150
   )
 }
 
+export async function openSidebarScreen(page, screen) {
+  await Promise.race([
+    page.getByTestId('mobile-menu-toggle').waitFor({ state: 'visible', timeout: 10000 }),
+    page
+      .getByTestId(`sidebar-icon-${screen}`)
+      .first()
+      .waitFor({ state: 'visible', timeout: 10000 }),
+  ]).catch(() => {})
+
+  const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
+
+  if ((await mobileMenuToggle.count()) > 0) {
+    const sidebarIcons = page.getByTestId('sidebar-icons')
+
+    if ((await sidebarIcons.filter({ visible: true }).count()) === 0) {
+      await mobileMenuToggle.first().click({ force: true })
+      await expect(sidebarIcons).toBeVisible({ timeout: 5000 })
+    }
+
+    const mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
+    await expect(mobileSidebarIcon).toBeVisible({ timeout: 5000 })
+    await mobileSidebarIcon.scrollIntoViewIfNeeded()
+    await mobileSidebarIcon.click({ force: true })
+    return
+  }
+
+  const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({
+    visible: true,
+  })
+  if ((await sidebarIcon.count()) > 0) {
+    await sidebarIcon.first().click({ force: true })
+    return
+  }
+  throw new Error(`Could not find a visible sidebar trigger for screen "${screen}"`)
+}
+
 async function getVisibleConnectionRow(page, connectionName) {
   const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`).filter({
     visible: true,
@@ -129,17 +165,38 @@ async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {
 }
 
 export async function deleteEditor(page, editorTestId) {
-  const editorLabel = page.getByTestId(editorTestId)
+  const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
+  const visibleEditorLabel = page.getByTestId(editorTestId).filter({ visible: true })
   const editorKey = editorTestId.replace(/^editor-/, '')
 
-  await openSidebarOverflowMenu(page, editorLabel, `editor-actions-${editorKey}-trigger`)
-  await page.getByTestId(`editor-actions-${editorKey}-delete-editor`).click()
-  await page.getByTestId('confirm-editor-deletion').click()
+  if ((await visibleEditorLabel.count()) === 0 && (await mobileMenuToggle.count()) > 0) {
+    await openSidebarScreen(page, 'editors')
+  }
+
+  await openSidebarOverflowMenu(
+    page,
+    page.getByTestId(editorTestId).filter({ visible: true }).first(),
+    `editor-actions-${editorKey}-trigger`,
+  )
+  await page
+    .getByTestId(`editor-actions-${editorKey}-delete-editor`)
+    .filter({ visible: true })
+    .click()
+  await page.getByTestId('confirm-editor-deletion').filter({ visible: true }).click()
 }
 
-export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 30000) {
+export async function waitForEditorQueryComplete(page, timeout = 60000) {
+  await Promise.race([
+    page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")', { timeout }),
+    page.getByTestId('query-results-length').waitFor({ state: 'visible', timeout }),
+    page.getByTestId('error-text').waitFor({ state: 'visible', timeout }),
+  ])
+}
+
+export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 60000) {
   await page.getByTestId('editor-run-button').click()
-  await page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")', { timeout })
+  await waitForEditorQueryComplete(page, timeout)
+
   await expect(page.getByTestId('query-results-length')).toContainText(String(expectedCount), {
     timeout,
   })

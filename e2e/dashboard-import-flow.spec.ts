@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { openSidebarScreen } from './test-helpers.js'
 
 test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to the URL with all the autoimport parameters
@@ -75,10 +76,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to check if the connection was created
   await page.getByTestId('mode-selector').selectOption('editing')
 
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click({ timeout: 5000 })
+  await openSidebarScreen(page, 'connections')
 
   // Should see the iris_data-connection or similar
   const connectionExists =
@@ -93,7 +91,7 @@ test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // if (isMobile) {
   //   await page.getByTestId('mobile-menu-toggle').click()
   // }
-  await page.getByTestId('sidebar-link-models').click()
+  await openSidebarScreen(page, 'models')
 
   const modelExists =
     (await page.isVisible('[data-testid*="iris_data"]')) ||

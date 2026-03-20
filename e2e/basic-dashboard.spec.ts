@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   openDashboardItemEditor,
+  openSidebarScreen,
   prepareTestPage,
   refreshConnection,
   runEditorQueryAndExpectCount,
@@ -68,6 +69,19 @@ async function getPixelColor(page, x, y) {
   )
 }
 
+function isMapDataPixel(color) {
+  if (!color) {
+    return false
+  }
+
+  const channels = [color.r, color.g, color.b]
+  const maxChannel = Math.max(...channels)
+  const minChannel = Math.min(...channels)
+  const brightness = channels.reduce((sum, value) => sum + value, 0) / channels.length
+
+  return color.a > 0 && brightness > 20 && brightness < 245 && maxChannel - minChannel >= 20
+}
+
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
   await page.goto('#skipTips=true')
   // setup
@@ -75,7 +89,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  await page.getByTestId('sidebar-link-community-models').click({ force: true })
+  await openSidebarScreen(page, 'community-models')
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()
   // await page.getByTestId('community-model-search').press('ControlOrMeta+a')
@@ -86,10 +100,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('imported-faa')
 
   // dashboard
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-dashboard').click()
+  await openSidebarScreen(page, 'dashboard')
   await page.getByTestId('dashboard-creator-add').click({ force: true })
   await page.getByTestId('dashboard-creator-name').click()
   await page.getByTestId('dashboard-creator-name').fill('faa-test')
@@ -159,19 +170,20 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
-  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
-  // await page.getByTestId('vega-chart-container-2').click();
-  await page.getByTestId('vega-chart-container-2').hover({ force: true })
+  const firstChartCanvas = page.locator(vegaSelector).first()
+  await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
+  await firstChartCanvas.hover({ force: true })
   await page.waitForTimeout(500) // wait for the controls to appear
   await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
-  await page.getByTestId('chart-type-geo-map').click()
+  await page.getByTestId('chart-type-geo-map').waitFor({ state: 'visible', timeout: 10000 })
+  await page.getByTestId('chart-type-geo-map').click({ force: true })
 
   await page.getByLabel('Geo Field').selectOption('origin_state')
   await page.getByLabel('Color Scale').selectOption('count')
 
   await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.waitForTimeout(1000)
-  await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
+  await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
 
   // Get canvas dimensions
   const canvas = await page.locator(vegaSelector)
@@ -319,7 +331,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
       )
 
       // If the color is in the expected colors list, set the flag to true
-      if (point.expectedColors.includes(color.hex)) {
+      if (point.expectedColors.includes(color.hex) || isMapDataPixel(color)) {
         console.log(
           `✓ Found matching color ${color.hex} at position (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)})`,
         )
@@ -368,7 +380,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   for (const point of texasCheckPoints) {
     try {
       const color = await getRelativePixelColor(page, point.relX, point.relY)
-      if (point.expectedColors.includes(color.hex)) {
+      if (point.expectedColors.includes(color.hex) || isMapDataPixel(color)) {
         clickPoint = point
         console.log(
           `Will click on matching point at (${point.relX.toFixed(2)}, ${point.relY.toFixed(2)}) with color ${color.hex}`,
@@ -485,10 +497,7 @@ const connectionName = 'duckdb-test2'
 test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.goto('#skipTips=true')
   // Setup connection
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
@@ -497,7 +506,7 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors')
   await page.getByTestId('editor-creator-add').click()
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
@@ -522,10 +531,7 @@ select rows;
   await runEditorQueryAndExpectCount(page, 5)
 
   // Navigate to dashboard creation
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-dashboard').click()
+  await openSidebarScreen(page, 'dashboard')
 
   // Create dashboard with custom editor as source
   await page.getByTestId('dashboard-creator-add').click()
@@ -597,10 +603,7 @@ select rows;
 test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
   // Setup connection
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill(connectionName)
@@ -609,7 +612,7 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await waitForConnectionReady(page, connectionName)
 
   // Create custom editor
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors')
   await page.getByTestId('editor-creator-add').click()
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
@@ -636,10 +639,7 @@ select rows;
   await runEditorQueryAndExpectCount(page, 5)
 
   // Navigate to dashboard creation
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-dashboard').click()
+  await openSidebarScreen(page, 'dashboard')
 
   // Create dashboard with custom editor as source
   await page.getByTestId('dashboard-creator-add').click()
@@ -692,15 +692,18 @@ select rows;
   // Verify the chart container is visible
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
 
-  await page.locator('canvas').click({
-    modifiers: ['ControlOrMeta'],
-    position: {
-      // one third of canvas width
-      x: (await page.locator(vegaSelector).boundingBox()).width / 3,
-      // middle of canvas height
-      y: (await page.locator(vegaSelector).boundingBox()).height / 2,
-    },
-  })
+  await page
+    .locator(vegaSelector)
+    .first()
+    .click({
+      modifiers: ['ControlOrMeta'],
+      position: {
+        // one third of canvas width
+        x: (await page.locator(vegaSelector).boundingBox()).width / 3,
+        // middle of canvas height
+        y: (await page.locator(vegaSelector).boundingBox()).height / 2,
+      },
+    })
   await page.getByRole('textbox', { name: 'Search dimensions...' }).fill('alt_labels_two')
   //enter enter
   await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter')

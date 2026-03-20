@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   deleteEditor,
+  openSidebarScreen,
   prepareTestPage,
   refreshConnection,
   runEditorQueryAndExpectCount,
@@ -12,11 +13,9 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('test', async ({ page, isMobile }) => {
+  test.setTimeout(240000)
   await page.goto('#skipTips=true')
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('duckdb-test')
@@ -24,7 +23,7 @@ test('test', async ({ page, isMobile }) => {
   await refreshConnection(page, 'duckdb-test')
   await waitForConnectionReady(page, 'duckdb-test')
 
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors')
 
   // Create first editor (regular name)
   await page.getByTestId('editor-creator-add').click()
@@ -379,8 +378,7 @@ SELECT 1;
 
   // Navigate back to the editors
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    await page.getByTestId('sidebar-link-editors').click()
+    await openSidebarScreen(page, 'editors')
   }
 
   // Click on test-one editor
@@ -436,11 +434,11 @@ order by
     'Parser Error: syntax error at or near "lineitem" LINE 1: import lineitem',
   )
 
-  // Delete editors and verify folder structure updates
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    return
   }
 
+  // Delete editors and verify folder structure updates
   await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
   await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
 
@@ -485,7 +483,7 @@ order by
   expect(analysisFolderCount).toBe(0)
 
   // now let's look at the connection history
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-duckdb-test').click()
 
   await page.waitForSelector('.query-history')

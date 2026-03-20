@@ -4,6 +4,7 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
   createEditorFromConnection,
+  openSidebarScreen,
   prepareTestPage,
   refreshConnection,
   waitForConnectionReady,
@@ -119,12 +120,8 @@ test.describe('Custom Model Store', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models')
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -198,10 +195,7 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(2000)
 
     // Navigate to connections to verify the model was imported
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-    await page.getByTestId('sidebar-link-connections').click()
+    await openSidebarScreen(page, 'connections')
 
     const connectionName = 'Example DuckDB Model-connection'
 
@@ -213,7 +207,7 @@ test.describe('Custom Model Store', () => {
     await waitForConnectionReady(page, connectionName, 10000)
 
     // Navigate to editors
-    await page.getByTestId('sidebar-link-editors').click()
+    await openSidebarScreen(page, 'editors')
 
     // Verify the model appears in the editors tree
     try {
@@ -237,12 +231,8 @@ test.describe('Custom Model Store', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models')
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -276,12 +266,8 @@ test.describe('Custom Model Store', () => {
     // Navigate to the application
     await page.goto('#skipTips=true')
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-
     // Navigate to Community Models
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models')
 
     // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
@@ -457,10 +443,7 @@ test.describe('Asset Auto-Import via URL', () => {
     })
 
     // Verify the store was registered by checking the sidebar
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
-    await page.getByTestId('sidebar-link-community-models').click()
+    await openSidebarScreen(page, 'community-models')
 
     // The store should now appear in the community models list
     const storeId = 'localhost:8100'

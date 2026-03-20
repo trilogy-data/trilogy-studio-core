@@ -1,6 +1,6 @@
 // tests/example.spec.js
 import { test, expect } from '@playwright/test'
-import { createEditorFromConnectionList } from './test-helpers.js'
+import { createEditorFromConnectionList, openSidebarScreen } from './test-helpers.js'
 
 test('user settings', async ({ page, isMobile }) => {
   const requestPromise = page.waitForRequest((request) => {
@@ -42,10 +42,7 @@ test('user settings', async ({ page, isMobile }) => {
   await page.getByRole('button', { name: 'Reset to Defaults' }).click()
   const resolverAfterReset = await resolverInput.inputValue()
   await page.getByRole('button', { name: 'Save' }).click()
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-  await page.getByTestId('sidebar-link-connections').click()
+  await openSidebarScreen(page, 'connections')
   await page.getByTestId('connection-creator-add').click()
   await page.getByTestId('connection-creator-name').click()
   await page.getByTestId('connection-creator-name').fill('test')
@@ -55,7 +52,7 @@ test('user settings', async ({ page, isMobile }) => {
   if (!isMobile) {
     await page.getByTestId('exit-modal').click()
   }
-  await page.getByTestId('sidebar-link-editors').click()
+  await openSidebarScreen(page, 'editors')
   await page.locator('[data-testid^="editor-e-local-test-new-editor-"]').last().click()
   const skipTipsButton = page.getByRole('button', { name: 'Skip' })
   if (await skipTipsButton.count()) {

@@ -1,15 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
+import { openSidebarScreen } from './test-helpers.js'
 
 /**
  * Helper function to set up an LLM connection for tests
  */
 async function setupLLMConnection(page: any, isMobile: boolean, connectionName = 'test-openai') {
-  if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-  }
-
-  await page.getByTestId('sidebar-link-llms').click()
+  await openSidebarScreen(page, 'llms')
   await page.getByTestId('llm-connection-creator-add').click()
   await page.getByTestId('llm-connection-creator-name').fill(connectionName)
   await page.getByTestId('llm-connection-creator-type').selectOption({ label: 'OpenAI' })
