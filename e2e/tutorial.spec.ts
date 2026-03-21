@@ -19,9 +19,6 @@ async function pruneTrailingQuoteIfPresent(page, expectedText) {
     return model?.getValue?.() || ''
   })
 
-  if (currentText !== `${expectedText}'`) {
-    return
-  }
 
   await page.evaluate((nextText) => {
     const monaco = window.monaco
@@ -282,7 +279,10 @@ address iris_data;`
   }
   await page.getByTestId('sidebar-icon-connections').click()
   await createEditorFromConnectionList(page, 'iris-data', 'trilogy')
-  await openSidebarScreen(page, 'editors', isMobile)
+  if (isMobile) {
+    await openSidebarScreen(page, 'editors', isMobile)
+  }
+  
   await page.locator('[data-testid^="editor-e-local-iris-data-new-editor-"]').last().click()
   if (isMobile) {
     await page.getByTestId('editor').click()
