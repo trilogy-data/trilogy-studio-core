@@ -128,17 +128,23 @@
 
           <div v-if="job.output" class="job-output">
             <div class="output-label">Output</div>
-            <pre>{{ job.output }}</pre>
+            <div v-if="jobHasFormattedOutput(job.output)" class="output-note">
+              Terminal formatting removed for readability.
+            </div>
+            <pre>{{ formatJobOutput(job.output) }}</pre>
           </div>
 
           <div v-if="job.error" class="job-output error">
             <div class="output-label">Error</div>
-            <pre>{{ job.error }}</pre>
+            <div v-if="jobHasFormattedOutput(job.error)" class="output-note">
+              Terminal formatting removed for readability.
+            </div>
+            <pre>{{ formatJobOutput(job.error) }}</pre>
           </div>
 
           <div v-if="job.pollingError" class="job-output warning">
             <div class="output-label">Polling Issue</div>
-            <pre>{{ job.pollingError }}</pre>
+            <pre>{{ formatJobOutput(job.pollingError) }}</pre>
           </div>
         </article>
       </section>
@@ -161,6 +167,7 @@ import { useCommunityApiStore, useJobsApiStore } from '../../stores'
 import type { GenericModelStore } from '../../remotes/models'
 import { KeySeparator } from '../../data/constants'
 import StoreTokenModal from '../StoreTokenModal.vue'
+import { hasTerminalControlCodes, stripTerminalControlCodes } from '../../utils/terminalOutput'
 
 const props = defineProps<{
   activeJobsKey: string
@@ -273,6 +280,10 @@ const refreshJob = async (jobId: string) => {
 
   await jobsStore.pollJob(selectedStoreId.value, jobId)
 }
+
+const formatJobOutput = (value: string | null | undefined) => stripTerminalControlCodes(value)
+
+const jobHasFormattedOutput = (value: string | null | undefined) => hasTerminalControlCodes(value)
 
 const formatTimestamp = (timestamp: number) =>
   new Intl.DateTimeFormat(undefined, {
@@ -502,6 +513,12 @@ const formatTimestamp = (timestamp: number) =>
   background: rgba(148, 163, 184, 0.08);
   overflow-x: auto;
   white-space: pre-wrap;
+}
+
+.output-note {
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 0.8rem;
 }
 
 .job-output.error pre,
