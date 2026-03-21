@@ -1,7 +1,8 @@
 import { expect } from '@playwright/test'
 
 export async function prepareTestPage(page) {
-  const resolverUrl = process.env.VITE_RESOLVER_URL || 'http://127.0.0.1:5678'
+  const resolverUrl =
+    process.env.VITE_RESOLVER_URL || (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
 
   await page.addInitScript((url) => {
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {
@@ -14,7 +15,7 @@ export async function prepareTestPage(page) {
       'userSettings',
       JSON.stringify({
         theme: '',
-        trilogyResolver: url,
+        trilogyResolver: url || '',
         telemetryEnabled: false,
         tipsRead: [],
         skipAllTips: true,

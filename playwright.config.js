@@ -5,7 +5,7 @@ const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 const inDocker = process.env.TEST_ENV === 'docker'
 const inProd = process.env.TEST_ENV === 'prod'
 
-if (!process.env.VITE_RESOLVER_URL && !inProd) {
+if (!process.env.VITE_RESOLVER_URL && !inProd && !inDocker) {
   process.env.VITE_RESOLVER_URL = 'http://127.0.0.1:5678'
 }
 
