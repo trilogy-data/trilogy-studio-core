@@ -1,11 +1,21 @@
 <template>
   <div>
     <div class="section-header">
-      {{ displayName }}
-      <button @click="$emit('refresh')" :disabled="loading" data-testid="refresh-models-button">
-        <span v-if="!loading">Refresh</span>
-        <span v-else>Refreshing...</span>
-      </button>
+      <span>{{ displayName }}</span>
+      <div class="header-actions">
+        <button
+          v-if="showTokenButton"
+          @click="$emit('manage-token')"
+          type="button"
+          data-testid="manage-store-token-button"
+        >
+          Set Token
+        </button>
+        <button @click="$emit('refresh')" :disabled="loading" data-testid="refresh-models-button">
+          <span v-if="!loading">Refresh</span>
+          <span v-else>Refreshing...</span>
+        </button>
+      </div>
     </div>
 
     <div class="filters my-4">
@@ -65,12 +75,14 @@ export interface CommunityModelHeaderProps {
   loading: boolean
   remote: string | null
   engineDisabled: boolean
+  showTokenButton?: boolean
 }
 
 const props = defineProps<CommunityModelHeaderProps>()
 
 defineEmits<{
   (e: 'refresh'): void
+  (e: 'manage-token'): void
   (e: 'update:searchQuery', value: string): void
   (e: 'update:selectedEngine', value: string): void
   (e: 'update:importStatus', value: string): void
@@ -106,6 +118,12 @@ const displayName = computed(() => {
 .filters {
   background-color: var(--sidebar-bg-color);
   padding: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .filter-label {

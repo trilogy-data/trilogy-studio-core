@@ -37,6 +37,7 @@ import type { UserSettingsStoreType } from './userSettingsStore'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { DashboardStoreType } from './dashboardStore'
 import type { CommunityApiStoreType } from './communityApiStore'
+import type { JobsApiStoreType } from './jobsApiStore'
 import type { ChatStoreType } from './chatStore'
 import CredentialManager from './CredentialManager.vue'
 import QueryExecutionService from './queryExecutionService'
@@ -87,6 +88,10 @@ const props = defineProps({
   },
   communityApiStore: {
     type: Object as PropType<CommunityApiStoreType>,
+    required: true,
+  },
+  jobsApiStore: {
+    type: Object as PropType<JobsApiStoreType>,
     required: true,
   },
   chatStore: {
@@ -368,6 +373,7 @@ provide('userSettingsStore', props.userSettingsStore)
 provide('llmConnectionStore', props.llmConnectionStore)
 provide('dashboardStore', props.dashboardStore)
 provide('communityApiStore', props.communityApiStore)
+provide('jobsApiStore', props.jobsApiStore)
 provide('chatStore', props.chatStore)
 const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)

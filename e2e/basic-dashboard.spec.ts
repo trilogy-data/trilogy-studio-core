@@ -69,6 +69,25 @@ async function getPixelColor(page, x, y) {
   )
 }
 
+async function clickChartCanvasWithModifier(containerLocator, relX, relY) {
+  const canvas = containerLocator.locator('.vega-container.vega-active canvas').first()
+  await expect(canvas).toBeVisible({ timeout: 45000 })
+
+  const bounds = await canvas.boundingBox()
+  if (!bounds) {
+    throw new Error('Could not get active canvas bounds')
+  }
+
+  await canvas.click({
+    modifiers: ['ControlOrMeta'],
+    force: true,
+    position: {
+      x: bounds.width * relX,
+      y: bounds.height * relY,
+    },
+  })
+}
+
 function isMapDataPixel(color) {
   if (!color) {
     return false
@@ -689,18 +708,8 @@ select rows;
   // Verify the chart container is visible
   await page.getByTestId('vega-chart-container-2').waitFor({ state: 'visible', timeout: 45000 })
 
-  await page
-    .locator(vegaSelector)
-    .first()
-    .click({
-      modifiers: ['ControlOrMeta'],
-      position: {
-        // one third of canvas width
-        x: (await page.locator(vegaSelector).boundingBox()).width / 3,
-        // middle of canvas height
-        y: (await page.locator(vegaSelector).boundingBox()).height / 2,
-      },
-    })
+  const firstDashboardChart = page.getByTestId('dashboard-component-0')
+  await clickChartCanvasWithModifier(firstDashboardChart, 1 / 3, 1 / 2)
   await page.getByRole('textbox', { name: 'Search dimensions...' }).fill('alt_labels_two')
   //enter enter
   await page.getByRole('textbox', { name: 'Search dimensions...' }).press('Enter')

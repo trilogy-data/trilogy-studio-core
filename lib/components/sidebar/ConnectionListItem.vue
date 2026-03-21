@@ -223,7 +223,12 @@
           />
         </div>
         <div class="connection-actions" v-else-if="item.type === 'connection'">
-          <connection-status-icon :connection="item.connection" />
+          <connection-refresh
+            v-if="!item.connection?.connected"
+            :connection="item.connection"
+            @refresh="handleRefreshConnectionClick"
+          />
+          <connection-status-icon v-else :connection="item.connection" />
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Connection actions"
@@ -242,6 +247,7 @@ import type { PropType, Ref } from 'vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import ConnectionIcon from './ConnectionIcon.vue'
 import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
+import ConnectionRefresh from './ConnectionRefresh.vue'
 import DuckDBImporter from '../sidebar/DuckDBImporter.vue'
 import ModelSelector from '../model/ModelSelector.vue'
 import Tooltip from '../Tooltip.vue'
@@ -285,6 +291,7 @@ export default {
     SidebarItem,
     ConnectionIcon,
     ConnectionStatusIcon,
+    ConnectionRefresh,
     CreateEditorFromDatasourcePopup,
     DuckDBImporter,
     ModelSelector,

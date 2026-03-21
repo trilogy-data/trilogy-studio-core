@@ -17,6 +17,7 @@ export interface GithubModelStore extends ModelStore {
 export interface GenericModelStore extends ModelStore {
   type: 'generic'
   baseUrl: string // Base URL that serves index.json
+  token?: string // Optional in-memory auth token for secured local serves
 }
 
 // Union type for all store types

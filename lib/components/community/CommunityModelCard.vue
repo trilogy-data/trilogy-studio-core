@@ -45,6 +45,7 @@
       <model-creator
         :formDefaults="{
           importAddress: file.downloadUrl,
+          importToken: file.store?.type === 'generic' ? file.store.token : undefined,
           connection: defaultConnection,
           name: file.name,
         }"
@@ -215,8 +216,23 @@ const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'):
   // Get current base URL
   const currentBase = window.location.origin + window.location.pathname
 
-  // Construct the import link using the new unified format
-  const importLink = `${currentBase}#screen=asset-import&import=${encodeURIComponent(props.file.downloadUrl)}&assetType=${encodeURIComponent(assetType)}&assetName=${encodeURIComponent(component.name)}&modelName=${encodeURIComponent(props.file.name)}&connection=${encodeURIComponent(props.file.engine)}`
+  const params = new URLSearchParams({
+    screen: 'asset-import',
+    import: props.file.downloadUrl,
+    assetType,
+    assetName: component.name,
+    modelName: props.file.name,
+    connection: props.file.engine,
+  })
+
+  if (props.file.store?.type === 'generic') {
+    params.set('store', props.file.store.baseUrl)
+    if (props.file.store.token) {
+      params.set('token', props.file.store.token)
+    }
+  }
+
+  const importLink = `${currentBase}#${params.toString()}`
 
   try {
     await navigator.clipboard.writeText(importLink)

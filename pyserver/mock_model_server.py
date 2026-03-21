@@ -8,6 +8,8 @@ Run with: python mock_model_server.py
 Or: uvicorn mock_model_server:app --reload --port 8100
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -24,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-PORT = 8100
+PORT = int(os.getenv("MOCK_MODEL_SERVER_PORT", "8100"))
 BASE_URL = f"http://localhost:{PORT}"
 
 

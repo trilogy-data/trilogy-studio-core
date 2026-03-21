@@ -429,6 +429,7 @@ const iconMap = ref({
   'asset-import': 'mdi mdi-import',
   models: 'mdi mdi-set-center',
   'community-models': 'mdi mdi-library-outline',
+  jobs: 'mdi mdi-playlist-play',
   tutorial: 'mdi mdi-help',
   settings: 'mdi mdi-cog-outline',
   profile: 'mdi mdi-account-outline',

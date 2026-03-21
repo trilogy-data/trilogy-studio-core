@@ -24,11 +24,35 @@
         @description-toggled="handleDescriptionToggle"
         @dashboard-link-copied="handleDashboardLinkCopy"
       />
+      <error-message v-else-if="storeError" type="error">
+        {{ storeError }}
+        <template #action>
+          <div class="error-actions">
+            <button
+              v-if="selectedStore?.type === 'generic'"
+              @click="showTokenModal = true"
+              class="retry-button secondary"
+            >
+              Set Token
+            </button>
+            <button @click="refreshStoreData" class="retry-button">Retry</button>
+          </div>
+        </template>
+      </error-message>
       <div v-else class="loading-state">
         <p v-if="isLoading" class="text-loading">Loading model...</p>
         <p v-else class="text-error">Model not found</p>
       </div>
     </div>
+
+    <store-token-modal
+      v-if="selectedStore?.type === 'generic'"
+      :show="showTokenModal"
+      :store-name="selectedStore.name"
+      :token="selectedStore.token"
+      @close="showTokenModal = false"
+      @save="handleTokenSave"
+    />
   </div>
 </template>
 
@@ -39,6 +63,8 @@ import CommunityModelCard from './CommunityModelCard.vue'
 import { KeySeparator } from '../../data/constants'
 import { type CommunityApiStoreType } from '../../stores/communityApiStore'
 import type { ModelFile } from '../../remotes/models'
+import ErrorMessage from '../ErrorMessage.vue'
+import StoreTokenModal from '../StoreTokenModal.vue'
 
 export interface CommunityModelsProps {
   activeCommunityModelKey: string
@@ -62,6 +88,7 @@ const emit = defineEmits<{
 const communityApiStore = inject('communityApiStore') as CommunityApiStoreType
 
 const isLoading = ref(false)
+const showTokenModal = ref(false)
 
 const selectedType = computed(() => {
   const separatorCount = props.activeCommunityModelKey.split(KeySeparator).length
@@ -115,6 +142,22 @@ const modelFile = computed((): ModelFile | null => {
   return filesForStore.find((file) => file.name === selectedModelName.value) || null
 })
 
+const selectedStore = computed(() => {
+  if (!selectedRootKey.value) {
+    return null
+  }
+
+  return communityApiStore.stores.find((store) => store.id === selectedRootKey.value) || null
+})
+
+const storeError = computed(() => {
+  if (!selectedRootKey.value) {
+    return null
+  }
+
+  return communityApiStore.errors[selectedRootKey.value] || null
+})
+
 // Event handlers
 const handleCreatorToggle = (isExpanded: boolean) => {
   emit('model-interaction', {
@@ -148,6 +191,29 @@ const handleDashboardLinkCopy = (component: any) => {
   })
 }
 
+const refreshStoreData = async () => {
+  if (!selectedRootKey.value) {
+    return
+  }
+
+  isLoading.value = true
+  try {
+    await communityApiStore.fetchStoreFiles(selectedRootKey.value)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleTokenSave = async (token: string) => {
+  if (!selectedRootKey.value) {
+    return
+  }
+
+  communityApiStore.updateStoreToken(selectedRootKey.value, token)
+  showTokenModal.value = false
+  await refreshStoreData()
+}
+
 // Watch for changes to load data if needed
 watch(
   () => [selectedRootKey.value, selectedType.value],
@@ -155,7 +221,7 @@ watch(
     if (newType === 'model' && newRootKey && !communityApiStore.filesByStore[newRootKey]) {
       isLoading.value = true
       try {
-        await communityApiStore.refreshData()
+        await communityApiStore.fetchStoreFiles(newRootKey)
       } finally {
         isLoading.value = false
       }
@@ -193,6 +259,29 @@ watch(
 .text-error {
   color: var(--error-color, #e53935);
   font-size: 18px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.retry-button {
+  background-color: var(--button-bg, #2563eb);
+  color: var(--text-color);
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.retry-button.secondary {
+  background: transparent;
+  border: 1px solid var(--border-light);
 }
 /* on mobile, remove single model view padding */
 @media (max-width: 768px) {

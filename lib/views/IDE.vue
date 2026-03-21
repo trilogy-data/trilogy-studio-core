@@ -43,6 +43,7 @@
           @content-collapsed="sidebarCollapsed = $event"
           @save-editors="saveEditorsCall"
           @model-key-selected="setActiveModelKey"
+          @jobs-key-selected="setActiveJobsKey"
           @documentation-key-selected="setActiveDocumentationKey"
           @connection-key-selected="setActiveConnectionKey"
           @llm-key-selected="setActiveLLMConnectionKey"
@@ -53,6 +54,7 @@
           :activeEditor="activeEditor"
           :activeDocumentationKey="activeDocumentationKey"
           :activeModelKey="activeModelKey"
+          :activeJobsKey="activeJobsKey"
           :activeConnectionKey="activeConnectionKey"
           :containerWidth="containerWidth"
           :activeDashboardKey="activeDashboard"
@@ -134,6 +136,9 @@
         </template>
         <template v-else-if="activeScreen === 'community-models'">
           <community-models :activeCommunityModelKey="activeCommunityModelKey" />
+        </template>
+        <template v-else-if="activeScreen === 'jobs'">
+          <jobs-view :activeJobsKey="activeJobsKey" />
         </template>
         <template v-else-if="activeScreen === 'llms'">
           <llm-view :initialTab="llmInitialTab" />
@@ -235,6 +240,7 @@ const ModelView = defineAsyncComponent(() => import('./ModelView.vue'))
 const CommunityModels = defineAsyncComponent(
   () => import('../components/community/CommunityModels.vue'),
 )
+const JobsView = defineAsyncComponent(() => import('../components/jobs/JobsView.vue'))
 const ConnectionView = defineAsyncComponent(() => import('./ConnectionView.vue'))
 const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
 const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
@@ -282,6 +288,7 @@ const IDEComponent: Component = defineComponent({
     'welcome-page': WelcomePage,
     dashboard: Dashboard,
     'community-models': CommunityModels,
+    'jobs-view': JobsView,
     'llm-view': LLMView,
     'connection-view': ConnectionView,
     'results-view': ResultsView,
@@ -342,6 +349,7 @@ const IDEComponent: Component = defineComponent({
       activeConnectionKey,
       activeLLMConnectionKey,
       activeCommunityModelKey,
+      activeJobsKey,
       activeDashboard,
       setActiveScreen,
       setActiveSidebarScreen,
@@ -349,6 +357,7 @@ const IDEComponent: Component = defineComponent({
       setActiveEditor,
       setActiveModelKey,
       setActiveCommunityModelKey,
+      setActiveJobsKey,
       setActiveDocumentationKey,
       setActiveConnectionKey,
       setActiveLLMConnectionKey,
@@ -437,7 +446,9 @@ const IDEComponent: Component = defineComponent({
       activeModelKey,
       setActiveModelKey,
       activeCommunityModelKey,
+      activeJobsKey,
       setActiveCommunityModelKey,
+      setActiveJobsKey,
       activeDocumentationKey,
       setActiveDocumentationKey,
       activeConnectionKey,

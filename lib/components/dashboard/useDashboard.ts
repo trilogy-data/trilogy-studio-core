@@ -46,9 +46,6 @@ export function useDashboard(
   emit: UseDashboardEmits,
   providedQueryExecutionService?: QueryExecutionService,
 ) {
-  if (!dashboard.value) {
-    throw new Error('Dashboard computed reference is required')
-  }
   // Initialize services and stores
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()

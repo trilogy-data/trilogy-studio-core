@@ -1,11 +1,27 @@
 <template>
-  <div class="hints" data-testid="editor-shortcut-hints">
-    <div class="shortcuts">
-      <div v-for="shortcut in shortcuts" :key="shortcut.name" class="shortcut-item">
-        <div class="shortcut-name">{{ shortcut.name }}</div>
-        <div class="shortcut">
-          <span>{{ icon }}</span>
-          <span v-for="key in shortcut.keys" :key="key">{{ key }}</span>
+  <div v-if="showHints" class="hints" data-testid="editor-shortcut-hints">
+    <div class="hint-card">
+      <div class="hint-header">
+        <div>
+          <div class="hint-title">Keyboard shortcuts</div>
+          <div class="hint-subtitle">Shown when an editor has no results yet.</div>
+        </div>
+        <button
+          class="disable-hints-button"
+          type="button"
+          data-testid="disable-editor-hints"
+          @click="disableHints"
+        >
+          Disable All Hints
+        </button>
+      </div>
+      <div class="shortcuts">
+        <div v-for="shortcut in shortcuts" :key="shortcut.name" class="shortcut-item">
+          <div class="shortcut-name">{{ shortcut.name }}</div>
+          <div class="shortcut">
+            <span>{{ icon }}</span>
+            <span v-for="key in shortcut.keys" :key="key">{{ key }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -19,10 +35,63 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  opacity: 0.32;
-  pointer-events: none;
   padding: 16px 24px;
   box-sizing: border-box;
+}
+
+.hint-card {
+  width: min(720px, 100%);
+  padding: 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--query-window-bg) 92%, transparent);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  opacity: 0.72;
+}
+
+.hint-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.hint-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hint-subtitle {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.disable-hints-button {
+  appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out;
+}
+
+.disable-hints-button:hover {
+  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.1);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.22);
+  color: var(--text);
 }
 
 .shortcuts {
@@ -31,7 +100,6 @@
   column-gap: 14px;
   row-gap: 5px;
   margin: 0 auto;
-  transform: translateY(-12%);
   align-items: center;
   max-width: min(680px, 100%);
 }
@@ -82,13 +150,25 @@
 @media screen and (max-width: 768px) {
   .hints {
     padding: 12px 16px;
-    opacity: 0.28;
+  }
+
+  .hint-card {
+    padding: 16px;
+  }
+
+  .hint-header {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 14px;
+  }
+
+  .disable-hints-button {
+    width: 100%;
   }
 
   .shortcuts {
     grid-template-columns: 1fr;
     row-gap: 6px;
-    transform: translateY(-6%);
   }
 
   .shortcut-name {
@@ -102,6 +182,9 @@
 </style>
 
 <script lang="ts">
+import { computed, defineComponent, inject } from 'vue'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore'
+
 function detectOperatingSystem(): string {
   if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
     const userAgent = navigator.userAgent.toLowerCase()
@@ -139,7 +222,27 @@ function detectOperatingSystem(): string {
   return 'Unknown'
 }
 
-export default {
+export default defineComponent({
+  name: 'HintComponent',
+  setup() {
+    const userSettingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
+
+    const showHints = computed(() => !userSettingsStore?.settings.disableEditorHints)
+
+    const disableHints = async () => {
+      if (!userSettingsStore) {
+        return
+      }
+
+      userSettingsStore.updateSetting('disableEditorHints', true)
+      await userSettingsStore.saveSettings()
+    }
+
+    return {
+      showHints,
+      disableHints,
+    }
+  },
   data() {
     const os = detectOperatingSystem()
     return {
@@ -177,11 +280,11 @@ export default {
       return this.staticShortcuts
     },
     icon() {
-      if (this.sysType == 'MacOS') {
-        return '⌘'
+      if (this.sysType === 'MacOS') {
+        return 'Cmd'
       }
       return 'Ctrl'
     },
   },
-}
+})
 </script>

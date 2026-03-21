@@ -16,7 +16,7 @@
         class="context-menu-item"
         :class="{ danger: item.danger, disabled: item.disabled }"
         :data-testid="id ? `${id}-${item.id}` : `context-menu-item-${item.id}`"
-        @click="handleItemClick(item)"
+        @click.stop="handleItemClick(item)"
       >
         <i v-if="item.icon" :class="`mdi ${item.icon}`"></i>
         <span>{{ item.label }}</span>

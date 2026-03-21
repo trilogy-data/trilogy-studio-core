@@ -1,7 +1,8 @@
 import { expect } from '@playwright/test'
 
 export async function prepareTestPage(page) {
-  const resolverUrl = process.env.VITE_RESOLVER_URL || 'https://trilogy-service.fly.dev'
+  const resolverUrl =
+    process.env.VITE_RESOLVER_URL || (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
 
   await page.addInitScript((url) => {
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {
@@ -14,7 +15,7 @@ export async function prepareTestPage(page) {
       'userSettings',
       JSON.stringify({
         theme: '',
-        trilogyResolver: url,
+        trilogyResolver: url || '',
         telemetryEnabled: false,
         tipsRead: [],
         skipAllTips: true,
@@ -24,30 +25,38 @@ export async function prepareTestPage(page) {
   }, resolverUrl)
 }
 
-export async function waitForConnectionReady(page, connectionName, timeout = 15000) {
-  await page.waitForFunction(
-    (name) => {
-      const element = document.querySelector(`[data-testid="status-icon-${name}"]`)
-      if (!element) return false
+async function ensureConnectionsSidebarVisible(page, connectionName) {
+  const visibleRow = page.getByTestId(`connection-${connectionName}`).filter({ visible: true })
+  if ((await visibleRow.count()) > 0) {
+    return
+  }
 
-      const style = window.getComputedStyle(element)
-      const backgroundColor = style.backgroundColor
-      return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
-    },
-    connectionName,
-    { timeout },
-  )
+  const mobileMenuToggle = page.getByTestId('mobile-menu-toggle').filter({ visible: true })
+  if ((await mobileMenuToggle.count()) > 0) {
+    await mobileMenuToggle.first().click()
+    await page.getByTestId(`sidebar-icon-connections`).click()
+    await expect(page.getByTestId(`connection-${connectionName}`).filter({ visible: true }).first()).toBeVisible()
+  }
+}
+
+export async function waitForConnectionReady(page, connectionName, timeout = 60000) {
+  await ensureConnectionsSidebarVisible(page, connectionName)
+  await expect(page.getByTestId(`status-icon-${connectionName}`).filter({ visible: true }).first()).toHaveClass(/connected/, { timeout })
 }
 
 export async function openSidebarScreen(page, screen, isMobile = false) {
   if (isMobile) {
     const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
     await expect(mobileMenuToggle).toBeVisible({ timeout: 10000 })
-    await mobileMenuToggle.click()
 
-    const mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`)
+    let mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
 
-    await expect(mobileSidebarIcon).toBeVisible({ timeout: 5000 })
+    if ((await mobileSidebarIcon.count()) === 0) {
+      await mobileMenuToggle.click({ force: true })
+      mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
+      await expect(mobileSidebarIcon).toBeVisible({ timeout: 10000 })
+    }
+
     await mobileSidebarIcon.scrollIntoViewIfNeeded()
     await mobileSidebarIcon.click({ force: true })
     return
@@ -59,6 +68,7 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
 }
 
 async function getVisibleConnectionRow(page, connectionName) {
+  await ensureConnectionsSidebarVisible(page, connectionName)
   const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`).filter({
     visible: true,
   })
@@ -69,6 +79,12 @@ async function getVisibleConnectionRow(page, connectionName) {
     (await rowByTestIdLabel.count()) > 0 ? rowByTestIdLabel.first() : rowByTextLabel.first()
 
   return connectionLabel.locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
+}
+
+async function clickMenuItem(page, testId) {
+  const item = page.getByTestId(testId).filter({ visible: true }).first()
+  await expect(item).toBeVisible()
+  await item.click()
 }
 
 export async function refreshConnection(page, connectionName) {
@@ -86,7 +102,7 @@ export async function refreshConnection(page, connectionName) {
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
   await connectionRow.getByTestId(`connection-actions-${connectionName}-trigger`).click()
-  await page.getByTestId(`connection-actions-${connectionName}-refresh`).click()
+  await clickMenuItem(page, `connection-actions-${connectionName}-refresh`)
 }
 
 export async function createEditorFromConnectionList(page, connectionName, type = 'trilogy') {
@@ -111,7 +127,7 @@ export async function refreshLLMConnection(page, connectionName) {
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
   await connectionRow.getByTestId(`llm-connection-actions-${connectionName}-trigger`).click()
-  await page.getByTestId(`llm-connection-actions-${connectionName}-refresh`).click()
+  await clickMenuItem(page, `llm-connection-actions-${connectionName}-refresh`)
 }
 
 export async function createEditorFromConnection(page, connectionName, type = 'trilogy') {

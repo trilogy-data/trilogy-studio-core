@@ -8,6 +8,7 @@ import { getDefaultValueFromHash } from '../stores/urlStore'
 const TEST_CONSTANTS = {
   MODEL_URL: 'https://example.com/model.json',
   STORE_URL: 'https://example.com/store',
+  SECURE_TOKEN: 'secure-share-token',
   DASHBOARD_NAME: 'TestDashboard',
   EDITOR_NAME: 'TestEditor',
   MODEL_NAME: 'TestModel',
@@ -385,6 +386,34 @@ describe('AssetAutoImporter', () => {
       })
 
       expect(mockCommunityApiStore.addStore).toHaveBeenCalled()
+    })
+
+    it('should forward token to store memory and model import calls', async () => {
+      setupSuccessfulDashboardImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+
+      wrapper = await createWrapper({
+        ...createUrlParams(),
+        store: TEST_CONSTANTS.STORE_URL,
+        token: TEST_CONSTANTS.SECURE_TOKEN,
+      })
+
+      await vi.waitFor(() => {
+        expect(mockCommunityApiStore.addStore).toHaveBeenCalled()
+        expect(mockModelImportService.importModel).toHaveBeenCalled()
+      })
+
+      expect(mockCommunityApiStore.addStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: TEST_CONSTANTS.STORE_URL,
+          token: TEST_CONSTANTS.SECURE_TOKEN,
+        }),
+      )
+      expect(mockModelImportService.importModel).toHaveBeenCalledWith(
+        TEST_CONSTANTS.MODEL_NAME,
+        TEST_CONSTANTS.MODEL_URL,
+        TEST_CONSTANTS.CONNECTION_NAME,
+        TEST_CONSTANTS.SECURE_TOKEN,
+      )
     })
 
     it('should skip registration if store already exists', async () => {

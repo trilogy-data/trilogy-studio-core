@@ -39,6 +39,8 @@ export class ChartRenderManager {
   private pendingRender = ref<RenderOperation | null>(null)
   private activeRender = ref<RenderOperation | null>(null)
   private lastSpec = ref<string | null>(null)
+  private pendingSpec: string | null = null
+  private activeSpec: string | null = null
 
   constructor(private chartHelpers: ChromaChartHelpers) {}
 
@@ -87,6 +89,9 @@ export class ChartRenderManager {
     if (this.hasLoaded.value && this.lastSpec.value === currentSpecString && !force) {
       console.log('Skipping render - spec unchanged')
       return
+    } else if (this.activeSpec === currentSpecString || this.pendingSpec === currentSpecString) {
+      console.log('Skipping render - identical spec already in flight:', chartTitle)
+      return
     } else {
       console.log('Rendering new spec on chart:', chartTitle, 'length', currentSpecString.length)
     }
@@ -110,16 +115,23 @@ export class ChartRenderManager {
 
     // This render is now pending
     this.pendingRender.value = renderOp
+    this.pendingSpec = currentSpecString
 
     // Check if this render was aborted while waiting
     if (renderOp.aborted) {
+      if (this.pendingRender.value?.id === renderOp.id) {
+        this.pendingRender.value = null
+        this.pendingSpec = null
+      }
       console.log(`Render ${renderOp.id} ${chartTitle} aborted before starting`)
       return
     }
 
     // Move from pending to active
     this.pendingRender.value = null
+    this.pendingSpec = null
     this.activeRender.value = renderOp
+    this.activeSpec = currentSpecString
 
     try {
       // Get the target container
@@ -206,6 +218,7 @@ export class ChartRenderManager {
       // Clear active render if it's this one
       if (this.activeRender.value?.id === renderOp.id) {
         this.activeRender.value = null
+        this.activeSpec = null
       }
     }
   }
@@ -219,6 +232,8 @@ export class ChartRenderManager {
     if (this.activeRender.value) {
       this.activeRender.value.aborted = true
     }
+    this.pendingSpec = null
+    this.activeSpec = null
 
     // Clean up both containers
     this.cleanupContainer(1)

@@ -24,7 +24,7 @@
         <button
           @click="editor.loading ? cancelQuery() : runQuery()"
           class="action-item"
-          :class="{ 'button-cancel': editor.loading }"
+          :class="{ 'button-cancel': editor.loading, 'button-run': !editor.loading }"
           data-testid="editor-run-button"
         >
           {{ editor.loading ? 'Cancel' : 'Test' }}
@@ -303,6 +303,16 @@ export default defineComponent({
       if (this.editor.type !== 'sql') {
         globalEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, () => {
           this.formatQuery()
+        })
+
+        globalEditor.addAction({
+          id: 'trilogy.simple-editor.format-query',
+          label: 'Format Query',
+          contextMenuGroupId: 'navigation',
+          contextMenuOrder: 1.5,
+          run: () => {
+            this.formatQuery()
+          },
         })
       }
     },
@@ -856,6 +866,22 @@ export default defineComponent({
   background-color: var(--error-color, #d32f2f);
   color: white;
   border: 1px solid var(--error-color, #d32f2f);
+}
+
+.button-run {
+  background-color: var(--special-text, #2563eb);
+  color: white;
+  border: 1px solid var(--special-text, #2563eb);
+}
+
+.button-run:hover {
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.12);
+}
+
+.button-cancel:hover {
+  filter: brightness(0.96);
 }
 
 .error-message {

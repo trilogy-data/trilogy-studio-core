@@ -20,6 +20,7 @@ type ScreenType =
   | 'editors'
   | 'tutorial'
   | 'llms'
+  | 'jobs'
   | 'dashboard'
   | 'dashboard-import'
   | 'asset-import'
@@ -40,6 +41,7 @@ interface NavigationState {
   activeConnectionKey: Ref<string>
   activeModelKey: Ref<string>
   activeCommunityModelKey: Ref<string>
+  activeJobsKey: Ref<string>
   activeDocumentationKey: Ref<string>
   activeLLMConnectionKey: Ref<string>
   modelImport: Ref<string>
@@ -78,6 +80,7 @@ export interface NavigationStore {
   readonly activeConnectionKey: Ref<string>
   readonly activeModelKey: Ref<string>
   readonly activeCommunityModelKey: Ref<string>
+  readonly activeJobsKey: Ref<string>
   readonly activeDocumentationKey: Ref<string>
   readonly activeLLMConnectionKey: Ref<string>
   readonly modelImport: Ref<string>
@@ -96,6 +99,7 @@ export interface NavigationStore {
   setActiveDashboard(dashboard: string | null): void
   setActiveModelKey(model: string | null): void
   setActiveCommunityModelKey(communityModel: string | null): void
+  setActiveJobsKey(jobKey: string | null): void
   setActiveConnectionKey(connection: string | null): void
   setActiveDocumentationKey(documentation: string | null): void
 
@@ -129,6 +133,7 @@ const createNavigationStore = (): NavigationStore => {
     activeConnectionKey: ref(getDefaultValueFromHash('connections', '')),
     activeModelKey: ref(getDefaultValueFromHash('model', '')),
     activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
+    activeJobsKey: ref(getDefaultValueFromHash('jobs', '')),
     activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
     activeDocumentationKey: ref(getDefaultValueFromHash('tutorial', '')),
     // model import is legacy
@@ -147,6 +152,7 @@ const createNavigationStore = (): NavigationStore => {
     'editors',
     'tutorial',
     'llms',
+    'jobs',
     'dashboard',
     'models',
     'community-models',
@@ -225,6 +231,24 @@ const createNavigationStore = (): NavigationStore => {
         }
         // Store root level: just the store name
         return store.name
+      }
+    } else if (screen === 'jobs') {
+      const parts = address.split(KeySeparator)
+      const storeId = parts[0]
+      const store = communityApiStore.stores.find((item) => item.id === storeId)
+      const storeName = store?.name || storeId
+
+      if (parts.length === 1) {
+        return storeName
+      }
+
+      const decodedTarget = decodeURIComponent(parts[2] || '')
+      if (parts[1] === 'directory') {
+        return decodedTarget === '__root__' ? `${storeName} - Root` : decodedTarget
+      }
+      if (parts[1] === 'file') {
+        const pathParts = decodedTarget.split('/')
+        return pathParts[pathParts.length - 1] || storeName
       }
     }
     return lastSegment(address, null)
@@ -345,6 +369,10 @@ const createNavigationStore = (): NavigationStore => {
       state.activeCommunityModelKey.value = ''
       keysToRemove.push('community-models')
     }
+    if (!activeKeys.includes('jobs')) {
+      state.activeJobsKey.value = ''
+      keysToRemove.push('jobs')
+    }
     if (!activeKeys.includes('tutorial')) {
       state.activeDocumentationKey.value = ''
       keysToRemove.push('tutorial')
@@ -428,6 +456,8 @@ const createNavigationStore = (): NavigationStore => {
       } else if (tabInfo.screen === 'community-models') {
         state.activeCommunityModelKey.value = tabInfo.address
         baseTips = baseTips.concat(userSettingsStore.getUnreadTips(communityTips))
+      } else if (tabInfo.screen === 'jobs') {
+        state.activeJobsKey.value = tabInfo.address
       }
       state.mobileMenuOpen.value = false
       state.displayedTips.value = baseTips
@@ -472,6 +502,16 @@ const createNavigationStore = (): NavigationStore => {
     }
     state.activeCommunityModelKey.value = communityModel
     openTab('community-models', null, communityModel)
+  }
+
+  const setActiveJobsKey = (jobKey: string | null): void => {
+    if (jobKey === null) {
+      removeHashFromUrl('jobs')
+      state.activeJobsKey.value = ''
+      return
+    }
+    state.activeJobsKey.value = jobKey
+    openTab('jobs', null, jobKey)
   }
 
   const setActiveEditor = (editor: string): void => {
@@ -605,6 +645,15 @@ const createNavigationStore = (): NavigationStore => {
       })
     }
 
+    if (state.activeJobsKey.value && !isImport) {
+      tabsToOpen.push({
+        screen: 'jobs',
+        title: null,
+        key: state.activeJobsKey.value,
+        isActive: activeScreen === 'jobs',
+      })
+    }
+
     if (state.activeDocumentationKey.value && !isImport) {
       tabsToOpen.push({
         screen: 'tutorial',
@@ -678,6 +727,7 @@ const createNavigationStore = (): NavigationStore => {
       const currentConnections = getDefaultValueFromHash('connections', '')
       const currentModels = getDefaultValueFromHash('model', '')
       const currentCommunityModels = getDefaultValueFromHash('community-models', '')
+      const currentJobs = getDefaultValueFromHash('jobs', '')
       const currentDocs = getDefaultValueFromHash('docs', '')
       const currentLLMs = getDefaultValueFromHash('llms', '')
       const currentScreen = getDefaultValueFromHash('screen', '') as ScreenType
@@ -719,6 +769,11 @@ const createNavigationStore = (): NavigationStore => {
           hash: currentCommunityModels,
           screen: 'community-models' as ScreenType,
           current: state.activeCommunityModelKey.value,
+        },
+        {
+          hash: currentJobs,
+          screen: 'jobs' as ScreenType,
+          current: state.activeJobsKey.value,
         },
         {
           hash: currentDocs,
@@ -782,6 +837,9 @@ const createNavigationStore = (): NavigationStore => {
     get activeCommunityModelKey() {
       return state.activeCommunityModelKey
     },
+    get activeJobsKey() {
+      return state.activeJobsKey
+    },
     get activeDocumentationKey() {
       return state.activeDocumentationKey
     },
@@ -823,6 +881,7 @@ const createNavigationStore = (): NavigationStore => {
     setActiveDocumentationKey,
     setActiveLLMConnectionKey,
     setActiveCommunityModelKey,
+    setActiveJobsKey,
     toggleMobileMenu,
     setActiveModelKey,
     setActiveTab,
