@@ -7,7 +7,7 @@ export interface StoreFilesResponse {
   directories: StoreDirectoryListing[]
 }
 
-export type RemoteJobStatus = 'running' | 'success' | 'error'
+export type RemoteJobStatus = 'running' | 'success' | 'error' | 'cancelled'
 
 export interface RemoteJobResponse {
   job_id: string
@@ -23,7 +23,7 @@ export interface LocalStoreJob extends RemoteJobResponse {
   operation: 'run' | 'refresh'
   submittedAt: number
   updatedAt: number
-  pollingState?: 'ok' | 'unable-to-fetch'
+  pollingState?: 'ok' | 'auth-paused' | 'not-found' | 'stopped'
   pollingError?: string | null
 }
 

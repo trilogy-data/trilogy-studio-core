@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import type { GenericModelStore } from '../remotes/models'
 import type { LocalStoreJob, RemoteJobResponse, StoreFilesResponse } from '../remotes/jobs'
-import { fetchStoreFiles, fetchStoreJob, submitStoreJob } from '../remotes/jobsService'
+import {
+  JobsServiceError,
+  cancelStoreJob,
+  fetchStoreFiles,
+  fetchStoreJob,
+  submitStoreJob,
+} from '../remotes/jobsService'
 import useCommunityApiStore, { type StoreStatus } from './communityApiStore'
 
 const pollers = new Map<string, ReturnType<typeof setInterval>>()
@@ -15,11 +21,25 @@ interface JobsApiState {
   loadingByStore: Record<string, boolean>
   submittingByTarget: Record<string, boolean>
   pollingByJob: Record<string, boolean>
+  stoppingByJob: Record<string, boolean>
 }
 
 const toSubmittingKey = (storeId: string, target: string, operation: 'run' | 'refresh'): string =>
   `${storeId}::${operation}::${target}`
 const toPollingKey = (storeId: string, jobId: string): string => `${storeId}::${jobId}`
+
+const normalizeLoadedJob = (job: LocalStoreJob): LocalStoreJob => {
+  const legacyPollingState: string | undefined = (job as { pollingState?: string }).pollingState
+  const pollingState = legacyPollingState === 'unable-to-fetch' ? 'stopped' : (job.pollingState ?? 'ok')
+  return {
+    ...job,
+    pollingState,
+    pollingError:
+      pollingState === 'stopped' && !job.pollingError && legacyPollingState === 'unable-to-fetch'
+        ? 'Polling stopped locally.'
+        : (job.pollingError ?? null),
+  }
+}
 
 const sortJobs = (jobs: LocalStoreJob[]): LocalStoreJob[] =>
   [...jobs].sort((left, right) => right.submittedAt - left.submittedAt)
@@ -33,6 +53,7 @@ const useJobsApiStore = defineStore('jobsApi', {
     loadingByStore: {},
     submittingByTarget: {},
     pollingByJob: {},
+    stoppingByJob: {},
   }),
 
   actions: {
@@ -61,7 +82,9 @@ const useJobsApiStore = defineStore('jobsApi', {
     },
 
     getStoreStatus(storeId: string): StoreStatus | 'running' {
-      const hasRunningJob = (this.jobsByStore[storeId] || []).some((job) => job.status === 'running')
+      const hasRunningJob = (this.jobsByStore[storeId] || []).some(
+        (job) => job.status === 'running' && (job.pollingState ?? 'ok') === 'ok',
+      )
       if (hasRunningJob) {
         return 'running'
       }
@@ -75,6 +98,10 @@ const useJobsApiStore = defineStore('jobsApi', {
 
     isPollingJob(storeId: string, jobId: string): boolean {
       return !!this.pollingByJob[toPollingKey(storeId, jobId)]
+    },
+
+    isStoppingJob(storeId: string, jobId: string): boolean {
+      return !!this.stoppingByJob[toPollingKey(storeId, jobId)]
     },
 
     clearStoreError(storeId: string): void {
@@ -123,7 +150,13 @@ const useJobsApiStore = defineStore('jobsApi', {
           return
         }
 
-        this.jobsByStore = JSON.parse(storedJobs)
+        const parsedJobs = JSON.parse(storedJobs) as Record<string, LocalStoreJob[]>
+        this.jobsByStore = Object.fromEntries(
+          Object.entries(parsedJobs).map(([storeId, jobs]) => [
+            storeId,
+            (jobs || []).map((job) => normalizeLoadedJob(job)),
+          ]),
+        )
       } catch (error) {
         console.error('Error loading jobs from localStorage:', error)
       }
@@ -132,11 +165,31 @@ const useJobsApiStore = defineStore('jobsApi', {
     resumePolling(): void {
       Object.entries(this.jobsByStore).forEach(([storeId, jobs]) => {
         jobs.forEach((job) => {
-          if (job.status === 'running' || job.pollingState === 'unable-to-fetch') {
+          if (job.status === 'running' && (job.pollingState ?? 'ok') === 'ok') {
             this.startPolling(storeId, job.job_id)
           }
         })
       })
+    },
+
+    async resumeAuthPausedJobs(storeId: string): Promise<void> {
+      const pausedJobs = (this.jobsByStore[storeId] || []).filter(
+        (job) => job.status === 'running' && job.pollingState === 'auth-paused',
+      )
+
+      await Promise.all(
+        pausedJobs.map(async (job) => {
+          const resumedJob: LocalStoreJob = {
+            ...job,
+            updatedAt: Date.now(),
+            pollingState: 'ok',
+            pollingError: null,
+          }
+          this.upsertJob(storeId, resumedJob)
+          this.startPolling(storeId, job.job_id)
+          await this.pollJob(storeId, job.job_id)
+        }),
+      )
     },
 
     async refreshAllStores(): Promise<void> {
@@ -191,6 +244,14 @@ const useJobsApiStore = defineStore('jobsApi', {
       this.saveJobsToStorage()
     },
 
+    removeJob(storeId: string, jobId: string): void {
+      this.stopPolling(storeId, jobId)
+      delete this.pollingByJob[toPollingKey(storeId, jobId)]
+      delete this.stoppingByJob[toPollingKey(storeId, jobId)]
+      this.jobsByStore[storeId] = (this.jobsByStore[storeId] || []).filter((job) => job.job_id !== jobId)
+      this.saveJobsToStorage()
+    },
+
     stopPolling(storeId: string, jobId: string): void {
       const pollerKey = `${storeId}:${jobId}`
       const intervalId = pollers.get(pollerKey)
@@ -200,6 +261,28 @@ const useJobsApiStore = defineStore('jobsApi', {
 
       clearInterval(intervalId)
       pollers.delete(pollerKey)
+    },
+
+    pauseJobPolling(
+      storeId: string,
+      jobId: string,
+      pollingState: NonNullable<LocalStoreJob['pollingState']>,
+      pollingError: string,
+    ): void {
+      const existingJob = (this.jobsByStore[storeId] || []).find((job) => job.job_id === jobId)
+      if (!existingJob) {
+        this.stopPolling(storeId, jobId)
+        return
+      }
+
+      this.stopPolling(storeId, jobId)
+      const pausedJob: LocalStoreJob = {
+        ...existingJob,
+        updatedAt: Date.now(),
+        pollingState,
+        pollingError,
+      }
+      this.upsertJob(storeId, pausedJob)
     },
 
     startPolling(storeId: string, jobId: string): void {
@@ -301,14 +384,70 @@ const useJobsApiStore = defineStore('jobsApi', {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : `Failed to poll job ${jobId}`
-        const degradedJob: LocalStoreJob = {
-          ...existingJob,
-          pollingState: 'unable-to-fetch',
-          pollingError: message,
+        if (error instanceof JobsServiceError && error.status === 401) {
+          this.pauseJobPolling(
+            storeId,
+            jobId,
+            'auth-paused',
+            'Polling paused: authentication required. Update the store token to resume tracking.',
+          )
+        } else if (error instanceof JobsServiceError && error.status === 404) {
+          this.pauseJobPolling(
+            storeId,
+            jobId,
+            'not-found',
+            'Polling stopped: job was not found on the server.',
+          )
+        } else {
+          this.pauseJobPolling(storeId, jobId, 'stopped', `Polling stopped locally. ${message}`)
         }
-        this.upsertJob(storeId, degradedJob)
       } finally {
         delete this.pollingByJob[pollingKey]
+      }
+    },
+
+    async stopJob(storeId: string, jobId: string): Promise<void> {
+      const stoppingKey = toPollingKey(storeId, jobId)
+      if (this.stoppingByJob[stoppingKey]) {
+        return
+      }
+
+      const store = this.getGenericStore(storeId)
+      const existingJob = (this.jobsByStore[storeId] || []).find((job) => job.job_id === jobId)
+      if (!store || !existingJob) {
+        this.stopPolling(storeId, jobId)
+        return
+      }
+
+      this.stoppingByJob[stoppingKey] = true
+      this.stopPolling(storeId, jobId)
+      delete this.pollingByJob[stoppingKey]
+
+      try {
+        const response = await cancelStoreJob(store, jobId)
+        const localJob = this.buildLocalJob(
+          storeId,
+          existingJob.target,
+          existingJob.operation,
+          response,
+          existingJob.submittedAt,
+        )
+        if (localJob.status === 'running') {
+          localJob.pollingState = 'stopped'
+          localJob.pollingError = 'Cancel requested. Polling stopped locally.'
+        }
+        this.upsertJob(storeId, localJob)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Failed to cancel job ${jobId}`
+        const stoppedJob: LocalStoreJob = {
+          ...existingJob,
+          updatedAt: Date.now(),
+          pollingState: 'stopped',
+          pollingError: `Stopped polling locally. ${message}`,
+        }
+        this.upsertJob(storeId, stoppedJob)
+      } finally {
+        delete this.stoppingByJob[stoppingKey]
       }
     },
   },

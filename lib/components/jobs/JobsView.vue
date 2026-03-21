@@ -104,11 +104,28 @@
             </div>
             <div class="job-card-actions">
               <button
-                class="job-refresh-button"
-                @click="refreshJob(job.job_id)"
-                :disabled="jobsStore.isPollingJob(job.storeId, job.job_id)"
+                v-if="canStopJob(job)"
+                class="job-stop-button"
+                @click="stopJob(job.job_id)"
+                :disabled="jobsStore.isStoppingJob(job.storeId, job.job_id)"
               >
-                {{ jobsStore.isPollingJob(job.storeId, job.job_id) ? 'Refreshing...' : 'Refresh' }}
+                {{ jobsStore.isStoppingJob(job.storeId, job.job_id) ? 'Stopping...' : 'Stop' }}
+              </button>
+              <button
+                class="job-refresh-button"
+                :class="{ tracking: isActivelyTrackingJob(job) }"
+                @click="refreshJob(job.job_id)"
+                :disabled="jobsStore.isStoppingJob(job.storeId, job.job_id) || isActivelyTrackingJob(job)"
+              >
+                <span v-if="isActivelyTrackingJob(job)" class="job-button-spinner" aria-hidden="true" />
+                {{ isActivelyTrackingJob(job) ? 'Tracking' : 'Refresh' }}
+              </button>
+              <button
+                class="job-delete-button"
+                @click="deleteJob(job.job_id)"
+                :disabled="jobsStore.isStoppingJob(job.storeId, job.job_id)"
+              >
+                Delete
               </button>
               <div class="job-status" :class="`job-status-${job.status}`">
                 {{ job.status }}
@@ -116,8 +133,16 @@
             </div>
           </div>
 
-          <div v-if="job.pollingState === 'unable-to-fetch'" class="job-polling-warning">
-            Unable to fetch latest status. Polling will continue automatically.
+          <div v-if="job.pollingState === 'auth-paused'" class="job-polling-warning">
+            Polling is paused until this store has a valid token again.
+          </div>
+
+          <div v-else-if="job.pollingState === 'not-found'" class="job-polling-warning stopped">
+            {{ job.pollingError || 'Polling stopped because the job was not found on the server.' }}
+          </div>
+
+          <div v-else-if="job.pollingState === 'stopped'" class="job-polling-warning stopped">
+            {{ job.pollingError || 'Polling stopped locally.' }}
           </div>
 
           <div class="job-meta">
@@ -271,6 +296,10 @@ const handleTokenSave = async (token: string) => {
   communityStore.updateStoreToken(selectedStoreId.value, token)
   showTokenModal.value = false
   await jobsStore.fetchFilesForStore(selectedStoreId.value)
+
+  if (jobsStore.storeStatus[selectedStoreId.value] === 'connected') {
+    await jobsStore.resumeAuthPausedJobs(selectedStoreId.value)
+  }
 }
 
 const refreshJob = async (jobId: string) => {
@@ -280,6 +309,28 @@ const refreshJob = async (jobId: string) => {
 
   await jobsStore.pollJob(selectedStoreId.value, jobId)
 }
+
+const stopJob = async (jobId: string) => {
+  if (!selectedStoreId.value) {
+    return
+  }
+
+  await jobsStore.stopJob(selectedStoreId.value, jobId)
+}
+
+const deleteJob = (jobId: string) => {
+  if (!selectedStoreId.value) {
+    return
+  }
+
+  jobsStore.removeJob(selectedStoreId.value, jobId)
+}
+
+const canStopJob = (job: { status: string; pollingState?: string }) =>
+  job.status === 'running' && job.pollingState !== 'stopped' && job.pollingState !== 'not-found'
+
+const isActivelyTrackingJob = (job: { status: string; pollingState?: string }) =>
+  job.status === 'running' && (job.pollingState ?? 'ok') === 'ok'
 
 const formatJobOutput = (value: string | null | undefined) => stripTerminalControlCodes(value)
 
@@ -476,7 +527,49 @@ const formatTimestamp = (timestamp: number) =>
   font-size: 12px;
 }
 
+.job-refresh-button.tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-stop-button,
+.job-delete-button {
+  border: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-color);
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.job-stop-button {
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.4);
+}
+
+.job-delete-button {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
 .job-refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.job-button-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: job-spin 0.8s linear infinite;
+}
+
+.job-stop-button:disabled,
+.job-delete-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -491,6 +584,10 @@ const formatTimestamp = (timestamp: number) =>
 
 .job-status-error {
   color: #dc2626;
+}
+
+.job-status-cancelled {
+  color: #b45309;
 }
 
 .job-meta {
@@ -532,6 +629,10 @@ const formatTimestamp = (timestamp: number) =>
   font-size: 0.9rem;
 }
 
+.job-polling-warning.stopped {
+  color: var(--text-faint);
+}
+
 .job-output.warning pre {
   color: #b45309;
 }
@@ -558,6 +659,16 @@ const formatTimestamp = (timestamp: number) =>
 
   .action-button {
     flex: 1 1 100%;
+  }
+}
+
+@keyframes job-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

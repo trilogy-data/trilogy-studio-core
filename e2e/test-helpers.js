@@ -33,6 +33,7 @@ async function ensureConnectionsSidebarVisible(page, connectionName) {
   const mobileMenuToggle = page.getByTestId('mobile-menu-toggle').filter({ visible: true })
   if ((await mobileMenuToggle.count()) > 0) {
     await mobileMenuToggle.first().click()
+    await page.getByTestId(`sidebar-icon-connections`).click()
     await expect(page.getByTestId(`connection-${connectionName}`).filter({ visible: true }).first()).toBeVisible()
   }
 }

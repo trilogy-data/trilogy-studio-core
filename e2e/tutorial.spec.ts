@@ -12,6 +12,24 @@ test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
 
+async function pruneTrailingQuoteIfPresent(page, expectedText) {
+  const currentText = await page.evaluate(() => {
+    const monaco = window.monaco
+    const model = monaco?.editor?.getModels?.()[0]
+    return model?.getValue?.() || ''
+  })
+
+  if (currentText !== `${expectedText}'`) {
+    return
+  }
+
+  await page.evaluate((nextText) => {
+    const monaco = window.monaco
+    const model = monaco?.editor?.getModels?.()[0]
+    model?.setValue?.(nextText)
+  }, expectedText)
+}
+
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')
   await page.getByTestId('tutorial-button').click()
@@ -21,10 +39,22 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByTestId('model-creation-submit').click()
   // Make sure the connection is active
   // on non-mobile, the sidebar will also have this testid, so filter to the visible one
-  await refreshConnection(page, 'demo-model-connection')
-  await waitForConnectionReady(page, 'demo-model-connection')
+  await page
+    .getByTestId('connect-connection-demo-model-connection')
+    .filter({ visible: true })
+    .click()
+  await page.waitForFunction(() => {
+    const element = document.querySelector('[data-testid="status-icon-demo-model-connection"]')
+    if (!element) return false
 
-  //
+    const style = window.getComputedStyle(element)
+    const backgroundColor = style.backgroundColor
+    console.log(backgroundColor)
+
+    // Check if the background color is green (in RGB format)
+    return backgroundColor === 'rgb(0, 128, 0)' || backgroundColor === '#008000'
+  })
+
   await page.getByTestId('editor-creator-add-tutorial').click()
   await page.getByTestId('editor-creator-name-tutorial').click()
   await page.getByTestId('editor-creator-name-tutorial').fill('my-first-editor')
@@ -85,10 +115,11 @@ auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
 select 
     unnest(states) as state, 
     random(state)*100 as rank 
-order by 
-    state asc;`
+  order by 
+      state asc;`
 
   await page.keyboard.type(typingQuery)
+  await pruneTrailingQuoteIfPresent(page, typingQuery)
   await page.getByTestId('editor-run-button').click()
   await waitForEditorQueryComplete(page)
 
@@ -166,8 +197,7 @@ select count(order.id) as order_count;`
   await createEditorFromConnectionList(page, 'iris-data', 'sql')
 
   // Set up the iris table
-  const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
-  if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
+ if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     return
   }
   if (isMobile) {
@@ -177,6 +207,8 @@ select count(order.id) as order_count;`
     await page.getByTestId('editor').click({ clickCount: 4 })
   }
   await page.keyboard.press('Delete')
+  const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
+  
   await page.keyboard.type(irisTableScript)
 
   await page.getByTestId('editor-run-button').click()

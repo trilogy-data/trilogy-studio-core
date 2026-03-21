@@ -1,6 +1,16 @@
 import type { GenericModelStore } from './models'
 import type { RemoteJobResponse, StoreFilesResponse } from './jobs'
 
+export class JobsServiceError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'JobsServiceError'
+    this.status = status
+  }
+}
+
 const buildAuthRequest = (
   token?: string,
   init: RequestInit = {},
@@ -24,12 +34,23 @@ const ensureOk = async (response: Response, fallback: string): Promise<Response>
 
   let detail = ''
   try {
-    detail = await response.text()
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const payload = await response.json()
+      detail =
+        typeof payload?.detail === 'string'
+          ? payload.detail
+          : typeof payload?.message === 'string'
+            ? payload.message
+            : JSON.stringify(payload)
+    } else {
+      detail = await response.text()
+    }
   } catch {
     detail = ''
   }
 
-  throw new Error(detail || fallback)
+  throw new JobsServiceError(detail || fallback, response.status)
 }
 
 export const fetchStoreFiles = async (store: GenericModelStore): Promise<StoreFilesResponse> => {
@@ -76,5 +97,20 @@ export const fetchStoreJob = async (
   )
 
   await ensureOk(response, `Failed to fetch job ${jobId}`)
+  return response.json()
+}
+
+export const cancelStoreJob = async (
+  store: GenericModelStore,
+  jobId: string,
+): Promise<RemoteJobResponse> => {
+  const response = await fetch(
+    `${store.baseUrl}/jobs/${jobId}/cancel`,
+    buildAuthRequest(store.token, {
+      method: 'POST',
+    }),
+  )
+
+  await ensureOk(response, `Failed to cancel job ${jobId}`)
   return response.json()
 }
