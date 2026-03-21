@@ -5,6 +5,10 @@ const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 const inDocker = process.env.TEST_ENV === 'docker'
 const inProd = process.env.TEST_ENV === 'prod'
 
+if (!process.env.VITE_RESOLVER_URL && !inProd) {
+  process.env.VITE_RESOLVER_URL = 'http://127.0.0.1:5678'
+}
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120000,

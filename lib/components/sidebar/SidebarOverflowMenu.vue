@@ -50,11 +50,26 @@ const emit = defineEmits<{
 const contextMenuVisible = ref(false)
 const contextMenuPosition = ref<Position>({ x: 0, y: 0 })
 
+const MENU_VIEWPORT_MARGIN = 8
+const BASE_MENU_PADDING = 6
+const MENU_ITEM_HEIGHT = 27
+const MENU_SEPARATOR_HEIGHT = 4
+
+const estimateMenuHeight = () =>
+  props.items.reduce(
+    (total, item) =>
+      total + (item.kind === 'separator' ? MENU_SEPARATOR_HEIGHT : MENU_ITEM_HEIGHT),
+    BASE_MENU_PADDING,
+  )
+
 const openOverflowMenu = (event: MouseEvent) => {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const estimatedHeight = estimateMenuHeight()
+  const maxX = Math.max(MENU_VIEWPORT_MARGIN, window.innerWidth - props.menuWidth - MENU_VIEWPORT_MARGIN)
+  const maxY = Math.max(MENU_VIEWPORT_MARGIN, window.innerHeight - estimatedHeight - MENU_VIEWPORT_MARGIN)
   contextMenuPosition.value = {
-    x: rect.right - props.menuWidth,
-    y: rect.bottom - 4,
+    x: Math.min(maxX, Math.max(MENU_VIEWPORT_MARGIN, rect.right - props.menuWidth)),
+    y: Math.min(maxY, Math.max(MENU_VIEWPORT_MARGIN, rect.bottom - 4)),
   }
   contextMenuVisible.value = true
 }

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
+import * as net from 'net'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
@@ -14,12 +15,36 @@ import {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Constants for mock server
-const MOCK_SERVER_PORT = 8100
-const MOCK_SERVER_URL = `http://localhost:${MOCK_SERVER_PORT}`
+const getAvailablePort = async (): Promise<number> =>
+  await new Promise((resolve, reject) => {
+    const server = net.createServer()
+
+    server.unref()
+    server.on('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      if (!address || typeof address === 'string') {
+        server.close(() => reject(new Error('Unable to determine mock server port')))
+        return
+      }
+
+      server.close((error) => {
+        if (error) {
+          reject(error)
+          return
+        }
+
+        resolve(address.port)
+      })
+    })
+  })
+
+const getStoreIdFromUrl = (url: string): string => url.replace(/^https?:\/\//, '').replace(/\//g, '-')
 
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
+  let mockServerUrl = ''
+  let mockStoreId = ''
 
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
@@ -52,11 +77,18 @@ test.describe('Custom Model Store', () => {
     }
 
     console.log(`Starting mock server with ${pythonExecutable}...`)
+    const mockServerPort = await getAvailablePort()
+    mockServerUrl = `http://localhost:${mockServerPort}`
+    mockStoreId = getStoreIdFromUrl(mockServerUrl)
 
     // Start the mock server
     mockServer = spawn(pythonExecutable, [serverPath], {
       cwd: path.join(projectRoot, 'pyserver'),
       stdio: 'pipe',
+      env: {
+        ...process.env,
+        MOCK_MODEL_SERVER_PORT: String(mockServerPort),
+      },
     })
 
     // Log server output
@@ -76,7 +108,7 @@ test.describe('Custom Model Store', () => {
 
       const checkServer = async () => {
         try {
-          const response = await fetch('http://localhost:8100/')
+          const response = await fetch(`${mockServerUrl}/`)
           if (response.ok) {
             clearTimeout(timeout)
             console.log('Mock server is ready!')
@@ -134,7 +166,7 @@ test.describe('Custom Model Store', () => {
 
     // Fill in store details
     await page.getByTestId('store-name-input').fill('Local Test Store')
-    await page.getByTestId('store-url-input').fill('http://localhost:8100')
+    await page.getByTestId('store-url-input').fill(mockServerUrl)
 
     // Submit the form
     await page.getByTestId('add-store-submit').click()
@@ -143,7 +175,7 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(2000)
 
     // Verify the store appears in the sidebar with a connected status
-    const storeId = 'localhost:8100'
+    const storeId = mockStoreId
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, { timeout: 10000 })
 
     // Verify the status icon shows connected (wait for fetch to complete)
@@ -254,12 +286,16 @@ test.describe('Custom Model Store', () => {
     const failedStoreId = 'localhost:9999'
     await page.waitForSelector(`[data-testid="community-${failedStoreId}"]`, { timeout: 10000 })
 
-    // Verify the store shows a failed status icon
-    await expect(page.getByTestId(`status-icon-${failedStoreId}`)).toBeVisible()
+    const failedStoreRow = page
+      .getByTestId(`community-${failedStoreId}`)
+      .filter({ visible: true })
+      .first()
+      .locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
 
-    // Check that the status icon has the failed class (red background)
-    const statusIcon = page.getByTestId(`status-icon-${failedStoreId}`)
-    await expect(statusIcon).toHaveClass(/failed/)
+    // Verify the sidebar row shows a failed status once the fetch settles.
+    const statusIcon = failedStoreRow.getByTestId(`status-icon-${failedStoreId}`).first()
+    await expect(statusIcon).toBeVisible()
+    await expect(statusIcon).toHaveClass(/failed/, { timeout: 10000 })
   })
 
   test('should allow removing a custom store', async ({ page, isMobile }) => {
@@ -280,7 +316,7 @@ test.describe('Custom Model Store', () => {
 
     // Fill in store details
     await page.getByTestId('store-name-input').fill('Temporary Store')
-    await page.getByTestId('store-url-input').fill('http://localhost:8100')
+    await page.getByTestId('store-url-input').fill(mockServerUrl)
 
     // Submit the form
     await page.getByTestId('add-store-submit').click()
@@ -289,7 +325,7 @@ test.describe('Custom Model Store', () => {
     await page.waitForTimeout(2000)
 
     // Verify the store appears
-    const storeId = 'localhost:8100'
+    const storeId = mockStoreId
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, { timeout: 10000 })
 
     // Hover over the store item to show the delete button
@@ -311,6 +347,8 @@ test.describe('Custom Model Store', () => {
 
 test.describe('Asset Auto-Import via URL', () => {
   let mockServer: ChildProcess | null = null
+  let mockServerUrl = ''
+  let mockStoreId = ''
 
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
@@ -341,10 +379,17 @@ test.describe('Asset Auto-Import via URL', () => {
     }
 
     console.log(`Starting mock server with ${pythonExecutable}...`)
+    const mockServerPort = await getAvailablePort()
+    mockServerUrl = `http://localhost:${mockServerPort}`
+    mockStoreId = getStoreIdFromUrl(mockServerUrl)
 
     mockServer = spawn(pythonExecutable, [serverPath], {
       cwd: path.join(projectRoot, 'pyserver'),
       stdio: 'pipe',
+      env: {
+        ...process.env,
+        MOCK_MODEL_SERVER_PORT: String(mockServerPort),
+      },
     })
 
     mockServer.stdout?.on('data', (data) => {
@@ -363,7 +408,7 @@ test.describe('Asset Auto-Import via URL', () => {
 
       const checkServer = async () => {
         try {
-          const response = await fetch(`${MOCK_SERVER_URL}/`)
+          const response = await fetch(`${mockServerUrl}/`)
           if (response.ok) {
             clearTimeout(timeout)
             console.log('Mock server is ready!')
@@ -405,8 +450,8 @@ test.describe('Asset Auto-Import via URL', () => {
     isMobile,
   }) => {
     // Build the auto-import URL with all parameters
-    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
-    const storeUrl = MOCK_SERVER_URL
+    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
+    const storeUrl = mockServerUrl
     const assetName = 'Example DuckDB Dashboard'
     const assetType = 'dashboard'
     const modelName = 'Example DuckDB Model'
@@ -446,14 +491,14 @@ test.describe('Asset Auto-Import via URL', () => {
     await openSidebarScreen(page, 'community-models', isMobile)
 
     // The store should now appear in the community models list
-    const storeId = 'localhost:8100'
+    const storeId = mockStoreId
     await expect(page.getByTestId(`community-${storeId}`)).toBeVisible({ timeout: 5000 })
   })
 
   test('should auto-import trilogy editor via URL', async ({ page, isMobile }) => {
     // Build the auto-import URL for a trilogy editor
-    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
-    const storeUrl = MOCK_SERVER_URL
+    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
+    const storeUrl = mockServerUrl
     const assetName = 'Example Query'
     const assetType = 'trilogy'
     const modelName = 'Example DuckDB Model'
@@ -486,8 +531,8 @@ test.describe('Asset Auto-Import via URL', () => {
 
   test('should show error for invalid asset name', async ({ page }) => {
     // Build the auto-import URL with an invalid asset name
-    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
-    const storeUrl = MOCK_SERVER_URL
+    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
+    const storeUrl = mockServerUrl
     const assetName = 'NonExistent Dashboard'
     const assetType = 'dashboard'
     const modelName = 'Example DuckDB Model'
@@ -515,7 +560,7 @@ test.describe('Asset Auto-Import via URL', () => {
 
   test('should support legacy dashboard parameter format', async ({ page }) => {
     // Build the auto-import URL using legacy 'dashboard' parameter
-    const modelUrl = `${MOCK_SERVER_URL}/models/example-duckdb.json`
+    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
     const dashboardName = 'Example DuckDB Dashboard'
     const modelName = 'Example DuckDB Model'
     const connection = 'duckdb'
