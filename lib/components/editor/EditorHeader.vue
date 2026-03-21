@@ -347,7 +347,12 @@ export default defineComponent({
   border: 1px solid var(--special-text);
 }
 
-.button-run:hover,
+.button-run:hover {
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.12);
+}
+
 .button-cancel:hover {
   filter: brightness(0.96);
 }
