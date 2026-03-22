@@ -308,6 +308,15 @@ export default defineComponent({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+@media screen and (max-width: 480px) {
+  .confirmation-dialog {
+    min-width: unset;
+    width: calc(100% - 32px);
+    max-width: calc(100% - 32px);
+    padding: 16px;
+  }
+}
+
 h3 {
   margin: 0 0 20px 0;
   color: var(--text-color);

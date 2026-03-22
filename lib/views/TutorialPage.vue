@@ -2,7 +2,7 @@
   <div v-if="currentData" class="section-header">{{ currentData.title }}</div>
   <div v-if="currentData" class="tutorial-container">
     <section id="navigation" class="tutorial-section">
-      <template v-for="paragraph in currentData.paragraphs">
+      <template v-for="paragraph in visibleParagraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
           {{ paragraph.content }}</highlight-component
         >
@@ -32,10 +32,10 @@
           testTag="tutorial"
         />
         <tutorial-prompt
-          v-else-if="paragraph.type === 'tutorial-prompts' && demoEditorCorrect"
+          v-else-if="paragraph.type === 'tutorial-prompts' && demoEditorId"
           :prompts="paragraph.data.prompts || []"
           :context="paragraph.data.context || 'main-trilogy'"
-          editorId="my-first-editor"
+          :editorId="demoEditorId"
         />
         <tutorial-function
           v-else-if="paragraph.type === 'function' && paragraph.data.function"
@@ -64,9 +64,16 @@
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
-                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. The
-            Welcome and Query Tutorial will show you how to create it.`
+                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. In the sidebar, click the "..." menu next to the connection to create it.`
             }}
+            <button
+              v-if="!demoEditorCorrect && demoConnectionCorrect"
+              class="create-for-me-btn"
+              @click="createEditorForMe"
+              data-testid="create-editor-for-me"
+            >
+              Create it for me
+            </button>
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
@@ -81,18 +88,18 @@
             }}
           </div>
         </div>
-        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorCorrect">
+        <div v-else-if="paragraph.type === 'demo-editor' && demoEditorId">
           <div class="editor-top">
             <editor
               context="main-trilogy"
-              editorId="my-first-editor"
+              :editorId="demoEditorId"
               @save-editors="saveEditorsCall"
               :containerHeight="500"
             />
           </div>
           <div class="editor-bottom">
             <results-view
-              :editorData="editorStore.editors['my-first-editor']"
+              :editorData="editorStore.editors[demoEditorId]"
               :containerHeight="500"
             />
           </div>
@@ -248,11 +255,33 @@ export default {
         this.connectionStore.connections[demoConnectionName]?.model === demoModelName
       )
     },
-    demoEditorCorrect() {
-      return (
-        this.editorStore.editors['my-first-editor'] &&
-        this.editorStore.editors['my-first-editor']?.connection === demoConnectionName
+    demoEditorId() {
+      // Always find the editor by name, not by id key
+      const editor = Object.values(this.editorStore.editors).find(
+        (e: any) => e.name === 'my-first-editor' && e.connection === demoConnectionName,
       )
+      return editor ? (editor as any).id : null
+    },
+    demoEditorCorrect() {
+      return !!this.demoEditorId
+    },
+    visibleParagraphs() {
+      if (!this.currentData) return []
+      const paragraphs = this.currentData.paragraphs
+      const result = []
+      const validatorChecks: Record<string, boolean> = {
+        'model-validator': this.demoModelCorrect,
+        'connection-validator': this.demoConnectionCorrect,
+        'editor-validator': this.demoEditorCorrect,
+      }
+      for (const paragraph of paragraphs) {
+        result.push(paragraph)
+        // If this is a validator and it's failing, stop here
+        if (paragraph.type && paragraph.type in validatorChecks && !validatorChecks[paragraph.type]) {
+          break
+        }
+      }
+      return result
     },
     currentNode() {
       if (!this.activeDocumentationKey) {
@@ -291,6 +320,10 @@ export default {
     },
     saveEditorsCall() {
       this.saveEditors()
+    },
+    createEditorForMe() {
+      this.editorStore.newEditor('my-first-editor', 'trilogy', demoConnectionName, '')
+      this.saveEditors(Object.values(this.editorStore.editors))
     },
   },
 }
@@ -344,6 +377,22 @@ export default {
 .test-result.failed {
   background-color: #ffd580;
   color: hsl(210, 100%, 50%, 0.75);
+}
+
+.create-for-me-btn {
+  margin-left: 8px;
+  padding: 4px 12px;
+  border: 1px solid hsl(210, 100%, 50%, 0.5);
+  border-radius: 4px;
+  background-color: hsl(210, 100%, 50%, 0.1);
+  color: hsl(210, 100%, 40%);
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.create-for-me-btn:hover {
+  background-color: hsl(210, 100%, 50%, 0.2);
 }
 
 @media screen and (max-width: 768px) {
