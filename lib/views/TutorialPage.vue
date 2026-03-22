@@ -277,7 +277,7 @@ export default {
       for (const paragraph of paragraphs) {
         result.push(paragraph)
         // If this is a validator and it's failing, stop here
-        if (paragraph.type in validatorChecks && !validatorChecks[paragraph.type]) {
+        if (paragraph.type && paragraph.type in validatorChecks && !validatorChecks[paragraph.type]) {
           break
         }
       }
