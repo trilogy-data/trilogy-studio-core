@@ -26,7 +26,7 @@ export const IntroTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-model-connection.',
+      'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
     ),
     new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
     new Paragraph('ModelList', '', 'model-validator'),
