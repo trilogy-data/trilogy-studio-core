@@ -64,9 +64,16 @@
             {{
               demoEditorCorrect
                 ? 'Great work: "my-first-editor" found and connected with right model ✓'
-                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. The
-            Welcome and Query Tutorial will show you how to create it.`
+                : `Almost there! "my-first-editor" not found under ${demoConnectionName} and is required to continue. In the sidebar, click the "..." menu next to the connection to create it.`
             }}
+            <button
+              v-if="!demoEditorCorrect && demoConnectionCorrect"
+              class="create-for-me-btn"
+              @click="createEditorForMe"
+              data-testid="create-editor-for-me"
+            >
+              Create it for me
+            </button>
           </div>
         </div>
         <div v-else-if="paragraph.type === 'model-validator'">
@@ -249,10 +256,13 @@ export default {
       )
     },
     demoEditorCorrect() {
-      return (
-        this.editorStore.editors['my-first-editor'] &&
-        this.editorStore.editors['my-first-editor']?.connection === demoConnectionName
+      // Check by id first, then fall back to searching by name
+      const byId = this.editorStore.editors['my-first-editor']
+      if (byId && byId.connection === demoConnectionName) return true
+      const byName = Object.values(this.editorStore.editors).find(
+        (e: any) => e.name === 'my-first-editor' && e.connection === demoConnectionName,
       )
+      return !!byName
     },
     currentNode() {
       if (!this.activeDocumentationKey) {
@@ -291,6 +301,10 @@ export default {
     },
     saveEditorsCall() {
       this.saveEditors()
+    },
+    createEditorForMe() {
+      this.editorStore.newEditor('my-first-editor', 'trilogy', demoConnectionName, '')
+      this.saveEditors(Object.values(this.editorStore.editors))
     },
   },
 }
@@ -344,6 +358,22 @@ export default {
 .test-result.failed {
   background-color: #ffd580;
   color: hsl(210, 100%, 50%, 0.75);
+}
+
+.create-for-me-btn {
+  margin-left: 8px;
+  padding: 4px 12px;
+  border: 1px solid hsl(210, 100%, 50%, 0.5);
+  border-radius: 4px;
+  background-color: hsl(210, 100%, 50%, 0.1);
+  color: hsl(210, 100%, 40%);
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.create-for-me-btn:hover {
+  background-color: hsl(210, 100%, 50%, 0.2);
 }
 
 @media screen and (max-width: 768px) {

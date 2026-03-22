@@ -26,7 +26,7 @@ export const IntroTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-connection.',
+      'Trilogy Studio has a built in model "store", containing a set of public models hosted on github. The demo model is one of those options. Let\'s get started! Search below for the demo-model, and click the import button to add it. You want to import it to a duckdb connection. Select new duckdb connection and name it demo-model-connection.',
     ),
     new Paragraph('Purpose', '<PLACEHOLDER>', 'community-models'),
     new Paragraph('ModelList', '', 'model-validator'),
@@ -54,7 +54,7 @@ export const IntroTutorial = new Article(
     ),
     new Paragraph(
       'Purpose',
-      'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. `Local` represents local storage in your browser. [Other storage, like Github, will be available in the future] Your imported model will have populated some default editors, but let\s start with a new one. Click the new button and create a Trilogy editor named "my-first-editor" associated with the demo connection.',
+      'Now that you have a connection and model set up, you can start querying in an editor. Editors are grouped by their storage, then by connection. `Local` represents local storage in your browser. [Other storage, like Github, will be available in the future] Your imported model will have populated some default editors, but let\'s start with a new one. In the sidebar, click the "..." menu next to the demo-model-connection to expand its options, then create a new Trilogy editor named "my-first-editor".',
     ),
     new Paragraph('Purpose', '', 'editors'),
     new Paragraph('Purpose', '', 'editor-validator'),

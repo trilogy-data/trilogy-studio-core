@@ -15,7 +15,7 @@ export default async function setupDemo(
   saveModels: Function,
   saveDashboards: Function,
 ) {
-  let connName = 'demo-connection'
+  let connName = 'demo-model-connection'
   let modelName = 'demo-model'
   let importAddress = 'https://trilogy-data.github.io/trilogy-public-models/studio/demo-model.json'
   let connection = new DuckDBConnection(connName, modelName)
