@@ -60,7 +60,7 @@ import { useCommunityApiStore, useJobsApiStore, useScreenNavigation } from '../.
 import { useConfirmationState } from '../useConfirmationState'
 import { KeySeparator } from '../../data/constants'
 import type { GenericModelStore } from '../../remotes/models'
-import type { JobsTreeNode, StoreDirectoryListing } from '../../remotes/jobs'
+import { buildJobsDirectoryKey, buildJobsTree, type JobsTreeNode } from '../../remotes/jobs'
 
 const props = withDefaults(
   defineProps<{
@@ -90,11 +90,17 @@ const storesWithErrors = computed(() =>
   genericStores.value.filter((store) => !!jobsStore.errors[store.id]),
 )
 
-const buildDirectoryKey = (storeId: string, directory: string) =>
-  `${storeId}${KeySeparator}directory${KeySeparator}${encodeURIComponent(directory)}`
+const expandDirectoryPath = (storeId: string, directory: string, includeSelf: boolean) => {
+  const segments = directory.split('/').filter(Boolean)
+  let currentPath = ''
 
-const buildFileKey = (storeId: string, target: string) =>
-  `${storeId}${KeySeparator}file${KeySeparator}${encodeURIComponent(target)}`
+  segments.forEach((segment, index) => {
+    currentPath = currentPath ? `${currentPath}/${segment}` : segment
+    if (includeSelf || index < segments.length - 1) {
+      collapsed.value[buildJobsDirectoryKey(storeId, currentPath)] = false
+    }
+  })
+}
 
 const expandAncestors = (key: string) => {
   const parts = key.split(KeySeparator)
@@ -102,80 +108,25 @@ const expandAncestors = (key: string) => {
     return
   }
 
-  collapsed.value[parts[0]] = false
+  const storeId = parts[0]
+  collapsed.value[storeId] = false
+
+  if (parts[1] === 'directory') {
+    expandDirectoryPath(storeId, decodeURIComponent(parts[2] || ''), true)
+    return
+  }
+
   if (parts[1] === 'file') {
     const target = decodeURIComponent(parts[2] || '')
-    if (target.includes('/')) {
-      const directory = target.split('/').slice(0, -1).join('/')
-      collapsed.value[buildDirectoryKey(parts[0], directory)] = false
+    const directory = target.split('/').slice(0, -1).join('/')
+    if (directory) {
+      expandDirectoryPath(storeId, directory, true)
     }
   }
 }
-
-const buildTreeForStore = (store: GenericModelStore): Array<JobsTreeNode & { store?: GenericModelStore }> => {
-  const tree: Array<JobsTreeNode & { store?: GenericModelStore }> = [
-    {
-      type: 'store',
-      label: store.name,
-      key: store.id,
-      indent: 0,
-      storeId: store.id,
-      store,
-    },
-  ]
-
-  if (collapsed.value[store.id]) {
-    return tree
-  }
-
-  const filesResponse = jobsStore.filesByStore[store.id]
-  const directories = filesResponse?.directories || []
-  const rootDirectory = directories.find((entry) => entry.directory === '')
-  const nestedDirectories = directories
-    .filter((entry) => entry.directory !== '')
-    .sort((left, right) => left.directory.localeCompare(right.directory))
-
-  const pushFiles = (files: string[], directory: string, indent: number) => {
-    files
-      .slice()
-      .sort((left, right) => left.localeCompare(right))
-      .forEach((fileName) => {
-        const target = directory ? `${directory}/${fileName}` : fileName
-        tree.push({
-          type: 'file',
-          label: fileName,
-          key: buildFileKey(store.id, target),
-          indent,
-          storeId: store.id,
-          target,
-        })
-      })
-  }
-
-  if (rootDirectory) {
-    pushFiles(rootDirectory.files, '', 1)
-  }
-
-  nestedDirectories.forEach((directoryEntry: StoreDirectoryListing) => {
-    const directoryKey = buildDirectoryKey(store.id, directoryEntry.directory)
-    tree.push({
-      type: 'directory',
-      label: directoryEntry.directory,
-      key: directoryKey,
-      indent: 1,
-      storeId: store.id,
-      target: directoryEntry.directory,
-    })
-
-    if (!collapsed.value[directoryKey]) {
-      pushFiles(directoryEntry.files, directoryEntry.directory, 2)
-    }
-  })
-
-  return tree
-}
-
-const displayTree = computed(() => genericStores.value.flatMap((store) => buildTreeForStore(store)))
+const displayTree = computed(() =>
+  buildJobsTree(collapsed.value, genericStores.value, jobsStore.filesByStore),
+)
 
 const handleAddStoreSubmit = async (store: GenericModelStore) => {
   try {
