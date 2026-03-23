@@ -51,10 +51,10 @@ test.describe('Custom Model Store', () => {
     await prepareTestPage(page)
   })
 
-  // Skip these tests in production and docker environments since they require a local mock server
+  // Skip these tests in production since they require local helper servers
   test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Custom store tests require local mock server, not available in production or docker environments',
+    process.env.TEST_ENV === 'prod',
+    'Custom store tests require local helper servers, not available in production',
   )
 
   // Start the mock server before all tests
@@ -353,10 +353,10 @@ test.describe('Asset Auto-Import via URL', () => {
     await prepareTestPage(page)
   })
 
-  // Skip these tests in production and docker environments since they require a local mock server
+  // Skip these tests in production since they require local helper servers
   test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Auto-import tests require local mock server, not available in production or docker environments',
+    process.env.TEST_ENV === 'prod',
+    'Auto-import tests require local helper servers, not available in production',
   )
 
   // Start the mock server before all tests
