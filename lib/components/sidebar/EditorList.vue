@@ -49,6 +49,7 @@
       :is-mobile="isMobile"
       @item-click="clickAction"
       @delete-editor="showDeleteConfirmation"
+      @refresh-store="refreshStore"
     />
 
     <ConfirmDialog
@@ -68,6 +69,8 @@
 import { inject, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { ModelConfigStoreType } from '../../stores/modelStore'
+import { useCommunityApiStore, useJobsApiStore } from '../../stores'
 import EditorCreatorInline from '../editor/EditorCreatorInline.vue'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
@@ -78,6 +81,9 @@ import { buildEditorTree } from '../../editors'
 import EditorListItem from './EditorListItem.vue'
 import ConfirmDialog from '../ConfirmDialog.vue'
 import { useConfirmationState } from '../useConfirmationState'
+import type Storage from '../../data/storage'
+import type RemoteStoreStorage from '../../data/remoteStoreStorage'
+import { removeRemoteStoreFromIde, syncRemoteStoreIntoIde } from '../../remotes/remoteStoreSync'
 
 export default {
   name: 'EditorList',
@@ -89,12 +95,20 @@ export default {
     },
   },
   setup() {
+    const communityStore = useCommunityApiStore()
+    const jobsStore = useJobsApiStore()
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const modelStore = inject<ModelConfigStoreType>('modelStore')
+    const storageSources = inject<Storage[]>('storageSources', [])
     const isMobile = inject<boolean>('isMobile', false)
-    if (!editorStore || !connectionStore) {
+    if (!editorStore || !connectionStore || !modelStore) {
       throw new Error('Editor store is not provided!')
     }
+
+    const remoteStorage = storageSources.find((source) => source.type === 'remote') as
+      | RemoteStoreStorage
+      | undefined
 
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
@@ -232,8 +246,27 @@ export default {
       editor.delete()
     })
 
+    const refreshStore = async (storeId: string) => {
+      await jobsStore.fetchFilesForStore(storeId)
+      if (!remoteStorage) {
+        return
+      }
+
+      const targetStore = communityStore.stores.find(
+        (store): store is (typeof communityStore.stores)[number] & { type: 'generic' } =>
+          store.type === 'generic' && store.id === storeId,
+      )
+      if (!targetStore) {
+        return
+      }
+
+      removeRemoteStoreFromIde(storeId, editorStore, connectionStore, modelStore)
+      await syncRemoteStoreIntoIde(remoteStorage, storeId, editorStore, connectionStore, modelStore)
+    }
+
     return {
       isMobile,
+      communityStore,
       connectionStore,
       editorStore,
       EditorTag,
@@ -250,6 +283,7 @@ export default {
       showDeleteConfirmation,
       cancelDelete,
       confirmDelete,
+      refreshStore,
     }
   },
   methods: {

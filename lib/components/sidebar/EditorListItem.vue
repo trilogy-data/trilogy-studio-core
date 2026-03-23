@@ -123,7 +123,7 @@ export default {
       default: false,
     },
   },
-  emits: ['item-click', 'delete-editor', 'toggle'],
+  emits: ['item-click', 'delete-editor', 'toggle', 'refresh-store'],
   setup(props, { emit }) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -188,6 +188,9 @@ export default {
     }
 
     const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      const isRemoteConnectionItem =
+        props.item.type === 'connection' && String(props.item.key).startsWith('c-remote-')
+
       if (props.item.type === 'editor') {
         return [
           {
@@ -199,8 +202,24 @@ export default {
         ]
       }
 
-      if (props.item.type === 'connection' || props.item.type === 'folder') {
+      if (props.item.type === 'folder') {
         return [
+          { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
+          {
+            id: 'new-trilogy',
+            label: 'New Trilogy editor',
+            icon: 'mdi-file-document-plus-outline',
+          },
+        ]
+      }
+
+      if (props.item.type === 'connection') {
+        return [
+          ...(isRemoteConnectionItem
+            ? ([
+                { id: 'refresh-store', label: 'Refresh', icon: 'mdi-refresh' },
+              ] as ContextMenuItem[])
+            : []),
           { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
           {
             id: 'new-trilogy',
@@ -237,6 +256,17 @@ export default {
         case 'delete-editor':
           this.$emit('delete-editor', this.item.editor)
           break
+        case 'refresh-store': {
+          const connection = this.connectionStore.connections[this.item.label] as
+            | ((typeof this.connectionStore.connections)[string] & {
+                remoteStoreId?: string | null
+              })
+            | undefined
+          if (connection?.remoteStoreId) {
+            this.$emit('refresh-store', connection.remoteStoreId)
+          }
+          break
+        }
         case 'new-sql':
           this.createNewEditor(
             this.item.type === 'connection' ? this.item.label : this.item.connection,

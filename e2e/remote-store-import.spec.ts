@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
+import * as fs from 'fs'
 import * as net from 'net'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -11,6 +12,7 @@ const __dirname = path.dirname(__filename)
 const TEST_TOKEN = 'abc123'
 const TEST_MODEL_NAME = 'urban_forest'
 const TEST_CONNECTION_NAME = `${TEST_MODEL_NAME}-connection`
+const TEST_SERVED_MODEL_ID = 'remote-store'
 
 const getAvailablePort = async (): Promise<number> =>
   await new Promise((resolve, reject) => {
@@ -46,36 +48,47 @@ test.describe('Remote Store Auto Import', () => {
 
   test.skip(
     process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Remote store import test requires a local Python fixture server',
+    'Remote store import test requires a local Trilogy CLI',
   )
 
   test.beforeAll(async () => {
     const projectRoot = path.join(__dirname, '..')
-    const serverPath = path.join(projectRoot, 'pyserver', 'mock_remote_store_server.py')
     const fixturePath = path.join(projectRoot, 'e2e', 'fixtures', 'remote-store')
-    const isWindows = process.platform === 'win32'
-    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
-    const pythonExecutable = isCI
-      ? 'python'
-      : isWindows
-        ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
-        : path.join(projectRoot, '.venv', 'bin', 'python')
+    const trilogyExecutableCandidates = [
+      path.join(projectRoot, '.venv', 'Scripts', 'trilogy.exe'),
+      path.join(projectRoot, '.venv', 'bin', 'trilogy'),
+      'trilogy',
+    ]
+    const trilogyExecutable =
+      trilogyExecutableCandidates.find((candidate) =>
+        candidate === 'trilogy' ? true : fs.existsSync(candidate),
+      ) ?? 'trilogy'
 
     const remoteStorePort = await getAvailablePort()
     remoteStoreUrl = `http://localhost:${remoteStorePort}`
 
-    remoteStoreServer = spawn(pythonExecutable, [serverPath], {
-      cwd: path.join(projectRoot, 'pyserver'),
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        MOCK_REMOTE_STORE_PORT: String(remoteStorePort),
-        MOCK_REMOTE_STORE_HOST: 'localhost',
-        MOCK_REMOTE_STORE_TOKEN: TEST_TOKEN,
-        MOCK_REMOTE_STORE_MODEL_NAME: 'data',
-        MOCK_REMOTE_STORE_FIXTURE: fixturePath,
+    remoteStoreServer = spawn(
+      trilogyExecutable,
+      [
+        'serve',
+        fixturePath,
+        'duckdb',
+        '--host',
+        '127.0.0.1',
+        '--port',
+        String(remoteStorePort),
+        '--no-browser',
+        '--auth-token',
+        TEST_TOKEN,
+      ],
+      {
+        cwd: projectRoot,
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+        },
       },
-    })
+    )
 
     remoteStoreServer.stdout?.on('data', (data) => {
       console.log(`Remote store server: ${data}`)
@@ -92,7 +105,12 @@ test.describe('Remote Store Auto Import', () => {
 
       const checkServer = async () => {
         try {
-          const response = await fetch(`${remoteStoreUrl}/health`)
+          const response = await fetch(`${remoteStoreUrl}/index.json`, {
+            headers: {
+              'X-Trilogy-Token': TEST_TOKEN,
+            },
+          })
+
           if (response.ok) {
             clearTimeout(timeout)
             resolve()
@@ -130,7 +148,7 @@ test.describe('Remote Store Auto Import', () => {
     const autoImportUrl =
       `#skipTips=true` +
       `&screen=asset-import` +
-      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/data.json`)}` +
+      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/${TEST_SERVED_MODEL_ID}.json`)}` +
       `&assetType=trilogy` +
       `&assetName=core_local` +
       `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
