@@ -49,8 +49,8 @@ test.describe('Remote Store Auto Import', () => {
   })
 
   test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Remote store import test requires the local Playwright lane',
+    process.env.TEST_ENV === 'prod',
+    'Remote store import test requires a local Trilogy CLI',
   )
 
   test.beforeAll(async () => {
@@ -224,9 +224,10 @@ test.describe('Remote Store Auto Import', () => {
     const newEditorLabel = (await page.getByTestId('editor-name-display').textContent()) || ''
     const newEditorName = newEditorLabel.trim()
 
+    await openSidebarScreen(page, 'editors', isMobile)
     await expect(
       page.getByTestId(`editor-c-remote-${TEST_CONNECTION_NAME}`).filter({ visible: true }).first(),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 30000 })
 
     const filesResponse = await fetch(`${remoteStoreUrl}/files`, {
       headers: {
