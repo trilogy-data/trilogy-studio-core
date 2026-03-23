@@ -25,7 +25,11 @@
           <tooltip content="Raw SQL Editor" v-if="item.editor.type === 'sql'">
             <span class="sql">SQL</span>
           </tooltip>
-          <tooltip content="Python File" class="icon-display" v-else-if="item.editor.type === 'python'">
+          <tooltip
+            content="Python File"
+            class="icon-display"
+            v-else-if="item.editor.type === 'python'"
+          >
             <i class="mdi mdi-language-python python-icon"></i>
           </tooltip>
           <tooltip content="Trilogy Editor" class="icon-display" v-else>
@@ -175,11 +179,27 @@ export default {
           editorName = `${root}/${editorName}`
         }
 
+        const connectionConfig = connectionStore.connections[connection] as
+          | {
+              storage?: string
+              remoteStoreId?: string | null
+            }
+          | undefined
+        const editorType = type === 'trilogy' ? 'preql' : type === 'python' ? 'python' : 'sql'
+        const isRemote = connectionConfig?.storage === 'remote'
+
         const editor = editorStore.newEditor(
           editorName,
-          type === 'trilogy' ? 'preql' : type === 'python' ? 'python' : 'sql',
+          editorType,
           connection,
           undefined,
+          isRemote
+            ? {
+                storage: 'remote',
+                remoteStoreId: connectionConfig?.remoteStoreId || null,
+                remotePath: editorName,
+              }
+            : undefined,
         )
 
         await saveEditors()
@@ -211,7 +231,9 @@ export default {
         return [
           { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
           ...(isRemoteFolderItem
-            ? ([{ id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' }] as ContextMenuItem[])
+            ? ([
+                { id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' },
+              ] as ContextMenuItem[])
             : []),
           {
             id: 'new-trilogy',

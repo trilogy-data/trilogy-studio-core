@@ -140,10 +140,11 @@ const useCommunityApiStore = defineStore('communityApi', {
             }
 
             if (store.type === 'generic') {
+              const existingGeneric = existing.type === 'generic' ? existing : null
               return {
                 ...store,
                 ...existing,
-                token: existing.token || store.token,
+                token: existingGeneric?.token || store.token,
               }
             }
 

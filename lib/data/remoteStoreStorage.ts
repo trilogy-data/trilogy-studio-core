@@ -30,7 +30,7 @@ import {
 } from '../editors/fileTypes'
 
 export interface RemoteStoreSnapshot {
-  editors: Record<string, EditorInterface>
+  editors: Record<string, Editor>
   connections: Record<string, Connection>
   models: Record<string, ModelConfig>
 }
@@ -197,8 +197,8 @@ export default class RemoteStoreStorage extends AbstractStorage {
     }
   }
 
-  async loadEditors(): Promise<Record<string, EditorInterface>> {
-    const editors: Record<string, EditorInterface> = {}
+  async loadEditors(): Promise<Record<string, Editor>> {
+    const editors: Record<string, Editor> = {}
     const stores = this.getGenericStores()
 
     await Promise.allSettled(

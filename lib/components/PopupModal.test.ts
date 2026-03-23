@@ -12,7 +12,9 @@ describe('PopupModal', () => {
     const wrapper = mount(PopupModal, {
       props: {
         showModal: true,
-        activeItems: [{ id: 'tip-1', title: 'Tip 1', content: 'Helpful text' }],
+        activeItems: [
+          { id: 'tip-1', title: 'Tip 1', content: 'Helpful text', category: 'onboarding' },
+        ],
       },
       attachTo: document.body,
       global: {

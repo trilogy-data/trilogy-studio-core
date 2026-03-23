@@ -458,13 +458,6 @@ const performImport = async () => {
   }
 }
 
-// Auto-import for DuckDB (no fields required)
-const autoImport = async () => {
-  if (!requiresFields.value) {
-    await performImport()
-  }
-}
-
 // Initialize auto-import
 onMounted(async () => {
   try {

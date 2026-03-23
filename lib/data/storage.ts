@@ -1,4 +1,4 @@
-import EditorInterface from '../editors/editor'
+import type { EditorInterface } from '../editors/editor'
 import { ModelConfig } from '../models'
 import { DashboardModel } from '../dashboards'
 import type Connection from '../connections/base'
