@@ -59,7 +59,7 @@ function makeProvider(options: {
 describe('QueryExecutionService', () => {
   it('executes queries through a pluggable execution provider', async () => {
     const resolver = {
-      resolve_query: vi.fn(async (...args: any[]) => ({
+      resolve_query: vi.fn(async () => ({
         data: {
           generated_sql: 'select 1 as value',
           columns: [{ name: 'value', purpose: 'metric' }],
@@ -101,7 +101,7 @@ describe('QueryExecutionService', () => {
 
   it('creates drilldown queries through provider-derived connection metadata', async () => {
     const resolver = {
-      drilldown_query: vi.fn(async (...args: any[]) => ({
+      drilldown_query: vi.fn(async () => ({
         data: {
           text: 'drilldown query',
         },
