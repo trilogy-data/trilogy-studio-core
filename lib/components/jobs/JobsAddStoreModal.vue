@@ -1,5 +1,10 @@
 <template>
-  <ModalDialog :show="show" title="Add Jobs Store" test-id="add-jobs-store-modal" @close="$emit('close')">
+  <ModalDialog
+    :show="show"
+    title="Add Jobs Store"
+    test-id="add-jobs-store-modal"
+    @close="$emit('close')"
+  >
     <template #default>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
@@ -7,9 +12,8 @@
           <input
             v-model="storeName"
             type="text"
-            placeholder="e.g., Local Trilogy Server"
+            placeholder="Optional, defaults to the store URL"
             data-testid="jobs-store-name-input"
-            required
           />
         </div>
 
@@ -54,6 +58,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { GenericModelStore } from '../../remotes/models'
+import {
+  buildGenericStoreFallbackName,
+  buildGenericStoreId,
+  normalizeGenericStoreBaseUrl,
+} from '../../remotes/genericStoreMetadata'
 import ModalDialog from '../ModalDialog.vue'
 
 const props = defineProps<{
@@ -86,16 +95,18 @@ watch(
 )
 
 const handleSubmit = () => {
-  if (!storeName.value || !baseUrl.value) {
-    error.value = 'Store name and base URL are required.'
+  if (!baseUrl.value) {
+    error.value = 'Base URL is required.'
     return
   }
 
+  const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl.value)
+
   emit('add', {
     type: 'generic',
-    id: baseUrl.value.replace(/^https?:\/\//, '').replace(/\//g, '-'),
-    name: storeName.value,
-    baseUrl: baseUrl.value.replace(/\/$/, ''),
+    id: buildGenericStoreId(normalizedBaseUrl),
+    name: storeName.value || buildGenericStoreFallbackName(normalizedBaseUrl),
+    baseUrl: normalizedBaseUrl,
     token: token.value || undefined,
   })
 }

@@ -62,6 +62,7 @@
           <div class="chat-header-controls">
             <dashboard-import-selector
               v-if="availableImportsForChat.length > 0"
+              compact
               :available-imports="availableImportsForChat"
               :active-imports="activeImportsForChat"
               @update:imports="handleImportChange"
@@ -333,7 +334,7 @@ export default defineComponent({
   gap: 12px;
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .auto-name-btn {

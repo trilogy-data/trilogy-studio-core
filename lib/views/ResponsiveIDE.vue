@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import { LocalStorage } from '../data'
+import { LocalStorage, RemoteStoreStorage } from '../data'
 import {
   useEditorStore,
   useConnectionStore,
@@ -51,8 +51,6 @@ let resolver = new TrilogyResolver(userSettingsStore)
 
 let localStorage = new LocalStorage()
 
-let contentSources = [localStorage]
-
 let store = useEditorStore()
 
 let connections = useConnectionStore()
@@ -65,8 +63,11 @@ let dashboards = useDashboardStore()
 
 let communityApiStore = useCommunityApiStore()
 let jobsApiStore = useJobsApiStore()
+let remoteStorage = new RemoteStoreStorage(communityApiStore)
 
 let chats = useChatStore()
+
+let contentSources = [localStorage, remoteStorage]
 </script>
 <!-- @ts-nocheck -->
 <template>

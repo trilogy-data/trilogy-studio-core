@@ -36,6 +36,7 @@ const tooltipContent = computed(() => {
     motherduck: 'MotherDuck',
     'bigquery-oauth': 'BigQuery',
     snowflake: 'Snowflake',
+    remote: 'Remote Project',
     default: 'Database Connection',
   }
   return typeMap[props.connectionType || 'default'] || props.connectionType || ''

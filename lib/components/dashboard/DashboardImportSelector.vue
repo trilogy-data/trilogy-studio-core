@@ -1,12 +1,13 @@
 <!-- ImportSelector.vue -->
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { type DashboardImport } from '../../dashboards/base'
 import { useClickOutside } from '../../composables/useClickOutside'
 
 export interface ImportSelectorProps {
   availableImports: DashboardImport[]
   activeImports: DashboardImport[]
+  compact?: boolean
 }
 
 const props = defineProps<ImportSelectorProps>()
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 // Show/hide dropdown
 const showDropdown = ref<boolean>(false)
 const selectorRef = ref<HTMLElement | null>(null)
+const searchQuery = ref('')
 
 // Toggle dropdown visibility
 function toggleDropdown(): void {
@@ -62,6 +64,22 @@ function exploreImport(importItem: DashboardImport): void {
 
 // Count of active imports
 const activeCount = computed((): number => props.activeImports.length)
+const filteredImports = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
+    return props.availableImports
+  }
+
+  return props.availableImports.filter((importItem) =>
+    importItem.name.toLowerCase().includes(query),
+  )
+})
+
+watch(showDropdown, (isOpen) => {
+  if (!isOpen) {
+    searchQuery.value = ''
+  }
+})
 
 useClickOutside(selectorRef, closeDropdown, {
   enabled: () => showDropdown.value,
@@ -73,7 +91,7 @@ useClickOutside(selectorRef, closeDropdown, {
     <div class="import-selector-header" @click="toggleDropdown">
       <div
         class="import-summary"
-        :class="{ 'has-imports': activeCount > 0 }"
+        :class="{ 'has-imports': activeCount > 0, compact: compact }"
         data-testid="dashboard-import-selector"
       >
         <div class="summary-content">
@@ -101,7 +119,7 @@ useClickOutside(selectorRef, closeDropdown, {
       </div>
     </div>
 
-    <div class="import-dropdown" v-if="showDropdown">
+    <div class="import-dropdown" :class="{ compact: compact }" v-if="showDropdown">
       <div class="import-dropdown-header">
         <h4>Available Data Sources</h4>
         <div class="dropdown-action-buttons">
@@ -132,9 +150,19 @@ useClickOutside(selectorRef, closeDropdown, {
         </div>
       </div>
 
+      <div class="import-search">
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="import-search-input"
+          placeholder="Search data sources..."
+          data-testid="dashboard-import-search"
+        />
+      </div>
+
       <div class="import-list">
         <div
-          v-for="importItem in availableImports"
+          v-for="importItem in filteredImports"
           :key="importItem.id"
           class="import-item"
           :class="{ active: isImportActive(importItem.id) }"
@@ -158,6 +186,9 @@ useClickOutside(selectorRef, closeDropdown, {
             </svg>
           </div>
           <div class="import-name">{{ importItem.name }}</div>
+        </div>
+        <div v-if="filteredImports.length === 0" class="import-empty-state">
+          No matching data sources
         </div>
       </div>
 
@@ -220,6 +251,7 @@ useClickOutside(selectorRef, closeDropdown, {
   flex: 0 1 260px;
   min-width: 160px;
   max-width: 260px;
+  z-index: 220;
 }
 
 .import-selector-header {
@@ -251,6 +283,13 @@ useClickOutside(selectorRef, closeDropdown, {
   -moz-appearance: none;
 }
 
+.import-summary.compact {
+  height: 28px;
+  padding: 0 10px 0 30px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 .import-summary.has-imports {
   color: var(--text-color);
 }
@@ -280,6 +319,11 @@ useClickOutside(selectorRef, closeDropdown, {
   color: var(--text-color);
 }
 
+.import-summary.compact .summary-icon {
+  left: 8px;
+  font-size: 14px;
+}
+
 .dropdown-icon {
   flex-shrink: 0;
   margin-left: 10px;
@@ -290,13 +334,17 @@ useClickOutside(selectorRef, closeDropdown, {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 100;
+  z-index: 1200;
   width: 300px;
   background-color: var(--query-window-bg);
   border: 1px solid var(--border-light);
   border-radius: 14px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   padding: 12px;
+}
+
+.import-dropdown.compact {
+  top: calc(100% + 4px);
 }
 
 .import-dropdown-header {
@@ -311,6 +359,27 @@ useClickOutside(selectorRef, closeDropdown, {
   color: var(--text-color);
   font-size: 13px;
   font-weight: 600;
+}
+
+.import-search {
+  margin-bottom: 10px;
+}
+
+.import-search-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--query-window-bg);
+  color: var(--text-color);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.import-search-input:focus {
+  border-color: var(--special-text);
 }
 
 .dropdown-action-buttons {
@@ -372,6 +441,13 @@ useClickOutside(selectorRef, closeDropdown, {
 
 .import-item.active {
   background-color: rgba(var(--special-text-rgb), 0.1);
+}
+
+.import-empty-state {
+  padding: 12px 8px;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: left;
 }
 
 .import-checkbox {

@@ -182,7 +182,7 @@ export function buildEditorTree(
     list.push({
       objectKey: storage,
       key: storageKey,
-      label: 'Browser Storage',
+      label: storage === 'remote' ? 'Remote Storage' : 'Browser Storage',
       type: 'storage',
       indent: 0,
     })

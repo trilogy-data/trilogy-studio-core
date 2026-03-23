@@ -18,13 +18,12 @@
         <!-- Generic Store Fields -->
         <template v-if="storeType === 'generic'">
           <div class="form-group">
-            <label>Store Name: <span class="required">*</span></label>
+            <label>Store Name:</label>
             <input
               v-model="storeName"
               type="text"
-              placeholder="e.g., Local Dev Store"
+              placeholder="Optional, defaults to the store URL"
               data-testid="store-name-input"
-              required
             />
           </div>
           <div class="form-group">
@@ -113,6 +112,11 @@
 <script lang="ts">
 import { ref, watch } from 'vue'
 import type { GenericModelStore, GithubModelStore } from '../../remotes/models'
+import {
+  buildGenericStoreFallbackName,
+  buildGenericStoreId,
+  normalizeGenericStoreBaseUrl,
+} from '../../remotes/genericStoreMetadata'
 import ModalDialog from '../ModalDialog.vue'
 
 export default {
@@ -161,19 +165,19 @@ export default {
 
       try {
         if (storeType.value === 'generic') {
-          if (!storeName.value || !baseUrl.value) {
+          if (!baseUrl.value) {
             error.value = 'Please fill in all required fields'
             return
           }
 
-          // Generate ID from base URL
-          const id = baseUrl.value.replace(/^https?:\/\//, '').replace(/\//g, '-')
+          const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl.value)
+          const id = buildGenericStoreId(normalizedBaseUrl)
 
           const store: GenericModelStore = {
             type: 'generic',
             id,
-            name: storeName.value,
-            baseUrl: baseUrl.value.replace(/\/$/, ''), // Remove trailing slash
+            name: storeName.value || buildGenericStoreFallbackName(normalizedBaseUrl),
+            baseUrl: normalizedBaseUrl,
           }
 
           emit('add', store)

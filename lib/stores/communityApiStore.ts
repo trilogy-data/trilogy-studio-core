@@ -8,9 +8,35 @@ import {
   DEFAULT_GITHUB_STORE,
 } from '../remotes/models'
 import { fetchFromAllStores, fetchFromStore } from '../remotes/storeService'
+import {
+  buildGenericStoreFallbackName,
+  buildGenericStoreId,
+  normalizeGenericStoreBaseUrl,
+} from '../remotes/genericStoreMetadata'
 import type { ModelConfigStoreType } from './modelStore'
 
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
+
+const applyUrlTokenDefaults = (stores: AnyModelStore[]): void => {
+  const params = new URLSearchParams(window.location.search)
+  const storeParam = params.get('store')
+  const tokenParam = params.get('token')
+
+  if (!storeParam || !tokenParam) {
+    return
+  }
+
+  const normalizedStoreUrl = normalizeGenericStoreBaseUrl(storeParam)
+  const matchingStore = stores.find(
+    (store): store is GenericModelStore =>
+      store.type === 'generic' &&
+      normalizeGenericStoreBaseUrl(store.baseUrl) === normalizedStoreUrl,
+  )
+
+  if (matchingStore && !matchingStore.token) {
+    matchingStore.token = tokenParam
+  }
+}
 
 export type StoreStatus = 'idle' | 'connected' | 'failed'
 
@@ -106,11 +132,32 @@ const useCommunityApiStore = defineStore('communityApi', {
         const stored = localStorage.getItem(STORES_STORAGE_KEY)
         if (stored) {
           const customStores: AnyModelStore[] = JSON.parse(stored)
+          const existingStoresById = new Map(this.stores.map((store) => [store.id, store]))
+          const mergedCustomStores = customStores.map((store) => {
+            const existing = existingStoresById.get(store.id)
+            if (!existing || existing.type !== store.type) {
+              return store
+            }
+
+            if (store.type === 'generic') {
+              return {
+                ...store,
+                ...existing,
+                token: existing.token || store.token,
+              }
+            }
+
+            return {
+              ...store,
+              ...existing,
+            }
+          })
           // Merge with default store, avoiding duplicates
-          const allStores = [DEFAULT_GITHUB_STORE, ...customStores]
+          const allStores = [DEFAULT_GITHUB_STORE, ...mergedCustomStores]
           const uniqueStores = allStores.filter(
             (store, index, self) => index === self.findIndex((s) => s.id === store.id),
           )
+          applyUrlTokenDefaults(uniqueStores)
           this.stores = uniqueStores
 
           // Initialize all loaded stores with 'idle' status
@@ -119,6 +166,9 @@ const useCommunityApiStore = defineStore('communityApi', {
               this.storeStatus[store.id] = 'idle'
             }
           })
+        }
+        if (!stored) {
+          applyUrlTokenDefaults(this.stores)
         }
       } catch (error) {
         console.error('Error loading stores from localStorage:', error)
@@ -264,9 +314,13 @@ const useCommunityApiStore = defineStore('communityApi', {
     async addStore(store: AnyModelStore): Promise<boolean> {
       // Validate store configuration
       if (store.type === 'generic') {
-        if (!store.baseUrl || !store.name) {
-          throw new Error('Base URL and name are required for generic stores')
+        if (!store.baseUrl) {
+          throw new Error('Base URL is required for generic stores')
         }
+
+        store.baseUrl = normalizeGenericStoreBaseUrl(store.baseUrl)
+        store.id = store.id || buildGenericStoreId(store.baseUrl)
+        store.name = store.name || buildGenericStoreFallbackName(store.baseUrl)
       } else if (store.type === 'github') {
         if (!store.owner || !store.repo || !store.branch) {
           throw new Error('Owner, repo, and branch are required for GitHub stores')
@@ -369,18 +423,18 @@ const useCommunityApiStore = defineStore('communityApi', {
       const { type, name, baseUrl, owner, repo, branch } = this.newStore
 
       if (type === 'generic') {
-        if (!name || !baseUrl) {
+        if (!baseUrl) {
           throw new Error('Please fill in all required fields')
         }
 
-        // Generate ID from base URL
-        const id = baseUrl.replace(/^https?:\/\//, '').replace(/\//g, '-')
+        const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl)
+        const id = buildGenericStoreId(normalizedBaseUrl)
 
         const store: GenericModelStore = {
           type: 'generic',
           id,
-          name,
-          baseUrl: baseUrl.replace(/\/$/, ''), // Remove trailing slash
+          name: name || buildGenericStoreFallbackName(normalizedBaseUrl),
+          baseUrl: normalizedBaseUrl,
         }
 
         await this.addStore(store)

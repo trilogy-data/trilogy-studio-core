@@ -68,7 +68,9 @@ const mockModelStore = {
 
 const mockCommunityApiStore = {
   stores: [] as any[],
-  addStore: vi.fn(),
+  addStore: vi.fn(async (store: any) => {
+    mockCommunityApiStore.stores.push(store)
+  }),
 }
 
 const mockSaveDashboards = vi.fn()
@@ -164,6 +166,9 @@ describe('AssetAutoImporter', () => {
           queryExecutionService: mockQueryExecutionService,
           saveDashboards: mockSaveDashboards,
           saveAll: mockSaveAll,
+        },
+        stubs: {
+          teleport: true,
         },
       },
     })
@@ -412,7 +417,62 @@ describe('AssetAutoImporter', () => {
         TEST_CONSTANTS.MODEL_NAME,
         TEST_CONSTANTS.MODEL_URL,
         TEST_CONSTANTS.CONNECTION_NAME,
-        TEST_CONSTANTS.SECURE_TOKEN,
+        expect.objectContaining({
+          token: TEST_CONSTANTS.SECURE_TOKEN,
+          remote: false,
+        }),
+      )
+    })
+
+    it('should pass remote import options when remote=true is provided', async () => {
+      setupSuccessfulEditorImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+
+      wrapper = await createWrapper({
+        ...createUrlParams({
+          assetType: 'trilogy',
+          assetName: TEST_CONSTANTS.EDITOR_NAME,
+        }),
+        store: TEST_CONSTANTS.STORE_URL,
+        token: TEST_CONSTANTS.SECURE_TOKEN,
+        remote: 'true',
+      })
+
+      await vi.waitFor(() => {
+        expect(mockModelImportService.importModel).toHaveBeenCalled()
+      })
+
+      expect(mockModelImportService.importModel).toHaveBeenCalledWith(
+        TEST_CONSTANTS.MODEL_NAME,
+        TEST_CONSTANTS.MODEL_URL,
+        TEST_CONSTANTS.CONNECTION_NAME,
+        expect.objectContaining({
+          token: TEST_CONSTANTS.SECURE_TOKEN,
+          remote: true,
+          remoteBaseUrl: TEST_CONSTANTS.STORE_URL,
+        }),
+      )
+    })
+
+    it('should name auto-registered remote stores from the imported model name', async () => {
+      setupSuccessfulEditorImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+
+      wrapper = await createWrapper({
+        ...createUrlParams({
+          assetType: 'trilogy',
+          assetName: TEST_CONSTANTS.EDITOR_NAME,
+        }),
+        store: TEST_CONSTANTS.STORE_URL,
+        remote: 'true',
+      })
+
+      await vi.waitFor(() => {
+        expect(mockCommunityApiStore.addStore).toHaveBeenCalled()
+      })
+
+      expect(mockCommunityApiStore.addStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: TEST_CONSTANTS.MODEL_NAME,
+        }),
       )
     })
 
@@ -500,6 +560,55 @@ describe('AssetAutoImporter', () => {
   })
 
   describe('Error Handling', () => {
+    it('should confirm before overwriting an existing model', async () => {
+      mockModelStore.models = {
+        [TEST_CONSTANTS.MODEL_NAME]: { name: TEST_CONSTANTS.MODEL_NAME },
+      }
+      setupSuccessfulDashboardImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+
+      wrapper = await createWrapper(
+        createUrlParams({
+          connection: TEST_CONSTANTS.CONNECTIONS.DUCKDB,
+        }),
+      )
+
+      expect(mockModelImportService.importModel).not.toHaveBeenCalled()
+      await vi.waitFor(() => {
+        expect((wrapper.vm as any).showOverwriteConfirmation).toBe(true)
+      })
+
+      await (wrapper.vm as any).confirmOverwrite()
+
+      await nextTick()
+      await flushPromises()
+
+      expect(mockModelImportService.importModel).toHaveBeenCalled()
+    })
+
+    it('should bail out when model overwrite is cancelled', async () => {
+      mockModelStore.models = {
+        [TEST_CONSTANTS.MODEL_NAME]: { name: TEST_CONSTANTS.MODEL_NAME },
+      }
+      setupSuccessfulDashboardImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+
+      wrapper = await createWrapper(
+        createUrlParams({
+          connection: TEST_CONSTANTS.CONNECTIONS.DUCKDB,
+        }),
+      )
+
+      await vi.waitFor(() => {
+        expect((wrapper.vm as any).showOverwriteConfirmation).toBe(true)
+      })
+      ;(wrapper.vm as any).cancelOverwrite()
+
+      await nextTick()
+      await flushPromises()
+
+      expect(mockModelImportService.importModel).not.toHaveBeenCalled()
+      expect((wrapper.vm as any).error).toContain('Import cancelled')
+    })
+
     it('should handle import errors gracefully', async () => {
       mockModelImportService.importModel.mockRejectedValue(new Error('Import failed'))
 

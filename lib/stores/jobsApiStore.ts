@@ -30,7 +30,8 @@ const toPollingKey = (storeId: string, jobId: string): string => `${storeId}::${
 
 const normalizeLoadedJob = (job: LocalStoreJob): LocalStoreJob => {
   const legacyPollingState: string | undefined = (job as { pollingState?: string }).pollingState
-  const pollingState = legacyPollingState === 'unable-to-fetch' ? 'stopped' : (job.pollingState ?? 'ok')
+  const pollingState =
+    legacyPollingState === 'unable-to-fetch' ? 'stopped' : (job.pollingState ?? 'ok')
   return {
     ...job,
     pollingState,
@@ -70,7 +71,9 @@ const useJobsApiStore = defineStore('jobsApi', {
 
     getGenericStores(): GenericModelStore[] {
       const communityStore = useCommunityApiStore()
-      return communityStore.stores.filter((store): store is GenericModelStore => store.type === 'generic')
+      return communityStore.stores.filter(
+        (store): store is GenericModelStore => store.type === 'generic',
+      )
     },
 
     getStoreJobs(storeId: string): LocalStoreJob[] {
@@ -248,7 +251,9 @@ const useJobsApiStore = defineStore('jobsApi', {
       this.stopPolling(storeId, jobId)
       delete this.pollingByJob[toPollingKey(storeId, jobId)]
       delete this.stoppingByJob[toPollingKey(storeId, jobId)]
-      this.jobsByStore[storeId] = (this.jobsByStore[storeId] || []).filter((job) => job.job_id !== jobId)
+      this.jobsByStore[storeId] = (this.jobsByStore[storeId] || []).filter(
+        (job) => job.job_id !== jobId,
+      )
       this.saveJobsToStorage()
     },
 

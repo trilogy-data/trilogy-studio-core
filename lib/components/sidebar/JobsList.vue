@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import SidebarList from './SidebarList.vue'
 import JobsListItem from './JobsListItem.vue'
 import JobsAddStoreModal from '../jobs/JobsAddStoreModal.vue'
@@ -61,6 +61,12 @@ import { useConfirmationState } from '../useConfirmationState'
 import { KeySeparator } from '../../data/constants'
 import type { GenericModelStore } from '../../remotes/models'
 import { buildJobsDirectoryKey, buildJobsTree, type JobsTreeNode } from '../../remotes/jobs'
+import type Storage from '../../data/storage'
+import type RemoteStoreStorage from '../../data/remoteStoreStorage'
+import type { EditorStoreType } from '../../stores/editorStore'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { ModelConfigStoreType } from '../../stores/modelStore'
+import { removeRemoteStoreFromIde, syncRemoteStoreIntoIde } from '../../remotes/remoteStoreSync'
 
 const props = withDefaults(
   defineProps<{
@@ -78,8 +84,16 @@ const emit = defineEmits<{
 const communityStore = useCommunityApiStore()
 const jobsStore = useJobsApiStore()
 const navigationStore = useScreenNavigation()
+const storageSources = inject<Storage[]>('storageSources', [])
+const editorStore = inject<EditorStoreType>('editorStore')
+const connectionStore = inject<ConnectionStoreType>('connectionStore')
+const modelStore = inject<ModelConfigStoreType>('modelStore')
 const collapsed = ref<Record<string, boolean>>({})
 const showAddStoreModal = ref(false)
+
+const remoteStorage = computed(
+  () => storageSources.find((source) => source.type === 'remote') as RemoteStoreStorage | undefined,
+)
 
 const genericStores = computed(() =>
   communityStore.stores.filter((store): store is GenericModelStore => store.type === 'generic'),
@@ -132,6 +146,15 @@ const handleAddStoreSubmit = async (store: GenericModelStore) => {
   try {
     await communityStore.addStore(store)
     await jobsStore.fetchFilesForStore(store.id)
+    if (remoteStorage.value && editorStore && connectionStore && modelStore) {
+      await syncRemoteStoreIntoIde(
+        remoteStorage.value,
+        store.id,
+        editorStore,
+        connectionStore,
+        modelStore,
+      )
+    }
     collapsed.value[store.id] = false
     showAddStoreModal.value = false
   } catch (error) {
@@ -145,6 +168,9 @@ const {
   closeConfirmation: cancelDeleteStore,
   confirm: confirmDeleteStore,
 } = useConfirmationState<GenericModelStore>((store) => {
+  if (editorStore && connectionStore && modelStore) {
+    removeRemoteStoreFromIde(store.id, editorStore, connectionStore, modelStore)
+  }
   communityStore.removeStore(store.id)
   jobsStore.clearStoreData(store.id)
 })

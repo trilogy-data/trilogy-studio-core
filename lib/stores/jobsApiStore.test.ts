@@ -73,6 +73,14 @@ describe('jobsApiStore', () => {
       .mockResolvedValueOnce(
         jsonResponse(
           {
+            models: [],
+          },
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
             directories: [{ directory: '', files: ['analytics.preql'] }],
           },
           { status: 200 },
@@ -124,9 +132,9 @@ describe('jobsApiStore', () => {
   })
 
   it('stops polling on 404 job not found', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      jsonResponse({ detail: 'Job not found' }, { status: 404 }),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Job not found' }, { status: 404 }))
     vi.stubGlobal('fetch', fetchMock)
 
     const communityStore = useCommunityApiStore()

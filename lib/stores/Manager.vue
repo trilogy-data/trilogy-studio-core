@@ -480,7 +480,7 @@ const saveConnections = async () => {
     await source.saveConnections(
       // @ts-ignore
       Object.values(props.connectionStore.connections).filter(
-        (connection) => (connection.storage = source.type),
+        (connection) => connection.storage == source.type,
       ),
     )
   }

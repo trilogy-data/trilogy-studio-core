@@ -49,6 +49,35 @@ export interface EditorInterface {
   chartConfig?: ChartConfig | null
   refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
+  remoteStoreId?: string | null
+  remotePath?: string | null
+  remoteOriginalPath?: string | null
+  remotePersisted?: boolean
+}
+
+const defaultRemoteExtension = (type: EditorInterface['type']): '.preql' | '.sql' => {
+  switch (type) {
+    case 'sql':
+      return '.sql'
+    default:
+      return '.preql'
+  }
+}
+
+export const normalizeRemoteEditorPath = (
+  name: string,
+  type: EditorInterface['type'],
+): string => {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return trimmed
+  }
+
+  if (/\.(preql|sql|csv)$/i.test(trimmed)) {
+    return trimmed
+  }
+
+  return `${trimmed}${defaultRemoteExtension(type)}`
 }
 
 export default class Editor implements EditorInterface {
@@ -75,6 +104,10 @@ export default class Editor implements EditorInterface {
   completionSymbols: CompletionItem[]
   refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
+  remoteStoreId?: string | null
+  remotePath?: string | null
+  remoteOriginalPath?: string | null
+  remotePersisted?: boolean
 
   defaultContents(type: string) {
     switch (type) {
@@ -94,6 +127,10 @@ export default class Editor implements EditorInterface {
     storage,
     contents = null,
     tags = null,
+    remoteStoreId = null,
+    remotePath = null,
+    remoteOriginalPath = null,
+    remotePersisted = false,
   }: {
     id: string
     name: string
@@ -102,9 +139,13 @@ export default class Editor implements EditorInterface {
     storage: string
     contents?: string | null
     tags?: EditorTag[] | null
+    remoteStoreId?: string | null
+    remotePath?: string | null
+    remoteOriginalPath?: string | null
+    remotePersisted?: boolean
   }) {
     this.id = id
-    this.name = name
+    this.name = storage === 'remote' ? normalizeRemoteEditorPath(name, type) : name
     this.type = type
     this.syntax = 'preql'
     this.connection = connection
@@ -124,6 +165,13 @@ export default class Editor implements EditorInterface {
     this.changed = true
     this.deleted = false
     this.completionSymbols = []
+    this.remoteStoreId = remoteStoreId
+    this.remotePath =
+      storage === 'remote'
+        ? normalizeRemoteEditorPath(remotePath || this.name, type)
+        : remotePath
+    this.remoteOriginalPath = remoteOriginalPath
+    this.remotePersisted = remotePersisted
   }
 
   getAutocomplete(word: string): CompletionItem[] {
@@ -147,11 +195,19 @@ export default class Editor implements EditorInterface {
   }
 
   setName(name: string) {
-    if (this.name === name) {
+    const nextName = this.storage === 'remote' ? normalizeRemoteEditorPath(name, this.type) : name
+    if (this.name === nextName) {
       return // No change, do nothing
     }
     this.changed = true
-    this.name = name
+    if (this.storage === 'remote') {
+      const currentRemotePath = this.remotePath || this.name
+      if (!this.remoteOriginalPath && this.remotePersisted && currentRemotePath !== nextName) {
+        this.remoteOriginalPath = currentRemotePath
+      }
+      this.remotePath = nextName
+    }
+    this.name = nextName
   }
 
   addTag(tag: EditorTag) {
@@ -211,6 +267,10 @@ export default class Editor implements EditorInterface {
       storage: this.storage,
       tags: this.tags,
       chartConfig: this.chartConfig,
+      remoteStoreId: this.remoteStoreId,
+      remotePath: this.remotePath,
+      remoteOriginalPath: this.remoteOriginalPath,
+      remotePersisted: this.remotePersisted,
     }
   }
 
@@ -224,6 +284,10 @@ export default class Editor implements EditorInterface {
       connection: parsed.connection || '',
       storage: parsed.storage || 'local',
       contents: parsed.contents || null,
+      remoteStoreId: parsed.remoteStoreId || null,
+      remotePath: parsed.remotePath || null,
+      remoteOriginalPath: parsed.remoteOriginalPath || null,
+      remotePersisted: parsed.remotePersisted || false,
     })
 
     // Hydrate additional properties
@@ -247,6 +311,10 @@ export default class Editor implements EditorInterface {
           .filter((tag): tag is EditorTag => tag !== null)
       : []
     editor.chartConfig = parsed.chartConfig || undefined
+    editor.remoteStoreId = parsed.remoteStoreId || null
+    editor.remotePath = parsed.remotePath || null
+    editor.remoteOriginalPath = parsed.remoteOriginalPath || null
+    editor.remotePersisted = parsed.remotePersisted || false
     return editor
   }
 }

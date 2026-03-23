@@ -1,10 +1,12 @@
 import { Editor, EditorTag } from '../editors'
+import { normalizeRemoteEditorPath } from '../editors/editor'
 import { ModelImport } from './import'
 import { ModelSource } from './model'
 import { type EditorStoreType } from '../stores/editorStore'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
+import { normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
 
 export interface ImportOutput {
   dashboards: Map<string, string>
@@ -17,7 +19,15 @@ interface ComponentData {
   alias: string
   purpose: EditorTag | null
   content: string
+  url: string
   type?: 'sql' | 'dashboard' | 'trilogy'
+}
+
+export interface ModelImportOptions {
+  token?: string
+  remote?: boolean
+  remoteStoreId?: string | null
+  remoteBaseUrl?: string | null
 }
 
 export class ModelImportService {
@@ -86,7 +96,10 @@ export class ModelImportService {
    * @param modelImport Model import definition
    * @returns Promise resolving to array of component details
    */
-  public async fetchModelImports(modelImport: ModelImport, token?: string): Promise<ComponentData[]> {
+  public async fetchModelImports(
+    modelImport: ModelImport,
+    token?: string,
+  ): Promise<ComponentData[]> {
     const results = await Promise.all(
       modelImport.components.map(async (component): Promise<ComponentData | null> => {
         if (component.purpose === 'data') {
@@ -104,6 +117,7 @@ export class ModelImportService {
             alias: component.alias,
             purpose: this.purposeToTag(component.purpose),
             content,
+            url: component.url,
             type: component.type as 'sql' | 'dashboard' | 'trilogy',
           }
         } catch (error) {
@@ -113,6 +127,7 @@ export class ModelImportService {
             alias: component.alias,
             purpose: this.purposeToTag(component.purpose),
             content: '', // Return empty content on failure
+            url: component.url,
             type: component.type as 'sql' | 'dashboard' | 'trilogy',
           }
         }
@@ -126,19 +141,92 @@ export class ModelImportService {
   /**
    * Creates or updates an editor for a component
    */
-  private createOrUpdateEditor(component: ComponentData, connectionName: string): Editor {
+  private getRemoteEditorPath(component: ComponentData): string {
+    const editorType = component.type === 'sql' ? 'sql' : 'preql'
+
+    if (component.name?.trim()) {
+      return normalizeRemoteEditorPath(component.name, editorType)
+    }
+
+    if (component.url?.trim()) {
+      try {
+        const componentUrl = new URL(component.url)
+        const fileName = decodeURIComponent(
+          componentUrl.pathname.split('/').filter(Boolean).pop() || '',
+        )
+        return normalizeRemoteEditorPath(fileName, editorType)
+      } catch {
+        return normalizeRemoteEditorPath(component.url, editorType)
+      }
+    }
+
+    return normalizeRemoteEditorPath('untitled', editorType)
+  }
+
+  private resolveRemotePath(
+    component: ComponentData,
+    remoteBaseUrl?: string | null,
+  ): string | null {
+    if (component.name?.trim()) {
+      return this.getRemoteEditorPath(component)
+    }
+
+    if (!remoteBaseUrl) {
+      return null
+    }
+
+    try {
+      const normalizedBaseUrl = `${normalizeGenericStoreBaseUrl(remoteBaseUrl)}/`
+      const baseUrl = new URL(normalizedBaseUrl)
+      const componentUrl = new URL(component.url, baseUrl)
+
+      if (
+        componentUrl.origin !== baseUrl.origin ||
+        !componentUrl.pathname.startsWith(baseUrl.pathname)
+      ) {
+        return null
+      }
+
+      const relativePath = componentUrl.pathname.slice(baseUrl.pathname.length)
+      return decodeURIComponent(relativePath)
+    } catch {
+      return null
+    }
+  }
+
+  private createOrUpdateEditor(
+    component: ComponentData,
+    connectionName: string,
+    options: ModelImportOptions = {},
+  ): Editor {
+    const remotePath = options.remote
+      ? this.resolveRemotePath(component, options.remoteBaseUrl)
+      : null
+    const editorName = options.remote ? remotePath || component.name : component.name
     const existing = Object.values(this.editorStore.editors).find(
-      (editor) => editor.name === component.name && editor.connection === connectionName,
+      (editor) =>
+        editor.name === editorName &&
+        editor.connection === connectionName &&
+        (!options.remote ||
+          (editor.storage === 'remote' &&
+            editor.remoteStoreId === (options.remoteStoreId || null))),
     )
 
     let editor: Editor
     if (!existing) {
       const editorType = component.type === 'sql' ? 'sql' : 'trilogy'
       editor = this.editorStore.newEditor(
-        component.name,
+        editorName,
         editorType,
         connectionName,
         component.content,
+        options.remote
+          ? {
+              storage: 'remote',
+              remoteStoreId: options.remoteStoreId || null,
+              remotePath: remotePath || editorName,
+            }
+          : {},
       )
     } else {
       editor = existing
@@ -148,6 +236,12 @@ export class ModelImportService {
     // Add purpose as a tag if not already present
     if (component.purpose && !editor.tags.includes(component.purpose)) {
       this.editorStore.editors[editor.id].tags.push(component.purpose)
+    }
+
+    if (options.remote) {
+      editor.remotePersisted = true
+      editor.remoteOriginalPath = null
+      editor.changed = false
     }
 
     return editor
@@ -216,7 +310,7 @@ export class ModelImportService {
     modelName: string,
     importAddress: string,
     connectionName: string,
-    token?: string,
+    options: ModelImportOptions = {},
   ): Promise<ImportOutput | null> {
     if (!importAddress) {
       return null
@@ -227,8 +321,8 @@ export class ModelImportService {
     const trilogy = new Map<string, string>()
 
     try {
-      const modelImportBase = await this.fetchModelImportBase(importAddress, token)
-      const components = await this.fetchModelImports(modelImportBase, token)
+      const modelImportBase = await this.fetchModelImportBase(importAddress, options.token)
+      const components = await this.fetchModelImports(modelImportBase, options.token)
 
       // Separate components by type
       const editorComponents = components.filter((c) => c.type === 'sql' || c.type === 'trilogy')
@@ -240,13 +334,13 @@ export class ModelImportService {
       for (const component of editorComponents) {
         console.log(`Processing editor: ${component.name}`)
 
-        const editor = this.createOrUpdateEditor(component, connectionName)
+        const editor = this.createOrUpdateEditor(component, connectionName, options)
 
         // Track components by type
         if (component.type === 'sql') {
-          sql.set(component.name, component.name)
+          sql.set(component.name, editor.name)
         } else if (component.type === 'trilogy') {
-          trilogy.set(component.name, component.name)
+          trilogy.set(component.name, editor.name)
           // Only trilogy components become model sources
           modelSources.push(new ModelSource(editor.id, component.alias || component.name, [], []))
         }
@@ -260,6 +354,7 @@ export class ModelImportService {
 
       // Update model sources
       this.modelStore.models[modelName].sources = modelSources
+      this.modelStore.models[modelName].storage = options.remote ? 'remote' : 'local'
       this.modelStore.models[modelName].changed = true
 
       return {

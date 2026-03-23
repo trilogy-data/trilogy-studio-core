@@ -1,0 +1,5 @@
+datasource core_local (
+    tree_id
+)
+grain (tree_id)
+address city_trees;
