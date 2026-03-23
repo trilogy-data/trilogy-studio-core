@@ -180,8 +180,7 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
                     imp_string = f"import {resolve_import_path(imp.name, query.current_filename)};\n"
                 base_imp_string += imp_string
             base = get_diagnostics(
-                base_imp_string
-                + normalize_relative_imports(query.query, query.current_filename),
+                base_imp_string + query.query,
                 query.sources,
                 current_filename=query.current_filename,
             )

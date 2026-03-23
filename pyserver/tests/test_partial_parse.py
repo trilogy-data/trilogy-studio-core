@@ -1,5 +1,8 @@
 from diagnostics import get_diagnostics
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from io_models import ModelInSchema, ModelSourceInSchema, ValidateQueryInSchema
+from studio_endpoints import create_trilogy_router
 
 
 def test_get_diagnostics():
@@ -89,3 +92,68 @@ def test_partial_parse_broken():
 
     diagnostics = get_diagnostics(model.query, model.sources)
     assert len(diagnostics.imports) == 0
+
+
+def test_relative_import_diagnostics_with_current_filename():
+    model = ValidateQueryInSchema.model_validate(
+        {
+            "query": "import ..base_import;\n\n\n\n\nselect test;",
+            "sources": [
+                {
+                    "alias": "base_import",
+                    "contents": "auto test <- [1,2,3,4];",
+                },
+                {
+                    "alias": "nest/child",
+                    "contents": "import ..base_import;\n\n\n\n\nselect test;",
+                },
+            ],
+            "imports": [],
+            "extra_filters": [],
+            "extra_content": {},
+            "current_filename": "nest/child.preql",
+        }
+    )
+
+    diagnostics = get_diagnostics(
+        model.query,
+        model.sources,
+        current_filename=model.current_filename,
+    )
+
+    assert diagnostics.items == []
+    assert diagnostics.imports[0].name == "base_import"
+    assert any(item.label == "test" for item in diagnostics.completion_items)
+
+
+def test_validate_query_endpoint_resolves_relative_import_once():
+    app = FastAPI()
+    app.include_router(create_trilogy_router())
+    client = TestClient(app)
+
+    response = client.post(
+        "/validate_query",
+        json={
+            "query": "import ..base_import;\n\n\n\n\nselect test;",
+            "sources": [
+                {
+                    "alias": "base_import",
+                    "contents": "auto test <- [1,2,3,4];",
+                },
+                {
+                    "alias": "nest/child",
+                    "contents": "import ..base_import;\n\n\n\n\nselect test;",
+                },
+            ],
+            "imports": [],
+            "extra_filters": [],
+            "extra_content": {},
+            "current_filename": "nest/child.preql",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"] == []
+    assert payload["imports"][0]["name"] == "base_import"
+    assert any(item["label"] == "test" for item in payload["completion_items"])
