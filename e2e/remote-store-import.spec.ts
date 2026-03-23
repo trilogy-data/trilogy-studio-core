@@ -38,7 +38,14 @@ const getAvailablePort = async (): Promise<number> =>
     })
   })
 
-test.describe('Remote Store Auto Import', () => {
+const shouldSkipRemoteStoreImportTests =
+  process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker'
+
+const remoteStoreImportDescribe = shouldSkipRemoteStoreImportTests
+  ? test.describe.skip
+  : test.describe
+
+remoteStoreImportDescribe('Remote Store Auto Import', () => {
   let remoteStoreServer: ChildProcess | null = null
   let remoteStoreUrl = ''
   let tempFixturePath = ''
@@ -47,11 +54,6 @@ test.describe('Remote Store Auto Import', () => {
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
-
-  test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Remote store import test requires the local Playwright lane',
-  )
 
   test.beforeAll(async () => {
     const projectRoot = path.join(__dirname, '..')

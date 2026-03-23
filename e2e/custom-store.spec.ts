@@ -42,7 +42,12 @@ const getAvailablePort = async (): Promise<number> =>
 const getStoreIdFromUrl = (url: string): string =>
   url.replace(/^https?:\/\//, '').replace(/\//g, '-')
 
-test.describe('Custom Model Store', () => {
+const shouldSkipCustomStoreTests =
+  process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker'
+
+const customStoreDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
+
+customStoreDescribe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
   let mockServerUrl = ''
   let mockStoreId = ''
@@ -50,13 +55,6 @@ test.describe('Custom Model Store', () => {
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
-
-  // Skip these tests in production and docker since they require helper servers
-  // plus browser flows that are currently only stable in the local lane.
-  test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Custom store tests require the local Playwright lane',
-  )
 
   // Start the mock server before all tests
   test.beforeAll(async () => {
