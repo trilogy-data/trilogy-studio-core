@@ -343,7 +343,9 @@ customStoreDescribe('Custom Model Store', () => {
   })
 })
 
-test.describe('Asset Auto-Import via URL', () => {
+const autoImportDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
+
+autoImportDescribe('Asset Auto-Import via URL', () => {
   let mockServer: ChildProcess | null = null
   let mockServerUrl = ''
   let mockStoreId = ''
@@ -351,12 +353,6 @@ test.describe('Asset Auto-Import via URL', () => {
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
-
-  // Skip these tests in production since they require local helper servers
-  test.skip(
-    process.env.TEST_ENV === 'prod',
-    'Auto-import tests require local helper servers, not available in production',
-  )
 
   // Start the mock server before all tests
   test.beforeAll(async () => {
