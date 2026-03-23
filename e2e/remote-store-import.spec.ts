@@ -49,8 +49,8 @@ test.describe('Remote Store Auto Import', () => {
   })
 
   test.skip(
-    process.env.TEST_ENV === 'prod',
-    'Remote store import test requires a local Trilogy CLI',
+    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
+    'Remote store import test requires the local Playwright lane',
   )
 
   test.beforeAll(async () => {

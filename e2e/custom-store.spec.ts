@@ -51,10 +51,11 @@ test.describe('Custom Model Store', () => {
     await prepareTestPage(page)
   })
 
-  // Skip these tests in production since they require local helper servers
+  // Skip these tests in production and docker since they require helper servers
+  // plus browser flows that are currently only stable in the local lane.
   test.skip(
-    process.env.TEST_ENV === 'prod',
-    'Custom store tests require local helper servers, not available in production',
+    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
+    'Custom store tests require the local Playwright lane',
   )
 
   // Start the mock server before all tests
