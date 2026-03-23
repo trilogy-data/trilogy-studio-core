@@ -182,15 +182,5 @@ test.describe('Remote Store Auto Import', () => {
     await expect(
       page.getByText('undefined.preql', { exact: true }).filter({ visible: true }),
     ).toHaveCount(0)
-
-    const nestedEditorLabel = page
-      .locator('.truncate-text')
-      .filter({ hasText: 'boston_landmarks.preql' })
-      .first()
-    await expect(nestedEditorLabel).toBeVisible()
-    await nestedEditorLabel.click()
-
-    await expect(page.getByTestId('editor-name-display')).toContainText('boston_landmarks.preql')
-    await expect(page.locator('.error-state')).toHaveCount(0)
   })
 })

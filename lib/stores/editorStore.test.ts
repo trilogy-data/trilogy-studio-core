@@ -38,4 +38,17 @@ describe('editorStore', () => {
     expect(first.id).toBe('remote:store-a:raw%2Fcore.preql')
     expect(second.id).toBe('remote:store-a:raw%2Fcore.preql#1')
   })
+
+  it('normalizes remote python editor paths with a .py suffix', () => {
+    const editorStore = useEditorStore()
+
+    const editor = editorStore.newEditor('raw/loaders/boston_loader', 'python', 'conn-a', '', {
+      storage: 'remote',
+      remoteStoreId: 'store-a',
+    })
+
+    expect(editor.name).toBe('raw/loaders/boston_loader.py')
+    expect(editor.remotePath).toBe('raw/loaders/boston_loader.py')
+    expect(editor.id).toBe('remote:store-a:raw%2Floaders%2Fboston_loader.py')
+  })
 })

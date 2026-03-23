@@ -5,7 +5,7 @@ import { Results } from '../editors/results'
 import type { ChartConfig } from '../editors/results'
 import { EditorTag } from '../editors'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
-import { normalizeRemoteEditorPath } from '../editors/editor'
+import { normalizeRemoteEditorPath, type EditorType } from '../editors/editor'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import useConnectionStore from './connectionStore'
@@ -79,7 +79,7 @@ const useEditorStore = defineStore('editors', {
   actions: {
     newEditor(
       name: string,
-      type: 'trilogy' | 'sql' | 'preql',
+      type: EditorType,
       connection: string,
       contents: string | undefined,
       options: {

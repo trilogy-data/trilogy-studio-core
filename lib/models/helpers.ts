@@ -7,11 +7,13 @@ import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
 import { normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
+import type { EditorType } from '../editors/editor'
 
 export interface ImportOutput {
   dashboards: Map<string, string>
   sql: Map<string, string>
   trilogy: Map<string, string>
+  python: Map<string, string>
 }
 
 interface ComponentData {
@@ -20,7 +22,7 @@ interface ComponentData {
   purpose: EditorTag | null
   content: string
   url: string
-  type?: 'sql' | 'dashboard' | 'trilogy'
+  type?: 'sql' | 'dashboard' | 'trilogy' | 'python'
 }
 
 export interface ModelImportOptions {
@@ -118,7 +120,7 @@ export class ModelImportService {
             purpose: this.purposeToTag(component.purpose),
             content,
             url: component.url,
-            type: component.type as 'sql' | 'dashboard' | 'trilogy',
+            type: component.type as 'sql' | 'dashboard' | 'trilogy' | 'python',
           }
         } catch (error) {
           console.error(`Error fetching component ${component.name}:`, error)
@@ -128,7 +130,7 @@ export class ModelImportService {
             purpose: this.purposeToTag(component.purpose),
             content: '', // Return empty content on failure
             url: component.url,
-            type: component.type as 'sql' | 'dashboard' | 'trilogy',
+            type: component.type as 'sql' | 'dashboard' | 'trilogy' | 'python',
           }
         }
       }),
@@ -141,8 +143,20 @@ export class ModelImportService {
   /**
    * Creates or updates an editor for a component
    */
+  private getComponentEditorType(component: ComponentData): EditorType {
+    switch (component.type) {
+      case 'sql':
+        return 'sql'
+      case 'python':
+        return 'python'
+      case 'trilogy':
+      default:
+        return 'preql'
+    }
+  }
+
   private getRemoteEditorPath(component: ComponentData): string {
-    const editorType = component.type === 'sql' ? 'sql' : 'preql'
+    const editorType = this.getComponentEditorType(component)
 
     if (component.name?.trim()) {
       return normalizeRemoteEditorPath(component.name, editorType)
@@ -214,7 +228,7 @@ export class ModelImportService {
 
     let editor: Editor
     if (!existing) {
-      const editorType = component.type === 'sql' ? 'sql' : 'trilogy'
+      const editorType = this.getComponentEditorType(component)
       editor = this.editorStore.newEditor(
         editorName,
         editorType,
@@ -319,13 +333,16 @@ export class ModelImportService {
     const dashboards = new Map<string, string>()
     const sql = new Map<string, string>()
     const trilogy = new Map<string, string>()
+    const python = new Map<string, string>()
 
     try {
       const modelImportBase = await this.fetchModelImportBase(importAddress, options.token)
       const components = await this.fetchModelImports(modelImportBase, options.token)
 
       // Separate components by type
-      const editorComponents = components.filter((c) => c.type === 'sql' || c.type === 'trilogy')
+      const editorComponents = components.filter(
+        (c) => c.type === 'sql' || c.type === 'trilogy' || c.type === 'python',
+      )
       const dashboardComponents = components.filter((c) => c.type === 'dashboard')
 
       // Phase 1: Create/update all editors first
@@ -343,6 +360,8 @@ export class ModelImportService {
           trilogy.set(component.name, editor.name)
           // Only trilogy components become model sources
           modelSources.push(new ModelSource(editor.id, component.alias || component.name, [], []))
+        } else if (component.type === 'python') {
+          python.set(component.name, editor.name)
         }
       }
 
@@ -361,6 +380,7 @@ export class ModelImportService {
         dashboards,
         sql,
         trilogy,
+        python,
       }
     } catch (error) {
       console.error('Error importing model:', error)

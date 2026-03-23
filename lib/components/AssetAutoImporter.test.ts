@@ -184,6 +184,7 @@ describe('AssetAutoImporter', () => {
       dashboards: new Map([[TEST_CONSTANTS.DASHBOARD_NAME, TEST_CONSTANTS.DASHBOARD_NAME]]),
       trilogy: new Map(),
       sql: new Map(),
+      python: new Map(),
     })
 
     const connectionName = TEST_CONSTANTS.CONNECTION_NAME
@@ -202,6 +203,7 @@ describe('AssetAutoImporter', () => {
       dashboards: new Map(),
       trilogy: new Map([[TEST_CONSTANTS.EDITOR_NAME, TEST_CONSTANTS.EDITOR_NAME]]),
       sql: new Map(),
+      python: new Map(),
     })
 
     const connectionName = TEST_CONSTANTS.CONNECTION_NAME
@@ -635,6 +637,7 @@ describe('AssetAutoImporter', () => {
         dashboards: new Map(),
         trilogy: new Map(),
         sql: new Map(),
+        python: new Map(),
       })
 
       const connectionName = TEST_CONSTANTS.CONNECTION_NAME

@@ -23,18 +23,16 @@ import {
   buildGenericStoreModelName,
   buildGenericStoreResourceName,
 } from '../remotes/genericStoreMetadata'
+import {
+  getEditorTypeForPath,
+  getFileExtension,
+  supportsEditorSourceTag,
+} from '../editors/fileTypes'
 
 export interface RemoteStoreSnapshot {
   editors: Record<string, EditorInterface>
   connections: Record<string, Connection>
   models: Record<string, ModelConfig>
-}
-
-const SUPPORTED_EDITOR_EXTENSIONS = new Set(['.preql', '.sql'])
-
-const getFileExtension = (path: string): string => {
-  const dotIndex = path.lastIndexOf('.')
-  return dotIndex === -1 ? '' : path.slice(dotIndex).toLowerCase()
 }
 
 const pathWithoutExtension = (path: string): string => path.replace(/\.[^.]+$/, '')
@@ -43,17 +41,6 @@ const flattenStoreFileTargets = (directories: { directory: string; files: string
   directories.flatMap((entry) =>
     entry.files.map((fileName) => (entry.directory ? `${entry.directory}/${fileName}` : fileName)),
   )
-
-const toEditorType = (path: string): 'preql' | 'sql' | null => {
-  const extension = getFileExtension(path)
-  if (extension === '.preql') {
-    return 'preql'
-  }
-  if (extension === '.sql') {
-    return 'sql'
-  }
-  return null
-}
 
 export default class RemoteStoreStorage extends AbstractStorage {
   public type: string
@@ -106,9 +93,7 @@ export default class RemoteStoreStorage extends AbstractStorage {
     const modelName = buildGenericStoreModelName(store)
 
     const targets = flattenStoreFileTargets(filesResponse.directories)
-    const editorTargets = targets.filter((path) =>
-      SUPPORTED_EDITOR_EXTENSIONS.has(getFileExtension(path)),
-    )
+    const editorTargets = targets.filter((path) => getEditorTypeForPath(path) !== null)
 
     const contentsByPath = await Promise.all(
       editorTargets.map(async (path) => ({
@@ -118,7 +103,7 @@ export default class RemoteStoreStorage extends AbstractStorage {
     )
 
     contentsByPath.forEach(({ path, content }) => {
-      const type = toEditorType(path)
+      const type = getEditorTypeForPath(path)
       if (!type) {
         return
       }
@@ -131,7 +116,7 @@ export default class RemoteStoreStorage extends AbstractStorage {
           connection: connectionName,
           storage: 'remote',
           contents: content,
-          tags: type === 'preql' ? [EditorTag.SOURCE] : [],
+          tags: supportsEditorSourceTag(type) ? [EditorTag.SOURCE] : [],
           remoteStoreId: store.id,
           remotePath: path,
           remotePersisted: true,

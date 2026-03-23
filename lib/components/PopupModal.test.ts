@@ -14,6 +14,7 @@ describe('PopupModal', () => {
         showModal: true,
         activeItems: [{ id: 'tip-1', title: 'Tip 1', content: 'Helpful text' }],
       },
+      attachTo: document.body,
       global: {
         provide: {
           userSettingsStore: mockUserSettingsStore,
@@ -26,10 +27,16 @@ describe('PopupModal', () => {
       },
     })
 
-    await wrapper.get('[data-testid="disable-all-hints"]').trigger('click')
+    const disableButton = document.body.querySelector(
+      '[data-testid="disable-all-hints"]',
+    ) as HTMLButtonElement | null
+    expect(disableButton).not.toBeNull()
+    disableButton?.click()
+    await wrapper.vm.$nextTick()
 
     expect(mockUserSettingsStore.updateSetting).toHaveBeenCalledWith('skipAllTips', true)
     expect(mockUserSettingsStore.saveSettings).toHaveBeenCalled()
     expect(wrapper.emitted('close-modal')).toBeTruthy()
+    wrapper.unmount()
   })
 })

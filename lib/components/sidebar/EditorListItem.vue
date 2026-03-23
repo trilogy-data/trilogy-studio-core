@@ -25,6 +25,9 @@
           <tooltip content="Raw SQL Editor" v-if="item.editor.type === 'sql'">
             <span class="sql">SQL</span>
           </tooltip>
+          <tooltip content="Python File" class="icon-display" v-else-if="item.editor.type === 'python'">
+            <i class="mdi mdi-language-python python-icon"></i>
+          </tooltip>
           <tooltip content="Trilogy Editor" class="icon-display" v-else>
             <img :src="trilogyIcon" class="trilogy-icon" />
           </tooltip>
@@ -174,7 +177,7 @@ export default {
 
         const editor = editorStore.newEditor(
           editorName,
-          type === 'trilogy' ? 'preql' : 'sql',
+          type === 'trilogy' ? 'preql' : type === 'python' ? 'python' : 'sql',
           connection,
           undefined,
         )
@@ -190,6 +193,8 @@ export default {
     const contextMenuItems = computed<ContextMenuItem[]>(() => {
       const isRemoteConnectionItem =
         props.item.type === 'connection' && String(props.item.key).startsWith('c-remote-')
+      const isRemoteFolderItem =
+        props.item.type === 'folder' && String(props.item.key).startsWith('f-remote-')
 
       if (props.item.type === 'editor') {
         return [
@@ -205,6 +210,9 @@ export default {
       if (props.item.type === 'folder') {
         return [
           { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
+          ...(isRemoteFolderItem
+            ? ([{ id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' }] as ContextMenuItem[])
+            : []),
           {
             id: 'new-trilogy',
             label: 'New Trilogy editor',
@@ -218,6 +226,7 @@ export default {
           ...(isRemoteConnectionItem
             ? ([
                 { id: 'refresh-store', label: 'Refresh', icon: 'mdi-refresh' },
+                { id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' },
               ] as ContextMenuItem[])
             : []),
           { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
@@ -281,6 +290,13 @@ export default {
             this.item.type === 'folder' ? this.item.objectKey : '',
           )
           break
+        case 'new-python':
+          this.createNewEditor(
+            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            'python',
+            this.item.type === 'folder' ? this.item.objectKey : '',
+          )
+          break
       }
     },
   },
@@ -306,6 +322,11 @@ export default {
 .trilogy-icon {
   width: var(--icon-size);
   height: var(--icon-size);
+}
+
+.python-icon {
+  font-size: var(--icon-size);
+  color: #3776ab;
 }
 
 .icon-display {

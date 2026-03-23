@@ -193,6 +193,7 @@ import type { GenericModelStore } from '../../remotes/models'
 import { KeySeparator } from '../../data/constants'
 import StoreTokenModal from '../StoreTokenModal.vue'
 import { hasTerminalControlCodes, stripTerminalControlCodes } from '../../utils/terminalOutput'
+import { supportsDirectJobsTarget } from '../../editors/fileTypes'
 
 const props = defineProps<{
   activeJobsKey: string
@@ -256,7 +257,17 @@ const visibleJobs = computed(() => {
   return jobsStore.getJobsForTarget(selectedStoreId.value, selectedTarget.value)
 })
 
-const canRunTarget = computed(() => selectedType.value === 'directory' || selectedType.value === 'file')
+const canRunTarget = computed(() => {
+  if (selectedType.value === 'directory') {
+    return true
+  }
+
+  if (selectedType.value === 'file') {
+    return supportsDirectJobsTarget(selectedTarget.value)
+  }
+
+  return false
+})
 
 const title = computed(() => {
   if (selectedType.value === 'store') {

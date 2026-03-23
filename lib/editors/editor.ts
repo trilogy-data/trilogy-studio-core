@@ -2,6 +2,12 @@ import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
 import { type CompletionItem } from '../stores/resolver'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
+import {
+  type EditorType,
+  normalizeRemoteEditorPath,
+} from './fileTypes'
+
+export { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
 
 /**
  * Refinement session state - stored in memory only, NOT persisted to storage.
@@ -29,7 +35,7 @@ export enum EditorTag {
 export interface EditorInterface {
   id: string
   name: string
-  type: 'trilogy' | 'sql' | 'preql'
+  type: EditorType
   syntax: string
   connection: string
   results: ResultsInterface
@@ -55,35 +61,10 @@ export interface EditorInterface {
   remotePersisted?: boolean
 }
 
-const defaultRemoteExtension = (type: EditorInterface['type']): '.preql' | '.sql' => {
-  switch (type) {
-    case 'sql':
-      return '.sql'
-    default:
-      return '.preql'
-  }
-}
-
-export const normalizeRemoteEditorPath = (
-  name: string,
-  type: EditorInterface['type'],
-): string => {
-  const trimmed = name.trim()
-  if (!trimmed) {
-    return trimmed
-  }
-
-  if (/\.(preql|sql|csv)$/i.test(trimmed)) {
-    return trimmed
-  }
-
-  return `${trimmed}${defaultRemoteExtension(type)}`
-}
-
 export default class Editor implements EditorInterface {
   id: string
   name: string
-  type: 'trilogy' | 'sql' | 'preql'
+  type: EditorType
   syntax: string
   connection: string
   results: Results
@@ -113,6 +94,8 @@ export default class Editor implements EditorInterface {
     switch (type) {
       case 'sql':
         return `SELECT 1;`
+      case 'python':
+        return ''
       case 'preql':
         return `SELECT 1 -> echo;`
       default:
@@ -134,7 +117,7 @@ export default class Editor implements EditorInterface {
   }: {
     id: string
     name: string
-    type: 'trilogy' | 'sql' | 'preql'
+    type: EditorType
     connection: string
     storage: string
     contents?: string | null
@@ -147,7 +130,7 @@ export default class Editor implements EditorInterface {
     this.id = id
     this.name = storage === 'remote' ? normalizeRemoteEditorPath(name, type) : name
     this.type = type
-    this.syntax = 'preql'
+    this.syntax = type === 'python' ? 'python' : 'preql'
     this.connection = connection
     this.results = new Results(new Map(), [])
     this.contents = contents ? contents : this.defaultContents(type)

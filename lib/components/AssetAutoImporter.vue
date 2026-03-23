@@ -378,7 +378,10 @@ const performImport = async () => {
     } else {
       // Find the imported editor by name and connection (for trilogy/editor types)
       let lookup = assetName.value
-      let matched = imports?.trilogy.get(assetName.value) || imports?.sql.get(assetName.value)
+      let matched =
+        imports?.trilogy.get(assetName.value) ||
+        imports?.sql.get(assetName.value) ||
+        imports?.python.get(assetName.value)
       if (matched) {
         lookup = matched
       }

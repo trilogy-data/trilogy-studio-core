@@ -46,6 +46,13 @@ describe('ModelImportService', () => {
               purpose: 'source',
               type: 'trilogy',
             },
+            {
+              url: 'http://localhost:8100/files/raw-boston-boston_loader.py',
+              name: 'raw/boston/boston_loader',
+              alias: '',
+              purpose: 'source',
+              type: 'python',
+            },
           ],
         })
       }
@@ -56,6 +63,10 @@ describe('ModelImportService', () => {
 
       if (url === 'http://localhost:8100/files/raw-boston-boston_landmarks.preql') {
         return new Response('datasource boston_landmarks;')
+      }
+
+      if (url === 'http://localhost:8100/files/raw-boston-boston_loader.py') {
+        return new Response('def datasource():\n    return "boston"')
       }
 
       return new Response('not found', { status: 404 })
@@ -79,9 +90,11 @@ describe('ModelImportService', () => {
     expect(imports?.trilogy.get('raw/boston/boston_landmarks')).toBe(
       'raw/boston/boston_landmarks.preql',
     )
+    expect(imports?.python.get('raw/boston/boston_loader')).toBe('raw/boston/boston_loader.py')
 
     const coreEditor = editorStore.getEditorByName('core_local.preql')
     const nestedEditor = editorStore.getEditorByName('raw/boston/boston_landmarks.preql')
+    const pythonEditor = editorStore.getEditorByName('raw/boston/boston_loader.py')
 
     expect(coreEditor?.remotePath).toBe('core_local.preql')
     expect(coreEditor?.remotePersisted).toBe(true)
@@ -90,5 +103,9 @@ describe('ModelImportService', () => {
     expect(nestedEditor?.remotePath).toBe('raw/boston/boston_landmarks.preql')
     expect(nestedEditor?.remotePersisted).toBe(true)
     expect(nestedEditor?.changed).toBe(false)
+
+    expect(pythonEditor?.remotePath).toBe('raw/boston/boston_loader.py')
+    expect(pythonEditor?.remotePersisted).toBe(true)
+    expect(pythonEditor?.changed).toBe(false)
   })
 })
