@@ -22,7 +22,7 @@ from io_models import (
     Import,
     TrilogyType,
 )
-from env_helpers import parse_env_from_full_model
+from env_helpers import parse_env_from_full_model, normalize_relative_imports
 from trilogy.parsing.parse_engine import ParseToObjects
 from logging import getLogger
 from common import concept_to_description, concept_to_derivation
@@ -94,7 +94,9 @@ def concept_to_completion(label: str, concept: Concept, environment: Environment
 
 
 def get_diagnostics(
-    doctext: str, sources: List[ModelSourceInSchema]
+    doctext: str,
+    sources: List[ModelSourceInSchema],
+    current_filename: str | None = None,
 ) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
@@ -113,7 +115,7 @@ def get_diagnostics(
         )
         return True
 
-    parse_fragment = doctext
+    parse_fragment = normalize_relative_imports(doctext, current_filename)
     tree = None
     loops = 0
     while parse_fragment.count(";") > 0:

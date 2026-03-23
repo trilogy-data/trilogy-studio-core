@@ -15,6 +15,8 @@ export function buildEditorTree(
     indent: number
     editor?: any
     connection?: string
+    storage?: string
+    remoteStoreId?: string | null
   }> = []
   const processedConnections = new Set<string>()
 
@@ -152,6 +154,11 @@ export function buildEditorTree(
             type: 'folder',
             indent: currentIndent,
             connection: connection,
+            storage,
+            remoteStoreId:
+              storage === 'remote'
+                ? (editors.find((editor) => editor.remoteStoreId)?.remoteStoreId ?? null)
+                : null,
           })
 
           // If folder is not collapsed, add its contents
@@ -167,6 +174,7 @@ export function buildEditorTree(
             type: 'editor',
             indent: currentIndent,
             editor: node.editor,
+            storage,
           })
         }
       })
@@ -210,6 +218,11 @@ export function buildEditorTree(
             label: connection,
             type: 'connection',
             indent: 1,
+            storage,
+            remoteStoreId:
+              storage === 'remote'
+                ? (editors.find((editor) => editor.remoteStoreId)?.remoteStoreId ?? null)
+                : null,
           })
           processedConnections.add(connectionKey)
 

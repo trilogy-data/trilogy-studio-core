@@ -117,6 +117,7 @@ class QueryInSchema(BaseModel):
     query: str
     dialect: Dialects
     full_model: ModelInSchema
+    current_filename: str | None = None
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
     # chart_type: ChartType | None = None
@@ -132,6 +133,7 @@ class ValidateQueryInSchema(BaseModel):
     query: str
     imports: list[Import]
     sources: List[ModelSourceInSchema]
+    current_filename: str | None = None
     extra_filters: Optional[list[str]] = None
 
 

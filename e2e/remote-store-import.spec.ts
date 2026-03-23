@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as net from 'net'
+import * as os from 'os'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { openSidebarScreen, prepareTestPage } from './test-helpers.js'
+import { createEditorFromConnection, openSidebarScreen, prepareTestPage } from './test-helpers.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -12,7 +13,6 @@ const __dirname = path.dirname(__filename)
 const TEST_TOKEN = 'abc123'
 const TEST_MODEL_NAME = 'urban_forest'
 const TEST_CONNECTION_NAME = `${TEST_MODEL_NAME}-connection`
-const TEST_SERVED_MODEL_ID = 'remote-store'
 
 const getAvailablePort = async (): Promise<number> =>
   await new Promise((resolve, reject) => {
@@ -41,6 +41,8 @@ const getAvailablePort = async (): Promise<number> =>
 test.describe('Remote Store Auto Import', () => {
   let remoteStoreServer: ChildProcess | null = null
   let remoteStoreUrl = ''
+  let tempFixturePath = ''
+  let servedModelId = ''
 
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
@@ -54,6 +56,9 @@ test.describe('Remote Store Auto Import', () => {
   test.beforeAll(async () => {
     const projectRoot = path.join(__dirname, '..')
     const fixturePath = path.join(projectRoot, 'e2e', 'fixtures', 'remote-store')
+    tempFixturePath = fs.mkdtempSync(path.join(os.tmpdir(), 'trilogy-remote-store-'))
+    fs.cpSync(fixturePath, tempFixturePath, { recursive: true })
+    servedModelId = path.basename(tempFixturePath)
     const trilogyExecutableCandidates = [
       path.join(projectRoot, '.venv', 'Scripts', 'trilogy.exe'),
       path.join(projectRoot, '.venv', 'bin', 'trilogy'),
@@ -71,7 +76,7 @@ test.describe('Remote Store Auto Import', () => {
       trilogyExecutable,
       [
         'serve',
-        fixturePath,
+        tempFixturePath,
         'duckdb',
         '--host',
         '127.0.0.1',
@@ -142,13 +147,18 @@ test.describe('Remote Store Auto Import', () => {
         resolve()
       }, 5000)
     })
+
+    if (tempFixturePath) {
+      fs.rmSync(tempFixturePath, { recursive: true, force: true })
+      tempFixturePath = ''
+    }
   })
 
   test('imports authenticated remote store files with nested paths', async ({ page, isMobile }) => {
     const autoImportUrl =
       `#skipTips=true` +
       `&screen=asset-import` +
-      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/${TEST_SERVED_MODEL_ID}.json`)}` +
+      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/${servedModelId}.json`)}` +
       `&assetType=trilogy` +
       `&assetName=core_local` +
       `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
@@ -182,5 +192,56 @@ test.describe('Remote Store Auto Import', () => {
     await expect(
       page.getByText('undefined.preql', { exact: true }).filter({ visible: true }),
     ).toHaveCount(0)
+  })
+
+  test('creates new editors from remote connections as remote-backed files', async ({
+    page,
+    isMobile,
+  }) => {
+    const autoImportUrl =
+      `#skipTips=true` +
+      `&screen=asset-import` +
+      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/${servedModelId}.json`)}` +
+      `&assetType=trilogy` +
+      `&assetName=core_local` +
+      `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
+      `&connection=duckdb` +
+      `&store=${encodeURIComponent(remoteStoreUrl)}` +
+      `&remote=true` +
+      `&token=${encodeURIComponent(TEST_TOKEN)}`
+
+    await page.goto(autoImportUrl)
+    await expect(page.getByTestId('editor-name-display')).toContainText('core_local.preql', {
+      timeout: 30000,
+    })
+
+    await openSidebarScreen(page, 'editors', isMobile)
+    await createEditorFromConnection(page, TEST_CONNECTION_NAME, 'trilogy')
+
+    await expect(page.getByTestId('editor-name-display')).toContainText('new-editor-', {
+      timeout: 30000,
+    })
+    const newEditorLabel = (await page.getByTestId('editor-name-display').textContent()) || ''
+    const newEditorName = newEditorLabel.trim()
+
+    await expect(
+      page.getByTestId(`editor-c-remote-${TEST_CONNECTION_NAME}`).filter({ visible: true }).first(),
+    ).toBeVisible()
+
+    const filesResponse = await fetch(`${remoteStoreUrl}/files`, {
+      headers: {
+        'X-Trilogy-Token': TEST_TOKEN,
+      },
+    })
+    expect(filesResponse.ok).toBeTruthy()
+    const filesPayload = await filesResponse.json()
+    const remotePaths = filesPayload.directories.flatMap(
+      (entry: { directory: string; files: string[] }) =>
+        entry.files.map((fileName) =>
+          entry.directory ? `${entry.directory}/${fileName}` : fileName,
+        ),
+    )
+
+    expect(remotePaths).toContain(newEditorName)
   })
 })

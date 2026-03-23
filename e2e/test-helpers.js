@@ -164,19 +164,34 @@ export async function createEditorFromConnection(page, connectionName, type = 't
     return
   }
 
-  const editorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
+  const localEditorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
     visible: true,
   })
+  const remoteEditorConnectionLabel = page.getByTestId(`editor-c-remote-${connectionName}`).filter({
+    visible: true,
+  })
+  const editorConnectionLabel =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? remoteEditorConnectionLabel.first()
+      : localEditorConnectionLabel.first()
   const connectionRow = editorConnectionLabel.locator(
     'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
   )
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.getByTestId(`editor-actions-c-local-${connectionName}-trigger`).click()
+  const actionKey =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? `editor-actions-c-remote-${connectionName}-trigger`
+      : `editor-actions-c-local-${connectionName}-trigger`
+  await connectionRow.getByTestId(actionKey).click()
 
   const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
-  await page.getByTestId(`editor-actions-c-local-${connectionName}-${actionId}`).click()
+  const actionTestId =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? `editor-actions-c-remote-${connectionName}-${actionId}`
+      : `editor-actions-c-local-${connectionName}-${actionId}`
+  await page.getByTestId(actionTestId).click()
 }
 
 async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {

@@ -19,6 +19,7 @@ export interface QueryInput {
   extraFilters?: string[]
   parameters?: Record<string, any>
   extraContent?: ContentInput[]
+  currentFilename?: string
 }
 
 export interface QueryUpdate {
@@ -403,6 +404,7 @@ export default class QueryExecutionService {
     editorType: EditorType,
     imports: Import[] = [],
     extraContent?: ContentInput[],
+    currentFilename?: string,
   ): Promise<string | null> {
     if (editorType === 'python') {
       return text
@@ -415,6 +417,9 @@ export default class QueryExecutionService {
         editorType,
         extraContent,
         imports,
+        null,
+        null,
+        currentFilename || null,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -436,6 +441,7 @@ export default class QueryExecutionService {
     drilldown_remove: string,
     drilldown_filter: string,
     extraContent?: ContentInput[],
+    currentFilename?: string,
   ): Promise<string | null> {
     if (editorType === 'python') {
       return null
@@ -451,6 +457,9 @@ export default class QueryExecutionService {
         drilldown_filter,
         extraContent,
         imports,
+        null,
+        null,
+        currentFilename || null,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -480,6 +489,7 @@ export default class QueryExecutionService {
       queryInput.imports,
       queryInput.extraFilters,
       queryInput.parameters,
+      queryInput.currentFilename || null,
     )
   }
 
@@ -522,6 +532,8 @@ export default class QueryExecutionService {
       sources,
       queryInput.imports,
       queryInput.extraFilters,
+      null,
+      queryInput.currentFilename || null,
     )
     // Return the imports from the validation result
     return validation
@@ -659,6 +671,7 @@ export default class QueryExecutionService {
           queryInput.imports,
           queryInput.extraFilters,
           queryInput.parameters,
+          queryInput.currentFilename || null,
         ),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>

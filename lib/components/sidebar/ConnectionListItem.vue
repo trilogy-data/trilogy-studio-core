@@ -394,12 +394,23 @@ export default {
       try {
         const timestamp = Date.now()
         const editorName = `new-editor-${timestamp}`
+        const connectionConfig = props.item.connection as Connection & {
+          remoteStoreId?: string | null
+        }
+        const isRemote = connectionConfig.storage === 'remote'
 
         const editor = editorStore.newEditor(
           editorName,
           type === 'trilogy' ? 'preql' : 'sql',
           props.item.connection.name,
           undefined,
+          isRemote
+            ? {
+                storage: 'remote',
+                remoteStoreId: connectionConfig.remoteStoreId || null,
+                remotePath: editorName,
+              }
+            : undefined,
         )
 
         await saveEditors()

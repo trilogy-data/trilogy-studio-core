@@ -179,14 +179,8 @@ export default {
           editorName = `${root}/${editorName}`
         }
 
-        const connectionConfig = connectionStore.connections[connection] as
-          | {
-              storage?: string
-              remoteStoreId?: string | null
-            }
-          | undefined
         const editorType = type === 'trilogy' ? 'preql' : type === 'python' ? 'python' : 'sql'
-        const isRemote = connectionConfig?.storage === 'remote'
+        const isRemote = props.item.storage === 'remote'
 
         const editor = editorStore.newEditor(
           editorName,
@@ -196,7 +190,7 @@ export default {
           isRemote
             ? {
                 storage: 'remote',
-                remoteStoreId: connectionConfig?.remoteStoreId || null,
+                remoteStoreId: props.item.remoteStoreId || null,
                 remotePath: editorName,
               }
             : undefined,
@@ -212,9 +206,8 @@ export default {
 
     const contextMenuItems = computed<ContextMenuItem[]>(() => {
       const isRemoteConnectionItem =
-        props.item.type === 'connection' && String(props.item.key).startsWith('c-remote-')
-      const isRemoteFolderItem =
-        props.item.type === 'folder' && String(props.item.key).startsWith('f-remote-')
+        props.item.type === 'connection' && props.item.storage === 'remote'
+      const isRemoteFolderItem = props.item.type === 'folder' && props.item.storage === 'remote'
 
       if (props.item.type === 'editor') {
         return [

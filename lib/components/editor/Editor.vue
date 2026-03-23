@@ -118,6 +118,7 @@ export interface QueryPartial {
   editorType: EditorType
   sources: ContentInput[]
   imports: Import[]
+  currentFilename?: string
 }
 
 export default defineComponent({
@@ -365,7 +366,14 @@ export default defineComponent({
       }
 
       const editorText = this.editorData.contents
-      let annotations = await this.trilogyResolver.validate_query(editorText, sources)
+      let annotations = await this.trilogyResolver.validate_query(
+        editorText,
+        sources,
+        null,
+        null,
+        null,
+        this.editorData.name,
+      )
 
       // Get editor instance from CodeEditor
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
@@ -409,6 +417,9 @@ export default defineComponent({
           queryInput.editorType,
           queryInput.sources,
           queryInput.imports,
+          null,
+          null,
+          queryInput.currentFilename || null,
         )
         if (formatted.data && formatted.data.text) {
           codeEditorRef.setValue(formatted.data.text)
@@ -456,6 +467,7 @@ export default defineComponent({
         editorType: this.editorData.type,
         sources,
         imports,
+        currentFilename: this.editorData.name,
       }
       return partial
     },
@@ -483,6 +495,9 @@ export default defineComponent({
           // add,
           queryInput.sources,
           queryInput.imports,
+          null,
+          null,
+          queryInput.currentFilename || null,
         )
         if (drilldown.data && drilldown.data.text) {
           codeEditorRef.setValue(drilldown.data.text)
@@ -538,6 +553,7 @@ export default defineComponent({
         text,
         editorType: queryPartial.editorType,
         imports: queryPartial.imports,
+        currentFilename: queryPartial.currentFilename,
       }
 
       // Define callbacks with mounting status checks

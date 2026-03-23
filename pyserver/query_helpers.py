@@ -33,7 +33,11 @@ from trilogy.core.statements.execute import (
 from trilogy.core.models.core import TraitDataType
 from logging import getLogger
 
-from env_helpers import parse_env_from_full_model
+from env_helpers import (
+    parse_env_from_full_model,
+    normalize_relative_imports,
+    resolve_import_path,
+)
 
 
 from io_models import (
@@ -323,13 +327,16 @@ def generate_query_core(
         env_time = time.time() - env_start
         import_start = time.time()
 
+    normalized_query = normalize_relative_imports(query.query, query.current_filename)
+
     # Process imports
     import_strings = []
     for imp in query.imports:
+        normalized_import_name = resolve_import_path(imp.name, query.current_filename)
         if imp.alias:
-            imp_string = f"import {imp.name} as {imp.alias};"
+            imp_string = f"import {normalized_import_name} as {imp.alias};"
         else:
-            imp_string = f"import {imp.name};"
+            imp_string = f"import {normalized_import_name};"
         import_strings.append(imp_string)
 
     if import_strings:
@@ -342,7 +349,7 @@ def generate_query_core(
 
     # Generate query
     target, columns, results, select_count = generate_single_query(
-        query.query, env, dialect, query.extra_filters, query.parameters
+        normalized_query, env, dialect, query.extra_filters, query.parameters
     )
 
     if enable_performance_logging:
