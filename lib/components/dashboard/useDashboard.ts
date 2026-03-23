@@ -23,7 +23,6 @@ import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
-import useConnectionStore from '../../stores/connectionStore'
 import type { DashboardModel } from '../../dashboards/base'
 
 export interface UseDashboardOptions {
@@ -52,7 +51,6 @@ export function useDashboard(
   let queryExecutionService = providedQueryExecutionService
     ? providedQueryExecutionService
     : inject<QueryExecutionService>('queryExecutionService')
-  const connectionStore = useConnectionStore()
   const { setActiveDashboard } = useScreenNavigation()
 
   if (!queryExecutionService) {
@@ -570,12 +568,9 @@ export function useDashboard(
     if (!dashboard.value || !dashboard.value.id)
       throw new Error('Dashboard not found or not initialized')
     if (!queryExecutionService) throw new Error('Query execution service not found')
-    if (!connectionStore) throw new Error('Connection store not found')
     let dashboardData = dashboardStore.dashboards[dashboardId]
     const executor = dashboardStore.getOrCreateQueryExecutor(dashboardId, {
       queryExecutionService,
-      connectionStore,
-      editorStore,
       connectionName: dashboardData.connection,
       dashboardId: dashboardId,
       getDashboardData: (id: string) => dashboardStore.dashboards[id],

@@ -10,5 +10,11 @@ export { default as useChatStore } from './chatStore'
 export { default as useScreenNavigation } from './useScreenNavigation'
 export { default as TrilogyResolver } from './resolver'
 export { default as QueryExecutionService } from './queryExecutionService'
-export type { QueryInput } from './queryExecutionService'
+export { ConnectionStoreExecutionConnectionProvider } from './queryExecutionService'
+export type {
+  DashboardExecutionService,
+  ExecutionConnection,
+  ExecutionConnectionProvider,
+  QueryInput,
+} from './queryExecutionService'
 export type { ContentInput } from './resolver'

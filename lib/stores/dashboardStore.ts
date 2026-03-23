@@ -76,8 +76,6 @@ export const useDashboardStore = defineStore('dashboards', {
       // Create new executor
       const executor = new DashboardQueryExecutor(
         dependencies.queryExecutionService,
-        dependencies.connectionStore,
-        dependencies.editorStore,
         dependencies.connectionName,
         dependencies.dashboardId,
         dependencies.getDashboardData,

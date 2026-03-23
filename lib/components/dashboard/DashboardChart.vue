@@ -65,7 +65,6 @@
 <script lang="ts">
 //      v-if="!loading && editMode &&
 import { defineComponent, inject, computed, ref, type PropType } from 'vue'
-import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChartConfig } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
@@ -181,7 +180,6 @@ export default defineComponent({
       return itemData.value.onRefresh || null
     })
 
-    const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore: AnalyticsStoreType | null = inject<AnalyticsStoreType | null>(
       'analyticsStore',
       null,
@@ -200,10 +198,6 @@ export default defineComponent({
         return
       }
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: nextChartConfig })
-    }
-
-    if (!connectionStore) {
-      throw new Error('Connection store not found!')
     }
 
     const {
@@ -271,6 +265,8 @@ export default defineComponent({
         selected,
         activeDrilldown.value!.remove,
         activeDrilldown.value!.filter,
+        itemData.value.rootContent || [],
+        (itemData.value.imports || []).map((imp) => ({ name: imp.name, alias: imp.alias })),
       )
       props.setItemData(props.itemId, props.dashboardId, {
         drilldown: newQuery,
