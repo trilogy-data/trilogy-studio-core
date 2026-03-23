@@ -96,9 +96,9 @@ export default defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
-    const remoteStorage = storageSources.find(
-      (source) => source.type === 'remote',
-    ) as RemoteStoreStorage | undefined
+    const remoteStorage = storageSources.find((source) => source.type === 'remote') as
+      | RemoteStoreStorage
+      | undefined
     const collapsed = ref<Record<string, boolean>>({})
 
     // Get the currently active model key

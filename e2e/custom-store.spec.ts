@@ -39,7 +39,8 @@ const getAvailablePort = async (): Promise<number> =>
     })
   })
 
-const getStoreIdFromUrl = (url: string): string => url.replace(/^https?:\/\//, '').replace(/\//g, '-')
+const getStoreIdFromUrl = (url: string): string =>
+  url.replace(/^https?:\/\//, '').replace(/\//g, '-')
 
 test.describe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
@@ -254,9 +255,7 @@ test.describe('Custom Model Store', () => {
     await createEditorFromConnection(page, connectionName, 'trilogy')
 
     // Verify a new editor was created under the imported model connection
-    await expect(
-      page.getByTestId(`editor-run-button`),
-    ).toBeVisible()
+    await expect(page.getByTestId(`editor-run-button`)).toBeVisible()
   })
 
   test('should show error for unreachable custom store', async ({ page, isMobile }) => {

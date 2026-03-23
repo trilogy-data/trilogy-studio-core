@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import type Editor from '../editors/editor'
 import type { EditorStoreType } from './editorStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type { ModelConfigStoreType } from './modelStore'
@@ -396,7 +397,7 @@ for (let source of props.storageSources) {
   loadingPromises.push(
     source.loadEditors().then((editors) => {
       for (let editor of Object.values(editors)) {
-        props.editorStore.addEditor(editor)
+        props.editorStore.addEditor(editor as Editor)
       }
     }),
   )

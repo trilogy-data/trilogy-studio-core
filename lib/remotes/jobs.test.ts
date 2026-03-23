@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildJobsDirectoryKey, buildJobsFileKey, buildJobsTree, type StoreFilesResponse } from './jobs'
+import {
+  buildJobsDirectoryKey,
+  buildJobsFileKey,
+  buildJobsTree,
+  type StoreFilesResponse,
+} from './jobs'
 import type { GenericModelStore } from './models'
 
 const store: GenericModelStore = {

@@ -47,7 +47,9 @@
           title="Toggle source model"
           aria-label="Toggle source model"
         >
-          <span class="action-label">{{ tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source' }}</span>
+          <span class="action-label">{{
+            tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source'
+          }}</span>
         </loading-button>
       </div>
 
@@ -110,7 +112,10 @@
 
       <div v-if="supportsEditorLocalExecution(editorType)" class="toolbar-divider"></div>
 
-      <div v-if="supportsEditorLocalExecution(editorType)" class="action-group action-group-execute">
+      <div
+        v-if="supportsEditorLocalExecution(editorType)"
+        class="action-group action-group-execute"
+      >
         <button
           @click="() => (loading ? $emit('cancel') : $emit('run'))"
           class="action-item"

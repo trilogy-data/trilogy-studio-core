@@ -11,10 +11,7 @@ export class JobsServiceError extends Error {
   }
 }
 
-const buildAuthRequest = (
-  token?: string,
-  init: RequestInit = {},
-): RequestInit => {
+const buildAuthRequest = (token?: string, init: RequestInit = {}): RequestInit => {
   const headers = new Headers(init.headers)
 
   if (token) {
@@ -141,10 +138,7 @@ export const updateStoreFile = async (
   await ensureOk(response, `Failed to update ${path}`)
 }
 
-export const deleteStoreFile = async (
-  store: GenericModelStore,
-  path: string,
-): Promise<void> => {
+export const deleteStoreFile = async (store: GenericModelStore, path: string): Promise<void> => {
   const response = await fetch(
     `${store.baseUrl}/files/${encodePath(path)}`,
     buildAuthRequest(store.token, {

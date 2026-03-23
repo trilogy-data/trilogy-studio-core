@@ -67,7 +67,8 @@ export const supportsEditorSourceTag = (type: EditorType | string): boolean =>
 export const supportsEditorAssistant = (type: EditorType | string): boolean =>
   type === 'trilogy' || type === 'preql'
 
-export const supportsEditorLocalExecution = (type: EditorType | string): boolean => type !== 'python'
+export const supportsEditorLocalExecution = (type: EditorType | string): boolean =>
+  type !== 'python'
 
 export const supportsDirectJobsTarget = (target: string): boolean =>
   getFileExtension(target) !== '.py'

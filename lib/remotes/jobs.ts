@@ -54,7 +54,8 @@ const createDirectoryTreeNode = (name: string, path: string): JobsDirectoryTreeN
   children: {},
 })
 
-const sortStrings = (values: string[]): string[] => values.slice().sort((left, right) => left.localeCompare(right))
+const sortStrings = (values: string[]): string[] =>
+  values.slice().sort((left, right) => left.localeCompare(right))
 
 const ensureDirectoryTreeNode = (
   root: JobsDirectoryTreeNode,

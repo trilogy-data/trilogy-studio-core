@@ -57,16 +57,21 @@ const MENU_SEPARATOR_HEIGHT = 4
 
 const estimateMenuHeight = () =>
   props.items.reduce(
-    (total, item) =>
-      total + (item.kind === 'separator' ? MENU_SEPARATOR_HEIGHT : MENU_ITEM_HEIGHT),
+    (total, item) => total + (item.kind === 'separator' ? MENU_SEPARATOR_HEIGHT : MENU_ITEM_HEIGHT),
     BASE_MENU_PADDING,
   )
 
 const openOverflowMenu = (event: MouseEvent) => {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const estimatedHeight = estimateMenuHeight()
-  const maxX = Math.max(MENU_VIEWPORT_MARGIN, window.innerWidth - props.menuWidth - MENU_VIEWPORT_MARGIN)
-  const maxY = Math.max(MENU_VIEWPORT_MARGIN, window.innerHeight - estimatedHeight - MENU_VIEWPORT_MARGIN)
+  const maxX = Math.max(
+    MENU_VIEWPORT_MARGIN,
+    window.innerWidth - props.menuWidth - MENU_VIEWPORT_MARGIN,
+  )
+  const maxY = Math.max(
+    MENU_VIEWPORT_MARGIN,
+    window.innerHeight - estimatedHeight - MENU_VIEWPORT_MARGIN,
+  )
   contextMenuPosition.value = {
     x: Math.min(maxX, Math.max(MENU_VIEWPORT_MARGIN, rect.right - props.menuWidth)),
     y: Math.min(maxY, Math.max(MENU_VIEWPORT_MARGIN, rect.bottom - 4)),

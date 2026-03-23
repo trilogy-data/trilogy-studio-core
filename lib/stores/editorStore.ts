@@ -95,10 +95,13 @@ const useEditorStore = defineStore('editors', {
         | undefined
       const storage = options.storage || connectionRef?.storage || 'local'
       const remoteStoreId =
-        options.remoteStoreId || (storage === 'remote' ? connectionRef?.remoteStoreId || null : null)
+        options.remoteStoreId ||
+        (storage === 'remote' ? connectionRef?.remoteStoreId || null : null)
       const baseName = storage === 'remote' ? normalizeRemoteEditorPath(name, type) : name
       const remotePath =
-        storage === 'remote' ? normalizeRemoteEditorPath(options.remotePath || baseName, type) : null
+        storage === 'remote'
+          ? normalizeRemoteEditorPath(options.remotePath || baseName, type)
+          : null
       const baseId =
         storage === 'remote'
           ? `remote:${remoteStoreId || 'store'}:${encodeURIComponent(remotePath || baseName)}`

@@ -98,9 +98,7 @@ export default class LocalStorage extends AbstractStorage {
     return Object.values(editors).some((editor) => editor.id === id)
   }
 
-  async saveConnections(
-    connections: Array<Connection>,
-  ): Promise<void> {
+  async saveConnections(connections: Array<Connection>): Promise<void> {
     const current = await this.loadConnections()
     connections.forEach((connection) => {
       if (connection.changed || !(connection.name in current)) {

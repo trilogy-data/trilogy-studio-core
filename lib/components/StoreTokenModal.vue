@@ -1,5 +1,10 @@
 <template>
-  <ModalDialog :show="show" title="Update Store Token" test-id="store-token-modal" @close="emit('close')">
+  <ModalDialog
+    :show="show"
+    title="Update Store Token"
+    test-id="store-token-modal"
+    @close="emit('close')"
+  >
     <template #default>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
@@ -17,7 +22,10 @@
             data-testid="store-token-input"
             required
           />
-          <small>Stored in memory only. If the local server restarts, you’ll need to update it again.</small>
+          <small
+            >Stored in memory only. If the local server restarts, you’ll need to update it
+            again.</small
+          >
         </div>
 
         <div class="dialog-actions">

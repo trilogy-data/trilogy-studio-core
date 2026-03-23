@@ -3,7 +3,10 @@
     <template #header>
       <div class="jobs-header">
         <h3 class="font-sans sidebar-header">Jobs</h3>
-        <button class="sidebar-control-button sidebar-header-action" @click="showAddStoreModal = true">
+        <button
+          class="sidebar-control-button sidebar-header-action"
+          @click="showAddStoreModal = true"
+        >
           <i class="mdi mdi-plus"></i>
           New
         </button>

@@ -2,10 +2,7 @@ import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
 import { type CompletionItem } from '../stores/resolver'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
-import {
-  type EditorType,
-  normalizeRemoteEditorPath,
-} from './fileTypes'
+import { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
 
 export { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
 
@@ -150,9 +147,7 @@ export default class Editor implements EditorInterface {
     this.completionSymbols = []
     this.remoteStoreId = remoteStoreId
     this.remotePath =
-      storage === 'remote'
-        ? normalizeRemoteEditorPath(remotePath || this.name, type)
-        : remotePath
+      storage === 'remote' ? normalizeRemoteEditorPath(remotePath || this.name, type) : remotePath
     this.remoteOriginalPath = remoteOriginalPath
     this.remotePersisted = remotePersisted
   }

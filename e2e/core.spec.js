@@ -53,9 +53,9 @@ test('user settings', async ({ page, isMobile }) => {
     await page.getByTestId('exit-modal').click()
   }
   if (isMobile) {
-     await openSidebarScreen(page, 'editors', isMobile)
+    await openSidebarScreen(page, 'editors', isMobile)
   }
- 
+
   await page.locator('[data-testid^="editor-e-local-test-new-editor-"]').last().click()
   const skipTipsButton = page.getByRole('button', { name: 'Skip' })
   if (await skipTipsButton.count()) {
