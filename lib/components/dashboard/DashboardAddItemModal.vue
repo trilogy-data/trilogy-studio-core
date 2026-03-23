@@ -78,9 +78,7 @@ function closeModal(): void {
     @close="closeModal"
   >
     <div class="add-item-content">
-      <p class="add-item-description">
-        Choose the kind of block you want to add to the dashboard.
-      </p>
+      <p class="add-item-description">Choose the kind of block you want to add to the dashboard.</p>
 
       <div class="item-type-grid" role="radiogroup" aria-label="Dashboard item type">
         <label

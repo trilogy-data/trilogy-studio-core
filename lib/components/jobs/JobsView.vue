@@ -7,11 +7,7 @@
         <p class="jobs-subtitle">{{ subtitle }}</p>
       </div>
       <div class="header-actions">
-        <button
-          v-if="selectedStore"
-          class="action-button secondary"
-          @click="showTokenModal = true"
-        >
+        <button v-if="selectedStore" class="action-button secondary" @click="showTokenModal = true">
           Set Token
         </button>
         <button
@@ -42,7 +38,8 @@
     </div>
 
     <div v-if="!genericStores.length" class="empty-state">
-      No local Trilogy stores are configured yet. Open a serve link or add a jobs store from the sidebar.
+      No local Trilogy stores are configured yet. Open a serve link or add a jobs store from the
+      sidebar.
     </div>
 
     <div v-else class="jobs-body">
@@ -89,7 +86,9 @@
       <section class="jobs-list">
         <div class="jobs-list-header">
           <h3>{{ jobsHeading }}</h3>
-          <span class="jobs-count">{{ visibleJobs.length }} job{{ visibleJobs.length === 1 ? '' : 's' }}</span>
+          <span class="jobs-count"
+            >{{ visibleJobs.length }} job{{ visibleJobs.length === 1 ? '' : 's' }}</span
+          >
         </div>
 
         <div v-if="!visibleJobs.length" class="empty-jobs">
@@ -115,9 +114,15 @@
                 class="job-refresh-button"
                 :class="{ tracking: isActivelyTrackingJob(job) }"
                 @click="refreshJob(job.job_id)"
-                :disabled="jobsStore.isStoppingJob(job.storeId, job.job_id) || isActivelyTrackingJob(job)"
+                :disabled="
+                  jobsStore.isStoppingJob(job.storeId, job.job_id) || isActivelyTrackingJob(job)
+                "
               >
-                <span v-if="isActivelyTrackingJob(job)" class="job-button-spinner" aria-hidden="true" />
+                <span
+                  v-if="isActivelyTrackingJob(job)"
+                  class="job-button-spinner"
+                  aria-hidden="true"
+                />
                 {{ isActivelyTrackingJob(job) ? 'Tracking' : 'Refresh' }}
               </button>
               <button
@@ -193,6 +198,7 @@ import type { GenericModelStore } from '../../remotes/models'
 import { KeySeparator } from '../../data/constants'
 import StoreTokenModal from '../StoreTokenModal.vue'
 import { hasTerminalControlCodes, stripTerminalControlCodes } from '../../utils/terminalOutput'
+import { supportsDirectJobsTarget } from '../../editors/fileTypes'
 
 const props = defineProps<{
   activeJobsKey: string
@@ -209,8 +215,8 @@ const genericStores = computed(() =>
 const effectiveKey = computed(() => props.activeJobsKey || genericStores.value[0]?.id || '')
 const keyParts = computed(() => effectiveKey.value.split(KeySeparator))
 const selectedStoreId = computed(() => keyParts.value[0] || '')
-const selectedStore = computed(() =>
-  genericStores.value.find((store) => store.id === selectedStoreId.value) || null,
+const selectedStore = computed(
+  () => genericStores.value.find((store) => store.id === selectedStoreId.value) || null,
 )
 const selectedStoreName = computed(() => selectedStore.value?.name || 'No store selected')
 const selectedType = computed<'store' | 'directory' | 'file'>(() => {
@@ -237,8 +243,7 @@ const directoryCount = computed(
   () => filesResponse.value?.directories.filter((entry) => entry.directory !== '').length || 0,
 )
 const fileCount = computed(
-  () =>
-    filesResponse.value?.directories.reduce((sum, entry) => sum + entry.files.length, 0) || 0,
+  () => filesResponse.value?.directories.reduce((sum, entry) => sum + entry.files.length, 0) || 0,
 )
 const storeError = computed(() =>
   selectedStoreId.value ? jobsStore.errors[selectedStoreId.value] : '',
@@ -256,7 +261,17 @@ const visibleJobs = computed(() => {
   return jobsStore.getJobsForTarget(selectedStoreId.value, selectedTarget.value)
 })
 
-const canRunTarget = computed(() => selectedType.value === 'directory' || selectedType.value === 'file')
+const canRunTarget = computed(() => {
+  if (selectedType.value === 'directory') {
+    return true
+  }
+
+  if (selectedType.value === 'file') {
+    return supportsDirectJobsTarget(selectedTarget.value)
+  }
+
+  return false
+})
 
 const title = computed(() => {
   if (selectedType.value === 'store') {

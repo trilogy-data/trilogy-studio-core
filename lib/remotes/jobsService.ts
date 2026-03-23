@@ -11,10 +11,7 @@ export class JobsServiceError extends Error {
   }
 }
 
-const buildAuthRequest = (
-  token?: string,
-  init: RequestInit = {},
-): RequestInit => {
+const buildAuthRequest = (token?: string, init: RequestInit = {}): RequestInit => {
   const headers = new Headers(init.headers)
 
   if (token) {
@@ -26,6 +23,13 @@ const buildAuthRequest = (
     headers,
   }
 }
+
+const encodePath = (path: string): string =>
+  path
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
 
 const ensureOk = async (response: Response, fallback: string): Promise<Response> => {
   if (response.ok) {
@@ -63,6 +67,86 @@ export const fetchStoreFiles = async (store: GenericModelStore): Promise<StoreFi
 
   await ensureOk(response, `Failed to fetch files for ${store.name}`)
   return response.json()
+}
+
+export const fetchStoreFileContent = async (
+  store: GenericModelStore,
+  path: string,
+): Promise<string> => {
+  const encodedPath = encodePath(path)
+  const response = await fetch(
+    `${store.baseUrl}/files/${encodedPath}`,
+    buildAuthRequest(store.token, {
+      method: 'GET',
+    }),
+  )
+
+  if (response.ok) {
+    return response.text()
+  }
+
+  if (response.status !== 404) {
+    await ensureOk(response, `Failed to fetch ${path}`)
+  }
+
+  const fallbackResponse = await fetch(
+    `${store.baseUrl}/${encodedPath}`,
+    buildAuthRequest(store.token, {
+      method: 'GET',
+    }),
+  )
+
+  await ensureOk(fallbackResponse, `Failed to fetch ${path}`)
+  return fallbackResponse.text()
+}
+
+export const createStoreFile = async (
+  store: GenericModelStore,
+  path: string,
+  content: string,
+): Promise<void> => {
+  const response = await fetch(
+    `${store.baseUrl}/files`,
+    buildAuthRequest(store.token, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path, content }),
+    }),
+  )
+
+  await ensureOk(response, `Failed to create ${path}`)
+}
+
+export const updateStoreFile = async (
+  store: GenericModelStore,
+  path: string,
+  content: string,
+): Promise<void> => {
+  const response = await fetch(
+    `${store.baseUrl}/files/${encodePath(path)}`,
+    buildAuthRequest(store.token, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+    }),
+  )
+
+  await ensureOk(response, `Failed to update ${path}`)
+}
+
+export const deleteStoreFile = async (store: GenericModelStore, path: string): Promise<void> => {
+  const response = await fetch(
+    `${store.baseUrl}/files/${encodePath(path)}`,
+    buildAuthRequest(store.token, {
+      method: 'DELETE',
+    }),
+  )
+
+  await ensureOk(response, `Failed to delete ${path}`)
 }
 
 export const submitStoreJob = async (

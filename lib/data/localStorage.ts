@@ -1,5 +1,6 @@
 import EditorInterface from '../editors/editor'
 import { ModelConfig } from '../models'
+import type Connection from '../connections/base'
 import {
   BigQueryOauthConnection,
   DuckDBConnection,
@@ -97,9 +98,7 @@ export default class LocalStorage extends AbstractStorage {
     return Object.values(editors).some((editor) => editor.id === id)
   }
 
-  async saveConnections(
-    connections: Array<BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>,
-  ): Promise<void> {
+  async saveConnections(connections: Array<Connection>): Promise<void> {
     const current = await this.loadConnections()
     connections.forEach((connection) => {
       if (connection.changed || !(connection.name in current)) {
@@ -113,15 +112,10 @@ export default class LocalStorage extends AbstractStorage {
     localStorage.setItem(this.connectionStorageKey, JSON.stringify(Object.values(current)))
   }
 
-  async loadConnections(): Promise<
-    Record<string, BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection>
-  > {
+  async loadConnections(): Promise<Record<string, Connection>> {
     const storedData = localStorage.getItem(this.connectionStorageKey)
     const raw = storedData ? JSON.parse(storedData) : []
-    const connections: Record<
-      string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection
-    > = {}
+    const connections: Record<string, Connection> = {}
 
     // Process each connection sequentially
     for (const connection of raw) {

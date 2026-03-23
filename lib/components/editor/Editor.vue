@@ -85,6 +85,7 @@ import type { Import, CompletionItem } from '../../stores/resolver'
 import LoadingButton from '../LoadingButton.vue'
 import ErrorMessage from '../ErrorMessage.vue'
 import { EditorTag } from '../../editors/index.ts'
+import type { EditorType } from '../../editors/editor'
 import type { ContentInput } from '../../stores/resolver.ts'
 import QueryExecutionService from '../../stores/queryExecutionService.ts'
 import type { QueryResult, QueryUpdate } from '../../stores/queryExecutionService.ts'
@@ -94,6 +95,11 @@ import CodeEditor from './EditorCode.vue'
 import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { type GoToDefinitionEvent } from './events'
+import {
+  supportsEditorFormatting,
+  supportsEditorLocalExecution,
+  supportsEditorValidation,
+} from '../../editors/fileTypes'
 
 // Define interfaces for the refs
 interface CodeEditorRef {
@@ -109,9 +115,10 @@ interface CodeEditorRef {
 export interface QueryPartial {
   text: string
   queryType: string
-  editorType: 'trilogy' | 'sql' | 'preql'
+  editorType: EditorType
   sources: ContentInput[]
   imports: Import[]
+  currentFilename?: string
 }
 
 export default defineComponent({
@@ -325,7 +332,7 @@ export default defineComponent({
       sources: ContentInput[] | null = null,
     ): Promise<Import[] | null> {
       // Early return for SQL
-      if (!this.editorData || this.editorData.type === 'sql') {
+      if (!this.editorData || !supportsEditorValidation(this.editorData.type)) {
         console.log('Nothing to validate')
         return null
       }
@@ -359,7 +366,14 @@ export default defineComponent({
       }
 
       const editorText = this.editorData.contents
-      let annotations = await this.trilogyResolver.validate_query(editorText, sources)
+      let annotations = await this.trilogyResolver.validate_query(
+        editorText,
+        sources,
+        null,
+        null,
+        null,
+        this.editorData.name,
+      )
 
       // Get editor instance from CodeEditor
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
@@ -385,6 +399,10 @@ export default defineComponent({
     },
 
     async formatQuery(): Promise<void> {
+      if (!this.editorData || !supportsEditorFormatting(this.editorData.type)) {
+        return
+      }
+
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
       if (!codeEditorRef) return
 
@@ -399,6 +417,9 @@ export default defineComponent({
           queryInput.editorType,
           queryInput.sources,
           queryInput.imports,
+          null,
+          null,
+          queryInput.currentFilename || null,
         )
         if (formatted.data && formatted.data.text) {
           codeEditorRef.setValue(formatted.data.text)
@@ -410,6 +431,13 @@ export default defineComponent({
     },
 
     async buildQueryArgs(text: string): Promise<QueryPartial> {
+      if (!this.editorData) {
+        throw new Error('Editor not found')
+      }
+      if (this.editorData.type === 'python') {
+        throw new Error('Python files are editable but cannot be run locally.')
+      }
+
       // Prepare sources for validation
       // Prepare query input
       const conn = this.connectionStore.connections[this.editorData.connection]
@@ -424,7 +452,7 @@ export default defineComponent({
           : []
       // Prepare imports
       let imports: Import[] = []
-      if (this.editorData.type !== 'sql') {
+      if (supportsEditorValidation(this.editorData.type)) {
         try {
           imports = (await this.validateQuery(false, sources)) || []
         } catch (error) {
@@ -439,10 +467,15 @@ export default defineComponent({
         editorType: this.editorData.type,
         sources,
         imports,
+        currentFilename: this.editorData.name,
       }
       return partial
     },
     async drilldownQuery(remove: string, add: string[], filter: string): Promise<void> {
+      if (!this.editorData || !supportsEditorFormatting(this.editorData.type)) {
+        return
+      }
+
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
       if (!codeEditorRef) return
 
@@ -462,6 +495,9 @@ export default defineComponent({
           // add,
           queryInput.sources,
           queryInput.imports,
+          null,
+          null,
+          queryInput.currentFilename || null,
         )
         if (drilldown.data && drilldown.data.text) {
           codeEditorRef.setValue(drilldown.data.text)
@@ -473,6 +509,13 @@ export default defineComponent({
       }
     },
     async runQuery(): Promise<any> {
+      if (!this.editorData || !supportsEditorLocalExecution(this.editorData.type)) {
+        if (this.editorData) {
+          this.editorData.setError('Python files are editable but cannot be run locally.')
+        }
+        return
+      }
+
       this.$emit('query-started')
       // clear existing error state (but keep refinement session so user can continue chatting)
       this.editorData.setError(null)
@@ -510,6 +553,7 @@ export default defineComponent({
         text,
         editorType: queryPartial.editorType,
         imports: queryPartial.imports,
+        currentFilename: queryPartial.currentFilename,
       }
 
       // Define callbacks with mounting status checks
@@ -595,6 +639,13 @@ export default defineComponent({
     },
 
     async handleLLMTrigger(): Promise<void> {
+      if (!this.editorData || this.editorData.type === 'python') {
+        if (this.editorData) {
+          this.editorData.setError('Python files are editable but cannot be run locally.')
+        }
+        return
+      }
+
       if (this.editorData.type === 'sql') {
         await this.generateLLMQuerySQL()
       } else {

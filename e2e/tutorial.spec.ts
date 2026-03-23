@@ -19,7 +19,6 @@ async function pruneTrailingQuoteIfPresent(page, expectedText) {
     return model?.getValue?.() || ''
   })
 
-
   await page.evaluate((nextText) => {
     const monaco = window.monaco
     const model = monaco?.editor?.getModels?.()[0]
@@ -194,7 +193,7 @@ select count(order.id) as order_count;`
   await createEditorFromConnectionList(page, 'iris-data', 'sql')
 
   // Set up the iris table
- if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
+  if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     return
   }
   if (isMobile) {
@@ -205,7 +204,7 @@ select count(order.id) as order_count;`
   }
   await page.keyboard.press('Delete')
   const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
-  
+
   await page.keyboard.type(irisTableScript)
 
   await page.getByTestId('editor-run-button').click()
@@ -282,7 +281,7 @@ address iris_data;`
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
   }
-  
+
   await page.locator('[data-testid^="editor-e-local-iris-data-new-editor-"]').last().click()
   if (isMobile) {
     await page.getByTestId('editor').click()

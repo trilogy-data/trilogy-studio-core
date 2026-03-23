@@ -162,6 +162,7 @@ export default class TrilogyResolver {
     imports: Import[] | null,
     extraFilters: string[] | null,
     parameters: Record<string, string | number | boolean> | null,
+    currentFilename: string | null,
   ): string {
     const normalizedParams = {
       query: query,
@@ -170,6 +171,7 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      current_filename: currentFilename || null,
     }
     return this.createHash(normalizedParams)
   }
@@ -210,6 +212,7 @@ export default class TrilogyResolver {
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     extraContent: Record<string, any> | null = null,
+    currentFilename: string | null = null,
   ): Promise<ValidateResponse> {
     const requestParams = {
       query: query,
@@ -217,6 +220,7 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       extra_content: extraContent || {},
+      current_filename: currentFilename || null,
     }
 
     // Generate hash of request params
@@ -257,6 +261,7 @@ export default class TrilogyResolver {
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
+    currentFilename: string | null = null,
   ): Promise<FormatQueryResponse> {
     console.log('TrilogyResolver.drilldown_query called')
     console.log(drilldown_filter)
@@ -271,6 +276,7 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      current_filename: currentFilename || null,
     }
 
     // Not in cache, make the API call
@@ -296,6 +302,7 @@ export default class TrilogyResolver {
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     parameters: Record<string, string> | null = null,
+    currentFilename: string | null = null,
   ): Promise<FormatQueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -309,6 +316,7 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      current_filename: currentFilename || null,
     }
 
     // Generate hash of request params
@@ -346,6 +354,7 @@ export default class TrilogyResolver {
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
+    currentFilename: string | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -360,6 +369,7 @@ export default class TrilogyResolver {
       imports,
       extraFilters,
       parameters,
+      currentFilename,
     )
 
     // Check if result exists in cache
@@ -375,6 +385,7 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      current_filename: currentFilename || null,
     }
 
     // Not in cache, make the API call
@@ -436,6 +447,7 @@ export default class TrilogyResolver {
         imports,
         mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
         Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
+        null,
       )
 
       const cachedResult = this.queryCache.get(cacheKey)
@@ -505,6 +517,7 @@ export default class TrilogyResolver {
         imports,
         mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
         Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
+        null,
       )
 
       this.queryCache.set(cacheKey, { data: queryAtom })

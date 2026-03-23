@@ -2,7 +2,8 @@ import { expect } from '@playwright/test'
 
 export async function prepareTestPage(page) {
   const resolverUrl =
-    process.env.VITE_RESOLVER_URL || (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
+    process.env.VITE_RESOLVER_URL ||
+    (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
 
   await page.addInitScript((url) => {
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {
@@ -35,13 +36,17 @@ async function ensureConnectionsSidebarVisible(page, connectionName) {
   if ((await mobileMenuToggle.count()) > 0) {
     await mobileMenuToggle.first().click()
     await page.getByTestId(`sidebar-icon-connections`).click()
-    await expect(page.getByTestId(`connection-${connectionName}`).filter({ visible: true }).first()).toBeVisible()
+    await expect(
+      page.getByTestId(`connection-${connectionName}`).filter({ visible: true }).first(),
+    ).toBeVisible()
   }
 }
 
 export async function waitForConnectionReady(page, connectionName, timeout = 60000) {
   await ensureConnectionsSidebarVisible(page, connectionName)
-  await expect(page.getByTestId(`status-icon-${connectionName}`).filter({ visible: true }).first()).toHaveClass(/connected/, { timeout })
+  await expect(
+    page.getByTestId(`status-icon-${connectionName}`).filter({ visible: true }).first(),
+  ).toHaveClass(/connected/, { timeout })
 }
 
 export async function openSidebarScreen(page, screen, isMobile = false) {
@@ -49,11 +54,17 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
     const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
     await expect(mobileMenuToggle).toBeVisible({ timeout: 10000 })
 
-    let mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
+    let mobileSidebarIcon = page
+      .getByTestId(`sidebar-icon-${screen}`)
+      .filter({ visible: true })
+      .first()
 
     if ((await mobileSidebarIcon.count()) === 0) {
       await mobileMenuToggle.click({ force: true })
-      mobileSidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
+      mobileSidebarIcon = page
+        .getByTestId(`sidebar-icon-${screen}`)
+        .filter({ visible: true })
+        .first()
       await expect(mobileSidebarIcon).toBeVisible({ timeout: 10000 })
     }
 
@@ -62,9 +73,22 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
     return
   }
 
+  const expandedSidebarContent = page.locator(
+    '.sidebar-container > .sidebar-content:not(.sidebar-content-collapsed)',
+  )
+  const selectedSidebarIcon = page
+    .locator(`[data-testid="sidebar-icon-${screen}"].selected`)
+    .first()
+
+  if ((await selectedSidebarIcon.count()) > 0 && (await expandedSidebarContent.isVisible())) {
+    return
+  }
+
   const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
   await expect(sidebarIcon).toBeVisible({ timeout: 10000 })
   await sidebarIcon.click({ force: true })
+  await expect(sidebarIcon).toHaveClass(/selected/, { timeout: 10000 })
+  await expect(expandedSidebarContent).toBeVisible({ timeout: 10000 })
 }
 
 async function getVisibleConnectionRow(page, connectionName) {
@@ -140,19 +164,34 @@ export async function createEditorFromConnection(page, connectionName, type = 't
     return
   }
 
-  const editorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
+  const localEditorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
     visible: true,
   })
+  const remoteEditorConnectionLabel = page.getByTestId(`editor-c-remote-${connectionName}`).filter({
+    visible: true,
+  })
+  const editorConnectionLabel =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? remoteEditorConnectionLabel.first()
+      : localEditorConnectionLabel.first()
   const connectionRow = editorConnectionLabel.locator(
     'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
   )
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.getByTestId(`editor-actions-c-local-${connectionName}-trigger`).click()
+  const actionKey =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? `editor-actions-c-remote-${connectionName}-trigger`
+      : `editor-actions-c-local-${connectionName}-trigger`
+  await connectionRow.getByTestId(actionKey).click()
 
   const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
-  await page.getByTestId(`editor-actions-c-local-${connectionName}-${actionId}`).click()
+  const actionTestId =
+    (await remoteEditorConnectionLabel.count()) > 0
+      ? `editor-actions-c-remote-${connectionName}-${actionId}`
+      : `editor-actions-c-local-${connectionName}-${actionId}`
+  await page.getByTestId(actionTestId).click()
 }
 
 async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {

@@ -248,9 +248,13 @@ export class ModelSource {
 
   constructor(editor: string, alias: string, concepts: Concept[], datasources: Datasource[]) {
     this.editor = editor
-    this.alias = alias
+    this.alias = ModelSource.normalizeAlias(alias)
     this.concepts = concepts || []
     this.datasources = datasources || []
+  }
+
+  static normalizeAlias(alias: string): string {
+    return alias.replace(/\.(preql|sql|py)$/i, '')
   }
 
   toJSON() {
@@ -397,7 +401,7 @@ export class ModelConfig {
   updateModelSourceName(id: string, newName: string) {
     let source = this.sources.find((s) => s.editor === id)
     if (source) {
-      source.alias = newName
+      source.alias = ModelSource.normalizeAlias(newName)
       this.changed = true
     }
   }

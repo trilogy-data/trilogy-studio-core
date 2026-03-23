@@ -527,7 +527,7 @@ export default defineComponent({
   min-height: 48px;
   background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .chat-header-left {
@@ -543,7 +543,7 @@ export default defineComponent({
   display: flex;
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .chat-title {

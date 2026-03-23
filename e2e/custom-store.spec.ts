@@ -39,9 +39,15 @@ const getAvailablePort = async (): Promise<number> =>
     })
   })
 
-const getStoreIdFromUrl = (url: string): string => url.replace(/^https?:\/\//, '').replace(/\//g, '-')
+const getStoreIdFromUrl = (url: string): string =>
+  url.replace(/^https?:\/\//, '').replace(/\//g, '-')
 
-test.describe('Custom Model Store', () => {
+const shouldSkipCustomStoreTests =
+  process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker'
+
+const customStoreDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
+
+customStoreDescribe('Custom Model Store', () => {
   let mockServer: ChildProcess | null = null
   let mockServerUrl = ''
   let mockStoreId = ''
@@ -49,12 +55,6 @@ test.describe('Custom Model Store', () => {
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
-
-  // Skip these tests in production and docker environments since they require a local mock server
-  test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Custom store tests require local mock server, not available in production or docker environments',
-  )
 
   // Start the mock server before all tests
   test.beforeAll(async () => {
@@ -254,9 +254,7 @@ test.describe('Custom Model Store', () => {
     await createEditorFromConnection(page, connectionName, 'trilogy')
 
     // Verify a new editor was created under the imported model connection
-    await expect(
-      page.getByTestId(`editor-run-button`),
-    ).toBeVisible()
+    await expect(page.getByTestId(`editor-run-button`)).toBeVisible()
   })
 
   test('should show error for unreachable custom store', async ({ page, isMobile }) => {
@@ -345,7 +343,9 @@ test.describe('Custom Model Store', () => {
   })
 })
 
-test.describe('Asset Auto-Import via URL', () => {
+const autoImportDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
+
+autoImportDescribe('Asset Auto-Import via URL', () => {
   let mockServer: ChildProcess | null = null
   let mockServerUrl = ''
   let mockStoreId = ''
@@ -353,12 +353,6 @@ test.describe('Asset Auto-Import via URL', () => {
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
-
-  // Skip these tests in production and docker environments since they require a local mock server
-  test.skip(
-    process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker',
-    'Auto-import tests require local mock server, not available in production or docker environments',
-  )
 
   // Start the mock server before all tests
   test.beforeAll(async () => {

@@ -9,7 +9,6 @@
     @click.stop
   >
     <i :class="buttonIcon" class="refresh-icon"></i>
-    <span v-if="!props.connection.connected" class="connect-label">Connect</span>
   </loading-button>
 </template>
 
@@ -47,9 +46,7 @@ const buttonIcon = computed(() =>
   props.connection.connected ? 'mdi mdi-refresh' : 'mdi mdi-power-plug-outline',
 )
 
-const buttonClass = computed(() =>
-  props.connection.connected ? 'sidebar-icon-button' : 'sidebar-connect-button',
-)
+const buttonClass = 'sidebar-icon-button'
 
 const buttonTestId = computed(() =>
   props.connection.connected
@@ -70,27 +67,7 @@ const handleRefresh = async () => {
 </script>
 
 <style scoped>
-.refresh-button {
-  border-radius: var(--radius-sm);
-}
-
-.sidebar-connect-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 26px;
-  padding: 4px 10px;
-  border: 1px solid var(--border-light);
-  background: transparent;
-  color: var(--text-color);
-  font-size: 12px;
-}
-
 .refresh-icon {
-  font-size: 15px;
-}
-
-.connect-label {
-  line-height: 1;
+  font-size: 13px;
 }
 </style>

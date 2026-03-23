@@ -10,7 +10,9 @@ import QueryExecutionService from '../stores/queryExecutionService'
 import { ModelImportService } from '../models/helpers'
 import useScreenNavigation from '../stores/useScreenNavigation'
 import { getDefaultValueFromHash, removeHashFromUrl } from '../stores/urlStore'
+import ConfirmDialog from './ConfirmDialog.vue'
 import trilogyIcon from '../static/trilogy.png'
+import { buildGenericStoreId, normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
 
 // Asset types that can be opened after import
 type AssetType = 'dashboard' | 'editor' | 'trilogy'
@@ -47,6 +49,7 @@ const isLoading = ref<boolean>(true)
 const modelUrl = ref<string>('')
 const storeUrl = ref<string>('')
 const importToken = ref<string>('')
+const remoteImport = ref<boolean>(false)
 const assetName = ref<string>('')
 const assetType = ref<AssetType>('dashboard')
 const modelName = ref<string>('')
@@ -54,6 +57,7 @@ const connectionType = ref<string>('')
 const error = ref<string | null>(null)
 const importSuccess = ref<boolean>(false)
 const importedAssetId = ref<string>('')
+const showOverwriteConfirmation = ref<boolean>(false)
 
 // Progress tracking
 const currentStep = ref<'registering' | 'importing' | 'connecting' | 'preparing'>('importing')
@@ -113,6 +117,11 @@ const assetTypeDisplayName = computed(() => {
       return 'Asset'
   }
 })
+
+const overwriteMessage = computed(
+  () =>
+    `A model named "${modelName.value}" already exists. Overwriting will replace its imported sources. Continue?`,
+)
 
 const loadingHeadline = computed(() => {
   switch (assetType.value) {
@@ -202,17 +211,19 @@ const registerStoreIfNeeded = async (): Promise<void> => {
     return
   }
 
-  // Generate store ID from URL
-  const storeId = storeUrl.value
-    .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '')
-    .replace(/\//g, '-')
+  const normalizedBaseUrl = normalizeGenericStoreBaseUrl(storeUrl.value)
+  const storeId = buildGenericStoreId(normalizedBaseUrl)
 
   // Check if store already exists
   const existingStore = communityApiStore.stores.find((s) => s.id === storeId)
   if (existingStore) {
-    if (existingStore.type === 'generic' && importToken.value) {
-      existingStore.token = importToken.value
+    if (existingStore.type === 'generic') {
+      if (importToken.value) {
+        existingStore.token = importToken.value
+      }
+      if (remoteImport.value && modelName.value) {
+        existingStore.name = modelName.value
+      }
     }
     console.log(`Store ${storeId} already registered`)
     return
@@ -222,8 +233,11 @@ const registerStoreIfNeeded = async (): Promise<void> => {
   const newStore: GenericModelStore = {
     type: 'generic',
     id: storeId,
-    name: `Auto-registered: ${storeUrl.value}`,
-    baseUrl: storeUrl.value.replace(/\/$/, ''), // Remove trailing slash
+    name:
+      remoteImport.value && modelName.value
+        ? modelName.value
+        : `Auto-registered: ${normalizedBaseUrl}`,
+    baseUrl: normalizedBaseUrl,
     token: importToken.value || undefined,
   }
 
@@ -234,6 +248,41 @@ const registerStoreIfNeeded = async (): Promise<void> => {
     console.warn(`Failed to register store ${storeId}:`, err)
     // Don't fail the import if store registration fails - model URL might still work
   }
+}
+
+const getRegisteredStore = (): GenericModelStore | null => {
+  if (!storeUrl.value || !communityApiStore) {
+    return null
+  }
+
+  const normalizedBaseUrl = normalizeGenericStoreBaseUrl(storeUrl.value)
+  const storeId = buildGenericStoreId(normalizedBaseUrl)
+  const store = communityApiStore.stores.find((item) => item.id === storeId)
+  return store?.type === 'generic' ? store : null
+}
+
+const cancelOverwrite = () => {
+  showOverwriteConfirmation.value = false
+  error.value = `Import cancelled. Existing model "${modelName.value}" was not overwritten.`
+  isLoading.value = false
+  stopTimer()
+}
+
+const confirmOverwrite = async () => {
+  showOverwriteConfirmation.value = false
+  error.value = null
+  await performImport()
+}
+
+const startImportFlow = async () => {
+  if (modelStore.models[modelName.value]) {
+    isLoading.value = false
+    stopTimer()
+    showOverwriteConfirmation.value = true
+    return
+  }
+
+  await performImport()
 }
 
 // Import model and open asset
@@ -278,11 +327,21 @@ const performImport = async () => {
     }
 
     // Import model (this will also import any dashboards included in the model)
+    const remoteStore = getRegisteredStore()
+    if (remoteImport.value && !remoteStore) {
+      throw new Error('Remote imports require a valid store URL that can be registered.')
+    }
+
     let imports = await modelImportService.importModel(
       modelName.value,
       modelUrl.value,
       connectionName,
-      importToken.value || undefined,
+      {
+        token: importToken.value || undefined,
+        remote: remoteImport.value,
+        remoteStoreId: remoteStore?.id || null,
+        remoteBaseUrl: remoteStore?.baseUrl || storeUrl.value || null,
+      },
     )
 
     // Transition to connecting step
@@ -319,7 +378,10 @@ const performImport = async () => {
     } else {
       // Find the imported editor by name and connection (for trilogy/editor types)
       let lookup = assetName.value
-      let matched = imports?.trilogy.get(assetName.value) || imports?.sql.get(assetName.value)
+      let matched =
+        imports?.trilogy.get(assetName.value) ||
+        imports?.sql.get(assetName.value) ||
+        imports?.python.get(assetName.value)
       if (matched) {
         lookup = matched
       }
@@ -374,6 +436,7 @@ const performImport = async () => {
     removeHashFromUrl('assetType')
     removeHashFromUrl('assetName')
     removeHashFromUrl('dashboard') // Legacy parameter
+    removeHashFromUrl('remote')
 
     // Auto-redirect after short delay
     setTimeout(() => {
@@ -395,13 +458,6 @@ const performImport = async () => {
   }
 }
 
-// Auto-import for DuckDB (no fields required)
-const autoImport = async () => {
-  if (!requiresFields.value) {
-    await performImport()
-  }
-}
-
 // Initialize auto-import
 onMounted(async () => {
   try {
@@ -414,6 +470,7 @@ onMounted(async () => {
     const modelUrlParam = screenNavigation.modelImport.value
     const storeUrlParam = getDefaultValueFromHash('store', '')
     const tokenParam = getDefaultValueFromHash('token', '')
+    const remoteParam = getDefaultValueFromHash('remote', '')
     const assetTypeParam = getDefaultValueFromHash('assetType', '') as AssetType
     const assetNameParam = getDefaultValueFromHash('assetName', '')
     const dashboardNameParam = getDefaultValueFromHash('dashboard', '') // Legacy support
@@ -445,6 +502,7 @@ onMounted(async () => {
     modelUrl.value = decodeURIComponent(modelUrlParam)
     storeUrl.value = storeUrlParam ? decodeURIComponent(storeUrlParam) : ''
     importToken.value = tokenParam ? decodeURIComponent(tokenParam) : ''
+    remoteImport.value = ['true', '1', 'yes'].includes((remoteParam || '').toLowerCase())
     assetName.value = decodeURIComponent(finalAssetName)
     assetType.value = finalAssetType
     modelName.value = decodeURIComponent(modelNameParam)
@@ -460,7 +518,7 @@ onMounted(async () => {
 
     // Auto-import if no fields required (DuckDB) - keep loading/timer running
     if (!requiresFields.value) {
-      await autoImport()
+      await startImportFlow()
     } else {
       // Stop loading for form input - user needs to provide data
       isLoading.value = false
@@ -487,7 +545,7 @@ const handleManualImport = async () => {
     throw new Error('Form is not valid')
   }
   console.log('performing import')
-  await performImport()
+  await startImportFlow()
 }
 
 // Fallback to manual import
@@ -682,6 +740,18 @@ const switchToManualImport = () => {
         <button @click="switchToManualImport" class="cancel-button">Cancel</button>
       </div>
     </div>
+
+    <ConfirmDialog
+      :show="showOverwriteConfirmation"
+      title="Overwrite Existing Model?"
+      :message="overwriteMessage"
+      confirm-label="Overwrite"
+      cancel-label="Cancel"
+      confirm-test-id="confirm-overwrite-model"
+      cancel-test-id="cancel-overwrite-model"
+      @close="cancelOverwrite"
+      @confirm="confirmOverwrite"
+    />
   </div>
 </template>
 

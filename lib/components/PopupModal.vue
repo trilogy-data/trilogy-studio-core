@@ -40,6 +40,13 @@
             >
               Got it!
             </button>
+            <button
+              @click="disableAllHints"
+              class="secondary-button"
+              data-testid="disable-all-hints"
+            >
+              Disable All Hints
+            </button>
             <button @click="skipSequence" class="cancel-btn" data-testid="skip-sequence">
               Skip
             </button>
@@ -54,10 +61,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
 import ResizeHandles from '../composables/ResizeHandles.vue' // Adjust path as needed
 import { useResizableDialog } from '../composables/useResizableDialog' // Adjust path as needed
 import type { ModalItem } from '../data/tips'
+import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 
 // Define props
 const props = defineProps({
@@ -81,6 +89,7 @@ const props = defineProps({
 
 // Define emits
 const emit = defineEmits(['mark-item-read', 'close-modal'])
+const userSettingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
 
 // Local state
 const currentIndex = ref(0)
@@ -268,6 +277,17 @@ const skipSequence = () => {
   emit('close-modal')
 }
 
+const disableAllHints = async () => {
+  if (!userSettingsStore) {
+    emit('close-modal')
+    return
+  }
+
+  userSettingsStore.updateSetting('skipAllTips', true)
+  await userSettingsStore.saveSettings()
+  emit('close-modal')
+}
+
 // Watchers
 // Reset index when items change
 watch(
@@ -436,6 +456,19 @@ h2 {
 }
 
 .cancel-btn:hover {
+  background-color: var(--border-light);
+}
+
+.secondary-button {
+  background-color: rgba(148, 163, 184, 0.08);
+  color: var(--text-color);
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: var(--font-size);
+}
+
+.secondary-button:hover {
   background-color: var(--border-light);
 }
 

@@ -464,11 +464,13 @@ export default defineComponent({
   min-width: 220px;
   max-width: 480px;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   background: var(--query-window-bg);
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  position: relative;
+  z-index: 3;
 }
 
 .chat-split-container.is-resizing {
@@ -493,7 +495,7 @@ export default defineComponent({
   gap: 8px;
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .connection-info {
@@ -515,6 +517,7 @@ export default defineComponent({
   padding: 0 8px;
   background: transparent;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  overflow: visible;
 }
 
 :deep(.chat-title) {
@@ -574,6 +577,8 @@ export default defineComponent({
   border-radius: 0;
   overflow: hidden;
   box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-tabs {

@@ -5,8 +5,10 @@ import { Results } from '../editors/results'
 import type { ChartConfig } from '../editors/results'
 import { EditorTag } from '../editors'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
+import { normalizeRemoteEditorPath, type EditorType } from '../editors/editor'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
+import useConnectionStore from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { CompletionItem } from './resolver'
 import {
@@ -77,27 +79,51 @@ const useEditorStore = defineStore('editors', {
   actions: {
     newEditor(
       name: string,
-      type: 'trilogy' | 'sql' | 'preql',
+      type: EditorType,
       connection: string,
       contents: string | undefined,
+      options: {
+        storage?: string
+        remoteStoreId?: string | null
+        remotePath?: string | null
+        remotePersisted?: boolean
+      } = {},
     ) {
-      let baseName = name
-      let uniqueName = name
+      const connectionStore = useConnectionStore()
+      const connectionRef = connectionStore.connections[connection] as
+        | { storage?: string; remoteStoreId?: string | null }
+        | undefined
+      const storage = options.storage || connectionRef?.storage || 'local'
+      const remoteStoreId =
+        options.remoteStoreId ||
+        (storage === 'remote' ? connectionRef?.remoteStoreId || null : null)
+      const baseName = storage === 'remote' ? normalizeRemoteEditorPath(name, type) : name
+      const remotePath =
+        storage === 'remote'
+          ? normalizeRemoteEditorPath(options.remotePath || baseName, type)
+          : null
+      const baseId =
+        storage === 'remote'
+          ? `remote:${remoteStoreId || 'store'}:${encodeURIComponent(remotePath || baseName)}`
+          : baseName
+      let uniqueId = baseId
       let suffix = 1
 
-      // Keep trying new names with incremented suffixes until we find a unique one
-      while (uniqueName in this.editors) {
-        uniqueName = `${baseName}_${suffix}`
+      while (this.editors[uniqueId]) {
+        uniqueId = `${baseId}#${suffix}`
         suffix++
       }
 
       let editor = new Editor({
-        id: uniqueName,
+        id: uniqueId,
         name: baseName,
         type,
         connection,
-        storage: 'local',
+        storage,
         contents: contents || '',
+        remoteStoreId,
+        remotePath: remotePath || undefined,
+        remotePersisted: options.remotePersisted || false,
       })
 
       this.editors[editor.id] = editor

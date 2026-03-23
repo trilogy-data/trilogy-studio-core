@@ -7,6 +7,13 @@ import {
   type CancellationToken,
 } from 'monaco-editor'
 import { editor, languages } from 'monaco-editor/esm/vs/editor/editor.api'
+import {
+  getMonacoLanguageForEditorType,
+  supportsEditorAssistant,
+  supportsEditorFormatting,
+  supportsEditorLocalExecution,
+  supportsEditorValidation,
+} from '../../editors/fileTypes'
 
 // Maps to track editor instances (exported for component use)
 export const editorMap = new Map<string, editor.IStandaloneCodeEditor>()
@@ -240,11 +247,15 @@ export const setupGoToDefinitionProvider = (
 
   console.log(
     'Setting up go-to-definition provider for language:',
-    editorType === 'sql' ? 'sql' : 'trilogy',
+    getMonacoLanguageForEditorType(editorType),
   )
 
+  if (editorType === 'python') {
+    return
+  }
+
   const disposable = languages.registerDefinitionProvider(
-    editorType === 'sql' ? 'sql' : 'trilogy',
+    getMonacoLanguageForEditorType(editorType),
     {
       provideDefinition: (model, position, token) => {
         return provideDefinition(model, position, token, editorInstance, onGoToDefinition)
@@ -258,11 +269,16 @@ export const setupGoToDefinitionProvider = (
 // Setup additional click handler for more controlled behavior
 export const setupGoToDefinitionClickHandler = (
   editorInstance: editor.IStandaloneCodeEditor,
+  editorType: string,
   onGoToDefinition: (data: any) => void,
   providerDisposables: IDisposable[],
 ): void => {
   const model = editorInstance.getModel()
   if (!model) return
+
+  if (editorType === 'python') {
+    return
+  }
 
   console.log('Setting up go-to-definition click handler')
 
@@ -372,7 +388,7 @@ export const createEditor = (
   // Create editor
   const editorInstance = editor.create(editorElement, {
     value: props.contents,
-    language: props.editorType === 'sql' ? 'sql' : 'trilogy',
+    language: getMonacoLanguageForEditorType(props.editorType),
     automaticLayout: true,
     autoClosingBrackets: 'always',
     autoClosingOvertype: 'always',
@@ -398,7 +414,12 @@ export const createEditor = (
   )
 
   // Set up additional click handler for more controlled behavior
-  setupGoToDefinitionClickHandler(editorInstance, callbacks.onGoToDefinition, providerDisposables)
+  setupGoToDefinitionClickHandler(
+    editorInstance,
+    props.editorType,
+    callbacks.onGoToDefinition,
+    providerDisposables,
+  )
 
   // Set up content change handler
   setupContentChangeHandler(editorInstance, callbacks)
@@ -487,18 +508,19 @@ export const setupKeyBindings = (
   editorType: string,
   callbacks: EditorEventCallbacks,
 ): void => {
-  // Validate query: Ctrl+Shift+V
-  editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
-    callbacks.onValidateQuery()
-  })
+  if (supportsEditorValidation(editorType)) {
+    editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV, () => {
+      callbacks.onValidateQuery()
+    })
+  }
 
-  // Run query: Ctrl+Enter
-  editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
-    callbacks.onRunQuery()
-  })
+  if (supportsEditorLocalExecution(editorType)) {
+    editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => {
+      callbacks.onRunQuery()
+    })
+  }
 
-  // Format query: Ctrl+K (not for SQL)
-  if (editorType !== 'sql') {
+  if (supportsEditorFormatting(editorType)) {
     editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.KeyK, () => {
       callbacks.onFormatQuery()
     })
@@ -514,10 +536,11 @@ export const setupKeyBindings = (
     })
   }
 
-  // LLM query generation: Ctrl+Shift+Enter
-  editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
-    callbacks.onGenerateLlmQuery()
-  })
+  if (supportsEditorAssistant(editorType)) {
+    editorInstance.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter, () => {
+      callbacks.onGenerateLlmQuery()
+    })
+  }
 
   // Save: Ctrl+S
   editorInstance.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {

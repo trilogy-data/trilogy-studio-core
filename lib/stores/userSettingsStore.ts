@@ -8,7 +8,6 @@ export interface UserSettings {
   telemetryEnabled: boolean | null
   tipsRead: string[]
   skipAllTips: boolean
-  disableEditorHints: boolean
   [key: string]: string | boolean | number | null | undefined | string[]
 }
 
@@ -22,7 +21,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
       telemetryEnabled: null,
       tipsRead: [] as string[],
       skipAllTips: false,
-      disableEditorHints: false,
     } as UserSettings,
     defaults: {
       theme: 'dark',
@@ -30,7 +28,6 @@ export const useUserSettingsStore = defineStore('userSettings', {
       telemetryEnabled: true,
       tipsRead: [] as string[],
       skipAllTips: false,
-      disableEditorHints: false,
     } as UserSettings,
     isLoading: false,
     hasChanges: false,
@@ -149,8 +146,8 @@ export const useUserSettingsStore = defineStore('userSettings', {
           if (!this.settings.tipsRead) {
             this.settings.tipsRead = []
           }
-          if (typeof this.settings.disableEditorHints !== 'boolean') {
-            this.settings.disableEditorHints = false
+          if ('disableEditorHints' in this.settings) {
+            delete this.settings.disableEditorHints
           }
         }
       } catch (error) {

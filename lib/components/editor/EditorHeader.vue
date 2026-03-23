@@ -38,7 +38,7 @@
           }}</span>
         </button>
         <loading-button
-          v-if="editorType !== 'sql' && connectionHasModel"
+          v-if="supportsEditorSourceTag(editorType) && connectionHasModel"
           :useDefaultStyle="false"
           class="toggle-button action-item action-item-scope"
           :class="{ tag: tags.includes(EditorTag.SOURCE) }"
@@ -47,11 +47,16 @@
           title="Toggle source model"
           aria-label="Toggle source model"
         >
-          <span class="action-label">{{ tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source' }}</span>
+          <span class="action-label">{{
+            tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source'
+          }}</span>
         </loading-button>
       </div>
 
-      <div class="toolbar-divider"></div>
+      <div
+        v-if="editorType === 'sql' || (supportsEditorSourceTag(editorType) && connectionHasModel)"
+        class="toolbar-divider"
+      ></div>
 
       <div class="action-group">
         <button
@@ -65,7 +70,7 @@
           <span class="action-label">Save</span>
         </button>
         <loading-button
-          v-if="editorType !== 'sql'"
+          v-if="supportsEditorValidation(editorType)"
           :useDefaultStyle="false"
           class="action-item action-item-compact"
           :action="() => $emit('validate')"
@@ -77,7 +82,7 @@
           <span class="action-label">Parse</span>
         </loading-button>
         <button
-          v-if="editorType !== 'sql'"
+          v-if="supportsEditorFormatting(editorType)"
           class="action-item action-item-compact"
           @click="$emit('format')"
           data-testid="editor-format-button"
@@ -89,9 +94,9 @@
         </button>
       </div>
 
-      <div v-if="editorType !== 'sql'" class="toolbar-divider"></div>
+      <div v-if="supportsEditorAssistant(editorType)" class="toolbar-divider"></div>
 
-      <div v-if="editorType !== 'sql'" class="action-group">
+      <div v-if="supportsEditorAssistant(editorType)" class="action-group">
         <loading-button
           :useDefaultStyle="false"
           class="action-item action-item-ai action-item-compact"
@@ -105,9 +110,12 @@
         </loading-button>
       </div>
 
-      <div class="toolbar-divider"></div>
+      <div v-if="supportsEditorLocalExecution(editorType)" class="toolbar-divider"></div>
 
-      <div class="action-group action-group-execute">
+      <div
+        v-if="supportsEditorLocalExecution(editorType)"
+        class="action-group action-group-execute"
+      >
         <button
           @click="() => (loading ? $emit('cancel') : $emit('run'))"
           class="action-item"
@@ -129,9 +137,25 @@
 import { defineComponent } from 'vue'
 import LoadingButton from '../LoadingButton.vue'
 import { EditorTag } from '../../editors'
+import {
+  supportsEditorAssistant,
+  supportsEditorFormatting,
+  supportsEditorLocalExecution,
+  supportsEditorSourceTag,
+  supportsEditorValidation,
+} from '../../editors/fileTypes'
 
 export default defineComponent({
   name: 'EditorHeader',
+  setup() {
+    return {
+      supportsEditorAssistant,
+      supportsEditorFormatting,
+      supportsEditorLocalExecution,
+      supportsEditorSourceTag,
+      supportsEditorValidation,
+    }
+  },
   components: {
     LoadingButton,
   },

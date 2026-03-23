@@ -68,7 +68,7 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, computed, defineComponent } from 'vue'
+import { ref, onMounted, computed, defineComponent, inject } from 'vue'
 
 import { useCommunityApiStore, useScreenNavigation } from '../../stores'
 import SidebarList from './SidebarList.vue'
@@ -78,12 +78,19 @@ import type { ModelFile, ModelRoot, AnyModelStore } from '../../remotes/models'
 import { buildCommunityModelTree } from '../../remotes/displayHelpers'
 import ConfirmDialog from '../ConfirmDialog.vue'
 import { useConfirmationState } from '../useConfirmationState'
+import type { EditorStoreType } from '../../stores/editorStore'
+import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { ModelConfigStoreType } from '../../stores/modelStore'
+import { removeRemoteStoreFromIde } from '../../remotes/remoteStoreSync'
 
 export default defineComponent({
   name: 'CommunityModelList',
   setup() {
     const communityStore = useCommunityApiStore()
     const navigationStore = useScreenNavigation()
+    const editorStore = inject<EditorStoreType>('editorStore')
+    const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const modelStore = inject<ModelConfigStoreType>('modelStore')
     const collapsed = ref<Record<string, boolean>>({})
 
     // Get the currently active model key
@@ -138,6 +145,11 @@ export default defineComponent({
       closeConfirmation: cancelDeleteStore,
       confirm: confirmDeleteStore,
     } = useConfirmationState<AnyModelStore>((store) => {
+      if (store.type === 'generic') {
+        if (editorStore && connectionStore && modelStore) {
+          removeRemoteStoreFromIde(store.id, editorStore, connectionStore, modelStore)
+        }
+      }
       communityStore.removeStore(store.id)
     })
 

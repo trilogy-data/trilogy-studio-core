@@ -25,6 +25,13 @@
           <tooltip content="Raw SQL Editor" v-if="item.editor.type === 'sql'">
             <span class="sql">SQL</span>
           </tooltip>
+          <tooltip
+            content="Python File"
+            class="icon-display"
+            v-else-if="item.editor.type === 'python'"
+          >
+            <i class="mdi mdi-language-python python-icon"></i>
+          </tooltip>
           <tooltip content="Trilogy Editor" class="icon-display" v-else>
             <img :src="trilogyIcon" class="trilogy-icon" />
           </tooltip>
@@ -123,7 +130,7 @@ export default {
       default: false,
     },
   },
-  emits: ['item-click', 'delete-editor', 'toggle'],
+  emits: ['item-click', 'delete-editor', 'toggle', 'refresh-store'],
   setup(props, { emit }) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -172,11 +179,21 @@ export default {
           editorName = `${root}/${editorName}`
         }
 
+        const editorType = type === 'trilogy' ? 'preql' : type === 'python' ? 'python' : 'sql'
+        const isRemote = props.item.storage === 'remote'
+
         const editor = editorStore.newEditor(
           editorName,
-          type === 'trilogy' ? 'preql' : 'sql',
+          editorType,
           connection,
           undefined,
+          isRemote
+            ? {
+                storage: 'remote',
+                remoteStoreId: props.item.remoteStoreId || null,
+                remotePath: editorName,
+              }
+            : undefined,
         )
 
         await saveEditors()
@@ -188,6 +205,10 @@ export default {
     }
 
     const contextMenuItems = computed<ContextMenuItem[]>(() => {
+      const isRemoteConnectionItem =
+        props.item.type === 'connection' && props.item.storage === 'remote'
+      const isRemoteFolderItem = props.item.type === 'folder' && props.item.storage === 'remote'
+
       if (props.item.type === 'editor') {
         return [
           {
@@ -199,8 +220,30 @@ export default {
         ]
       }
 
-      if (props.item.type === 'connection' || props.item.type === 'folder') {
+      if (props.item.type === 'folder') {
         return [
+          { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
+          ...(isRemoteFolderItem
+            ? ([
+                { id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' },
+              ] as ContextMenuItem[])
+            : []),
+          {
+            id: 'new-trilogy',
+            label: 'New Trilogy editor',
+            icon: 'mdi-file-document-plus-outline',
+          },
+        ]
+      }
+
+      if (props.item.type === 'connection') {
+        return [
+          ...(isRemoteConnectionItem
+            ? ([
+                { id: 'refresh-store', label: 'Refresh', icon: 'mdi-refresh' },
+                { id: 'new-python', label: 'New Python file', icon: 'mdi-language-python' },
+              ] as ContextMenuItem[])
+            : []),
           { id: 'new-sql', label: 'New SQL editor', icon: 'mdi-file-document-plus-outline' },
           {
             id: 'new-trilogy',
@@ -237,6 +280,17 @@ export default {
         case 'delete-editor':
           this.$emit('delete-editor', this.item.editor)
           break
+        case 'refresh-store': {
+          const connection = this.connectionStore.connections[this.item.label] as
+            | ((typeof this.connectionStore.connections)[string] & {
+                remoteStoreId?: string | null
+              })
+            | undefined
+          if (connection?.remoteStoreId) {
+            this.$emit('refresh-store', connection.remoteStoreId)
+          }
+          break
+        }
         case 'new-sql':
           this.createNewEditor(
             this.item.type === 'connection' ? this.item.label : this.item.connection,
@@ -248,6 +302,13 @@ export default {
           this.createNewEditor(
             this.item.type === 'connection' ? this.item.label : this.item.connection,
             'trilogy',
+            this.item.type === 'folder' ? this.item.objectKey : '',
+          )
+          break
+        case 'new-python':
+          this.createNewEditor(
+            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            'python',
             this.item.type === 'folder' ? this.item.objectKey : '',
           )
           break
@@ -276,6 +337,11 @@ export default {
 .trilogy-icon {
   width: var(--icon-size);
   height: var(--icon-size);
+}
+
+.python-icon {
+  font-size: var(--icon-size);
+  color: #3776ab;
 }
 
 .icon-display {

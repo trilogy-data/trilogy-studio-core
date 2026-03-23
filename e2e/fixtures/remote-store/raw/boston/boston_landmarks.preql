@@ -1,0 +1,5 @@
+datasource boston_landmarks (
+    landmark_id
+)
+grain (landmark_id)
+address boston_landmarks_source;

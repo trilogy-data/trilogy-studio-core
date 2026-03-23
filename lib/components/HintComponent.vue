@@ -1,19 +1,11 @@
 <template>
-  <div v-if="showHints" class="hints" data-testid="editor-shortcut-hints">
+  <div class="hints" data-testid="editor-shortcut-hints">
     <div class="hint-card">
       <div class="hint-header">
         <div>
           <div class="hint-title">Keyboard shortcuts</div>
           <div class="hint-subtitle">Shown when an editor has no results yet.</div>
         </div>
-        <button
-          class="disable-hints-button"
-          type="button"
-          data-testid="disable-editor-hints"
-          @click="disableHints"
-        >
-          Disable All Hints
-        </button>
       </div>
       <div class="shortcuts">
         <div v-for="shortcut in shortcuts" :key="shortcut.name" class="shortcut-item">
@@ -69,29 +61,6 @@
   font-size: 11px;
   line-height: 1.45;
   color: var(--text-faint);
-}
-
-.disable-hints-button {
-  appearance: none;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.08);
-  color: var(--text-faint);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease-in-out,
-    border-color 0.15s ease-in-out,
-    color 0.15s ease-in-out;
-}
-
-.disable-hints-button:hover {
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.1);
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.22);
-  color: var(--text);
 }
 
 .shortcuts {
@@ -162,10 +131,6 @@
     margin-bottom: 14px;
   }
 
-  .disable-hints-button {
-    width: 100%;
-  }
-
   .shortcuts {
     grid-template-columns: 1fr;
     row-gap: 6px;
@@ -182,8 +147,7 @@
 </style>
 
 <script lang="ts">
-import { computed, defineComponent, inject } from 'vue'
-import type { UserSettingsStoreType } from '../stores/userSettingsStore'
+import { defineComponent } from 'vue'
 
 function detectOperatingSystem(): string {
   if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
@@ -224,25 +188,6 @@ function detectOperatingSystem(): string {
 
 export default defineComponent({
   name: 'HintComponent',
-  setup() {
-    const userSettingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
-
-    const showHints = computed(() => !userSettingsStore?.settings.disableEditorHints)
-
-    const disableHints = async () => {
-      if (!userSettingsStore) {
-        return
-      }
-
-      userSettingsStore.updateSetting('disableEditorHints', true)
-      await userSettingsStore.saveSettings()
-    }
-
-    return {
-      showHints,
-      disableHints,
-    }
-  },
   data() {
     const os = detectOperatingSystem()
     return {

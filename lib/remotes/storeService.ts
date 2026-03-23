@@ -19,6 +19,17 @@ const buildAuthRequest = (token?: string): RequestInit | undefined => {
   }
 }
 
+export const fetchGenericStoreIndex = async (store: GenericModelStore): Promise<StoreIndex> => {
+  const indexUrl = `${store.baseUrl}/index.json`
+  const response = await fetchWithBackoff(indexUrl, buildAuthRequest(store.token))
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch store index: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
 /**
  * Fetch models from a generic store
  * @param store The generic store configuration
@@ -34,15 +45,7 @@ export const fetchFromGenericStore = async (
   let files: ModelFile[] = []
 
   try {
-    // Fetch the index from the base URL
-    const indexUrl = `${store.baseUrl}/index.json`
-    const response = await fetchWithBackoff(indexUrl, buildAuthRequest(store.token))
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch store index: ${response.status} ${response.statusText}`)
-    }
-
-    const index: StoreIndex = await response.json()
+    const index = await fetchGenericStoreIndex(store)
 
     // Fetch each model file
     const filePromises = index.models.map(async (modelRef) => {

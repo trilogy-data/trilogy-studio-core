@@ -13,7 +13,12 @@ from trilogy.parsing.render import Renderer
 from trilogy.core.exceptions import InvalidSyntaxException
 from trilogy.authoring import SelectStatement, SelectItem
 
-from env_helpers import parse_env_from_full_model, model_to_response
+from env_helpers import (
+    parse_env_from_full_model,
+    model_to_response,
+    normalize_relative_imports,
+    resolve_import_path,
+)
 from io_models import (
     QueryInSchema,
     FormatQueryOutSchema,
@@ -58,7 +63,11 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
         env = parse_env_from_full_model(query.full_model.sources)
         try:
             _, parsed = parse_text(
-                safe_format_query(query.query), env, parse_config=PARSE_CONFIG
+                safe_format_query(
+                    normalize_relative_imports(query.query, query.current_filename)
+                ),
+                env,
+                parse_config=PARSE_CONFIG,
             )
         except Exception as e:
             raise HTTPException(status_code=422, detail="Parsing error: " + str(e))
@@ -72,12 +81,18 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             base_imp_string = ""
             for imp in query.imports:
                 if imp.alias:
-                    imp_string = f"import {imp.name} as {imp.alias};\n"
+                    imp_string = (
+                        f"import {resolve_import_path(imp.name, query.current_filename)}"
+                        f" as {imp.alias};\n"
+                    )
                 else:
-                    imp_string = f"import {imp.name};\n"
+                    imp_string = f"import {resolve_import_path(imp.name, query.current_filename)};\n"
                 base_imp_string += imp_string
             _, parsed = parse_text(
-                safe_format_query(base_imp_string + query.query),
+                safe_format_query(
+                    base_imp_string
+                    + normalize_relative_imports(query.query, query.current_filename)
+                ),
                 env,
                 parse_config=PARSE_CONFIG,
             )
@@ -135,6 +150,7 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
                         base = get_diagnostics(
                             f"WHERE {filter_string} SELECT 1 as __ftest_{idx};",
                             query.sources,
+                            current_filename=query.current_filename,
                         )
                         if base.items:
                             filter_validation.append(
@@ -156,11 +172,18 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
             base_imp_string = ""
             for imp in query.imports:
                 if imp.alias:
-                    imp_string = f"import {imp.name} as {imp.alias};\n"
+                    imp_string = (
+                        f"import {resolve_import_path(imp.name, query.current_filename)}"
+                        f" as {imp.alias};\n"
+                    )
                 else:
-                    imp_string = f"import {imp.name};\n"
+                    imp_string = f"import {resolve_import_path(imp.name, query.current_filename)};\n"
                 base_imp_string += imp_string
-            base = get_diagnostics(base_imp_string + query.query, query.sources)
+            base = get_diagnostics(
+                base_imp_string + query.query,
+                query.sources,
+                current_filename=query.current_filename,
+            )
             base.items += filter_validation
             return base
         except Exception as e:

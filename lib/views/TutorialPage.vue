@@ -98,10 +98,7 @@
             />
           </div>
           <div class="editor-bottom">
-            <results-view
-              :editorData="editorStore.editors[demoEditorId]"
-              :containerHeight="500"
-            />
+            <results-view :editorData="editorStore.editors[demoEditorId]" :containerHeight="500" />
           </div>
         </div>
         <div
@@ -277,7 +274,11 @@ export default {
       for (const paragraph of paragraphs) {
         result.push(paragraph)
         // If this is a validator and it's failing, stop here
-        if (paragraph.type && paragraph.type in validatorChecks && !validatorChecks[paragraph.type]) {
+        if (
+          paragraph.type &&
+          paragraph.type in validatorChecks &&
+          !validatorChecks[paragraph.type]
+        ) {
           break
         }
       }

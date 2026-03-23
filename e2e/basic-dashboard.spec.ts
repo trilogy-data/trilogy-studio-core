@@ -104,7 +104,6 @@ function isMapDataPixel(color) {
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
   await page.goto('#skipTips=true')
 
-
   await openSidebarScreen(page, 'community-models', isMobile)
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()

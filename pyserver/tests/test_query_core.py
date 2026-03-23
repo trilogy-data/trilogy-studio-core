@@ -95,3 +95,79 @@ def test_validate_statement():
     target, columns, results, _ = generate_query_core(query, dialect)
     assert len(results) == 19, results
     query_to_output(target, columns, results, "default", dialect, False)
+
+
+def test_generate_query_supports_relative_imports_from_current_filename():
+    query = QueryInSchema.model_validate(
+        {
+            "imports": [],
+            "query": "import ..some_parent as parent_source;\nSELECT parent_source.count;",
+            "current_filename": "nested/test.preql",
+            "dialect": "duckdb",
+            "full_model": {
+                "name": "",
+                "sources": [
+                    {
+                        "alias": "some_parent",
+                        "contents": """
+key id int;
+metric count <- count(id);
+
+datasource some_parent (
+    id:id
+)
+grain (id)
+address some_parent;
+""",
+                    }
+                ],
+            },
+        }
+    )
+
+    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    sql = DuckDBDialect().compile_statement(target)
+
+    assert "count" in sql.lower()
+    assert columns[0].name == "parent_source.count"
+
+
+def test_generate_query_supports_relative_imports_inside_source_files():
+    query = QueryInSchema.model_validate(
+        {
+            "imports": [{"name": "nested.test", "alias": "nested_test"}],
+            "query": "SELECT nested_test.count;",
+            "dialect": "duckdb",
+            "full_model": {
+                "name": "",
+                "sources": [
+                    {
+                        "alias": "some_parent",
+                        "contents": """
+key id int;
+metric count <- count(id);
+
+datasource some_parent (
+    id:id
+)
+grain (id)
+address some_parent;
+""",
+                    },
+                    {
+                        "alias": "nested/test",
+                        "contents": """
+import ..some_parent as parent_source;
+auto count <- parent_source.count;
+""",
+                    },
+                ],
+            },
+        }
+    )
+
+    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    sql = DuckDBDialect().compile_statement(target)
+
+    assert "count" in sql.lower()
+    assert columns[0].name == "nested_test.count"

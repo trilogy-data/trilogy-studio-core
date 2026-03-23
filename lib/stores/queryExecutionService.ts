@@ -1,4 +1,5 @@
 import { Results, type ResultColumn, ColumnType } from '../editors/results'
+import type { EditorType } from '../editors/editor'
 import type { ContentInput } from '../stores/resolver'
 import type {
   Import,
@@ -13,11 +14,12 @@ import { TrilogyResolver } from '.'
 
 export interface QueryInput {
   text: string
-  editorType: 'trilogy' | 'sql' | 'preql'
+  editorType: EditorType
   imports: Import[]
   extraFilters?: string[]
   parameters?: Record<string, any>
   extraContent?: ContentInput[]
+  currentFilename?: string
 }
 
 export interface QueryUpdate {
@@ -67,7 +69,7 @@ export default class QueryExecutionService {
   async executeQueriesBatch(
     connectionId: string,
     queries: MultiQueryComponent[],
-    editorType: 'trilogy' | 'sql' | 'preql',
+    editorType: EditorType,
     imports: Import[] = [],
     extraFilters?: string[],
     parameters: Record<string, any> = {},
@@ -81,6 +83,20 @@ export default class QueryExecutionService {
     resultPromise: Promise<BatchQueryResult>
     cancellation: QueryCancellation
   }> {
+    if (editorType === 'python') {
+      return {
+        cancellation: {
+          cancel: () => {},
+          isActive: () => false,
+        },
+        resultPromise: Promise.resolve({
+          success: false,
+          results: [],
+          executionTime: 0,
+        }),
+      }
+    }
+
     const startTime = new Date().getTime()
 
     // Create cancellation controller
@@ -116,7 +132,7 @@ export default class QueryExecutionService {
   private async executeQueriesBatchInternal(
     connectionId: string,
     queries: MultiQueryComponent[],
-    editorType: 'trilogy' | 'sql' | 'preql',
+    editorType: EditorType,
     imports: Import[] = [],
     extraFilters: string[],
     parameters: Record<string, any> = {},
@@ -385,10 +401,15 @@ export default class QueryExecutionService {
   async formatQuery(
     text: string,
     queryType: string,
-    editorType: 'trilogy' | 'sql' | 'preql',
+    editorType: EditorType,
     imports: Import[] = [],
     extraContent?: ContentInput[],
+    currentFilename?: string,
   ): Promise<string | null> {
+    if (editorType === 'python') {
+      return text
+    }
+
     try {
       const formatted = await this.trilogyResolver.format_query(
         text,
@@ -396,6 +417,9 @@ export default class QueryExecutionService {
         editorType,
         extraContent,
         imports,
+        null,
+        null,
+        currentFilename || null,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -411,13 +435,18 @@ export default class QueryExecutionService {
   async createDrilldownQuery(
     text: string,
     queryType: string,
-    editorType: 'trilogy' | 'sql' | 'preql',
+    editorType: EditorType,
     imports: Import[] = [],
     drilldown_add: string[],
     drilldown_remove: string,
     drilldown_filter: string,
     extraContent?: ContentInput[],
+    currentFilename?: string,
   ): Promise<string | null> {
+    if (editorType === 'python') {
+      return null
+    }
+
     try {
       const formatted = await this.trilogyResolver.drilldown_query(
         text,
@@ -428,6 +457,9 @@ export default class QueryExecutionService {
         drilldown_filter,
         extraContent,
         imports,
+        null,
+        null,
+        currentFilename || null,
       )
 
       if (formatted.data && formatted.data.text) {
@@ -457,6 +489,7 @@ export default class QueryExecutionService {
       queryInput.imports,
       queryInput.extraFilters,
       queryInput.parameters,
+      queryInput.currentFilename || null,
     )
   }
 
@@ -466,8 +499,8 @@ export default class QueryExecutionService {
     log: boolean = true,
     sources: ContentInput[] | null = null,
   ): Promise<ValidateResponse | null> {
-    // Skip validation for SQL queries
-    if (queryInput.editorType === 'sql') {
+    // Skip validation for editors that do not support Trilogy parsing
+    if (queryInput.editorType === 'sql' || queryInput.editorType === 'python') {
       return null
     }
 
@@ -499,6 +532,8 @@ export default class QueryExecutionService {
       sources,
       queryInput.imports,
       queryInput.extraFilters,
+      null,
+      queryInput.currentFilename || null,
     )
     // Return the imports from the validation result
     return validation
@@ -556,6 +591,24 @@ export default class QueryExecutionService {
     let resultSize = 0
     let columnCount = 0
     let generatedSql = ''
+
+    if (queryInput.editorType === 'python') {
+      const error = 'Python files are editable but cannot be run locally.'
+      if (onFailure) {
+        onFailure({
+          message: error,
+          error: true,
+          running: false,
+        })
+      }
+      return {
+        success: false,
+        error,
+        executionTime: 0,
+        resultSize: 0,
+        columnCount: 0,
+      }
+    }
 
     // Notify query started if callback provided
     if (onStarted) onStarted()
@@ -618,6 +671,7 @@ export default class QueryExecutionService {
           queryInput.imports,
           queryInput.extraFilters,
           queryInput.parameters,
+          queryInput.currentFilename || null,
         ),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>

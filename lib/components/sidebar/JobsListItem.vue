@@ -28,7 +28,10 @@
             </span>
           </tooltip>
           <tooltip content="Refresh Store" position="left">
-            <span class="hover-icon sidebar-icon-button" @click.stop="emit('refresh-store', item.store.id)">
+            <span
+              class="hover-icon sidebar-icon-button"
+              @click.stop="emit('refresh-store', item.store.id)"
+            >
               <i class="mdi mdi-refresh"></i>
             </span>
           </tooltip>

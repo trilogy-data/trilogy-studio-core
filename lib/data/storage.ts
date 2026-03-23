@@ -1,12 +1,7 @@
-import EditorInterface from '../editors/editor'
+import type { EditorInterface } from '../editors/editor'
 import { ModelConfig } from '../models'
 import { DashboardModel } from '../dashboards'
-import {
-  BigQueryOauthConnection,
-  DuckDBConnection,
-  MotherDuckConnection,
-  SnowflakeJwtConnection,
-} from '../connections'
+import type Connection from '../connections/base'
 import { LLMProvider } from '../llm'
 import { Chat } from '../chats/chat'
 export default abstract class AbstractStorage {
@@ -16,23 +11,14 @@ export default abstract class AbstractStorage {
     this.type = 'abstract'
   }
 
-  abstract saveEditor(editor: EditorInterface): void
-  abstract saveEditors(editorsList: EditorInterface[]): void
+  abstract saveEditor(editor: EditorInterface): Promise<void>
+  abstract saveEditors(editorsList: EditorInterface[]): Promise<void>
   abstract loadEditors(): Promise<Record<string, EditorInterface>>
   abstract deleteEditor(name: string): Promise<void>
   abstract clearEditors(): Promise<void>
 
-  abstract saveConnections(
-    connections: Array<
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
-    >,
-  ): Promise<void>
-  abstract loadConnections(): Promise<
-    Record<
-      string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
-    >
-  >
+  abstract saveConnections(connections: Array<Connection>): Promise<void>
+  abstract loadConnections(): Promise<Record<string, Connection>>
   abstract deleteConnection(name: string): Promise<void>
 
   abstract loadModelConfig(): Promise<Record<string, ModelConfig>>
