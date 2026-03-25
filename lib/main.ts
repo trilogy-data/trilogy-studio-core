@@ -1,3 +1,5 @@
+import './embedTheme.css'
+
 export { default as DataTable } from './components/DataTable.vue'
 export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
 export { default as Editor } from './components/editor/Editor.vue'

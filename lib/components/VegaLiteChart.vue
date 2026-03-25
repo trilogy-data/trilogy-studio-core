@@ -519,8 +519,8 @@ export default defineComponent({
   bottom: 8px;
   left: 50%;
   padding: 6px 8px;
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  border: 1px solid var(--trilogy-embed-overlay-border);
+  background: var(--trilogy-embed-floating-surface);
   backdrop-filter: blur(8px);
   transform: translate(-50%, 6px);
 }
@@ -540,9 +540,9 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
-  color: var(--floating-text, var(--text-color));
+  border: 1px solid var(--trilogy-embed-overlay-border);
+  background-color: var(--trilogy-embed-floating-surface-strong);
+  color: var(--trilogy-embed-floating-text);
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -555,23 +555,23 @@ export default defineComponent({
 }
 
 .control-btn:hover {
-  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+  background-color: var(--trilogy-embed-floating-surface);
+  border-color: rgba(var(--trilogy-embed-special-text-rgb), 0.28);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 
 .control-btn:disabled {
-  background-color: var(--border-light);
-  color: var(--text-color-muted);
+  background-color: var(--trilogy-embed-border-light);
+  color: var(--trilogy-embed-text-muted);
   cursor: not-allowed;
 }
 
 .control-btn:disabled:hover {
-  background-color: var(--border-light);
+  background-color: var(--trilogy-embed-border-light);
 }
 
 .control-btn.active {
-  background-color: var(--special-text);
+  background-color: var(--trilogy-embed-special-text);
   color: white;
 }
 

@@ -1,4 +1,5 @@
 import concurrent.futures
+import pytest
 from io_models import QueryInSchema
 from trilogy.parser import parse_text
 from env_helpers import parse_env_from_full_model

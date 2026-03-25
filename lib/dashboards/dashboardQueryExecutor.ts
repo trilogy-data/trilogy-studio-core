@@ -571,6 +571,7 @@ export class DashboardQueryExecutor {
       if (queryArgsList.length === 0) {
         return
       }
+
       let callbacks = Object.fromEntries(
         queryArgsList.map((queryArgs) => [
           queryArgs.label,

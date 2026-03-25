@@ -455,14 +455,14 @@ const titleLevelClass = computed(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--result-window-font);
+  color: var(--trilogy-embed-result-window-font);
   position: relative;
   overflow-y: hidden;
-  background-color: var(--dashboard-background);
+  background-color: var(--trilogy-embed-dashboard-background);
   border-radius: 14px;
   box-shadow:
-    inset 0 0 0 1px var(--border),
-    var(--surface-shadow);
+    inset 0 0 0 1px var(--trilogy-embed-border),
+    var(--trilogy-embed-surface-shadow);
 }
 
 .grid-item-section-header-style {
@@ -521,8 +521,8 @@ const titleLevelClass = computed(() => {
   gap: 8px;
   min-height: 27px;
   padding: 4px 12px 3px;
-  background-color: var(--panel-header-bg);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--trilogy-embed-panel-header-bg);
+  border-bottom: 1px solid var(--trilogy-embed-border);
   flex-shrink: 0;
 }
 
@@ -593,7 +593,7 @@ const titleLevelClass = computed(() => {
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.025em;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color);
 }
 
 .item-title-level-1 {
@@ -646,7 +646,7 @@ const titleLevelClass = computed(() => {
   max-width: 100%;
   height: auto;
   text-align: center;
-  color: var(--dashboard-helper-text);
+  color: var(--trilogy-embed-dashboard-helper-text);
   opacity: 0.9;
   overflow: hidden;
 }
@@ -657,7 +657,7 @@ const titleLevelClass = computed(() => {
   flex: 1 1 0;
   min-width: 18px;
   height: 1px;
-  background: var(--border-light);
+  background: var(--trilogy-embed-border-light);
   opacity: 0.9;
 }
 
@@ -666,7 +666,7 @@ const titleLevelClass = computed(() => {
 }
 
 .section-header-editable:hover {
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text);
 }
 
 .section-header-text {
@@ -679,11 +679,11 @@ const titleLevelClass = computed(() => {
 }
 
 .editable-title:hover {
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text);
 }
 
 .item-title-static:hover {
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color);
 }
 
 .edit-indicator {
@@ -701,10 +701,10 @@ const titleLevelClass = computed(() => {
   padding: 4px 6px;
   font-size: var(--font-size);
   font-weight: 600;
-  border: 1px solid var(--special-text);
+  border: 1px solid var(--trilogy-embed-special-text);
   outline: none;
-  background-color: var(--query-window-bg);
-  color: var(--text-color);
+  background-color: var(--trilogy-embed-bg);
+  color: var(--trilogy-embed-text-color);
   border-radius: 10px;
 }
 
@@ -726,7 +726,7 @@ const titleLevelClass = computed(() => {
 .drag-handle-icon {
   display: flex;
   align-items: center;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color);
   opacity: 0.45;
 }
 
@@ -744,9 +744,9 @@ const titleLevelClass = computed(() => {
   justify-content: center;
   width: var(--chart-control-height);
   height: var(--chart-control-height);
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
-  color: var(--floating-text, var(--text-color));
+  border: 1px solid var(--trilogy-embed-overlay-border);
+  background-color: var(--trilogy-embed-floating-surface-strong);
+  color: var(--trilogy-embed-floating-text);
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -757,19 +757,19 @@ const titleLevelClass = computed(() => {
 }
 
 .control-btn:hover {
-  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+  background-color: var(--trilogy-embed-floating-surface);
+  border-color: rgba(var(--trilogy-embed-special-text-rgb), 0.28);
 }
 
 .control-btn.remove-btn {
-  color: var(--delete-color, #dc2626);
+  color: var(--trilogy-embed-delete-color);
   border-color: currentColor;
   opacity: 0.82;
 }
 
 .control-btn.remove-btn:hover {
-  background-color: var(--delete-color, #dc2626);
-  border-color: var(--delete-color, #dc2626);
+  background-color: var(--trilogy-embed-delete-color);
+  border-color: var(--trilogy-embed-delete-color);
   color: #ffffff;
   opacity: 1;
 }
@@ -797,10 +797,10 @@ const titleLevelClass = computed(() => {
   padding: 1px 7px;
   font-size: 10px;
   letter-spacing: var(--ui-label-letter-spacing);
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  background: rgba(var(--trilogy-embed-special-text-rgb), 0.08);
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
-  color: var(--text-color);
+  box-shadow: inset 0 0 0 1px rgba(var(--trilogy-embed-special-text-rgb), 0.18);
+  color: var(--trilogy-embed-text-color);
 }
 
 .filter-content {
@@ -811,12 +811,12 @@ const titleLevelClass = computed(() => {
 
 .filter-source {
   font-weight: 600;
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text);
   flex-shrink: 0;
 }
 
 .filter-value {
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -830,7 +830,7 @@ const titleLevelClass = computed(() => {
   margin-left: 3px;
   border: none;
   background: none;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color);
   opacity: 0.7;
   cursor: pointer;
   font-size: 13px;

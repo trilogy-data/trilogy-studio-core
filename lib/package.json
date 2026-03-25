@@ -6,6 +6,15 @@
   "type": "module",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
+  "style": "dist/main.css",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js",
+      "default": "./dist/main.js"
+    },
+    "./style.css": "./dist/main.css"
+  },
   "repository": {
     "url": "https://github.com/trilogy-data/trilogy-studio-core"
   },
