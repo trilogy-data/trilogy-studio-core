@@ -152,7 +152,7 @@ function createLoadingPill(fallbackText: string = 'Loading'): string {
   else if (length <= 20) width = '120px'
   else width = '160px'
 
-  return `<span class="loading-pill" style="display: inline-block; width: ${width}; height: 1em; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; filter: blur(0.5px);"></span>`
+  return `<span class="loading-pill" style="display: inline-block; width: ${width}; height: 1em; border-radius: 4px; filter: blur(0.5px);"></span>`
 }
 
 /**

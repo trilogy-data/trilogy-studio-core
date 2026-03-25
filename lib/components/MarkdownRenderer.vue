@@ -314,13 +314,18 @@ export default defineComponent({
   color: var(--text-color);
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .loading-pill {
   display: inline-block;
   background: linear-gradient(
     90deg,
-    var(--bg-color) 25%,
-    var(--button-bg) 50%,
-    var(--bg-color) 75%
+    var(--light-bg-color, #f6f8fb) 25%,
+    var(--border-color, #d6dde6) 50%,
+    var(--light-bg-color, #f6f8fb) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
