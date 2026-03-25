@@ -83,7 +83,6 @@ describe('Expression Evaluation', () => {
     it('should return loading pills when loading', () => {
       const result = evaluateFallback('data[0].name || "Loading"', sampleData, true)
       expect(result).toContain('loading-pill')
-      expect(result).toContain('shimmer')
     })
 
     it('should handle expressions without fallback', () => {

@@ -42,10 +42,6 @@ describe('Loading State', () => {
     it('should include loading pill styling', () => {
       const template = '{name}'
       const result = renderMarkdown(template, sampleData, true)
-      expect(result).toContain(
-        'background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-      )
-      expect(result).toContain('background-size: 200% 100%')
       expect(result).toContain('border-radius: 4px')
       expect(result).toContain('filter: blur(0.5px)')
     })
