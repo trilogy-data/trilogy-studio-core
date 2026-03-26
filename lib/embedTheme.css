@@ -22,3 +22,51 @@
   --trilogy-embed-overlay-border: var(--overlay-border, rgba(148, 163, 184, 0.14));
   --trilogy-embed-surface-shadow: var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08));
 }
+
+:where(.trilogy-embed-provider.trilogy-embed-theme-light) {
+  color-scheme: light;
+  --text-color: #1f2937;
+  --text-color-muted: #64748b;
+  --special-text: #2563eb;
+  --special-text-rgb: 37, 99, 235;
+  --delete-color: #dc2626;
+  --bg-color: #ffffff;
+  --border: #d6dde6;
+  --border-color: #d6dde6;
+  --border-light: #e1e6ed;
+  --panel-header-bg: #f6f8fb;
+  --dashboard-background: #ffffff;
+  --dashboard-helper-text: #425466;
+  --button-mouseover: #f2f5f9;
+  --floating-surface: rgba(255, 255, 255, 0.9);
+  --floating-surface-strong: rgba(255, 255, 255, 0.97);
+  --floating-text: #1f2937;
+  --overlay-border: rgba(148, 163, 184, 0.14);
+  --surface-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --result-window-bg: #ffffff;
+  --query-window-bg: #ffffff;
+}
+
+:where(.trilogy-embed-provider.trilogy-embed-theme-dark) {
+  color-scheme: dark;
+  --text-color: #e2e8f0;
+  --text-color-muted: #94a3b8;
+  --special-text: #60a5fa;
+  --special-text-rgb: 96, 165, 250;
+  --delete-color: #f87171;
+  --bg-color: #0f172a;
+  --border: #334155;
+  --border-color: #334155;
+  --border-light: #475569;
+  --panel-header-bg: #172036;
+  --dashboard-background: #0f172a;
+  --dashboard-helper-text: #cbd5e1;
+  --button-mouseover: #1e293b;
+  --floating-surface: rgba(15, 23, 42, 0.86);
+  --floating-surface-strong: rgba(15, 23, 42, 0.94);
+  --floating-text: #e2e8f0;
+  --overlay-border: rgba(148, 163, 184, 0.24);
+  --surface-shadow: 0 1px 2px rgba(2, 6, 23, 0.35);
+  --result-window-bg: #111827;
+  --query-window-bg: #111827;
+}

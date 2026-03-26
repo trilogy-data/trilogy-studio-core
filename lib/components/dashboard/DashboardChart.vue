@@ -14,7 +14,12 @@
       :symbols="symbols"
       @submit="submitDrilldown"
     />
-    <ErrorMessage v-else-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage
+      v-else-if="error && !loading"
+      class="chart-placeholder"
+      :details="error"
+      :query="query"
+    />
     <VegaLiteChart
       v-else-if="results && ready && !loading"
       :id="`${itemId}-${dashboardId}`"

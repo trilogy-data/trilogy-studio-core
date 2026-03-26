@@ -4,6 +4,7 @@ import vegaEmbed from 'vega-embed'
 import type { View } from 'vega'
 import type { ChartConfig, ResultColumn } from '../editors/results'
 import { ChromaChartHelpers } from './chartHelpers'
+import { safeJsonStringify } from '../utility/jsonSerialization'
 
 // Type for tracking render operations
 export interface RenderOperation {
@@ -83,7 +84,7 @@ export class ChartRenderManager {
   ): Promise<void> {
     if (!spec) return
 
-    const currentSpecString = JSON.stringify(spec)
+    const currentSpecString = safeJsonStringify(spec)
 
     // Skip if spec hasn't changed and not forced
     if (this.hasLoaded.value && this.lastSpec.value === currentSpecString && !force) {

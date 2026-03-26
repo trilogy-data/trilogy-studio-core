@@ -2,6 +2,7 @@ import './embedTheme.css'
 
 export { default as DataTable } from './components/DataTable.vue'
 export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
+export { default as TrilogyEmbedProvider } from './components/TrilogyEmbedProvider.vue'
 export { default as Editor } from './components/editor/Editor.vue'
 export { default as Dashboard } from './components/dashboard/Dashboard.vue'
 export { default as DashboardChart } from './components/dashboard/DashboardChart.vue'
@@ -25,6 +26,21 @@ export type { LLMConnectionStoreType } from './stores/llmStore'
 // Settings Store
 export { default as useUserSettingsStore } from './stores/userSettingsStore'
 export type { UserSettingsStoreType } from './stores/userSettingsStore'
+export {
+  TRILOGY_EMBED_CONFIG_KEY,
+  normalizeEmbedTheme,
+  provideTrilogyEmbedConfig,
+  resolveThemeMode,
+  resolveThemeVariables,
+  useResolvedThemeMode,
+  useTrilogyEmbedConfig,
+} from './embed/config'
+export type {
+  TrilogyEmbedConfig,
+  TrilogyEmbedTheme,
+  TrilogyEmbedThemeObject,
+  TrilogyThemeMode,
+} from './embed/config'
 
 // Chat composables
 export { useChatWithTools } from './composables/useChatWithTools'

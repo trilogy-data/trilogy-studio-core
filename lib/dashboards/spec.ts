@@ -19,6 +19,7 @@ import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 import { createBeeSwarmSpec } from './beeSwarmSpec'
 import { TRELLIS_ELIGIBLE, NO_AXES_CHARTS } from './constants'
+import { toJsonSafeRows, toJsonSafeValue } from '../utility/jsonSerialization'
 
 const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
@@ -111,7 +112,9 @@ export const generateVegaSpec = (
   containerWidth: number = 600,
 ) => {
   let intChart: { [key: string]: string | number | Array<any> }[] = chartSelection
-    ? (chartSelection.map((x) => toRaw(x)) as { [key: string]: string | number | Array<any> }[])
+    ? (chartSelection.map((x) => toJsonSafeValue(toRaw(x))) as {
+        [key: string]: string | number | Array<any>
+      }[])
     : ([] as { [key: string]: string | number | Array<any> }[])
   // preprocess data - if any column is a year, map it to a data.forEach(d => d.year = new Date(d.year, 0, 1));
   // Preprocess data - find all columns with 'year' trait and map integer years to dates
@@ -121,7 +124,7 @@ export const generateVegaSpec = (
   // const dateTimeColumns = Array.from(columns.entries())
   //   .filter(([_, col]) => col.traits?.includes('datetime'))
   //   .map(([colName, _]) => colName)
-  let localData = data ? [...data] : []
+  let localData = data ? toJsonSafeRows(data) : []
   if (yearColumns.length > 0 && localData) {
     localData.forEach((row) => {
       yearColumns.forEach((colName) => {

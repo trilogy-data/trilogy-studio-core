@@ -296,8 +296,9 @@
 import type { ResultColumn, Row } from '../../editors/results'
 import { ColumnType } from '../../editors/results'
 import type { PropType } from 'vue'
-import { computed, inject } from 'vue'
+import { inject } from 'vue'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore.ts'
+import { useResolvedThemeMode } from '../../embed/config'
 
 export interface SelectOption {
   label: string
@@ -342,11 +343,8 @@ export default {
     },
   },
   setup() {
-    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
-    if (!settingsStore) {
-      throw new Error('userSettingsStore not provided')
-    }
-    const currentTheme = computed(() => settingsStore.settings.theme)
+    const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
+    const currentTheme = useResolvedThemeMode(settingsStore)
 
     return {
       settingsStore,

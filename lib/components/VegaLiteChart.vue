@@ -112,6 +112,7 @@ import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import ChartControlPanel from './ChartControlPanel.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
+import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
@@ -120,6 +121,7 @@ import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
 import { ChartRenderManager } from './chartRenderManager'
 import { ChartControlsManager } from './chartControlsManager'
 import { ChartOperationsManager } from './chartOperationsManager'
+import { safeJsonStringify } from '../utility/jsonSerialization'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -162,15 +164,11 @@ export default defineComponent({
   },
 
   setup(props, { emit }) {
-    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
 
-    if (!settingsStore) {
-      throw new Error('userSettingsStore not provided')
-    }
-
     // Create a computed property for the current theme
-    const currentTheme = computed(() => settingsStore.settings.theme)
+    const currentTheme = useResolvedThemeMode(settingsStore)
 
     // Computed property to determine if container is too short for side controls
     const isShortContainer = computed(() => {
@@ -385,7 +383,7 @@ export default defineComponent({
         if (!hasMounted || updatePending) return
         const [newSelection] = newValues
         const oldSelection = oldValues ? oldValues[0] : undefined
-        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
+        if (safeJsonStringify(newSelection) === safeJsonStringify(oldSelection)) return
         renderChart(true)
       },
     )
@@ -400,7 +398,7 @@ export default defineComponent({
           return
         }
         // check they are actually different
-        if (oldValues && JSON.stringify(newValues) === JSON.stringify(oldValues)) {
+        if (oldValues && safeJsonStringify(newValues) === safeJsonStringify(oldValues)) {
           return
         }
         updatePending = true

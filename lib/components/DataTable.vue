@@ -210,8 +210,9 @@ import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { PropType, ShallowRef } from 'vue'
-import { shallowRef, computed, inject } from 'vue'
+import { shallowRef, inject } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
+import { useResolvedThemeMode } from '../embed/config'
 import { snakeCaseToCapitalizedWords } from '../dashboards/formatting.ts'
 
 Tabulator.registerModule([
@@ -441,11 +442,8 @@ export default {
     },
   },
   setup() {
-    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
-    if (!settingsStore) {
-      throw new Error('userSettingsStore not provided')
-    }
-    const currentTheme = computed(() => settingsStore.settings.theme)
+    const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
+    const currentTheme = useResolvedThemeMode(settingsStore)
 
     return {
       settingsStore,

@@ -6,7 +6,12 @@
     @mouseenter="onChartMouseEnter"
     @mouseleave="onChartMouseLeave"
   >
-    <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage
+      v-if="error && !loading"
+      class="chart-placeholder"
+      :details="error"
+      :query="query"
+    />
     <data-table
       v-else-if="ready && results"
       :id="`${itemId}-${dashboardId}`"
