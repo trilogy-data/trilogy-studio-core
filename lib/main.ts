@@ -1,3 +1,4 @@
+import './icons/registerMdiIcons'
 import './embedTheme.css'
 
 export { default as DataTable } from './components/DataTable.vue'

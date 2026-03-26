@@ -36,7 +36,10 @@ export interface CreateCrossFilterControllerOptions {
 export interface CrossFilterController {
   getSelections(): CrossFilterSelection[]
   getSelectionSources(): string[]
-  applyDimensionClick(selection: CrossFilterSelection, operation?: CrossFilterOperation): CrossFilterValueMap
+  applyDimensionClick(
+    selection: CrossFilterSelection,
+    operation?: CrossFilterOperation,
+  ): CrossFilterValueMap
   clearSource(source: string): void
   clearAll(): void
   hasSelectionFrom(source: string): boolean
@@ -65,7 +68,9 @@ function normalizeFieldName(
   normalizeLocalFields: boolean,
 ): string | null {
   if (validFields.size === 0) {
-    return normalizeLocalFields && field.startsWith('local.') ? field.replace(/^local\./, '') : field
+    return normalizeLocalFields && field.startsWith('local.')
+      ? field.replace(/^local\./, '')
+      : field
   }
 
   if (validFields.has(field)) {
@@ -211,7 +216,9 @@ export function removeCrossFilterFromItem(
     return false
   }
 
-  const nextConceptFilters = (item.conceptFilters || []).filter((filter) => filter.source !== sourceId)
+  const nextConceptFilters = (item.conceptFilters || []).filter(
+    (filter) => filter.source !== sourceId,
+  )
   const conceptChanged =
     JSON.stringify(nextConceptFilters) !== JSON.stringify(item.conceptFilters || [])
 
@@ -235,7 +242,9 @@ export function removeCrossFilterSourceFromGridItems(
       return
     }
 
-    const nextConceptFilters = (item.conceptFilters || []).filter((filter) => filter.source !== sourceId)
+    const nextConceptFilters = (item.conceptFilters || []).filter(
+      (filter) => filter.source !== sourceId,
+    )
     const conceptChanged =
       JSON.stringify(nextConceptFilters) !== JSON.stringify(item.conceptFilters || [])
 
@@ -259,7 +268,9 @@ export function clearAllCrossFiltersFromGridItems(
 
   Object.entries(gridItems).forEach(([itemId, item]) => {
     const hadFilters =
-      Boolean(item.conceptFilters?.length) || Boolean(item.chartFilters?.length) || Boolean(item.filters?.length)
+      Boolean(item.conceptFilters?.length) ||
+      Boolean(item.chartFilters?.length) ||
+      Boolean(item.filters?.length)
 
     item.conceptFilters = []
     item.chartFilters = []
@@ -279,7 +290,9 @@ export function createCrossFilterController(
   const selections = new Map<string, CrossFilterSelection[]>()
 
   const getValidFields = (): Set<string> => {
-    const raw = options.validFields ? toValue(options.validFields as MaybeRefOrGetter<Iterable<string>>) : []
+    const raw = options.validFields
+      ? toValue(options.validFields as MaybeRefOrGetter<Iterable<string>>)
+      : []
     return new Set(raw)
   }
 
@@ -297,12 +310,14 @@ export function createCrossFilterController(
 
   return {
     getSelections() {
-      return Array.from(selections.values()).flat().map((selection) => ({
-        source: selection.source,
-        filters: cloneValueMap(selection.filters),
-        chart: cloneValueMap(selection.chart || selection.filters),
-        append: selection.append,
-      }))
+      return Array.from(selections.values())
+        .flat()
+        .map((selection) => ({
+          source: selection.source,
+          filters: cloneValueMap(selection.filters),
+          chart: cloneValueMap(selection.chart || selection.filters),
+          append: selection.append,
+        }))
     },
     getSelectionSources() {
       return Array.from(selections.keys())
@@ -329,7 +344,9 @@ export function createCrossFilterController(
         return normalized.filters
       }
 
-      const hasExactMatch = existing.some((entry) => areValueMapsEqual(entry.filters, normalized.filters))
+      const hasExactMatch = existing.some((entry) =>
+        areValueMapsEqual(entry.filters, normalized.filters),
+      )
       const next = hasExactMatch
         ? existing.filter((entry) => !areValueMapsEqual(entry.filters, normalized.filters))
         : [...existing, normalized]
@@ -362,7 +379,9 @@ export function createCrossFilterController(
         )
     },
     getChartSelectionsFor(itemId) {
-      return (selections.get(itemId) || []).map((entry) => cloneValueMap(entry.chart || entry.filters))
+      return (selections.get(itemId) || []).map((entry) =>
+        cloneValueMap(entry.chart || entry.filters),
+      )
     },
     getFilterExpressionFor(itemId) {
       return buildCrossFilterExpression(this.getSqlFilterInputsFor(itemId))
@@ -374,7 +393,9 @@ export function createCrossFilterController(
   }
 }
 
-export function useCrossFilterController(options: MaybeRefOrGetter<CreateCrossFilterControllerOptions> = {}) {
+export function useCrossFilterController(
+  options: MaybeRefOrGetter<CreateCrossFilterControllerOptions> = {},
+) {
   const version = ref(0)
   const controller = createCrossFilterController(toValue(options))
 

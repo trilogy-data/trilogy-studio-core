@@ -204,58 +204,46 @@ describe.skipIf(!GOOGLE_KEY)('Google Provider Integration', () => {
     expect(provider.models.length).toBeGreaterThan(0)
   })
 
-  it(
-    'should generate a simple completion',
-    async () => {
-      const response = await provider.generateCompletion({
-        prompt: 'Say "hello" and nothing else.',
+  it('should generate a simple completion', async () => {
+    const response = await provider.generateCompletion({
+      prompt: 'Say "hello" and nothing else.',
+      maxTokens: 50,
+    })
+
+    expect(response.text.toLowerCase()).toContain('hello')
+    expect(response.usage.totalTokens).toBeGreaterThan(0)
+  }, 120000)
+
+  it('should handle message history', async () => {
+    const history: LLMMessage[] = [
+      { role: 'user', content: 'My favorite fruit is mango.' },
+      { role: 'assistant', content: 'Mangoes are delicious!' },
+    ]
+
+    const response = await provider.generateCompletion(
+      {
+        prompt: 'What is my favorite fruit?',
         maxTokens: 50,
-      })
+      },
+      history,
+    )
 
-      expect(response.text.toLowerCase()).toContain('hello')
-      expect(response.usage.totalTokens).toBeGreaterThan(0)
-    },
-    120000,
-  )
+    expect(response.text.toLowerCase()).toContain('mango')
+  }, 120000)
 
-  it(
-    'should handle message history',
-    async () => {
-      const history: LLMMessage[] = [
-        { role: 'user', content: 'My favorite fruit is mango.' },
-        { role: 'assistant', content: 'Mangoes are delicious!' },
-      ]
+  it('should handle tool calling', async () => {
+    const response = await provider.generateCompletion({
+      prompt:
+        'Use the get_weather tool to look up the current weather in San Francisco, CA. Do not answer from memory.',
+      tools: [testTool],
+      maxTokens: 200,
+    })
 
-      const response = await provider.generateCompletion(
-        {
-          prompt: 'What is my favorite fruit?',
-          maxTokens: 50,
-        },
-        history,
-      )
-
-      expect(response.text.toLowerCase()).toContain('mango')
-    },
-    120000,
-  )
-
-  it(
-    'should handle tool calling',
-    async () => {
-      const response = await provider.generateCompletion({
-        prompt:
-          'Use the get_weather tool to look up the current weather in San Francisco, CA. Do not answer from memory.',
-        tools: [testTool],
-        maxTokens: 200,
-      })
-
-      expect(response.toolCalls).toBeDefined()
-      expect(response.toolCalls!.length).toBeGreaterThan(0)
-      expect(response.toolCalls![0].name).toBe('get_weather')
-      expect(response.toolCalls![0].input).toHaveProperty('location')
-    },
-    120000,
-  )
+    expect(response.toolCalls).toBeDefined()
+    expect(response.toolCalls!.length).toBeGreaterThan(0)
+    expect(response.toolCalls![0].name).toBe('get_weather')
+    expect(response.toolCalls![0].input).toHaveProperty('location')
+  }, 120000)
 })
 
 describe.skipIf(!OPENROUTER_KEY)('OpenRouter Provider Integration', () => {

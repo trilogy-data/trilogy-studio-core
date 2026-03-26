@@ -14,7 +14,7 @@ importers:
       '@google/genai':
         specifier: ^0.12.0
         version: 0.12.0
-      '@mdi/font':
+      '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
       apache-arrow:
@@ -379,8 +379,8 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
-  '@mdi/font@7.4.47':
-    resolution: {integrity: sha512-43MtGpd585SNzHZPcYowu/84Vz2a2g31TvPMTm9uTiCSWzaheQySUcSyUH/46fPnuPQWof2yd0pGBtzee/IQWw==}
+  '@mdi/js@7.4.47':
+    resolution: {integrity: sha512-KPnNOtm5i2pMabqZxpUz7iQf+mfrYZyKCZ8QNz85czgEt7cuHcGorWfdzUMWYA0SD+a6Hn4FmJ+YhzzzjkTZrQ==}
 
   '@microsoft/api-extractor-model@7.31.1':
     resolution: {integrity: sha512-Dhnip5OFKbl85rq/ICHBFGhV4RA5UQSl8AC/P/zoGvs+CBudPkatt5kIhMGiYgVPnUWmfR6fcp38+1AFLYNtUw==}
@@ -2644,7 +2644,7 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@mdi/font@7.4.47': {}
+  '@mdi/js@7.4.47': {}
 
   '@microsoft/api-extractor-model@7.31.1(@types/node@24.10.9)':
     dependencies:

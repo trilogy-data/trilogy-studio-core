@@ -5,11 +5,7 @@ import QueryExecutionService, {
 } from './queryExecutionService'
 import { Results, ColumnType } from '../editors/results'
 
-function makeProvider(options: {
-  connected?: boolean
-  queryType?: string
-  queryResult?: Results
-}) {
+function makeProvider(options: { connected?: boolean; queryType?: string; queryResult?: Results }) {
   const queryResult =
     options.queryResult ||
     new Results(

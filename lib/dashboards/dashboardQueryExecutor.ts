@@ -1,9 +1,5 @@
 import type { Dashboard, GridItemDataResponse } from '../dashboards/base'
-import type {
-  ContentInput,
-  MultiQueryComponent,
-  Import,
-} from '../stores/resolver'
+import type { ContentInput, MultiQueryComponent, Import } from '../stores/resolver'
 import type { DashboardExecutionService } from '../stores/queryExecutionService'
 import type { Results } from '../editors/results'
 

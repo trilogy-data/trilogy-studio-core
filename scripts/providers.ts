@@ -1,5 +1,5 @@
 const { LLMProvider, OpenAIProvider, GoogleProvider, AnthropicProvider, createPrompt } =
-  await import('trilogy-studio-components/llm')
+  await import('../lib/llm')
 /**
  * Creates a provider instance based on provider name
  */

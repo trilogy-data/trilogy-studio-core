@@ -208,6 +208,11 @@ export default defineComponent({
   letter-spacing: 0;
 }
 
+.md-admonition-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+}
+
 .md-admonition-body {
   padding: 0;
 }
@@ -220,21 +225,12 @@ export default defineComponent({
   margin-bottom: 0.35em;
 }
 
-.md-admonition-header::before {
-  font-family: 'Material Design Icons';
-  line-height: 1;
-}
-
 .md-admonition-note {
   border-left-color: #0969da;
 }
 
 .md-admonition-note .md-admonition-header {
   color: #0969da;
-}
-
-.md-admonition-note .md-admonition-header::before {
-  content: '\F02FC';
 }
 
 .md-admonition-tip {
@@ -245,20 +241,12 @@ export default defineComponent({
   color: #1a7f37;
 }
 
-.md-admonition-tip .md-admonition-header::before {
-  content: '\F0335';
-}
-
 .md-admonition-important {
   border-left-color: #8250df;
 }
 
 .md-admonition-important .md-admonition-header {
   color: #8250df;
-}
-
-.md-admonition-important .md-admonition-header::before {
-  content: '\F02D1';
 }
 
 .md-admonition-warning {
@@ -269,20 +257,12 @@ export default defineComponent({
   color: #9a6700;
 }
 
-.md-admonition-warning .md-admonition-header::before {
-  content: '\F0026';
-}
-
 .md-admonition-caution {
   border-left-color: #cf222e;
 }
 
 .md-admonition-caution .md-admonition-header {
   color: #cf222e;
-}
-
-.md-admonition-caution .md-admonition-header::before {
-  content: '\F0026';
 }
 
 :root.dark-theme .md-admonition-note .md-admonition-header {

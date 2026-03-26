@@ -19,12 +19,7 @@
         <div v-if="query" class="message-query-block">
           <div class="message-query-header">
             <span class="message-query-label">Trilogy Query</span>
-            <button
-              v-if="canCopy"
-              class="message-copy-button"
-              type="button"
-              @click="copyQuery"
-            >
+            <button v-if="canCopy" class="message-copy-button" type="button" @click="copyQuery">
               {{ copyLabel }}
             </button>
           </div>
@@ -99,7 +94,9 @@ export default {
       return this.copied ? 'Copied' : 'Copy'
     },
     normalizedFilters(): ErrorFilter[] {
-      return (this.filters || []).filter((filter) => typeof filter?.value === 'string' && filter.value.trim())
+      return (this.filters || []).filter(
+        (filter) => typeof filter?.value === 'string' && filter.value.trim(),
+      )
     },
     formattedFilters(): string {
       return this.normalizedFilters
@@ -138,10 +135,14 @@ export default {
   font-size: 14px;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
   min-height: 0;
   box-sizing: border-box;
   border-radius: 12px;
   overflow: hidden;
+  align-self: stretch;
 }
 
 .error-message {
@@ -166,6 +167,9 @@ export default {
   gap: 10px;
   min-height: 0;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .message-header {
@@ -220,6 +224,7 @@ export default {
   color: #f1f5f9;
   max-height: 160px;
   overflow: auto;
+  min-width: 0;
 }
 
 .information-message .message-text {
@@ -234,6 +239,7 @@ export default {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 2px;
 }
 
@@ -242,6 +248,7 @@ export default {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  min-width: 0;
 }
 
 .message-query-header {
@@ -284,6 +291,7 @@ export default {
   word-break: break-word;
   overflow: auto;
   max-height: 180px;
+  min-width: 0;
   background: rgba(2, 6, 23, 0.5);
   color: #bfdbfe;
   border: 1px solid rgba(96, 165, 250, 0.16);

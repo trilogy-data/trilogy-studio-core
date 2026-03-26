@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
 import { initializeCspTracking } from '../lib/remotes/modelApiService'
-import '@mdi/font/css/materialdesignicons.css'
+import '../lib/icons/registerMdiIcons'
 import './style.css'
 import './tabulator-style.css'
 
@@ -28,7 +28,7 @@ self.MonacoEnvironment = {
 }
 
 async function initializeTrilogy() {
-  const { configureTrilogy } = await import('trilogy-studio-components/monaco')
+  const { configureTrilogy } = await import('../lib/monaco')
   configureTrilogy()
 }
 // Start loading trilogy configuration in the background

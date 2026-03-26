@@ -18,7 +18,9 @@ describe('cross filter controller', () => {
       chart: { species: 'Acer rubrum' },
     })
 
-    expect(controller.getSqlFiltersFor('species-chart', ["city = 'USBTV'"])).toEqual(["city = 'USBTV'"])
+    expect(controller.getSqlFiltersFor('species-chart', ["city = 'USBTV'"])).toEqual([
+      "city = 'USBTV'",
+    ])
     expect(controller.getSqlFiltersFor('native-chart', ["city = 'USBTV'"])).toEqual([
       "city = 'USBTV'",
       "species='''Acer rubrum'''",
@@ -76,10 +78,9 @@ describe('cross filter helpers', () => {
     ).toEqual({ species: 'Acer saccharum' })
 
     expect(
-      filterAllowedDimensionFilters(
-        { 'local.species': 'Acer saccharum', ignored: 'x' },
-        ['species'],
-      ),
+      filterAllowedDimensionFilters({ 'local.species': 'Acer saccharum', ignored: 'x' }, [
+        'species',
+      ]),
     ).toEqual({ 'local.species': 'Acer saccharum' })
   })
 
@@ -110,8 +111,12 @@ describe('cross filter helpers', () => {
     )
 
     expect(updated).toEqual(['peer'])
-    expect(items.source.chartFilters).toEqual([{ source: 'source', value: { species: 'Acer rubrum' } }])
-    expect(items.peer.conceptFilters).toEqual([{ source: 'source', value: { species: 'Acer rubrum' } }])
+    expect(items.source.chartFilters).toEqual([
+      { source: 'source', value: { species: 'Acer rubrum' } },
+    ])
+    expect(items.peer.conceptFilters).toEqual([
+      { source: 'source', value: { species: 'Acer rubrum' } },
+    ])
     expect(items.peer.filters).toEqual([{ source: 'cross', value: "species='''Acer rubrum'''" }])
     expect(items.locked.conceptFilters).toEqual([])
   })

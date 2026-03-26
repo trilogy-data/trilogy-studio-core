@@ -120,9 +120,6 @@ importers:
       split.js:
         specifier: ^1.6.5
         version: 1.6.5
-      trilogy-studio-components:
-        specifier: link:lib
-        version: link:lib
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.0)(typescript@5.6.3)

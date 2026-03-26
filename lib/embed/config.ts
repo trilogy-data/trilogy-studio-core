@@ -1,4 +1,12 @@
-import { computed, inject, provide, type ComputedRef, type InjectionKey, type MaybeRefOrGetter, toValue } from 'vue'
+import {
+  computed,
+  inject,
+  provide,
+  type ComputedRef,
+  type InjectionKey,
+  type MaybeRefOrGetter,
+  toValue,
+} from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
 
 export type TrilogyThemeMode = 'light' | 'dark'
@@ -49,9 +57,7 @@ export function resolveThemeVariables(
 ): Record<string, string> {
   const normalizedTheme = normalizeEmbedTheme(embedTheme)
   const variables = normalizedTheme?.variables || {}
-  return Object.fromEntries(
-    Object.entries(variables).map(([key, value]) => [key, String(value)]),
-  )
+  return Object.fromEntries(Object.entries(variables).map(([key, value]) => [key, String(value)]))
 }
 
 export function provideTrilogyEmbedConfig(config: MaybeRefOrGetter<TrilogyEmbedConfig | null>) {
@@ -61,7 +67,10 @@ export function provideTrilogyEmbedConfig(config: MaybeRefOrGetter<TrilogyEmbedC
 }
 
 export function useTrilogyEmbedConfig(): ComputedRef<TrilogyEmbedConfig | null> {
-  return inject(TRILOGY_EMBED_CONFIG_KEY, computed(() => null))
+  return inject(
+    TRILOGY_EMBED_CONFIG_KEY,
+    computed(() => null),
+  )
 }
 
 export function useResolvedThemeMode(
@@ -72,4 +81,3 @@ export function useResolvedThemeMode(
     resolveThemeMode(embedConfig.value?.theme, settingsStore?.settings.theme || null),
   )
 }
-

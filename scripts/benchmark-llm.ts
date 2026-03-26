@@ -5,14 +5,12 @@ import path from 'path'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-const { DuckDBConnection } = await import('trilogy-studio-components/connections')
+const { DuckDBConnection } = await import('../lib/connections')
 import { createProviderInstance } from './providers'
 import { loadTestData, getApiKey, printSummary } from './utils'
 import { TestRunner } from './test-runner'
 import { ProviderConfig, ProviderResult, TestResult } from './types'
-const { useLLMConnectionStore, useConnectionStore } = await import(
-  'trilogy-studio-components/stores'
-)
+const { useLLMConnectionStore, useConnectionStore } = await import('../lib/stores')
 
 // Load environment variables from .env file
 dotenv.config()

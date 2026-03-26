@@ -1,12 +1,12 @@
 import { Pinia } from 'pinia'
-const { createPrompt } = await import('trilogy-studio-components/llm')
+const { createPrompt } = await import('../lib/llm')
 const {
   TrilogyResolver,
   useLLMConnectionStore,
   QueryExecutionService,
   useConnectionStore,
   useUserSettingsStore,
-} = await import('trilogy-studio-components/stores')
+} = await import('../lib/stores')
 import { BenchMarkQuery, TestResult, ImportMap, ContentInput, Import } from './types'
 
 export class TestRunner {

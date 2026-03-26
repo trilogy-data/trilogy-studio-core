@@ -32,7 +32,7 @@
           class="clear-search-btn sidebar-icon-button"
           :data-testid="testTag ? `connection-search-clear-${testTag}` : 'connection-search-clear'"
         >
-          ✕
+          <span class="mdi mdi-close" aria-hidden="true"></span>
         </button>
       </div>
     </template>
@@ -509,13 +509,9 @@ export default {
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0;
-}
-
-.clear-search-btn::before {
-  content: '\F0156';
-  font-family: 'Material Design Icons';
   font-size: 14px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
