@@ -11,6 +11,7 @@
       class="chart-placeholder"
       :details="error"
       :query="query"
+      :filters="filters"
     />
     <data-table
       v-else-if="ready && results"
@@ -113,6 +114,10 @@ export default defineComponent({
       return itemData.value.error || null
     })
 
+    const filters = computed(() => {
+      return itemData.value.filters || []
+    })
+
     const startTime = computed(() => {
       return itemData.value.loadStartTime || null
     })
@@ -177,6 +182,7 @@ export default defineComponent({
       loading,
       showLoading,
       error,
+      filters,
       query,
       chartHeight,
       chartWidth,

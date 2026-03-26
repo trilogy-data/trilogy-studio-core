@@ -24,6 +24,7 @@ import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { DashboardModel } from '../../dashboards/base'
+import { filterAllowedDimensionFilters } from '../../dashboards/crossFilters'
 
 export interface UseDashboardOptions {
   connectionId?: string
@@ -614,21 +615,8 @@ export function useDashboard(
   function setCrossFilter(info: DimensionClick): void {
     if (!dashboard.value || !dashboard.value.id) return
 
-    let globalFields = globalCompletion.value.map((f) => f.label)
-    const finalFilters = Object.entries(info.filters).reduce(
-      (acc, [key, value]) => {
-        let lookup = key
-        let altLookup = null
-        if (lookup.startsWith('local.')) {
-          altLookup = lookup.replace('local.', '')
-        }
-        if (globalFields.includes(lookup) || (altLookup && globalFields.includes(altLookup))) {
-          acc[key] = value
-        }
-        return acc
-      },
-      {} as Record<string, string>,
-    )
+    const globalFields = globalCompletion.value.map((f) => f.label)
+    const finalFilters = filterAllowedDimensionFilters(info.filters, globalFields)
 
     if (!finalFilters || Object.keys(finalFilters).length === 0) {
       console.log('No valid filters to apply from cross-filter event, given ', info.filters)

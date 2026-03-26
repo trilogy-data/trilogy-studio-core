@@ -11,6 +11,7 @@
       class="chart-placeholder"
       :details="error"
       :query="query"
+      :filters="filters"
     />
 
     <MarkdownRenderer
@@ -109,6 +110,10 @@ export default defineComponent({
       return itemData.value.error || null
     })
 
+    const filters = computed(() => {
+      return itemData.value.filters || []
+    })
+
     const startTime = computed(() => {
       return itemData.value.loadStartTime || null
     })
@@ -150,6 +155,7 @@ export default defineComponent({
       ready,
       loading,
       error,
+      filters,
       query,
       markdown,
       handleLocalRefresh,

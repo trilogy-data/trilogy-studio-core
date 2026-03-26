@@ -2,8 +2,14 @@
 import type { ChartConfig } from '../editors/results'
 import type { Results } from '../editors/results'
 import { migrateChartConfig } from '../editors/results'
-import { objectToSqlExpression } from './conditions'
 import type { ContentInput } from '../stores/resolver'
+import {
+  applyCrossFilterOperationToGridItems,
+  clearAllCrossFiltersFromGridItems,
+  removeCrossFilterFromItem,
+  removeCrossFilterSourceFromGridItems,
+  syncCrossFilterSqlForItem,
+} from './crossFilters'
 
 export interface DimensionClick {
   source: string
@@ -461,75 +467,36 @@ export class DashboardModel implements Dashboard {
   updateItemFilters(itemID: string) {
     const gridItem = this.gridItems[itemID]
     if (gridItem) {
-      gridItem.filters = gridItem.filters || []
-      gridItem.filters = gridItem.filters.filter((f) => f.source !== 'cross')
-      if (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) {
-        let build = objectToSqlExpression(gridItem.conceptFilters.map((f) => f.value))
-        gridItem.filters.push({
-          source: 'cross',
-          value: build,
-        })
-        // gridItem.parameters = build.parameters
+      const changed = syncCrossFilterSqlForItem(gridItem)
+      if (changed) {
+        this.updatedAt = new Date()
+        this.changed = true
       }
+    }
+  }
+
+  removeItemCrossFilter(itemId: string, source: string) {
+    const changed = removeCrossFilterFromItem(this.gridItems, itemId, source)
+    if (changed) {
       this.updatedAt = new Date()
       this.changed = true
     }
   }
 
-  removeItemCrossFilter(itemId: string, source: string) {
-    // remove the filter from all items in the dashboard who DOmatch the itemId
-    for (const id in this.gridItems) {
-      if (id === itemId) {
-        const gridItem = this.gridItems[id]
-        gridItem.conceptFilters = gridItem.conceptFilters || []
-        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== source)
-        gridItem.filters = gridItem.filters || []
-        gridItem.filters = gridItem.filters.filter((f) => f.source !== source)
-      }
-    }
-  }
-
   removeItemCrossFilterSource(itemId: string): string[] {
-    // remove the filter from all items in the dashboard who DO match the itemId
-    let updated = []
-    for (const id in this.gridItems) {
-      if (id === itemId) {
-        const gridItem = this.gridItems[id]
-        gridItem.filters = gridItem.filters || []
-        gridItem.chartFilters = []
-      }
-      if (id !== itemId) {
-        const gridItem = this.gridItems[id]
-        let hasFilter =
-          gridItem.conceptFilters &&
-          gridItem.conceptFilters.length > 0 &&
-          gridItem.conceptFilters.some((f) => f.source === itemId)
-        gridItem.conceptFilters = gridItem.conceptFilters || []
-        gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
-        if (hasFilter) {
-          this.updateItemFilters(id)
-          updated.push(id)
-        }
-      }
+    const sourceHadSelections = Boolean(this.gridItems[itemId]?.chartFilters?.length)
+    const updated = removeCrossFilterSourceFromGridItems(this.gridItems, itemId)
+    if (updated.length > 0 || sourceHadSelections) {
+      this.updatedAt = new Date()
+      this.changed = true
     }
     return updated
   }
 
   removeAllFilters(): string[] {
-    // remove the filter from all items in the dashboard
-    let updated = []
+    const updated = clearAllCrossFiltersFromGridItems(this.gridItems)
     for (const id in this.gridItems) {
-      const gridItem = this.gridItems[id]
-      if (
-        (gridItem.conceptFilters && gridItem.conceptFilters.length > 0) ||
-        (gridItem.filters && gridItem.filters.length > 0)
-      ) {
-        updated.push(id)
-      }
-      gridItem.conceptFilters = []
-      gridItem.chartFilters = []
-      gridItem.filters = []
-      gridItem.parameters = {}
+      this.gridItems[id].parameters = {}
     }
     if (updated.length > 0) {
       this.updatedAt = new Date()
@@ -544,64 +511,13 @@ export class DashboardModel implements Dashboard {
     chartMap: Record<string, string>,
     operation: 'add' | 'append' | 'remove',
   ): string[] {
-    // add/remove the filter to all items in the dashboard who do NOT match the itemId
-    let updated = []
-    for (const id in this.gridItems) {
-      if (id === itemId) {
-        const gridItem = this.gridItems[id]
-        gridItem.chartFilters = gridItem.chartFilters || []
-        if (operation !== 'append') {
-          gridItem.chartFilters = gridItem.chartFilters.filter((f) => f.source !== itemId)
-        }
-        if (['add', 'append'].includes(operation)) {
-          gridItem.chartFilters.push({ source: itemId, value: chartMap })
-        }
-      }
-      if (id !== itemId) {
-        const gridItem = this.gridItems[id]
-        if (!gridItem.allowCrossFilter) {
-          continue // Skip items that do not allow cross-filtering
-        }
-
-        // Store the original state to check for changes
-        const originalConceptFilters = JSON.stringify(gridItem.conceptFilters || [])
-
-        gridItem.conceptFilters = gridItem.conceptFilters || []
-        let shouldAppend = true
-        if (operation !== 'append') {
-          gridItem.conceptFilters = gridItem.conceptFilters.filter((f) => f.source !== itemId)
-        } else if (operation === 'append') {
-          // The issue is here - we need to properly compare objects
-          // Check if there's an exact match with both source and value
-          const hasExactMatch = gridItem.conceptFilters.some(
-            (f) => f.source === itemId && JSON.stringify(f.value) === JSON.stringify(conceptMap),
-          )
-          if (hasExactMatch) {
-            shouldAppend = false
-            // If there's an exact match, remove it
-            gridItem.conceptFilters = gridItem.conceptFilters.filter(
-              (f) =>
-                !(f.source === itemId && JSON.stringify(f.value) === JSON.stringify(conceptMap)),
-            )
-          } else {
-          }
-        }
-
-        // Only push if we're adding or (appending and no exact match exists)
-        if (operation === 'add' || (operation === 'append' && shouldAppend)) {
-          gridItem.conceptFilters.push({ source: itemId, value: conceptMap })
-        }
-
-        // Check if the conceptFilters actually changed
-        const newConceptFilters = JSON.stringify(gridItem.conceptFilters)
-        const filtersChanged = originalConceptFilters !== newConceptFilters
-
-        if (filtersChanged) {
-          this.updateItemFilters(id)
-          updated.push(id)
-        }
-      }
-    }
+    const updated = applyCrossFilterOperationToGridItems(
+      this.gridItems,
+      itemId,
+      conceptMap,
+      chartMap,
+      operation,
+    )
     this.updatedAt = new Date()
     this.changed = true
     return updated

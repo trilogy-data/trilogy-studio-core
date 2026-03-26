@@ -1,34 +1,51 @@
 <template>
   <div :class="messageClass" ref="messageContainer">
-    <div class="message-header">
-      <span class="message-badge">{{ badgeLabel }}</span>
-      <span class="message-title">{{ resolvedTitle }}</span>
-    </div>
-    <div v-if="hasMessageContent" class="message-text" data-testid="error-text">
-      <slot v-if="$slots.default"></slot>
-      <span v-else>{{ details }}</span>
-    </div>
-    <div v-if="query" class="message-query-block">
-      <div class="message-query-header">
-        <span class="message-query-label">Trilogy Query</span>
-        <button
-          v-if="canCopy"
-          class="message-copy-button"
-          type="button"
-          @click="copyQuery"
-        >
-          {{ copyLabel }}
-        </button>
+    <div class="message-shell">
+      <div class="message-header">
+        <span class="message-badge">{{ badgeLabel }}</span>
+        <span class="message-title">{{ resolvedTitle }}</span>
       </div>
-      <pre class="message-query">{{ query }}</pre>
-    </div>
-    <div class="message-action">
-      <slot name="action"></slot>
+      <div class="message-body">
+        <div v-if="hasMessageContent" class="message-text" data-testid="error-text">
+          <slot v-if="$slots.default"></slot>
+          <span v-else>{{ details }}</span>
+        </div>
+        <div v-if="normalizedFilters.length" class="message-query-block">
+          <div class="message-query-header">
+            <span class="message-query-label">Active Filters</span>
+          </div>
+          <pre class="message-query">{{ formattedFilters }}</pre>
+        </div>
+        <div v-if="query" class="message-query-block">
+          <div class="message-query-header">
+            <span class="message-query-label">Trilogy Query</span>
+            <button
+              v-if="canCopy"
+              class="message-copy-button"
+              type="button"
+              @click="copyQuery"
+            >
+              {{ copyLabel }}
+            </button>
+          </div>
+          <pre class="message-query">{{ query }}</pre>
+        </div>
+      </div>
+      <div class="message-action">
+        <slot name="action"></slot>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+import type { PropType } from 'vue'
+
+export interface ErrorFilter {
+  source?: string
+  value: string
+}
+
 export default {
   name: 'MessageComponent',
   props: {
@@ -48,6 +65,10 @@ export default {
     query: {
       type: String,
       default: '',
+    },
+    filters: {
+      type: Array as PropType<ErrorFilter[]>,
+      default: () => [],
     },
   },
   data() {
@@ -77,6 +98,19 @@ export default {
     copyLabel(): string {
       return this.copied ? 'Copied' : 'Copy'
     },
+    normalizedFilters(): ErrorFilter[] {
+      return (this.filters || []).filter((filter) => typeof filter?.value === 'string' && filter.value.trim())
+    },
+    formattedFilters(): string {
+      return this.normalizedFilters
+        .map((filter) => {
+          if (filter.source && filter.source !== 'global') {
+            return `[${filter.source}] ${filter.value}`
+          }
+          return filter.value
+        })
+        .join('\n')
+    },
   },
   methods: {
     async copyQuery() {
@@ -100,15 +134,14 @@ export default {
   flex-direction: column;
   align-items: stretch;
   text-align: left;
-  gap: 10px;
   padding: 16px;
-  justify-content: flex-start;
   font-size: 14px;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
   height: 100%;
-  overflow-y: auto;
+  min-height: 0;
   box-sizing: border-box;
   border-radius: 12px;
+  overflow: hidden;
 }
 
 .error-message {
@@ -125,6 +158,14 @@ export default {
     rgba(248, 250, 252, 0.96);
   color: #0f172a;
   border: 1px solid rgba(96, 165, 250, 0.28);
+}
+
+.message-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  height: 100%;
 }
 
 .message-header {
@@ -177,11 +218,23 @@ export default {
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.38);
   color: #f1f5f9;
+  max-height: 160px;
+  overflow: auto;
 }
 
 .information-message .message-text {
   background: rgba(219, 234, 254, 0.65);
   color: #1e293b;
+}
+
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .message-query-block {
@@ -230,6 +283,7 @@ export default {
   white-space: pre-wrap;
   word-break: break-word;
   overflow: auto;
+  max-height: 180px;
   background: rgba(2, 6, 23, 0.5);
   color: #bfdbfe;
   border: 1px solid rgba(96, 165, 250, 0.16);
@@ -239,5 +293,6 @@ export default {
   display: flex;
   justify-content: center;
   width: 100%;
+  flex-shrink: 0;
 }
 </style>

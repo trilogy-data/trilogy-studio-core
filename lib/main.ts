@@ -82,6 +82,17 @@ export type { TrilogyChatOptions } from './composables/useTrilogyChat'
 // Dashboard primitives for embedded usage
 export { DashboardQueryExecutor } from './dashboards/dashboardQueryExecutor'
 export { DashboardModel, CELL_TYPES } from './dashboards/base'
+export {
+  applyCrossFilterOperationToGridItems,
+  buildCrossFilterExpression,
+  clearAllCrossFiltersFromGridItems,
+  createCrossFilterController,
+  filterAllowedDimensionFilters,
+  removeCrossFilterFromItem,
+  removeCrossFilterSourceFromGridItems,
+  syncCrossFilterSqlForItem,
+  useCrossFilterController,
+} from './dashboards/crossFilters'
 export type {
   Dashboard as DashboardDefinition,
   DashboardImport,
@@ -91,6 +102,16 @@ export type {
   LayoutItem,
   DimensionClick,
 } from './dashboards/base'
+export type {
+  CrossFilterController,
+  CrossFilterInputLike,
+  CrossFilterItemLike,
+  CrossFilterOperation,
+  CrossFilterSelection,
+  CrossFilterValueMap,
+  CreateCrossFilterControllerOptions,
+  SqlFilterLike,
+} from './dashboards/crossFilters'
 
 // Query execution primitives for dependency injection
 export { default as QueryExecutionService } from './stores/queryExecutionService'
