@@ -11,6 +11,8 @@ export { default as DashboardDataSelector } from './components/dashboard/Dashboa
 export { default as DataTable } from './components/DataTable.vue'
 export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
 export { default as VegaLiteChart } from './components/VegaLiteChart.vue'
+export { useTrilogyCore } from './composables/useTrilogyCore'
+export { useTrilogyChat } from './composables/useTrilogyChat'
 
 export {
   TRILOGY_EMBED_CONFIG_KEY,
@@ -27,6 +29,8 @@ export type {
   TrilogyEmbedThemeObject,
   TrilogyThemeMode,
 } from './embed/config'
+export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTrilogyCore'
+export type { TrilogyChatOptions } from './composables/useTrilogyChat'
 
 export { DashboardQueryExecutor } from './dashboards/dashboardQueryExecutor'
 export { DashboardModel, CELL_TYPES } from './dashboards/base'

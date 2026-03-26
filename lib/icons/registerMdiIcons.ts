@@ -261,11 +261,8 @@ function toSvgDataUrl(path: string): string {
 
 function buildBaseCss(): string {
   return `
-.mdi,
-.mdi-set {
+.mdi {
   display: inline-block;
-  width: 1em;
-  height: 1em;
   font-size: inherit;
   line-height: inherit;
   vertical-align: middle;
@@ -275,19 +272,21 @@ function buildBaseCss(): string {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.mdi::before {
+.mdi::before,
+.mdi-set {
   content: "";
   display: inline-block;
   width: 1em;
   height: 1em;
   background-color: currentColor;
-  vertical-align: top;
+  line-height: inherit;
+  vertical-align: middle;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
 .mdi.mdi-spin::before {
@@ -297,24 +296,28 @@ function buildBaseCss(): string {
 
 .mdi-18px.mdi-set,
 .mdi-18px.mdi::before {
+  font-size: 18px;
   width: 18px;
   height: 18px;
 }
 
 .mdi-24px.mdi-set,
 .mdi-24px.mdi::before {
+  font-size: 24px;
   width: 24px;
   height: 24px;
 }
 
 .mdi-36px.mdi-set,
 .mdi-36px.mdi::before {
+  font-size: 36px;
   width: 36px;
   height: 36px;
 }
 
 .mdi-48px.mdi-set,
 .mdi-48px.mdi::before {
+  font-size: 48px;
   width: 48px;
   height: 48px;
 }

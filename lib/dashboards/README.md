@@ -58,7 +58,7 @@ They preserve the same native behavior:
 - append mode toggles exact matches on and off
 
 ```typescript
-import { createCrossFilterController } from '@trilogy-data/trilogy-studio-components'
+import { createCrossFilterController } from '@trilogy-data/trilogy-studio-components/dashboard'
 
 const filters = createCrossFilterController({
   validFields: ['species', 'native_status', 'tree_category'],

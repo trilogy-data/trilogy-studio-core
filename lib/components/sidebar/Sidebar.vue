@@ -555,6 +555,10 @@ export default defineComponent({
   opacity: 0.92;
 }
 
+.sidebar-icon i::before {
+  transform: translateY(-3px);
+}
+
 .sidebar-icon.selected {
   background-color: transparent;
   color: #e5edf8;

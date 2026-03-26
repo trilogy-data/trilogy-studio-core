@@ -99,7 +99,7 @@ import {
   getEditorText,
   setupEditorKeybindings,
 } from '../monaco/editorHelpers'
-import { EditorModel } from '../main'
+import EditorModel from '../editors/editor'
 import { Results } from '../editors/results'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'

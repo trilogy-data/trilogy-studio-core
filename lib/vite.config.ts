@@ -16,7 +16,6 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        main: 'main.ts',
         dashboard: 'entry.dashboard.ts',
         views: 'entry.views.ts',
         monaco: 'entry.monaco.ts',
@@ -25,6 +24,7 @@ export default defineConfig({
         connections: 'entry.connections.ts',
         embed: 'entry.embed.ts',
       },
+      formats: ['es'],
       fileName: (_, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
