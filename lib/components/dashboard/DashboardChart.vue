@@ -16,7 +16,7 @@
     />
     <ErrorMessage
       v-else-if="error && !loading"
-      class="chart-placeholder"
+      :compact="true"
       :details="error"
       :query="query"
       :filters="filters"
