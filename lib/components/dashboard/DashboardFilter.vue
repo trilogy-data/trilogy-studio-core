@@ -14,7 +14,7 @@
       :filters="filters"
     />
     <dashboard-data-selector
-      v-else-if="ready && results"
+      v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
       :headers="results.headers"
       :results="results.data"
@@ -27,7 +27,7 @@
 
     <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading && showLoading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+      <LoadingView :startTime="startTime" text="" subtle />
     </div>
 
     <!-- <div

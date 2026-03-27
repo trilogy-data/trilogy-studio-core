@@ -22,7 +22,7 @@
       :filters="filters"
     />
     <VegaLiteChart
-      v-else-if="results && ready && !loading"
+      v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
       :columns="results.headers"
       :data="results.data"
@@ -41,7 +41,7 @@
       @revert-drilldown="revertDrilldown"
     />
     <div v-if="loading && showLoading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+      <LoadingView :startTime="startTime" text="" subtle />
     </div>
     <div
       v-if="!editMode || !(results && ready)"
@@ -283,7 +283,6 @@ export default defineComponent({
         drilldownChartConfig: null,
         loading: true,
       })
-      ready.value = false
       showLoading.value = true
       activeDrilldown.value = null
       await executeQuery()

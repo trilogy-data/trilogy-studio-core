@@ -517,8 +517,11 @@ export default defineComponent({
   bottom: 8px;
   left: 50%;
   padding: 6px 8px;
-  border: 1px solid var(--trilogy-embed-overlay-border);
-  background: var(--trilogy-embed-floating-surface);
+  border: 1px solid var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  background: var(
+    --trilogy-embed-floating-surface,
+    var(--floating-surface, rgba(255, 255, 255, 0.9))
+  );
   backdrop-filter: blur(8px);
   transform: translate(-50%, 6px);
 }
@@ -538,9 +541,12 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--trilogy-embed-overlay-border);
-  background-color: var(--trilogy-embed-floating-surface-strong);
-  color: var(--trilogy-embed-floating-text);
+  border: 1px solid var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  background-color: var(
+    --trilogy-embed-floating-surface-strong,
+    var(--floating-surface-strong, rgba(255, 255, 255, 0.97))
+  );
+  color: var(--trilogy-embed-floating-text, var(--floating-text, var(--text-color, #1f2937)));
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -553,23 +559,26 @@ export default defineComponent({
 }
 
 .control-btn:hover {
-  background-color: var(--trilogy-embed-floating-surface);
-  border-color: rgba(var(--trilogy-embed-special-text-rgb), 0.28);
+  background-color: var(
+    --trilogy-embed-floating-surface,
+    var(--floating-surface, rgba(255, 255, 255, 0.9))
+  );
+  border-color: rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.28);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 
 .control-btn:disabled {
-  background-color: var(--trilogy-embed-border-light);
-  color: var(--trilogy-embed-text-muted);
+  background-color: var(--trilogy-embed-border-light, var(--border-light, #e1e6ed));
+  color: var(--trilogy-embed-text-muted, var(--text-color-muted, #64748b));
   cursor: not-allowed;
 }
 
 .control-btn:disabled:hover {
-  background-color: var(--trilogy-embed-border-light);
+  background-color: var(--trilogy-embed-border-light, var(--border-light, #e1e6ed));
 }
 
 .control-btn.active {
-  background-color: var(--trilogy-embed-special-text);
+  background-color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
   color: white;
 }
 

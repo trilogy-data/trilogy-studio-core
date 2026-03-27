@@ -31,6 +31,43 @@ Available public subpaths:
 
 There is no root package export. Import one of the explicit subpaths above so bundle-splitting stays predictable.
 
+## Self-Hosted DuckDB Assets
+
+Consumers using `DuckDBConnection` can override the default DuckDB asset loading and point the
+connection layer at app-hosted worker and wasm files:
+
+```ts
+import {
+  DuckDBConnection,
+  configureDuckDBAssets,
+  type DuckDBAssetUrls,
+} from '@trilogy-data/trilogy-studio-components/connections'
+
+const duckdbAssets: DuckDBAssetUrls = {
+  mvp: {
+    mainModule: '/duckdb/duckdb-mvp.wasm',
+    mainWorker: '/duckdb/duckdb-browser-mvp.worker.js',
+  },
+  eh: {
+    mainModule: '/duckdb/duckdb-eh.wasm',
+    mainWorker: '/duckdb/duckdb-browser-eh.worker.js',
+  },
+}
+
+configureDuckDBAssets(duckdbAssets)
+
+const connection = new DuckDBConnection('Local analytics')
+await connection.reset()
+```
+
+This is useful when an embedding app already has another DuckDB runtime, or wants to avoid the
+`jsDelivr` fallback and serve the assets from its own origin.
+
+For actual asset deduplication across the main app bundle and web workers, prefer stable URLs from
+the host app's `public/` assets or another static host. Importing DuckDB files with `?url` from
+multiple Vite build graphs can still emit duplicate hashed files even when they resolve to the same
+source package.
+
 ## Embedding Themes
 
 Embedded consumers can now provide theme information without wiring the full Studio `userSettingsStore`.

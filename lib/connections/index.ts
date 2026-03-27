@@ -1,6 +1,7 @@
 export { default as Connection, Table, Database, Schema, Column, AssetType } from './base'
 export { default as MotherDuckConnection } from './motherduck'
-export { default as DuckDBConnection } from './duckdb'
+export { default as DuckDBConnection, configureDuckDBAssets } from './duckdb'
+export type { DuckDBAssetUrls } from './duckdb'
 export { default as BigQueryOauthConnection } from './bigquery_oauth'
 export { SnowflakeJwtConnection } from './snowflake'
 export { default as RemoteProjectConnection } from './remoteProject'
