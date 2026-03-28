@@ -517,7 +517,8 @@ export default defineComponent({
   bottom: 8px;
   left: 50%;
   padding: 6px 8px;
-  border: 1px solid var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  border: 1px solid
+    var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
   background: var(
     --trilogy-embed-floating-surface,
     var(--floating-surface, rgba(255, 255, 255, 0.9))
@@ -541,7 +542,8 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  border: 1px solid
+    var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
   background-color: var(
     --trilogy-embed-floating-surface-strong,
     var(--floating-surface-strong, rgba(255, 255, 255, 0.97))
@@ -563,7 +565,10 @@ export default defineComponent({
     --trilogy-embed-floating-surface,
     var(--floating-surface, rgba(255, 255, 255, 0.9))
   );
-  border-color: rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.28);
+  border-color: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.28
+  );
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 

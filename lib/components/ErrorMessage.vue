@@ -22,14 +22,15 @@
         </div>
       </div>
       <div class="message-body">
-        <div v-if="showPrimaryBody && hasMessageContent" class="message-text" data-testid="error-text">
+        <div
+          v-if="showPrimaryBody && hasMessageContent"
+          class="message-text"
+          data-testid="error-text"
+        >
           <slot v-if="$slots.default"></slot>
           <span v-else>{{ details }}</span>
         </div>
-        <div
-          v-if="showSecondaryBody && !hasSecondaryContent"
-          class="message-empty-state"
-        >
+        <div v-if="showSecondaryBody && !hasSecondaryContent" class="message-empty-state">
           No additional context available.
         </div>
         <div
@@ -41,10 +42,7 @@
           </div>
           <pre class="message-query">{{ formattedFilters }}</pre>
         </div>
-        <div
-          v-if="showStackedQuery || (showSecondaryBody && query)"
-          class="message-query-block"
-        >
+        <div v-if="showStackedQuery || (showSecondaryBody && query)" class="message-query-block">
           <div class="message-query-header">
             <span class="message-query-label">Trilogy Query</span>
             <button v-if="canCopy" class="message-copy-button" type="button" @click="copyQuery">

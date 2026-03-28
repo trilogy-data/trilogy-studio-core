@@ -31,13 +31,14 @@ async function initializeTrilogy() {
   const { configureTrilogy } = await import('../lib/monaco')
   configureTrilogy()
 }
-// Start loading trilogy configuration in the background
-initializeTrilogy().catch(console.error)
 
 const Pinia = createPinia()
 
 const app = createApp(App)
 app.use(Pinia)
+
+// Start loading trilogy configuration in the background after Pinia is available.
+initializeTrilogy().catch(console.error)
 
 function removeLoadingScreen() {
   const loadingElement = document.getElementById('loading-screen')

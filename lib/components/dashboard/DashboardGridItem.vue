@@ -288,11 +288,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
       class="dev-toolbar-shell"
       :class="{ 'dev-toolbar-visible': editControlsVisible }"
     >
-      <div
-        ref="devToolbarRef"
-        class="dev-toolbar"
-        data-testid="dashboard-item-header-controls"
-      >
+      <div ref="devToolbarRef" class="dev-toolbar" data-testid="dashboard-item-header-controls">
         <button
           @click="openEditor"
           class="control-btn"
@@ -874,7 +870,10 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     --trilogy-embed-floating-surface,
     var(--floating-surface, rgba(255, 255, 255, 0.9))
   );
-  border-color: rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.28);
+  border-color: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.28
+  );
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
@@ -924,9 +923,13 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   padding: 1px 7px;
   font-size: 10px;
   letter-spacing: var(--ui-label-letter-spacing);
-  background: rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.08);
+  background: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.08
+  );
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.18);
+  box-shadow: inset 0 0 0 1px
+    rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.18);
   color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
 }
 

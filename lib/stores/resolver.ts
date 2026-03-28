@@ -238,16 +238,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      this.buildResolverUrl('validate_query'),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('validate_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.validateCache.set(cacheKey, response)
@@ -285,16 +282,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      this.buildResolverUrl('drilldown_query'),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('drilldown_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     return response
   }
@@ -334,16 +328,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      this.buildResolverUrl('format_query'),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('format_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.formatCache.set(cacheKey, response)
@@ -394,16 +385,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      this.buildResolverUrl('generate_query'),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('generate_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.queryCache.set(cacheKey, response)
@@ -565,16 +553,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      this.buildResolverUrl('parse_model'),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('parse_model'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     const modelConfig = ModelConfig.fromJSON(response.data)
 

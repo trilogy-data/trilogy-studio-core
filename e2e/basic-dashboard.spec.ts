@@ -81,8 +81,8 @@ async function clickChartCanvasWithModifier(containerLocator, relX, relY) {
   await canvas.click({
     force: true,
     position: {
-      x: bounds.width * .9,
-      y: bounds.height * .9,
+      x: bounds.width * 0.9,
+      y: bounds.height * 0.9,
     },
   })
   //our actual click
@@ -196,7 +196,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   const firstChartCanvas = page.locator(vegaSelector).first()
   await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
   await firstChartCanvas.hover({ force: true })
-    const firstDashboardItem = page.getByTestId('dashboard-component-0')
+  const firstDashboardItem = page.getByTestId('dashboard-component-0')
   await firstDashboardItem.hover({ force: true })
   await page.waitForTimeout(250)
   await firstDashboardItem.click({

@@ -48,6 +48,7 @@ export default defineConfig({
     },
   ],
   resolve: {
+    dedupe: ['vue', 'pinia'],
     alias: {
       buffer: 'buffer/', // buffer requires /
     },

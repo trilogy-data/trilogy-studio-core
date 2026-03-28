@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="loading-container"
-    :class="{ 'loading-container-subtle': subtle }"
-    ref="containerRef"
-  >
+  <div class="loading-container" :class="{ 'loading-container-subtle': subtle }" ref="containerRef">
     <template v-if="isCompact">
       <p class="display-text">
         <img :src="trilogyIcon" class="trilogy-icon" />
