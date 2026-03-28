@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon'
+import { toJsonSafeRows } from '../utility/jsonSerialization'
 
 // class QueryOut(BaseModel):
 //     connection: str
@@ -126,51 +127,6 @@ export function migrateChartConfig(
   return config
 }
 
-type SerializableValue =
-  | string
-  | number
-  | boolean
-  | null
-  | SerializableValue[]
-  | { [key: string]: SerializableValue }
-
-function makeValuesJsonSerializable(
-  objects: readonly Readonly<Record<string, any>>[],
-): Record<string, SerializableValue>[] {
-  return objects.map((obj) => {
-    const serializedObj: Record<string, SerializableValue> = {}
-    for (const key in obj) {
-      const value = obj[key]
-
-      // Handle BigInt specifically
-      if (typeof value === 'bigint') {
-        serializedObj[key] = value.toString()
-      }
-      // Handle native Dates
-      else if (value instanceof Date) {
-        serializedObj[key] = value.toISOString()
-      }
-      // Handle luxon DateTime objects (used by DuckDB, Snowflake, BigQuery for date/datetime columns)
-      else if (value !== null && value !== undefined && value.isLuxonDateTime === true) {
-        serializedObj[key] = value.toISO()
-      }
-      // Recursively handle nested objects or arrays
-      else if (Array.isArray(value)) {
-        serializedObj[key] = value.map((item) =>
-          typeof item === 'object' && item !== null ? makeValuesJsonSerializable([item])[0] : item,
-        )
-      } else if (typeof value === 'object' && value !== null) {
-        serializedObj[key] = makeValuesJsonSerializable([value])[0]
-      }
-      // All other values are JSON serializable as-is
-      else {
-        serializedObj[key] = value
-      }
-    }
-    return serializedObj
-  })
-}
-
 export class Results implements ResultsInterface {
   headers: Map<string, ResultColumn>
   data: readonly Row[]
@@ -181,7 +137,7 @@ export class Results implements ResultsInterface {
   }
   toJSON(): object {
     return {
-      data: makeValuesJsonSerializable(this.data),
+      data: toJsonSafeRows(this.data),
       headers: Object.fromEntries(this.headers), // Convert Map to a plain object
     }
   }

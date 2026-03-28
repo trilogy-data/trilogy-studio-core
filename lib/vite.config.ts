@@ -15,9 +15,17 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: 'main.ts',
-      name: 'TrilogyStudioComponents',
-      fileName: 'main',
+      entry: {
+        dashboard: 'entry.dashboard.ts',
+        views: 'entry.views.ts',
+        monaco: 'entry.monaco.ts',
+        llm: 'entry.llm.ts',
+        stores: 'entry.stores.ts',
+        connections: 'entry.connections.ts',
+        embed: 'entry.embed.ts',
+      },
+      formats: ['es'],
+      fileName: (_, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
       external: ['vue', 'pinia', '@motherduck/wasm-client'],

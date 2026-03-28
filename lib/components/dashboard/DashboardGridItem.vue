@@ -4,6 +4,7 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import DashboardFilter from './DashboardFilter.vue'
+import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
   type LayoutItem,
@@ -38,6 +39,9 @@ const emit = defineEmits<{
 const editingItemTitle = ref(false)
 const editableItemName = ref('')
 const isHeaderVisible = ref(false)
+const controlsDismissed = ref(false)
+const contentEditToolbarRef = ref<HTMLElement | null>(null)
+const devToolbarRef = ref<HTMLElement | null>(null)
 
 function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
@@ -56,6 +60,7 @@ function startTitleEditing(): void {
 
   const currentItemData = props.getItemData(props.item.i, props.dashboardId)
   isHeaderVisible.value = false
+  controlsDismissed.value = false
   editingItemTitle.value = true
   editableItemName.value = currentItemData.name
 
@@ -233,6 +238,34 @@ const displayTitle = computed(() => {
 const titleLevelClass = computed(() => {
   return `item-title-level-${parsedDisplayTitle.value.level}`
 })
+
+const editControlsVisible = computed(() => {
+  return isHeaderVisible.value && !editingItemTitle.value && !controlsDismissed.value
+})
+
+function dismissHoverControls(): void {
+  if (!editControlsVisible.value) {
+    return
+  }
+
+  controlsDismissed.value = true
+  isHeaderVisible.value = false
+}
+
+function handleMouseEnter(): void {
+  isHeaderVisible.value = true
+  controlsDismissed.value = false
+}
+
+function handleMouseLeave(): void {
+  isHeaderVisible.value = false
+  controlsDismissed.value = false
+}
+
+useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
+  enabled: () => editControlsVisible.value,
+  eventName: 'mousedown',
+})
 </script>
 
 <template>
@@ -247,64 +280,22 @@ const titleLevelClass = computed(() => {
       'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
     }"
-    @mouseenter="
-      () => {
-        isHeaderVisible = true
-      }
-    "
-    @mouseleave="
-      () => {
-        isHeaderVisible = false
-      }
-    "
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <div
-      v-if="editMode"
+      v-if="editMode && isSectionHeader"
       class="dev-toolbar-shell"
-      :class="{ 'dev-toolbar-visible': isHeaderVisible && !editingItemTitle }"
+      :class="{ 'dev-toolbar-visible': editControlsVisible }"
     >
-      <div class="dev-toolbar" data-testid="dashboard-item-header-controls">
-        <button
-          v-if="!isSectionHeader"
-          @click="increaseHeight"
-          class="control-btn"
-          :data-testid="`increase-height-item-${item.i}`"
-          title="Increase height"
-        >
-          <i class="mdi mdi-plus icon"></i>
-        </button>
-        <button
-          v-if="!isSectionHeader"
-          @click="decreaseHeight"
-          class="control-btn"
-          :data-testid="`decrease-height-item-${item.i}`"
-          title="Decrease height"
-        >
-          <i class="mdi mdi-minus icon"></i>
-        </button>
+      <div ref="devToolbarRef" class="dev-toolbar" data-testid="dashboard-item-header-controls">
         <button
           @click="openEditor"
           class="control-btn"
           :data-testid="`edit-dashboard-item-content-${item.i}`"
-          :title="isSectionHeader ? 'Edit title' : 'Edit data'"
+          title="Edit title"
         >
-          <i
-            :class="
-              isSectionHeader ? 'mdi mdi-pencil-outline icon' : 'mdi mdi-database-edit-outline icon'
-            "
-          ></i>
-        </button>
-        <button
-          v-if="!isSectionHeader"
-          @click="toggleCrossFilterEligible"
-          class="control-btn"
-          :data-testid="`toggle-crossfilter-item-content-${item.i}`"
-          :title="
-            itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
-          "
-        >
-          <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
-          <i v-else class="mdi mdi-filter-outline icon"></i>
+          <i class="mdi mdi-pencil-outline icon"></i>
         </button>
         <button
           @click="copyItem"
@@ -316,7 +307,7 @@ const titleLevelClass = computed(() => {
         </button>
         <button
           @click="removeItem"
-          class="control-btn remove-btn"
+          class="control-btn dashboard-remove-btn"
           :data-testid="`remove-dashboard-item-${item.i}`"
           title="Remove item"
         >
@@ -445,6 +436,70 @@ const titleLevelClass = computed(() => {
         @dimension-click="dimensionClick"
         @background-click="backgroundClick"
       />
+
+      <div
+        v-if="editMode && !isSectionHeader"
+        class="content-edit-overlay no-drag"
+        :class="{ 'content-edit-overlay-visible': editControlsVisible }"
+      >
+        <div
+          ref="contentEditToolbarRef"
+          class="content-edit-toolbar"
+          data-testid="dashboard-item-header-controls"
+        >
+          <button
+            @click="increaseHeight"
+            class="control-btn"
+            :data-testid="`increase-height-item-${item.i}`"
+            title="Increase height"
+          >
+            <i class="mdi mdi-plus icon"></i>
+          </button>
+          <button
+            @click="decreaseHeight"
+            class="control-btn"
+            :data-testid="`decrease-height-item-${item.i}`"
+            title="Decrease height"
+          >
+            <i class="mdi mdi-minus icon"></i>
+          </button>
+          <button
+            @click="openEditor"
+            class="control-btn"
+            :data-testid="`edit-dashboard-item-content-${item.i}`"
+            title="Edit data"
+          >
+            <i class="mdi mdi-database-edit-outline icon"></i>
+          </button>
+          <button
+            @click="toggleCrossFilterEligible"
+            class="control-btn"
+            :data-testid="`toggle-crossfilter-item-content-${item.i}`"
+            :title="
+              itemData.allowCrossFilter ? 'Toggle cross-filtering OFF' : 'Toggle cross-filtering ON'
+            "
+          >
+            <i v-if="itemData.allowCrossFilter" class="mdi mdi-filter-remove-outline icon"></i>
+            <i v-else class="mdi mdi-filter-outline icon"></i>
+          </button>
+          <button
+            @click="copyItem"
+            class="control-btn"
+            :data-testid="`copy-dashboard-item-${item.i}`"
+            title="Copy item"
+          >
+            <i class="mdi mdi-content-copy icon"></i>
+          </button>
+          <button
+            @click="removeItem"
+            class="control-btn dashboard-remove-btn"
+            :data-testid="`remove-dashboard-item-${item.i}`"
+            title="Remove item"
+          >
+            <i class="mdi mdi-delete-outline icon"></i>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -455,14 +510,17 @@ const titleLevelClass = computed(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--result-window-font);
+  color: var(
+    --trilogy-embed-result-window-font,
+    var(--result-window-font, var(--text-color, #1f2937))
+  );
   position: relative;
   overflow-y: hidden;
-  background-color: var(--dashboard-background);
+  background-color: var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff));
   border-radius: 14px;
   box-shadow:
-    inset 0 0 0 1px var(--border),
-    var(--surface-shadow);
+    inset 0 0 0 1px var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6))),
+    var(--trilogy-embed-surface-shadow, var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08)));
 }
 
 .grid-item-section-header-style {
@@ -521,8 +579,8 @@ const titleLevelClass = computed(() => {
   gap: 8px;
   min-height: 27px;
   padding: 4px 12px 3px;
-  background-color: var(--panel-header-bg);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
+  border-bottom: 1px solid var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)));
   flex-shrink: 0;
 }
 
@@ -573,6 +631,8 @@ const titleLevelClass = computed(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .section-header-content {
@@ -587,13 +647,58 @@ const titleLevelClass = computed(() => {
   padding: 2px 12px;
 }
 
+.content-edit-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.16);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.content-edit-overlay-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.content-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(100%, 280px);
+  padding: 8px;
+  border-radius: 14px;
+  background: color-mix(
+    in srgb,
+    var(--trilogy-embed-bg, var(--bg-color, #ffffff)) 92%,
+    rgba(15, 23, 42, 0.92)
+  );
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.3);
+  transform: translateY(12px) scale(0.98);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.content-edit-overlay-visible .content-edit-toolbar {
+  transform: translateY(0) scale(1);
+}
+
 .item-title {
   font-family: var(--font-heading);
   font-size: var(--widget-title-font-size);
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.025em;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
 }
 
 .item-title-level-1 {
@@ -646,7 +751,7 @@ const titleLevelClass = computed(() => {
   max-width: 100%;
   height: auto;
   text-align: center;
-  color: var(--dashboard-helper-text);
+  color: var(--trilogy-embed-dashboard-helper-text, var(--dashboard-helper-text, #425466));
   opacity: 0.9;
   overflow: hidden;
 }
@@ -657,7 +762,7 @@ const titleLevelClass = computed(() => {
   flex: 1 1 0;
   min-width: 18px;
   height: 1px;
-  background: var(--border-light);
+  background: var(--trilogy-embed-border-light, var(--border-light, #e1e6ed));
   opacity: 0.9;
 }
 
@@ -666,7 +771,7 @@ const titleLevelClass = computed(() => {
 }
 
 .section-header-editable:hover {
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
 }
 
 .section-header-text {
@@ -679,11 +784,11 @@ const titleLevelClass = computed(() => {
 }
 
 .editable-title:hover {
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
 }
 
 .item-title-static:hover {
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
 }
 
 .edit-indicator {
@@ -701,10 +806,10 @@ const titleLevelClass = computed(() => {
   padding: 4px 6px;
   font-size: var(--font-size);
   font-weight: 600;
-  border: 1px solid var(--special-text);
+  border: 1px solid var(--trilogy-embed-special-text, var(--special-text, #2563eb));
   outline: none;
-  background-color: var(--query-window-bg);
-  color: var(--text-color);
+  background-color: var(--trilogy-embed-bg, var(--bg-color, #ffffff));
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
   border-radius: 10px;
 }
 
@@ -726,7 +831,7 @@ const titleLevelClass = computed(() => {
 .drag-handle-icon {
   display: flex;
   align-items: center;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
   opacity: 0.45;
 }
 
@@ -744,9 +849,13 @@ const titleLevelClass = computed(() => {
   justify-content: center;
   width: var(--chart-control-height);
   height: var(--chart-control-height);
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
-  color: var(--floating-text, var(--text-color));
+  border: 1px solid
+    var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  background-color: var(
+    --trilogy-embed-floating-surface-strong,
+    var(--floating-surface-strong, rgba(255, 255, 255, 0.97))
+  );
+  color: var(--trilogy-embed-floating-text, var(--floating-text, var(--text-color, #1f2937)));
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -757,21 +866,38 @@ const titleLevelClass = computed(() => {
 }
 
 .control-btn:hover {
-  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+  background-color: var(
+    --trilogy-embed-floating-surface,
+    var(--floating-surface, rgba(255, 255, 255, 0.9))
+  );
+  border-color: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.28
+  );
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
-.control-btn.remove-btn {
-  color: var(--delete-color, #dc2626);
-  border-color: currentColor;
+.control-btn.dashboard-remove-btn {
+  background: var(
+    --trilogy-embed-floating-surface-strong,
+    var(--floating-surface-strong, rgba(255, 255, 255, 0.97))
+  );
+  color: var(--trilogy-embed-delete-color, #dc2626);
+  border-color: rgba(220, 38, 38, 0.32);
   opacity: 0.82;
 }
 
-.control-btn.remove-btn:hover {
-  background-color: var(--delete-color, #dc2626);
-  border-color: var(--delete-color, #dc2626);
-  color: #ffffff;
+.control-btn.dashboard-remove-btn:hover {
+  background: #dc2626 !important;
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
   opacity: 1;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.28);
+}
+
+.control-btn.dashboard-remove-btn:hover .icon {
+  color: #ffffff !important;
 }
 
 .icon {
@@ -797,10 +923,14 @@ const titleLevelClass = computed(() => {
   padding: 1px 7px;
   font-size: 10px;
   letter-spacing: var(--ui-label-letter-spacing);
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  background: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.08
+  );
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(var(--special-text-rgb, 37, 99, 235), 0.18);
-  color: var(--text-color);
+  box-shadow: inset 0 0 0 1px
+    rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.18);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
 }
 
 .filter-content {
@@ -811,12 +941,12 @@ const titleLevelClass = computed(() => {
 
 .filter-source {
   font-weight: 600;
-  color: var(--special-text);
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
   flex-shrink: 0;
 }
 
 .filter-value {
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -830,7 +960,7 @@ const titleLevelClass = computed(() => {
   margin-left: 3px;
   border: none;
   background: none;
-  color: var(--text-color);
+  color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
   opacity: 0.7;
   cursor: pointer;
   font-size: 13px;
@@ -862,6 +992,16 @@ const titleLevelClass = computed(() => {
   .grid-item-header {
     padding: 3px 10px 2px;
     min-height: 25px;
+  }
+
+  .content-edit-overlay {
+    padding: 10px;
+  }
+
+  .content-edit-toolbar {
+    max-width: 100%;
+    gap: 4px;
+    padding: 6px;
   }
 
   .grid-item-header-right {

@@ -1,14 +1,15 @@
 <template>
-  <div class="loading-container" ref="containerRef">
+  <div class="loading-container" :class="{ 'loading-container-subtle': subtle }" ref="containerRef">
     <template v-if="isCompact">
       <p class="display-text">
-        <img :src="trilogyIcon" class="trilogy-icon" />{{ text }} ({{ elapsedTime }})
+        <img :src="trilogyIcon" class="trilogy-icon" />
+        <span>{{ statusText }}</span>
       </p>
       <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
     </template>
     <template v-else>
       <img :src="trilogyIcon" class="trilogy-icon" />
-      <div class="loading-text">{{ text }} ({{ elapsedTime }})</div>
+      <div class="loading-text">{{ statusText }}</div>
       <div class="cancel-container">
         <button v-if="cancel" @click="handleCancel" class="cancel-button">Cancel</button>
       </div>
@@ -32,6 +33,7 @@ interface Props {
   cancel?: (() => void) | null
   text: string
   startTime: number | null
+  subtle?: boolean
 }
 
 export default defineComponent({
@@ -51,6 +53,11 @@ export default defineComponent({
       required: false,
       default: Date.now(),
     },
+    subtle: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
   },
   setup(props: Props) {
     const containerRef = ref<HTMLElement | null>(null)
@@ -61,6 +68,10 @@ export default defineComponent({
     let resizeObserver: ResizeObserver | null = null
 
     const isCompact = computed(() => containerHeight.value < 45)
+    const statusText = computed(() => {
+      const label = props.text.trim()
+      return label ? `${label} (${elapsedTime.value})` : elapsedTime.value
+    })
 
     const updateContainerHeight = () => {
       if (containerRef.value) {
@@ -133,6 +144,7 @@ export default defineComponent({
       trilogyIcon,
       elapsedTime,
       isCompact,
+      statusText,
     }
   },
 })
@@ -152,8 +164,9 @@ export default defineComponent({
 .trilogy-icon {
   display: inline-block;
   animation: spin 1s linear infinite;
-  height: 30px;
-  width: 30px;
+  height: 24px;
+  width: 24px;
+  flex: 0 0 auto;
 }
 
 .loading-container {
@@ -161,10 +174,16 @@ export default defineComponent({
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-top: 40px;
-  padding: 2rem;
+  gap: 0.45rem;
+  padding: 1rem;
   background: var(--bg-light);
+  box-sizing: border-box;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Compact mode styles */
@@ -178,11 +197,16 @@ export default defineComponent({
 }
 
 .display-text {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   text-align: center;
-  height: 24px;
-  /* align text vertically with icon */
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin: 0;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 @keyframes bounce {
@@ -197,10 +221,31 @@ export default defineComponent({
 }
 
 .loading-text {
-  font-size: 1.1rem;
-  min-width: 120px;
+  font-size: 0.95rem;
   text-align: center;
-  height: 24px;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.2;
+  color: var(--dashboard-helper-text, var(--text-color-muted, var(--text)));
+  overflow-wrap: anywhere;
+}
+
+.loading-container-subtle {
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+}
+
+.loading-container-subtle .trilogy-icon {
+  height: 16px;
+  width: 16px;
+  opacity: 0.5;
+}
+
+.loading-container-subtle .loading-text,
+.loading-container-subtle .display-text {
+  font-size: 0.68rem;
+  color: var(--dashboard-helper-text, var(--text-color-muted, var(--text)));
+  opacity: 0.65;
 }
 
 .cancel-button {

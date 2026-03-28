@@ -6,9 +6,15 @@
     @mouseenter="onChartMouseEnter"
     @mouseleave="onChartMouseLeave"
   >
-    <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage
+      v-if="error && !loading"
+      :compact="true"
+      :details="error"
+      :query="query"
+      :filters="filters"
+    />
     <dashboard-data-selector
-      v-else-if="ready && results"
+      v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
       :headers="results.headers"
       :results="results.data"
@@ -21,7 +27,7 @@
 
     <!-- Loading overlay positioned absolutely over the entire component -->
     <div v-if="loading && showLoading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+      <LoadingView :startTime="startTime" text="" subtle />
     </div>
 
     <!-- <div
@@ -107,6 +113,10 @@ export default defineComponent({
       return itemData.value.error || null
     })
 
+    const filters = computed(() => {
+      return itemData.value.filters || []
+    })
+
     const startTime = computed(() => {
       return itemData.value.loadStartTime || null
     })
@@ -171,6 +181,7 @@ export default defineComponent({
       loading,
       showLoading,
       error,
+      filters,
       query,
       chartHeight,
       chartWidth,

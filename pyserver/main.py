@@ -21,8 +21,9 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
-from trilogy import CONFIG, __version__
+from trilogy import __version__
 from contextlib import asynccontextmanager
+from process_pool import init_process_pool, shutdown_process_pool
 
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
@@ -36,13 +37,11 @@ if os.path.exists(env_path):
             line = line.strip()
             if line and not line.startswith("#"):
                 key, value = line.split("=", 1)
-                os.environ[key.strip()] = value.strip()
+                os.environ.setdefault(key.strip(), value.strip())
 
 current_directory = Path(__file__).parent
 
 sys.path.append(str(current_directory))
-
-CONFIG.rendering.parameters = False
 
 logger = getLogger(__name__)
 
@@ -87,9 +86,11 @@ PORT = 5678
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up...!")
+    init_process_pool()
 
     yield
 
+    await shutdown_process_pool()
     print("Shutting down...!")
 
 

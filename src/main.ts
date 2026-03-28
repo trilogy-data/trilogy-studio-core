@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
 import { initializeCspTracking } from '../lib/remotes/modelApiService'
-import '@mdi/font/css/materialdesignicons.css'
+import '../lib/icons/registerMdiIcons'
 import './style.css'
 import './tabulator-style.css'
 
@@ -28,16 +28,17 @@ self.MonacoEnvironment = {
 }
 
 async function initializeTrilogy() {
-  const { configureTrilogy } = await import('trilogy-studio-components/monaco')
+  const { configureTrilogy } = await import('../lib/monaco')
   configureTrilogy()
 }
-// Start loading trilogy configuration in the background
-initializeTrilogy().catch(console.error)
 
 const Pinia = createPinia()
 
 const app = createApp(App)
 app.use(Pinia)
+
+// Start loading trilogy configuration in the background after Pinia is available.
+initializeTrilogy().catch(console.error)
 
 function removeLoadingScreen() {
   const loadingElement = document.getElementById('loading-screen')

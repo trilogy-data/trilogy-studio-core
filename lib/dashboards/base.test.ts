@@ -64,4 +64,89 @@ describe('DashboardModel transient state persistence', () => {
     expect(hydrated.gridItems['0'].error).toBeNull()
     expect(hydrated.gridItems['0'].loadStartTime).toBeNull()
   })
+
+  it('applies native cross filters to peers without filtering the source item query', () => {
+    const dashboard = new DashboardModel({
+      id: 'dashboard-1',
+      name: 'Revenue Dashboard',
+      connection: 'duckdb',
+      gridItems: {
+        source: {
+          type: CELL_TYPES.CHART,
+          content: 'select species, count(*) as tree_count',
+          name: 'Species',
+          allowCrossFilter: true,
+          filters: [],
+          chartFilters: [],
+        },
+        peer: {
+          type: CELL_TYPES.CHART,
+          content: 'select native_status, count(*) as tree_count',
+          name: 'Native',
+          allowCrossFilter: true,
+          filters: [],
+          conceptFilters: [],
+        },
+      },
+    })
+
+    const updated = dashboard.updateItemCrossFilters(
+      'source',
+      { species: 'Acer rubrum' },
+      { species: 'Acer rubrum' },
+      'add',
+    )
+
+    expect(updated).toEqual(['peer'])
+    expect(dashboard.gridItems.source.filters).toEqual([])
+    expect(dashboard.gridItems.source.chartFilters).toEqual([
+      { source: 'source', value: { species: 'Acer rubrum' } },
+    ])
+    expect(dashboard.gridItems.peer.filters).toEqual([
+      { source: 'cross', value: "species='''Acer rubrum'''" },
+    ])
+  })
+
+  it('toggles append selections off for both source highlights and peer filters', () => {
+    const dashboard = new DashboardModel({
+      id: 'dashboard-1',
+      name: 'Revenue Dashboard',
+      connection: 'duckdb',
+      gridItems: {
+        source: {
+          type: CELL_TYPES.CHART,
+          content: 'select species, count(*) as tree_count',
+          name: 'Species',
+          allowCrossFilter: true,
+          filters: [],
+          chartFilters: [],
+        },
+        peer: {
+          type: CELL_TYPES.CHART,
+          content: 'select native_status, count(*) as tree_count',
+          name: 'Native',
+          allowCrossFilter: true,
+          filters: [],
+          conceptFilters: [],
+        },
+      },
+    })
+
+    dashboard.updateItemCrossFilters(
+      'source',
+      { species: 'Acer rubrum' },
+      { species: 'Acer rubrum' },
+      'append',
+    )
+    dashboard.updateItemCrossFilters(
+      'source',
+      { species: 'Acer rubrum' },
+      { species: 'Acer rubrum' },
+      'append',
+    )
+
+    expect(dashboard.gridItems.source.chartFilters).toEqual([])
+    expect(dashboard.gridItems.peer.conceptFilters).toEqual([])
+    expect(dashboard.gridItems.peer.filters).toEqual([])
+  })
 })

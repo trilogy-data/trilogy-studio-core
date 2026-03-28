@@ -152,6 +152,20 @@ export function formatToolResultText(result: ToolCallResult): string {
   }
 }
 
+function describeToolExecutionError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
+
 /**
  * Core tool loop execution.
  * Runs the LLM conversation with tool calls until:
@@ -301,7 +315,16 @@ export async function runToolLoop(
       }
 
       stateUpdater.setActiveToolName(toolCall.name)
-      const result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
+
+      let result: ToolCallResult
+      try {
+        result = await toolExecutor.executeToolCall(toolCall.name, toolCall.input)
+      } catch (error) {
+        result = {
+          success: false,
+          error: `Tool "${toolCall.name}" failed: ${describeToolExecutionError(error)}`,
+        }
+      }
 
       // Track executed tool call for UI display
       const chatToolCall: ChatToolCall = {

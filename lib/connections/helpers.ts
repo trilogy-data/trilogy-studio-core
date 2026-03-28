@@ -1,5 +1,5 @@
-import { Connection } from '.'
 import { KeySeparator } from '../data/constants'
+import type Connection from './base'
 import { Table } from './base'
 
 export function buildConnectionTree(

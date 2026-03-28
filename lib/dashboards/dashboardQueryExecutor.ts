@@ -1,14 +1,10 @@
-import { QueryExecutionService } from '../stores'
 import type { Dashboard, GridItemDataResponse } from '../dashboards/base'
-import type { ContentInput, MultiQueryComponent } from '../stores/resolver'
-import type { ConnectionStoreType } from '../stores/connectionStore'
-import type { EditorStoreType } from '../stores/editorStore'
+import type { ContentInput, MultiQueryComponent, Import } from '../stores/resolver'
+import type { DashboardExecutionService } from '../stores/queryExecutionService'
 import type { Results } from '../editors/results'
 
 export interface QueryExecutorDependencies {
-  queryExecutionService: QueryExecutionService
-  connectionStore: ConnectionStoreType
-  editorStore: EditorStoreType
+  queryExecutionService: DashboardExecutionService
   connectionName: string
   dashboardId: string
   getDashboardData: (dashboardId: string) => Dashboard
@@ -60,9 +56,7 @@ export class DashboardQueryExecutor {
   // Track which itemIds are associated with each query ID (for cleanup)
   private itemIdByQueryId: Map<string, string> = new Map()
 
-  public queryExecutionService: QueryExecutionService
-  public connectionStore: ConnectionStoreType
-  private editorStore: EditorStoreType
+  public queryExecutionService: DashboardExecutionService
   public connectionName: string
   private dashboardId: string
   private getItemData: (itemId: string, dashboardId: string) => GridItemDataResponse
@@ -72,13 +66,9 @@ export class DashboardQueryExecutor {
   private retryAttempts: number
   private batchDelay: number // ms to wait before executing batch
   private batchTimeout: NodeJS.Timeout | null = null
-  private connectionPromise: Promise<void> | null = null
-  private connectionChecked: boolean = false
 
   constructor(
-    queryExecutionService: any,
-    connectionStore: ConnectionStoreType,
-    editorStore: EditorStoreType,
+    queryExecutionService: DashboardExecutionService,
     connectionName: string,
     dashboardId: string,
     getDashboardData: (dashboardId: string) => Dashboard,
@@ -91,8 +81,6 @@ export class DashboardQueryExecutor {
     } = {},
   ) {
     this.queryExecutionService = queryExecutionService
-    this.connectionStore = connectionStore
-    this.editorStore = editorStore
     this.connectionName = connectionName
     this.maxConcurrentQueries = options.maxConcurrentQueries || 10
     this.retryAttempts = options.retryAttempts || 2
@@ -101,88 +89,6 @@ export class DashboardQueryExecutor {
     this.getItemData = getItemData
     this.setItemData = setItemData
     this.getDashboardData = getDashboardData
-    // Check and ensure connection on instantiation
-    this.ensureConnection()
-  }
-
-  /**
-   * Ensure connection is established and cache the promise to avoid multiple connection attempts
-   */
-  private async ensureConnection(): Promise<void> {
-    if (this.connectionChecked && this.isConnectionActive()) {
-      return
-    }
-
-    if (this.connectionPromise) {
-      return this.connectionPromise
-    }
-
-    this.connectionPromise = this.checkAndConnect()
-    return this.connectionPromise
-  }
-
-  /**
-   * Check if connection is active, and connect if not
-   */
-  private async checkAndConnect(): Promise<void> {
-    try {
-      const conn = this.connectionStore.connections[this.connectionName]
-      if (!conn) {
-        throw new Error(`Connection "${this.connectionName}" not found in store`)
-      }
-
-      if (!conn.connected) {
-        console.log(`Connection "${this.connectionName}" not connected, attempting to connect...`)
-        await this.connectionStore.resetConnection(this.connectionName)
-        if (!conn.connected) {
-          throw new Error(`Connection "${this.connectionName}" failed to connect`)
-        }
-      }
-
-      this.connectionChecked = true
-      this.connectionPromise = null // Reset for future checks
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to establish connection'
-      console.error(`Failed to connect "${this.connectionName}":`, errorMessage)
-
-      // Fail all queued queries
-      this.failAllQueries(errorMessage)
-
-      this.connectionPromise = null
-      throw error
-    }
-  }
-
-  /**
-   * Check if the current connection is active
-   */
-  private isConnectionActive(): boolean {
-    const conn = this.connectionStore.connections[this.connectionName]
-    return conn?.connected === true
-  }
-
-  /**
-   * Fail all queued and waiting queries with the given error message
-   */
-  private failAllQueries(errorMessage: string): void {
-    // Fail all queued queries
-    this.queryQueue.forEach((query) => {
-      query.onError(errorMessage)
-    })
-    this.queryQueue.clear()
-
-    // Reject all waiting promises
-    this.queryWaiters.forEach((waiter) => {
-      waiter.reject(errorMessage)
-    })
-    this.queryWaiters.clear()
-
-    // Clear active queries
-    this.activeQueries.clear()
-
-    // Clear tracking maps
-    this.latestQueryByItemId.clear()
-    this.itemIdByQueryId.clear()
   }
 
   /**
@@ -248,8 +154,13 @@ export class DashboardQueryExecutor {
 
   public setConnection(connectionName: string): void {
     this.connectionName = connectionName
-    this.connectionChecked = false // Reset connection check for new connection
-    this.connectionPromise = null
+  }
+
+  private getDashboardImports(): Import[] {
+    return this.getDashboardData(this.dashboardId).imports.map((imp) => ({
+      name: imp.name,
+      alias: imp.alias,
+    }))
   }
 
   /**
@@ -278,7 +189,6 @@ export class DashboardQueryExecutor {
     let filters = (this.getItemData(itemId, this.dashboardId).filters || []).map(
       (filter) => filter.value,
     )
-    let dashboard = this.getDashboardData(this.dashboardId)
     this.setItemData(itemId, this.dashboardId, {
       loading: true,
       error: null,
@@ -289,15 +199,8 @@ export class DashboardQueryExecutor {
       queryInput: {
         text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
         extraFilters: filters,
-        parameters: inputs.parameters || [],
-        extraContent: dashboard.imports.map((imp) => ({
-          alias: imp.name,
-          // legacy handling
-          contents:
-            this.editorStore.editors[imp.id]?.contents ||
-            this.editorStore.editors[imp.name]?.contents ||
-            '',
-        })),
+        parameters: (inputs.parameters || {}) as Record<string, any>,
+        extraContent: inputs.rootContent || [],
       },
       priority: this.getDefaultPriority(itemId),
       itemId,
@@ -389,7 +292,6 @@ export class DashboardQueryExecutor {
         })
         return
       }
-      let dashboard = this.getDashboardData(this.dashboardId)
       this.setItemData(itemId, this.dashboardId, {
         loading: true,
         error: null,
@@ -400,15 +302,8 @@ export class DashboardQueryExecutor {
         queryInput: {
           text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
           extraFilters: filters,
-          parameters: inputs.parameters || [],
-          extraContent: dashboard.imports.map((imp) => ({
-            alias: imp.name,
-            // legacy handling
-            contents:
-              this.editorStore.editors[imp.id]?.contents ||
-              this.editorStore.editors[imp.name]?.contents ||
-              '',
-          })),
+          parameters: (inputs.parameters || {}) as Record<string, any>,
+          extraContent: inputs.rootContent || [],
         },
         priority: this.getDefaultPriority(itemId),
         itemId,
@@ -547,29 +442,18 @@ export class DashboardQueryExecutor {
     add: string[],
     remove: string,
     filter: string,
+    extraContent: ContentInput[] = [],
+    imports: Import[] = this.getDashboardImports(),
   ): Promise<any> {
-    let queryType = this.connectionStore.connections[this.connectionName].query_type
-    let dashboard = this.getDashboardData(this.dashboardId)
-    let sources = this.connectionStore.getConnectionSources(this.connectionName).concat(
-      dashboard.imports.map((imp) => ({
-        alias: imp.name,
-        // legacy handling
-        contents:
-          this.editorStore.editors[imp.id]?.contents ||
-          this.editorStore.editors[imp.name]?.contents ||
-          '',
-      })),
-    )
-
-    let newQuery = await this.queryExecutionService.createDrilldownQuery(
+    let newQuery = await this.queryExecutionService.createConnectionDrilldownQuery(
+      this.connectionName,
       query,
-      queryType,
       'trilogy',
-      this.getDashboardData(this.dashboardId).imports,
+      imports,
       add,
       remove,
       filter,
-      sources,
+      extraContent,
     )
     return newQuery
   }
@@ -646,18 +530,7 @@ export class DashboardQueryExecutor {
     if (queries.length === 0) return
 
     try {
-      await this.ensureConnection()
-      const conn = this.connectionStore.connections[this.connectionName]
-      if (!conn) {
-        throw new Error(`Connection "${this.connectionName}" not found!`)
-      }
-
-      // Double-check connection is still active
-      if (!conn.connected) {
-        throw new Error(`Connection "${this.connectionName}" is not connected`)
-      }
-
-      const dashboardData = this.getDashboardData(this.dashboardId)
+      const dashboardImports = this.getDashboardImports()
 
       // Build query arguments and move queries from queue to active
       const queryArgsList: MultiQueryComponent[] = []
@@ -694,6 +567,7 @@ export class DashboardQueryExecutor {
       if (queryArgsList.length === 0) {
         return
       }
+
       let callbacks = Object.fromEntries(
         queryArgsList.map((queryArgs) => [
           queryArgs.label,
@@ -727,7 +601,7 @@ export class DashboardQueryExecutor {
         this.connectionName,
         queryArgsList,
         'trilogy',
-        dashboardData.imports,
+        dashboardImports,
         [],
         {},
         () => {},
@@ -735,14 +609,7 @@ export class DashboardQueryExecutor {
         errorCallbacks,
         callbacks,
         false,
-        dashboardData.imports.map((imp) => ({
-          alias: imp.name,
-          // legacy handling
-          contents:
-            this.editorStore.editors[imp.id]?.contents ||
-            this.editorStore.editors[imp.name]?.contents ||
-            '',
-        })),
+        validQueries[0]?.queryInput.extraContent || [],
       )
 
       // Handle batch results
@@ -751,12 +618,6 @@ export class DashboardQueryExecutor {
       console.log(`Batch query executed successfully with ${results.results.length} results`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-
-      // If this was a connection error, reset connection state
-      if (errorMessage.includes('connection') || errorMessage.includes('connect')) {
-        this.connectionChecked = false
-        this.connectionPromise = null
-      }
 
       // Handle error for all queries in the batch
       for (const queuedQuery of queries) {
@@ -818,30 +679,14 @@ export class DashboardQueryExecutor {
     if (!queuedQuery) return
 
     try {
-      // Ensure connection is established before executing query
-      await this.ensureConnection()
-
       // Move from queue to active only after connection is ensured
       this.queryQueue.delete(queryId)
       this.activeQueries.add(queryId)
-
-      // Get connection
-      const conn = this.connectionStore.connections[this.connectionName]
-      if (!conn) {
-        throw new Error(`Connection "${this.connectionName}" not found!`)
-      }
-
-      // Double-check connection is still active
-      if (!conn.connected) {
-        throw new Error(`Connection "${this.connectionName}" is not connected`)
-      }
-
-      //fetch latest
-      let dashboardData = this.getDashboardData(this.dashboardId)
+      let dashboardImports = this.getDashboardImports()
       // Execute query
       const queryArgs = {
         ...queuedQuery.queryInput,
-        imports: dashboardData.imports,
+        imports: dashboardImports,
         editorType: 'trilogy' as 'trilogy' | 'sql' | 'preql',
       }
       const { resultPromise } = await this.queryExecutionService.executeQuery(
@@ -877,12 +722,6 @@ export class DashboardQueryExecutor {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-
-      // If this was a connection error, reset connection state
-      if (errorMessage.includes('connection') || errorMessage.includes('connect')) {
-        this.connectionChecked = false
-        this.connectionPromise = null
-      }
 
       // Retry logic
       if (queuedQuery.retryCount < this.retryAttempts) {

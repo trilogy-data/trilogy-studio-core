@@ -51,18 +51,131 @@ interface QueryCancellation {
   isActive: () => boolean
 }
 
+export interface ExecutionConnection {
+  name: string
+  queryType: string
+  isConnected(): boolean
+  executeSql(sql: string, parameters?: Record<string, any> | null): Promise<Results>
+}
+
+export interface ExecutionConnectionProvider {
+  getConnection(connectionId: string): ExecutionConnection | null
+  ensureConnected(connectionId: string): Promise<void>
+  getConnectionSources(connectionId: string): ContentInput[]
+}
+
+class ConnectionStoreExecutionConnection implements ExecutionConnection {
+  constructor(private connection: ConnectionStoreType['connections'][string]) {}
+
+  get name(): string {
+    return this.connection.name
+  }
+
+  get queryType(): string {
+    return this.connection.query_type
+  }
+
+  isConnected(): boolean {
+    return this.connection.connected
+  }
+
+  executeSql(sql: string, parameters?: Record<string, any> | null): Promise<Results> {
+    return this.connection.query(sql, parameters ?? null)
+  }
+}
+
+export class ConnectionStoreExecutionConnectionProvider implements ExecutionConnectionProvider {
+  constructor(private connectionStore: ConnectionStoreType) {}
+
+  getConnection(connectionId: string): ExecutionConnection | null {
+    const connection = this.connectionStore.connections[connectionId]
+    return connection ? new ConnectionStoreExecutionConnection(connection) : null
+  }
+
+  async ensureConnected(connectionId: string): Promise<void> {
+    const connection = this.connectionStore.connections[connectionId]
+    if (!connection) {
+      throw new Error(`Connection ${connectionId} not found.`)
+    }
+
+    if (!connection.connected) {
+      await this.connectionStore.resetConnection(connectionId)
+    }
+  }
+
+  getConnectionSources(connectionId: string): ContentInput[] {
+    return this.connectionStore.getConnectionSources(connectionId)
+  }
+}
+
+function isExecutionConnectionProvider(
+  value: ExecutionConnectionProvider | ConnectionStoreType,
+): value is ExecutionConnectionProvider {
+  return (
+    typeof (value as ExecutionConnectionProvider).getConnection === 'function' &&
+    typeof (value as ExecutionConnectionProvider).ensureConnected === 'function'
+  )
+}
+
+export interface DashboardExecutionService {
+  executeQueriesBatch(
+    connectionId: string,
+    queries: MultiQueryComponent[],
+    editorType: EditorType,
+    imports?: Import[],
+    extraFilters?: string[],
+    parameters?: Record<string, any>,
+    onStarted?: () => void,
+    onProgress?: (message: QueryUpdate) => void,
+    onFailure?: Record<string, (message: any) => void>,
+    onSuccess?: Record<string, (message: any) => void>,
+    dryRun?: boolean,
+    extraContent?: ContentInput[],
+  ): Promise<{
+    resultPromise: Promise<BatchQueryResult>
+    cancellation: QueryCancellation
+  }>
+
+  executeQuery(
+    connectionId: string,
+    queryInput: QueryInput,
+    onStarted?: () => void,
+    onProgress?: (message: QueryUpdate) => void,
+    onFailure?: (message: QueryUpdate) => void,
+    onSuccess?: (message: QueryResult) => void,
+    dryRun?: boolean,
+  ): Promise<{
+    resultPromise: Promise<QueryResult>
+    cancellation: QueryCancellation
+  }>
+
+  createConnectionDrilldownQuery(
+    connectionId: string,
+    text: string,
+    editorType: EditorType,
+    imports: Import[],
+    drilldown_add: string[],
+    drilldown_remove: string,
+    drilldown_filter: string,
+    extraContent?: ContentInput[],
+    currentFilename?: string,
+  ): Promise<string | null>
+}
+
 export default class QueryExecutionService {
   public trilogyResolver: TrilogyResolver
-  private connectionStore: ConnectionStoreType
+  private connectionProvider: ExecutionConnectionProvider
   private storeHistory: boolean
 
   constructor(
     trilogyResolver: TrilogyResolver,
-    connectionStore: ConnectionStoreType,
+    connectionProvider: ExecutionConnectionProvider | ConnectionStoreType,
     storeHistory: boolean = true,
   ) {
     this.trilogyResolver = trilogyResolver
-    this.connectionStore = connectionStore
+    this.connectionProvider = isExecutionConnectionProvider(connectionProvider)
+      ? connectionProvider
+      : new ConnectionStoreExecutionConnectionProvider(connectionProvider)
     this.storeHistory = storeHistory
   }
 
@@ -149,7 +262,7 @@ export default class QueryExecutionService {
     if (onStarted) onStarted()
 
     // Check connection
-    const conn = this.connectionStore.connections[connectionId]
+    const conn = this.connectionProvider.getConnection(connectionId)
     if (!conn) {
       return {
         success: false,
@@ -183,14 +296,14 @@ export default class QueryExecutionService {
       }
     }
 
-    if (!conn.connected) {
+    if (!conn.isConnected()) {
       try {
         if (onProgress)
           onProgress({
             message: 'Connection is not active... Attempting to automatically reconnect.',
             error: true,
           })
-        await this.connectionStore.resetConnection(connectionId)
+        await this.connectionProvider.ensureConnected(connectionId)
         if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
       } catch (connectionError) {
         if (onFailure) {
@@ -219,7 +332,7 @@ export default class QueryExecutionService {
       }
     }
 
-    let sources: ContentInput[] = this.connectionStore.getConnectionSources(conn.name)
+    let sources: ContentInput[] = this.connectionProvider.getConnectionSources(connectionId)
     if (extraContent) {
       sources = sources.concat(extraContent)
     }
@@ -229,7 +342,7 @@ export default class QueryExecutionService {
       const batchResponse: BatchQueryResponse = await Promise.race([
         this.trilogyResolver.resolve_queries_batch(
           queries,
-          conn.query_type,
+          conn.queryType,
           sources,
           imports,
           extraFilters,
@@ -253,7 +366,7 @@ export default class QueryExecutionService {
             try {
               //@ts-ignore
               const sqlResponse: Results = await Promise.race([
-                conn.query(queryResult.generated_sql, parameters),
+                conn.executeSql(queryResult.generated_sql, parameters),
                 new Promise((_, reject) => {
                   controller.signal.addEventListener('abort', () =>
                     reject(new Error('Query execution cancelled by user')),
@@ -472,10 +585,42 @@ export default class QueryExecutionService {
     }
   }
 
-  async generateQuery(connectionId: string, queryInput: QueryInput): Promise<QueryResponse | null> {
-    const conn = this.connectionStore.connections[connectionId]
+  async createConnectionDrilldownQuery(
+    connectionId: string,
+    text: string,
+    editorType: EditorType,
+    imports: Import[] = [],
+    drilldown_add: string[],
+    drilldown_remove: string,
+    drilldown_filter: string,
+    extraContent?: ContentInput[],
+    currentFilename?: string,
+  ): Promise<string | null> {
+    const conn = this.connectionProvider.getConnection(connectionId)
+    if (!conn) {
+      throw new Error(`Connection ${connectionId} not found.`)
+    }
 
-    let sources: ContentInput[] = this.connectionStore.getConnectionSources(connectionId)
+    return this.createDrilldownQuery(
+      text,
+      conn.queryType,
+      editorType,
+      imports,
+      drilldown_add,
+      drilldown_remove,
+      drilldown_filter,
+      extraContent,
+      currentFilename,
+    )
+  }
+
+  async generateQuery(connectionId: string, queryInput: QueryInput): Promise<QueryResponse | null> {
+    const conn = this.connectionProvider.getConnection(connectionId)
+    if (!conn) {
+      throw new Error(`Connection ${connectionId} not found.`)
+    }
+
+    let sources: ContentInput[] = this.connectionProvider.getConnectionSources(connectionId)
 
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
@@ -483,7 +628,7 @@ export default class QueryExecutionService {
 
     return this.trilogyResolver.resolve_query(
       queryInput.text,
-      conn.query_type,
+      conn.queryType,
       queryInput.editorType,
       sources,
       queryInput.imports,
@@ -514,14 +659,14 @@ export default class QueryExecutionService {
     }
 
     // Check connection
-    const conn = this.connectionStore.connections[connectionId]
+    const conn = this.connectionProvider.getConnection(connectionId)
     if (!conn) {
       return null
     }
 
     // Get sources if not provided
     if (!sources) {
-      sources = this.connectionStore.getConnectionSources(conn.name)
+      sources = this.connectionProvider.getConnectionSources(connectionId)
     }
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
@@ -614,7 +759,7 @@ export default class QueryExecutionService {
     if (onStarted) onStarted()
 
     // Check connection
-    const conn = this.connectionStore.connections[connectionId]
+    const conn = this.connectionProvider.getConnection(connectionId)
     if (!conn) {
       return {
         success: false,
@@ -625,14 +770,14 @@ export default class QueryExecutionService {
       }
     }
 
-    if (!conn.connected && !dryRun) {
+    if (!conn.isConnected() && !dryRun) {
       try {
         if (onProgress)
           onProgress({
             message: 'Connection is not active... Attempting to automatically reconnect.',
             error: true,
           })
-        await this.connectionStore.resetConnection(connectionId)
+        await this.connectionProvider.ensureConnected(connectionId)
         if (onProgress) onProgress({ message: 'Reconnect Successful', running: true })
         // Return special status to indicate retry needed
       } catch (connectionError) {
@@ -652,7 +797,7 @@ export default class QueryExecutionService {
         }
       }
     }
-    let sources: ContentInput[] = this.connectionStore.getConnectionSources(conn.name)
+    let sources: ContentInput[] = this.connectionProvider.getConnectionSources(connectionId)
 
     if (queryInput.extraContent) {
       sources = sources.concat(queryInput.extraContent)
@@ -665,7 +810,7 @@ export default class QueryExecutionService {
       resolveResponse = await Promise.race([
         this.trilogyResolver.resolve_query(
           queryInput.text,
-          conn.query_type,
+          conn.queryType,
           queryInput.editorType,
           sources,
           queryInput.imports,
@@ -727,7 +872,7 @@ export default class QueryExecutionService {
       // Second step: Execute query
       //@ts-ignore
       const sqlResponse: Results = await Promise.race([
-        conn.query(generatedSql, queryInput.parameters),
+        conn.executeSql(generatedSql, queryInput.parameters),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
             reject(new Error('Query cancelled by user')),

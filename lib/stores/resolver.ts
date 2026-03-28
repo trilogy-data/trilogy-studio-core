@@ -187,6 +187,11 @@ export default class TrilogyResolver {
     return base
   }
 
+  private buildResolverUrl(path: string): string {
+    const baseUrl = this.settingStore.settings.trilogyResolver.replace(/\/+$/, '')
+    return `${baseUrl}/${path}`
+  }
+
   private async fetchWithErrorHandling(url: string, options: RequestInit): Promise<any> {
     try {
       const response = await fetch(url, options)
@@ -233,16 +238,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/validate_query`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('validate_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.validateCache.set(cacheKey, response)
@@ -280,16 +282,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/drilldown_query`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('drilldown_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     return response
   }
@@ -329,16 +328,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/format_query`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('format_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.formatCache.set(cacheKey, response)
@@ -389,16 +385,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/generate_query`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('generate_query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     // Cache the result
     this.queryCache.set(cacheKey, response)
@@ -488,7 +481,7 @@ export default class TrilogyResolver {
     }
 
     const apiResponse = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/generate_queries`,
+      this.buildResolverUrl('generate_queries'),
       {
         method: 'POST',
         headers: {
@@ -560,16 +553,13 @@ export default class TrilogyResolver {
     }
 
     // Not in cache, make the API call
-    const response = await this.fetchWithErrorHandling(
-      `${this.settingStore.settings.trilogyResolver}/parse_model`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestParams),
+    const response = await this.fetchWithErrorHandling(this.buildResolverUrl('parse_model'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(requestParams),
+    })
 
     const modelConfig = ModelConfig.fromJSON(response.data)
 

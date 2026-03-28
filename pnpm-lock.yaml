@@ -17,9 +17,12 @@ importers:
       '@google/genai':
         specifier: ^0.12.0
         version: 0.12.0
-      '@mdi/font':
+      '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
+      '@motherduck/wasm-client':
+        specifier: ^0.6.6
+        version: 0.6.6(apache-arrow@21.1.0)
       apache-arrow:
         specifier: ^21.1.0
         version: 21.1.0
@@ -47,6 +50,9 @@ importers:
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0
+      split.js:
+        specifier: ^1.6.5
+        version: 1.6.5
       tabulator-tables:
         specifier: ^6.3.1
         version: 6.3.1
@@ -69,9 +75,6 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(typescript@5.6.3)
     devDependencies:
-      '@motherduck/wasm-client':
-        specifier: ^0.6.6
-        version: 0.6.6(apache-arrow@21.1.0)
       '@playwright/test':
         specifier: ^1.56.1
         version: 1.56.1
@@ -117,12 +120,6 @@ importers:
       rollup-plugin-visualizer:
         specifier: ^6.0.5
         version: 6.0.5(rollup@4.53.2)
-      split.js:
-        specifier: ^1.6.5
-        version: 1.6.5
-      trilogy-studio-components:
-        specifier: link:lib
-        version: link:lib
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.0)(typescript@5.6.3)
@@ -497,8 +494,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@mdi/font@7.4.47':
-    resolution: {integrity: sha512-43MtGpd585SNzHZPcYowu/84Vz2a2g31TvPMTm9uTiCSWzaheQySUcSyUH/46fPnuPQWof2yd0pGBtzee/IQWw==}
+  '@mdi/js@7.4.47':
+    resolution: {integrity: sha512-KPnNOtm5i2pMabqZxpUz7iQf+mfrYZyKCZ8QNz85czgEt7cuHcGorWfdzUMWYA0SD+a6Hn4FmJ+YhzzzjkTZrQ==}
 
   '@microsoft/api-extractor-model@7.31.3':
     resolution: {integrity: sha512-dv4quQI46p0U03TCEpasUf6JrJL3qjMN7JUAobsPElxBv4xayYYvWW9aPpfYV+Jx6hqUcVaLVOeV7+5hxsyoFQ==}
@@ -3097,7 +3094,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mdi/font@7.4.47': {}
+  '@mdi/js@7.4.47': {}
 
   '@microsoft/api-extractor-model@7.31.3(@types/node@22.19.0)':
     dependencies:

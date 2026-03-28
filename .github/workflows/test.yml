@@ -1,11 +1,44 @@
 name: CI test
 on:
-  push:
-    branches-ignore:
-      - 'main'
+  pull_request:
 
 jobs:
-  # Non-Docker path: Backend → Frontend → Playwright (all in one runner)
+  lib-tests:
+    name: Library Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: ./lib/pnpm-lock.yaml
+
+      - name: Install library dependencies
+        working-directory: ./lib
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck library
+        working-directory: ./lib
+        run: pnpm typecheck
+
+      - name: Test library
+        working-directory: ./lib
+        env:
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: pnpm test
+
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest
@@ -15,28 +48,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      # Setup Node and pnpm
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
-      
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-      
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
-      
-      # Setup Python for backend
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-      
+
       - name: Install backend dependencies
         working-directory: ./pyserver
         run: |
@@ -44,27 +75,24 @@ jobs:
           pip install wheel
           pip install -r requirements.txt
           pip install -r requirements-test.txt
-      
-      # Backend Tests
+
       - name: Lint with mypy
         working-directory: ./pyserver
         run: |
           mypy . --explicit-package-bases
-      
+
       - name: Test with pytest
         working-directory: ./pyserver
         run: |
           pip install pytest pytest-cov
           pytest --ignore=docs_src/ --cov=./
-      
-      # Frontend Tests
+
       - name: Ensure we can build frontend
         run: pnpm run build
-      
+
       - name: Run frontend tests
         run: pnpm run test
-      
-      # Start backend for Playwright tests
+
       - name: Run Backend Python in background
         working-directory: ./pyserver
         run: |
@@ -72,8 +100,8 @@ jobs:
           SERVER_PID=$!
           echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
           echo "Started server with PID: $SERVER_PID"
-          sleep 10  
-          
+          sleep 10
+
           if ps -p $SERVER_PID > /dev/null; then
             echo "Server started successfully!"
           else
@@ -82,17 +110,16 @@ jobs:
             exit 1
           fi
         shell: /usr/bin/bash -e {0}
-      
-      # Playwright Tests
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
-      
+
       - name: Run Playwright tests (Local)
         run: pnpm exec playwright test
         env:
           PLAYWRIGHT_USE_PREVIEW: 'true'
           TEST_ENV: 'local'
-      
+
       - name: Stop Python server
         if: always()
         run: |
@@ -100,7 +127,7 @@ jobs:
             echo "Stopping server with PID $SERVER_PID"
             kill $SERVER_PID || true
           fi
-      
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -108,7 +135,6 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-  # Docker path: Build and test in Docker environment
   integration-tests-docker:
     name: Integration Tests (Docker)
     runs-on: ubuntu-latest
@@ -117,18 +143,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
-      
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -144,18 +170,17 @@ jobs:
           pip install wheel
           pip install -r requirements.txt
           pip install -r requirements-test.txt
-      
+
       - name: Build Docker image
         run: |
           docker build -t trilogy-studio:test .
-      
+
       - name: Run Docker container with health check
         run: |
-          # Start container in detached mode
           CONTAINER_ID=$(docker run -d -p 8080:80 trilogy-studio:test)
           echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
           echo "Started container: $CONTAINER_ID"
-      
+
       - name: Wait for container to be healthy
         run: |
           echo "Waiting for container to become healthy..."
@@ -163,31 +188,31 @@ jobs:
             while true; do
               HEALTH_STATUS=$(docker inspect --format="{{.State.Health.Status}}" $CONTAINER_ID)
               echo "Current health status: $HEALTH_STATUS"
-              
+
               if [ "$HEALTH_STATUS" = "healthy" ]; then
-                echo "✅ Container is healthy!"
+                echo "Container is healthy!"
                 break
               elif [ "$HEALTH_STATUS" = "unhealthy" ]; then
-                echo "❌ Container is unhealthy!"
+                echo "Container is unhealthy!"
                 docker logs $CONTAINER_ID
                 exit 1
               else
-                echo "⏳ Waiting for health check... (status: $HEALTH_STATUS)"
+                echo "Waiting for health check... (status: $HEALTH_STATUS)"
                 sleep 5
               fi
             done
           '
-      
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
-      
+
       - name: Run Playwright tests against Docker
         run: pnpm exec playwright test
         env:
           PLAYWRIGHT_USE_PREVIEW: 'true'
           TEST_ENV: 'docker'
           BASE_URL: 'http://localhost:8080'
-      
+
       - name: Stop and remove Docker container
         if: always()
         run: |
@@ -196,7 +221,7 @@ jobs:
             docker stop $CONTAINER_ID || true
             docker rm $CONTAINER_ID || true
           fi
-      
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

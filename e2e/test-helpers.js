@@ -12,16 +12,16 @@ export async function prepareTestPage(page) {
 
     window.localStorage.clear()
     window.sessionStorage.clear()
-    window.localStorage.setItem(
-      'userSettings',
-      JSON.stringify({
-        theme: '',
-        trilogyResolver: url || '',
-        telemetryEnabled: false,
-        tipsRead: [],
-        skipAllTips: true,
-      }),
-    )
+    const userSettings = {
+      theme: '',
+      telemetryEnabled: false,
+      tipsRead: [],
+      skipAllTips: true,
+    }
+    if (url) {
+      userSettings.trilogyResolver = url
+    }
+    window.localStorage.setItem('userSettings', JSON.stringify(userSettings))
     window.localStorage.setItem('__playwright_prepared', 'true')
   }, resolverUrl)
 }

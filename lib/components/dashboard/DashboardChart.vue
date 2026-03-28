@@ -14,9 +14,15 @@
       :symbols="symbols"
       @submit="submitDrilldown"
     />
-    <ErrorMessage v-else-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage
+      v-else-if="error && !loading"
+      :compact="true"
+      :details="error"
+      :query="query"
+      :filters="filters"
+    />
     <VegaLiteChart
-      v-else-if="results && ready && !loading"
+      v-else-if="results && ready"
       :id="`${itemId}-${dashboardId}`"
       :columns="results.headers"
       :data="results.data"
@@ -35,7 +41,7 @@
       @revert-drilldown="revertDrilldown"
     />
     <div v-if="loading && showLoading" class="loading-overlay">
-      <LoadingView :startTime="startTime" text="Loading"></LoadingView>
+      <LoadingView :startTime="startTime" text="" subtle />
     </div>
     <div
       v-if="!editMode || !(results && ready)"
@@ -65,7 +71,6 @@
 <script lang="ts">
 //      v-if="!loading && editMode &&
 import { defineComponent, inject, computed, ref, type PropType } from 'vue'
-import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChartConfig } from '../../editors/results'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import ErrorMessage from '../ErrorMessage.vue'
@@ -165,6 +170,10 @@ export default defineComponent({
       return itemData.value.error || null
     })
 
+    const filters = computed(() => {
+      return itemData.value.filters || []
+    })
+
     const startTime = computed(() => {
       return itemData.value.loadStartTime || null
     })
@@ -181,7 +190,6 @@ export default defineComponent({
       return itemData.value.onRefresh || null
     })
 
-    const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const analyticsStore: AnalyticsStoreType | null = inject<AnalyticsStoreType | null>(
       'analyticsStore',
       null,
@@ -200,10 +208,6 @@ export default defineComponent({
         return
       }
       props.setItemData(props.itemId, props.dashboardId, { chartConfig: nextChartConfig })
-    }
-
-    if (!connectionStore) {
-      throw new Error('Connection store not found!')
     }
 
     const {
@@ -271,13 +275,14 @@ export default defineComponent({
         selected,
         activeDrilldown.value!.remove,
         activeDrilldown.value!.filter,
+        itemData.value.rootContent || [],
+        (itemData.value.imports || []).map((imp) => ({ name: imp.name, alias: imp.alias })),
       )
       props.setItemData(props.itemId, props.dashboardId, {
         drilldown: newQuery,
         drilldownChartConfig: null,
         loading: true,
       })
-      ready.value = false
       showLoading.value = true
       activeDrilldown.value = null
       await executeQuery()
@@ -299,6 +304,7 @@ export default defineComponent({
       loading,
       showLoading,
       error,
+      filters,
       query,
       chartHeight,
       chartWidth,

@@ -112,6 +112,7 @@ import type { ResultColumn, Row, ChartConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import ChartControlPanel from './ChartControlPanel.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
+import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
@@ -120,6 +121,7 @@ import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
 import { ChartRenderManager } from './chartRenderManager'
 import { ChartControlsManager } from './chartControlsManager'
 import { ChartOperationsManager } from './chartOperationsManager'
+import { safeJsonStringify } from '../utility/jsonSerialization'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -162,15 +164,11 @@ export default defineComponent({
   },
 
   setup(props, { emit }) {
-    const settingsStore = inject<UserSettingsStoreType>('userSettingsStore')
+    const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
 
-    if (!settingsStore) {
-      throw new Error('userSettingsStore not provided')
-    }
-
     // Create a computed property for the current theme
-    const currentTheme = computed(() => settingsStore.settings.theme)
+    const currentTheme = useResolvedThemeMode(settingsStore)
 
     // Computed property to determine if container is too short for side controls
     const isShortContainer = computed(() => {
@@ -385,7 +383,7 @@ export default defineComponent({
         if (!hasMounted || updatePending) return
         const [newSelection] = newValues
         const oldSelection = oldValues ? oldValues[0] : undefined
-        if (JSON.stringify(newSelection) === JSON.stringify(oldSelection)) return
+        if (safeJsonStringify(newSelection) === safeJsonStringify(oldSelection)) return
         renderChart(true)
       },
     )
@@ -400,7 +398,7 @@ export default defineComponent({
           return
         }
         // check they are actually different
-        if (oldValues && JSON.stringify(newValues) === JSON.stringify(oldValues)) {
+        if (oldValues && safeJsonStringify(newValues) === safeJsonStringify(oldValues)) {
           return
         }
         updatePending = true
@@ -519,8 +517,12 @@ export default defineComponent({
   bottom: 8px;
   left: 50%;
   padding: 6px 8px;
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background: var(--floating-surface, rgba(255, 255, 255, 0.9));
+  border: 1px solid
+    var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  background: var(
+    --trilogy-embed-floating-surface,
+    var(--floating-surface, rgba(255, 255, 255, 0.9))
+  );
   backdrop-filter: blur(8px);
   transform: translate(-50%, 6px);
 }
@@ -540,9 +542,13 @@ export default defineComponent({
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--overlay-border, rgba(148, 163, 184, 0.24));
-  background-color: var(--floating-surface-strong, rgba(255, 255, 255, 0.97));
-  color: var(--floating-text, var(--text-color));
+  border: 1px solid
+    var(--trilogy-embed-overlay-border, var(--overlay-border, rgba(148, 163, 184, 0.14)));
+  background-color: var(
+    --trilogy-embed-floating-surface-strong,
+    var(--floating-surface-strong, rgba(255, 255, 255, 0.97))
+  );
+  color: var(--trilogy-embed-floating-text, var(--floating-text, var(--text-color, #1f2937)));
   cursor: pointer;
   font-size: var(--button-font-size);
   transition:
@@ -555,23 +561,29 @@ export default defineComponent({
 }
 
 .control-btn:hover {
-  background-color: var(--floating-surface, rgba(255, 255, 255, 0.9));
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.28);
+  background-color: var(
+    --trilogy-embed-floating-surface,
+    var(--floating-surface, rgba(255, 255, 255, 0.9))
+  );
+  border-color: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.28
+  );
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 
 .control-btn:disabled {
-  background-color: var(--border-light);
-  color: var(--text-color-muted);
+  background-color: var(--trilogy-embed-border-light, var(--border-light, #e1e6ed));
+  color: var(--trilogy-embed-text-muted, var(--text-color-muted, #64748b));
   cursor: not-allowed;
 }
 
 .control-btn:disabled:hover {
-  background-color: var(--border-light);
+  background-color: var(--trilogy-embed-border-light, var(--border-light, #e1e6ed));
 }
 
 .control-btn.active {
-  background-color: var(--special-text);
+  background-color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
   color: white;
 }
 

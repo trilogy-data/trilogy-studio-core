@@ -1,11 +1,50 @@
 {
- "name": "@trilogy-data/trilogy-studio-components",
-  "version": "0.1.14",
+  "name": "@trilogy-data/trilogy-studio-components",
+  "version": "0.1.16",
   "private": false,
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
-  "main": "dist/main.js",
-  "types": "dist/main.d.ts",
+  "style": "dist/trilogy-studio-components.css",
+  "exports": {
+    "./dashboard": {
+      "types": "./dist/dashboard.d.ts",
+      "import": "./dist/dashboard.js",
+      "default": "./dist/dashboard.js"
+    },
+    "./views": {
+      "types": "./dist/views.d.ts",
+      "import": "./dist/views.js",
+      "default": "./dist/views.js"
+    },
+    "./monaco": {
+      "types": "./dist/monaco.d.ts",
+      "import": "./dist/monaco.js",
+      "default": "./dist/monaco.js"
+    },
+    "./llm": {
+      "types": "./dist/llm.d.ts",
+      "import": "./dist/llm.js",
+      "default": "./dist/llm.js"
+    },
+    "./stores": {
+      "types": "./dist/stores.d.ts",
+      "import": "./dist/stores.js",
+      "default": "./dist/stores.js"
+    },
+    "./connections": {
+      "types": "./dist/connections.d.ts",
+      "import": "./dist/connections.js",
+      "default": "./dist/connections.js"
+    },
+    "./embed": {
+      "types": "./dist/embed.d.ts",
+      "import": "./dist/embed.js",
+      "default": "./dist/embed.js"
+    },
+    "./style.css": "./dist/trilogy-studio-components.css"
+  },
   "repository": {
     "url": "https://github.com/trilogy-data/trilogy-studio-core"
   },
@@ -18,15 +57,19 @@
     "test": "vitest"
   },
   "peerDependencies": {
-    "vue": "^3.5.13",
-    "pinia": "^2.0.0"
+    "pinia": "^2.0.0",
+    "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@types/luxon": "^3.7.1",
+    "@types/prismjs": "^1.26.5",
+    "@types/tabulator-tables": "^6.3.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
     "jsdom": "^26.1.0",
+    "pinia": "^2.3.1",
     "prettier": "^3.5.1",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",
@@ -34,16 +77,17 @@
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^3.2.4",
     "vue": "^3.5.13",
-    "vue-tsc": "^2.2.0",
-    "@types/prismjs": "^1.26.5",
-    "pinia": "^2.3.1"
+    "vue-tsc": "^2.2.0"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.29.1-dev269.0",
     "@google/genai": "^0.12.0",
-    "@mdi/font": "^7.4.47",
+    "@mdi/js": "^7.4.47",
+    "@motherduck/wasm-client": "^0.6.6",
     "apache-arrow": "^21.1.0",
     "dompurify": "^3.3.0",
+    "html2canvas": "^1.4.1",
+    "jose": "^6.1.1",
     "luxon": "^3.5.0",
     "monaco-editor": "^0.52.2",
     "prismjs": "^1.29.0",
@@ -52,8 +96,6 @@
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
     "vega-lite": "^6.4.1",
-    "vue3-grid-layout-next": "^1.0.7",
-    "html2canvas": "^1.4.1",
-    "jose": "^6.1.1"
+    "vue3-grid-layout-next": "^1.0.7"
   }
 }

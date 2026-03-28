@@ -219,7 +219,9 @@ Use view mode first, then switch to edit.
       const result = convertMarkdownToHtml(markdown)
 
       expect(result).toContain('<div class="md-admonition md-admonition-tip">')
-      expect(result).toContain('<div class="md-admonition-header">Tip</div>')
+      expect(result).toContain('<div class="md-admonition-header">')
+      expect(result).toContain('class="md-admonition-icon mdi mdi-lightbulb-on"')
+      expect(result).toContain('<span>Tip</span>')
       expect(result).toContain('Use view mode first, then switch to edit.')
     })
 

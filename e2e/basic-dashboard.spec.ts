@@ -77,7 +77,15 @@ async function clickChartCanvasWithModifier(containerLocator, relX, relY) {
   if (!bounds) {
     throw new Error('Could not get active canvas bounds')
   }
-
+  // clear the overlay
+  await canvas.click({
+    force: true,
+    position: {
+      x: bounds.width * 0.9,
+      y: bounds.height * 0.9,
+    },
+  })
+  //our actual click
   await canvas.click({
     modifiers: ['ControlOrMeta'],
     force: true,
@@ -188,7 +196,19 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   const firstChartCanvas = page.locator(vegaSelector).first()
   await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
   await firstChartCanvas.hover({ force: true })
-  await page.waitForTimeout(500) // wait for the controls to appear
+  const firstDashboardItem = page.getByTestId('dashboard-component-0')
+  await firstDashboardItem.hover({ force: true })
+  await page.waitForTimeout(250)
+  await firstDashboardItem.click({
+    force: true,
+    position: {
+      x: 16,
+      y: 16,
+    },
+  })
+  await page.waitForTimeout(250) // wait for the controls to appear
+  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
+  await page.waitForTimeout(500)
   await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
   await page.getByTestId('chart-type-geo-map').waitFor({ state: 'visible', timeout: 10000 })
   await page.getByTestId('chart-type-geo-map').click({ force: true })
@@ -423,6 +443,17 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   const clickX = bounds.x + bounds.width * clickPoint.relX
   const clickY = bounds.y + bounds.height * clickPoint.relY
 
+  await firstDashboardItem.hover({ force: true })
+  await page.waitForTimeout(250)
+  await firstDashboardItem.click({
+    force: true,
+    position: {
+      x: 16,
+      y: 16,
+    },
+  })
+  await page.waitForTimeout(250)
+
   console.log(`Clicking map at screen coordinates (${Math.round(clickX)}, ${Math.round(clickY)})`)
   await page.mouse.click(clickX, clickY)
 
@@ -611,7 +642,8 @@ select rows;
   await expect(page.getByTestId('dashboard-component-0')).toBeVisible()
   await expect(page.getByTestId('dashboard-component-1')).toBeVisible()
 
-  await page.getByRole('gridcell', { name: '2' }).click()
+  await page.getByRole('gridcell', { name: '2' }).click({ force: true })
+  await page.getByRole('gridcell', { name: '2' }).click({ force: true })
   console.log('✓ Custom editor dashboard creation test passed')
 })
 

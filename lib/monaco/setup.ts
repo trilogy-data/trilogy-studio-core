@@ -4,7 +4,6 @@ import { Range } from 'monaco-editor'
 import { dataTypes } from '../language'
 import { languages } from 'monaco-editor/esm/vs/editor/editor.api'
 import useEditorStore from '../stores/editorStore'
-const store = useEditorStore()
 export function configureTrilogy() {
   languages.register({ id: 'trilogy' })
   languages.setLanguageConfiguration('trilogy', {
@@ -231,6 +230,7 @@ export function configureTrilogy() {
 
   // add model autocompletion
   function getModelCompletions(word: string, range: Range) {
+    const store = useEditorStore()
     // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
     // here you could do a server side lookup
     let completions = store.getCurrentEditorAutocomplete(word)

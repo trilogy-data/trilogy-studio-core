@@ -23,6 +23,14 @@ interface FallbackExpression {
 
 type AdmonitionType = 'tip' | 'warning' | 'note' | 'important' | 'caution'
 
+const ADMONITION_ICON_CLASS: Record<AdmonitionType, string> = {
+  tip: 'mdi mdi-lightbulb-on',
+  warning: 'mdi mdi-alert-circle-outline',
+  note: 'mdi mdi-note-text-outline',
+  important: 'mdi mdi-star-outline',
+  caution: 'mdi mdi-alert-circle',
+}
+
 // ============================================================================
 // SECURITY AND VALIDATION
 // ============================================================================
@@ -746,7 +754,10 @@ function createAdmonitionHtml(type: AdmonitionType, content: string): string {
   }
 
   return `<div class="md-admonition md-admonition-${type}">
-    <div class="md-admonition-header">${titleMap[type]}</div>
+    <div class="md-admonition-header">
+      <span class="md-admonition-icon ${ADMONITION_ICON_CLASS[type]}" aria-hidden="true"></span>
+      <span>${titleMap[type]}</span>
+    </div>
     <div class="md-admonition-body">${convertMarkdownToHtml(content.trim())}</div>
   </div>`
 }

@@ -46,4 +46,24 @@ describe('TrilogyResolver', () => {
       current_filename: 'nested/other.preql',
     })
   })
+
+  it('normalizes trailing slashes in resolver URLs', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ generated_sql: 'select 1' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:5678/api/' },
+    } as any)
+
+    await resolver.resolve_query('select 1;', 'duckdb', 'preql')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:5678/api/generate_query',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+  })
 })

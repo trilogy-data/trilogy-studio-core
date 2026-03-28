@@ -6,7 +6,13 @@
     @mouseenter="onChartMouseEnter"
     @mouseleave="onChartMouseLeave"
   >
-    <ErrorMessage v-if="error && !loading" class="chart-placeholder">{{ error }}</ErrorMessage>
+    <ErrorMessage
+      v-if="error && !loading"
+      :compact="true"
+      :details="error"
+      :query="query"
+      :filters="filters"
+    />
 
     <MarkdownRenderer
       v-else-if="ready"
@@ -104,6 +110,10 @@ export default defineComponent({
       return itemData.value.error || null
     })
 
+    const filters = computed(() => {
+      return itemData.value.filters || []
+    })
+
     const startTime = computed(() => {
       return itemData.value.loadStartTime || null
     })
@@ -145,6 +155,7 @@ export default defineComponent({
       ready,
       loading,
       error,
+      filters,
       query,
       markdown,
       handleLocalRefresh,

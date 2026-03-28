@@ -26,6 +26,25 @@ interface DuckDBType {
   precision?: number
 }
 
+export interface DuckDBAssetUrls {
+  mvp: {
+    mainModule: string
+    mainWorker: string
+  }
+  eh: {
+    mainModule: string
+    mainWorker: string
+  }
+}
+
+let configuredDuckDBAssetUrls: DuckDBAssetUrls | null = null
+
+// Host apps can point DuckDB at their own static asset URLs instead of
+// bundling another copy into every consuming build or falling back to jsDelivr.
+export function configureDuckDBAssets(assetUrls: DuckDBAssetUrls | null): void {
+  configuredDuckDBAssetUrls = assetUrls
+}
+
 // use a singleton pattern to help avoid memory issues
 const connectionCache: Record<string, { db: AsyncDuckDB; connection: AsyncDuckDBConnection }> = {}
 
@@ -37,13 +56,16 @@ async function createDuckDB(
     return connectionCache[connectionName]
   }
 
-  let bundles: DuckDBBundles
   let worker_url: string | null = null
+  const configuredAssets = configuredDuckDBAssetUrls
   // Check if bundled assets should be used
-  const useBundledAssets = import.meta.env.VITE_DUCKDB_BUNDLED === 'true'
+  const useBundledAssets = !configuredAssets && import.meta.env.VITE_DUCKDB_BUNDLED === 'true'
   let worker: Worker
   let bundle: DuckDBBundle
-  if (useBundledAssets) {
+  if (configuredAssets) {
+    bundle = await selectBundle(configuredAssets as DuckDBBundles)
+    worker = new Worker(bundle.mainWorker!)
+  } else if (useBundledAssets) {
     // Load bundled assets - no fallback
     const [
       { default: duckdb_wasm },
@@ -57,7 +79,7 @@ async function createDuckDB(
       import('@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url'),
     ])
 
-    bundles = {
+    const bundledAssets: DuckDBBundles = {
       mvp: {
         mainModule: duckdb_wasm,
         mainWorker: mvp_worker,
@@ -67,12 +89,12 @@ async function createDuckDB(
         mainWorker: eh_worker,
       },
     }
-    bundle = await selectBundle(bundles)
+    bundle = await selectBundle(bundledAssets)
     worker = new Worker(bundle.mainWorker!)
   } else {
     // Use CDN bundles
-    bundles = getJsDelivrBundles()
-    bundle = await selectBundle(bundles)
+    const cdnBundles = getJsDelivrBundles()
+    bundle = await selectBundle(cdnBundles)
     worker_url = URL.createObjectURL(
       new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
     )

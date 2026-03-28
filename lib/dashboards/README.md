@@ -36,7 +36,7 @@ function setCrossFilter(info: DimensionClick): void {
 
   if (!finalFilters || Object.keys(finalFilters).length === 0) return
 
-  dashboardStore.updateItemCrossFilters(
+dashboardStore.updateItemCrossFilters(
     dashboard.value.id,
     info.source,
     finalFilters,
@@ -44,4 +44,32 @@ function setCrossFilter(info: DimensionClick): void {
     info.append ? 'append' : 'add',
   )
 }
+```
+
+## Reusable Controller
+
+For embedded apps that are not using the full dashboard store, use the exported
+`createCrossFilterController` or `useCrossFilterController` helpers.
+
+They preserve the same native behavior:
+- the source chart keeps its own visual selection
+- peer charts receive SQL filters derived from that selection
+- the source chart does not filter its own query
+- append mode toggles exact matches on and off
+
+```typescript
+import { createCrossFilterController } from '@trilogy-data/trilogy-studio-components/dashboard'
+
+const filters = createCrossFilterController({
+  validFields: ['species', 'native_status', 'tree_category'],
+})
+
+filters.applyDimensionClick({
+  source: 'species-chart',
+  filters: { species: 'Acer rubrum' },
+  chart: { species: 'Acer rubrum' },
+})
+
+const speciesChartSelections = filters.getChartSelectionsFor('species-chart')
+const nativeChartFilters = filters.getSqlFiltersFor('native-chart', ["city = 'USBTV'"])
 ```
