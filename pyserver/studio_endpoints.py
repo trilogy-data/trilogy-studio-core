@@ -48,13 +48,21 @@ logger = getLogger(__name__)
 NON_PARAMETER_RENDERING = Rendering(parameters=False)
 
 
-def _http_error_payload(exc: HTTPException) -> dict:
+def _build_http_error_payload(status_code: int, detail: str) -> dict:
     return {
         "__http_error__": {
-            "status_code": exc.status_code,
-            "detail": exc.detail,
+            "status_code": status_code,
+            "detail": detail,
         }
     }
+
+
+def _http_error_payload(exc: HTTPException) -> dict:
+    return _build_http_error_payload(exc.status_code, exc.detail)
+
+
+def _worker_http_error(status_code: int, detail: str) -> dict:
+    return _build_http_error_payload(status_code, detail)
 
 
 def _raise_if_worker_error(payload: dict) -> dict:
@@ -81,7 +89,7 @@ def _format_query_task(query_data: dict) -> dict:
     except HTTPException as exc:
         return _http_error_payload(exc)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(exc))
+        return _worker_http_error(422, "Parsing error: " + str(exc))
     renderer = Renderer()
     return FormatQueryOutSchema(
         text=renderer.render_statement_string(parsed)
@@ -150,7 +158,7 @@ def _drilldown_query_task(query_data: dict) -> dict:
     except HTTPException as exc:
         return _http_error_payload(exc)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(exc))
+        return _worker_http_error(422, "Parsing error: " + str(exc))
     renderer = Renderer()
     return FormatQueryOutSchema(
         text=renderer.render_statement_string(parsed)
@@ -208,7 +216,7 @@ def _validate_query_task(query_data: dict) -> dict:
     except HTTPException as exc:
         return _http_error_payload(exc)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(exc))
+        return _worker_http_error(422, "Parsing error: " + str(exc))
 
 
 def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dict:
@@ -264,7 +272,7 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
                 f"Multi-query generation failed after {error_time:.4f}s: {str(exc)}"
             )
 
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(exc))
+        return _worker_http_error(422, "Parsing error: " + str(exc))
 
 
 def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
@@ -333,7 +341,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
             perf_logger.error(
                 f"Query generation failed after {error_time:.6f}s: {str(exc)} {tb}"
             )
-        raise HTTPException(status_code=422, detail=str(exc))
+        return _worker_http_error(422, str(exc))
 
 
 def _parse_model_task(model_data: dict, enable_perf_logging: bool) -> dict:
@@ -361,7 +369,7 @@ def _parse_model_task(model_data: dict, enable_perf_logging: bool) -> dict:
                 f"Model parsing failed after {error_time:.4f}s: {str(exc)}"
             )
 
-        raise HTTPException(status_code=422, detail="Parsing error: " + str(exc))
+        return _worker_http_error(422, "Parsing error: " + str(exc))
 
 
 def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:

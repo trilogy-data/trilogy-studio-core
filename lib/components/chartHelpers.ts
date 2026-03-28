@@ -3,7 +3,7 @@ import type { View } from 'vega'
 import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
-import { convertTimestampToISODate, filteredColumns } from '../dashboards/helpers'
+import { convertTimestampToISODate, filteredColumns, isHexColumn } from '../dashboards/helpers'
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
 const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
@@ -334,7 +334,9 @@ export class ChromaChartHelpers {
    * Gets eligible fields for filtering based on chart type
    */
   private getEligibleFields(config: ChartConfig, columns: Map<string, ResultColumn>): string[] {
-    let eligible = filteredColumns('categorical', columns).map((x) => x.name)
+    let eligible = filteredColumns('categorical', columns)
+      .filter((column) => !isHexColumn(column))
+      .map((x) => x.name)
     eligible = eligible.concat(filteredColumns('geographic', columns).map((x) => x.name))
     eligible = eligible.concat(filteredColumns('latitude', columns).map((x) => x.name))
     eligible = eligible.concat(filteredColumns('longitude', columns).map((x) => x.name))

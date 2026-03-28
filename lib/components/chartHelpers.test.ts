@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ChromaChartHelpers } from './chartHelpers'
 import { type ResultColumn, type ChartConfig, ColumnType } from '../editors/results'
 
@@ -201,6 +201,59 @@ describe('ChromaChartHelpers', () => {
 
       const isValid = chartHelpers.validateConfigFields(config as ChartConfig, testColumns)
       expect(isValid).toBe(true)
+    })
+  })
+
+  describe('handlePointClick', () => {
+    it('does not include implicit hex helper fields in cross-filter selections', () => {
+      const onDimensionClick = vi.fn()
+      chartHelpers = new ChromaChartHelpers({
+        onDimensionClick,
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      })
+
+      testColumns.set('tree_category', {
+        name: 'tree_category',
+        type: ColumnType.STRING,
+        address: 'local.tree_category',
+        traits: [],
+      })
+      testColumns.set('cat_color', {
+        name: 'cat_color',
+        type: ColumnType.STRING,
+        address: 'local.cat_color',
+        traits: ['hex'],
+      })
+
+      const config: ChartConfig = {
+        chartType: 'donut',
+        xField: 'tree_count',
+        yField: 'tree_category',
+        colorField: 'tree_category',
+        showTitle: false,
+      }
+
+      chartHelpers.handlePointClick(
+        { shiftKey: false, ctrlKey: false } as MouseEvent,
+        {
+          datum: {
+            tree_category: 'broadleaf',
+            cat_color: '#A7E3B2',
+            tree_count: 42,
+          },
+        },
+        config,
+        testColumns,
+      )
+
+      expect(onDimensionClick).toHaveBeenCalledTimes(1)
+      expect(onDimensionClick).toHaveBeenCalledWith({
+        filters: { 'local.tree_category': 'broadleaf' },
+        chart: { tree_category: 'broadleaf' },
+        append: false,
+      })
     })
   })
 })

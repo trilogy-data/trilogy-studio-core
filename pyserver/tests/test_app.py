@@ -6,6 +6,7 @@ from io_models import (
     DrilldownQueryInSchema,
     Import,
 )
+from studio_endpoints import _generate_query_task
 from trilogy import Dialects
 
 
@@ -157,6 +158,40 @@ select unnest(x) as rows;
     assert response.status_code == 200
     assert "unnest([1, 2, 3, 4, 5])" in response.json()["generated_sql"]
     assert ":x" not in response.json()["generated_sql"]
+
+
+def test_generate_query_worker_serializes_errors():
+    request = QueryInSchema(
+        imports=[],
+        query="select 1 as rows;",
+        extra_filters=["("],
+        dialect=Dialects.DUCK_DB,
+        current_filename="test-one",
+        full_model=ModelInSchema(name="test_parse", sources=[]),
+    )
+
+    payload = _generate_query_task(request.model_dump(mode="json"), False)
+
+    assert payload["__http_error__"]["status_code"] == 422
+    assert payload["__http_error__"]["detail"]
+    assert "Unexpected token" in payload["__http_error__"]["detail"]
+
+
+def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
+    request = QueryInSchema(
+        imports=[],
+        query="select 1 as rows;",
+        extra_filters=["("],
+        dialect=Dialects.DUCK_DB,
+        current_filename="test-one",
+        full_model=ModelInSchema(name="test_parse", sources=[]),
+    )
+
+    response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
+
+    assert response.status_code == 422
+    assert response.json()["detail"]
+    assert "Unexpected token" in response.json()["detail"]
 
 
 # def test_read_models(test_client: TestClient):
