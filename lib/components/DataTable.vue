@@ -166,16 +166,15 @@
   border: 0;
 }
 
-/* Dark theme support */
-/* Highlighted cell styling */
+/* Highlight matching cells when cross-filter selections are active. */
 .highlighted-cell {
-  background-color: var(--highlight-bg, #fff3cd) !important;
-  border: 2px solid var(--highlight-border, #ffc107) !important;
+  background-color: var(--highlight-bg, rgba(37, 99, 235, 0.18)) !important;
+  box-shadow: inset 0 0 0 2px var(--highlight-border, #3b82f6);
 }
 
 .dark-theme-table .highlighted-cell {
-  background-color: var(--dark-highlight-bg, #3e2723) !important;
-  border-color: var(--dark-highlight-border, #ff9800) !important;
+  background-color: var(--dark-highlight-bg, rgba(96, 165, 250, 0.22)) !important;
+  box-shadow: inset 0 0 0 2px var(--dark-highlight-border, #60a5fa);
 }
 
 /* Mobile responsiveness */
@@ -499,6 +498,13 @@ export default {
     }
   },
   methods: {
+    clearHighlights(target: HTMLElement) {
+      const highlightedCells = target.querySelectorAll('.highlighted-cell')
+      highlightedCells.forEach((highlightedCell) => {
+        highlightedCell.classList.remove('highlighted-cell')
+      })
+    },
+
     async copyToClipboard() {
       if (!this.tabulator || !this.tableData || this.tableData.length === 0) {
         return
@@ -633,8 +639,6 @@ export default {
         }
         let value = cell.getValue()
 
-        const element = cell.getElement()
-
         //@ts-ignore
         if (event.ctrlKey) {
           this.$emit('drilldown-click', {
@@ -643,15 +647,13 @@ export default {
           return
         }
 
-        if (element.classList.contains('highlighted-cell')) {
-          const highlightedCells = target.querySelectorAll('.highlighted-cell')
-          highlightedCells.forEach((highlightedCell) => {
-            highlightedCell.classList.remove('highlighted-cell')
-          })
+        if (cell.getElement().classList.contains('highlighted-cell')) {
+          this.clearHighlights(target)
           this.$emit('background-click', {
             filters: { [field]: value },
           })
         } else {
+          this.clearHighlights(target)
           this.$emit('cell-click', {
             filters: { [field]: value },
             append: true,

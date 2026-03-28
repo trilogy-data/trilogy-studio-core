@@ -4,6 +4,7 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import DashboardFilter from './DashboardFilter.vue'
+import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
   type LayoutItem,
@@ -38,6 +39,9 @@ const emit = defineEmits<{
 const editingItemTitle = ref(false)
 const editableItemName = ref('')
 const isHeaderVisible = ref(false)
+const controlsDismissed = ref(false)
+const contentEditToolbarRef = ref<HTMLElement | null>(null)
+const devToolbarRef = ref<HTMLElement | null>(null)
 
 function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
@@ -56,6 +60,7 @@ function startTitleEditing(): void {
 
   const currentItemData = props.getItemData(props.item.i, props.dashboardId)
   isHeaderVisible.value = false
+  controlsDismissed.value = false
   editingItemTitle.value = true
   editableItemName.value = currentItemData.name
 
@@ -233,6 +238,34 @@ const displayTitle = computed(() => {
 const titleLevelClass = computed(() => {
   return `item-title-level-${parsedDisplayTitle.value.level}`
 })
+
+const editControlsVisible = computed(() => {
+  return isHeaderVisible.value && !editingItemTitle.value && !controlsDismissed.value
+})
+
+function dismissHoverControls(): void {
+  if (!editControlsVisible.value) {
+    return
+  }
+
+  controlsDismissed.value = true
+  isHeaderVisible.value = false
+}
+
+function handleMouseEnter(): void {
+  isHeaderVisible.value = true
+  controlsDismissed.value = false
+}
+
+function handleMouseLeave(): void {
+  isHeaderVisible.value = false
+  controlsDismissed.value = false
+}
+
+useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
+  enabled: () => editControlsVisible.value,
+  eventName: 'mousedown',
+})
 </script>
 
 <template>
@@ -247,23 +280,19 @@ const titleLevelClass = computed(() => {
       'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
     }"
-    @mouseenter="
-      () => {
-        isHeaderVisible = true
-      }
-    "
-    @mouseleave="
-      () => {
-        isHeaderVisible = false
-      }
-    "
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <div
       v-if="editMode && isSectionHeader"
       class="dev-toolbar-shell"
-      :class="{ 'dev-toolbar-visible': isHeaderVisible && !editingItemTitle }"
+      :class="{ 'dev-toolbar-visible': editControlsVisible }"
     >
-      <div class="dev-toolbar" data-testid="dashboard-item-header-controls">
+      <div
+        ref="devToolbarRef"
+        class="dev-toolbar"
+        data-testid="dashboard-item-header-controls"
+      >
         <button
           @click="openEditor"
           class="control-btn"
@@ -415,9 +444,13 @@ const titleLevelClass = computed(() => {
       <div
         v-if="editMode && !isSectionHeader"
         class="content-edit-overlay no-drag"
-        :class="{ 'content-edit-overlay-visible': isHeaderVisible && !editingItemTitle }"
+        :class="{ 'content-edit-overlay-visible': editControlsVisible }"
       >
-        <div class="content-edit-toolbar" data-testid="dashboard-item-header-controls">
+        <div
+          ref="contentEditToolbarRef"
+          class="content-edit-toolbar"
+          data-testid="dashboard-item-header-controls"
+        >
           <button
             @click="increaseHeight"
             class="control-btn"
