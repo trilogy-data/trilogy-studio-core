@@ -9,6 +9,7 @@ from logging import getLogger
 
 from fastapi import APIRouter, HTTPException
 from trilogy.authoring import SelectItem, SelectStatement
+from trilogy.constants import Rendering
 from trilogy.core.exceptions import InvalidSyntaxException
 from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
@@ -42,6 +43,9 @@ from query_helpers import (
 from utility import safe_percentage
 
 logger = getLogger(__name__)
+
+
+NON_PARAMETER_RENDERING = Rendering(parameters=False)
 
 
 def _http_error_payload(exc: HTTPException) -> dict:
@@ -214,7 +218,10 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
         start_time = time.time()
 
     try:
-        dialect = get_dialect_generator(queries.dialect)
+        dialect = get_dialect_generator(
+            queries.dialect,
+            rendering=NON_PARAMETER_RENDERING,
+        )
 
         if enable_perf_logging:
             dialect_time = time.time() - start_time
@@ -271,7 +278,10 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
         )
     try:
         dialect_start = time.perf_counter()
-        dialect = get_dialect_generator(query.dialect)
+        dialect = get_dialect_generator(
+            query.dialect,
+            rendering=NON_PARAMETER_RENDERING,
+        )
         dialect_time = time.perf_counter() - dialect_start
 
         core_start = time.perf_counter()

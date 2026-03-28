@@ -139,6 +139,26 @@ SELECT
 ;""", response.json()["text"]
 
 
+def test_generate_query_inlines_duckdb_constants(test_client: TestClient):
+    request = QueryInSchema(
+        imports=[],
+        query="""
+auto x <- [1,2,3,4,5];
+
+select unnest(x) as rows;
+""",
+        dialect=Dialects.DUCK_DB,
+        current_filename="test-one",
+        full_model=ModelInSchema(name="test_parse", sources=[]),
+    )
+
+    response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
+
+    assert response.status_code == 200
+    assert "unnest([1, 2, 3, 4, 5])" in response.json()["generated_sql"]
+    assert ":x" not in response.json()["generated_sql"]
+
+
 # def test_read_models(test_client: TestClient):
 #     response = test_client.get("/models")
 #     assert response.status_code == 200
