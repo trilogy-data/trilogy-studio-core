@@ -33,7 +33,7 @@ export const createBarChartSpec = (
 
   // Set the label angle based on the count
   const labelAngle = xValueCount > 7 ? -45 : 0
-  return {
+  const barLayer = {
     params: [
       {
         name: 'highlight',
@@ -70,5 +70,35 @@ export const createBarChartSpec = (
       order: { field: config.yField, sort: 'descending' },
       ...encoding,
     },
+  }
+
+  if (!config.yField2) {
+    return barLayer
+  }
+
+  const secondaryLineLayer = {
+    mark: {
+      type: 'line',
+      point: true,
+      color: currentTheme === 'light' ? '#1D4ED8' : '#93C5FD',
+      strokeWidth: 2,
+    },
+    encoding: {
+      x: {
+        ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
+        ...getSortOrder(config.xField || '', columns, config.yField),
+      },
+      y: createFieldEncoding(config.yField2, columns, {
+        axis: {
+          ...getFormatHint(config.yField2, columns),
+          orient: 'right',
+        },
+      }),
+      tooltip: tooltipFields,
+    },
+  }
+
+  return {
+    layer: [barLayer, secondaryLineLayer],
   }
 }

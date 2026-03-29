@@ -33,6 +33,21 @@ export interface CreateCrossFilterControllerOptions {
   normalizeLocalFields?: boolean
 }
 
+export function extractEligibleCrossFilterFields(
+  completionItems: Iterable<{ label: string }> = [],
+): string[] {
+  const fields = new Set<string>()
+
+  for (const item of completionItems) {
+    if (!item?.label) {
+      continue
+    }
+    fields.add(item.label)
+  }
+
+  return Array.from(fields)
+}
+
 export interface CrossFilterController {
   getSelections(): CrossFilterSelection[]
   getSelectionSources(): string[]
