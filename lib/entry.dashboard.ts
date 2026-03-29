@@ -13,6 +13,8 @@ export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
 export { default as VegaLiteChart } from './components/VegaLiteChart.vue'
 export { useTrilogyCore } from './composables/useTrilogyCore'
 export { useTrilogyChat } from './composables/useTrilogyChat'
+export { useCrossFilterEligibility } from './composables/useCrossFilterEligibility'
+export { useResolvedCrossFilterController } from './composables/useResolvedCrossFilterController'
 
 export {
   TRILOGY_EMBED_CONFIG_KEY,
@@ -31,6 +33,11 @@ export type {
 } from './embed/config'
 export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTrilogyCore'
 export type { TrilogyChatOptions } from './composables/useTrilogyChat'
+export type {
+  CrossFilterEligibilityService,
+  UseCrossFilterEligibilityOptions,
+} from './composables/useCrossFilterEligibility'
+export type { UseResolvedCrossFilterControllerOptions } from './composables/useResolvedCrossFilterController'
 
 export { DashboardQueryExecutor } from './dashboards/dashboardQueryExecutor'
 export { DashboardModel, CELL_TYPES } from './dashboards/base'
@@ -39,6 +46,7 @@ export {
   buildCrossFilterExpression,
   clearAllCrossFiltersFromGridItems,
   createCrossFilterController,
+  extractEligibleCrossFilterFields,
   filterAllowedDimensionFilters,
   removeCrossFilterFromItem,
   removeCrossFilterSourceFromGridItems,
@@ -67,6 +75,7 @@ export type {
 
 export { default as QueryExecutionService } from './stores/queryExecutionService'
 export type {
+  EligibleCrossFilterFieldsOptions,
   QueryInput,
   QueryUpdate,
   QueryResult,

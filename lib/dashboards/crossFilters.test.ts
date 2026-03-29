@@ -4,6 +4,7 @@ import {
   filterAllowedDimensionFilters,
   applyCrossFilterOperationToGridItems,
   buildCrossFilterExpression,
+  extractEligibleCrossFilterFields,
 } from './crossFilters'
 
 describe('cross filter controller', () => {
@@ -128,5 +129,16 @@ describe('cross filter helpers', () => {
         { source: 'a', value: { species: 'Acer saccharum' } },
       ]),
     ).toEqual("(species='''Acer rubrum''' OR species='''Acer saccharum''')")
+  })
+
+  it('extracts unique eligible fields from completion items in order', () => {
+    expect(
+      extractEligibleCrossFilterFields([
+        { label: 'species' },
+        { label: 'tree_count' },
+        { label: 'species' },
+        { label: '' },
+      ]),
+    ).toEqual(['species', 'tree_count'])
   })
 })

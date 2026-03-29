@@ -24,7 +24,10 @@ import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { DashboardModel } from '../../dashboards/base'
-import { filterAllowedDimensionFilters } from '../../dashboards/crossFilters'
+import {
+  extractEligibleCrossFilterFields,
+  filterAllowedDimensionFilters,
+} from '../../dashboards/crossFilters'
 
 export interface UseDashboardOptions {
   connectionId?: string
@@ -615,7 +618,7 @@ export function useDashboard(
   function setCrossFilter(info: DimensionClick): void {
     if (!dashboard.value || !dashboard.value.id) return
 
-    const globalFields = globalCompletion.value.map((f) => f.label)
+    const globalFields = extractEligibleCrossFilterFields(globalCompletion.value)
     const finalFilters = filterAllowedDimensionFilters(info.filters, globalFields)
 
     if (!finalFilters || Object.keys(finalFilters).length === 0) {

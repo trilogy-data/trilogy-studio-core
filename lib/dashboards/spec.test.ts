@@ -167,6 +167,26 @@ describe('generateVegaSpec', () => {
       expect(validateVegaLiteSpec(spec)).toBe(true)
       expect(spec.encoding.x.axis.labelAngle).toBe(-45)
     })
+
+    it('should generate a combo bar chart when yField2 is set', () => {
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'region',
+        yField: 'sales',
+        yField2: 'percent',
+      }
+
+      const spec = generateVegaSpec(testData, config, testColumns, null)
+
+      expect(validateVegaLiteSpec(spec)).toBe(true)
+      expect(spec.layer).toBeDefined()
+      expect(spec.layer).toHaveLength(2)
+      expect(spec.layer[0].mark.type).toBe('bar')
+      expect(spec.layer[1].mark.type).toBe('line')
+      expect(spec.layer[1].encoding.y.field).toBe('percent')
+      expect(spec.layer[1].encoding.y.axis.orient).toBe('right')
+      expect(spec.resolve.scale.y).toBe('independent')
+    })
   })
 
   describe('Horizontal Bar Chart', () => {

@@ -48,8 +48,9 @@ dashboardStore.updateItemCrossFilters(
 
 ## Reusable Controller
 
-For embedded apps that are not using the full dashboard store, use the exported
-`createCrossFilterController` or `useCrossFilterController` helpers.
+For embedded apps that are not using the full dashboard store, prefer the exported
+`useResolvedCrossFilterController` helper. It resolves global fields from the model,
+waits for eligibility to load, and then exposes the same controller methods.
 
 They preserve the same native behavior:
 - the source chart keeps its own visual selection
@@ -60,8 +61,11 @@ They preserve the same native behavior:
 ```typescript
 import { createCrossFilterController } from '@trilogy-data/trilogy-studio-components/dashboard'
 
-const filters = createCrossFilterController({
-  validFields: ['species', 'native_status', 'tree_category'],
+const filters = useResolvedCrossFilterController({
+  queryExecutionService,
+  connectionId: 'duckdb',
+  imports: [{ name: 'tree_enrichment', alias: '' }],
+  normalizeLocalFields: true,
 })
 
 filters.applyDimensionClick({

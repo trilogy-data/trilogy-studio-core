@@ -77,7 +77,7 @@ export const Controls: ChartControl[] = [
     field: 'yField2',
     columnFilter: 'numeric',
     allowEmpty: true,
-    visibleFor: ['line', 'area'],
+    visibleFor: ['bar', 'line', 'area'],
     filterGroup: 'axes',
   },
   {
@@ -234,7 +234,7 @@ export const Controls: ChartControl[] = [
     field: 'linkY2',
     columnFilter: 'all',
     allowEmpty: true,
-    visibleFor: ['line'],
+    visibleFor: ['bar', 'line'],
     filterGroup: 'appearance',
   },
   {

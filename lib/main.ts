@@ -79,6 +79,13 @@ export { useTrilogyCore } from './composables/useTrilogyCore'
 export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTrilogyCore'
 export { useTrilogyChat } from './composables/useTrilogyChat'
 export type { TrilogyChatOptions } from './composables/useTrilogyChat'
+export { useCrossFilterEligibility } from './composables/useCrossFilterEligibility'
+export { useResolvedCrossFilterController } from './composables/useResolvedCrossFilterController'
+export type {
+  CrossFilterEligibilityService,
+  UseCrossFilterEligibilityOptions,
+} from './composables/useCrossFilterEligibility'
+export type { UseResolvedCrossFilterControllerOptions } from './composables/useResolvedCrossFilterController'
 
 // Dashboard primitives for embedded usage
 export { DashboardQueryExecutor } from './dashboards/dashboardQueryExecutor'
@@ -88,6 +95,7 @@ export {
   buildCrossFilterExpression,
   clearAllCrossFiltersFromGridItems,
   createCrossFilterController,
+  extractEligibleCrossFilterFields,
   filterAllowedDimensionFilters,
   removeCrossFilterFromItem,
   removeCrossFilterSourceFromGridItems,
@@ -117,6 +125,7 @@ export type {
 // Query execution primitives for dependency injection
 export { default as QueryExecutionService } from './stores/queryExecutionService'
 export type {
+  EligibleCrossFilterFieldsOptions,
   QueryInput,
   QueryUpdate,
   QueryResult,

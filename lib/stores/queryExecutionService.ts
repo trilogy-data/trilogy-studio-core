@@ -11,6 +11,7 @@ import type {
 import useQueryHistoryService from './connectionHistoryStore'
 import type { ConnectionStoreType } from './connectionStore'
 import { TrilogyResolver } from '.'
+import { extractEligibleCrossFilterFields } from '../dashboards/crossFilters'
 
 export interface QueryInput {
   text: string
@@ -162,10 +163,18 @@ export interface DashboardExecutionService {
   ): Promise<string | null>
 }
 
+export interface EligibleCrossFilterFieldsOptions {
+  imports?: Import[]
+  extraFilters?: string[]
+  extraContent?: ContentInput[]
+  currentFilename?: string
+}
+
 export default class QueryExecutionService {
   public trilogyResolver: TrilogyResolver
   private connectionProvider: ExecutionConnectionProvider
   private storeHistory: boolean
+  private eligibleCrossFilterFieldsCache = new Map<string, string[]>()
 
   constructor(
     trilogyResolver: TrilogyResolver,
@@ -683,6 +692,56 @@ export default class QueryExecutionService {
     // Return the imports from the validation result
     return validation
   }
+
+  async getEligibleCrossFilterFields(
+    connectionId: string,
+    options: EligibleCrossFilterFieldsOptions = {},
+  ): Promise<string[]> {
+    const conn = this.connectionProvider.getConnection(connectionId)
+    if (!conn) {
+      throw new Error(`Connection ${connectionId} not found.`)
+    }
+
+    const imports = options.imports ?? []
+    const extraFilters = options.extraFilters ?? []
+    const extraContent = options.extraContent ?? []
+    const sources = this.connectionProvider.getConnectionSources(connectionId).concat(extraContent)
+    const cacheKey = JSON.stringify({
+      connectionId,
+      queryType: conn.queryType,
+      imports,
+      extraFilters,
+      sources,
+      currentFilename: options.currentFilename ?? null,
+    })
+
+    const cached = this.eligibleCrossFilterFieldsCache.get(cacheKey)
+    if (cached) {
+      return [...cached]
+    }
+
+    const validation = await this.validateQuery(
+      connectionId,
+      {
+        text: 'select 1 as cross_filter_probe;',
+        editorType: 'trilogy',
+        imports,
+        extraFilters,
+        extraContent,
+        currentFilename: options.currentFilename,
+      },
+      false,
+    )
+
+    const fields = extractEligibleCrossFilterFields(validation?.data.completion_items ?? [])
+    this.eligibleCrossFilterFieldsCache.set(cacheKey, fields)
+    return [...fields]
+  }
+
+  clearEligibleCrossFilterFieldsCache(): void {
+    this.eligibleCrossFilterFieldsCache.clear()
+  }
+
   async executeQuery(
     connectionId: string,
     queryInput: QueryInput,

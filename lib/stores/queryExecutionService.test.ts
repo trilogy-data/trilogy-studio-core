@@ -132,4 +132,46 @@ describe('QueryExecutionService', () => {
     )
     expect(result).toBe('drilldown query')
   })
+
+  it('resolves and caches eligible cross-filter fields from validation completions', async () => {
+    const resolver = {
+      validate_query: vi.fn(async () => ({
+        data: {
+          items: [],
+          imports: [],
+          completion_items: [
+            { label: 'species' },
+            { label: 'tree_count' },
+            { label: 'species' },
+          ],
+        },
+      })),
+    } as any
+    const { provider } = makeProvider({ connected: true })
+    const service = new QueryExecutionService(resolver, provider, false)
+
+    const first = await service.getEligibleCrossFilterFields('worker-duckdb', {
+      imports: [{ name: 'core', alias: 'core' }],
+      extraContent: [{ alias: 'dashboard', contents: 'const dashboard <- 2;' }],
+    })
+    const second = await service.getEligibleCrossFilterFields('worker-duckdb', {
+      imports: [{ name: 'core', alias: 'core' }],
+      extraContent: [{ alias: 'dashboard', contents: 'const dashboard <- 2;' }],
+    })
+
+    expect(first).toEqual(['species', 'tree_count'])
+    expect(second).toEqual(['species', 'tree_count'])
+    expect(resolver.validate_query).toHaveBeenCalledTimes(1)
+    expect(resolver.validate_query).toHaveBeenCalledWith(
+      'select 1 as cross_filter_probe;',
+      [
+        { alias: 'core', contents: 'const source <- 1;' },
+        { alias: 'dashboard', contents: 'const dashboard <- 2;' },
+      ],
+      [{ name: 'core', alias: 'core' }],
+      [],
+      null,
+      null,
+    )
+  })
 })
