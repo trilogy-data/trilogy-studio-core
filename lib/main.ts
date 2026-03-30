@@ -80,11 +80,17 @@ export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTri
 export { useTrilogyChat } from './composables/useTrilogyChat'
 export type { TrilogyChatOptions } from './composables/useTrilogyChat'
 export { useCrossFilterEligibility } from './composables/useCrossFilterEligibility'
+export { useEmbeddedDashboardGroup } from './composables/useEmbeddedDashboardGroup'
 export { useResolvedCrossFilterController } from './composables/useResolvedCrossFilterController'
 export type {
   CrossFilterEligibilityService,
   UseCrossFilterEligibilityOptions,
 } from './composables/useCrossFilterEligibility'
+export type {
+  EmbeddedDashboardGroup,
+  EmbeddedDashboardGroupItemOptions,
+  UseEmbeddedDashboardGroupOptions,
+} from './composables/useEmbeddedDashboardGroup'
 export type { UseResolvedCrossFilterControllerOptions } from './composables/useResolvedCrossFilterController'
 
 // Dashboard primitives for embedded usage

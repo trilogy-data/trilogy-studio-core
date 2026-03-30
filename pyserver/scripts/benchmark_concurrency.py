@@ -13,6 +13,7 @@ DEFAULT_PAYLOAD_FILES = [
     SCRIPT_DIR / "payloads" / "small_names.json",
     SCRIPT_DIR / "payloads" / "tpch_large_duckdb.json",
 ]
+DEFAULT_ENDPOINTS = ["generate_query"]
 
 
 def percentile(values: list[float], p: int) -> float | None:
@@ -61,12 +62,13 @@ async def probe_health(
 
 async def run_level(
     base_url: str,
+    endpoint: str,
     payload_name: str,
     payload: dict[str, Any],
     concurrency: int,
     request_count: int,
 ) -> dict[str, Any]:
-    query_url = f"{base_url}/generate_query"
+    query_url = f"{base_url}/{endpoint}"
     health_url = f"{base_url}/health"
     limits = httpx.Limits(
         max_connections=max(200, concurrency * 2),
@@ -101,7 +103,8 @@ async def run_level(
     non_200 = [status for status, _, _ in results if status not in (200, None)]
     exceptions = [error for status, _, error in results if status is None and error]
     health_ok = [elapsed for status, elapsed in health_latencies if status == 200]
-    sources = payload.get("full_model", {}).get("sources", [])
+    model_payload = payload.get("full_model", payload)
+    sources = model_payload.get("sources", [])
     model_chars = sum(len(source.get("contents", "")) for source in sources)
 
     req_p95 = percentile(ok_times, 95)
@@ -109,6 +112,7 @@ async def run_level(
 
     return {
         "payload": payload_name,
+        "endpoint": endpoint,
         "query_chars": len(payload.get("query", "")),
         "model_chars": model_chars,
         "source_count": len(sources),
@@ -138,6 +142,30 @@ def load_payloads(payload_files: list[str]) -> list[tuple[str, dict[str, Any]]]:
     return loaded
 
 
+def adapt_payload_for_endpoint(
+    endpoint: str, payload_name: str, payload: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
+    if endpoint in ("generate_query", "format_query"):
+        return payload_name, payload
+    if endpoint == "validate_query":
+        return (
+            f"{payload_name}-validate",
+            {
+                "query": payload["query"],
+                "imports": payload.get("imports", []),
+                "sources": payload.get("full_model", {}).get("sources", []),
+                "current_filename": payload.get("current_filename"),
+                "extra_filters": payload.get("extra_filters", []),
+            },
+        )
+    if endpoint == "parse_model":
+        return (
+            f"{payload_name}-parse-model",
+            payload.get("full_model", {}),
+        )
+    raise ValueError(f"Unsupported endpoint: {endpoint}")
+
+
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:8090")
@@ -159,23 +187,36 @@ async def main():
         default=[],
         help="Path to a request payload JSON file. May be provided multiple times.",
     )
+    parser.add_argument(
+        "--endpoint",
+        action="append",
+        default=[],
+        choices=["generate_query", "validate_query", "format_query", "parse_model"],
+        help="Endpoint to benchmark. May be provided multiple times.",
+    )
     args = parser.parse_args()
     payload_files = args.payload_file or [str(path) for path in DEFAULT_PAYLOAD_FILES]
+    endpoints = args.endpoint or DEFAULT_ENDPOINTS
     payloads = load_payloads(payload_files)
 
     all_results = []
-    for payload_name, payload in payloads:
-        for concurrency in args.concurrency:
-            request_count = args.requests_per_level or max(16, concurrency * 4)
-            result = await run_level(
-                args.base_url.rstrip("/"),
-                payload_name,
-                payload,
-                concurrency,
-                request_count,
+    for endpoint in endpoints:
+        for payload_name, payload in payloads:
+            adapted_payload_name, adapted_payload = adapt_payload_for_endpoint(
+                endpoint, payload_name, payload
             )
-            all_results.append(result)
-            print(json.dumps(result))
+            for concurrency in args.concurrency:
+                request_count = args.requests_per_level or max(16, concurrency * 4)
+                result = await run_level(
+                    args.base_url.rstrip("/"),
+                    endpoint,
+                    adapted_payload_name,
+                    adapted_payload,
+                    concurrency,
+                    request_count,
+                )
+                all_results.append(result)
+                print(json.dumps(result))
 
     print("FINAL")
     print(json.dumps(all_results, indent=2))

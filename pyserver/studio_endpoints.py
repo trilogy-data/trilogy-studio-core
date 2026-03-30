@@ -32,7 +32,7 @@ from io_models import (
     ValidateItem,
     ValidateQueryInSchema,
 )
-from process_pool import run_cpu_bound
+from process_pool import run_aux_task, run_cpu_bound
 from query_helpers import (
     PARSE_CONFIG,
     generate_multi_query_core,
@@ -43,6 +43,7 @@ from query_helpers import (
 from utility import safe_percentage
 
 logger = getLogger(__name__)
+perf_logger = getLogger("trilogy.performance")
 
 
 NON_PARAMETER_RENDERING = Rendering(parameters=False)
@@ -73,6 +74,18 @@ def _raise_if_worker_error(payload: dict) -> dict:
             detail=error["detail"],
         )
     return payload
+
+
+def _run_inline_task(task_name: str, task, *args):
+    start_time = time.perf_counter()
+    payload = task(*args)
+    elapsed = time.perf_counter() - start_time
+    perf_logger.info(
+        "Inline task completed - Task: %s | Total: %.6fs",
+        task_name,
+        elapsed,
+    )
+    return _raise_if_worker_error(payload)
 
 
 def _format_query_task(query_data: dict) -> dict:
@@ -386,20 +399,24 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
 
     @router.post("/format_query")
     async def format_query(query: QueryInSchema):
-        return _raise_if_worker_error(
-            await run_cpu_bound(_format_query_task, query.model_dump(mode="json"))
+        return _run_inline_task(
+            "format_query",
+            _format_query_task,
+            query.model_dump(mode="json"),
         )
 
     @router.post("/drilldown_query")
     async def drilldown_query(query: DrilldownQueryInSchema):
-        return _raise_if_worker_error(
-            await run_cpu_bound(_drilldown_query_task, query.model_dump(mode="json"))
+        return _run_inline_task(
+            "drilldown_query",
+            _drilldown_query_task,
+            query.model_dump(mode="json"),
         )
 
     @router.post("/validate_query")
     async def validate_query(query: ValidateQueryInSchema):
         return _raise_if_worker_error(
-            await run_cpu_bound(_validate_query_task, query.model_dump(mode="json"))
+            await run_aux_task(_validate_query_task, query.model_dump(mode="json"))
         )
 
     @router.post("/generate_queries")

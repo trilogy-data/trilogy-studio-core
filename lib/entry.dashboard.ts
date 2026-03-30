@@ -14,6 +14,7 @@ export { default as VegaLiteChart } from './components/VegaLiteChart.vue'
 export { useTrilogyCore } from './composables/useTrilogyCore'
 export { useTrilogyChat } from './composables/useTrilogyChat'
 export { useCrossFilterEligibility } from './composables/useCrossFilterEligibility'
+export { useEmbeddedDashboardGroup } from './composables/useEmbeddedDashboardGroup'
 export { useResolvedCrossFilterController } from './composables/useResolvedCrossFilterController'
 
 export {
@@ -37,6 +38,11 @@ export type {
   CrossFilterEligibilityService,
   UseCrossFilterEligibilityOptions,
 } from './composables/useCrossFilterEligibility'
+export type {
+  EmbeddedDashboardGroup,
+  EmbeddedDashboardGroupItemOptions,
+  UseEmbeddedDashboardGroupOptions,
+} from './composables/useEmbeddedDashboardGroup'
 export type { UseResolvedCrossFilterControllerOptions } from './composables/useResolvedCrossFilterController'
 
 export { DashboardQueryExecutor } from './dashboards/dashboardQueryExecutor'
