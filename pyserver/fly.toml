@@ -8,6 +8,10 @@ primary_region = 'ewr'
 
 [build]
 
+[env]
+  TRILOGY_PROCESS_POOL_SIZE = '1'
+  TRILOGY_AUX_POOL_SIZE = '1'
+
 [http_service]
   internal_port = 8080
   force_https = true

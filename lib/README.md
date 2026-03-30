@@ -16,6 +16,7 @@ import {
   QueryExecutionService,
   TrilogyEmbedProvider,
   createCrossFilterController,
+  useEmbeddedDashboardGroup,
 } from '@trilogy-data/trilogy-studio-components/dashboard'
 ```
 
@@ -30,6 +31,41 @@ Available public subpaths:
 - `@trilogy-data/trilogy-studio-components/llm`
 
 There is no root package export. Import one of the explicit subpaths above so bundle-splitting stays predictable.
+
+## Shared Embedded Dashboard Execution
+
+When an embedding app renders several independent dashboard charts on one page, prefer a shared
+embedded dashboard group instead of creating one `DashboardQueryExecutor` per chart. The group
+coalesces sibling refreshes into `generate_queries` calls, so Trilogy only resolves imports and
+model context once per batch.
+
+```ts
+import { useEmbeddedDashboardGroup } from '@trilogy-data/trilogy-studio-components/dashboard'
+
+const embeddedGroup = useEmbeddedDashboardGroup({
+  dashboardId: 'summary-usbtv',
+  connectionId: 'tree-duckdb',
+  queryExecutionService,
+  imports: SUMMARY_IMPORTS,
+})
+
+embeddedGroup.registerItem({
+  itemId: 'top-species',
+  title: 'Top Species',
+  query: 'select species, count(tree_id) as tree_count;',
+})
+
+embeddedGroup.registerItem({
+  itemId: 'native-status',
+  title: 'Native Status',
+  query: 'select native_status, count(tree_id) as tree_count;',
+})
+
+embeddedGroup.scheduleRun('top-species')
+embeddedGroup.scheduleRun('native-status')
+```
+
+This is the intended fit for tree-style summary pages that compose several standalone charts.
 
 ## Self-Hosted DuckDB Assets
 
