@@ -1,7 +1,9 @@
 import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue'
 import { objectToSqlExpression } from './conditions'
 
-export type CrossFilterValueMap = Record<string, string | unknown[]>
+export type CrossFilterScalar = string | number | Date
+export type CrossFilterValue = CrossFilterScalar | CrossFilterScalar[]
+export type CrossFilterValueMap = Record<string, CrossFilterValue>
 export type CrossFilterOperation = 'add' | 'append' | 'remove'
 
 export interface CrossFilterSelection {
@@ -68,7 +70,7 @@ function cloneValueMap(value: CrossFilterValueMap): CrossFilterValueMap {
   return { ...value }
 }
 
-function areValuesEqual(a: string | unknown[], b: string | unknown[]): boolean {
+function areValuesEqual(a: CrossFilterValue, b: CrossFilterValue): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     return a.length === b.length && a.every((v, i) => v === b[i])
   }
@@ -118,7 +120,7 @@ export function filterAllowedDimensionFilters(
   const normalizeLocalFields = options.normalizeLocalFields ?? false
 
   return Object.entries(filters).reduce((acc, [field, value]) => {
-    if (typeof value !== 'string' && !Array.isArray(value)) {
+    if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date) && !Array.isArray(value)) {
       return acc
     }
 

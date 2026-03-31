@@ -9,12 +9,13 @@ import {
   removeCrossFilterFromItem,
   removeCrossFilterSourceFromGridItems,
   syncCrossFilterSqlForItem,
+  type CrossFilterValue,
 } from './crossFilters'
 
 export interface DimensionClick {
   source: string
-  filters: Record<string, string | unknown[]>
-  chart: Record<string, string | unknown[]>
+  filters: Record<string, CrossFilterValue>
+  chart: Record<string, CrossFilterValue>
   append: boolean
 }
 export interface DashboardImport {

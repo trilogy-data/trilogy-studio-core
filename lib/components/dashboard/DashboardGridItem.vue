@@ -4,6 +4,7 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import DashboardFilter from './DashboardFilter.vue'
+import Tooltip from '../Tooltip.vue'
 import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
@@ -365,35 +366,39 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 
       <div class="grid-item-header-right">
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
-          <div
+          <Tooltip
             v-for="(filter, index) in visibleHeaderFilters"
             :key="`${filter.source}-${filter.value}-${index}`"
-            class="header-filter-chip"
-            :title="cleanFilterValue(filter.value)"
+            :content="cleanFilterValue(filter.value)"
+            position="bottom"
           >
-            <span class="filter-content">
-              <span class="filter-source"
-                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+            <div class="header-filter-chip">
+              <span class="filter-content">
+                <span class="filter-source"
+                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+                >
+                <span class="filter-value">{{ truncateFilterValue(filter.value, 40) }}</span>
+              </span>
+              <button
+                v-if="editMode && filter.source !== 'global'"
+                class="filter-remove-btn"
+                @click="removeFilter(filter.source)"
+                :title="`Remove ${filter.source} filter`"
               >
-              <span class="filter-value">{{ truncateFilterValue(filter.value, 40) }}</span>
-            </span>
-            <button
-              v-if="editMode && filter.source !== 'global'"
-              class="filter-remove-btn"
-              @click="removeFilter(filter.source)"
-              :title="`Remove ${filter.source} filter`"
-            >
-              x
-            </button>
-          </div>
+                x
+              </button>
+            </div>
+          </Tooltip>
 
-          <div
+          <Tooltip
             v-if="hiddenFilterCount > 0"
-            class="header-filter-chip filter-overflow"
-            :title="`${hiddenFilterCount} more filter(s)`"
+            :content="`${hiddenFilterCount} more filter(s)`"
+            position="bottom"
           >
-            +{{ hiddenFilterCount }}
-          </div>
+            <div class="header-filter-chip filter-overflow">
+              +{{ hiddenFilterCount }}
+            </div>
+          </Tooltip>
         </div>
       </div>
     </div>
